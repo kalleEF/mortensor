@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Rscript -e \"tryCatch\\(parse\\(''''R/metrics.R''''\\), error = function\\(e\\) cat\\(''''PARSE ERROR:'''', e$message, ''''\\\\n''''\\)\\)\")",
+      "Bash(where Rscript)",
+      "Bash(where R)"
+    ]
+  }
+}

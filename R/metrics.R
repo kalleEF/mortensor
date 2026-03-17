@@ -1,3 +1,230 @@
+# ---- accuracy generic ----
+
+#' Evaluate forecast accuracy
+#'
+#' Computes a comprehensive set of scoring rules for a mortality forecast.
+#' When called with observed test data, evaluates out-of-sample accuracy.
+#' When called without test data, evaluates in-sample fit (fitted vs raw
+#' training observations).
+#'
+#' @param object A `mort_forecast` object.
+#' @param test Optional `mort_data` object containing observed mortality rates
+#'   for the forecast period. If `NULL`, evaluates in-sample accuracy using
+#'   fitted values and raw training data (both must be present).
+#' @param ... Ignored.
+#' @return A named list with class `mort_accuracy`, containing:
+#'   \describe{
+#'     \item{mase_cell}{Cell-level MASE across all (age, group) series.}
+#'     \item{mase_trend}{Group-trend MASE.}
+#'     \item{mase_combined}{Combined MASE (0.7 cell + 0.3 trend).}
+#'     \item{rmse_log}{RMSE on the log scale.}
+#'     \item{mae}{Mean absolute error.}
+#'     \item{coverage}{Empirical coverage of 95\% PI (if PIs present).}
+#'     \item{interval_score}{Mean interval score (if PIs present).}
+#'     \item{crps}{Empirical CRPS from simulations (if sims present).}
+#'     \item{n_ages}{Number of age groups evaluated.}
+#'     \item{n_years}{Number of years evaluated.}
+#'     \item{n_groups}{Number of population groups evaluated.}
+#'     \item{type}{`"out_of_sample"` or `"in_sample"`.}
+#'     \item{model}{Model name.}
+#'   }
+#' @examples
+#' \dontrun{
+#' # Out-of-sample: compare forecast against held-out observed data
+#' accuracy(fc, test = holdout_data)
+#'
+#' # In-sample: evaluate fitted vs raw training data
+#' accuracy(fc)
+#' }
+#' @export
+accuracy <- function(object, ...) UseMethod("accuracy")
+
+#' @rdname accuracy
+#' @export
+accuracy.mort_forecast <- function(object, test = NULL, ...) {
+  if (!is.null(test)) {
+    stopifnot(inherits(test, "mort_data"))
+    obs_arr   <- test$mx
+    fc_arr    <- object$mx_point
+    eval_type <- "out_of_sample"
+
+    # Align dimensions: test may cover more/fewer years than forecast
+    fc_years   <- object$forecast_years
+    test_years <- test$years
+    common     <- intersect(fc_years, test_years)
+    if (length(common) == 0)
+      stop("No overlapping years between forecast (", min(fc_years), "-",
+           max(fc_years), ") and test data (", min(test_years), "-",
+           max(test_years), ").")
+    fc_idx   <- match(common, fc_years)
+    test_idx <- match(common, test_years)
+    obs_arr  <- obs_arr[, test_idx, , drop = FALSE]
+    fc_arr   <- fc_arr[, fc_idx, , drop = FALSE]
+
+    # For MASE we need training data
+    train_arr <- object$mx_raw %||% object$extras$mx_smooth
+    if (is.null(train_arr)) {
+      train_arr <- NULL
+      warning("No training data available in forecast object; ",
+              "MASE metrics will be NA.")
+    }
+
+    # Align PI arrays if present
+    pi_lower <- if (!is.null(object$mx_lower)) object$mx_lower[, fc_idx, , drop = FALSE] else NULL
+    pi_upper <- if (!is.null(object$mx_upper)) object$mx_upper[, fc_idx, , drop = FALSE] else NULL
+    sims_arr <- if (!is.null(object$sims)) object$sims[, fc_idx, , , drop = FALSE] else NULL
+
+  } else {
+    # In-sample: fitted vs raw
+    if (is.null(object$mx_fitted) || is.null(object$mx_raw)) {
+      stop("In-sample accuracy requires both mx_fitted and mx_raw. ",
+           "Pass test data for out-of-sample evaluation, or re-run ",
+           "forecast with return_fitted = TRUE.")
+    }
+    obs_arr   <- object$mx_raw
+    fc_arr    <- object$mx_fitted
+    train_arr <- object$mx_raw
+    eval_type <- "in_sample"
+    pi_lower  <- NULL
+    pi_upper  <- NULL
+    sims_arr  <- NULL
+  }
+
+  n_a <- dim(obs_arr)[1]
+  n_t <- dim(obs_arr)[2]
+  n_g <- dim(obs_arr)[3]
+
+  # Point forecast metrics
+  mase_cell  <- if (!is.null(train_arr)) compute_mase_array(obs_arr, fc_arr, train_arr) else NA_real_
+  mase_trend <- if (!is.null(train_arr)) compute_mase_group_trend(obs_arr, fc_arr, train_arr) else NA_real_
+  mase_comb  <- if (!is.null(train_arr)) compute_mase_combined(obs_arr, fc_arr, train_arr) else NA_real_
+  rmse       <- compute_rmse_log(as.vector(obs_arr), as.vector(fc_arr))
+  mae_val    <- compute_mae(as.vector(obs_arr), as.vector(fc_arr))
+
+  # Probabilistic metrics
+  coverage <- NA_real_
+  is_val   <- NA_real_
+  crps_val <- NA_real_
+
+  if (!is.null(pi_lower) && !is.null(pi_upper)) {
+    in_pi    <- obs_arr >= pi_lower & obs_arr <= pi_upper
+    coverage <- mean(in_pi, na.rm = TRUE)
+    is_val   <- compute_interval_score_array(obs_arr, pi_lower, pi_upper)
+  }
+  if (!is.null(sims_arr)) {
+    crps_val <- compute_crps_empirical(obs_arr, sims_arr)
+  }
+
+  result <- list(
+    mase_cell      = mase_cell,
+    mase_trend     = mase_trend,
+    mase_combined  = mase_comb,
+    rmse_log       = rmse,
+    mae            = mae_val,
+    coverage       = coverage,
+    interval_score = is_val,
+    crps           = crps_val,
+    n_ages         = n_a,
+    n_years        = n_t,
+    n_groups       = n_g,
+    type           = eval_type,
+    model          = object$model
+  )
+  structure(result, class = "mort_accuracy")
+}
+
+#' @export
+print.mort_accuracy <- function(x, ...) {
+  cat("<mort_accuracy> ", x$type, "\n")
+  cat("  Model:          ", x$model, "\n")
+  cat("  Evaluated on:   ", x$n_ages, "ages x", x$n_years, "years x",
+      x$n_groups, "groups\n")
+  cat("  --- Point forecast ---\n")
+  if (!is.na(x$mase_combined))
+    cat("  MASE (combined):", round(x$mase_combined, 4), "\n")
+  if (!is.na(x$mase_cell))
+    cat("  MASE (cell):    ", round(x$mase_cell, 4), "\n")
+  if (!is.na(x$mase_trend))
+    cat("  MASE (trend):   ", round(x$mase_trend, 4), "\n")
+  cat("  RMSE (log):     ", round(x$rmse_log, 4), "\n")
+  cat("  MAE:            ", formatC(x$mae, format = "e", digits = 3), "\n")
+  if (!is.na(x$coverage) || !is.na(x$interval_score) || !is.na(x$crps)) {
+    cat("  --- Probabilistic ---\n")
+    if (!is.na(x$coverage))
+      cat("  Coverage (95%): ", round(x$coverage, 3), "\n")
+    if (!is.na(x$interval_score))
+      cat("  Interval score: ", round(x$interval_score, 4), "\n")
+    if (!is.na(x$crps))
+      cat("  CRPS:           ", round(x$crps, 4), "\n")
+  }
+  invisible(x)
+}
+
+#' Compare accuracy across multiple forecasts
+#'
+#' Takes several `mort_forecast` objects (or `mort_accuracy` objects) and
+#' returns a summary comparison table.
+#'
+#' @param ... Named `mort_forecast` or `mort_accuracy` objects.
+#' @param test A `mort_data` object of observed test data. Required when
+#'   passing `mort_forecast` objects. Ignored for `mort_accuracy` inputs.
+#' @return A `data.table` with one row per model and columns for each metric.
+#' @examples
+#' \dontrun{
+#' compare_accuracy(
+#'   "Tucker3-CoDa" = fc_coda,
+#'   "Lee-Carter"   = fc_lc,
+#'   "Ensemble"     = fc_ens,
+#'   test = holdout_data
+#' )
+#' }
+#' @export
+compare_accuracy <- function(..., test = NULL) {
+  args <- list(...)
+  if (length(args) == 0) stop("Provide at least one forecast or accuracy object.")
+
+  # If a single unnamed list was passed, unpack it
+  if (length(args) == 1 && is.null(names(args)) && is.list(args[[1]]) &&
+      !inherits(args[[1]], "mort_forecast") &&
+      !inherits(args[[1]], "mort_accuracy")) {
+    args <- args[[1]]
+  }
+
+  # Ensure names
+
+  if (is.null(names(args))) names(args) <- paste0("model_", seq_along(args))
+  nms <- names(args)
+
+  rows <- vector("list", length(args))
+  for (i in seq_along(args)) {
+    obj <- args[[i]]
+    if (inherits(obj, "mort_accuracy")) {
+      acc <- obj
+    } else if (inherits(obj, "mort_forecast")) {
+      acc <- accuracy(obj, test = test)
+    } else {
+      stop("Element '", nms[i], "' is not a mort_forecast or mort_accuracy.")
+    }
+    rows[[i]] <- data.table::data.table(
+      model          = nms[i],
+      mase_combined  = acc$mase_combined,
+      mase_cell      = acc$mase_cell,
+      mase_trend     = acc$mase_trend,
+      rmse_log       = acc$rmse_log,
+      mae            = acc$mae,
+      coverage       = acc$coverage,
+      interval_score = acc$interval_score,
+      crps           = acc$crps
+    )
+  }
+  dt <- data.table::rbindlist(rows)
+  dt <- dt[order(dt$mase_combined), ]
+  dt
+}
+
+
+# ---- Low-level scoring functions ----
+
 #' RMSE on the log scale
 #'
 #' @param actual Numeric vector of observed mortality rates.

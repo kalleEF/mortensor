@@ -26,11 +26,117 @@ and probabilistic forecasts.
 
 This vignette covers:
 
-1. Point forecast metrics: RMSE, MAE, MASE (cell, trend, combined)
-2. Probabilistic metrics: CRPS (Gaussian and empirical), interval score, WIS,
+1. The `accuracy()` method: one-call evaluation from a `mort_forecast` object
+2. The `compare_accuracy()` function: tabular comparison across models
+3. Point forecast metrics: RMSE, MAE, MASE (cell, trend, combined)
+4. Probabilistic metrics: CRPS (Gaussian and empirical), interval score, WIS,
    log-score
-3. How these are used in model selection and calibration
-4. Practical examples for comparing models
+5. How these are used in model selection and calibration
+6. Practical examples for comparing models
+
+## The `accuracy()` method
+
+The simplest way to evaluate a forecast is to call `accuracy()` directly on a
+`mort_forecast` object. It computes all relevant metrics in one call.
+
+### Out-of-sample evaluation
+
+When you have held-out observed data, pass it as the `test` argument:
+
+```{r accuracy-oos}
+library(mortensor)
+data(example_mortality)
+
+# Split data: first 80% for training, last 20% for testing
+n_t    <- example_mortality$n_t
+n_test <- round(0.2 * n_t)
+train  <- example_mortality[, 1:(n_t - n_test), ]
+test   <- example_mortality[, (n_t - n_test + 1):n_t, ]
+
+# Build forecast from training data
+sm  <- smooth_mortality(train, method = "gam", covid_years = c(2020L, 2021L))
+cal <- calibrate(sm, holdout_frac = 0.2, ensemble = TRUE)
+fc  <- forecast(cal, h = n_test)
+fc  <- add_pi(fc, n_sim = 500, method = "bootstrap")
+
+# One call — all metrics
+acc <- accuracy(fc, test = test)
+print(acc)
+# <mort_accuracy>  out_of_sample
+#   Model:           Ensemble
+#   Evaluated on:    13 ages x 4 years x 10 groups
+#   --- Point forecast ---
+#   MASE (combined): 0.8234
+#   MASE (cell):     0.8567
+#   MASE (trend):    0.7456
+#   RMSE (log):      0.0312
+#   MAE:             1.23e-03
+#   --- Probabilistic ---
+#   Coverage (95%):  0.943
+#   Interval score:  0.1287
+#   CRPS:            0.0198
+```
+
+The result is a `mort_accuracy` object. All fields are accessible:
+
+```{r accuracy-fields}
+acc$mase_combined   # 0.8234
+acc$coverage        # 0.943
+acc$crps            # 0.0198
+```
+
+### In-sample evaluation
+
+Without test data, `accuracy()` evaluates fitted values against the raw
+training data:
+
+```{r accuracy-insample}
+acc_in <- accuracy(fc)
+print(acc_in)
+# <mort_accuracy>  in_sample
+```
+
+## Comparing multiple models with `compare_accuracy()`
+
+To compare several models side-by-side, use `compare_accuracy()`:
+
+```{r compare-accuracy}
+# Calibrate individual models
+cal_coda <- calibrate(sm, models = "tucker3_coda", ensemble = FALSE)
+cal_lc   <- calibrate(sm, models = "lee_carter",   ensemble = FALSE)
+cal_ets  <- calibrate(sm, models = "ets",           ensemble = FALSE)
+cal_ens  <- calibrate(sm, ensemble = TRUE)
+
+# Forecast each
+fc_coda <- add_pi(forecast(cal_coda, h = n_test), n_sim = 500)
+fc_lc   <- add_pi(forecast(cal_lc,   h = n_test), n_sim = 500)
+fc_ets  <- add_pi(forecast(cal_ets,  h = n_test), n_sim = 500)
+fc_ens  <- add_pi(forecast(cal_ens,  h = n_test), n_sim = 500)
+
+# Compare — returns a data.table sorted by MASE
+comp <- compare_accuracy(
+  "Tucker3-CoDa" = fc_coda,
+  "Lee-Carter"   = fc_lc,
+  "ETS"          = fc_ets,
+  "Ensemble"     = fc_ens,
+  test = test
+)
+print(comp)
+#            model  mase_combined  mase_cell  mase_trend  rmse_log  ...
+# 1:       Ensemble        0.809      0.847       0.721    0.028
+# 2:  Tucker3-CoDa        0.823      0.857       0.745    0.031
+# 3:    Lee-Carter        0.890      0.923       0.812    0.035
+# 4:           ETS        0.991      1.034       0.923    0.042
+```
+
+You can also pass pre-computed `mort_accuracy` objects if you want to avoid
+re-computing:
+
+```{r compare-precomputed}
+acc1 <- accuracy(fc_coda, test = test)
+acc2 <- accuracy(fc_lc,   test = test)
+comp <- compare_accuracy("Tucker3-CoDa" = acc1, "Lee-Carter" = acc2)
+```
 
 ## Point forecast metrics
 
@@ -267,90 +373,88 @@ print(cal$comparison)
 
 ## Practical evaluation workflow
 
-### Hold-out evaluation
+### Using `accuracy()` (recommended)
 
-```{r holdout-eval}
+The `accuracy()` method handles all the array extraction and alignment
+automatically:
+
+```{r holdout-accuracy}
 data(example_mortality)
-sm <- smooth_mortality(example_mortality, method = "gam",
-                       covid_years = c(2020L, 2021L))
 
-# Manual train/test split
-n_t <- length(sm$years)
+# Split into train and test mort_data objects
+n_t    <- example_mortality$n_t
 n_test <- round(0.2 * n_t)
-train_idx <- 1:(n_t - n_test)
-test_idx  <- (n_t - n_test + 1):n_t
+train  <- example_mortality[, 1:(n_t - n_test), ]
+test   <- example_mortality[, (n_t - n_test + 1):n_t, ]
 
-mx_train <- sm$mx[, train_idx, , drop = FALSE]
-mx_test  <- sm$mx[, test_idx,  , drop = FALSE]
+# Pipeline on training data
+sm  <- smooth_mortality(train, method = "gam", covid_years = c(2020L, 2021L))
+cal <- calibrate(sm, holdout_frac = 0.2, ensemble = TRUE)
+fc  <- forecast(cal, h = n_test)
+fc  <- add_pi(fc, n_sim = 500, method = "bootstrap")
 
-# Run a specific model on training data
+# All metrics in one call
+acc <- accuracy(fc, test = test)
+print(acc)
+```
+
+### Comparing multiple models with `compare_accuracy()`
+
+```{r compare-models-new}
+# Calibrate individual models on the same training data
+models <- c("tucker3_coda", "tucker3_direct", "lee_carter", "ets", "rwd")
+forecasts <- list()
+for (m in models) {
+  cal_m <- calibrate(sm, models = m, ensemble = FALSE)
+  fc_m  <- forecast(cal_m, h = n_test)
+  fc_m  <- add_pi(fc_m, n_sim = 500)
+  forecasts[[m]] <- fc_m
+}
+
+# One-line comparison table (sorted by MASE)
+comp <- compare_accuracy(
+  "Tucker3-CoDa"   = forecasts$tucker3_coda,
+  "Tucker3-Direct"  = forecasts$tucker3_direct,
+  "Lee-Carter"      = forecasts$lee_carter,
+  "ETS"             = forecasts$ets,
+  "RWD"             = forecasts$rwd,
+  test = test
+)
+print(comp)
+```
+
+### Low-level evaluation (manual array extraction)
+
+The low-level `compute_*()` functions remain available for custom workflows:
+
+```{r holdout-manual}
+# Manual train/test split at the array level
+mx_train <- sm$mx
+mx_test  <- test$mx
+
 fc_arr <- tucker3_coda_forecast(
   mx_array = mx_train,
-  years    = sm$years[train_idx],
+  years    = sm$years,
   ages     = sm$ages,
   h        = n_test,
   R_A = 3, R_B = 2, R_C = 2,
   ts_method = "ets"
 )$mx_forecast
 
-# Evaluate
+# Individual metrics
 cat("MASE (cell):", round(compute_mase_array(mx_test, fc_arr, mx_train), 3), "\n")
 cat("MASE (trend):", round(compute_mase_group_trend(mx_test, fc_arr, mx_train), 3), "\n")
 cat("MASE (combined):", round(compute_mase_combined(mx_test, fc_arr, mx_train), 3), "\n")
 cat("RMSE (log):", round(compute_rmse_log(mx_test, fc_arr), 4), "\n")
 ```
 
-### Evaluating prediction intervals
-
-```{r pi-eval}
-cal <- calibrate(sm, holdout_frac = 0.2, ensemble = TRUE)
-fc  <- forecast(cal, h = n_test)
-fc  <- add_pi(fc, n_sim = 500, method = "bootstrap")
-
-# Interval score on holdout
-is_val <- compute_interval_score_array(
-  obs_arr   = mx_test,
-  lower_arr = fc$mx_lower,
-  upper_arr = fc$mx_upper,
-  alpha     = 0.05
-)
-cat("Interval score (95% PI):", round(is_val, 4), "\n")
-
-# Empirical coverage
-coverage <- mean(mx_test >= fc$mx_lower & mx_test <= fc$mx_upper)
-cat("Empirical coverage:", round(coverage, 3), "(nominal: 0.95)\n")
-
-# CRPS from simulations
-crps <- compute_crps_empirical(mx_test, fc$sims)
-cat("CRPS:", round(crps, 4), "\n")
-```
-
-### Comparing multiple models
-
-```{r model-compare}
-models <- c("tucker3_coda", "tucker3_direct", "lee_carter", "ets", "rwd")
-results <- data.frame(model = models, mase = NA, crps = NA, is = NA)
-
-for (i in seq_along(models)) {
-  cal_i <- calibrate(sm, models = models[i], ensemble = FALSE,
-                     holdout_frac = 0.2)
-  fc_i  <- forecast(cal_i, h = n_test)
-  fc_i  <- add_pi(fc_i, n_sim = 500)
-
-  results$mase[i] <- compute_mase_combined(mx_test, fc_i$mx_point, mx_train)
-  results$crps[i] <- compute_crps_empirical(mx_test, fc_i$sims)
-  results$is[i]   <- compute_interval_score_array(mx_test, fc_i$mx_lower,
-                                                   fc_i$mx_upper)
-}
-
-print(results[order(results$mase), ])
-```
-
 ## Metric selection guide
 
 | Metric | Type | Evaluates | When to use |
 |--------|------|-----------|-------------|
-| `compute_mase_combined()` | Point | Overall forecast quality | Model selection (default) |
+| `accuracy()` | All | All metrics at once | Default for `mort_forecast` objects |
+| `compare_accuracy()` | All | Multi-model table | Comparing several forecasts |
+| `compute_mase_combined()` | Point | Overall forecast quality | Low-level / custom workflows |
 | `compute_mase_array()` | Point | Cell-level patterns | Age-group accuracy matters |
 | `compute_mase_group_trend()` | Point | Trend capture | Decline trajectory matters |
 | `compute_rmse_log()` | Point | Log-scale fit | Traditional comparison |
@@ -362,20 +466,23 @@ print(results[order(results$mase), ])
 
 ### Recommendations
 
-- **Model selection**: Use combined MASE (this is what `calibrate()` does)
-- **PI evaluation**: Use interval score + check empirical coverage
-- **Publication**: Report CRPS (comprehensive) + interval score (interpretable)
-  + MASE (for point forecast baseline)
+- **Quick evaluation**: `accuracy(fc, test = holdout)` — one call, all metrics
+- **Multi-model comparison**: `compare_accuracy(..., test = holdout)` — sorted
+  table
+- **Model selection**: Combined MASE (used automatically by `calibrate()`)
+- **PI evaluation**: Check `coverage` (should be near 0.95) + `interval_score`
+- **Publication**: Report MASE (point) + CRPS (distributional) + interval
+  score (interpretable)
 - **Multi-model papers**: Use WIS with matched quantile levels across models
 
 ## Summary
 
-- **mortensor** implements all major proper scoring rules for mortality
-  forecasting
+- `accuracy()` computes all metrics from a `mort_forecast` object in one call
+- `compare_accuracy()` produces a tidy comparison table across models
 - Combined MASE (0.7 cell + 0.3 trend) is the workhorse for automated model
   selection
 - Probabilistic scores (CRPS, IS, WIS) evaluate the full predictive
   distribution and PI calibration
-- All metrics operate on 3D arrays, matching the natural data structure
+- Low-level `compute_*()` functions remain available for custom workflows
 - The `calibrate()` pipeline integrates these scores seamlessly into the model
   selection workflow
