@@ -1,0 +1,381 @@
+---
+title: "Scoring Rules and Forecast Evaluation"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Scoring Rules and Forecast Evaluation}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment  = "#>",
+  fig.width  = 7,
+  fig.height = 5,
+  eval = FALSE
+)
+```
+
+## Overview
+
+Rigorous forecast evaluation requires **proper scoring rules** — metrics that
+are optimised when the forecaster reports their true belief. **mortensor**
+implements a comprehensive set of scoring functions for both point forecasts
+and probabilistic forecasts.
+
+This vignette covers:
+
+1. Point forecast metrics: RMSE, MAE, MASE (cell, trend, combined)
+2. Probabilistic metrics: CRPS (Gaussian and empirical), interval score, WIS,
+   log-score
+3. How these are used in model selection and calibration
+4. Practical examples for comparing models
+
+## Point forecast metrics
+
+### RMSE on log scale
+
+Root mean squared error on $\log(m_x)$:
+
+$$\text{RMSE}_{\log} = \sqrt{\frac{1}{n} \sum_{i} \bigl(\log(\hat{m}_i) - \log(m_i)\bigr)^2}$$
+
+```{r rmse}
+library(mortensor)
+
+# Vectors of actual and predicted rates
+rmse <- compute_rmse_log(actual = obs_mx, predicted = fc_mx)
+cat("RMSE (log):", round(rmse, 4), "\n")
+```
+
+### Mean absolute error
+
+$$\text{MAE} = \frac{1}{n} \sum_i |m_i - \hat{m}_i|$$
+
+```{r mae}
+mae <- compute_mae(actual = obs_mx, predicted = fc_mx)
+```
+
+### MASE: Mean Absolute Scaled Error
+
+MASE is the primary metric used for model selection in **mortensor**. It
+normalises the MAE by the in-sample naive (random walk) forecast error:
+
+$$\text{MASE} = \frac{\text{MAE}_{\text{forecast}}}{\text{MAE}_{\text{naive}}}$$
+
+where $\text{MAE}_{\text{naive}} = \frac{1}{T-1}\sum_{t=2}^T |y_t - y_{t-1}|$
+on the training data.
+
+A MASE < 1 means the model beats the naive random walk; MASE > 1 means it
+does worse.
+
+#### Single series
+
+```{r mase-single}
+mase_val <- compute_mase(
+  actual_test    = test_series,       # test period values
+  predicted_test = forecast_series,   # forecast values
+  train_series   = train_series       # training period values
+)
+cat("MASE:", round(mase_val, 3), "\n")
+```
+
+#### Cell-level MASE (across the full array)
+
+Computes MASE for each (age, group) cell and averages:
+
+```{r mase-array}
+mase_cell <- compute_mase_array(
+  arr_test  = mx_test,     # 3D test array [n_ages x n_test x n_groups]
+  fc_arr    = mx_forecast, # 3D forecast array [n_ages x h x n_groups]
+  arr_train = mx_train     # 3D training array
+)
+cat("Cell MASE:", round(mase_cell, 3), "\n")
+```
+
+#### Group-trend MASE
+
+Averages across ages first (collapsing to group-level trends), then computes
+MASE on these smoother series:
+
+```{r mase-trend}
+mase_trend <- compute_mase_group_trend(
+  arr_test  = mx_test,
+  fc_arr    = mx_forecast,
+  arr_train = mx_train
+)
+cat("Trend MASE:", round(mase_trend, 3), "\n")
+```
+
+#### Combined MASE (used for model selection)
+
+The combined MASE balances cell-level accuracy with trend accuracy:
+
+$$\text{MASE}_{\text{combined}} = 0.7 \times \text{MASE}_{\text{cell}} + 0.3 \times \text{MASE}_{\text{trend}}$$
+
+```{r mase-combined}
+mase_comb <- compute_mase_combined(
+  arr_test  = mx_test,
+  fc_arr    = mx_forecast,
+  arr_train = mx_train
+)
+cat("Combined MASE:", round(mase_comb, 3), "\n")
+```
+
+**Why 0.7/0.3?** Cell-level accuracy is weighted more because it captures
+age-specific patterns, but trend accuracy prevents selecting models that are
+accurate on average while missing overall mortality decline trajectories.
+
+## Probabilistic forecast metrics
+
+### CRPS: Continuous Ranked Probability Score
+
+The CRPS evaluates the full predictive distribution. Lower is better.
+
+#### Gaussian CRPS (closed-form)
+
+If the predictive distribution is $\mathcal{N}(\mu, \sigma^2)$:
+
+$$\text{CRPS}(F, y) = \sigma \left[ \frac{y - \mu}{\sigma}\left(2\Phi\left(\frac{y-\mu}{\sigma}\right) - 1\right) + 2\phi\left(\frac{y-\mu}{\sigma}\right) - \frac{1}{\sqrt{\pi}} \right]$$
+
+```{r crps-gaussian}
+crps_g <- compute_crps_gaussian(
+  obs   = log_obs,    # log(mx) observations
+  mu    = log_mu,     # predictive means (log scale)
+  sigma = log_sigma   # predictive standard deviations (log scale)
+)
+cat("Gaussian CRPS:", round(crps_g, 4), "\n")
+```
+
+#### Empirical CRPS (from bootstrap samples)
+
+When the predictive distribution is represented by bootstrap samples:
+
+$$\text{CRPS}(F, y) = \frac{1}{B}\sum_{b=1}^{B}|y - x^{(b)}| - \frac{1}{2B^2}\sum_{b=1}^{B}\sum_{b'=1}^{B}|x^{(b)} - x^{(b')}|$$
+
+```{r crps-empirical}
+crps_e <- compute_crps_empirical(
+  obs_arr  = mx_test,     # 3D observed array
+  sims_arr = fc$sims      # 4D simulation array [n_a x h x n_g x n_sim]
+)
+cat("Empirical CRPS:", round(crps_e, 4), "\n")
+```
+
+The empirical CRPS is computed on the log scale for numerical stability.
+
+### Interval Score
+
+The interval score evaluates a $(1-\alpha)$-level prediction interval:
+
+$$\text{IS}_\alpha(l, u; y) = (u - l) + \frac{2}{\alpha}(l - y)\mathbf{1}(y < l) + \frac{2}{\alpha}(y - u)\mathbf{1}(y > u)$$
+
+It rewards narrow intervals but heavily penalises observations falling outside.
+
+#### Single observation
+
+```{r is-single}
+is_val <- compute_interval_score(
+  obs   = log_obs,     # scalar or vector
+  lower = log_lower,   # lower PI bound (log scale)
+  upper = log_upper,   # upper PI bound (log scale)
+  alpha = 0.05         # for 95% PI
+)
+cat("Interval score:", round(is_val, 4), "\n")
+```
+
+#### Full 3D array
+
+```{r is-array}
+is_arr <- compute_interval_score_array(
+  obs_arr   = mx_test,       # 3D observed array
+  lower_arr = fc$mx_lower,   # 3D lower bound
+  upper_arr = fc$mx_upper,   # 3D upper bound
+  alpha     = 0.05
+)
+cat("Mean interval score:", round(is_arr, 4), "\n")
+```
+
+The array version operates on $\log(m_x)$ internally.
+
+### Weighted Interval Score (WIS)
+
+WIS generalises the interval score to multiple quantile levels, providing a
+single summary of the full predictive distribution:
+
+$$\text{WIS} = \frac{1}{K+0.5}\left[\frac{1}{2}|y - \hat{y}_{0.5}| + \sum_{k=1}^{K}\alpha_k \cdot \text{IS}_{\alpha_k}\right]$$
+
+```{r wis}
+# quantile_matrix: [n_obs x K] matrix of quantile forecasts
+# probs: K probabilities (e.g. c(0.025, 0.1, 0.25, 0.5, 0.75, 0.9, 0.975))
+
+wis <- compute_wis(
+  obs             = obs_vector,
+  quantile_matrix = qmat,
+  probs           = c(0.025, 0.1, 0.25, 0.5, 0.75, 0.9, 0.975)
+)
+cat("WIS:", round(wis, 4), "\n")
+```
+
+WIS is particularly useful for comparing models that produce different numbers
+of quantiles or when you want a single number summarising the entire
+predictive distribution.
+
+### Log-score (negative)
+
+The log-score measures the probability density assigned to the observation:
+
+$$\text{LS}(F, y) = -\log f(y)$$
+
+where $f$ is the predictive density. Lower is better.
+
+```{r log-score}
+ls <- compute_log_score_gaussian(
+  obs   = log_obs,
+  mu    = log_mu,
+  sigma = log_sigma
+)
+cat("Negative log-score:", round(ls, 4), "\n")
+```
+
+## How metrics are used in model selection
+
+### Inside `calibrate()`
+
+The `calibrate()` function uses **combined MASE** for:
+
+1. **Tucker3 rank selection**: The rank combination with lowest CV MASE is
+   chosen
+2. **Model comparison**: All models are ranked by holdout combined MASE
+3. **Ensemble weighting**: Inverse-MASE weights: $w_i \propto 1/\text{MASE}_i$
+
+### Inside `compare_models()`
+
+The comparison data.table contains three MASE variants:
+
+```{r compare}
+sm  <- smooth_mortality(example_mortality, method = "gam",
+                        covid_years = c(2020L, 2021L))
+cal <- calibrate(sm, holdout_frac = 0.2, ensemble = TRUE)
+
+print(cal$comparison)
+#              model   mase  mase_trend  mase_combined
+# 1:    Tucker3-CoDa  0.847      0.721         0.809
+# 2:  Tucker3-Direct  0.891      0.756         0.851
+# 3:      Lee-Carter  0.923      0.812         0.890
+# ...
+```
+
+## Practical evaluation workflow
+
+### Hold-out evaluation
+
+```{r holdout-eval}
+data(example_mortality)
+sm <- smooth_mortality(example_mortality, method = "gam",
+                       covid_years = c(2020L, 2021L))
+
+# Manual train/test split
+n_t <- length(sm$years)
+n_test <- round(0.2 * n_t)
+train_idx <- 1:(n_t - n_test)
+test_idx  <- (n_t - n_test + 1):n_t
+
+mx_train <- sm$mx[, train_idx, , drop = FALSE]
+mx_test  <- sm$mx[, test_idx,  , drop = FALSE]
+
+# Run a specific model on training data
+fc_arr <- tucker3_coda_forecast(
+  mx_array = mx_train,
+  years    = sm$years[train_idx],
+  ages     = sm$ages,
+  h        = n_test,
+  R_A = 3, R_B = 2, R_C = 2,
+  ts_method = "ets"
+)$mx_forecast
+
+# Evaluate
+cat("MASE (cell):", round(compute_mase_array(mx_test, fc_arr, mx_train), 3), "\n")
+cat("MASE (trend):", round(compute_mase_group_trend(mx_test, fc_arr, mx_train), 3), "\n")
+cat("MASE (combined):", round(compute_mase_combined(mx_test, fc_arr, mx_train), 3), "\n")
+cat("RMSE (log):", round(compute_rmse_log(mx_test, fc_arr), 4), "\n")
+```
+
+### Evaluating prediction intervals
+
+```{r pi-eval}
+cal <- calibrate(sm, holdout_frac = 0.2, ensemble = TRUE)
+fc  <- forecast(cal, h = n_test)
+fc  <- add_pi(fc, n_sim = 500, method = "bootstrap")
+
+# Interval score on holdout
+is_val <- compute_interval_score_array(
+  obs_arr   = mx_test,
+  lower_arr = fc$mx_lower,
+  upper_arr = fc$mx_upper,
+  alpha     = 0.05
+)
+cat("Interval score (95% PI):", round(is_val, 4), "\n")
+
+# Empirical coverage
+coverage <- mean(mx_test >= fc$mx_lower & mx_test <= fc$mx_upper)
+cat("Empirical coverage:", round(coverage, 3), "(nominal: 0.95)\n")
+
+# CRPS from simulations
+crps <- compute_crps_empirical(mx_test, fc$sims)
+cat("CRPS:", round(crps, 4), "\n")
+```
+
+### Comparing multiple models
+
+```{r model-compare}
+models <- c("tucker3_coda", "tucker3_direct", "lee_carter", "ets", "rwd")
+results <- data.frame(model = models, mase = NA, crps = NA, is = NA)
+
+for (i in seq_along(models)) {
+  cal_i <- calibrate(sm, models = models[i], ensemble = FALSE,
+                     holdout_frac = 0.2)
+  fc_i  <- forecast(cal_i, h = n_test)
+  fc_i  <- add_pi(fc_i, n_sim = 500)
+
+  results$mase[i] <- compute_mase_combined(mx_test, fc_i$mx_point, mx_train)
+  results$crps[i] <- compute_crps_empirical(mx_test, fc_i$sims)
+  results$is[i]   <- compute_interval_score_array(mx_test, fc_i$mx_lower,
+                                                   fc_i$mx_upper)
+}
+
+print(results[order(results$mase), ])
+```
+
+## Metric selection guide
+
+| Metric | Type | Evaluates | When to use |
+|--------|------|-----------|-------------|
+| `compute_mase_combined()` | Point | Overall forecast quality | Model selection (default) |
+| `compute_mase_array()` | Point | Cell-level patterns | Age-group accuracy matters |
+| `compute_mase_group_trend()` | Point | Trend capture | Decline trajectory matters |
+| `compute_rmse_log()` | Point | Log-scale fit | Traditional comparison |
+| `compute_crps_empirical()` | Prob. | Full distribution | Bootstrap-based forecasts |
+| `compute_crps_gaussian()` | Prob. | Full distribution | Gaussian assumption valid |
+| `compute_interval_score()` | Prob. | Interval calibration | Evaluating 95% PIs |
+| `compute_wis()` | Prob. | Multi-quantile summary | Comparing distributional forecasts |
+| `compute_log_score_gaussian()` | Prob. | Density quality | Gaussian density evaluation |
+
+### Recommendations
+
+- **Model selection**: Use combined MASE (this is what `calibrate()` does)
+- **PI evaluation**: Use interval score + check empirical coverage
+- **Publication**: Report CRPS (comprehensive) + interval score (interpretable)
+  + MASE (for point forecast baseline)
+- **Multi-model papers**: Use WIS with matched quantile levels across models
+
+## Summary
+
+- **mortensor** implements all major proper scoring rules for mortality
+  forecasting
+- Combined MASE (0.7 cell + 0.3 trend) is the workhorse for automated model
+  selection
+- Probabilistic scores (CRPS, IS, WIS) evaluate the full predictive
+  distribution and PI calibration
+- All metrics operate on 3D arrays, matching the natural data structure
+- The `calibrate()` pipeline integrates these scores seamlessly into the model
+  selection workflow
