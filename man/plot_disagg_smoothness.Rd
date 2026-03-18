@@ -8,7 +8,7 @@ plot_disagg_smoothness(mx_1yr_dt, output_dir, cause_short)
 }
 \arguments{
 \item{mx_1yr_dt}{\code{data.table} with columns \code{age},
-\code{mx_1yr}, \code{sex}, \code{quintile}, \code{year}.}
+\code{mx_1yr}, \code{year}, and any group columns.}
 
 \item{output_dir}{Output directory.}
 

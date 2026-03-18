@@ -213,7 +213,7 @@ prob_exceed <- apply(fc$sims, c(1, 2, 3), function(x) mean(x > threshold))
 
 ```{r plot-pi}
 # PI fan chart for a specific group
-plot(fc, type = "pi", group = 1)
+plot(fc, type = "pi")
 
 # Trend plot with PI envelope
 plot(fc, type = "trends")
@@ -232,8 +232,8 @@ When using GAM-Bayes, you can also visualise the smoothing credible intervals:
 
 ```{r gam-ci}
 # Compute GAM credible intervals on the smoothed surface
-ci <- compute_gam_ci_arrays(sm)
-# ci$mx_lo95, ci$mx_hi95: 3D arrays of 95% credible bounds
+ci <- compute_gam_ci_arrays(sm$gam_fits, sm$ages, sm$years)
+# ci$mx_lo, ci$mx_hi: 3D arrays of 95% credible bounds
 
 # These feed into the GAM-Bayes procedure
 ```
@@ -304,13 +304,13 @@ fc  <- forecast(cal, h = 10)
 
 # Bootstrap PIs (fast)
 fc_boot <- add_pi(fc, n_sim = 500, method = "bootstrap")
-plot(fc_boot, type = "pi", group = 1)
+plot(fc_boot, type = "pi")
 plot(fc_boot, type = "trends")
 
 # GAM-Bayes PIs (thorough)
 fc_bayes <- add_pi(fc, n_sim = 200, method = "gam_bayes",
                    calibration = cal)
-plot(fc_bayes, type = "pi", group = 1)
+plot(fc_bayes, type = "pi")
 
 # Compare PI widths
 boot_width  <- mean(log(fc_boot$mx_upper)  - log(fc_boot$mx_lower))

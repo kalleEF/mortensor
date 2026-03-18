@@ -105,7 +105,7 @@ bootstrap_lc_fdm <- function(mx_array, pop_array, years, ages, groups_dt, h,
   for (k in seq_len(n_g)) {
     rate_mat <- pmax(mx_array[, , k], 1e-12)
     pop_mat  <- pmax(pop_array[, , k], 1)
-    lbl <- tolower(paste0(groups_dt$sex[k], "_q", groups_dt$quintile[k]))
+    lbl <- tolower(paste(groups_dt[k, ], collapse = "_"))
     ddata <- tryCatch(
       demography::demogdata(data = rate_mat, pop = pop_mat,
                             ages = ages, years = years,

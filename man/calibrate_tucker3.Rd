@@ -12,7 +12,8 @@ calibrate_tucker3(
   width = 5,
   h_val = 3,
   min_train = 12,
-  rank_selection = c("cv", "bic", "aic")
+  rank_selection = c("cv", "bic", "aic"),
+  cv_metric = c("mase", "mase_combined", "mase_trend")
 )
 }
 \arguments{
@@ -34,9 +35,13 @@ calibrate_tucker3(
 cross-validation, \code{"bic"} or \code{"aic"} for information criterion
 based selection. When using IC, the ts_method is selected via a smaller CV
 using the best ranks.}
+
+\item{cv_metric}{Character; scoring metric for cross-validation.
+\code{"mase"} (default), \code{"mase_combined"}, or \code{"mase_trend"}.
+See \code{\link[=resolve_cv_metric]{resolve_cv_metric()}}.}
 }
 \value{
-Named list with \code{R_A}, \code{R_B}, \code{R_C}, \code{ts_method}, \code{cv_mase}
+Named list with \code{R_A}, \code{R_B}, \code{R_C}, \code{ts_method}, \code{cv_score}
 (or \code{ic_value} for BIC/AIC selection).
 }
 \description{

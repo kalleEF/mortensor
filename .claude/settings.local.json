@@ -3,7 +3,13 @@
     "allow": [
       "Bash(Rscript -e \"tryCatch\\(parse\\(''''R/metrics.R''''\\), error = function\\(e\\) cat\\(''''PARSE ERROR:'''', e$message, ''''\\\\n''''\\)\\)\")",
       "Bash(where Rscript)",
-      "Bash(where R)"
+      "Bash(where R)",
+      "Bash(\"/c/Program Files/R/R-4.5.1/bin/Rscript.exe\" -e \"roxygen2::roxygenise\\(\\)\")",
+      "Bash(Rscript -e 'source\\(\"\"data-raw/create_example_data.R\"\"\\)')",
+      "Bash(where.exe Rscript)",
+      "Read(//c/Program Files/R/**)",
+      "Bash(\"/c/Program Files/R/R-4.5.1/bin/Rscript.exe\" -e 'source\\(\"\"data-raw/create_example_data.R\"\"\\)')",
+      "Bash(\"/c/Program Files/R/R-4.5.1/bin/Rscript.exe\" -e 'devtools::document\\(\\)')"
     ]
   }
 }

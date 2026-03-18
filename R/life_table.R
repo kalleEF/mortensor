@@ -265,11 +265,15 @@ life_expectancy.mort_data <- function(object, width = 5,
     for (t in seq_len(dims[2])) {
       lt <- life_table(mx_arr[, t, g], ages, width = width,
                        open_age_method = open_age_method)
-      results[[k]] <- data.table::data.table(
+      row <- data.table::data.table(
         year  = years[t],
         group = .group_label(groups, g),
         ex    = lt$ex[1]
       )
+      if (is.data.frame(groups))
+        for (col_name in names(groups))
+          row[[col_name]] <- groups[[col_name]][g]
+      results[[k]] <- row
       k <- k + 1L
     }
   }
@@ -321,6 +325,9 @@ life_expectancy.mort_forecast <- function(object, width = 5,
         row$ex_lower <- lt_lo$ex[1]  # higher mx -> lower ex
         row$ex_upper <- lt_hi$ex[1]  # lower mx -> higher ex
       }
+      if (is.data.frame(groups))
+        for (col_name in names(groups))
+          row[[col_name]] <- groups[[col_name]][g]
       results[[k]] <- row
       k <- k + 1L
     }

@@ -23,7 +23,7 @@ knitr::opts_chunk$set(
 
 ```{r install-github}
 # install.packages("remotes")
-remotes::install_github("PLACEHOLDER/mortensor")
+remotes::install_github("kalleEF/mortensor")
 ```
 
 ### From a local clone
@@ -72,11 +72,17 @@ surfaces. The package supports:
 
 - **Smoothing**: GAM-based 2D P-spline smoothing with COVID year exclusion
 - **Multiple models**: Tucker3 (CoDa & Direct), Lee-Carter, FDM, StMoMo, ARIMA, ETS, RWD
-- **Model selection**: Rolling-origin CV, BIC/AIC rank selection, ensemble stacking
+- **Model selection**: Rolling-origin CV (pluggable metrics: cell MASE, combined, trend),
+  BIC/AIC rank selection, ensemble stacking
 - **Prediction intervals**: Bootstrap and GAM-Bayes posterior propagation
+- **Rich plotting**: Automatic faceting/colouring by group metadata (e.g.\ sex,
+  deprivation), GAM Bayesian CI ribbons, trends by age group
 - **Age disaggregation**: Hyman+Kannisto, Natural+Gompertz, GAM-based
 - **Life tables**: Standard abridged life tables and life expectancy
-- **Multi-disease**: WLS reconciliation for coherent cause-specific forecasts
+- **Scoring**: S3 `accuracy()` and `compare_accuracy()` for point and
+  probabilistic evaluation (MASE, CRPS, interval score, WIS)
+- **Multi-disease**: WLS reconciliation and Tucker4-ILR for coherent
+  cause-specific forecasts
 
 ## Loading data
 
@@ -90,7 +96,10 @@ print(example_mortality)
 
 ### Custom data
 
-You can create a `mort_data` object from your own arrays:
+You can create a `mort_data` object from your own arrays. The `groups`
+argument is a data.frame whose columns define the stratification variables
+(e.g.\ sex, deprivation quintile). These columns are later used for automatic
+faceting and colouring in plots:
 
 ```{r custom-data}
 md <- mort_data(
@@ -98,16 +107,35 @@ md <- mort_data(
   pop    = my_pop_array,      # same dimensions
   ages   = c(30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90),
   years  = 2001:2020,
-  groups = c("Male_Q1", "Male_Q2", "Female_Q1", "Female_Q2"),
-  label  = "My mortality data"
+  groups = data.frame(
+    sex      = c("Male", "Male", "Female", "Female"),
+    quintile = c(1, 2, 1, 2)
+  ),
+  cause  = "All causes"
 )
 ```
 
-Or load from ONS Excel files:
+Or read from a long-format data.frame/data.table (the most flexible option).
+The `group_cols` argument defines which columns become the group strata — these
+are then used for automatic faceting and colouring in all plots:
+
+```{r read-long}
+md <- read_mortality(
+  my_long_dt,
+  deaths_col = "deaths",
+  pop_col    = "pop",
+  ages       = seq(30, 90, 5),
+  age_col    = "age_group",
+  group_cols = c("sex", "quintile")
+)
+```
+
+Or load from ONS Excel files (requires the `readxl` package):
 
 ```{r read-ons}
+cfg <- mort_config(cause_label = "All causes", cause_short = "all")
 md <- read_ons_excel("path/to/deaths.xlsx", "path/to/population.xlsx",
-                     disease_col = "ICD10", sex_col = "Sex")
+                     config = cfg)
 ```
 
 ### Exploring data
@@ -160,12 +188,16 @@ plot(cal)                        # bar chart of MASE by model
 plot(cal, type = "ranks")        # Tucker3 rank selection heatmap
 ```
 
-You can control which models are included and how Tucker3 ranks are selected:
+You can control which models are included, how Tucker3 ranks are selected, and
+which scoring metric is used during cross-validation:
 
 ```{r calibrate-bic}
 cal_bic <- calibrate(sm,
                      rank_selection = "bic",   # fast BIC-based rank selection
                      models = c("tucker3_coda", "tucker3_direct", "lee_carter"))
+
+# Use combined MASE (cell + trend) as CV metric for all models
+cal_combined <- calibrate(sm, cv_metric = "mase_combined")
 ```
 
 ### 3. Forecasting
@@ -180,7 +212,7 @@ summary(fc)
 
 ```{r pi}
 fc <- add_pi(fc, n_sim = 100, method = "gam_bayes")
-plot(fc, type = "pi", group = 1)
+plot(fc, type = "pi")
 ```
 
 ### 5. Age disaggregation
@@ -194,16 +226,25 @@ fc_1yr <- disaggregate(fc, target_ages = 30:100,
 
 ### Extended plotting
 
-All plot types work on both pipeline and workflow outputs:
+All plot types work on both pipeline and workflow outputs. Group structure
+from the `mort_data` object (e.g.\ `sex`, `quintile`) is automatically used
+for faceting and colouring — the last group column maps to colour, earlier
+columns to facets. You can override with `facet_by` and `color_by`:
 
 ```{r extended-plots}
-plot(fc, type = "trends")           # age-averaged trends with PIs
+plot(fc, type = "trends")           # observed + fitted + forecast with CIs
+plot(fc, type = "trends_by_age")    # same, faceted by representative age groups
 plot(fc, type = "age")              # age profiles for forecast years
-plot(fc, type = "pi", group = 1)    # PI fan chart
+plot(fc, type = "pi")               # PI fan chart
 plot(fc, type = "residuals")        # deviance residual heatmap
-plot(fc, type = "smoothing")        # observed vs smoothed scatter
+plot(fc, type = "smoothing")        # observed vs smoothed with GAM Bayes CI
 plot(fc, type = "components")       # Tucker3 B-mode temporal components
 plot(fc, type = "model_comparison") # bar chart from calibration
+plot(fc_1yr, type = "disagg")       # single-year disaggregated age profiles
+
+# Override auto-detected faceting/colouring
+plot(fc, type = "trends", facet_by = "sex", color_by = "quintile")
+plot(fc, type = "trends_by_age", facet_by = "sex", color_by = "quintile")
 ```
 
 ### Exporting results
@@ -262,9 +303,34 @@ life_expectancy(result)
 
 ## Scoring and evaluation
 
+### S3 accuracy methods
+
+The easiest way to evaluate forecasts is via the S3 `accuracy()` method, which
+computes MASE, RMSE, and combined metrics in one call:
+
+```{r accuracy}
+# In-sample accuracy (fitted vs raw training data)
+accuracy(fc)
+
+# Out-of-sample accuracy (forecast vs holdout data)
+accuracy(fc, test = holdout_data)
+
+# Compare multiple forecasts side-by-side
+compare_accuracy(
+  "Tucker3-CoDa" = fc_coda,
+  "Lee-Carter"   = fc_lc,
+  "Ensemble"     = fc_ens,
+  test = holdout_data
+)
+```
+
+### Low-level scoring functions
+
 ```{r scoring}
 # Point forecast accuracy
-compute_mase_array(arr_test, fc_arr, arr_train)
+compute_mase_array(arr_test, fc_arr, arr_train)     # cell-level MASE
+compute_mase_combined(arr_test, fc_arr, arr_train)   # 0.7*cell + 0.3*trend
+compute_mase_group_trend(arr_test, fc_arr, arr_train)# group-trend MASE
 compute_rmse_log(obs, pred)
 
 # Probabilistic scoring

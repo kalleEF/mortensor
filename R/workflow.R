@@ -27,6 +27,15 @@ NULL
 #' @export
 forecast <- function(object, h = NULL, ...) UseMethod("forecast")
 
+#' @export
+forecast.mort_data <- function(object, h = NULL, ...) {
+  stop("Cannot forecast a mort_data object directly.\n",
+       "  Run calibrate() first, then forecast the result:\n",
+       "    cal <- calibrate(sm)\n",
+       "    fc  <- forecast(cal, h = 10)",
+       call. = FALSE)
+}
+
 # ---- S3 class: mort_calibration ----
 
 #' Create a mortality calibration object
@@ -121,6 +130,14 @@ summary.mort_calibration <- function(object, ...) {
 #'   if `holdout_years` is provided.
 #' @param ensemble Logical; build an inverse-MASE ensemble? (default TRUE)
 #' @param ensemble_top_k Maximum number of models in the ensemble.
+#' @param rank_selection Character; rank selection strategy for Tucker3 models.
+#'   `"cv"` (default) uses rolling-origin cross-validation, `"bic"` or `"aic"`
+#'   selects ranks via information criteria (faster). Passed to
+#'   [calibrate_tucker3()].
+#' @param cv_metric Character; scoring metric for cross-validation.
+#'   `"mase"` (default) uses cell-level MASE, `"mase_combined"` uses
+#'   0.7 * cell + 0.3 * trend MASE, `"mase_trend"` uses trend MASE only.
+#'   Applied to all models during calibration.
 #' @param config Optional `mort_config` for advanced settings (smoothing
 #'   method, COVID years, etc.).
 #' @param ... Additional arguments passed to calibration functions.
@@ -132,8 +149,12 @@ calibrate <- function(data,
                                  "ets", "arima", "rwd"),
                       holdout_years = NULL, holdout_frac = 0.2,
                       ensemble = TRUE, ensemble_top_k = 3L,
+                      rank_selection = c("cv", "bic", "aic"),
+                      cv_metric = c("mase", "mase_combined", "mase_trend"),
                       config = NULL, ...) {
   stopifnot(inherits(data, "mort_data"))
+  rank_selection <- match.arg(rank_selection)
+  cv_metric <- match.arg(cv_metric)
   if (is.null(config)) config <- mort_config()
 
   data_raw <- data
@@ -173,17 +194,21 @@ calibrate <- function(data,
   calib_coda <- calib_direct <- NULL
   if ("tucker3_coda" %in% models) {
     calib_coda <- calibrate_tucker3(mx_smooth, years, ages, method = "coda",
-                                     width = config$age_width, h_val = h_val)
+                                     width = config$age_width, h_val = h_val,
+                                     rank_selection = rank_selection,
+                                     cv_metric = cv_metric)
     cat("  CoDa: R_A=", calib_coda$R_A, " R_B=", calib_coda$R_B,
         " R_C=", calib_coda$R_C, " ts=", calib_coda$ts_method,
-        " CV-MASE=", round(calib_coda$cv_mase, 4), "\n")
+        " CV-score=", round(calib_coda$cv_score, 4), "\n")
   }
   if ("tucker3_direct" %in% models) {
     calib_direct <- calibrate_tucker3(mx_smooth, years, ages, method = "direct",
-                                       width = config$age_width, h_val = h_val)
+                                       width = config$age_width, h_val = h_val,
+                                       rank_selection = rank_selection,
+                                       cv_metric = cv_metric)
     cat("  Direct: R_A=", calib_direct$R_A, " R_B=", calib_direct$R_B,
         " R_C=", calib_direct$R_C, " ts=", calib_direct$ts_method,
-        " CV-MASE=", round(calib_direct$cv_mase, 4), "\n")
+        " CV-score=", round(calib_direct$cv_score, 4), "\n")
   }
 
   # Calibrate other models
@@ -195,7 +220,8 @@ calibrate <- function(data,
     calib_all <- calibrate_all_models(mx_smooth, pop_arr, years, ages, groups,
                                        h_val = h_val,
                                        n_origins = config$cv_n_origins,
-                                       width = config$age_width)
+                                       width = config$age_width,
+                                       cv_metric = cv_metric)
   }
 
   # Model comparison on holdout

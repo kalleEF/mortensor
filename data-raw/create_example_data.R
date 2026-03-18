@@ -64,14 +64,13 @@ covid_idx <- which(years == 2020)
 mx_arr[, covid_idx, ] <- mx_arr[, covid_idx, ] * exp(rnorm(n_a * n_g, 0.15, 0.05))
 
 # --- Create mort_data object ---
-group_names <- paste(groups$sex, groups$quintile, sep = "_")
-
 example_mortality <- mort_data(
   mx     = mx_arr,
   ages   = ages,
   years  = years,
-  groups = group_names,
-  pop    = pop_arr
+  groups = groups,   # data.frame with sex, quintile columns
+  pop    = pop_arr,
+  cause  = "All causes"
 )
 
 # --- Save ---
@@ -80,4 +79,6 @@ usethis::use_data(example_mortality, overwrite = TRUE)
 cat("Created example_mortality dataset:\n")
 cat(sprintf("  Ages: %d-%d+ (%d groups)\n", min(ages), max(ages), n_a))
 cat(sprintf("  Years: %d-%d (%d years)\n", min(years), max(years), n_t))
-cat(sprintf("  Groups: %d (%s)\n", n_g, paste(group_names, collapse = ", ")))
+cat(sprintf("  Groups: %d (%s x %s)\n", n_g,
+            paste(unique(groups$sex), collapse = "/"),
+            paste(unique(groups$quintile), collapse = "/")))

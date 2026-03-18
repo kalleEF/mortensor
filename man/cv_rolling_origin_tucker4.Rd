@@ -16,7 +16,8 @@ cv_rolling_origin_tucker4(
   R_D,
   ts_method,
   h_val = 3,
-  min_train = 12
+  min_train = 12,
+  metric_fn = compute_mase_array
 )
 }
 \arguments{
@@ -37,9 +38,12 @@ cv_rolling_origin_tucker4(
 \item{h_val}{Validation horizon.}
 
 \item{min_train}{Minimum training years.}
+
+\item{metric_fn}{Scoring function with signature
+\verb{function(arr_test, fc_arr, arr_train)}. Default: \code{\link[=compute_mase_array]{compute_mase_array()}}.}
 }
 \value{
-Scalar mean MASE.
+Scalar mean CV score.
 }
 \description{
 Rolling-origin CV for Tucker4 coherent forecast

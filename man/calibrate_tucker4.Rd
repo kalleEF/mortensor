@@ -11,7 +11,8 @@ calibrate_tucker4(
   disease_order,
   years,
   h_val = 3,
-  min_train = 12
+  min_train = 12,
+  cv_metric = c("mase", "mase_combined", "mase_trend")
 )
 }
 \arguments{
@@ -28,9 +29,13 @@ calibrate_tucker4(
 \item{h_val}{Validation horizon.}
 
 \item{min_train}{Minimum training years.}
+
+\item{cv_metric}{Character; scoring metric for cross-validation.
+\code{"mase"} (default), \code{"mase_combined"}, or \code{"mase_trend"}.
+See \code{\link[=resolve_cv_metric]{resolve_cv_metric()}}.}
 }
 \value{
-Named list of best ranks and \code{cv_mase}.
+Named list of best ranks and \code{cv_score}.
 }
 \description{
 Stage 1: coarse grid. Stage 2: fine grid around best from stage 1.

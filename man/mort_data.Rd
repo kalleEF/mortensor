@@ -22,8 +22,17 @@ mort_data(
 
 \item{years}{Integer vector of calendar years.}
 
-\item{groups}{A data.frame with one row per group (slice of 3rd dimension).
-Must contain columns that define strata (e.g. \code{sex}, \code{deprivation}).}
+\item{groups}{Group metadata. Accepted formats:
+\itemize{
+\item A \code{data.frame} with one row per group and columns defining
+strata (e.g. \code{data.frame(sex = c("M","F"), quintile = c(1,2))}).
+This is the recommended format for flexible plotting with
+\code{facet_by}/\code{color_by}.
+\item A named list with equal-length vectors (converted to data.frame).
+\item A character vector of group labels (stored as single column
+\code{"group"} --- faceting by sub-dimensions will not be possible).
+}
+At most 3 group columns are supported.}
 
 \item{pop}{Optional 3D array of population exposure (same dims as \code{mx}).}
 

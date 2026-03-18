@@ -90,7 +90,7 @@ fc_resp   <- add_pi(fc_resp,   n_sim = 500, method = "bootstrap")
 
 ```{r reconcile}
 recon <- reconcile(
-  disease_forecasts = list(
+  forecasts = list(
     cancer = fc_cancer,
     cvd    = fc_cvd,
     resp   = fc_resp

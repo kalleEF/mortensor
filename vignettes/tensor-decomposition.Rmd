@@ -115,7 +115,12 @@ calib_cv <- calibrate_tucker3(
 
 cat("Optimal ranks:", calib_cv$R_A, calib_cv$R_B, calib_cv$R_C, "\n")
 cat("Best time-series method:", calib_cv$ts_method, "\n")
-cat("CV MASE:", round(calib_cv$cv_mase, 3), "\n")
+cat("CV score:", round(calib_cv$cv_score, 3), "\n")
+
+# You can also use cv_metric to change the scoring function:
+# cv_metric = "mase"          — cell-level MASE (default)
+# cv_metric = "mase_combined" — 0.7 * cell + 0.3 * trend MASE
+# cv_metric = "mase_trend"    — trend MASE only
 
 # Fast BIC alternative
 calib_bic <- calibrate_tucker3(

@@ -15,7 +15,8 @@ cv_rolling_origin(
   method = "coda",
   h_val = 3,
   min_train = 12,
-  width = 5
+  width = 5,
+  metric_fn = compute_mase_array
 )
 }
 \arguments{
@@ -36,9 +37,12 @@ cv_rolling_origin(
 \item{min_train}{Minimum training years.}
 
 \item{width}{Age-group width.}
+
+\item{metric_fn}{Scoring function with signature
+\verb{function(arr_test, fc_arr, arr_train)}. Default: \code{\link[=compute_mase_array]{compute_mase_array()}}.}
 }
 \value{
-Scalar mean MASE.
+Scalar mean CV score.
 }
 \description{
 Cross-validate Tucker3 with rolling origin

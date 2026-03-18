@@ -196,12 +196,15 @@ tucker4_coherent_forecast <- function(X_ilr, years, h,
 #' @param ts_method       Time-series method.
 #' @param h_val           Validation horizon.
 #' @param min_train       Minimum training years.
-#' @return Scalar mean MASE.
+#' @param metric_fn Scoring function with signature
+#'   `function(arr_test, fc_arr, arr_train)`. Default: [compute_mase_array()].
+#' @return Scalar mean CV score.
 #' @export
 cv_rolling_origin_tucker4 <- function(X_ilr, mx_all, mx_disease_list,
                                       disease_order, years,
                                       R_A, R_B, R_C, R_D, ts_method,
-                                      h_val = 3, min_train = 12) {
+                                      h_val = 3, min_train = 12,
+                                      metric_fn = compute_mase_array) {
   n_yr <- length(years)
   last_origin  <- n_yr - h_val
   first_origin <- max(min_train, last_origin - 5)
@@ -233,7 +236,7 @@ cv_rolling_origin_tucker4 <- function(X_ilr, mx_all, mx_disease_list,
       mx_fc_d <- result$shares_forecast[, , , d] * mx_all_test
       mx_obs_d <- mx_disease_list[[disease_order[d]]][, test_idx, , drop = FALSE]
       mx_train_d <- mx_disease_list[[disease_order[d]]][, 1:t_end, , drop = FALSE]
-      m <- compute_mase_array(mx_obs_d, mx_fc_d, mx_train_d)
+      m <- metric_fn(mx_obs_d, mx_fc_d, mx_train_d)
       if (!is.na(m) && is.finite(m)) per_disease_mase <- c(per_disease_mase, m)
     }
     mase_vals[o] <- if (length(per_disease_mase) == 0) Inf else mean(per_disease_mase)
@@ -253,10 +256,15 @@ cv_rolling_origin_tucker4 <- function(X_ilr, mx_all, mx_disease_list,
 #' @param years           Integer vector.
 #' @param h_val           Validation horizon.
 #' @param min_train       Minimum training years.
-#' @return Named list of best ranks and `cv_mase`.
+#' @param cv_metric Character; scoring metric for cross-validation.
+#'   \code{"mase"} (default), \code{"mase_combined"}, or \code{"mase_trend"}.
+#'   See [resolve_cv_metric()].
+#' @return Named list of best ranks and `cv_score`.
 #' @export
 calibrate_tucker4 <- function(X_ilr, mx_all, mx_disease_list, disease_order,
-                              years, h_val = 3, min_train = 12) {
+                              years, h_val = 3, min_train = 12,
+                              cv_metric = c("mase", "mase_combined", "mase_trend")) {
+  metric_fn <- resolve_cv_metric(cv_metric)
   n_a <- dim(X_ilr)[1]; n_t <- dim(X_ilr)[2]
   n_g <- dim(X_ilr)[3]; K   <- dim(X_ilr)[4]
 
@@ -274,7 +282,8 @@ calibrate_tucker4 <- function(X_ilr, mx_all, mx_disease_list, disease_order,
       cv_rolling_origin_tucker4(X_ilr, mx_all, mx_disease_list,
                                 disease_order, years,
                                 ra, rb, rc, rd, ts_m,
-                                h_val = h_val, min_train = min_train),
+                                h_val = h_val, min_train = min_train,
+                                metric_fn = metric_fn),
       error = function(e) Inf)
   }
 
@@ -312,7 +321,7 @@ calibrate_tucker4 <- function(X_ilr, mx_all, mx_disease_list, disease_order,
                                   R_D = rd, ts_method = ts_m)
             }
           }
-  best_params$cv_mase <- best_mase
+  best_params$cv_score <- best_mase
   best_params
 }
 

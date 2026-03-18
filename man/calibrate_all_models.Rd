@@ -12,7 +12,8 @@ calibrate_all_models(
   groups,
   h_val = 4,
   n_origins = 4,
-  width = 5
+  width = 5,
+  cv_metric = c("mase", "mase_combined", "mase_trend")
 )
 }
 \arguments{
@@ -31,6 +32,10 @@ calibrate_all_models(
 \item{n_origins}{Number of CV origins.}
 
 \item{width}{Age-group width.}
+
+\item{cv_metric}{Character; scoring metric for cross-validation.
+\code{"mase"} (default), \code{"mase_combined"}, or \code{"mase_trend"}.
+See \code{\link[=resolve_cv_metric]{resolve_cv_metric()}}.}
 }
 \value{
 Named list of best parameters per model.

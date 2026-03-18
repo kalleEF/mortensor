@@ -184,7 +184,7 @@ read_mortality_from_arrays <- function(mx, ages, years, groups,
                                        age_labels = NULL) {
   if (!is.array(mx) || length(dim(mx)) != 3)
     stop("'mx' must be a 3D array [n_ages x n_years x n_groups].")
-  if (!is.data.frame(groups)) groups <- as.data.frame(groups)
+  groups <- .coerce_groups(groups, dim(mx)[3])
   if (length(ages) != dim(mx)[1])
     stop("length(ages) = ", length(ages), " but dim(mx)[1] = ", dim(mx)[1])
   if (length(years) != dim(mx)[2])

@@ -125,17 +125,21 @@ str(calib_coda)
 # $R_B       : 2
 # $R_C       : 2
 # $ts_method : "ets"
-# $cv_mase   : 0.847
+# $cv_score   : 0.847
 ```
 
 The CV procedure:
 
 1. For each rank combination, fit Tucker3 on years $[1, T_0]$, forecast $h$
-   steps, compute MASE against held-out truth.
+   steps, score against held-out truth using the chosen `cv_metric`.
 2. Roll forward: train on $[1, T_0+1]$, forecast, score.
-3. Average MASE across origins.
-4. Select ranks with lowest average MASE.
+3. Average scores across origins.
+4. Select ranks with lowest average score.
 5. Given best ranks, compare `ts_method` $\in$ `{arima, ets, rwd}`.
+
+By default, the scoring metric is cell-level MASE (`cv_metric = "mase"`). You
+can also use `"mase_combined"` (0.7 × cell + 0.3 × trend) or `"mase_trend"`
+(trend only). See the [CV metric selection](#cv-metric-selection) section below.
 
 ### Information criteria (fast)
 
@@ -165,7 +169,7 @@ calib_bic <- calibrate_tucker3(sm$mx, sm$years, sm$ages,
                                 method = "coda", rank_selection = "bic")
 
 cat(sprintf("CV  ranks: (%d, %d, %d) — MASE: %.3f\n",
-            calib_cv$R_A, calib_cv$R_B, calib_cv$R_C, calib_cv$cv_mase))
+            calib_cv$R_A, calib_cv$R_B, calib_cv$R_C, calib_cv$cv_score))
 cat(sprintf("BIC ranks: (%d, %d, %d) — BIC: %.1f\n",
             calib_bic$R_A, calib_bic$R_B, calib_bic$R_C, calib_bic$ic_value))
 ```
@@ -190,16 +194,45 @@ calib_all <- calibrate_all_models(
 names(calib_all)
 # [1] "lc" "fdm" "stmomo" "rwd" "arima" "ets"
 
-# Each entry has model-specific parameters + cv_mase
+# Each entry has model-specific parameters + cv_score
 calib_all$lc
 # $adjust     : "dt"
 # $order      : 6
 # $method     : "arima"
-# $cv_mase    : 0.912
+# $cv_score    : 0.912
 
 calib_all$ets
 # $damped     : TRUE
-# $cv_mase    : 1.034
+# $cv_score    : 1.034
+```
+
+## CV metric selection {#cv-metric-selection}
+
+By default, cross-validation selects hyperparameters using cell-level MASE
+(`cv_metric = "mase"`). The `cv_metric` parameter lets you choose an
+alternative scoring function applied to **all** models during calibration:
+
+| `cv_metric`      | Function                    | Description |
+|------------------|-----------------------------|-------------|
+| `"mase"`         | `compute_mase_array()`      | Cell-level MASE (default) |
+| `"mase_combined"`| `compute_mase_combined()`   | 0.7 × cell + 0.3 × trend MASE |
+| `"mase_trend"`   | `compute_mase_group_trend()`| Group-trend MASE only |
+
+Using `"mase_combined"` aligns calibration with the metric used for final model
+ranking in `compare_models()`, which can lead to more consistent selections:
+
+```{r cv-metric}
+# Calibrate Tucker3 using combined MASE
+calib_combined <- calibrate_tucker3(
+  mx_array  = sm$mx,
+  years     = sm$years,
+  ages      = sm$ages,
+  method    = "coda",
+  cv_metric = "mase_combined"
+)
+
+# The top-level calibrate() passes cv_metric to all models
+cal <- calibrate(sm, cv_metric = "mase_combined")
 ```
 
 ## Model comparison and scoring
@@ -326,7 +359,7 @@ cv_result <- cv_expanding_model(
   width     = 5
 )
 
-cat("Lee-Carter CV MASE:", round(cv_result$cv_mase, 3), "\n")
+cat("Lee-Carter CV score:", round(cv_result$cv_score, 3), "\n")
 ```
 
 ## Using `mort_config` for calibration settings

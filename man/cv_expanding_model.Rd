@@ -13,6 +13,7 @@ cv_expanding_model(
   fit_fn,
   h_val = 4,
   n_origins = 4,
+  metric_fn = compute_mase_array,
   ...
 )
 }
@@ -35,10 +36,13 @@ returning a list with element \code{mx_forecast}.}
 
 \item{n_origins}{Number of expanding origins.}
 
+\item{metric_fn}{Scoring function with signature
+\verb{function(arr_test, fc_arr, arr_train)}. Default: \code{\link[=compute_mase_array]{compute_mase_array()}}.}
+
 \item{...}{Passed to \code{fit_fn}.}
 }
 \value{
-Scalar mean MASE.
+Scalar mean CV score.
 }
 \description{
 Expanding-window cross-validation for a generic model

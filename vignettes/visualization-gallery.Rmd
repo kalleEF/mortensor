@@ -109,19 +109,22 @@ This is the key visual for communicating model selection results.
 
 ## 3. Forecast plots (`plot.mort_forecast`)
 
-The `plot()` method for `mort_forecast` supports seven visualisation types.
+The `plot()` method for `mort_forecast` supports eight visualisation types.
+All types that show groups automatically use the metadata from `fc$groups`
+(e.g.\ `sex`, `quintile`). By default the last group column maps to colour
+and earlier columns to facets. Override with `facet_by` and `color_by`.
 
 ### Prediction interval fan chart
 
 ```{r fc-pi}
-plot(fc, type = "pi", group = 1)
+plot(fc, type = "pi")
 ```
 
 - **x-axis**: Year (training + forecast)
 - **y-axis**: $\log(m_x)$
 - **Fan**: 95% PI ribbon (shaded) with median line
 - **Points**: Observed (training) data
-- Faceted by age group
+- Faceted by age group (and group label when multiple groups)
 - The most important diagnostic: do PIs capture the data-generating process?
 
 ### Trends with PI envelope
@@ -131,9 +134,30 @@ plot(fc, type = "trends")
 ```
 
 - Age-averaged $\log(m_x)$ across time
-- Training period (solid), forecast (dashed), PI ribbon
-- One line per group
+- Observed dots + fitted solid line (with 95% GAM Bayesian CI ribbon when
+  available) + forecast dashed line with PI ribbon
+- Colour by group variable, faceted by remaining group variables
+- Vertical dotted line marks forecast start
 - Useful for checking that forecast trajectories are plausible
+
+### Trends by age group
+
+```{r fc-trends-by-age}
+plot(fc, type = "trends_by_age")
+```
+
+- Same as `"trends"` but faceted by representative age groups
+  (40--44, 50--54, 60--64, 70--74, 80--84, 90+)
+- Uses `facet_grid(age_group ~ facet_by)` when a facet variable is set
+- Useful for checking age-specific forecast behaviour
+
+### Controlling group aesthetics
+
+```{r fc-group-override}
+# Override auto-detected facet/colour mapping
+plot(fc, type = "trends", facet_by = "sex", color_by = "quintile")
+plot(fc, type = "trends_by_age", facet_by = "sex", color_by = "quintile")
+```
 
 ### Age profiles
 
@@ -154,7 +178,7 @@ plot(fc, type = "residuals")
 - Heatmap of in-sample residuals: $\log(\hat{m}_x) - \log(m_x)$
 - **Blue**: overprediction, **Red**: underprediction
 - Structured residuals indicate model misspecification
-- Faceted by group
+- Faceted by group metadata
 
 ### Smoothing comparison
 
@@ -162,10 +186,10 @@ plot(fc, type = "residuals")
 plot(fc, type = "smoothing")
 ```
 
-- Scatter plot of raw vs smoothed $\log(m_x)$
-- Points should lie near the 45-degree line
-- Deviations indicate over- or under-smoothing
-- COVID years may appear as outliers (expected if excluded)
+- Time-series view: observed dots + smoothed lines
+- 95% GAM Bayesian credible interval ribbon (when GAM fits are available)
+- Colour by group variable, faceted by remaining group variables
+- Useful for assessing the degree and quality of smoothing
 
 ### Tucker3 components
 

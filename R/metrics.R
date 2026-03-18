@@ -19,7 +19,7 @@
 #'     \item{mase_combined}{Combined MASE (0.7 cell + 0.3 trend).}
 #'     \item{rmse_log}{RMSE on the log scale.}
 #'     \item{mae}{Mean absolute error.}
-#'     \item{coverage}{Empirical coverage of 95\% PI (if PIs present).}
+#'     \item{coverage}{Empirical coverage of 95 percent PI (if PIs present).}
 #'     \item{interval_score}{Mean interval score (if PIs present).}
 #'     \item{crps}{Empirical CRPS from simulations (if sims present).}
 #'     \item{n_ages}{Number of age groups evaluated.}
@@ -495,4 +495,20 @@ compute_crps_empirical <- function(obs_arr, sims_arr) {
     }
   }
   if (length(crps_vals) == 0) NA_real_ else mean(crps_vals)
+}
+
+# ---- CV metric resolver (internal) ----
+
+#' Resolve a CV metric name to its scoring function
+#'
+#' @param metric Character; one of `"mase"`, `"mase_combined"`, `"mase_trend"`.
+#' @return A function with signature `(arr_test, fc_arr, arr_train)`.
+#' @keywords internal
+resolve_cv_metric <- function(metric = c("mase", "mase_combined", "mase_trend")) {
+  metric <- match.arg(metric)
+  switch(metric,
+    mase          = compute_mase_array,
+    mase_combined = compute_mase_combined,
+    mase_trend    = compute_mase_group_trend
+  )
 }

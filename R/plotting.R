@@ -711,23 +711,35 @@ plot_disagg_profile <- function(disagg, mx_grouped, ages, width = 5,
 #' groups as a heatmap.  Bright spots indicate kinks or jumps.
 #'
 #' @param mx_1yr_dt  \code{data.table} with columns \code{age},
-#'   \code{mx_1yr}, \code{sex}, \code{quintile}, \code{year}.
+#'   \code{mx_1yr}, \code{year}, and any group columns.
 #' @param output_dir Output directory.
 #' @param cause_short Short cause label for filename.
 #' @export
 plot_disagg_smoothness <- function(mx_1yr_dt, output_dir, cause_short) {
+  reserved <- c("age", "mx_1yr", "year", "mx_point", "mx_lo95", "mx_hi95",
+                "mx_median", "age_group")
+  group_cols <- setdiff(names(mx_1yr_dt), reserved)
+  if (length(group_cols) == 0) {
+    combos <- data.table::data.table(.dummy = "all")
+  } else {
+    combos <- unique(mx_1yr_dt[, group_cols, with = FALSE])
+  }
   sm_list <- list()
   for (yr in unique(mx_1yr_dt$year)) {
-    for (s in unique(mx_1yr_dt$sex)) {
-      for (q in unique(mx_1yr_dt$quintile)) {
-        sub <- mx_1yr_dt[year == yr & sex == s & quintile == q][order(age)]
-        if (nrow(sub) < 3) next
-        d2 <- c(NA, abs(diff(log(pmax(sub$mx_1yr, 1e-12)),
-                             differences = 2)), NA)
-        sm_list[[length(sm_list) + 1]] <- data.table::data.table(
-          age = sub$age, d2 = d2,
-          grp = paste0(s, " Q", q, " ", yr))
+    for (ci in seq_len(nrow(combos))) {
+      mask <- mx_1yr_dt$year == yr
+      grp_parts <- character(0)
+      for (gc in group_cols) {
+        mask <- mask & mx_1yr_dt[[gc]] == combos[[gc]][ci]
+        grp_parts <- c(grp_parts, as.character(combos[[gc]][ci]))
       }
+      sub <- mx_1yr_dt[mask][order(age)]
+      if (nrow(sub) < 3) next
+      d2 <- c(NA, abs(diff(log(pmax(sub$mx_1yr, 1e-12)),
+                           differences = 2)), NA)
+      sm_list[[length(sm_list) + 1]] <- data.table::data.table(
+        age = sub$age, d2 = d2,
+        grp = paste(c(grp_parts, yr), collapse = " "))
     }
   }
   if (length(sm_list) == 0) return(invisible(NULL))

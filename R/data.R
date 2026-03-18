@@ -15,7 +15,8 @@
 #'   \item{pop}{3D array \code{[13 x 20 x 10]} of population exposure}
 #'   \item{ages}{Integer vector of 13 age-group start values (30, 35, ..., 90)}
 #'   \item{years}{Integer vector of 20 calendar years (2001--2020)}
-#'   \item{groups}{Character vector of 10 group labels (e.g., "Male_Q1")}
+#'   \item{groups}{data.frame with 10 rows and columns \code{sex}
+#'     (Male/Female) and \code{quintile} (Q1--Q5)}
 #' }
 #'
 #' @source Synthetically generated. See \code{data-raw/create_example_data.R}.

@@ -1,3 +1,33 @@
+# ---- Internal: group coercion ----
+
+#' Coerce groups to a validated data.frame
+#'
+#' Accepts a data.frame, named list, or character/factor vector and returns
+#' a data.frame with one row per group. At most 3 group columns are supported.
+#' All columns are coerced to character.
+#' @param groups Groups specification (data.frame, named list, or character vector).
+#' @param n_g Expected number of groups (3rd dimension of mx array).
+#' @return A data.frame with character columns.
+#' @keywords internal
+.coerce_groups <- function(groups, n_g) {
+  if (is.data.frame(groups)) {
+    # pass through
+  } else if (is.list(groups) && !is.null(names(groups))) {
+    groups <- as.data.frame(groups, stringsAsFactors = FALSE)
+  } else {
+    groups <- data.frame(group = as.character(groups), stringsAsFactors = FALSE)
+  }
+  if (nrow(groups) != n_g)
+    stop("groups has ", nrow(groups), " rows but mx has ", n_g,
+         " groups (3rd dimension).", call. = FALSE)
+  if (ncol(groups) > 3L)
+    stop("At most 3 group dimensions are supported, got ", ncol(groups), ".",
+         call. = FALSE)
+  for (j in seq_len(ncol(groups)))
+    groups[[j]] <- as.character(groups[[j]])
+  groups
+}
+
 # ---- S3 class: mort_data ----
 
 #' Create a mortality data object
@@ -8,8 +38,17 @@
 #' @param mx 3D array `[n_ages x n_years x n_groups]` of mortality rates.
 #' @param ages Integer vector of age-group start values (e.g. \code{c(30, 35, 40, 90)}).
 #' @param years Integer vector of calendar years.
-#' @param groups A data.frame with one row per group (slice of 3rd dimension).
-#'   Must contain columns that define strata (e.g. `sex`, `deprivation`).
+#' @param groups Group metadata. Accepted formats:
+#'   \itemize{
+#'     \item A \code{data.frame} with one row per group and columns defining
+#'       strata (e.g. \code{data.frame(sex = c("M","F"), quintile = c(1,2))}).
+#'       This is the recommended format for flexible plotting with
+#'       \code{facet_by}/\code{color_by}.
+#'     \item A named list with equal-length vectors (converted to data.frame).
+#'     \item A character vector of group labels (stored as single column
+#'       \code{"group"} --- faceting by sub-dimensions will not be possible).
+#'   }
+#'   At most 3 group columns are supported.
 #' @param pop Optional 3D array of population exposure (same dims as `mx`).
 #' @param cause Optional character label for the cause of death.
 #' @param age_labels Optional character vector of age-group labels
@@ -24,8 +63,7 @@ mort_data <- function(mx, ages, years, groups,
   n_a <- dim(mx)[1]; n_t <- dim(mx)[2]; n_g <- dim(mx)[3]
   stopifnot(length(ages) == n_a)
   stopifnot(length(years) == n_t)
-  if (!is.data.frame(groups)) groups <- as.data.frame(groups)
-  stopifnot(nrow(groups) == n_g)
+  groups <- .coerce_groups(groups, n_g)
   if (!is.null(pop)) {
     stopifnot(is.array(pop), length(dim(pop)) == 3)
     stopifnot(identical(dim(pop), dim(mx)))

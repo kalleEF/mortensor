@@ -6,9 +6,11 @@
 \usage{
 \method{plot}{mort_forecast}(
   x,
-  type = c("trends", "age", "pi", "residuals", "smoothing", "components",
-    "model_comparison", "disagg"),
+  type = c("trends", "trends_by_age", "age", "pi", "residuals", "smoothing",
+    "components", "model_comparison", "disagg"),
   group = NULL,
+  facet_by = NULL,
+  color_by = NULL,
   ...
 )
 }
@@ -16,13 +18,24 @@
 \item{x}{A \code{mort_forecast} object.}
 
 \item{type}{One of \code{"trends"} (age-averaged trends with PIs),
+\code{"trends_by_age"} (trends faceted by age group),
 \code{"age"} (age profiles for forecast years), \code{"pi"} (PI fan chart),
 \code{"residuals"} (residual diagnostics), \code{"smoothing"} (observed vs
 smoothed), \code{"components"} (Tucker3 B-mode temporal components),
 \code{"model_comparison"} (bar chart from calibration), or \code{"disagg"}
 (single-year disaggregated profiles).}
 
-\item{group}{Integer index or \code{NULL} for all groups.}
+\item{group}{Integer index to show a single group, or \code{NULL} (default)
+for all groups.}
+
+\item{facet_by}{Character vector of column names from the groups data.frame
+to use for faceting. If \code{NULL} (default), auto-detected from group
+structure: when groups have 2+ columns, the first columns are used for
+faceting.}
+
+\item{color_by}{Character column name from the groups data.frame to map to
+the colour aesthetic. If \code{NULL} (default), auto-detected: the last column
+of the groups data.frame is used.}
 
 \item{...}{Additional arguments passed to ggplot.}
 }

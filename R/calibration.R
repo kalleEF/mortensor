@@ -9,12 +9,15 @@
 #' @param h_val Validation horizon.
 #' @param min_train Minimum training years.
 #' @param width Age-group width.
-#' @return Scalar mean MASE.
+#' @param metric_fn Scoring function with signature
+#'   `function(arr_test, fc_arr, arr_train)`. Default: [compute_mase_array()].
+#' @return Scalar mean CV score.
 #' @export
 cv_rolling_origin <- function(mx_array, years, ages,
                               R_A, R_B, R_C, ts_method,
                               method = "coda",
-                              h_val = 3, min_train = 12, width = 5) {
+                              h_val = 3, min_train = 12, width = 5,
+                              metric_fn = compute_mase_array) {
   n_yr <- length(years)
   last_origin  <- n_yr - h_val
   first_origin <- max(min_train, last_origin - 5)
@@ -42,7 +45,7 @@ cv_rolling_origin <- function(mx_array, years, ages,
     }, error = function(e) NULL)
 
     if (is.null(result)) { mase_vals[i] <- Inf; next }
-    m <- compute_mase_array(arr_test, result$mx_forecast, arr_train)
+    m <- metric_fn(arr_test, result$mx_forecast, arr_train)
     mase_vals[i] <- if (is.na(m) || !is.finite(m)) Inf else m
   }
   finite <- mase_vals[is.finite(mase_vals)]
@@ -140,14 +143,19 @@ tucker3_info_criterion <- function(mx_array, R_A, R_B, R_C,
 #'   cross-validation, \code{"bic"} or \code{"aic"} for information criterion
 #'   based selection. When using IC, the ts_method is selected via a smaller CV
 #'   using the best ranks.
-#' @return Named list with `R_A`, `R_B`, `R_C`, `ts_method`, `cv_mase`
+#' @param cv_metric Character; scoring metric for cross-validation.
+#'   \code{"mase"} (default), \code{"mase_combined"}, or \code{"mase_trend"}.
+#'   See [resolve_cv_metric()].
+#' @return Named list with `R_A`, `R_B`, `R_C`, `ts_method`, `cv_score`
 #'   (or `ic_value` for BIC/AIC selection).
 #' @export
 calibrate_tucker3 <- function(mx_array, years, ages,
                               method = "coda", width = 5,
                               h_val = 3, min_train = 12,
-                              rank_selection = c("cv", "bic", "aic")) {
+                              rank_selection = c("cv", "bic", "aic"),
+                              cv_metric = c("mase", "mase_combined", "mase_trend")) {
   rank_selection <- match.arg(rank_selection)
+  metric_fn <- resolve_cv_metric(cv_metric)
   n_a <- dim(mx_array)[1]; n_t <- dim(mx_array)[2]; n_g <- dim(mx_array)[3]
 
   ra_grid <- 2:min(6, n_a - 1)
@@ -183,7 +191,8 @@ calibrate_tucker3 <- function(mx_array, years, ages,
         cv_rolling_origin(mx_array, years, ages,
                           best_ranks["R_A"], best_ranks["R_B"], best_ranks["R_C"],
                           ts_m, method = method, h_val = h_val,
-                          min_train = min_train, width = width),
+                          min_train = min_train, width = width,
+                          metric_fn = metric_fn),
         error = function(e) Inf)
       if (is.finite(cv_m) && cv_m < best_mase) {
         best_mase <- cv_m
@@ -193,7 +202,7 @@ calibrate_tucker3 <- function(mx_array, years, ages,
 
     return(list(R_A = best_ranks["R_A"], R_B = best_ranks["R_B"],
                 R_C = best_ranks["R_C"], ts_method = best_ts,
-                cv_mase = best_mase, ic_value = best_ic,
+                cv_score = best_mase, ic_value = best_ic,
                 rank_selection = rank_selection))
   }
 
@@ -208,7 +217,8 @@ calibrate_tucker3 <- function(mx_array, years, ages,
           cv_m <- tryCatch(
             cv_rolling_origin(mx_array, years, ages, ra, rb, rc, ts_m,
                               method = method, h_val = h_val,
-                              min_train = min_train, width = width),
+                              min_train = min_train, width = width,
+                              metric_fn = metric_fn),
             error = function(e) Inf)
           if (is.finite(cv_m) && cv_m < best_mase) {
             best_mase   <- cv_m
@@ -218,7 +228,7 @@ calibrate_tucker3 <- function(mx_array, years, ages,
       }
     }
   }
-  best_params$cv_mase <- best_mase
+  best_params$cv_score <- best_mase
   best_params
 }
 
@@ -234,11 +244,14 @@ calibrate_tucker3 <- function(mx_array, years, ages,
 #'   returning a list with element \code{mx_forecast}.
 #' @param h_val Validation horizon.
 #' @param n_origins Number of expanding origins.
+#' @param metric_fn Scoring function with signature
+#'   `function(arr_test, fc_arr, arr_train)`. Default: [compute_mase_array()].
 #' @param ... Passed to `fit_fn`.
-#' @return Scalar mean MASE.
+#' @return Scalar mean CV score.
 #' @export
 cv_expanding_model <- function(mx_array, pop_array, years, ages, groups,
-                               fit_fn, h_val = 4, n_origins = 4, ...) {
+                               fit_fn, h_val = 4, n_origins = 4,
+                               metric_fn = compute_mase_array, ...) {
   n_yr <- length(years)
   last_origin  <- n_yr - h_val
   first_origin <- max(h_val + 5, last_origin - n_origins + 1)
@@ -260,7 +273,7 @@ cv_expanding_model <- function(mx_array, pop_array, years, ages, groups,
     if (is.null(result) || is.null(result$mx_forecast)) {
       mase_vals[i] <- Inf; next
     }
-    m <- compute_mase_array(arr_test, result$mx_forecast, arr_train)
+    m <- metric_fn(arr_test, result$mx_forecast, arr_train)
     mase_vals[i] <- if (is.na(m) || !is.finite(m)) Inf else m
   }
   finite <- mase_vals[is.finite(mase_vals)]
@@ -280,102 +293,113 @@ cv_expanding_model <- function(mx_array, pop_array, years, ages, groups,
 #' @param h_val Validation horizon.
 #' @param n_origins Number of CV origins.
 #' @param width Age-group width.
+#' @param cv_metric Character; scoring metric for cross-validation.
+#'   \code{"mase"} (default), \code{"mase_combined"}, or \code{"mase_trend"}.
+#'   See [resolve_cv_metric()].
 #' @return Named list of best parameters per model.
 #' @export
 calibrate_all_models <- function(mx_array, pop_array, years, ages, groups,
-                                 h_val = 4, n_origins = 4, width = 5) {
+                                 h_val = 4, n_origins = 4, width = 5,
+                                 cv_metric = c("mase", "mase_combined", "mase_trend")) {
+  metric_fn <- resolve_cv_metric(cv_metric)
   calib <- list()
   n_a <- dim(mx_array)[1]
 
   # Lee-Carter
-  best_lc <- list(adjust = "dt", chooseperiod = FALSE, cv_mase = Inf)
+  best_lc <- list(adjust = "dt", chooseperiod = FALSE, cv_score = Inf)
   if (requireNamespace("demography", quietly = TRUE)) {
     for (adj in c("dt", "dxt", "e0", "none")) {
       for (cp in c(FALSE, TRUE)) {
         lc_fn <- function(arr, pop, yrs, ag, gr, h_a, ...)
           lca_forecast(arr, pop, yrs, ag, gr, h_a, adjust = adj, chooseperiod = cp)
         m <- tryCatch(cv_expanding_model(mx_array, pop_array, years, ages, groups,
-                                         lc_fn, h_val = h_val, n_origins = n_origins),
+                                         lc_fn, h_val = h_val, n_origins = n_origins,
+                                         metric_fn = metric_fn),
                       error = function(e) Inf)
-        if (is.finite(m) && m < best_lc$cv_mase)
-          best_lc <- list(adjust = adj, chooseperiod = cp, cv_mase = m)
+        if (is.finite(m) && m < best_lc$cv_score)
+          best_lc <- list(adjust = adj, chooseperiod = cp, cv_score = m)
       }
     }
   }
   calib$lc <- best_lc
 
   # FDM
-  best_fdm <- list(order = 6, method = "arima", cv_mase = Inf)
+  best_fdm <- list(order = 6, method = "arima", cv_score = Inf)
   if (requireNamespace("demography", quietly = TRUE)) {
     for (ord in c(4, 6)) {
       for (meth in c("arima", "ets")) {
         fdm_fn <- function(arr, pop, yrs, ag, gr, h_a, ...)
           fdm_forecast(arr, pop, yrs, ag, gr, h_a, order = ord, method = meth)
         m <- tryCatch(cv_expanding_model(mx_array, pop_array, years, ages, groups,
-                                         fdm_fn, h_val = h_val, n_origins = n_origins),
+                                         fdm_fn, h_val = h_val, n_origins = n_origins,
+                                         metric_fn = metric_fn),
                       error = function(e) Inf)
-        if (is.finite(m) && m < best_fdm$cv_mase)
-          best_fdm <- list(order = ord, method = meth, cv_mase = m)
+        if (is.finite(m) && m < best_fdm$cv_score)
+          best_fdm <- list(order = ord, method = meth, cv_score = m)
       }
     }
   }
   calib$fdm <- best_fdm
 
   # StMoMo
-  best_stmomo <- list(model_type = "APC", cv_mase = Inf)
+  best_stmomo <- list(model_type = "APC", cv_score = Inf)
   if (requireNamespace("StMoMo", quietly = TRUE)) {
     for (mt in c("APC", "CBD")) {
       stm_fn <- function(arr, pop, yrs, ag, gr, h_a, ...)
         stmomo_forecast(arr, pop, yrs, ag, gr, h_a, model_type = mt)
       m <- tryCatch(cv_expanding_model(mx_array, pop_array, years, ages, groups,
-                                       stm_fn, h_val = h_val, n_origins = n_origins),
+                                       stm_fn, h_val = h_val, n_origins = n_origins,
+                                         metric_fn = metric_fn),
                     error = function(e) Inf)
-      if (is.finite(m) && m < best_stmomo$cv_mase)
-        best_stmomo <- list(model_type = mt, cv_mase = m)
+      if (is.finite(m) && m < best_stmomo$cv_score)
+        best_stmomo <- list(model_type = mt, cv_score = m)
     }
   }
   calib$stmomo <- best_stmomo
 
   # RWD
-  best_rwd <- list(drift_window = 0, cv_mase = Inf)
+  best_rwd <- list(drift_window = 0, cv_score = Inf)
   for (dw in c(0, length(years), max(1, length(years) - 5))) {
     rwd_fn <- function(arr, pop, yrs, ag, gr, h_a, ...)
       rwd_forecast(arr, yrs, h_a, drift_window = dw)
     m <- tryCatch(cv_expanding_model(mx_array, pop_array, years, ages, groups,
-                                     rwd_fn, h_val = h_val, n_origins = n_origins),
+                                     rwd_fn, h_val = h_val, n_origins = n_origins,
+                                         metric_fn = metric_fn),
                   error = function(e) Inf)
-    if (is.finite(m) && m < best_rwd$cv_mase)
-      best_rwd <- list(drift_window = dw, cv_mase = m)
+    if (is.finite(m) && m < best_rwd$cv_score)
+      best_rwd <- list(drift_window = dw, cv_score = m)
   }
   calib$rwd <- best_rwd
 
   # ARIMA
-  best_arima <- list(max.p = 2, max.q = 1, max.d = 1, cv_mase = Inf)
+  best_arima <- list(max.p = 2, max.q = 1, max.d = 1, cv_score = Inf)
   for (mp in c(1, 2)) {
     for (mq in c(0, 1)) {
       for (md in c(1, 2)) {
         arima_fn <- function(arr, pop, yrs, ag, gr, h_a, ...)
           arima_forecast(arr, yrs, h_a, max.p = mp, max.q = mq, max.d = md)
         m <- tryCatch(cv_expanding_model(mx_array, pop_array, years, ages, groups,
-                                         arima_fn, h_val = h_val, n_origins = n_origins),
+                                         arima_fn, h_val = h_val, n_origins = n_origins,
+                                         metric_fn = metric_fn),
                       error = function(e) Inf)
-        if (is.finite(m) && m < best_arima$cv_mase)
-          best_arima <- list(max.p = mp, max.q = mq, max.d = md, cv_mase = m)
+        if (is.finite(m) && m < best_arima$cv_score)
+          best_arima <- list(max.p = mp, max.q = mq, max.d = md, cv_score = m)
       }
     }
   }
   calib$arima <- best_arima
 
   # ETS
-  best_ets <- list(ets_model = "AAN", damped = TRUE, cv_mase = Inf)
+  best_ets <- list(ets_model = "AAN", damped = TRUE, cv_score = Inf)
   for (em in c("AAN", "AAdN", "ZZN", "MMN", "ANN")) {
     ets_fn <- function(arr, pop, yrs, ag, gr, h_a, ...)
       ets_forecast(arr, yrs, h_a, ets_model = em, damped = TRUE)
     m <- tryCatch(cv_expanding_model(mx_array, pop_array, years, ages, groups,
-                                     ets_fn, h_val = h_val, n_origins = n_origins),
+                                     ets_fn, h_val = h_val, n_origins = n_origins,
+                                         metric_fn = metric_fn),
                   error = function(e) Inf)
-    if (is.finite(m) && m < best_ets$cv_mase)
-      best_ets <- list(ets_model = em, damped = TRUE, cv_mase = m)
+    if (is.finite(m) && m < best_ets$cv_score)
+      best_ets <- list(ets_model = em, damped = TRUE, cv_score = m)
   }
   calib$ets <- best_ets
 

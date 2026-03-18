@@ -12,6 +12,8 @@ calibrate(
   holdout_frac = 0.2,
   ensemble = TRUE,
   ensemble_top_k = 3L,
+  rank_selection = c("cv", "bic", "aic"),
+  cv_metric = c("mase", "mase_combined", "mase_trend"),
   config = NULL,
   ...
 )
@@ -33,6 +35,16 @@ if \code{holdout_years} is provided.}
 \item{ensemble}{Logical; build an inverse-MASE ensemble? (default TRUE)}
 
 \item{ensemble_top_k}{Maximum number of models in the ensemble.}
+
+\item{rank_selection}{Character; rank selection strategy for Tucker3 models.
+\code{"cv"} (default) uses rolling-origin cross-validation, \code{"bic"} or \code{"aic"}
+selects ranks via information criteria (faster). Passed to
+\code{\link[=calibrate_tucker3]{calibrate_tucker3()}}.}
+
+\item{cv_metric}{Character; scoring metric for cross-validation.
+\code{"mase"} (default) uses cell-level MASE, \code{"mase_combined"} uses
+0.7 * cell + 0.3 * trend MASE, \code{"mase_trend"} uses trend MASE only.
+Applied to all models during calibration.}
 
 \item{config}{Optional \code{mort_config} for advanced settings (smoothing
 method, COVID years, etc.).}

@@ -29,6 +29,7 @@ Imports:
     forecast,
     mgcv,
     ggplot2,
+    rlang,
     stats
 Suggests:
     readxl,
