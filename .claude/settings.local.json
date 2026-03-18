@@ -9,7 +9,10 @@
       "Bash(where.exe Rscript)",
       "Read(//c/Program Files/R/**)",
       "Bash(\"/c/Program Files/R/R-4.5.1/bin/Rscript.exe\" -e 'source\\(\"\"data-raw/create_example_data.R\"\"\\)')",
-      "Bash(\"/c/Program Files/R/R-4.5.1/bin/Rscript.exe\" -e 'devtools::document\\(\\)')"
+      "Bash(\"/c/Program Files/R/R-4.5.1/bin/Rscript.exe\" -e 'devtools::document\\(\\)')",
+      "WebSearch",
+      "WebFetch(domain:usethis.r-lib.org)",
+      "WebFetch(domain:r-pkgs.org)"
     ]
   }
 }

@@ -1,0 +1,32 @@
+url: https://kalleEF.github.io/mortensor
+
+template:
+  bootstrap: 5
+
+navbar:
+  structure:
+    left: [intro, reference, articles]
+    right: [search, github]
+  components:
+    github:
+      icon: fa-github
+      href: https://github.com/kalleEF/mortensor
+
+articles:
+  - title: Getting Started
+    contents:
+    - getting-started
+  - title: Methods
+    contents:
+    - tensor-decomposition
+    - model-calibration-and-selection
+    - prediction-intervals
+    - age-disaggregation
+    - life-tables
+    - scoring-and-evaluation
+  - title: Multi-Cause
+    contents:
+    - multi-cause-forecasting
+  - title: Reference
+    contents:
+    - visualization-gallery
