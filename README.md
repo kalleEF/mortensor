@@ -2,7 +2,7 @@
 
 **:children_crossing:CAUTION: This package is vibe-coded :sparkles:. Use at your own risk:children_crossing:**
 
-**Cause-Specific Mortality Forecasting with Tensor Decomposition**
+**Cause-Specific Coherent Ensemble Mortality Forecasting including Tensor Decomposition Approaches**
 
 `mortensor` is a modular R package for forecasting age-specific mortality rates
 across population strata (e.g. sex × deprivation quintile) and causes of
@@ -262,8 +262,8 @@ result <- run_coherent_forecast(disease_configs, all_cause_config, shared)
 
 If you use `mortensor` in published work, please cite:
 
-> [Emmert-Fees, Karl]. (2024). *mortensor: Cause-Specific Mortality Forecasting with
-> Tensor Decomposition*. R package version 0.1.0.
+> Emmert-Fees, Karl. (2024). *mortensor: Cause-Specific Coherent Ensemble Mortality Forecasting 
+> including Tensor Decomposition Approaches*. R package version 0.1.0.
 
 But seriously... don't use this for something you want to publish... (yet)
 
@@ -271,4 +271,4 @@ But seriously... don't use this for something you want to publish... (yet)
 
 ## License
 
-MIT © [Author(s)]
+MIT © kalleEF
