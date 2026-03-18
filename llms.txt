@@ -272,8 +272,10 @@ result <- run_coherent_forecast(disease_configs, all_cause_config, shared)
 
 If you use `mortensor` in published work, please cite:
 
-> \[Author(s)\]. (2024). *mortensor: Cause-Specific Mortality
+> \[Emmert-Fees, Karl\]. (2024). *mortensor: Cause-Specific Mortality
 > Forecasting with Tensor Decomposition*. R package version 0.1.0.
+
+But seriously… don’t use this for something you want to publish… (yet)
 
 ------------------------------------------------------------------------
 
