@@ -36,7 +36,7 @@ Key design goals:
 
 ```r
 # From GitHub
-remotes::install_github("PLACEHOLDER/mortensor")
+remotes::install_github("kalleEF/mortensor")
 
 # From a local clone
 devtools::install("path/to/mortensor")
