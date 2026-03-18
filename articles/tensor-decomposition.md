@@ -1,0 +1,418 @@
+# Tensor Decomposition Methods in mortensor
+
+## Overview
+
+**mortensor** models mortality as a multi-way array and uses Tucker
+decomposition to extract low-rank structure across ages, periods, and
+population groups. This vignette explains:
+
+1.  How mortality data maps to a 3D tensor (Tucker3) or 4D tensor
+    (Tucker4)
+2.  Tucker3 with compositional log-ratio (CoDa) and direct log-rate
+    transforms
+3.  Tucker4 with isometric log-ratio (ILR) for joint cause-of-death
+    modelling
+4.  How temporal components are forecast and the mortality surface
+    reconstructed
+
+## Mathematical background
+
+### The mortality tensor
+
+Observed age-specific mortality rates $m_{x,t,g}$ for age group $x$,
+year $t$, and population stratum $g$ (e.g. sex $\times$ deprivation
+quintile) are arranged in a 3D array
+$\mathcal{X} \in {\mathbb{R}}^{I \times J \times K}$ where $I$ = number
+of age groups, $J$ = number of years, $K$ = number of population groups.
+
+### Tucker3 decomposition
+
+The Tucker3 decomposition approximates the tensor as:
+
+$$\mathcal{X} \approx \mathcal{G} \times_{1}\mathbf{A} \times_{2}\mathbf{B} \times_{3}\mathbf{C}$$
+
+where:
+
+- $\mathbf{A} \in {\mathbb{R}}^{I \times R_{A}}$ captures **age
+  patterns** (loadings on age groups)
+- $\mathbf{B} \in {\mathbb{R}}^{J \times R_{B}}$ captures **temporal
+  dynamics** (time-varying coefficients — these are what we forecast)
+- $\mathbf{C} \in {\mathbb{R}}^{K \times R_{C}}$ captures **group
+  structure** (loadings on population strata)
+- $\mathcal{G} \in {\mathbb{R}}^{R_{A} \times R_{B} \times R_{C}}$ is
+  the **core tensor** governing interactions between modes
+
+The ranks $\left( R_{A},R_{B},R_{C} \right)$ control the trade-off
+between parsimony and fit. Lower ranks yield smoother, more
+interpretable patterns; higher ranks capture finer structure at the risk
+of overfitting.
+
+### Two transform strategies
+
+**Tucker3-CoDa (Compositional)**: Mortality rates are converted to a
+death distribution $d_{x}$ via life-table methods
+([`compute_dx()`](https://kalleEF.github.io/mortensor/reference/compute_dx.md)),
+then a centred log-ratio (CLR) transform is applied. This works on
+*shares* of mortality across ages, making it invariant to the overall
+level. After decomposition and forecasting, the inverse CLR is applied
+and rates are recovered via
+[`dx_to_mx()`](https://kalleEF.github.io/mortensor/reference/dx_to_mx.md).
+
+**Tucker3-Direct**: The log mortality rates
+$\log\left( m_{x,t,g} \right)$ are decomposed directly. This is simpler
+and often competitive for all-cause mortality.
+
+### Tucker4 for multi-cause coherence
+
+When forecasting $K$ causes of death, we form a 4D tensor
+$\mathcal{X} \in {\mathbb{R}}^{I \times J \times G \times {(K + 1)}}$
+where the 4th mode represents cause-specific shares (including a
+residual category ensuring shares sum to 1). An ILR transform is applied
+along mode 4, producing a $K$-dimensional coordinate in the simplex.
+Tucker4 decomposes this, forecasts the B-mode, and inverts the ILR to
+recover coherent future shares.
+
+## Tucker3-CoDa workflow
+
+### Step 1: Prepare data
+
+``` r
+library(mortensor)
+data(example_mortality)
+
+# Smooth first — Tucker3 is sensitive to noisy rates
+sm <- smooth_mortality(example_mortality, method = "gam",
+                       covid_years = c(2020L, 2021L))
+```
+
+### Step 2: Calibrate Tucker3 ranks
+
+Rank selection can use rolling-origin cross-validation (`"cv"`) or
+information criteria (`"bic"`, `"aic"`). CV is more reliable but slower;
+BIC is a fast default.
+
+``` r
+# Cross-validation (recommended for final analysis)
+calib_cv <- calibrate_tucker3(
+  mx_array       = sm$mx,
+  years          = sm$years,
+  ages           = sm$ages,
+  method         = "coda",          # compositional (CLR) transform
+  rank_selection = "cv",            # rolling-origin CV
+  h_val          = 3,               # 3-year validation horizon
+  min_train      = 12               # minimum 12 training years
+)
+
+cat("Optimal ranks:", calib_cv$R_A, calib_cv$R_B, calib_cv$R_C, "\n")
+cat("Best time-series method:", calib_cv$ts_method, "\n")
+cat("CV score:", round(calib_cv$cv_score, 3), "\n")
+
+# You can also use cv_metric to change the scoring function:
+# cv_metric = "mase"          — cell-level MASE (default)
+# cv_metric = "mase_combined" — 0.7 * cell + 0.3 * trend MASE
+# cv_metric = "mase_trend"    — trend MASE only
+
+# Fast BIC alternative
+calib_bic <- calibrate_tucker3(
+  mx_array       = sm$mx,
+  years          = sm$years,
+  ages           = sm$ages,
+  method         = "coda",
+  rank_selection = "bic"
+)
+```
+
+The grid searched is typically $R_{A} \in \{ 2,\ldots,5\}$,
+$R_{B} \in \{ 2,\ldots,5\}$, $R_{C} \in \{ 1,\ldots,\min(4,K)\}$ and
+`ts_method` $\in$`{"arima", "ets", "rwd"}`.
+
+### Step 3: Forecast
+
+``` r
+fc_coda <- tucker3_coda_forecast(
+  mx_array  = sm$mx,
+  years     = sm$years,
+  ages      = sm$ages,
+  h         = 10,                   # 10-year forecast horizon
+  R_A       = calib_cv$R_A,
+  R_B       = calib_cv$R_B,
+  R_C       = calib_cv$R_C,
+  ts_method = calib_cv$ts_method,
+  width     = 5,                    # 5-year age groups
+  return_full = TRUE                # keep components for bootstrap
+)
+
+cat("Variance explained:", round(fc_coda$fit_pct, 1), "%\n")
+```
+
+When `return_full = TRUE`, the result includes $\mathbf{A}$,
+$\mathbf{B}$, $\mathbf{C}$, $\mathcal{G}$, the ARIMA/ETS fits, and
+residuals — all needed for bootstrap prediction intervals.
+
+### Step 4: Inspect temporal components
+
+The $\mathbf{B}$-mode matrix captures how mortality evolves over time.
+Each column is a temporal component:
+
+``` r
+# Plot B-mode components with forecasted extensions
+plot_B_components(
+  fc_obj         = fc_coda,
+  forecast_years = 2021:2030,
+  sim_years      = sm$years,
+  output_dir     = tempdir(),
+  cause_label    = "All causes",
+  cause_short    = "all"
+)
+```
+
+Component 1 typically captures the dominant mortality decline trend;
+higher components capture acceleration, deceleration, or group-specific
+deviations.
+
+### Step 5: Reconstruct and verify
+
+``` r
+# The forecast array has dimensions [n_ages x h x n_groups]
+dim(fc_coda$mx_forecast)  # e.g. [13, 10, 10]
+
+# Compare against the training fit
+cat("In-sample fit:", round(fc_coda$fit_pct, 1), "% variance explained\n")
+```
+
+## Tucker3-Direct workflow
+
+The direct approach skips the compositional transform and works on
+$\log\left( m_{x,t,g} \right)$ directly:
+
+``` r
+calib_direct <- calibrate_tucker3(
+  mx_array       = sm$mx,
+  years          = sm$years,
+  ages           = sm$ages,
+  method         = "direct",        # log(mx) directly
+  rank_selection = "cv",
+  h_val          = 3,
+  min_train      = 12
+)
+
+fc_direct <- tucker3_direct_forecast(
+  mx_array    = sm$mx,
+  years       = sm$years,
+  h           = 10,
+  R_A         = calib_direct$R_A,
+  R_B         = calib_direct$R_B,
+  R_C         = calib_direct$R_C,
+  ts_method   = calib_direct$ts_method,
+  return_full = TRUE
+)
+```
+
+### CoDa vs Direct: when to use which?
+
+| Criterion               | Tucker3-CoDa                                | Tucker3-Direct             |
+|-------------------------|---------------------------------------------|----------------------------|
+| **Interpretability**    | Works on mortality *structure* (age shares) | Works on *levels*          |
+| **All-cause mortality** | Good                                        | Often equally good         |
+| **Cause-specific**      | Recommended (shares are bounded)            | May produce negative rates |
+| **Small sample**        | More robust (lower effective dimension)     | Can overfit                |
+| **Computation**         | Slightly slower (CLR + inverse)             | Slightly faster            |
+
+In practice, the
+[`calibrate()`](https://kalleEF.github.io/mortensor/reference/calibrate.md)
+workflow evaluates both and selects via holdout MASE, so the choice is
+data-driven.
+
+## Tucker4-ILR for multi-cause coherence
+
+When modelling multiple causes of death, we want forecasted cause shares
+to sum to 1 at every age, year, and group. Tucker4-ILR achieves this by
+construction.
+
+### Step 1: Build the cause-share tensor
+
+``` r
+# Suppose we have mort_data objects for each cause and all-cause
+# (in practice these come from read_mortality() or the pipeline)
+shares_4d <- compute_cause_shares(
+  mx_disease_list = list(cancer = data_cancer$mx,
+                         cvd    = data_cvd$mx,
+                         resp   = data_resp$mx),
+  mx_all          = data_all$mx,
+  disease_order   = c("cancer", "cvd", "resp")
+)
+
+# Result: 4D array [n_ages x n_years x n_groups x 4]
+# The 4th slice is the residual (1 - sum of named causes)
+dim(shares_4d)
+```
+
+### Step 2: ILR transform
+
+``` r
+X_ilr <- ilr_cause_transform(shares_4d)
+
+# Result: 4D array [n_ages x n_years x n_groups x 3]
+# (K+1 parts → K ILR coordinates)
+dim(X_ilr)
+```
+
+### Step 3: Calibrate Tucker4 ranks
+
+``` r
+calib_t4 <- calibrate_tucker4(
+  X_ilr            = X_ilr,
+  mx_all           = data_all$mx,
+  mx_disease_list  = list(cancer = data_cancer$mx,
+                          cvd    = data_cvd$mx,
+                          resp   = data_resp$mx),
+  disease_order    = c("cancer", "cvd", "resp"),
+  years            = data_all$years,
+  h_val            = 3,
+  min_train        = 12
+)
+
+cat("Tucker4 ranks:", calib_t4$R_A, calib_t4$R_B,
+    calib_t4$R_C, calib_t4$R_D, "\n")
+```
+
+### Step 4: Forecast and invert
+
+``` r
+fc_t4 <- tucker4_coherent_forecast(
+  X_ilr     = X_ilr,
+  years     = data_all$years,
+  h         = 10,
+  R_A       = calib_t4$R_A,
+  R_B       = calib_t4$R_B,
+  R_C       = calib_t4$R_C,
+  R_D       = calib_t4$R_D,
+  ts_method = calib_t4$ts_method,
+  return_full = TRUE
+)
+
+# shares_forecast: [n_ages x h x n_groups x (K+1)]
+# Each slice along mode 4 sums to 1 by construction
+dim(fc_t4$shares_forecast)
+
+# Verify coherence
+rowSums(fc_t4$shares_forecast[1, 1, 1, ])  # should be 1.0
+```
+
+### Step 5: Recover cause-specific mortality rates
+
+``` r
+# Multiply shares by all-cause forecast to get cause-specific rates
+# (This is handled internally by run_coherent_forecast())
+mx_cancer_fc <- fc_t4$shares_forecast[, , , 1] * mx_all_fc
+mx_cvd_fc    <- fc_t4$shares_forecast[, , , 2] * mx_all_fc
+mx_resp_fc   <- fc_t4$shares_forecast[, , , 3] * mx_all_fc
+
+# By construction: cancer + cvd + resp + residual = all-cause
+```
+
+### Visualise share evolution
+
+``` r
+plot_share_evolution(
+  shares_obs_4d = shares_4d,
+  shares_fc_4d  = fc_t4$shares_forecast,
+  years_obs     = data_all$years,
+  years_fc      = 2021:2030,
+  disease_order = c("cancer", "cvd", "resp", "residual"),
+  output_dir    = tempdir(),
+  group_index   = 1,
+  groups        = data_all$groups
+)
+```
+
+## Advanced: B-mode forecasting internals
+
+The temporal mode $\mathbf{B}$ is the only component that changes over
+time. After Tucker decomposition, each column $\mathbf{b}_{r}$
+($r = 1,\ldots,R_{B}$) is a univariate time series. The
+[`forecast_B_mode()`](https://kalleEF.github.io/mortensor/reference/forecast_B_mode.md)
+internal function fits one of three methods:
+
+- **`"arima"`**:
+  [`forecast::auto.arima()`](https://pkg.robjhyndman.com/forecast/reference/auto.arima.html)
+  with automatic order selection
+- **`"ets"`**:
+  [`forecast::ets()`](https://pkg.robjhyndman.com/forecast/reference/ets.html)
+  (exponential smoothing, damped by default)
+- **`"rwd"`**: Random walk with drift (simplest baseline)
+
+The selected method is determined during calibration (either the one
+with lowest CV MASE or set by the user).
+
+``` r
+# After decomposition, you can inspect the B-mode directly:
+B_matrix <- fc_coda$B        # [n_years x R_B]
+arima_fits <- fc_coda$arima_fits  # list of R_B forecast objects
+
+# Each component's forecast:
+for (r in seq_len(ncol(B_matrix))) {
+  cat(sprintf("Component %d: %s\n", r, arima_fits[[r]]$method))
+}
+```
+
+## Advanced: Reconstruction mechanics
+
+The reconstruction from Tucker3 components uses:
+
+$$\widehat{\mathcal{X}} = \mathbf{A} \cdot \mathcal{G} \cdot (\mathbf{C} \otimes \mathbf{B})^{\top}$$
+
+where $\otimes$ is the Kronecker product. In code:
+
+``` r
+# Low-level reconstruction (internal function, shown for illustration)
+X_hat <- reconstruct_array(
+  A = fc_coda$A,
+  B = fc_coda$B_forecast,  # forecasted B-mode
+  C = fc_coda$C,
+  G = fc_coda$G
+)
+dim(X_hat)  # [n_ages x h x n_groups]
+```
+
+For Tucker4, the analogous function is
+[`reconstruct_array4()`](https://kalleEF.github.io/mortensor/reference/reconstruct_array4.md)
+with an additional mode matrix $\mathbf{D}$.
+
+## Integration with the calibrate–forecast workflow
+
+In practice, you rarely call
+[`tucker3_coda_forecast()`](https://kalleEF.github.io/mortensor/reference/tucker3_coda_forecast.md)
+or
+[`calibrate_tucker3()`](https://kalleEF.github.io/mortensor/reference/calibrate_tucker3.md)
+directly. The high-level
+[`calibrate()`](https://kalleEF.github.io/mortensor/reference/calibrate.md)
+and
+[`forecast()`](https://kalleEF.github.io/mortensor/reference/forecast.md)
+functions handle this automatically:
+
+``` r
+# This internally runs calibrate_tucker3() for both CoDa and Direct,
+# plus Lee-Carter, FDM, ETS, ARIMA, RWD, and builds an ensemble
+cal <- calibrate(sm, models = c("tucker3_coda", "tucker3_direct",
+                                "lee_carter", "ets"),
+                 holdout_frac = 0.2, ensemble = TRUE)
+
+# Dispatches to the best model (or ensemble)
+fc <- forecast(cal, h = 10)
+
+# The model name tells you what was selected
+cat("Selected model:", fc$model, "\n")
+```
+
+## Summary
+
+| Method         | Transform           | Modes                          | Use case                              |
+|----------------|---------------------|--------------------------------|---------------------------------------|
+| Tucker3-CoDa   | CLR on death shares | 3D: age × year × group         | Single cause; robust to level shifts  |
+| Tucker3-Direct | log(mx)             | 3D: age × year × group         | Single cause; simpler, fast           |
+| Tucker4-ILR    | ILR on cause shares | 4D: age × year × group × cause | Multi-cause; coherent by construction |
+
+The tensor approach captures cross-mode interactions that univariate
+methods (Lee-Carter, ARIMA per series) cannot exploit, typically
+yielding better out-of-sample accuracy for stratified mortality data.

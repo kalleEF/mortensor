@@ -1,0 +1,498 @@
+# Scoring Rules and Forecast Evaluation
+
+## Overview
+
+Rigorous forecast evaluation requires **proper scoring rules** — metrics
+that are optimised when the forecaster reports their true belief.
+**mortensor** implements a comprehensive set of scoring functions for
+both point forecasts and probabilistic forecasts.
+
+This vignette covers:
+
+1.  The
+    [`accuracy()`](https://kalleEF.github.io/mortensor/reference/accuracy.md)
+    method: one-call evaluation from a `mort_forecast` object
+2.  The
+    [`compare_accuracy()`](https://kalleEF.github.io/mortensor/reference/compare_accuracy.md)
+    function: tabular comparison across models
+3.  Point forecast metrics: RMSE, MAE, MASE (cell, trend, combined)
+4.  Probabilistic metrics: CRPS (Gaussian and empirical), interval
+    score, WIS, log-score
+5.  How these are used in model selection and calibration
+6.  Practical examples for comparing models
+
+## The `accuracy()` method
+
+The simplest way to evaluate a forecast is to call
+[`accuracy()`](https://kalleEF.github.io/mortensor/reference/accuracy.md)
+directly on a `mort_forecast` object. It computes all relevant metrics
+in one call.
+
+### Out-of-sample evaluation
+
+When you have held-out observed data, pass it as the `test` argument:
+
+``` r
+library(mortensor)
+data(example_mortality)
+
+# Split data: first 80% for training, last 20% for testing
+n_t    <- example_mortality$n_t
+n_test <- round(0.2 * n_t)
+train  <- example_mortality[, 1:(n_t - n_test), ]
+test   <- example_mortality[, (n_t - n_test + 1):n_t, ]
+
+# Build forecast from training data
+sm  <- smooth_mortality(train, method = "gam", covid_years = c(2020L, 2021L))
+cal <- calibrate(sm, holdout_frac = 0.2, ensemble = TRUE)
+fc  <- forecast(cal, h = n_test)
+fc  <- add_pi(fc, n_sim = 500, method = "bootstrap")
+
+# One call — all metrics
+acc <- accuracy(fc, test = test)
+print(acc)
+# <mort_accuracy>  out_of_sample
+#   Model:           Ensemble
+#   Evaluated on:    13 ages x 4 years x 10 groups
+#   --- Point forecast ---
+#   MASE (combined): 0.8234
+#   MASE (cell):     0.8567
+#   MASE (trend):    0.7456
+#   RMSE (log):      0.0312
+#   MAE:             1.23e-03
+#   --- Probabilistic ---
+#   Coverage (95%):  0.943
+#   Interval score:  0.1287
+#   CRPS:            0.0198
+```
+
+The result is a `mort_accuracy` object. All fields are accessible:
+
+``` r
+acc$mase_combined   # 0.8234
+acc$coverage        # 0.943
+acc$crps            # 0.0198
+```
+
+### In-sample evaluation
+
+Without test data,
+[`accuracy()`](https://kalleEF.github.io/mortensor/reference/accuracy.md)
+evaluates fitted values against the raw training data:
+
+``` r
+acc_in <- accuracy(fc)
+print(acc_in)
+# <mort_accuracy>  in_sample
+```
+
+## Comparing multiple models with `compare_accuracy()`
+
+To compare several models side-by-side, use
+[`compare_accuracy()`](https://kalleEF.github.io/mortensor/reference/compare_accuracy.md):
+
+``` r
+# Calibrate individual models
+cal_coda <- calibrate(sm, models = "tucker3_coda", ensemble = FALSE)
+cal_lc   <- calibrate(sm, models = "lee_carter",   ensemble = FALSE)
+cal_ets  <- calibrate(sm, models = "ets",           ensemble = FALSE)
+cal_ens  <- calibrate(sm, ensemble = TRUE)
+
+# Forecast each
+fc_coda <- add_pi(forecast(cal_coda, h = n_test), n_sim = 500)
+fc_lc   <- add_pi(forecast(cal_lc,   h = n_test), n_sim = 500)
+fc_ets  <- add_pi(forecast(cal_ets,  h = n_test), n_sim = 500)
+fc_ens  <- add_pi(forecast(cal_ens,  h = n_test), n_sim = 500)
+
+# Compare — returns a data.table sorted by MASE
+comp <- compare_accuracy(
+  "Tucker3-CoDa" = fc_coda,
+  "Lee-Carter"   = fc_lc,
+  "ETS"          = fc_ets,
+  "Ensemble"     = fc_ens,
+  test = test
+)
+print(comp)
+#            model  mase_combined  mase_cell  mase_trend  rmse_log  ...
+# 1:       Ensemble        0.809      0.847       0.721    0.028
+# 2:  Tucker3-CoDa        0.823      0.857       0.745    0.031
+# 3:    Lee-Carter        0.890      0.923       0.812    0.035
+# 4:           ETS        0.991      1.034       0.923    0.042
+```
+
+You can also pass pre-computed `mort_accuracy` objects if you want to
+avoid re-computing:
+
+``` r
+acc1 <- accuracy(fc_coda, test = test)
+acc2 <- accuracy(fc_lc,   test = test)
+comp <- compare_accuracy("Tucker3-CoDa" = acc1, "Lee-Carter" = acc2)
+```
+
+## Point forecast metrics
+
+### RMSE on log scale
+
+Root mean squared error on $\log\left( m_{x} \right)$:
+
+$$\text{RMSE}_{\log} = \sqrt{\frac{1}{n}\sum\limits_{i}(\log\left( {\widehat{m}}_{i} \right) - \log\left( m_{i} \right))^{2}}$$
+
+``` r
+library(mortensor)
+
+# Vectors of actual and predicted rates
+rmse <- compute_rmse_log(actual = obs_mx, predicted = fc_mx)
+cat("RMSE (log):", round(rmse, 4), "\n")
+```
+
+### Mean absolute error
+
+$$\text{MAE} = \frac{1}{n}\sum\limits_{i}\left| m_{i} - {\widehat{m}}_{i} \right|$$
+
+``` r
+mae <- compute_mae(actual = obs_mx, predicted = fc_mx)
+```
+
+### MASE: Mean Absolute Scaled Error
+
+MASE is the primary metric used for model selection in **mortensor**. It
+normalises the MAE by the in-sample naive (random walk) forecast error:
+
+$$\text{MASE} = \frac{\text{MAE}_{\text{forecast}}}{\text{MAE}_{\text{naive}}}$$
+
+where
+$\text{MAE}_{\text{naive}} = \frac{1}{T - 1}\sum_{t = 2}^{T}\left| y_{t} - y_{t - 1} \right|$
+on the training data.
+
+A MASE \< 1 means the model beats the naive random walk; MASE \> 1 means
+it does worse.
+
+#### Single series
+
+``` r
+mase_val <- compute_mase(
+  actual_test    = test_series,       # test period values
+  predicted_test = forecast_series,   # forecast values
+  train_series   = train_series       # training period values
+)
+cat("MASE:", round(mase_val, 3), "\n")
+```
+
+#### Cell-level MASE (across the full array)
+
+Computes MASE for each (age, group) cell and averages:
+
+``` r
+mase_cell <- compute_mase_array(
+  arr_test  = mx_test,     # 3D test array [n_ages x n_test x n_groups]
+  fc_arr    = mx_forecast, # 3D forecast array [n_ages x h x n_groups]
+  arr_train = mx_train     # 3D training array
+)
+cat("Cell MASE:", round(mase_cell, 3), "\n")
+```
+
+#### Group-trend MASE
+
+Averages across ages first (collapsing to group-level trends), then
+computes MASE on these smoother series:
+
+``` r
+mase_trend <- compute_mase_group_trend(
+  arr_test  = mx_test,
+  fc_arr    = mx_forecast,
+  arr_train = mx_train
+)
+cat("Trend MASE:", round(mase_trend, 3), "\n")
+```
+
+#### Combined MASE (used for model selection)
+
+The combined MASE balances cell-level accuracy with trend accuracy:
+
+$$\text{MASE}_{\text{combined}} = 0.7 \times \text{MASE}_{\text{cell}} + 0.3 \times \text{MASE}_{\text{trend}}$$
+
+``` r
+mase_comb <- compute_mase_combined(
+  arr_test  = mx_test,
+  fc_arr    = mx_forecast,
+  arr_train = mx_train
+)
+cat("Combined MASE:", round(mase_comb, 3), "\n")
+```
+
+**Why 0.7/0.3?** Cell-level accuracy is weighted more because it
+captures age-specific patterns, but trend accuracy prevents selecting
+models that are accurate on average while missing overall mortality
+decline trajectories.
+
+## Probabilistic forecast metrics
+
+### CRPS: Continuous Ranked Probability Score
+
+The CRPS evaluates the full predictive distribution. Lower is better.
+
+#### Gaussian CRPS (closed-form)
+
+If the predictive distribution is
+$\mathcal{N}\left( \mu,\sigma^{2} \right)$:
+
+$$\text{CRPS}(F,y) = \sigma\left\lbrack \frac{y - \mu}{\sigma}\left( 2\Phi\left( \frac{y - \mu}{\sigma} \right) - 1 \right) + 2\phi\left( \frac{y - \mu}{\sigma} \right) - \frac{1}{\sqrt{\pi}} \right\rbrack$$
+
+``` r
+crps_g <- compute_crps_gaussian(
+  obs   = log_obs,    # log(mx) observations
+  mu    = log_mu,     # predictive means (log scale)
+  sigma = log_sigma   # predictive standard deviations (log scale)
+)
+cat("Gaussian CRPS:", round(crps_g, 4), "\n")
+```
+
+#### Empirical CRPS (from bootstrap samples)
+
+When the predictive distribution is represented by bootstrap samples:
+
+$$\text{CRPS}(F,y) = \frac{1}{B}\sum\limits_{b = 1}^{B}\left| y - x^{(b)} \right| - \frac{1}{2B^{2}}\sum\limits_{b = 1}^{B}\sum\limits_{b\prime = 1}^{B}\left| x^{(b)} - x^{(b\prime)} \right|$$
+
+``` r
+crps_e <- compute_crps_empirical(
+  obs_arr  = mx_test,     # 3D observed array
+  sims_arr = fc$sims      # 4D simulation array [n_a x h x n_g x n_sim]
+)
+cat("Empirical CRPS:", round(crps_e, 4), "\n")
+```
+
+The empirical CRPS is computed on the log scale for numerical stability.
+
+### Interval Score
+
+The interval score evaluates a $(1 - \alpha)$-level prediction interval:
+
+$$\text{IS}_{\alpha}(l,u;y) = (u - l) + \frac{2}{\alpha}(l - y)\mathbf{1}(y < l) + \frac{2}{\alpha}(y - u)\mathbf{1}(y > u)$$
+
+It rewards narrow intervals but heavily penalises observations falling
+outside.
+
+#### Single observation
+
+``` r
+is_val <- compute_interval_score(
+  obs   = log_obs,     # scalar or vector
+  lower = log_lower,   # lower PI bound (log scale)
+  upper = log_upper,   # upper PI bound (log scale)
+  alpha = 0.05         # for 95% PI
+)
+cat("Interval score:", round(is_val, 4), "\n")
+```
+
+#### Full 3D array
+
+``` r
+is_arr <- compute_interval_score_array(
+  obs_arr   = mx_test,       # 3D observed array
+  lower_arr = fc$mx_lower,   # 3D lower bound
+  upper_arr = fc$mx_upper,   # 3D upper bound
+  alpha     = 0.05
+)
+cat("Mean interval score:", round(is_arr, 4), "\n")
+```
+
+The array version operates on $\log\left( m_{x} \right)$ internally.
+
+### Weighted Interval Score (WIS)
+
+WIS generalises the interval score to multiple quantile levels,
+providing a single summary of the full predictive distribution:
+
+$$\text{WIS} = \frac{1}{K + 0.5}\left\lbrack \frac{1}{2}\left| y - {\widehat{y}}_{0.5} \right| + \sum\limits_{k = 1}^{K}\alpha_{k} \cdot \text{IS}_{\alpha_{k}} \right\rbrack$$
+
+``` r
+# quantile_matrix: [n_obs x K] matrix of quantile forecasts
+# probs: K probabilities (e.g. c(0.025, 0.1, 0.25, 0.5, 0.75, 0.9, 0.975))
+
+wis <- compute_wis(
+  obs             = obs_vector,
+  quantile_matrix = qmat,
+  probs           = c(0.025, 0.1, 0.25, 0.5, 0.75, 0.9, 0.975)
+)
+cat("WIS:", round(wis, 4), "\n")
+```
+
+WIS is particularly useful for comparing models that produce different
+numbers of quantiles or when you want a single number summarising the
+entire predictive distribution.
+
+### Log-score (negative)
+
+The log-score measures the probability density assigned to the
+observation:
+
+$$\text{LS}(F,y) = - \log f(y)$$
+
+where $f$ is the predictive density. Lower is better.
+
+``` r
+ls <- compute_log_score_gaussian(
+  obs   = log_obs,
+  mu    = log_mu,
+  sigma = log_sigma
+)
+cat("Negative log-score:", round(ls, 4), "\n")
+```
+
+## How metrics are used in model selection
+
+### Inside `calibrate()`
+
+The
+[`calibrate()`](https://kalleEF.github.io/mortensor/reference/calibrate.md)
+function uses **combined MASE** for:
+
+1.  **Tucker3 rank selection**: The rank combination with lowest CV MASE
+    is chosen
+2.  **Model comparison**: All models are ranked by holdout combined MASE
+3.  **Ensemble weighting**: Inverse-MASE weights:
+    $w_{i} \propto 1/\text{MASE}_{i}$
+
+### Inside `compare_models()`
+
+The comparison data.table contains three MASE variants:
+
+``` r
+sm  <- smooth_mortality(example_mortality, method = "gam",
+                        covid_years = c(2020L, 2021L))
+cal <- calibrate(sm, holdout_frac = 0.2, ensemble = TRUE)
+
+print(cal$comparison)
+#              model   mase  mase_trend  mase_combined
+# 1:    Tucker3-CoDa  0.847      0.721         0.809
+# 2:  Tucker3-Direct  0.891      0.756         0.851
+# 3:      Lee-Carter  0.923      0.812         0.890
+# ...
+```
+
+## Practical evaluation workflow
+
+### Using `accuracy()` (recommended)
+
+The
+[`accuracy()`](https://kalleEF.github.io/mortensor/reference/accuracy.md)
+method handles all the array extraction and alignment automatically:
+
+``` r
+data(example_mortality)
+
+# Split into train and test mort_data objects
+n_t    <- example_mortality$n_t
+n_test <- round(0.2 * n_t)
+train  <- example_mortality[, 1:(n_t - n_test), ]
+test   <- example_mortality[, (n_t - n_test + 1):n_t, ]
+
+# Pipeline on training data
+sm  <- smooth_mortality(train, method = "gam", covid_years = c(2020L, 2021L))
+cal <- calibrate(sm, holdout_frac = 0.2, ensemble = TRUE)
+fc  <- forecast(cal, h = n_test)
+fc  <- add_pi(fc, n_sim = 500, method = "bootstrap")
+
+# All metrics in one call
+acc <- accuracy(fc, test = test)
+print(acc)
+```
+
+### Comparing multiple models with `compare_accuracy()`
+
+``` r
+# Calibrate individual models on the same training data
+models <- c("tucker3_coda", "tucker3_direct", "lee_carter", "ets", "rwd")
+forecasts <- list()
+for (m in models) {
+  cal_m <- calibrate(sm, models = m, ensemble = FALSE)
+  fc_m  <- forecast(cal_m, h = n_test)
+  fc_m  <- add_pi(fc_m, n_sim = 500)
+  forecasts[[m]] <- fc_m
+}
+
+# One-line comparison table (sorted by MASE)
+comp <- compare_accuracy(
+  "Tucker3-CoDa"   = forecasts$tucker3_coda,
+  "Tucker3-Direct"  = forecasts$tucker3_direct,
+  "Lee-Carter"      = forecasts$lee_carter,
+  "ETS"             = forecasts$ets,
+  "RWD"             = forecasts$rwd,
+  test = test
+)
+print(comp)
+```
+
+### Low-level evaluation (manual array extraction)
+
+The low-level `compute_*()` functions remain available for custom
+workflows:
+
+``` r
+# Manual train/test split at the array level
+mx_train <- sm$mx
+mx_test  <- test$mx
+
+fc_arr <- tucker3_coda_forecast(
+  mx_array = mx_train,
+  years    = sm$years,
+  ages     = sm$ages,
+  h        = n_test,
+  R_A = 3, R_B = 2, R_C = 2,
+  ts_method = "ets"
+)$mx_forecast
+
+# Individual metrics
+cat("MASE (cell):", round(compute_mase_array(mx_test, fc_arr, mx_train), 3), "\n")
+cat("MASE (trend):", round(compute_mase_group_trend(mx_test, fc_arr, mx_train), 3), "\n")
+cat("MASE (combined):", round(compute_mase_combined(mx_test, fc_arr, mx_train), 3), "\n")
+cat("RMSE (log):", round(compute_rmse_log(mx_test, fc_arr), 4), "\n")
+```
+
+## Metric selection guide
+
+| Metric                                                                                                        | Type  | Evaluates                | When to use                         |
+|---------------------------------------------------------------------------------------------------------------|-------|--------------------------|-------------------------------------|
+| [`accuracy()`](https://kalleEF.github.io/mortensor/reference/accuracy.md)                                     | All   | All metrics at once      | Default for `mort_forecast` objects |
+| [`compare_accuracy()`](https://kalleEF.github.io/mortensor/reference/compare_accuracy.md)                     | All   | Multi-model table        | Comparing several forecasts         |
+| [`compute_mase_combined()`](https://kalleEF.github.io/mortensor/reference/compute_mase_combined.md)           | Point | Overall forecast quality | Low-level / custom workflows        |
+| [`compute_mase_array()`](https://kalleEF.github.io/mortensor/reference/compute_mase_array.md)                 | Point | Cell-level patterns      | Age-group accuracy matters          |
+| [`compute_mase_group_trend()`](https://kalleEF.github.io/mortensor/reference/compute_mase_group_trend.md)     | Point | Trend capture            | Decline trajectory matters          |
+| [`compute_rmse_log()`](https://kalleEF.github.io/mortensor/reference/compute_rmse_log.md)                     | Point | Log-scale fit            | Traditional comparison              |
+| [`compute_crps_empirical()`](https://kalleEF.github.io/mortensor/reference/compute_crps_empirical.md)         | Prob. | Full distribution        | Bootstrap-based forecasts           |
+| [`compute_crps_gaussian()`](https://kalleEF.github.io/mortensor/reference/compute_crps_gaussian.md)           | Prob. | Full distribution        | Gaussian assumption valid           |
+| [`compute_interval_score()`](https://kalleEF.github.io/mortensor/reference/compute_interval_score.md)         | Prob. | Interval calibration     | Evaluating 95% PIs                  |
+| [`compute_wis()`](https://kalleEF.github.io/mortensor/reference/compute_wis.md)                               | Prob. | Multi-quantile summary   | Comparing distributional forecasts  |
+| [`compute_log_score_gaussian()`](https://kalleEF.github.io/mortensor/reference/compute_log_score_gaussian.md) | Prob. | Density quality          | Gaussian density evaluation         |
+
+### Recommendations
+
+- **Quick evaluation**: `accuracy(fc, test = holdout)` — one call, all
+  metrics
+- **Multi-model comparison**: `compare_accuracy(..., test = holdout)` —
+  sorted table
+- **Model selection**: Combined MASE (used automatically by
+  [`calibrate()`](https://kalleEF.github.io/mortensor/reference/calibrate.md))
+- **PI evaluation**: Check `coverage` (should be near 0.95) +
+  `interval_score`
+- **Publication**: Report MASE (point) + CRPS (distributional) +
+  interval score (interpretable)
+- **Multi-model papers**: Use WIS with matched quantile levels across
+  models
+
+## Summary
+
+- [`accuracy()`](https://kalleEF.github.io/mortensor/reference/accuracy.md)
+  computes all metrics from a `mort_forecast` object in one call
+- [`compare_accuracy()`](https://kalleEF.github.io/mortensor/reference/compare_accuracy.md)
+  produces a tidy comparison table across models
+- Combined MASE (0.7 cell + 0.3 trend) is the workhorse for automated
+  model selection
+- Probabilistic scores (CRPS, IS, WIS) evaluate the full predictive
+  distribution and PI calibration
+- Low-level `compute_*()` functions remain available for custom
+  workflows
+- The
+  [`calibrate()`](https://kalleEF.github.io/mortensor/reference/calibrate.md)
+  pipeline integrates these scores seamlessly into the model selection
+  workflow
