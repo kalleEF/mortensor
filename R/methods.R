@@ -669,15 +669,33 @@ plot.mort_forecast <- function(x,
   }
   dt <- do.call(rbind, rows)
 
+  # Ensure each year x group combination forms a separate line
+  has_groups <- "group_label" %in% names(dt) && length(unique(dt$group_label)) > 1
+  if (has_groups) {
+    dt$line_id <- interaction(dt$year, dt$group_label, drop = TRUE)
+  } else {
+    dt$line_id <- dt$year
+  }
+
   p <- ggplot2::ggplot(dt, ggplot2::aes(x = age, y = log_mx,
-                                         color = year)) +
+                                         color = year, group = line_id)) +
     ggplot2::geom_line(linewidth = 0.8) +
     ggplot2::geom_point(size = 1.5) +
     ggplot2::labs(title = paste0("Forecast age profiles: ", fc$model),
                   x = "Age", y = "log(mx)", color = "Year") +
     ggplot2::theme_minimal(base_size = 12)
 
-  p <- .apply_group_facets(p, ga, dt)
+  # Facet by all group dimensions (color = year, so don't use .apply_group_facets
+  # which would add conflicting color scales for the group column)
+  facet_vars <- c(ga$facet_by, ga$color_by)
+  facet_vars <- facet_vars[!is.null(facet_vars) & facet_vars %in% names(dt)]
+  if (length(facet_vars) > 0) {
+    p <- p + ggplot2::facet_wrap(stats::reformulate(facet_vars),
+                                  scales = "free_y")
+  } else if (has_groups) {
+    p <- p + ggplot2::facet_wrap(~group_label, scales = "free_y")
+  }
+
   print(p)
   invisible(p)
 }
@@ -1067,28 +1085,54 @@ plot.mort_forecast <- function(x,
       ggplot2::scale_fill_brewer(palette = "RdYlGn", direction = -1,
                                   name = ga$color_by)
   } else {
+    # When no color aesthetic but multiple groups exist, use group_label
+    # to separate lines so they don't zigzag across strata
+    multi_grp <- "group_label" %in% names(obs_dt %||% fit_dt %||% fc_dt) &&
+      length(unique((obs_dt %||% fit_dt %||% fc_dt)$group_label)) > 1
     if (!is.null(obs_dt))
       p <- p + ggplot2::geom_point(data = obs_dt,
         ggplot2::aes(x = year, y = log_mx), size = 0.5, alpha = 0.35)
-    if (!is.null(fit_dt))
-      p <- p + ggplot2::geom_line(data = fit_dt,
-        ggplot2::aes(x = year, y = log_mx), linewidth = 0.5)
-    if (any(!is.na(fc_dt$log_lo)))
-      p <- p + ggplot2::geom_ribbon(data = fc_dt,
-        ggplot2::aes(x = year, ymin = log_lo, ymax = log_hi),
-        alpha = 0.12, fill = "steelblue")
-    p <- p + ggplot2::geom_line(data = fc_dt,
-      ggplot2::aes(x = year, y = log_mx),
-      linewidth = 0.6, linetype = "dashed", color = "darkblue")
+    if (!is.null(fit_dt)) {
+      if (multi_grp)
+        p <- p + ggplot2::geom_line(data = fit_dt,
+          ggplot2::aes(x = year, y = log_mx, group = group_label),
+          linewidth = 0.5)
+      else
+        p <- p + ggplot2::geom_line(data = fit_dt,
+          ggplot2::aes(x = year, y = log_mx), linewidth = 0.5)
+    }
+    if (any(!is.na(fc_dt$log_lo))) {
+      if (multi_grp)
+        p <- p + ggplot2::geom_ribbon(data = fc_dt,
+          ggplot2::aes(x = year, ymin = log_lo, ymax = log_hi,
+                       group = group_label),
+          alpha = 0.12, fill = "steelblue")
+      else
+        p <- p + ggplot2::geom_ribbon(data = fc_dt,
+          ggplot2::aes(x = year, ymin = log_lo, ymax = log_hi),
+          alpha = 0.12, fill = "steelblue")
+    }
+    if (multi_grp)
+      p <- p + ggplot2::geom_line(data = fc_dt,
+        ggplot2::aes(x = year, y = log_mx, group = group_label),
+        linewidth = 0.6, linetype = "dashed", color = "darkblue")
+    else
+      p <- p + ggplot2::geom_line(data = fc_dt,
+        ggplot2::aes(x = year, y = log_mx),
+        linewidth = 0.6, linetype = "dashed", color = "darkblue")
   }
 
   p <- p + ggplot2::geom_vline(xintercept = min(fc$forecast_years) - 0.5,
                                 linetype = "dotted", color = "grey50")
 
-  # Faceting: age_group × facet_by (or just age_group)
+  # Faceting: age_group × facet_by (or group_label if multiple groups)
   if (!is.null(ga$facet_by)) {
     facet_f <- stats::reformulate(ga$facet_by, response = "age_group")
     p <- p + ggplot2::facet_grid(facet_f, scales = "free_y")
+  } else if (!has_color && length(ga$groups_to_plot) > 1 &&
+             "group_label" %in% names(fc_dt)) {
+    # Multiple groups without color: facet by group_label × age_group
+    p <- p + ggplot2::facet_grid(group_label ~ age_group, scales = "free_y")
   } else {
     p <- p + ggplot2::facet_wrap(~age_group, scales = "free_y")
   }

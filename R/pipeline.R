@@ -404,6 +404,27 @@ run_forecast <- function(data, config = NULL) {
   }
   smooth_dt <- data.table::rbindlist(smooth_list)
 
+  # Add GAM Bayesian CIs to smooth_dt (if GAM smoothing was used)
+  if (!is.null(gam_fits)) {
+    gam_ci <- tryCatch(
+      compute_gam_ci_arrays(gam_fits, ages, years),
+      error = function(e) NULL)
+    if (!is.null(gam_ci)) {
+      ci_list <- list()
+      for (k in seq_len(n_g)) for (j in seq_along(years)) {
+        ci_list[[length(ci_list) + 1]] <- append_group_cols(
+          data.table::data.table(
+            year = years[j], age_group = config$age_groups,
+            mx_lo95 = gam_ci$mx_lo95[, j, k],
+            mx_hi95 = gam_ci$mx_hi95[, j, k]),
+          groups, k)
+      }
+      ci_dt <- data.table::rbindlist(ci_list)
+      merge_keys <- c("year", "age_group", names(groups))
+      smooth_dt <- merge(smooth_dt, ci_dt, by = merge_keys, all.x = TRUE)
+    }
+  }
+
   # ---- 11. COHERENCE ----
   fc_dt <- enforce_coherence(fc_dt, obs_dt,
                              sex_constraint = config$sex_constraint)
@@ -438,13 +459,14 @@ run_forecast <- function(data, config = NULL) {
   grp_names <- names(groups)
   plot_forecast_trends(obs_dt, fitted_dt, fc_dt, config$output_dir,
                        config$cause_label, config$cause_short, forecast_years,
-                       group_cols = grp_names)
+                       group_cols = grp_names, smooth_dt = smooth_dt)
   plot_obs_vs_smooth(obs_dt, smooth_dt, config$output_dir,
                      config$cause_label, config$cause_short,
                      group_cols = grp_names)
   plot_forecast_trends_by_age(obs_dt, fitted_dt, fc_dt, config$output_dir,
                               config$cause_label, config$cause_short,
-                              forecast_years, group_cols = grp_names)
+                              forecast_years, group_cols = grp_names,
+                              smooth_dt = smooth_dt)
   plot_forecast_age(fc_dt, config$output_dir, config$cause_label,
                     config$cause_short, config$age_groups,
                     group_cols = grp_names)

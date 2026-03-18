@@ -597,6 +597,36 @@ disaggregate <- function(fc, target_ages = 30L:100L,
     }
   }
 
+  # Disaggregate fitted values to single-year ages (for accuracy/plotting)
+  mx_fitted_1yr <- NULL
+  if (!is.null(fc$mx_fitted)) {
+    n_t_train <- dim(fc$mx_fitted)[2]
+    mx_fitted_1yr <- array(NA_real_, dim = c(n_target, n_t_train, fc$n_g))
+    for (k in seq_len(fc$n_g)) {
+      for (j in seq_len(n_t_train)) {
+        mx_fitted_1yr[, j, k] <- tryCatch(
+          disagg_fn(fc$mx_fitted[, j, k], ages, target_ages, width),
+          error = function(e) rep(NA_real_, n_target))
+      }
+    }
+    if (all(is.na(mx_fitted_1yr))) mx_fitted_1yr <- NULL
+  }
+
+  # Disaggregate raw observations to single-year ages
+  mx_raw_1yr <- NULL
+  if (!is.null(fc$mx_raw)) {
+    n_t_train <- dim(fc$mx_raw)[2]
+    mx_raw_1yr <- array(NA_real_, dim = c(n_target, n_t_train, fc$n_g))
+    for (k in seq_len(fc$n_g)) {
+      for (j in seq_len(n_t_train)) {
+        mx_raw_1yr[, j, k] <- tryCatch(
+          disagg_fn(fc$mx_raw[, j, k], ages, target_ages, width),
+          error = function(e) rep(NA_real_, n_target))
+      }
+    }
+    if (all(is.na(mx_raw_1yr))) mx_raw_1yr <- NULL
+  }
+
   # Build new age labels for single years
   age_labels_1yr <- as.character(target_ages)
 
@@ -623,7 +653,10 @@ disaggregate <- function(fc, target_ages = 30L:100L,
     mx_median      = mx_1yr_med,
     mx_lower       = mx_1yr_lo,
     mx_upper       = mx_1yr_hi,
-    fit_info       = fc$fit_info
+    mx_fitted      = mx_fitted_1yr,
+    mx_raw         = mx_raw_1yr,
+    fit_info       = fc$fit_info,
+    extras         = fc$extras
   )
 }
 

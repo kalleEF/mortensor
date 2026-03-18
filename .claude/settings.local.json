@@ -12,7 +12,10 @@
       "Bash(\"/c/Program Files/R/R-4.5.1/bin/Rscript.exe\" -e 'devtools::document\\(\\)')",
       "WebSearch",
       "WebFetch(domain:usethis.r-lib.org)",
-      "WebFetch(domain:r-pkgs.org)"
+      "WebFetch(domain:r-pkgs.org)",
+      "Bash(\"/c/Program Files/R/R-4.5.1/bin/Rscript.exe\" -e \"devtools::load_all\\(''''c:/Users/ge28bak/OneDrive - TUM/TUM_Personal/1_Research/Repos/mortensor''''\\)\")",
+      "Bash(\"/c/Program Files/R/R-4.5.1/bin/Rscript.exe\" -e \":*)",
+      "Bash(\"/c/Program Files/R/R-4.5.1/bin/Rscript.exe\" -e \"devtools::load_all\\(''c:/Users/ge28bak/OneDrive - TUM/TUM_Personal/1_Research/Repos/mortensor''\\)\")"
     ]
   }
 }
