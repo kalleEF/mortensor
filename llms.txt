@@ -1,5 +1,7 @@
 # mortensor
 
+**🚸CAUTION: This package is vibe-coded ✨. Use at your own risk🚸**
+
 **Cause-Specific Mortality Forecasting with Tensor Decomposition**
 
 `mortensor` is a modular R package for forecasting age-specific
@@ -37,7 +39,7 @@ Key design goals:
 
 ``` r
 # From GitHub
-remotes::install_github("PLACEHOLDER/mortensor")
+remotes::install_github("kalleEF/mortensor")
 
 # From a local clone
 devtools::install("path/to/mortensor")
