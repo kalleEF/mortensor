@@ -1,5 +1,7 @@
 # mortensor
 
+**:children_crossing:CAUTION: This package is vibe-coded :sparkles:. Use at your own risk:children_crossing:**
+
 **Cause-Specific Mortality Forecasting with Tensor Decomposition**
 
 `mortensor` is a modular R package for forecasting age-specific mortality rates
