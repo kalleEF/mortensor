@@ -1,7 +1,8 @@
 # mortensor revamp plan
 
-Date: 2026-10-12. Status: proposal for discussion. Builds on the findings in
-`dev/production-review.md` (referred to as "the review"; defect IDs D1-D26).
+Date: 2026-10-12. Status: **agreed direction**; the owner's decisions are
+recorded in Section 14. Builds on the findings in `dev/production-review.md`
+(referred to as "the review"; defect IDs D1-D26).
 
 ## 1. Goal
 
@@ -14,9 +15,8 @@ Turn mortensor into a suite of composable functions that:
    harmonisation, one or more models, ensembles, coherence and reconciliation
    constraints, and derived demographic quantities;
 3. includes the **functionality of BAMP** (Bayesian age-period-cohort
-   modelling and prediction; Schmid and Held 2007) as a first-class model
-   family, and extends it to Poisson likelihoods, several strata and mixed
-   granularity;
+   modelling and prediction; Schmid and Held 2007) through a seamless wrapper
+   around the `bamp` package, behaving like every other model in the suite;
 4. produces **honest, calibrated probabilistic forecasts**: every forecast is
    a set of draws, every evaluation is out of sample, and every derived
    quantity carries its uncertainty.
@@ -103,18 +103,19 @@ dimension. It gives two ways to use mixed-granularity data:
 1. **Harmonise first:** ungroup coarse data to the latent grid with the
    penalized composite link model (1D, or 2D over age and period as in Rizzi
    et al. 2018), then use any model. Available for every model.
-2. **Model through the operator:** count-likelihood models (Bayesian APC,
-   Poisson P-spline, Poisson Lee-Carter) put **C** into the likelihood and fit
-   the latent rates directly to the coarse data. This propagates the
-   uncertainty of ungrouping into the forecast and is the generalisation of
-   BAMP's unequal age/period grid (Knorr-Held and Rainer 2001).
+2. **Model through the operator (later):** count-likelihood models put **C**
+   into the likelihood and fit the latent rates directly to the coarse data.
+   This propagates the uncertainty of ungrouping into the forecast and
+   generalises BAMP's unequal age/period grid (Knorr-Held and Rainer 2001).
+   It requires native count models and is outside the current scope; the
+   data layer is designed so it can be added without changing the API.
 
 ### 4.3 Functions
 
 | Function | Purpose |
 |---|---|
 | `mt_data()`, `add_deaths()`, `add_exposure()`, `add_population()`, `add_rates()` | Build a data object from long tables or arrays; declare columns for age, period, strata, cause |
-| `set_grid()` | Choose the latent grid (default: finest resolution present, single years where any input has single years) |
+| `set_grid()` | Choose the latent grid (default: single years of age and calendar years; coarser grids on request) |
 | `validate()` | Coverage, duplicates, overlapping intervals, gaps, negative or zero exposures, deaths > exposure, consistency between deaths, exposure and rates |
 | `describe_granularity()` | Table of what is observed at which resolution, by dataset and period |
 | `as_exposure()` | Person-years from mid-year or January-1 populations with a declared approximation |
@@ -155,7 +156,7 @@ training data only (grid, information criteria or inner rolling-origin CV).
 
 | Family | Constructor | Implementation | Joint strata | Uses **C** |
 |---|---|---|---|---|
-| Bayesian APC (BAMP functionality, Section 7) | `apc_bayes()` | `bamp` wrapper, then native engine | native engine | yes (native) |
+| Bayesian APC (BAMP functionality, Section 7) | `apc_bayes()` | `bamp` wrapper | no (one fit per stratum) | no (bamp's own unequal-grid handling) |
 | Lee-Carter and variants | `lee_carter()` | Poisson log-bilinear fit natively; `demography` wrapper for comparison | via `li_lee()` | later |
 | Functional demographic model | `fdm()` | `demography` wrapper | via `product_ratio()` | no |
 | Multi-population coherent | `li_lee()`, `product_ratio()` | Li and Lee (2005); Hyndman et al. (2013) | yes | no |
@@ -164,51 +165,65 @@ training data only (grid, information criteria or inner rolling-origin CV).
 | Tensor models (current core idea) | `tucker3(transform = c("coda", "log"))`, `tucker4()` | Port from 0.1.0 after fixing D11, D12 | yes | no |
 | Benchmarks | `rwd()`, `arima_series()`, `ets_series()` | `forecast` package, simulated with `simulate()` | no | no |
 
-## 7. Bayesian APC module (BAMP functionality)
+## 7. Bayesian APC module: a seamless bamp wrapper
 
-### 7.1 Feature parity with bamp 3.0.0 and extensions
+Decision (Section 14): BAMP functionality comes from wrapping the `bamp`
+package; no native engine is built now. Because mortensor moves to GPL-3,
+adapting bamp code with attribution is legally possible where the wrapper
+needs it, but the default is to call bamp's exported functions and to report
+problems upstream.
 
-| bamp feature | Plan in mortensor |
+### 7.1 What "seamless" means
+
+`apc_bayes()` must behave like every other model: the same constructor style,
+the same `mt_fit()` / `mt_forecast()` / `backtest()` / `mt_ensemble()` calls,
+the same draws as output. The wrapper does all bamp-specific work:
+
+| Requirement | Wrapper behaviour |
 |---|---|
-| Binomial likelihood, logit link | `family = binomial()`; plus `family = poisson()` with log-exposure offset as the default for central death rates; optional negative binomial |
-| RW1/RW2 smoothing priors for age, period, cohort | Same, as sparse precision matrices; optional sum-to-zero and drift constraints; Sørbye-Rue scaling option |
-| Unstructured heterogeneity per effect (`rw2+het`) | Same, including prediction (broken in bamp 3.0.0) |
-| Cell-level overdispersion | Same (Gaussian term in the linear predictor) |
-| Unequal age and period grids (`periods_per_agegroup`) | Generalised through the latent grid and **C**: any combination of age and period resolutions, varying open intervals |
-| Period and cohort covariates | Same, plus age-varying covariate effects |
-| MCMC, Gelman-Rubin checks, DIC | Laplace approximation by default, full MCMC on request; R-hat and effective sample size reported and enforced; DIC and WAIC for parity, rolling-origin CV recommended for forecasting |
-| `selectModel()` greedy DIC search | `tune()` over RW orders and options, by CV or DIC |
-| `predict_apc()` random-walk extrapolation | `mt_forecast()` returning draws of rates and, with future exposures, of deaths including Poisson/binomial noise |
-| `simulate_apc()` | `simulate()` method, used for simulation-based calibration tests |
-| `effects()`, `plot()` with identifiability conventions | `tidy()` and `plot()` of age, period and cohort effects with documented conventions |
-| (not in bamp) several strata | Multivariate APC with shared and stratum-specific effects (Riebler et al. 2009; Riebler et al. 2011), the natural model for sex x deprivation data |
-| (not in bamp) missing cells | Supported: missing cells drop out of the likelihood |
-| (not in bamp) mixed granularity | Through **C** (Section 4.2) |
+| Interface | `apc_bayes(age = "rw2", period = "rw2", cohort = "rw1", overdispersion = TRUE, mcmc = mcmc_control())` |
+| Data conversion | Deaths and exposures per stratum from `mt_data` to bamp's matrices (rows = periods, columns = age groups); exposures rounded to integers with the rounding recorded |
+| Age and period resolution | Fit bamp at the resolution the deaths were observed: 5-year age groups with annual periods use `periods_per_agegroup = 5` (Knorr-Held and Rainer 2001); single-year deaths use single-year ages. Forecast draws are mapped to the single-year latent grid by the harmonisation layer, draw by draw |
+| Strata | One bamp fit per stratum; strata run in parallel under one core budget shared with bamp's own chains, so the machine is not oversubscribed |
+| Convergence | `checkConvergence()` called explicitly after every fit; if it fails, refit with longer chains up to a limit, then stop with the R-hat table. Never return unconverged results silently |
+| Forecast draws | `predict_apc()` posterior samples converted to `mt_draws` \[age x period x stratum x draw\]; deaths drawn with binomial noise from external future exposures |
+| Missing cells | bamp cannot fit with NA cells: the wrapper stops with a clear message and points to `impute_missing()` or `regroup()` |
+| Heterogeneity models | Prediction for `rw1+het`/`rw2+het` fails in bamp 3.0.0: blocked with an informative error until fixed upstream, or served by an adapted prediction routine (possible under GPL-3; decide in Phase 3) |
+| Likelihood | bamp is binomial with population as denominator; documented, and the fitted p is treated as the central rate only where rates are small (checked at old ages) |
+| Model selection | `tune(apc_bayes(), method = "dic")` via `bamp::selectModel()`, or out-of-sample selection through `backtest()` |
+| Effects | `tidy()` and `plot()` of age, period and cohort effects via `bamp::effects()` with the convention stated |
+| Reproducibility | Seeds passed through; parallel RNG streams (`L'Ecuyer-CMRG`) for chains and strata |
+| Messages | bamp output captured into the diagnostics table; nothing printed by default |
+| Dependency | `bamp (>= 3.0.0)` in Suggests; tests skip if not installed; an integration test on a small fixture runs in CI |
 
-### 7.2 Engine options
+### 7.2 Runtime budget
 
-| Option | Pros | Cons | Use |
-|---|---|---|---|
-| A. Wrap `bamp` (Suggests) | Parity within weeks; reference implementation | One stratum per call, binomial only, no missing data, GPL-3 boundary, young release | Stage 1 and as validation reference |
-| B. Native engine on TMB (Kristensen et al. 2016) | Fast Laplace approximation for sparse latent Gaussian models; Poisson/binomial; **C** and multiple strata straightforward; CRAN-compatible; MIT-compatible when written from the papers | C++ templates to maintain; Laplace approximation treats hyperparameters by empirical Bayes unless combined with MCMC | Stage 2 default engine |
-| C. Full MCMC via `tmbstan` (Monnahan et al. 2018) on the same TMB template | Full Bayes on the identical model; checks the Laplace approximation | Slower | Optional `engine = "nuts"` |
-| D. INLA (as in BAPC; Riebler and Held 2017) | Fast and accurate for this model class | Not on CRAN | Not as a hard dependency; optional comparison only |
+The review's test fit took 141 s for one stratum with short chains
+(6,000 iterations, 4 chains on 4 cores), and about 16 minutes with bamp's
+automatic chain length. Because the chains already use all cores, 10 strata
+on the same machine take roughly 25 minutes (short chains) to about 2.7 hours
+(automatic length) per fit. Backtests multiply this by the number of
+origins, so the wrapper needs explicit `mcmc_control()` presets ("fast" for
+backtests with an enforced convergence check, "final" for the reported
+forecast) and caching of fits.
 
-**Recommendation:** A first, then B with C as an option, validated against A
-on shared examples (posterior predictive agreement of rates) and by
-simulation-based calibration. The native engine must be written from the
-published model descriptions, not from bamp's GPL-3 source (see decision 1).
+### 7.3 Not in the current scope (possible later)
 
-### 7.3 Known modelling risks
+A native engine (e.g. TMB with optional full MCMC via `tmbstan`; Kristensen
+et al. 2016, Monnahan et al. 2018) would add Poisson likelihood, joint
+multi-stratum APC models (Riebler et al. 2009; Riebler et al. 2011), missing
+cells and fitting coarse counts directly through the aggregation operator.
+These are recorded as options, not commitments.
+
+### 7.4 Known modelling risks
 
 - APC extrapolation depends on how the linear trend is split between period
   and cohort; forecasts of RW2 models widen quickly. Riebler and Held (2017)
   discuss criticism that Bayesian APC intervals are too wide and report
   well-calibrated intervals in their application. Calibration must therefore
   be checked in mortensor's own backtests, not assumed.
-- The bamp test run in the review took 141 s for one group with short chains
-  (about 16 minutes with automatic chain length). Joint models over 10 strata
-  and single-year ages need the sparse TMB engine to be practical.
+- bamp 3.0.0 is a recent release with a limited test suite; pin the version
+  and keep mortensor-side integration tests.
 
 ## 8. Layers 4-6: forecasting, composition and derived quantities
 
@@ -224,7 +239,7 @@ compatible summaries.
 | Function | Purpose |
 |---|---|
 | `mt_ensemble(..., weights)` | Mixture of model draws. Weights: equal, inverse score, or stacking on out-of-sample scores from inner CV; never fitted on the evaluation holdout. Precedent for probabilistic model ensembles in mortality: Kontis et al. (2017) |
-| `cohere()` | Coherence across strata (e.g. sexes, deprivation quintiles) via joint models (Li-Lee, product-ratio, multivariate APC) or post-hoc constraints, documented as such |
+| `cohere()` | Coherence across strata (e.g. sexes, deprivation quintiles) via joint models (Li-Lee, product-ratio, Tucker3 across groups) or post-hoc constraints, documented as such |
 | `reconcile()` | Make draws add up over a hierarchy (causes to all-cause, regions to nation) with bottom-up, top-down or MinT reconciliation (Wickramasuriya et al. 2019), applied draw by draw |
 | `cause_shares()` | Compositional forecasts of cause shares given an all-cause forecast (successor of the Tucker4/ILR code) |
 | `scenario()` | Explicit user adjustments (e.g. shock periods, target improvement rates), recorded in the forecast metadata |
@@ -264,8 +279,8 @@ d <- mt_data() |>
   flag_shocks(periods = 2020:2022, action = "exclude")
 
 spec <- mt_ensemble(
-  apc_bayes(age = rw2(), period = rw2(), cohort = rw1(), overdispersion = TRUE,
-            family = poisson(), joint = TRUE, engine = "tmb"),
+  apc_bayes(age = "rw2", period = "rw2", cohort = "rw1", overdispersion = TRUE,
+            by = c("sex", "imd"), mcmc = mcmc_control("fast")),   # bamp wrapper
   lee_carter(by = c("sex", "imd")),
   tucker3(transform = "coda"),
   weights = stacking(score = "crps", cv = rolling_origin(h = 5, n = 4))
@@ -286,7 +301,7 @@ summarise(fc, life_expectancy(age = 30), deaths(), asr(standard = "esp2013"),
 
 | 0.1.0 component | Fate |
 |---|---|
-| `mort_data`, `mort_forecast`, `mort_calibration` | Replaced by `mt_data`, `mt_draws`, `mt_fit`; converters provided |
+| `mort_data`, `mort_forecast`, `mort_calibration` | Replaced by `mt_data`, `mt_draws`, `mt_fit` (clean break, no converters; a migration note maps old calls to new ones) |
 | Tucker3/CoDa and Tucker4/ILR cores | Ported behind the model contract after fixing the open age group (D11) and single-group handling (D12) |
 | `calibrate()`, `compare_models()`, `calibrate_all_models()` | Replaced by `tune()`, `mt_ensemble()` and `backtest()` |
 | Bootstrap PI functions | Replaced by model-specific `simulate()` paths |
@@ -297,18 +312,28 @@ summarise(fc, life_expectancy(age = 30), deaths(), asr(standard = "esp2013"),
 
 ## 12. Engineering
 
+- **Licence:** GPL-3 (decision 1). DESCRIPTION `License: GPL-3`; the MIT
+  LICENSE file is removed. Only the copyright holder(s) of the existing code
+  can relicense it; confirm that no external contributions under MIT need
+  separate permission.
 - **Dependencies (core):** `data.table`, `Matrix`, `rlang`, `cli`,
-  `generics`, `ggplot2`. **Suggests:** `bamp`, `demography`, `StMoMo`,
-  `ungroup`, `scoringutils`, `posterior`, `tmbstan`, `future.apply`.
-  **LinkingTo:** `TMB`, `RcppEigen` (Stage 2 engine).
-- **Package split (decision 4):** keep one package until the TMB engine
-  lands; split into `mortensor` (core) and `mortensor.apc` (compiled engine)
-  if compile times or CRAN checks become a burden.
+  `generics`, `ggplot2`, `forecast`, `rTensor`, `compositions`.
+  **Suggests:** `bamp (>= 3.0.0)`, `demography`, `StMoMo`, `ungroup`,
+  `MortalityLaws`, `scoringutils`, `posterior`, `future.apply`.
+- **One package** (decision 4), organised by layer in `R/` (`data_*.R`,
+  `harmonise_*.R`, `model_*.R`, `draws_*.R`, `compose_*.R`, `derive_*.R`,
+  `evaluate_*.R`, `adapters_*.R`).
+- **Regression baseline from 0.1.0:** before porting, record the point
+  forecasts of every 0.1.0 model on `example_mortality` and on the owner's
+  real data with fixed hyperparameters. Ported models must reproduce them
+  (within tolerance) except where a documented defect fix changes them (e.g.
+  D11). This protects what worked well in 0.1.0 while the structure changes.
 - **Testing:**
   - Unit tests per function.
   - Invariant tests, e.g. regrouping preserves totals, life-table identities
     hold, and draws aggregate consistently.
-  - Simulation-based calibration for the Bayesian engine.
+  - Posterior predictive and convergence checks for the bamp wrapper on a
+    simulated fixture with known rates.
   - Regression tests against `demography`, `StMoMo` and `bamp` on fixtures.
   - A small public benchmark run in CI. Ship only data whose licence allows
     redistribution (check the terms of use of sources such as the HMD before
@@ -325,32 +350,43 @@ summarise(fc, life_expectancy(age = 30), deaths(), asr(standard = "esp2013"),
 ## 13. Phased roadmap
 
 Effort assumes one developer familiar with R package development; ranges
-reflect uncertainty, especially for the native engine.
+reflect uncertainty.
 
 | Phase | Content | Deliverable | Effort |
 |---|---|---|---|
-| 0 | Stabilise 0.1.x (review Phase 0: D1, D2, D17, CI, executable vignettes) | 0.1.1 that installs, checks and runs | 1-2 weeks |
-| 1 | Data layer and granularity: axes, strata, observation sets, operator **C**, validation, `regroup()`, `ungroup()` (wrapper), exposures, interval-aware life tables | `mt_data` API with tests | 4-6 weeks |
-| 2 | Model contract, draws, `backtest()`/`score()`, benchmarks (RWD, ARIMA, ETS), Lee-Carter (Poisson), Tucker3 ported | Honest benchmark harness; first comparison of Tucker3 against standard models | 4-6 weeks |
-| 3 | Bayesian APC Stage 1: `apc_bayes(engine = "bamp")` wrapper with convergence enforcement, draws, future exposures | BAMP functionality available | 2 weeks |
-| 4 | Bayesian APC Stage 2: native TMB engine (Poisson/binomial, RW1/RW2, heterogeneity, overdispersion, **C**, missing cells), optional NUTS; validation against bamp and by simulation-based calibration | Engine handling mixed granularity | 6-10 weeks |
-| 5 | Composition and derived quantities: ensembles (mixture, stacking), Li-Lee/product-ratio, multivariate APC, reconciliation on draws, cause shares, pathwise summaries | Full forecasting workflow | 5-8 weeks |
-| 6 | Validation and release: public benchmark on openly licensed data, executable vignettes, methods paper draft, 1.0.0 | Release | 4-6 weeks |
+| 0 | Stabilise 0.1.x (review Phase 0: D1, D2, D17, CI, executable vignettes); relicense to GPL-3; record the 0.1.0 regression baseline | 0.1.1 that installs, checks and runs | 1-2 weeks |
+| 1 | Data layer and granularity: axes, strata, observation sets, operator **C**, validation, `regroup()`, `ungroup()` with the methods chosen in Section 5.1, exposures, interval-aware life tables; single-year default grid | `mt_data` API with tests | 4-6 weeks |
+| 2 | Model contract, draws, `backtest()`/`score()`, benchmarks (RWD, ARIMA, ETS), Lee-Carter, Tucker3-CoDa and Tucker3-Direct ported | Honest benchmark harness; first comparison of Tucker3 against standard models | 4-6 weeks |
+| 3 | Seamless bamp wrapper `apc_bayes()` (Section 7) | BAMP functionality available | 2-3 weeks |
+| 4 | Composition and derived quantities for the release-1 models: ensembles (mixture, inverse score, stacking on inner CV), pathwise life tables, e_x, deaths with external population projections, ASR | **Release 0.2.0** (first release) | 4-6 weeks |
+| 5 | Port every remaining model and method that runs in 0.1.0 (committed, see list below) | **Release 0.3.0** | 5-8 weeks |
+| 6 | Validation: public benchmark on openly licensed data, executable vignettes, methods paper draft | **Release 1.0.0** | 4-6 weeks |
 
-Total: roughly 6-10 months of focused work. Phases 1-2 can start in
-parallel with Phase 3 once the model contract is fixed.
+Total: roughly 5-8 months of focused work.
 
-## 14. Decisions needed from the owner
+**Committed for 0.3.0 (all models and methods running in 0.1.0):**
+FDM; StMoMo APC and CBD (with real ages and correct exposures); Tucker4/ILR
+coherent multi-cause forecasting and cause shares; WLS reconciliation
+(alongside MinT) in `reconcile()`; sex/group coherence in `cohere()` (as a
+documented constraint, plus Li-Lee and product-ratio models); NNLS stacking
+(fitted on the scale it is applied to, on inner CV); GAM (Gaussian) and
+Whittaker smoothing as options next to the Poisson P-spline; GAM-Bayes
+smoothing-uncertainty propagation as an option on top of model simulation;
+the natural-Gompertz, Hyman-Kannisto and GAM disaggregation methods as
+alternative `ungroup()` methods with the exposure-weighted constraint;
+Kannisto, Gompertz and reciprocal open-age methods in `life_table()`.
 
-| # | Decision | Options | Recommendation |
-|---|---|---|---|
-| 1 | Licence | Stay MIT (wrap bamp via Suggests, write the native engine from the papers) or move to GPL-3 (allows reusing bamp code with attribution) | Stay MIT unless reusing bamp's C code saves substantial time; this is not legal advice |
-| 2 | Native Bayesian engine | TMB (+ tmbstan), Stan only, INLA, or bamp only | TMB with optional tmbstan |
-| 3 | Population scope | Exposures and external projections only, or a full cohort-component population projection (fertility, migration) | Exposures and external projections; cohort-component later if needed |
-| 4 | Package structure | One package or core + compiled engine package | One package until Phase 4 |
-| 5 | Default latent grid | Single years (needs ungrouping) or finest observed resolution | Finest observed resolution; single years when any input has them |
-| 6 | Backward compatibility | Converters and deprecation period, or clean break | Clean break at 0.2.0 with a migration note, since 0.1.0 has no stable release |
-| 7 | Scope cut for the first release | All model families, or APC + Lee-Carter + Tucker3 + benchmarks | The reduced set; add FDM, StMoMo and multi-cause after the benchmark |
+## 14. Decisions (agreed with the owner, 2026-10-12)
+
+| # | Topic | Decision |
+|---|---|---|
+| 1 | Licence | Change to GPL-3 |
+| 2 | Bayesian APC | Wrapper around `bamp` only for now, but seamless (Section 7); native engine not planned |
+| 3 | Population scope | External population (exposures and external projections); no cohort-component projection |
+| 4 | Package structure | One package |
+| 5 | Default latent grid | Single years of age |
+| 6 | Backward compatibility | Clean break at 0.2.0 |
+| 7 | Scope | Release 0.2.0: APC (bamp) + Lee-Carter + Tucker3 + benchmarks; release 0.3.0 definitively adds all models and methods running in 0.1.0 (Section 13) |
 
 ## 15. References
 

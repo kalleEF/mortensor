@@ -54,7 +54,8 @@ kinds:
    unweighted constraint (D21).
 
 Documentation does not demonstrate the package: all vignettes are built with
-`eval = FALSE`; evaluated, [[VIG_SUMMARY]]. Runtime is high for small data
+`eval = FALSE`; evaluated, 66 of 159 chunks fail, 10 more could not be completed,
+and only one of nine vignettes (life tables) runs end to end. Runtime is high for small data
 (about 10 minutes for the default `calibrate()` on 13 x 20 x 10 cells).
 
 What is worth keeping: the S3 workflow design (`calibrate()` ->
@@ -99,7 +100,30 @@ little about correctness.
 
 ### 3.3 Vignettes
 
-[[VIGNETTES]]
+All nine vignettes set `eval = FALSE` in their setup chunk, so `R CMD build`
+"succeeds" without running any code. Each chunk was evaluated in order in one
+session per vignette (install and setup chunks skipped), with a 40-minute
+limit per vignette. Chunks that were not reached because of the limit were
+then run separately with objects precomputed from the README run; those
+results are marked "(pre)" and only show whether the code runs given objects
+of the right type.
+
+| Vignette | Chunks evaluated | Run | Error | Not completed | Notes |
+|---|---|---|---|---|---|
+| getting-started | 20 | 9 | 10 | 1 (time limit) | Placeholder objects never defined (`my_mx_array`, `mx_vector`, `md`, `holdout_data`, `arr_test`); ONS file paths; the `gam_bayes` interval chunk did not finish (about 10 minutes per 50 draws) |
+| tensor-decomposition | 15 | 8 | 7 | 0 | Tucker4 chunks need `data_all` (not shipped); `reconstruct` uses non-existent fields (`B_forecast`, `G`). 1,590 s in total |
+| model-calibration-and-selection | 16 | 10 (4 pre) | 1 (pre) | 5 | `cv-expanding` calls `cv_expanding_model(model = "lee_carter")`, which does not exist as an argument; three chunks with repeated `calibrate()` calls and `full-example` not run (time limit), `dispatch` not testable because its input chunk was not run; printed "example output" tables do not match what the code produces |
+| prediction-intervals | 15 | 13 (7 pre) | 0 | 2 | `gam-bayes` (200 draws, estimated over 40 minutes) not run; `le-pi` text says e_x intervals come from simulated paths, the code uses pointwise bounds (D22); `disagg-pi` prints NULL instead of the table shown |
+| scoring-and-evaluation | 21 | 6 | 13 | 2 | 12 low-level metric chunks reference undefined objects (`obs_mx`, `mx_test`, `log_obs`, `qmat`); `accuracy-insample` fails on the vignette's own forecast object; `compare-models-new` not run (time limit), `holdout-manual` not testable |
+| life-tables | 12 | 12 | 0 | 0 | Runs fully (1,070 s, two `calibrate()` calls); `le-disagg` uses the default width on single-year output (D10) |
+| age-disaggregation | 14 | 6 | 8 | 0 | `disaggregate(method = "gam")` stops (D23); later chunks depend on its output; `full-example` fails with `object 'year' not found` |
+| multi-cause-forecasting | 14 | 0 | 14 | 0 | No multi-cause data shipped; pipelines require ONS paths (D24) |
+| visualization-gallery | 32 | 19 | 13 | 0 | Undefined objects (`mx_obs`, `data_all`); calls an unexported function (`model_colors`) |
+| **Total** | **159** | **83** | **66** | **10** | |
+
+Runtime: the vignettes call the default `calibrate()` at least 13 times in
+total (about 10 minutes each on this machine), so even a fixed set would take
+hours to build without precomputation.
 
 ### 3.4 README quick start and runtime
 
@@ -143,7 +167,7 @@ Severity: **Blocker** = install, check or the documented workflow fails;
 |---|---|---|---|---|
 | D1 | Blocker | Dependencies | `%||%` is used in 23 functions but never defined or imported; it exists in base R only from 4.4.0 while DESCRIPTION declares R >= 4.1.0 | R CMD check: examples ERROR, 5 test failures; `print()` of every main class fails on R 4.3.3 |
 | D2 | Blocker | Generics | `forecast()` (`R/workflow.R:28`) and `accuracy()` (`R/metrics.R:40`) are new generics with the same names as the `forecast`/`generics` generics. After `library(forecast)` (forecast 9.x re-exports `generics::forecast`), `forecast(<mort_calibration>)` dispatches to the wrong generic | Reproduced: `non-numeric argument to binary operator` |
-| D3 | Blocker | Documentation | All nine vignettes set `eval = FALSE` globally, so `R CMD build` succeeds without running any code. Evaluated, [[VIG_FAILCOUNT]] | Section 3.3 |
+| D3 | Blocker | Documentation | All nine vignettes set `eval = FALSE` globally, so `R CMD build` succeeds without running any code. Evaluated, 66 of 159 chunks fail, 10 could not be completed, and only life-tables runs end to end; several chunks print hard-coded "example output" that does not match what the code produces | Section 3.3 |
 | D4 | High | Model selection | Holdout leakage: the holdout years are smoothed together with the training years, the last rolling-origin CV fold of every model evaluates exactly the holdout years, and the README path scores forecasts against smoothed (not observed) holdout values | README path: reported holdout MASE 0.0017 vs honest 0.734 for the selected ensemble; raw input: reported scores 3-7% optimistic and the selected ensemble ranks 7th of 9 on honest scores; 315 CV fits scored on the holdout years (Section 5.1) |
 | D5 | High | Ensemble | Ensemble size, inverse-MASE weights and NNLS stacking weights are chosen on the holdout and the same holdout score is reported and compared with single models (with a 5% preference margin for the ensemble). NNLS weights are fitted on log(mx) and applied to mx | Code: `R/comparison.R:151-237`, `R/workflow.R:250-262` |
 | D6 | High | Ensemble | A component that fails (NA) contributes 0 to the weighted ensemble average without renormalising the weights per cell (`R/workflow.R:320`, `R/comparison.R:170`, `R/bootstrap.R:238,323`), and no warning is raised | Lee-Carter failing for one group: ensemble forecast for that group = 0.500 x Tucker3 forecast; all other groups 0.99-1.00 |
