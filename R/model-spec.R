@@ -83,16 +83,17 @@ mt_fit.mt_spec <- function(spec, data, prep = NULL, cores = 1, ...) {
   st <- d$strata
   run <- function(expr_fun) {
     t0 <- proc.time()[["elapsed"]]
-    w <- character()
+    w <- new.env(parent = emptyenv())
+    w$msg <- character()
     res <- withCallingHandlers(tryCatch(expr_fun(), error = function(e) e),
                                warning = function(cnd) {
-                                 w <<- c(w, conditionMessage(cnd))
+                                 w$msg <- c(w$msg, conditionMessage(cnd))
                                  invokeRestart("muffleWarning")
                                })
     secs <- proc.time()[["elapsed"]] - t0
     ok <- !inherits(res, "error")
     list(fit = if (ok) res else NULL, status = if (ok) "ok" else "failed",
-         message = if (ok) paste(unique(w), collapse = " | ") else conditionMessage(res), seconds = secs)
+         message = if (ok) paste(unique(w$msg), collapse = " | ") else conditionMessage(res), seconds = secs)
   }
   if (spec$joint) {
     r <- run(function() fit_model(spec, md$D, md$E, md$age, md$periods))
