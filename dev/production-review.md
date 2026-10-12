@@ -29,8 +29,8 @@ continues the first review pass recorded in the handoff notes and replaces its
 
 ## 2. Summary
 
-**Verdict: mortensor 0.1.0 is a research prototype, not a production
-package.** The code base is substantial (about 9,000 lines, 103 exports) and
+**Verdict: mortensor 0.1.0 is a research prototype that needs substantial
+work before production use.** The code base is substantial (about 9,000 lines, 103 exports) and
 the README workflow runs end to end on R >= 4.4. The problems are of four
 kinds:
 
@@ -246,8 +246,8 @@ Findings:
 1. The README path reports a holdout MASE of 0.0017 for the selected
    ensemble; its honest MASE is 0.734, about 400 times worse. Scores against
    smoothed holdout values (median distance from the observed values 0.027
-   log units) measure how well a model extrapolates a GAM curve, not how well
-   it forecasts mortality. The same number is printed as "MASE" by
+   log units) measure how well a model extrapolates a GAM curve; they say nothing about
+   how well it forecasts mortality. The same number is printed as "MASE" by
    `print()` and `summary()` of the forecast.
 2. With raw input, every reported score is 3-7% better than the honest score
    of the same model, and the reported ranking does not carry over: the
@@ -313,7 +313,7 @@ h = 10.
 The cap at +/-1.5 log units never bound in these runs, and coverage computed
 from the raw simulation quantiles (before re-centring and capping) was within
 0.02 of the reported coverage. The under-coverage therefore comes from how
-the simulations are generated, not from the post-processing.
+the simulations are generated; the post-processing plays no part here.
 
 **(c) README quick start.** The ensemble chosen by `calibrate()` was FDM,
 ARIMA and ETS with weights 0.000, 0.977 and 0.023. `add_pi()` simulated from
@@ -488,7 +488,7 @@ with the code.
    fitted values of the selected model.
 7. Coherence across groups via established multi-population models (Li and
    Lee 2005; product-ratio method of Hyndman et al. 2013) instead of the
-   female <= male constraint; group definitions from data, not hardcoded.
+   female <= male constraint; group definitions taken from the data.
 
 ### Phase 4: architecture and API (in parallel with Phases 1-3)
 

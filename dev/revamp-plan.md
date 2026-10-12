@@ -30,7 +30,7 @@ Turn mortensor into a suite of composable functions that:
 | One latent grid, many observation grids | Models describe rates on a fine latent grid; each dataset is linked to it by an aggregation operator. Reporting can use any grid |
 | Forecasts are draws | Point forecasts, intervals, e_x, deaths and totals are summaries of the same simulated paths |
 | Strict temporal separation | Splitting happens before smoothing, tuning or weighting; evaluation code cannot see test data during fitting |
-| Plug-in models | A small contract that every model implements; external engines (bamp, StMoMo, demography) are wrapped, not copied |
+| Plug-in models | A small contract that every model implements; external engines (bamp, StMoMo, demography) are used through wrappers |
 | Fail loudly | Errors and per-model failures are reported in a diagnostics table, never converted to NA, 0 or defaults |
 | Quiet and pure by default | No `cat()`, no files written outside `export()`, plots return ggplot objects |
 
@@ -174,7 +174,7 @@ year-to-year roughness of the truth).
 
 **Decisions for `ungroup()`:**
 
-1. Ungroup **rates, not counts**: deaths with single-year exposures as the
+1. Ungroup **rates**: deaths with single-year exposures as the
    offset. Cohort-size waves then live in the exposures and the rate surface
    is smooth in age and period.
 2. If exposures are only grouped, ungroup the population first (monotone
@@ -280,7 +280,7 @@ A native engine (e.g. TMB with optional full MCMC via `tmbstan`; Kristensen
 et al. 2016, Monnahan et al. 2018) would add Poisson likelihood, joint
 multi-stratum APC models (Riebler et al. 2009; Riebler et al. 2011), missing
 cells and fitting coarse counts directly through the aggregation operator.
-These are recorded as options, not commitments.
+These are recorded as options for later.
 
 ### 7.4 Known modelling risks
 
@@ -288,7 +288,7 @@ These are recorded as options, not commitments.
   and cohort; forecasts of RW2 models widen quickly. Riebler and Held (2017)
   discuss criticism that Bayesian APC intervals are too wide and report
   well-calibrated intervals in their application. Calibration must therefore
-  be checked in mortensor's own backtests, not assumed.
+  be checked in mortensor's own backtests.
 - bamp 3.0.0 is a recent release with a limited test suite; pin the version
   and keep mortensor-side integration tests.
 
