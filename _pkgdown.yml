@@ -1,0 +1,66 @@
+url: ~
+template:
+  bootstrap: 5
+reference:
+  - title: Data
+    contents:
+      - mt_data
+      - mt_add
+      - mt_axis
+      - parse_age_labels
+      - axis_widths
+      - mt_strata
+      - mt_set_grid
+      - mt_array
+      - mt_window
+      - mt_granularity
+      - mt_validate
+      - mt_as_exposure
+      - as_mt_data
+      - mt_from_hmd
+      - mt_example
+      - mt_example_causes
+  - title: Harmonisation and preprocessing
+    contents:
+      - mt_regroup
+      - mt_operator
+      - mt_ungroup
+      - mt_smooth
+      - mt_prep
+  - title: Models
+    contents:
+      - rwd
+      - lee_carter
+      - lc_parameters
+      - tucker3
+      - arima_series
+      - hyndman_ullah
+      - stmomo
+      - li_lee
+      - apc_bayes
+      - mcmc_control
+      - apc_effects
+      - cause_shares
+      - mt_ensemble
+      - mt_tune
+      - new_mt_spec
+  - title: Fitting and forecasting
+    contents:
+      - mt_fit
+      - mt_forecast
+      - mt_draws
+      - mt_deaths
+      - mt_reconcile
+      - mt_cohere
+  - title: Evaluation
+    contents:
+      - mt_backtest
+      - mt_score
+  - title: Derived quantities, plots and export
+    contents:
+      - life_table
+      - life_expectancy
+      - derived
+      - standard_population
+      - mt_plot
+      - mt_export
