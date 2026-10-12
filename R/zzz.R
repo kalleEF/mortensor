@@ -25,5 +25,5 @@ utils::globalVariables(c(
   "reorder", "sd", "sex", "share", "simulate", "smooth",
   "stage", "type", "value", "w", "xmax", "xmin", "y", "year",
   "grp",
-  "log_lo", "log_hi", "residual"
+  "log_lo", "log_hi", "residual", "group_label", "line_id"
 ))

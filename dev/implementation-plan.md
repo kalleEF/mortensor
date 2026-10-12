@@ -5,6 +5,17 @@ decisions) and `dev/production-review.md` (defects D1-D26). This document turns
 the revamp into work packages that can be implemented, reviewed and merged one
 at a time.
 
+## 0. Decisions update (owner, 2026-10-12)
+
+| Topic | Decision | Consequence in this plan |
+|---|---|---|
+| Distribution | GitHub only for now | WP V6.3 becomes "GitHub release 1.0.0"; no CRAN-specific work |
+| Minimum R | Lowest version actually needed; newer is fine | `Depends: R (>= 4.3.0)`, the oldest version tested in CI and used for development |
+| Dependencies | Reduce where possible | Imports limited to `data.table`, `Matrix`, `stats`, `utils`, `parallel`; Tucker decomposition, CLR/ILR transforms, PCLM, Lee-Carter, random walk with drift and scoring are implemented natively; `forecast` (ARIMA/ETS), `ggplot2` (plots), `bamp`, `demography`, `StMoMo` move to Suggests; `rlang`, `cli`, `rTensor`, `compositions`, `scoringutils`, `future.apply` are not used (base R conditions and `parallel` instead) |
+| Vignettes | Show the functionality with Human Mortality Database data | Offline HMD extracts shipped in Suggests packages (`StMoMo::EWMaleData`: England & Wales men 1961-2011; `demography::fr.mort`: France 1899-2005), grouped where needed to demonstrate granularity; optional live download via `HMDHFDplus` evaluated only when `HMD_USER`/`HMD_PASSWORD` are set |
+| Validation | A validation pipeline usable with every iteration | New WP Q0.1 (Section 5): `validation/` suite with thresholds and a stored baseline, run by GitHub workflows |
+| Branch | Work in this session goes to `claude/vigilant-albattani-2ssw1x`, which plays the role of `dev-0.2` | The 0.1.1 fixes are a separate commit on that branch (recorded in `dev/progress.md`) that the owner can bring to `main` |
+
 ## 1. How to use this plan
 
 - Every **work package (WP)** is sized for one pull request (roughly 300-1,000
@@ -180,7 +191,9 @@ Each step has `prep_fit(step, data)` (learns on the training window) and
 | P0.5 | Regression baseline | P0.1 | `dev/baseline/capture_baseline.R`: point forecasts of every 0.1.0 model with fixed hyperparameters on `example_mortality` (committed as `tests/testthat/fixtures/baseline_0.1.rds`) and, locally, on the owner's data (not committed) | Script reruns reproducibly (fixed seed); fixture documented | protects 0.1.0 behaviour | 1 |
 | P0.6 | Repository hygiene for the rewrite | P0.2 | `CLAUDE.md` (conventions from Section 3), `dev/progress.md`, issue templates, `dev-0.2` branch created | Present and referenced from README | | 0.5 |
 
-Phase 0 total: about 8 days.
+| Q0.1 | Validation pipeline | P0.3 | `validation/run_validation.R` with suites (unit tests, ungrouping accuracy on HMD extracts, interval coverage on the simulated generator, honest backtest on HMD data, runtime budget), thresholds in `validation/thresholds.csv`, results appended to `validation/history.csv`, markdown report; GitHub workflow runs the quick suite on every push and pull request and the full suite weekly and on demand, uploads the report and fails on threshold breaches | Pipeline runs locally and in CI; a deliberately broken metric makes it fail | | 3 |
+
+Phase 0 total: about 11 days (including Q0.1).
 
 ## 6. Phase 1: data layer and harmonisation (on `dev-0.2`)
 
@@ -339,12 +352,12 @@ repository.
 
 ## 17. Open questions for the owner
 
-1. Minimum R version: keep R >= 4.1 (native pipe) or raise to 4.3?
-2. CRAN as a target for 0.2.0, or GitHub-only until 1.0.0?
-3. German single-year population (Destatis 12411-0005 or similar) available
+Answered: minimum R 4.3 (Section 0), GitHub only. Still open:
+
+1. German single-year population (Destatis 12411-0005 or similar) available
    for the rate-based ungrouping and backtests on your data?
-4. Lee-Carter: confirm a native implementation, validated against `StMoMo`
-   and `demography`.
+2. Lee-Carter: native implementation, validated against `StMoMo` and
+   `demography` (assumed agreed unless the owner objects).
 
 ## 18. References
 

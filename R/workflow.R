@@ -13,20 +13,6 @@
 #' @name workflow
 NULL
 
-#' Forecast mortality from a calibrated model
-#'
-#' Generic function for producing mortality forecasts. Dispatches on the
-#' class of `object`. After `library(mortensor)` this generic is always
-#' available without needing to load the \pkg{forecast} package separately.
-#'
-#' @param object A `mort_calibration` object (from [calibrate()]).
-#' @param h Integer forecast horizon (years). Overrides the value stored in
-#'   the calibration object.
-#' @param ... Additional arguments passed to the method.
-#' @return A `mort_forecast` object.
-#' @export
-forecast <- function(object, h = NULL, ...) UseMethod("forecast")
-
 #' @export
 forecast.mort_data <- function(object, h = NULL, ...) {
   stop("Cannot forecast a mort_data object directly.\n",

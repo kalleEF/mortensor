@@ -1,45 +1,14 @@
 # ---- accuracy generic ----
 
-#' Evaluate forecast accuracy
+#' Evaluate forecast accuracy of a mort_forecast
 #'
-#' Computes a comprehensive set of scoring rules for a mortality forecast.
-#' When called with observed test data, evaluates out-of-sample accuracy.
-#' When called without test data, evaluates in-sample fit (fitted vs raw
-#' training observations).
+#' Method for [generics::accuracy()]. With `test`, evaluates out-of-sample
+#' accuracy; without it, in-sample accuracy of fitted vs raw values.
 #'
 #' @param object A `mort_forecast` object.
-#' @param test Optional `mort_data` object containing observed mortality rates
-#'   for the forecast period. If `NULL`, evaluates in-sample accuracy using
-#'   fitted values and raw training data (both must be present).
+#' @param test Optional `mort_data` with observed rates for the forecast years.
 #' @param ... Ignored.
-#' @return A named list with class `mort_accuracy`, containing:
-#'   \describe{
-#'     \item{mase_cell}{Cell-level MASE across all (age, group) series.}
-#'     \item{mase_trend}{Group-trend MASE.}
-#'     \item{mase_combined}{Combined MASE (0.7 cell + 0.3 trend).}
-#'     \item{rmse_log}{RMSE on the log scale.}
-#'     \item{mae}{Mean absolute error.}
-#'     \item{coverage}{Empirical coverage of 95 percent PI (if PIs present).}
-#'     \item{interval_score}{Mean interval score (if PIs present).}
-#'     \item{crps}{Empirical CRPS from simulations (if sims present).}
-#'     \item{n_ages}{Number of age groups evaluated.}
-#'     \item{n_years}{Number of years evaluated.}
-#'     \item{n_groups}{Number of population groups evaluated.}
-#'     \item{type}{`"out_of_sample"` or `"in_sample"`.}
-#'     \item{model}{Model name.}
-#'   }
-#' @examples
-#' \dontrun{
-#' # Out-of-sample: compare forecast against held-out observed data
-#' accuracy(fc, test = holdout_data)
-#'
-#' # In-sample: evaluate fitted vs raw training data
-#' accuracy(fc)
-#' }
-#' @export
-accuracy <- function(object, ...) UseMethod("accuracy")
-
-#' @rdname accuracy
+#' @return A `mort_accuracy` object.
 #' @export
 accuracy.mort_forecast <- function(object, test = NULL, ...) {
   if (!is.null(test)) {

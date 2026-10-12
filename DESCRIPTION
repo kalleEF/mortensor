@@ -1,9 +1,9 @@
 Package: mortensor
 Title: Cause-Specific Mortality Forecasting with Tensor Decomposition
-Version: 0.1.0
+Version: 0.1.1
 Authors@R: 
     person("Karl", "Emmert-Fees", email = "karl.emmert-fees@tum.de",
-           role = c("aut", "cre"))
+           role = c("aut", "cre", "cph"))
 Description: A modular toolkit for cause-specific mortality forecasting using
     Tucker tensor decomposition, compositional data analysis (CoDa), and
     ensemble time-series methods. Provides a step-by-step workflow
@@ -16,7 +16,7 @@ Description: A modular toolkit for cause-specific mortality forecasting using
     Hyman+Kannisto, Natural+Gompertz, and GAM methods; and standard abridged
     life tables. Designed for stratified mortality data (e.g. by sex and
     deprivation quintile).
-License: MIT LICENSE
+License: GPL-3
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2
@@ -30,6 +30,7 @@ Imports:
     mgcv,
     ggplot2,
     rlang,
+    generics,
     stats
 Suggests:
     readxl,
