@@ -126,11 +126,78 @@ dimension. It gives two ways to use mixed-granularity data:
 | Function | Method | Notes |
 |---|---|---|
 | `regroup()` | Exact summation of deaths and exposures through **C** | Rates are recomputed from summed counts (exposure-weighted by construction; fixes D21) |
-| `ungroup()` | Penalized composite link model, 1D or 2D (Rizzi et al. 2015, 2018) | Wrap the `ungroup` package first; native implementation later if needed. Returns draws or bootstrap replicates of the ungrouped counts so the uncertainty can be propagated |
+| `ungroup()` | Penalized composite link model on **rates** (deaths with single-year exposures as offset), 1D per year by default, 2D on request (Rizzi et al. 2015, 2018); monotone spline of cumulative counts for exposures | Native implementation adapted from `ungroup` (MIT, compatible with GPL-3) with the fixes in Section 5.1; optional bootstrap replicates to propagate ungrouping uncertainty |
 | `align()` | Bring several observation sets to the latent grid (regroup where finer, ungroup where coarser) | Records the operation per cell |
 | `smooth()` | Poisson P-spline in age and period with log-exposure offset (Currie et al. 2004) | Applied to training data only; raw data are kept |
 | `flag_shocks()` | Mark periods (e.g. 2020-2022) for exclusion, down-weighting or an indicator term | Explicit, model-aware, never silent |
 | `impute_missing()` | Model-based imputation or exclusion | Models declare whether they accept missing cells |
+
+### 5.1 Ungrouping: evidence and chosen approach
+
+Single-year ages are the default grid (Section 14), so ungrouping 5-year
+death data is on the critical path. The owner reported unstable output from
+2D ungrouping of German data over time. Three checks during this review
+explain why and what works (`ungroup` 1.6.3, R 4.5.3):
+
+1. **Simulation with known single-year truth** (Kannisto-type hazards with
+   age-specific improvement, cohort-size waves in the population, Poisson
+   deaths grouped to 30-34 ... 85-89 and 90+; 5 replicates, large and small
+   populations).
+2. **England & Wales men 1980-2011** (`StMoMo::EWMaleData`, real single-year
+   deaths and exposures), grouped the same way and ungrouped back, so every
+   estimate can be checked against observed single-year rates.
+3. **German deaths 1998-2024 by cause and region** (owner's data, deaths only):
+   10-year groups were ungrouped and re-aggregated to the observed 5-year
+   groups.
+
+**What goes wrong:**
+
+| Cause | Evidence |
+|---|---|
+| With an exposure offset, `pclm()`/`pclm2D()` return rates that are shifted by a common factor: the artificial bin appended after the open interval is removed with a count-based reallocation (`delete.artificial.bin()`) that is applied to rates | Noise-free test: every single-year rate 6.1% too low (factor 0.939) and every implied group total 6% short; in 2D the factor differs by year |
+| `pclm2D()` defaults: `lambda = c(1, 1)` fixed (not estimated), knots every 7 ages (`kr = 7`), search range for lambda only 0.1-1000 | Defaults give 4.8-6.6% error in simulation; with estimation the lambda search hit the upper bound in simulation |
+| 2D smoothing of **death counts** cannot represent cohort-size waves, which run diagonally through the age-period surface (Germany: deaths of women aged 85-89 fell 37% from 1999 to 2004 and recovered by 2009 as the 1915-1919 birth cohorts passed through) | England & Wales, deaths only, 2D with lambda estimated: median absolute log error 0.64 at 30-89 and 1.25 at 90-100 (rates off by factors of about 1.9 and 3.5), group totals off by a factor of about 2; German all-cause series: log errors of 0.37-0.89 (factors 1.4-2.4) and year-to-year roughness 3-4 times the data's |
+| Deaths alone do not identify the split of the open 90+ group | England & Wales, deaths only, 1D per year: median absolute log error 0.69 at 90-100 (a factor of about 2), biased low |
+| Point smoothers (`demography::smooth.demogdata()`) do not use the grouping constraint | England & Wales: 2.1% error at 30-89 but rates at 90-100 about 20% too low; group totals off by 1-2% |
+
+**What works** (England & Wales, real single-year truth; errors are median absolute log errors, which for small values equal relative errors):
+
+| Method | Error 30-89 | Error 90-100 | Year-to-year roughness vs grouped data | Group totals |
+|---|---|---|---|---|
+| PCLM on rates with single-year exposures, 1D per year, rescaled per year | 1.5% | 2.4% | 1.07 | exact |
+| PCLM on rates with single-year exposures, 2D with lambda estimated (`kr = 2`, range 0.01-1e7), rescaled per year | 1.6% | 2.4% | 0.76 | within 0.6% |
+| Same 2D without the rescaling | 6.6% | 6.1% | 0.13 | 6.5% off |
+
+The simulation gives the same ranking (2D rate-based with rescaling: 0.8-1.3%
+error at 30-89 and 0.9-1.5% at 90-100; 1D per year has 2-5 times the
+year-to-year roughness of the truth).
+
+**Decisions for `ungroup()`:**
+
+1. Ungroup **rates, not counts**: deaths with single-year exposures as the
+   offset. Cohort-size waves then live in the exposures and the rate surface
+   is smooth in age and period.
+2. If exposures are only grouped, ungroup the population first (monotone
+   spline of cumulative population counts, which preserves totals exactly),
+   then the deaths as rates. Refuse 2D ungrouping of death counts without
+   exposures, with an explanatory error.
+3. Correct the level shift: implement PCLM natively (adapted from `ungroup`,
+   MIT-licensed, with attribution) so that the artificial bin is removed
+   correctly for rates; until then, rescale each year so implied deaths
+   match observed deaths.
+4. Default 1D per year; 2D as an option for smoother time paths, with lambda
+   estimated on a wide range, `kr = 2`, and a warning when lambda hits a
+   bound.
+5. Set the upper age (omega) explicitly and document the open-interval
+   assumption; report fitted-versus-observed group totals as a diagnostic.
+6. In backtests, ungroup within the training window only (2D smoothing over
+   time would otherwise use future years; review D4).
+7. Report the offset issue and the 2D defaults to the `ungroup` maintainers
+   (owner's decision).
+
+Figures: `dev/figures/ew_age_profile_2008.png`,
+`dev/figures/ew_age95_over_time.png`,
+`dev/figures/ungroup_age95_over_time_small.png`.
 
 ## 6. Layer 3: models
 
@@ -320,6 +387,8 @@ summarise(fc, life_expectancy(age = 30), deaths(), asr(standard = "esp2013"),
   `generics`, `ggplot2`, `forecast`, `rTensor`, `compositions`.
   **Suggests:** `bamp (>= 3.0.0)`, `demography`, `StMoMo`, `ungroup`,
   `MortalityLaws`, `scoringutils`, `posterior`, `future.apply`.
+  (`ungroup` is used only as a reference in tests; the PCLM code is adapted
+  into mortensor, see Section 5.1.)
 - **One package** (decision 4), organised by layer in `R/` (`data_*.R`,
   `harmonise_*.R`, `model_*.R`, `draws_*.R`, `compose_*.R`, `derive_*.R`,
   `evaluate_*.R`, `adapters_*.R`).
