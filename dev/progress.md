@@ -106,6 +106,13 @@ work: `claude/vigilant-albattani-2ssw1x` (plays the role of `dev-0.2`).
   0.067/0.95, RH 0.067/0.97 (2 of 4 origins failed), FDM 0.069/0.73, CBD
   0.194/0.67 (CBD is designed for older ages; ages 30+ used here).
 
+- 2026-10-12: First recorded full validation run (`validation/history.csv`,
+  commit 803e6d8 code): all 32 threshold checks pass, 418 unit-test
+  expectations. Open against the 0.2.0 criteria: the equal-weight ensemble of
+  Lee-Carter, Tucker3 and the random walk over-covers on the simulation
+  benchmark (95% coverage 0.994 against the target 0.90-0.98), because the
+  random walk component is too wide on that generator.
+
 ## Open questions
 
 See `dev/implementation-plan.md` Section 17.
