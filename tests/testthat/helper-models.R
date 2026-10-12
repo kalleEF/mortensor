@@ -13,6 +13,7 @@ expect_mt_model <- function(spec, data = NULL, h = 3, n_draws = 20) {
   testthat::expect_true(all(is.finite(fc1$rates) & fc1$rates > 0))
   testthat::expect_equal(fc1$periods, max(g$period$lower) + seq_len(h))
   s <- mt_summarise(fc1)
+  testthat::expect_true(all(c("q0.025", "q0.5", "q0.975") %in% names(s)))
   testthat::expect_true(all(s$q0.025 <= s$q0.5 & s$q0.5 <= s$q0.975))
   invisible(list(fit = fit, fc = fc1))
 }

@@ -32,7 +32,9 @@ mt_prep <- function(...) {
   structure(list(steps = steps), class = "mt_prep")
 }
 
-new_step <- function(type, args) structure(list(type = type, args = args), class = c(paste0("mt_step_", type), "mt_step"))
+new_step <- function(type, args) {
+  structure(list(type = type, args = args), class = c(paste0("mt_step_", type), "mt_step"))
+}
 
 #' @rdname mt_prep
 #' @export
@@ -124,7 +126,8 @@ print.mt_prep <- function(x, ...) {
   cat("<mt_prep>", length(x$steps), "step(s)\n")
   for (st in x$steps) {
     a <- st$args
-    desc <- if (length(a)) paste(names(a), vapply(a, function(v) paste(format(v), collapse = ","), ""), sep = "=", collapse = ", ") else ""
+    vals <- vapply(a, function(v) paste(format(v), collapse = ","), "")
+    desc <- if (length(a)) paste(names(a), vals, sep = "=", collapse = ", ") else ""
     cat(sprintf("  step_%s(%s)\n", st$type, desc))
   }
   invisible(x)

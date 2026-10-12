@@ -30,6 +30,13 @@ work: `claude/vigilant-albattani-2ssw1x` (plays the role of `dev-0.2`).
 | M2.7 | done | this branch | `mt_score()`: CRPS, WIS (Bracher et al. 2021), coverage, PIT, MASE |
 | M2.8 | open | | `mt_tune()` |
 | C4.1 | done | this branch | `mt_ensemble()` (equal, numeric, inner-backtest CRPS weights) |
+| B3.1-B3.4 | done | this branch | `apc_bayes()` + `mcmc_control()`: fit at the death resolution (`periods_per_agegroup`), explicit convergence check with refits, draws mapped to the grid with shape factors, `apc_effects()`; DIC-based selection not wrapped |
+| C4.2 | partial | this branch | `life_expectancy()` on draws, `mt_deaths()`; `prob_dying()`, `asr()`, `yll()` open |
+| C4.3 | done | this branch | `mt_plot_forecast()`, `mt_plot_age()`, `mt_plot_life_expectancy()`, `mt_plot_rates()`, `mt_plot_ungroup()`, `mt_plot_coverage()` (tests check that plots build; no vdiffr snapshots) |
+| C4.4 | open | | `mt_export()` |
+| C4.5 | done | this branch | Vignettes: getting started (simulated), granularity and ungrouping (HMD E&W, France), forecasting and backtesting (HMD France, E&W), Bayesian APC with bamp (HMD France; precomputed via `dev/precompute-vignettes.R`) |
+| C4.6, C4.7 | open | | Performance pass (2D PCLM about 90 s for 71 x 32), release 0.2.0 |
+| D1.12 (HMD) | done | this branch | `mt_from_hmd()`, `mt_read_hmd()` (HMDHFDplus, credentials from `HMD_USER`/`HMD_PASSWORD`) |
 
 ## Decisions taken during implementation
 
@@ -64,6 +71,19 @@ work: `claude/vigilant-albattani-2ssw1x` (plays the role of `dev-0.2`).
 - 2026-10-12: The 0.1.0 regression baseline (`dev/baseline/`) used GAM
   smoothing and the old data structures; exact reproduction is not a goal.
   The Tucker3 core is tested by exact recovery of a low-rank array instead.
+
+- 2026-10-12: bamp defaults changed to RW2 age, RW1 period and cohort: with
+  RW2 period/cohort bamp's own forecasts exploded on French HMD data
+  (ages 90-94, 15 years ahead, 90% interval 0.004-0.63 against 0.11-0.17
+  with RW1). RW1 forecasts are biased when mortality keeps declining
+  (backtest France 1996+10: CRPS 0.067 vs Lee-Carter 0.037, PIT mean 0.23).
+- 2026-10-12: Splitting an open exposure interval (85+) into single years
+  from its total alone gave errors of 27% at 85-99 and a factor of about 6
+  at 100+ (France); `mt_ungroup()` now warns
+  (`mt_warning_ungroup_open_counts`).
+- 2026-10-12: lintr's `object_name_linter` is disabled (matrix notation such
+  as `D`, `E`, `XtWX` is used throughout; lintr 3.1.1 failed with custom
+  regexes); line length 120.
 
 ## Open questions
 

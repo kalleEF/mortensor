@@ -79,6 +79,23 @@ checks$backtest_ew <- list(
                          mean(lc$crps) / mean(rw$crps)))
   })
 
+checks$apc_bayes_france <- list(
+  suite = "full",
+  description = paste("apc_bayes() (bamp, fast MCMC) on French women (HMD via demography), 1970-2006, deaths in",
+                      "5-year groups from age 40: convergence, and a backtest from origin 1996 (h = 10)."),
+  run = function() {
+    fr <- suppressWarnings(as_mt_data(mortensor:::pkg_data("fr.mort", "demography"), series = "female",
+                                      years = 1970:2006))
+    fr <- mt_regroup(fr, age = 40:100)
+    x <- fr
+    x$obs$deaths <- mt_regroup(fr, age = seq(40, 100, 5))$obs$deaths
+    prep <- mt_prep(step_ungroup())
+    fit <- mt_fit(apc_bayes(), x, prep = prep)
+    bt <- mt_backtest(apc_bayes(), x, origins = 1996, h = 10, prep = prep, n_draws = 300)
+    data.frame(metric = c("converged", "crps", "cov95"),
+               value = c(mean(fit$diagnostics$status == "ok"), mean(bt$crps), mean(bt$cov95)))
+  })
+
 checks$ungroup_ew_2d <- list(
   suite = "full",
   description = "As ungroup_ew_1d for 1980-2011 with the 2D PCLM (age-period surface).",

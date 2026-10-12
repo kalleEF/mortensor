@@ -89,7 +89,6 @@ mt_add <- function(data, measure, x, by = NULL, age = "age", period = "year",
   st <- register_strata(data$strata, obs, by)
   data$strata <- st
   data$by <- by
-  key <- if (length(by)) by else NULL
   if (length(by)) {
     obs <- merge(obs, st[, c("stratum", by), with = FALSE], by = by, sort = FALSE)
     obs[, (by) := NULL]
@@ -402,7 +401,7 @@ mt_granularity <- function(data) {
     o <- data$obs[[m]]
     o[, list(measure = m, cells = .N,
              ages = describe_widths(age_hi - age_lo, age_lo, age_hi),
-             open_from = if (any(is.infinite(age_hi))) paste(unique(age_lo[is.infinite(age_hi)]), collapse = ",") else "none",
+             open_from = open_from_label(age_lo, age_hi),
              periods = sprintf("%s-%s", min(period_lo), max(period_hi) - 1),
              period_width = paste(unique(period_hi - period_lo), collapse = ",")),
       by = "stratum"]
@@ -411,6 +410,10 @@ mt_granularity <- function(data) {
   out <- merge(data$strata[, c("stratum", "label")], out, by = "stratum")
   setcolorder(out, c("measure", "stratum", "label"))
   out[order(measure, stratum)]
+}
+
+open_from_label <- function(lo, hi) {
+  if (any(is.infinite(hi))) paste(unique(lo[is.infinite(hi)]), collapse = ",") else "none"
 }
 
 describe_widths <- function(w, lo, hi) {

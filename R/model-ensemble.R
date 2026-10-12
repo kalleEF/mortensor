@@ -49,7 +49,9 @@ mt_ensemble <- function(..., weights = "equal", inner_origins = 3, inner_h = 5) 
 #' @export
 mt_fit.mt_spec_ensemble <- function(spec, data, prep = NULL, cores = 1, ...) {
   p <- spec$params
-  fits <- lapply(p$components, function(cs) tryCatch(mt_fit(cs, data, prep = prep, cores = cores), error = function(e) e))
+  fits <- lapply(p$components, function(cs) {
+    tryCatch(mt_fit(cs, data, prep = prep, cores = cores), error = function(e) e)
+  })
   ok <- !vapply(fits, inherits, logical(1), what = "error")
   if (!any(ok)) mt_abort("Every ensemble component failed.", class = "model_fit")
   w <- if (is.numeric(p$weights)) {
@@ -65,7 +67,8 @@ mt_fit.mt_spec_ensemble <- function(spec, data, prep = NULL, cores = 1, ...) {
   diag <- rbindlist(lapply(names(fits), function(n) {
     f <- fits[[n]]
     if (inherits(f, "error")) {
-      data.table(component = n, stratum = ref$strata$label, status = "failed", message = conditionMessage(f), seconds = NA_real_)
+      data.table(component = n, stratum = ref$strata$label, status = "failed", message = conditionMessage(f),
+                 seconds = NA_real_)
     } else {
       cbind(data.table(component = n), f$diagnostics)
     }

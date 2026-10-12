@@ -51,7 +51,6 @@ fc <- mt_forecast(fit, h = 10, n_draws = 200, seed = 1)
 \references{
 Lee RD, Carter LR (1992). Modeling and forecasting U.S. mortality.
 \emph{Journal of the American Statistical Association} 87(419): 659-671.
-\doi{10.1080/01621459.1992.10475265}
 
 Brouhns N, Denuit M, Vermunt JK (2002). A Poisson log-bilinear regression
 approach to the construction of projected lifetables. \emph{Insurance:
@@ -60,5 +59,5 @@ Mathematics and Economics} 31(3): 373-393.
 
 Brouhns N, Denuit M, Van Keilegom I (2005). Bootstrapping the Poisson
 log-bilinear model for mortality forecasting. \emph{Scandinavian Actuarial
-Journal} 2005(3): 212-224. \doi{10.1080/03461230510009754}
+Journal} 2005(3): 212-224.
 }

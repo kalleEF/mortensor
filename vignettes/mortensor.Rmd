@@ -1,0 +1,162 @@
+---
+title: "Getting started with mortensor"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Getting started with mortensor}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width = 7, fig.height = 4.5, message = FALSE)
+has_gg <- requireNamespace("ggplot2", quietly = TRUE)
+```
+
+mortensor builds probabilistic mortality forecasts from data observed at
+different granularities. A forecast is assembled from interchangeable parts:
+
+1. **data** in their original resolution (`mt_data()`),
+2. **harmonisation** onto a modelling grid, single years of age by default
+   (`mt_ungroup()`, `mt_smooth()`, `mt_regroup()`), bundled as a
+   preprocessing pipeline (`mt_prep()`),
+3. a **model** (`lee_carter()`, `rwd()`, `tucker3()`, `apc_bayes()`, ...),
+   fitted with `mt_fit()` and forecast with `mt_forecast()` as simulated
+   paths,
+4. **evaluation** with rolling-origin backtests (`mt_backtest()`,
+   `mt_score()`), and
+5. **derived quantities** computed path by path (`life_expectancy()`).
+
+This vignette uses simulated data with a known truth. The vignettes
+"Data at different granularities" and "Forecasting with Human Mortality
+Database data" apply the same steps to HMD data for England & Wales and
+France.
+
+```{r}
+library(mortensor)
+```
+
+## Data
+
+`mt_example()` simulates deaths for women and men aged 30 and over,
+1990-2019. As in many official statistics, deaths are reported in 5-year age
+groups with an open 90+ interval, exposures by single year of age with an
+open 100+ interval.
+
+```{r}
+x <- mt_example()
+x
+mt_granularity(x)
+```
+
+`mt_validate()` checks plausibility (deaths without exposure, rates above 1,
+coverage of the grid and, for stratified data, hierarchy sums):
+
+```{r}
+mt_validate(x)
+```
+
+## Harmonisation
+
+The modelling grid is single years of age (30, ..., 99, 100+) and calendar
+years. The deaths are coarser than the grid, so models cannot use them
+directly:
+
+```{r, error = TRUE}
+mt_fit(lee_carter(), x)
+```
+
+`mt_ungroup()` estimates single-year deaths with the penalized composite link
+model, using the single-year exposures as offset (deaths are ungrouped as
+rates). The estimates add up to the observed group totals.
+
+```{r}
+u <- mt_ungroup(x)
+head(attr(u, "ungroup"))
+```
+
+```{r, eval = has_gg}
+mt_plot_ungroup(x, u, period = 2019)
+```
+
+Because the data are simulated, the estimated single-year rates can be
+compared with the truth:
+
+```{r}
+est <- mt_array(u, "deaths") / mt_array(u, "exposure")
+summary(as.vector(abs(log(est / attr(x, "truth")))))
+```
+
+## Fitting and forecasting
+
+Preprocessing belongs to the model pipeline, so that backtests can refit it
+on every training window:
+
+```{r}
+prep <- mt_prep(step_ungroup())
+fit_lc <- mt_fit(lee_carter(), x, prep = prep)
+fit_lc
+fc_lc <- mt_forecast(fit_lc, h = 15, n_draws = 500, seed = 1)
+fc_lc
+```
+
+The forecast holds 500 simulated paths per age, year and stratum.
+`mt_summarise()` returns means and quantiles:
+
+```{r}
+s <- mt_summarise(fc_lc)
+s[age %in% c("65", "85") & period %in% c(2020, 2034), .(label, age, period, q0.025, q0.5, q0.975)]
+```
+
+```{r, eval = has_gg}
+mt_plot_forecast(fc_lc, ages = c("40", "65", "85", "100+"))
+```
+
+## Derived quantities
+
+Life expectancy is computed for every path, so its interval reflects the
+joint uncertainty of all ages:
+
+```{r}
+e65 <- life_expectancy(fc_lc, at = 65)
+e65[period %in% c(2020, 2027, 2034)]
+```
+
+```{r, eval = has_gg}
+mt_plot_life_expectancy(fc_lc, at = 65)
+```
+
+## Other models and ensembles
+
+All models share the same interface. `tucker3()` models the strata jointly;
+`mt_ensemble()` mixes the draws of several models.
+
+```{r}
+fit_t3 <- mt_fit(tucker3(), x, prep = prep)
+ens <- mt_ensemble(lc = lee_carter(), t3 = tucker3(), rw = rwd())
+fc_ens <- mt_forecast(mt_fit(ens, x, prep = prep), h = 15, n_draws = 500, seed = 1)
+life_expectancy(fc_ens, at = 65)[period == 2034]
+```
+
+## Honest backtests
+
+`mt_backtest()` cuts the data at each forecast origin, refits the
+preprocessing and the model on the training window, and scores predictive
+draws against the observed deaths at their observed resolution (here 5-year
+age groups), so ungrouping errors count against the model.
+
+```{r}
+origins <- 2004:2009
+bt <- rbind(
+  mt_backtest(lee_carter(), x, origins = origins, h = 10, prep = prep, n_draws = 200),
+  mt_backtest(tucker3(), x, origins = origins, h = 10, prep = prep, n_draws = 200),
+  mt_backtest(rwd(), x, origins = origins, h = 10, prep = prep, n_draws = 200)
+)
+mt_score(bt, by = "model")
+```
+
+Lower CRPS and WIS are better; `cov50`, `cov80` and `cov95` are the shares
+of observations inside the central 50%, 80% and 95% intervals.
+
+```{r, eval = has_gg}
+mt_plot_coverage(bt)
+```

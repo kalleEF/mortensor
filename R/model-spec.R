@@ -34,11 +34,10 @@ new_mt_spec <- function(model, params = list(), joint = FALSE, min_periods = 5, 
 #' @export
 print.mt_spec <- function(x, ...) {
   p <- x$params
-  desc <- if (length(p)) {
-    paste(names(p), vapply(p, function(v) {
-      if (is.null(v)) "NULL" else if (is.list(v)) "<list>" else paste(format(v), collapse = ",")
-    }, ""), sep = " = ", collapse = ", ")
-  } else ""
+  show <- function(v) {
+    if (is.null(v)) "NULL" else if (is.list(v)) "<list>" else paste(format(v), collapse = ",")
+  }
+  desc <- if (length(p)) paste(names(p), vapply(p, show, ""), sep = " = ", collapse = ", ") else ""
   cat(sprintf("<mt_spec> %s%s\n", x$label, if (nzchar(desc)) paste0(": ", desc) else ""))
   invisible(x)
 }
@@ -140,10 +139,12 @@ model_inputs <- function(d, spec) {
     if (is.null(d$obs[[m]])) mt_abort(sprintf("Models need a %s table.", m), class = "model_data")
   }
   D <- tryCatch(mt_array(d, "deaths"), mt_error_resolution = function(e) {
-    mt_abort("Deaths are coarser than the grid; add step_ungroup() to the preprocessing.", class = "model_data")
+    mt_abort("Deaths are coarser than the grid; add step_ungroup() to the preprocessing.", class = "model_data",
+             call = NULL)
   })
   E <- tryCatch(mt_array(d, "exposure"), mt_error_resolution = function(e) {
-    mt_abort("Exposures are coarser than the grid; add step_ungroup() to the preprocessing.", class = "model_data")
+    mt_abort("Exposures are coarser than the grid; add step_ungroup() to the preprocessing.", class = "model_data",
+             call = NULL)
   })
   if (anyNA(D) || anyNA(E)) {
     mt_abort("Deaths and exposures must be complete on the grid (no missing cells).", class = "model_data")
@@ -238,7 +239,11 @@ mt_forecast.mt_fit <- function(fit, h = 10, to = NULL, n_draws = 500, seed = NUL
 predictive_rates <- function(arr, fit, exposure, spec) {
   d <- dim(arr)
   E <- exposure %||% fit$exposure_last
-  if (length(dim(E)) == 2) E <- array(E, c(d[1], 1, d[3]))
+  if (length(dim(E)) == 2) {
+    if (!all(dim(E) == d[c(1, 3)])) mt_abort("`exposure` must be [age, stratum] or [age, period, stratum].",
+                                             class = "argument")
+    E <- array(E, c(d[1], 1, d[3]))
+  }
   if (dim(E)[2] == 1) E <- E[, rep(1, d[2]), , drop = FALSE]
   if (!all(dim(E) == d[1:3])) mt_abort("`exposure` must be [age, period, stratum] matching the forecast.",
                                        class = "argument")

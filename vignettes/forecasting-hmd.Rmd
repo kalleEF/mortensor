@@ -1,0 +1,162 @@
+---
+title: "Forecasting and backtesting with HMD data"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Forecasting and backtesting with HMD data}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+has_data <- requireNamespace("StMoMo", quietly = TRUE) && requireNamespace("demography", quietly = TRUE)
+has_gg <- requireNamespace("ggplot2", quietly = TRUE)
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width = 7, fig.height = 4.5, eval = has_data, message = FALSE)
+```
+
+This vignette forecasts mortality for France with Human Mortality Database
+(HMD) data (`demography::fr.mort`), compares models in an honest rolling-origin
+backtest, and combines them in an ensemble. A second example with England &
+Wales (`StMoMo::EWMaleData`) shows a case where the classic Lee-Carter
+intervals are too narrow.
+
+```{r}
+library(mortensor)
+library(data.table)
+```
+
+## Data
+
+Women and men aged 30 and over, 1950-2006, with single years of age up to 99
+and an open interval 100+ (aggregated from the HMD's 110+ table):
+
+```{r}
+fr <- suppressWarnings(as_mt_data(demography::fr.mort, years = 1950:2006))
+fr <- mt_regroup(fr, age = 30:100)
+fr
+```
+
+```{r, eval = has_data && has_gg}
+mt_plot_rates(fr)
+```
+
+## Models
+
+All models share one interface. Each returns simulated paths of future
+death rates.
+
+| Constructor | Model |
+|---|---|
+| `rwd()` | Random walk with drift on log rates per age (benchmark) |
+| `lee_carter()` | Lee-Carter, Poisson (Brouhns et al. 2002) or SVD (Lee and Carter 1992) |
+| `tucker3()` | Tucker3 tensor decomposition of the age x period x stratum array, fitted jointly for women and men |
+| `arima_series()`, `ets_series()` | ARIMA and exponential smoothing per age (package forecast) |
+| `apc_bayes()` | Bayesian age-period-cohort model (package bamp; see its vignette) |
+| `mt_ensemble()` | Mixture of the draws of several models |
+
+```{r}
+fit_lc <- mt_fit(lee_carter(), fr)
+head(lc_parameters(fit_lc)[parameter == "b"])
+fit_t3 <- mt_fit(tucker3(), fr)
+fit_t3$fits$fit_pct
+```
+
+## Backtest
+
+`mt_backtest()` refits the model on data up to each origin and scores
+predictive draws of the observed log death rates in the following ten years.
+Scores are averaged over ages, years ahead, sexes and origins. Smaller CRPS
+and WIS are better; well-calibrated 50%, 80% and 95% intervals contain about
+50%, 80% and 95% of the observations.
+
+```{r}
+origins <- c(1986, 1989, 1992, 1995)
+specs <- list(rwd(), lee_carter(), lee_carter(jump_off = "observed"), tucker3())
+bt <- rbindlist(lapply(specs, function(sp) {
+  b <- mt_backtest(sp, fr, origins = origins, h = 10, n_draws = 200)
+  if (isTRUE(sp$params$jump_off == "observed")) b[, model := "Lee-Carter (observed jump-off)"]
+  b
+}))
+mt_score(bt, by = "model")[order(crps)]
+```
+
+```{r, eval = has_data && has_gg}
+mt_plot_coverage(bt)
+```
+
+Scores by horizon show how quickly accuracy deteriorates:
+
+```{r}
+dcast(mt_score(bt, by = c("model", "horizon")), horizon ~ model, value.var = "crps")
+```
+
+## Ensemble
+
+An ensemble mixes the paths of its components. With `weights = "crps"` the
+weights come from an inner backtest on the last years of the training data,
+so they never use the years being forecast.
+
+```{r}
+ens <- mt_ensemble(lc = lee_carter(jump_off = "observed"), t3 = tucker3(), rw = rwd(), weights = "crps")
+bt_ens <- mt_backtest(ens, fr, origins = origins, h = 10, n_draws = 200)
+mt_score(rbind(bt, bt_ens), by = "model")[order(crps)]
+```
+
+## Forecast to 2030
+
+```{r}
+fit_ens <- mt_fit(ens, fr)
+fit_ens$weights
+fc <- mt_forecast(fit_ens, to = 2030, n_draws = 1000, seed = 2026)
+fc
+```
+
+```{r, eval = has_data && has_gg}
+mt_plot_forecast(fc, ages = c("40", "65", "80", "95"))
+mt_plot_age(fc, periods = c(2007, 2030))
+```
+
+Life expectancy at 65, computed path by path:
+
+```{r}
+e65 <- life_expectancy(fc, at = 65)
+e65[period %in% c(2007, 2020, 2030), .(label, period, q0.025, q0.5, q0.975)]
+```
+
+```{r, eval = has_data && has_gg}
+mt_plot_life_expectancy(fc, at = 65)
+```
+
+## A cautionary example: England & Wales
+
+For men in England & Wales, Lee-Carter fitted to 1961 onwards forecasts the
+decade after each origin with intervals that are far too narrow, and is less
+accurate than the random walk. Lee-Carter intervals reflect only the
+uncertainty of the period index; when the age pattern of mortality
+improvement changes, as it did for British men from the 1970s, the
+constant `b_x` misses it.
+
+```{r}
+ew <- as_mt_data(StMoMo::EWMaleData)
+ew <- mt_regroup(mt_set_grid(ew, age = single_ages(30, 100, open = FALSE)), age = single_ages(30, 100, open = FALSE))
+bt_ew <- rbind(
+  mt_backtest(lee_carter(), ew, origins = 1996:2001, h = 10, n_draws = 200),
+  mt_backtest(rwd(), ew, origins = 1996:2001, h = 10, n_draws = 200),
+  mt_backtest(tucker3(), ew, origins = 1996:2001, h = 10, n_draws = 200))
+mt_score(bt_ew, by = "model")
+```
+
+Backtests like this one are the reason mortensor reports interval coverage
+alongside accuracy: a model can rank well on point accuracy and still give
+misleading uncertainty.
+
+## References
+
+Brouhns N, Denuit M, Vermunt JK (2002). A Poisson log-bilinear regression
+approach to the construction of projected lifetables. *Insurance: Mathematics
+and Economics* 31(3): 373-393.
+
+Lee RD, Carter LR (1992). Modeling and forecasting U.S. mortality. *Journal of
+the American Statistical Association* 87(419): 659-671.
+
+Bracher J, Ray EL, Gneiting T, Reich NG (2021). Evaluating epidemic forecasts
+in an interval format. *PLoS Computational Biology* 17(2): e1008618.

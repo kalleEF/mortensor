@@ -53,5 +53,4 @@ head(attr(s, "smooth"))
 \references{
 Currie ID, Durban M, Eilers PHC (2004). Smoothing and forecasting
 mortality rates. \emph{Statistical Modelling} 4(4): 279-298.
-\doi{10.1191/1471082X04st080oa}
 }

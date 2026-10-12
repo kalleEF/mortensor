@@ -42,7 +42,7 @@ test_that("open intervals are expanded to omega and exposures can be ungrouped f
   x <- mt_example(years = 2001:2002)
   xr <- suppressWarnings(mt_regroup(x, age = c(30, seq(35, 90, 5))))
   xr <- mt_set_grid(xr, age = single_ages(30, 100))
-  u <- mt_ungroup(xr, exposure_method = "monotone")
+  expect_warning(u <- mt_ungroup(xr, exposure_method = "monotone"), class = "mt_warning_ungroup_open_counts")
   e_true <- mt_array(x, "exposure")
   e_est <- mt_array(u, "exposure")
   expect_equal(sum(e_est), sum(e_true), tolerance = 1e-8)

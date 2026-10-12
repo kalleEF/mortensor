@@ -48,7 +48,7 @@ mt_summarise <- function(draws, probs = c(0.025, 0.1, 0.5, 0.9, 0.975)) {
   out <- data.table(stratum = rep(seq_len(d[3]), each = d[1] * d[2]),
                     age_lo = rep(draws$age$lower, d[2] * d[3]), age = rep(draws$age$labels, d[2] * d[3]),
                     period = rep(rep(draws$periods, each = d[1]), d[3]), mean = rowMeans(M))
-  qn <- paste0("q", format(probs, trim = TRUE, scientific = FALSE))
+  qn <- qnames(probs)
   for (k in seq_along(probs)) set(out, j = qn[k], value = Q[, k])
   out <- merge(draws$strata, out, by = "stratum", sort = FALSE)
   setorderv(out, c("stratum", "period", "age_lo"))
@@ -82,7 +82,7 @@ life_expectancy_draws <- function(x, at = NULL, probs = c(0.025, 0.1, 0.5, 0.9, 
   ok <- rowSums(is.na(M)) == 0
   Q <- matrix(NA_real_, nrow(M), length(probs))
   if (any(ok)) Q[ok, ] <- row_quantiles(M[ok, , drop = FALSE], probs)
-  qn <- paste0("q", format(probs, trim = TRUE, scientific = FALSE))
+  qn <- qnames(probs)
   for (k in seq_along(probs)) set(out, j = qn[k], value = Q[, k])
   out <- merge(x$strata, out, by = "stratum", sort = FALSE)
   out[, at := at %||% x$age$lower[1]]
@@ -111,7 +111,11 @@ mt_deaths <- function(draws, exposure = NULL, noise = TRUE, seed = NULL) {
   check_class(draws, "mt_draws", "draws")
   d <- dim(draws$rates)
   E <- exposure %||% draws$exposure_last
-  if (length(dim(E)) == 2) E <- array(E, c(d[1], 1, d[3]))
+  if (length(dim(E)) == 2) {
+    if (!all(dim(E) == d[c(1, 3)])) mt_abort("`exposure` must be [age, stratum] or [age, period, stratum].",
+                                             class = "argument")
+    E <- array(E, c(d[1], 1, d[3]))
+  }
   if (length(dim(E)) != 3 || dim(E)[1] != d[1] || dim(E)[3] != d[3]) {
     mt_abort("`exposure` does not match the draws.", class = "argument")
   }
@@ -121,3 +125,5 @@ mt_deaths <- function(draws, exposure = NULL, noise = TRUE, seed = NULL) {
   if (!noise) return(mu)
   with_seed(seed, array(stats::rpois(length(mu), mu), dim(mu), dimnames(mu)))
 }
+
+qnames <- function(p) paste0("q", as.character(p))

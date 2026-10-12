@@ -12,10 +12,21 @@ The package is organised in layers:
 \itemize{
 \item \strong{Data}: \code{\link[=mt_data]{mt_data()}} stores deaths, exposures and populations observed
 at any age and period resolution (\code{\link[=age_groups]{age_groups()}}, \code{\link[=single_ages]{single_ages()}},
-\code{\link[=single_years]{single_years()}}); \code{\link[=as_mt_data]{as_mt_data()}} converts HMD-based objects from
-\pkg{StMoMo} and \pkg{demography}; \code{\link[=mt_validate]{mt_validate()}} checks plausibility.
+\code{\link[=single_years]{single_years()}}, \code{\link[=parse_age_labels]{parse_age_labels()}}); \code{\link[=as_mt_data]{as_mt_data()}} and
+\code{\link[=mt_from_hmd]{mt_from_hmd()}} read Human Mortality Database data; \code{\link[=mt_validate]{mt_validate()}}
+checks plausibility; \code{\link[=mt_example]{mt_example()}} simulates data with known truth.
 \item \strong{Harmonisation}: \code{\link[=mt_regroup]{mt_regroup()}} aggregates exactly, \code{\link[=mt_ungroup]{mt_ungroup()}}
-estimates single-year data with the penalized composite link model.
+estimates single-year data with the penalized composite link model,
+\code{\link[=mt_smooth]{mt_smooth()}} smooths rates; \code{\link[=mt_prep]{mt_prep()}} bundles these steps so that
+backtests refit them on every training window.
+\item \strong{Models}: \code{\link[=rwd]{rwd()}}, \code{\link[=lee_carter]{lee_carter()}}, \code{\link[=tucker3]{tucker3()}}, \code{\link[=arima_series]{arima_series()}},
+\code{\link[=ets_series]{ets_series()}}, \code{\link[=apc_bayes]{apc_bayes()}} (package bamp) and \code{\link[=mt_ensemble]{mt_ensemble()}}, fitted
+with \code{\link[=mt_fit]{mt_fit()}} and forecast with \code{\link[=mt_forecast]{mt_forecast()}} as simulated paths
+(\link{mt_draws}).
+\item \strong{Evaluation}: \code{\link[=mt_backtest]{mt_backtest()}} and \code{\link[=mt_score]{mt_score()}}.
+\item \strong{Derived quantities and plots}: \code{\link[=life_table]{life_table()}}, \code{\link[=life_expectancy]{life_expectancy()}},
+\code{\link[=mt_deaths]{mt_deaths()}}, \code{\link[=mt_plot_forecast]{mt_plot_forecast()}} and the other \verb{mt_plot_*()}
+functions.
 }
 }
 \seealso{

@@ -32,15 +32,17 @@ mt_validate <- function(data, hierarchy = NULL, tol = 0.005) {
   lab <- function(s) data$strata$label[match(s, data$strata$stratum)]
   if (!is.null(E)) {
     z <- E[value == 0, .N, by = "stratum"]
-    for (i in seq_len(nrow(z))) add("zero exposure", "info", "exposure", lab(z$stratum[i]), z$N[i], "cells with zero exposure")
+    for (i in seq_len(nrow(z))) {
+      add("zero exposure", "info", "exposure", lab(z$stratum[i]), z$N[i], "cells with zero exposure")
+    }
   }
   if (!is.null(D) && !is.null(E)) {
     j <- merge(D, E, by = c("stratum", "age_lo", "age_hi", "period_lo", "period_hi"), suffixes = c(".d", ".e"))
     z <- j[value.d > 0 & value.e == 0, .N, by = "stratum"]
     for (i in seq_len(nrow(z))) add("deaths without exposure", "error", "deaths", lab(z$stratum[i]), z$N[i],
                                     "deaths > 0 where exposure is 0")
-    z <- j[value.e > 0 & value.d / value.e > 1 & age_lo < 100, list(N = .N, ex = paste(head(unique(age_lo), 3), collapse = ",")),
-           by = "stratum"]
+    z <- j[value.e > 0 & value.d / value.e > 1 & age_lo < 100,
+           list(N = .N, ex = paste(head(unique(age_lo), 3), collapse = ",")), by = "stratum"]
     for (i in seq_len(nrow(z))) add("rate above 1", "warning", "deaths", lab(z$stratum[i]), z$N[i],
                                     sprintf("central death rate > 1 below age 100 (ages %s)", z$ex[i]))
   }

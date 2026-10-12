@@ -61,7 +61,12 @@ pclm_fit <- function(y, C, o, B, pen, lambda = NULL, criterion = c("bic", "aic")
   } else {
     for (round in 1:2) {
       for (k in seq_len(np)) {
-        ll[k] <- stats::optimize(function(z) { l2 <- ll; l2[k] <- z; obj(l2) }, lr, tol = 0.05)$minimum
+        obj_k <- function(z) {
+          l2 <- ll
+          l2[k] <- z
+          obj(l2)
+        }
+        ll[k] <- stats::optimize(obj_k, lr, tol = 0.05)$minimum
       }
     }
   }

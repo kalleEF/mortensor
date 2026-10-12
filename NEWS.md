@@ -19,6 +19,10 @@ Clean break: the 0.1.x interface is replaced (see `dev/revamp-plan.md`).
   `rwd()`, `lee_carter()` (Poisson and SVD; agrees with StMoMo and
   demography), `tucker3()` (native HOOI; log and CoDa), `arima_series()`,
   `ets_series()`, and `mt_ensemble()`.
+* `apc_bayes()`: seamless wrapper of the bamp package (Bayesian
+  age-period-cohort models) with convergence checks and draws on the grid.
+* Plots (`mt_plot_*()`, ggplot2), HMD readers (`mt_from_hmd()`,
+  `mt_read_hmd()`), and four vignettes using HMD data.
 * `mt_backtest()` (rolling origin, scored at the observed resolution) and
   `mt_score()` (CRPS, WIS, coverage, PIT, MASE).
 * Validation pipeline in `validation/` and GitHub workflows for R CMD check

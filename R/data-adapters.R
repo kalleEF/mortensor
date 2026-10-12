@@ -63,3 +63,53 @@ matrices_to_long <- function(D, E, ages, years) {
   data.table(age = rep(as.numeric(ages), length(years)), year = rep(as.numeric(years), each = length(ages)),
              deaths = as.vector(D), exposure = as.vector(E))
 }
+
+#' Human Mortality Database tables
+#'
+#' `mt_from_hmd()` converts HMD tables in the layout returned by
+#' `HMDHFDplus::readHMDweb()` (columns `Year`, `Age`, `Female`, `Male`,
+#' `Total`, and `OpenInterval`) into an [mt_data] object with strata `sex`.
+#' `mt_read_hmd()` downloads `Deaths_1x1` and `Exposures_1x1` for one country
+#' with \pkg{HMDHFDplus}; an HMD account is needed (<https://www.mortality.org>).
+#'
+#' @param deaths,exposures Data frames from `HMDHFDplus::readHMDweb()`.
+#' @param sexes Columns to use.
+#' @param years Optional subset of years.
+#' @param country HMD country code, for example `"SWE"`.
+#' @param username,password HMD credentials (default: environment variables
+#'   `HMD_USER` and `HMD_PASSWORD`).
+#' @return An [mt_data] object.
+#' @examples
+#' d <- data.frame(Year = 2000, Age = 0:2, Female = c(10, 1, 1), Male = c(12, 2, 1),
+#'                 Total = c(22, 3, 2), OpenInterval = c(FALSE, FALSE, TRUE))
+#' e <- transform(d, Female = 1000, Male = 1000, Total = 2000)
+#' mt_from_hmd(d, e)
+#' @export
+mt_from_hmd <- function(deaths, exposures, sexes = c("Female", "Male"), years = NULL) {
+  conv <- function(x, nm) {
+    x <- as.data.table(x)
+    if (!is.null(years)) x <- x[x$Year %in% years]
+    open <- if ("OpenInterval" %in% names(x)) x$OpenInterval else rep(FALSE, nrow(x))
+    age <- suppressWarnings(as.numeric(gsub("\\+", "", as.character(x$Age))))
+    rbindlist(lapply(sexes, function(s) {
+      data.table(sex = tolower(s), year = x$Year, age_lo = age, age_hi = ifelse(open, Inf, age + 1),
+                 value = as.numeric(x[[s]]))
+    }))[, (nm) := value][, value := NULL][]
+  }
+  d <- conv(deaths, "deaths")
+  e <- conv(exposures, "exposure")
+  mt_data(deaths = d, exposure = e, by = "sex", age = c("age_lo", "age_hi"))
+}
+
+#' @rdname mt_from_hmd
+#' @export
+mt_read_hmd <- function(country, username = Sys.getenv("HMD_USER"), password = Sys.getenv("HMD_PASSWORD"),
+                        years = NULL) {
+  need_pkg("HMDHFDplus", "to download Human Mortality Database data")
+  if (!nzchar(username) || !nzchar(password)) {
+    mt_abort("HMD credentials are needed (arguments or HMD_USER and HMD_PASSWORD).", class = "adapter")
+  }
+  d <- HMDHFDplus::readHMDweb(country, "Deaths_1x1", username, password)
+  e <- HMDHFDplus::readHMDweb(country, "Exposures_1x1", username, password)
+  mt_from_hmd(d, e, years = years)
+}

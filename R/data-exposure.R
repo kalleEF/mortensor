@@ -25,7 +25,9 @@ mt_as_exposure <- function(data, type = c("midyear", "jan1")) {
   type <- match.arg(type)
   P <- data$obs$population
   if (is.null(P)) mt_abort("No population table.", class = "missing_measure")
-  if (any(P$period_hi - P$period_lo != 1)) mt_abort("Population must be given for single calendar years.", class = "exposure")
+  if (any(P$period_hi - P$period_lo != 1)) {
+    mt_abort("Population must be given for single calendar years.", class = "exposure")
+  }
   E <- if (type == "midyear") {
     copy(P)
   } else {

@@ -115,6 +115,14 @@ ungroup_counts_1d <- function(obs, g, omega, ctl, method, measure) {
   x <- (fa$lower + fa$upper) / 2
   bas <- pclm_basis(x, min(fa$lower), max(fa$upper), ctl$kr, ctl$deg, ctl$pord)
   width <- fa$upper - fa$lower
+  open_split <- is.infinite(obs$age_hi) & obs$a1 != obs$a2
+  if (any(open_split)) {
+    mt_warn(sprintf(paste0("The open %s interval from age %s is split into %d grid cells from its total alone; ",
+                           "the age pattern inside it is extrapolated and can be badly wrong. Prefer data with ",
+                           "a higher open age or a grid whose open interval starts at %s."),
+                    measure, min(obs$age_lo[open_split]), max(obs$a2 - obs$a1 + 1), min(obs$age_lo[open_split])),
+            class = "ungroup_open_counts", call = NULL)
+  }
   out <- list()
   dg <- list()
   for (key in split(seq_len(nrow(obs)), list(obs$stratum, obs$p1), drop = TRUE)) {
@@ -144,7 +152,8 @@ ungroup_counts_1d <- function(obs, g, omega, ctl, method, measure) {
     res[exact, on = c(a = "a1"), `:=`(value = i.value, provenance = i.provenance)]
     out[[length(out) + 1L]] <- res
     dg[[length(dg) + 1L]] <- data.table(measure = measure, stratum = o$stratum[1], period = g$period$labels[o$p1[1]],
-                                        method = method, lambda_age = fit$lambda[1], lambda_period = NA_real_, ed = fit$ed,
+                                        method = method, lambda_age = fit$lambda[1], lambda_period = NA_real_,
+                                        ed = fit$ed,
                                         max_rel_diff = rel, at_bound = isTRUE(fit$at_bound))
   }
   list(obs = grid_table(rbindlist(out), g), diag = rbindlist(dg))
@@ -157,7 +166,6 @@ ungroup_rates <- function(D, E, g, omega, ctl, dims) {
   Earr <- obs_to_matrix(E, g)
   fa <- fine_axis(g$age, omega)
   xa <- (fa$lower + fa$upper) / 2
-  nf <- length(fa$lower)
   n_open <- sum(fa$grid == length(g$age) & fa$open)
   bas <- pclm_basis(xa, min(fa$lower), max(fa$upper), ctl$kr, ctl$deg, ctl$pord)
   out <- list()
@@ -175,7 +183,8 @@ ungroup_rates <- function(D, E, g, omega, ctl, dims) {
         out[[length(out) + 1L]] <- data.table(stratum = s, a = r$a, p = p, value = r$deaths,
                                               provenance = r$provenance)
         dg[[length(dg) + 1L]] <- data.table(measure = "deaths", stratum = s, period = g$period$labels[p],
-                                            method = paste0(ctl$method_label %||% "pclm_rate", "_1d"), lambda_age = r$fit$lambda[1],
+                                            method = paste0(ctl$method_label %||% "pclm_rate", "_1d"),
+                                            lambda_age = r$fit$lambda[1],
                                             lambda_period = NA_real_, ed = r$fit$ed,
                                             max_rel_diff = r$rel, at_bound = isTRUE(r$fit$at_bound))
       }
@@ -189,7 +198,8 @@ ungroup_rates <- function(D, E, g, omega, ctl, dims) {
       out[[length(out) + 1L]] <- data.table(stratum = s, a = r$a, p = r$p, value = r$deaths,
                                             provenance = r$provenance)
       dg[[length(dg) + 1L]] <- data.table(measure = "deaths", stratum = s, period = "all",
-                                          method = paste0(ctl$method_label %||% "pclm_rate", "_2d"), lambda_age = r$fit$lambda[1],
+                                          method = paste0(ctl$method_label %||% "pclm_rate", "_2d"),
+                                          lambda_age = r$fit$lambda[1],
                                           lambda_period = r$fit$lambda[2],
                                           ed = r$fit$ed, max_rel_diff = r$rel, at_bound = isTRUE(r$fit$at_bound))
     }

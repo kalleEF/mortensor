@@ -114,7 +114,9 @@ axis_widths <- function(axis, omega = 110) {
   check_class(axis, "mt_axis", "axis")
   upper <- axis$upper
   if (is.infinite(upper[length(upper)])) {
-    if (omega <= axis$lower[length(upper)]) mt_abort("`omega` must exceed the start of the open interval.", class = "axis")
+    if (omega <= axis$lower[length(upper)]) {
+      mt_abort("`omega` must exceed the start of the open interval.", class = "axis")
+    }
     upper[length(upper)] <- omega
   }
   upper - axis$lower
@@ -172,13 +174,25 @@ parse_age_labels <- function(x) {
   lo <- hi <- rep(NA_real_, length(s))
   num <- function(z) as.numeric(z)
   m <- regmatches(s, regexec("^(?:<|under)\\s*(\\d+)$", s, perl = TRUE))
-  for (k in which(lengths(m) == 2)) { lo[k] <- 0; hi[k] <- num(m[[k]][2]) }
+  for (k in which(lengths(m) == 2)) {
+    lo[k] <- 0
+    hi[k] <- num(m[[k]][2])
+  }
   m <- regmatches(s, regexec("^(\\d+)\\s*-\\s*(\\d+)$", s, perl = TRUE))
-  for (k in which(lengths(m) == 3)) { lo[k] <- num(m[[k]][2]); hi[k] <- num(m[[k]][3]) + 1 }
+  for (k in which(lengths(m) == 3)) {
+    lo[k] <- num(m[[k]][2])
+    hi[k] <- num(m[[k]][3]) + 1
+  }
   m <- regmatches(s, regexec("^(\\d+)\\s*(?:\\+|and over|and older|plus|or older)$", s, perl = TRUE))
-  for (k in which(lengths(m) == 2)) { lo[k] <- num(m[[k]][2]); hi[k] <- Inf }
+  for (k in which(lengths(m) == 2)) {
+    lo[k] <- num(m[[k]][2])
+    hi[k] <- Inf
+  }
   m <- regmatches(s, regexec("^(\\d+)$", s, perl = TRUE))
-  for (k in which(lengths(m) == 2)) { lo[k] <- num(m[[k]][2]); hi[k] <- lo[k] + 1 }
+  for (k in which(lengths(m) == 2)) {
+    lo[k] <- num(m[[k]][2])
+    hi[k] <- lo[k] + 1
+  }
   bad <- is.na(lo)
   if (any(bad)) {
     mt_abort(sprintf("Cannot parse age label(s): %s.", paste0("\"", unique(x[bad]), "\"", collapse = ", ")),

@@ -88,7 +88,8 @@ simulate_lc_population <- function(years, size) {
 
 with_seed <- function(seed, expr) {
   if (is.null(seed)) return(expr)
-  old <- if (exists(".Random.seed", envir = globalenv(), inherits = FALSE)) get(".Random.seed", envir = globalenv()) else NULL
+  has_seed <- exists(".Random.seed", envir = globalenv(), inherits = FALSE)
+  old <- if (has_seed) get(".Random.seed", envir = globalenv()) else NULL
   on.exit({
     if (is.null(old)) rm(".Random.seed", envir = globalenv()) else assign(".Random.seed", old, envir = globalenv())
   })
