@@ -334,7 +334,78 @@ with the code.
 
 ## 8. Integrating bamp
 
-[[BAMP]]
+Question from the owner: can bamp (<https://github.com/volkerschmid/bamp>)
+and its methods be integrated into a flexible mortality modelling package?
+
+**Short answer: yes, as an optional model backend behind a plug-in interface,
+not as copied code, and only after mortensor works on counts and on
+predictive draws (Phases 1-2, Phase 4 item 2).** bamp supplies exactly what
+mortensor lacks today: a likelihood-based model for deaths and population
+with cohort effects and forecast intervals that widen with the horizon and
+include parameter uncertainty.
+
+### 8.1 What bamp is
+
+bamp 3.0.0 (CRAN, released 2026-08-31; the GitHub repository is at the same
+version) implements the Bayesian age-period-cohort (APC) model of Schmid and
+Held (2007), building on Knorr-Held and Rainer (2001):
+
+- Binomial likelihood with logit link: deaths ~ Bin(population, p);
+  logit p = mu + age + period + cohort, with RW1 or RW2 smoothing priors,
+  optional unstructured heterogeneity per effect and optional cell-level
+  overdispersion.
+- Unequal grids: `periods_per_agegroup = 5` handles 5-year age groups with
+  annual periods through overlapping 1-year cohorts. This matches mortensor's
+  typical data.
+- Inference: a new Pólya-Gamma Gibbs engine (default, C implementation) and
+  the legacy block Metropolis-Hastings engine (`method = "taylor"`); four
+  chains, Gelman-Rubin checks (`checkConvergence()`), DIC, and greedy DIC
+  model selection (`selectModel()`).
+- Prediction (`predict_apc()`): period and cohort effects are extrapolated as
+  random walks for every posterior draw, returning posterior draws of rates
+  (and of cases when future population is supplied).
+
+### 8.2 Test run on mortensor data
+
+One group of `example_mortality` (male, Q1, 2001-2019; deaths =
+round(mx x pop)), RW2 for age, period and cohort, 6,000 iterations x 4 chains
+on 4 cores:
+
+| Step | Result |
+|---|---|
+| `bamp()` | 141 s wall time; `checkConvergence()` TRUE (max R 1.008); DIC 129.7 |
+| `predict_apc()`, 5 periods | 11 s; 4,000 posterior draws of rates for 13 ages x 24 periods |
+| 2020 forecast vs observed (held out) | 30-34: 0.00040 (90% interval 0.00033-0.00049) vs 0.00047; 90+: 0.0656 (0.0619-0.0692) vs 0.0806. The 2020 shock in the example data is outside the intervals, as expected |
+| Automatic MCMC length (40,000 iterations) | about 16 min per group, extrapolated from a calibration run |
+
+### 8.3 Fit with mortensor and gaps to close
+
+| Topic | bamp | Consequence for integration |
+|---|---|---|
+| Data | Counts: deaths and population matrices, periods x ages, one stratum per call; no missing values (one NA made all chains fail) | mortensor must keep deaths and exposures (Phase 4 item 3) and loop over groups; impute or reject missing cells explicitly |
+| Groups | No joint multi-group model | 10 independent fits for sex x quintile; no borrowing of strength between groups (multivariate APC models exist in the literature but not in bamp) |
+| Likelihood | Binomial with population as denominator | Close to Poisson for small rates; document the difference at the oldest ages |
+| Output | Posterior draws of rates by age and period | Fits directly into draw-based PIs, ensembles as mixtures and pathwise e_x (Phase 2), once mortensor stores draws |
+| Runtime | Minutes per group per fit | Unsuitable for the inner CV grid; evaluate with fixed settings on a few rolling origins, or select within the training data with DIC |
+| Known issues in 3.0.0 | Prediction fails for `rw1+het`/`rw2+het` models (`predict_apc()` handles only `rw1`/`rw2`); `bamp()` runs the convergence check silently unless `verbose = TRUE`; the Pólya-Gamma variables are drawn from a moment-matched normal approximation, and whether the subsequent Metropolis-Hastings step restores exact invariance was not verified; limited test suite | Restrict the wrapper to RW1/RW2 with optional overdispersion, call `checkConvergence()` explicitly and fail on non-convergence, pin `bamp (>= 3.0.0)`, add mortensor-side integration tests, report the issues upstream |
+| Licence | GPL-3 | Keep in `Suggests`, call only exported functions, guard with `requireNamespace()`; do not copy code into the MIT-licensed package (not legal advice) |
+
+### 8.4 Proposed integration
+
+1. Prerequisites: count-based `mort_data`, the model plug-in interface and
+   draw-based outputs (Phases 1, 2 and 4).
+2. Wrapper `model_bamp()` implementing the plug-in contract: transpose each
+   group slice to periods x ages, fit with user-chosen RW orders and
+   `overdisp`, check convergence, call `predict_apc()` with future exposures,
+   and return draws as an array \[age x horizon x group x draw\].
+3. Evaluation: include bamp in rolling-origin backtests with fixed MCMC
+   settings and compare interval calibration with Lee-Carter and the
+   ensemble. Riebler and Held (2017) found well-calibrated Bayesian APC
+   projections when holding out the last 10 years of lung cancer mortality
+   data; replicating that kind of check on mortensor's data is the relevant
+   benchmark.
+4. Effort: about 1-2 weeks for wrapper, tests and a vignette once the
+   prerequisites exist; parallelise across groups.
 
 ## 9. References
 
