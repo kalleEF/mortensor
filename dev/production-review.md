@@ -75,7 +75,7 @@ Severity: **Blocker** = install, check or the documented workflow fails;
 | D1 | Blocker | Dependencies | `%||%` is used in 23 functions but never defined or imported; it exists in base R only from 4.4.0 while DESCRIPTION declares R >= 4.1.0 | R CMD check: examples ERROR, 5 test failures; `print()` of every main class fails on R 4.3.3 |
 | D2 | Blocker | Generics | `forecast()` (`R/workflow.R:28`) and `accuracy()` (`R/metrics.R:40`) are new generics with the same names as the `forecast`/`generics` generics. After `library(forecast)` (forecast 9.x re-exports `generics::forecast`), `forecast(<mort_calibration>)` dispatches to the wrong generic | Reproduced: `non-numeric argument to binary operator` |
 | D3 | Blocker | Documentation | All nine vignettes set `eval = FALSE` globally, so `R CMD build` succeeds without running any code. Evaluated, [[VIG_FAILCOUNT]] | Section 3.3 |
-| D4 | High | Model selection | Holdout leakage: the holdout years are smoothed together with the training years, the last rolling-origin CV fold of every model evaluates exactly the holdout years, and the README path scores forecasts against smoothed (not observed) holdout values | Section 5.1, [[LEAK_SHORT]] |
+| D4 | High | Model selection | Holdout leakage: the holdout years are smoothed together with the training years, the last rolling-origin CV fold of every model evaluates exactly the holdout years, and the README path scores forecasts against smoothed (not observed) holdout values | README path: reported holdout MASE 0.0017 vs honest 0.734 for the selected ensemble; raw input: reported scores 3-7% optimistic and the selected ensemble ranks 7th of 9 on honest scores; 315 CV fits scored on the holdout years (Section 5.1) |
 | D5 | High | Ensemble | Ensemble size, inverse-MASE weights and NNLS stacking weights are chosen on the holdout and the same holdout score is reported and compared with single models (with a 5% preference margin for the ensemble). NNLS weights are fitted on log(mx) and applied to mx | Code: `R/comparison.R:151-237`, `R/workflow.R:250-262` |
 | D6 | High | Ensemble | A component that fails (NA) contributes 0 to the weighted ensemble average without renormalising the weights per cell (`R/workflow.R:320`, `R/comparison.R:170`, `R/bootstrap.R:238,323`), and no warning is raised | Lee-Carter failing for one group: ensemble forecast for that group = 0.500 x Tucker3 forecast; all other groups 0.99-1.00 |
 | D7 | High | PIs | `add_pi()` on an ensemble simulates only the first component (`extras$method` of the first model) | Ensemble of RWD and Tucker3: PI width equals RWD alone (0.180) or Tucker3 alone (0.184) depending only on component order |
@@ -121,7 +121,55 @@ accuracy, and its design does not separate training from test data:
 - Ensemble choice and weights are tuned on the holdout and then compared with
   single models on the same holdout (D5).
 
-[[LEAK_TABLE]]
+**Leakage experiment.** `example_mortality` restricted to 2001-2019 (to leave
+out the 2020 shock); the default holdout is 2016-2019. Three calibrations with
+default settings (`rank_selection = "cv"`):
+
+- (a) README path: `calibrate(smooth_mortality(data_2001_2019))`.
+- (b) Raw input: `calibrate(data_2001_2019)` (smoothing happens inside).
+- (c) Honest: `calibrate(smooth_mortality(data_2001_2015))`, so no
+  2016-2019 data are used anywhere.
+
+"Honest" scores re-fit each model on data smoothed without 2016-2019 (with
+the hyperparameters chosen in (b) or (c)) and score the forecasts against the
+observed 2016-2019 rates. All values are the package's combined MASE
+(lower is better).
+
+| Model | Reported (a), vs smoothed | Reported (b), vs observed | Honest, (b) settings | Honest, (c) settings |
+|---|---|---|---|---|
+| Tucker3-CoDa | 0.198 | 0.700 | 0.720 | 0.719 |
+| Tucker3-Direct | 0.123 | 0.699 | 0.722 | 0.722 |
+| Lee-Carter | 0.020 | 0.693 | 0.722 | 0.728 |
+| FDM | 0.697 | 0.743 | 0.785 | 0.785 |
+| StMoMo-APC | 0.332 | 0.685 | 0.712 | 0.712 |
+| RWD | 0.011 | 0.693 | 0.726 | 0.735 |
+| ARIMA | 0.002 | 0.693 | 0.748 | 0.749 |
+| ETS | 0.011 | 0.693 | 0.732 | 0.732 |
+| Ensemble | 0.002 | 0.693 | 0.734 | (not selected) |
+| **Selected** | Ensemble (ARIMA, ETS) | Ensemble (ARIMA, Lee-Carter) | | ARIMA (honest 0.749) |
+
+Findings:
+
+1. The README path reports a holdout MASE of 0.0017 for the selected
+   ensemble; its honest MASE is 0.734, about 400 times worse. Scores against
+   smoothed holdout values (median distance from the observed values 0.027
+   log units) measure how well a model extrapolates a GAM curve, not how well
+   it forecasts mortality. The same number is printed as "MASE" by
+   `print()` and `summary()` of the forecast.
+2. With raw input, every reported score is 3-7% better than the honest score
+   of the same model, and the reported ranking does not carry over: the
+   selected ensemble ranks 7th of 9 on honest scores.
+3. Smoothing leaks future information into the training years: adding
+   2016-2019 changes the smoothed 2015 rates by a median of 0.0033 log units
+   (maximum 0.015), against 0.0009 for 2001-2010.
+4. Instrumentation of the default `calibrate()` call on 2001-2019 recorded
+   315 Tucker3-Direct CV fits trained up to 2015 and scored on 2016-2019,
+   i.e. on the holdout.
+5. On this example, all honest scores lie in a narrow band (0.71-0.79), so
+   most of the apparent differences between models in the reported table are
+   noise or leakage. The example data are a simple log-linear trend plus
+   noise; real data will differ, but the design flaw is independent of the
+   data.
 
 The MASE used throughout is computed on log rates and scaled by the in-sample
 one-step naive error (Hyndman and Koehler 2006). That is reasonable as a
