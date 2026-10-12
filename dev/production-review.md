@@ -61,7 +61,34 @@ little about correctness.
 
 ### 3.4 README quick start and runtime
 
-[[README]]
+The README quick start runs end to end once `%||%` exists (on R 4.3.3 it
+fails at `print(cal)`). Timings with four other R jobs sharing four cores, so
+expect lower numbers on an idle machine:
+
+| Step | Time | Notes |
+|---|---|---|
+| `smooth_mortality()` | 7 s | |
+| `calibrate()` (default, CV) | 632 s | 9 models compared; selected Ensemble of FDM/ARIMA/ETS with weights 0.000/0.977/0.023 |
+| `calibrate(rank_selection = "bic")` | 190 s | same selection |
+| `forecast(cal, h = 10)` | 13 s | |
+| `add_pi(n_sim = 500)` | 4 s | simulated from FDM only (D7); width 0.021 log units at all horizons |
+| `add_pi(method = "gam_bayes", n_sim = 50)` | 596 s | |
+| `disaggregate()` | 1 s | |
+| `life_expectancy()` | 0.3 s | grouped forecast fine; single-year forecast wrong by default (D10) |
+| `export()` | < 1 s | writes CSV; single-year file named `*_grouped.csv` |
+| `plot()` (9 types), `accuracy()`, `summary()` | < 2 s each | `type = "disagg"` returns NULL on the S3 path (D23) |
+
+Other observations from the run:
+
+- The printed forecast reports "MASE: 0.0012", which is the leaked holdout
+  score against smoothed data (Section 5.1).
+- The ETS hyperparameter chosen by calibration was `AAdN`, a specification
+  that always errors, so the "ETS-Damped" model is actually `auto.arima`
+  (D13).
+- StMoMo failed for some groups (`complete = FALSE`) and printed 90 lines of
+  "StMoMo: Start fitting with gnm" that cannot be suppressed from mortensor.
+- Tucker3-Direct selected R_C = 4 for 10 groups and the `rwd` time-series
+  method; Tucker3-CoDa selected ranks 5/6/4.
 
 ## 4. Verified defects
 
@@ -89,14 +116,14 @@ Severity: **Blocker** = install, check or the documented workflow fails;
 | D15 | Medium | Data input | `build_array()` sorts age labels as text, so `"10-14"` is placed before `"5-9"` and values are assigned to the wrong ages; a missing age row fills the whole age vector with 1e-12 (with only a message); the unit test fixture has duplicated age rows and only checks dimensions | Input rates for ages 0/5/10 = 0.001/0.0001/0.0002 come back as 0.001/0.0002/0.0001 |
 | D16 | Medium | Scoring | `compute_wis()` divides by the sum of the weights instead of K + 1/2 as in Bracher et al. (2021), so values are not comparable with the literature or other software, and the scale changes with the quantile set | 7 quantiles: 4.00 x the published definition; 5 quantiles: 3.23 x |
 | D17 | Low | Package metadata | `License: MIT LICENSE` is invalid (should be `MIT + file LICENSE` with the two-line CRAN LICENSE file); undefined globals `group_label`, `line_id`; copyright holder in LICENSE (`kalleEF`) differs from DESCRIPTION | R CMD check WARNING and NOTE |
-| D18 | Medium | API | The `models` argument of `calibrate()` does not restrict the comparison: `compare_models()` always fits all models and `calibrate_all_models()` always tunes all non-Tucker3 models; user-facing names (`"lee_carter"`) differ from internal names (`"Lee-Carter"`) | [[MODELS_SHORT]] |
+| D18 | Medium | API | The `models` argument of `calibrate()` does not restrict the comparison: `compare_models()` always fits all models and `calibrate_all_models()` always tunes all non-Tucker3 models; user-facing names (`"lee_carter"`) differ from internal names (`"Lee-Carter"`) | `calibrate(sm, models = "lee_carter", rank_selection = "bic")` compared all 9 candidates, selected an Ensemble (not Lee-Carter) and took 187 s, the same as a full run |
 | D19 | Medium | Model selection | Models with NA cells are flagged `complete = FALSE` and excluded from the ensemble, but remain eligible as best single model; their MASE is computed on the subset of cells that did not fail | Lee-Carter and StMoMo with a failed group: finite combined MASE, `complete = FALSE` |
 | D20 | Low | Life tables | `life_table()` documentation says Kannisto is the default open-age method; the code uses the reciprocal. Kannisto/Gompertz extrapolation uses group start ages and a sum that starts at exp(-mu_0) | e90 for a Gompertz hazard: exact 7.43, package Gompertz option 7.15; e30 differs by 2.4 years between reciprocal and Kannisto on `example_mortality` |
 | D21 | Medium | Disaggregation | Single-year rates are constrained so that their unweighted mean equals the grouped rate; for the open interval the mean is taken over 90-100 only. The correct constraint is exposure weighted over the full interval | Stationary Gompertz population: single-year rates at ages 95 and 100 overestimated by 11% and 22%; e30 0.4 years too low |
 | D22 | Medium | Life tables | e_x bounds are life tables of the pointwise upper and lower mx bounds (`R/life_table.R:320-327`), which is not a prediction interval for e_x | Code reading; requires simulated paths to fix |
 | D23 | Medium | S3 workflow | `disaggregate(method = "gam")` stops with an error; `plot(<disaggregated forecast>, type = "disagg")` returns NULL with "No single-year disaggregated data available" because it reads `extras$mx_1yr_dt`, which only `run_forecast()` sets; single-year `export()` writes correct rows to a file named `*_forecast_grouped.csv`; `print()`/`summary()` report the holdout MASE of the selected model as "MASE"/"CV MASE" | README run, Section 3.4 |
 | D24 | Medium | Multi-cause | `run_reconciled_forecast()` and `run_coherent_forecast()` call `run_forecast(<mort_config>)`, which only works with the ONS Excel input; `enforce_coherence()` hardcodes `sex == "Male"/"Female"` and `quintile` | [[MULTI_SHORT]] |
-| D25 | Medium | Performance | Default `calibrate()` fits 315 Tucker3 configurations x 5 origins x 2 variants plus all other grids | [[RUNTIME_SHORT]] |
+| D25 | Medium | Performance | Default `calibrate()` fits 315 Tucker3 configurations x 5 origins x 2 variants plus all other grids | On the 13 x 20 x 10 example: `calibrate()` 632 s with CV and 190 s with BIC; `add_pi(method = "gam_bayes")` 596 s for 50 draws (refits every ensemble member per draw); 4 parallel jobs on 4 cores, so single-job times are lower |
 | D26 | Low | Hygiene | 170 `cat()` calls (not suppressible), 12 plot methods call `print(p)`, 17 `ggsave()` side effects in exported helpers, 40 `tryCatch(..., error = function(e) NULL)` that hide failures, 96 hard-coded `1e-12` floors; committed `.claude/settings.local.json` (contains a local Windows path) and `tests/testthat/Rplots.pdf`; no R CMD check CI workflow; 103 exported functions including internal helpers | `grep` counts on `R/` |
 
 ## 5. Methodological assessment
