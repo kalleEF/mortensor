@@ -79,9 +79,9 @@ Severity: **Blocker** = install, check or the documented workflow fails;
 | D5 | High | Ensemble | Ensemble size, inverse-MASE weights and NNLS stacking weights are chosen on the holdout and the same holdout score is reported and compared with single models (with a 5% preference margin for the ensemble). NNLS weights are fitted on log(mx) and applied to mx | Code: `R/comparison.R:151-237`, `R/workflow.R:250-262` |
 | D6 | High | Ensemble | A component that fails (NA) contributes 0 to the weighted ensemble average without renormalising the weights per cell (`R/workflow.R:320`, `R/comparison.R:170`, `R/bootstrap.R:238,323`), and no warning is raised | Lee-Carter failing for one group: ensemble forecast for that group = 0.500 x Tucker3 forecast; all other groups 0.99-1.00 |
 | D7 | High | PIs | `add_pi()` on an ensemble simulates only the first component (`extras$method` of the first model) | Ensemble of RWD and Tucker3: PI width equals RWD alone (0.180) or Tucker3 alone (0.184) depending only on component order |
-| D8 | High | PIs | PIs do not widen with horizon for RWD/ARIMA/ETS/Lee-Carter/FDM (point forecast plus i.i.d. resampled in-sample residuals; Lee-Carter k_t uncertainty ignored), are re-centred on the point forecast and capped at +/-1.5 log units; `mx_median` is overwritten with the point forecast | [[COV_SHORT]] |
+| D8 | High | PIs | PIs do not widen with horizon for RWD/ARIMA/ETS/Lee-Carter/FDM (point forecast plus i.i.d. resampled in-sample residuals; Lee-Carter k_t uncertainty ignored), are re-centred on the point forecast and capped at +/-1.5 log units; `mx_median` is overwritten with the point forecast | 95% PIs covered 84-87% on the example data; on simulated random-walk data coverage fell from 80-85% at h = 1 to 37-68% at h = 10, with constant width for five of seven models; README run: width 0.021 log units at all horizons (Section 5.2) |
 | D9 | Medium | PIs | `ensemble_bootstrap()` (used by `run_forecast()`) averages draws across models instead of sampling from the mixture, which shrinks the predictive spread | Two components with 10% spread: 95% log-width 0.27 (averaged draws) vs 0.48 (mixture) |
-| D10 | High | Life tables | `life_expectancy()` and `life_table()` default to `width = 5`, also for single-year output of `disaggregate()` | Single-year Gompertz schedule: e30 = 201.6 with the default vs 59.0 with `width = 1`; [[LE_SHORT]] |
+| D10 | High | Life tables | `life_expectancy()` and `life_table()` default to `width = 5`, also for single-year output of `disaggregate()` | Single-year Gompertz schedule: e30 = 201.6 with the default vs 59.0 with `width = 1`; README forecast disaggregated to single years: mean e30 = 207.3 with the default vs 62.7 with `width = 1` (63.4 from the grouped forecast) |
 | D11 | High | CoDa | The open age group is lost in the CoDa transform: `compute_dx()` ignores the open-interval rate and `dx_to_mx()` replaces it with a Gompertz extrapolation of the two previous groups | Doubling the input 90+ rate changes the round-trip 90+ rate by a factor of 1.000; on `example_mortality` the round trip inflates m(90+) by 20% |
 | D12 | Medium | Tucker3 | Data with one group fail: rank grid `2:min(4, n_g - 1)` becomes `2:0`; BIC selection returns `R_C = 2` with criterion `Inf` without a warning, and forecasting then errors (`ranks must be positive`) | Reproduced for Tucker3-Direct and Tucker3-CoDa |
 | D13 | Medium | Calibration grids | ETS candidates `AAdN`, `MMN` and `ANN` with `damped = TRUE` always error and silently fall back to `auto.arima`; RWD drift windows `0` and `length(years)` give identical forecasts | 3 of 5 ETS specifications error; max abs difference between the two RWD windows = 0 |
@@ -94,7 +94,7 @@ Severity: **Blocker** = install, check or the documented workflow fails;
 | D20 | Low | Life tables | `life_table()` documentation says Kannisto is the default open-age method; the code uses the reciprocal. Kannisto/Gompertz extrapolation uses group start ages and a sum that starts at exp(-mu_0) | e90 for a Gompertz hazard: exact 7.43, package Gompertz option 7.15; e30 differs by 2.4 years between reciprocal and Kannisto on `example_mortality` |
 | D21 | Medium | Disaggregation | Single-year rates are constrained so that their unweighted mean equals the grouped rate; for the open interval the mean is taken over 90-100 only. The correct constraint is exposure weighted over the full interval | Stationary Gompertz population: single-year rates at ages 95 and 100 overestimated by 11% and 22%; e30 0.4 years too low |
 | D22 | Medium | Life tables | e_x bounds are life tables of the pointwise upper and lower mx bounds (`R/life_table.R:320-327`), which is not a prediction interval for e_x | Code reading; requires simulated paths to fix |
-| D23 | Medium | S3 workflow | [[S3_SHORT]] | Section 3.4 |
+| D23 | Medium | S3 workflow | `disaggregate(method = "gam")` stops with an error; `plot(<disaggregated forecast>, type = "disagg")` returns NULL with "No single-year disaggregated data available" because it reads `extras$mx_1yr_dt`, which only `run_forecast()` sets; single-year `export()` writes correct rows to a file named `*_forecast_grouped.csv`; `print()`/`summary()` report the holdout MASE of the selected model as "MASE"/"CV MASE" | README run, Section 3.4 |
 | D24 | Medium | Multi-cause | `run_reconciled_forecast()` and `run_coherent_forecast()` call `run_forecast(<mort_config>)`, which only works with the ONS Excel input; `enforce_coherence()` hardcodes `sex == "Male"/"Female"` and `quintile` | [[MULTI_SHORT]] |
 | D25 | Medium | Performance | Default `calibrate()` fits 315 Tucker3 configurations x 5 origins x 2 variants plus all other grids | [[RUNTIME_SHORT]] |
 | D26 | Low | Hygiene | 170 `cat()` calls (not suppressible), 12 plot methods call `print(p)`, 17 `ggsave()` side effects in exported helpers, 40 `tryCatch(..., error = function(e) NULL)` that hide failures, 96 hard-coded `1e-12` floors; committed `.claude/settings.local.json` (contains a local Windows path) and `tests/testthat/Rplots.pdf`; no R CMD check CI workflow; 103 exported functions including internal helpers | `grep` counts on `R/` |
@@ -132,7 +132,54 @@ drift.
 
 ### 5.2 Prediction intervals
 
-[[COV_TABLE]]
+Two backtests ran each model through the package's own path
+(`mort_calibration` -> `forecast()` -> `add_pi(n_sim = 200)`) with default
+hyperparameters, and counted how often held-out observed log rates fell
+inside the nominal 95% interval.
+
+**(a) `example_mortality`, train 2001-2014, test 2015-2019.** The example data
+are a deterministic log-linear trend plus i.i.d. noise (sd 0.04), the easiest
+possible case for residual-bootstrap intervals.
+
+| Model | Coverage (nominal 95%) | Log PI width, h = 1 | Log PI width, h = 5 |
+|---|---|---|---|
+| Tucker3-Direct | 0.85 | 0.134 | 0.134 |
+| Tucker3-CoDa | 0.87 | 0.139 | 0.139 |
+| Lee-Carter | 0.85 | 0.131 | 0.131 |
+| FDM | 0.84 | 0.132 | 0.132 |
+| RWD | 0.86 | 0.131 | 0.132 |
+| ARIMA | 0.86 | 0.131 | 0.131 |
+| ETS | 0.84 | 0.130 | 0.130 |
+
+**(b) Simulated Lee-Carter-type data** (20 replicates; 13 age groups x 10
+groups; log m = a_x + b_x k_t + group shift + noise, k_t a random walk with
+drift, innovation sd 0.02, observation sd 0.03; train 20 years, forecast 10).
+Here the true predictive spread grows with the horizon. Ignoring parameter
+uncertainty, the correct 95% log width is about 0.14 at h = 1 and 0.27 at
+h = 10.
+
+| Model | Coverage h = 1 | Coverage h = 5 | Coverage h = 10 | Log width h = 1 | Log width h = 10 |
+|---|---|---|---|---|---|
+| Tucker3-Direct | 0.80 | 0.69 | 0.68 | 0.143 | 0.190 |
+| Tucker3-CoDa | 0.81 | 0.70 | 0.67 | 0.154 | 0.194 |
+| Lee-Carter | 0.84 | 0.66 | 0.53 | 0.110 | 0.110 |
+| FDM | 0.80 | 0.61 | 0.46 | 0.111 | 0.111 |
+| RWD | 0.85 | 0.69 | 0.55 | 0.114 | 0.114 |
+| ARIMA | 0.82 | 0.60 | 0.48 | 0.108 | 0.108 |
+| ETS | 0.83 | 0.56 | 0.37 | 0.109 | 0.109 |
+| Correct (oracle, approx.) | 0.95 | 0.95 | 0.95 | 0.14 | 0.27 |
+
+The cap at +/-1.5 log units never bound in these runs, and coverage computed
+from the raw simulation quantiles (before re-centring and capping) was within
+0.02 of the reported coverage. The under-coverage therefore comes from how
+the simulations are generated, not from the post-processing.
+
+**(c) README quick start.** The ensemble chosen by `calibrate()` was FDM,
+ARIMA and ETS with weights 0.000, 0.977 and 0.023. `add_pi()` simulated from
+FDM, the first listed component, which has weight 0 and the worst holdout
+score (D7). Because `mx_raw` was the smoothed series, residuals were tiny, and
+the 95% interval was 0.021 log units wide (about +/-1%) at every horizon from
+1 to 10 years.
 
 Mechanisms behind these results, all confirmed in the code paths exercised
 above:
