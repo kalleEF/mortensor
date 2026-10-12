@@ -29,7 +29,49 @@ continues the first review pass recorded in the handoff notes and replaces its
 
 ## 2. Summary
 
-[[SUMMARY]]
+**Verdict: mortensor 0.1.0 is a research prototype, not a production
+package.** The code base is substantial (about 9,000 lines, 103 exports) and
+the README workflow runs end to end on R >= 4.4. The problems are of four
+kinds:
+
+1. **It does not run as declared.** On R 4.1-4.3, which DESCRIPTION
+   allows, `print()` of every main object fails (D1). After
+   `library(forecast)`, `forecast()` dispatches to the wrong generic (D2).
+   R CMD check has 3 ERRORs.
+2. **Its accuracy claims come from a leaky evaluation.** The README workflow
+   reports a holdout MASE of 0.0017 for the selected model; scored honestly
+   on observed data it is 0.734, about 400 times worse. Even with raw input,
+   holdout years enter smoothing and cross-validation, and the selected
+   ensemble ranks 7th of 9 on honest scores (D4, D5).
+3. **Its prediction intervals are not calibrated.** Nominal 95% intervals
+   covered 84-87% of observations in the easiest possible case and fell to
+   37-68% at a 10-year horizon on simulated random-walk data. Ensemble
+   intervals come from whichever component is listed first (in the README
+   run, a member with weight 0) (D7, D8).
+4. **Several demographic outputs are wrong by default.** Single-year life
+   expectancy comes out at about 207 years instead of 63 (D10), the CoDa
+   models do not learn the 90+ rate (D11), and disaggregation uses an
+   unweighted constraint (D21).
+
+Documentation does not demonstrate the package: all vignettes are built with
+`eval = FALSE`; evaluated, [[VIG_SUMMARY]]. Runtime is high for small data
+(about 10 minutes for the default `calibrate()` on 13 x 20 x 10 cells).
+
+What is worth keeping: the S3 workflow design (`calibrate()` ->
+`forecast()` -> `add_pi()` -> `disaggregate()`), the plotting and export
+methods, and the core idea of forecasting age-at-death compositions jointly
+across population groups with a Tucker3 decomposition. Whether that idea
+beats standard models is currently unknown, because the package's own
+evaluation cannot answer it: on honest scores all models were within 0.71 to
+0.79 on the example data.
+
+**Recommendation.** Do Phase 0 (about 1-2 weeks) immediately. Then do
+Phases 1 and 2 (honest evaluation and calibrated intervals) before adding any
+features, because they decide whether the Tucker3/CoDa contribution holds up.
+Consider narrowing the scope (for example dropping the multi-cause pipeline
+until the single-cause workflow is validated). bamp can be integrated as an
+optional Bayesian APC backend once mortensor works on counts and predictive
+draws (Section 8).
 
 ## 3. Current state
 
@@ -122,7 +164,7 @@ Severity: **Blocker** = install, check or the documented workflow fails;
 | D21 | Medium | Disaggregation | Single-year rates are constrained so that their unweighted mean equals the grouped rate; for the open interval the mean is taken over 90-100 only. The correct constraint is exposure weighted over the full interval | Stationary Gompertz population: single-year rates at ages 95 and 100 overestimated by 11% and 22%; e30 0.4 years too low |
 | D22 | Medium | Life tables | e_x bounds are life tables of the pointwise upper and lower mx bounds (`R/life_table.R:320-327`), which is not a prediction interval for e_x | Code reading; requires simulated paths to fix |
 | D23 | Medium | S3 workflow | `disaggregate(method = "gam")` stops with an error; `plot(<disaggregated forecast>, type = "disagg")` returns NULL with "No single-year disaggregated data available" because it reads `extras$mx_1yr_dt`, which only `run_forecast()` sets; single-year `export()` writes correct rows to a file named `*_forecast_grouped.csv`; `print()`/`summary()` report the holdout MASE of the selected model as "MASE"/"CV MASE" | README run, Section 3.4 |
-| D24 | Medium | Multi-cause | `run_reconciled_forecast()` and `run_coherent_forecast()` call `run_forecast(<mort_config>)`, which only works with the ONS Excel input; `enforce_coherence()` hardcodes `sex == "Male"/"Female"` and `quintile` | [[MULTI_SHORT]] |
+| D24 | Medium | Multi-cause | `run_reconciled_forecast()` and `run_coherent_forecast()` call `run_forecast(<mort_config>)`, which only works with the ONS Excel input; `enforce_coherence()` hardcodes `sex == "Male"/"Female"` and `quintile` | `multi-cause-forecasting` vignette: all 14 evaluated chunks fail (no multi-cause data shipped, the `constraints` chunk passes arguments the function does not accept, pipelines error with "`path` must be a string") |
 | D25 | Medium | Performance | Default `calibrate()` fits 315 Tucker3 configurations x 5 origins x 2 variants plus all other grids | On the 13 x 20 x 10 example: `calibrate()` 632 s with CV and 190 s with BIC; `add_pi(method = "gam_bayes")` 596 s for 50 draws (refits every ensemble member per draw); 4 parallel jobs on 4 cores, so single-job times are lower |
 | D26 | Low | Hygiene | 170 `cat()` calls (not suppressible), 12 plot methods call `print(p)`, 17 `ggsave()` side effects in exported helpers, 40 `tryCatch(..., error = function(e) NULL)` that hide failures, 96 hard-coded `1e-12` floors; committed `.claude/settings.local.json` (contains a local Windows path) and `tests/testthat/Rplots.pdf`; no R CMD check CI workflow; 103 exported functions including internal helpers | `grep` counts on `R/` |
 

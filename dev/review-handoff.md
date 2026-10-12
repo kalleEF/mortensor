@@ -1,5 +1,9 @@
 # mortensor production review: handoff notes
 
+> **Status (second session, 2026-10-12):** the "Still to do" list below has
+> been completed. Results, corrections to these notes, the prioritised roadmap
+> and the bamp assessment are in `dev/production-review.md`.
+
 Working notes from a first review session (2026-10-12). That session could not
 install `rTensor`, `compositions`, `demography` or `StMoMo` because CRAN was
 blocked by the environment's network policy, so parts of the review are based
