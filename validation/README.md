@@ -25,6 +25,10 @@ R CMD INSTALL . && Rscript validation/run_validation.R --suite full --record
 Rscript validation/run_validation.R --load-all --selftest
 ```
 
+The `unit_tests` check of the full suite runs the test files of the working
+tree against the installed package, so install the current tree first and
+do not change it during the run.
+
 GitHub Actions (`.github/workflows/validation.yaml`) runs the quick suite on
 every push and pull request and the full suite every Monday and on demand
 (workflow dispatch). The report is shown in the job summary and uploaded as
