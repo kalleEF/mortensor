@@ -78,6 +78,7 @@ backtest_origin <- function(spec, data, origin, h, prep, n_draws, seed) {
   probs <- wis_probs()
   rows <- list()
   for (s in unique(obs$stratum)) {
+    if (anyNA(D_draws[, , s, ])) next
     sel <- obs$stratum == s
     C <- build_operator(idx[sel], na, np)
     Ds <- matrix(D_draws[, , s, ], ncol = n_draws)
@@ -93,6 +94,7 @@ backtest_origin <- function(spec, data, origin, h, prep, n_draws, seed) {
                  age_lo = o$age_lo, age_hi = o$age_hi, period = o$period_lo, observed = y, scale = scale),
       sc)
   }
+  if (!length(rows)) mt_abort("The model failed in every stratum.", class = "backtest")
   out <- rbindlist(rows)
   out <- merge(data$strata, out, by = "stratum", sort = FALSE)
   out[]

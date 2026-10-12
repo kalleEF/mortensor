@@ -30,7 +30,8 @@ demography, ggplot2) use them when installed.
 | Data at any granularity | `mt_data()`, `mt_add_deaths()`, `as_mt_data()` (StMoMo, demography), `mt_from_hmd()`, `mt_read_hmd()`, `mt_validate()`, `mt_example()` |
 | Harmonisation | `mt_regroup()`, `mt_ungroup()` (native penalized composite link model, rates with exposure offset, 1D/2D), `mt_smooth()`, `mt_as_exposure()` |
 | Preprocessing pipelines | `mt_prep()` with `step_ungroup()`, `step_smooth()`, `step_regroup()`, `step_grid()`, `step_shocks()` |
-| Models | `rwd()`, `lee_carter()`, `tucker3()`, `arima_series()`, `ets_series()`, `apc_bayes()` (bamp), `mt_ensemble()` |
+| Models | `rwd()`, `lee_carter()`, `tucker3()`, `arima_series()`, `ets_series()`, `hyndman_ullah()` (demography), `stmomo()` (APC, CBD, RH, M6, LC), `li_lee()`, `product_ratio()`, `apc_bayes()` (bamp), `cause_shares()` (multi-cause), `mt_ensemble()` (equal, CRPS or stacking weights), `mt_tuned()` |
+| Constraints | `mt_reconcile()` (MinT, WLS, OLS; draw by draw), `mt_cohere()` |
 | Forecasts | `mt_fit()`, `mt_forecast()` (simulated paths), `mt_summarise()`, `mt_deaths()` |
 | Evaluation | `mt_backtest()` (rolling origin, no leakage), `mt_score()` (CRPS, WIS, coverage, PIT, MASE) |
 | Derived quantities and plots | `life_table()`, `life_expectancy()`, `mt_plot_forecast()`, `mt_plot_life_expectancy()`, `mt_plot_coverage()`, ... |

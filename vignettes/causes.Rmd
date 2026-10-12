@@ -1,0 +1,91 @@
+---
+title: "Coherent forecasts by cause of death"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Coherent forecasts by cause of death}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width = 7, fig.height = 4.5, message = FALSE)
+has_gg <- requireNamespace("ggplot2", quietly = TRUE)
+```
+
+Forecasting causes of death one at a time gives cause-specific forecasts
+that do not add up to the all-cause forecast. mortensor offers two remedies:
+
+* `cause_shares()` models all-cause mortality with any model and the shares
+  of the causes with a compositional tensor model (isometric log-ratio
+  coordinates and a Tucker decomposition across age, year, group and cause),
+  so causes add up to all causes in every draw;
+* `mt_reconcile()` adjusts independent forecasts draw by draw so that they
+  add up (MinT, WLS or OLS projection).
+
+The Human Mortality Database has no causes of death, so this vignette uses
+`mt_example_causes()`: simulated deaths of women and men by cause
+(cardiovascular disease, cancer, other) with known shares that change with
+age and time.
+
+```{r}
+library(mortensor)
+library(data.table)
+x <- mt_example_causes(years = 1990:2019)
+x
+mt_validate(x, hierarchy = list(var = "cause", total = "all"))
+```
+
+`mt_validate()` with a hierarchy checks that the causes add up to all
+causes; in real data this check catches problems such as doubled totals.
+
+## Cause shares
+
+Shares of rare causes at young ages are noisy. Smoothing the cause-specific
+rates first (`step_smooth()`, Poisson P-splines over age) keeps that noise
+out of the share model; without it the forecast intervals of the causes were
+too wide in the backtest below (95% coverage above 0.99).
+
+```{r}
+prep <- mt_prep(step_smooth())
+fit <- mt_fit(cause_shares(total = lee_carter(), ranks = c(3, 3, 2, 2)), x, prep = prep)
+fit$diagnostics
+fc <- mt_forecast(fit, h = 15, n_draws = 500, seed = 1)
+st <- fc$strata
+coherence_gap <- function(fc, sx) {
+  i <- st$stratum[st$sex == sx & st$cause == "all"]
+  j <- st$stratum[st$sex == sx & st$cause != "all"]
+  max(abs(apply(fc$rates[, , j, , drop = FALSE], c(1, 2, 4), sum) / fc$rates[, , i, ] - 1))
+}
+c(female = coherence_gap(fc, "female"), male = coherence_gap(fc, "male"))
+```
+
+```{r, eval = has_gg}
+mt_plot_forecast(fc, ages = c("50", "70", "85"), strata = c("male.all", "male.cvd", "male.cancer", "male.other"))
+```
+
+## Independent forecasts and reconciliation
+
+Independent Lee-Carter fits per cause do not add up:
+
+```{r}
+fc_ind <- mt_forecast(mt_fit(lee_carter(), x, prep = prep), h = 15, n_draws = 500, seed = 1)
+c(female = coherence_gap(fc_ind, "female"), male = coherence_gap(fc_ind, "male"))
+fc_rec <- mt_reconcile(fc_ind, var = "cause", total = "all", method = "mint")
+c(female = coherence_gap(fc_rec, "female"), male = coherence_gap(fc_rec, "male"))
+```
+
+## Backtest by cause
+
+```{r}
+origins <- 2005:2009
+bt <- rbind(
+  mt_backtest(cause_shares(total = lee_carter(), ranks = c(3, 3, 2, 2)), x, origins = origins, h = 10,
+              n_draws = 200, prep = prep),
+  mt_backtest(lee_carter(), x, origins = origins, h = 10, n_draws = 200, prep = prep))
+mt_score(bt, by = c("model", "cause"))[order(cause, crps)]
+```
+
+The cause-share model borrows strength across ages, years, sexes and causes
+for the composition, while all-cause mortality keeps its own model. Which
+approach forecasts better depends on the data; the backtest above is the way
+to decide.

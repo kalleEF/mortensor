@@ -7,6 +7,7 @@
 mt_ungroup(
   data,
   dims = 1,
+  method = c("pclm", "monotone"),
   exposure_method = c("pclm", "monotone"),
   lambda = NULL,
   criterion = c("bic", "aic"),
@@ -21,6 +22,10 @@ mt_ungroup(
 \item{data}{An \link{mt_data} object.}
 
 \item{dims}{1 or 2.}
+
+\item{method}{Method for deaths: \code{"pclm"} (default) or \code{"monotone"}
+(cumulative deaths interpolated by a monotone Hyman spline, counts only,
+1D; an alternative ported from mortensor 0.1 that ignores exposures).}
 
 \item{exposure_method}{\code{"pclm"} or \code{"monotone"}.}
 

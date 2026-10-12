@@ -12,14 +12,15 @@ mt_smooth(
   kr = 2,
   deg = 3,
   pord = 2,
-  lambda_range = c(0.01, 1e+08)
+  lambda_range = c(0.01, 1e+08),
+  method = c("pspline", "whittaker")
 )
 }
 \arguments{
 \item{data}{An \link{mt_data} object.}
 
 \item{dims}{1 (over age, separately per period) or 2 (age-period
-surface).}
+surface; P-splines only).}
 
 \item{lambda}{Fixed smoothing parameter(s); \code{NULL} selects them by
 \code{criterion}.}
@@ -32,6 +33,12 @@ surface).}
 penalty.}
 
 \item{lambda_range}{Search range for the smoothing parameters.}
+
+\item{method}{\code{"pspline"} (Poisson P-splines, default) or \code{"whittaker"}
+(Whittaker-Henderson smoothing of log rates over age with weights equal
+to the deaths, the approximate inverse variance of a log rate;
+smoothing parameter by generalised cross-validation unless \code{lambda} is
+given; an option ported from mortensor 0.1).}
 }
 \value{
 An \code{mt_data} object with smoothed deaths; diagnostics as attribute

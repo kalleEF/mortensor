@@ -96,6 +96,36 @@ checks$apc_bayes_france <- list(
                value = c(mean(fit$diagnostics$status == "ok"), mean(bt$crps), mean(bt$cov95)))
   })
 
+checks$coverage_li_lee <- list(
+  suite = "full",
+  description = "As coverage_lee_carter for li_lee() (independent trends per stratum violate its assumption).",
+  run = function() coverage_check(li_lee(), 10))
+
+checks$coverage_fdm <- list(
+  suite = "full",
+  description = "As coverage_lee_carter for hyndman_ullah() (functional demographic model, demography).",
+  run = function() coverage_check(hyndman_ullah(order = 3), 10))
+
+checks$cause_shares_coherence <- list(
+  suite = "quick",
+  description = paste("cause_shares(lee_carter()) with step_smooth() on mt_example_causes(): largest relative gap",
+                      "between all-cause",
+                      "draws and the sum of cause draws, and CRPS by cause in a backtest from 2012 (h = 5)."),
+  run = function() {
+    x <- mt_example_causes(years = 1995:2017)
+    prep <- mt_prep(step_smooth())
+    fit <- mt_fit(cause_shares(total = lee_carter()), mt_window(x, to = 2012), prep = prep)
+    fc <- mt_forecast(fit, h = 5, n_draws = 100, seed = 1)
+    st <- fc$strata
+    gap <- max(vapply(c("female", "male"), function(sx) {
+      i <- st$stratum[st$sex == sx & st$cause == "all"]
+      j <- st$stratum[st$sex == sx & st$cause != "all"]
+      max(abs(apply(fc$rates[, , j, , drop = FALSE], c(1, 2, 4), sum) / fc$rates[, , i, ] - 1))
+    }, 0))
+    bt <- mt_backtest(cause_shares(total = lee_carter()), x, origins = 2012, h = 5, n_draws = 100, prep = prep)
+    data.frame(metric = c("max_gap", "crps", "cov95"), value = c(gap, mean(bt$crps), mean(bt$cov95)))
+  })
+
 checks$ungroup_ew_2d <- list(
   suite = "full",
   description = "As ungroup_ew_1d for 1980-2011 with the 2D PCLM (age-period surface).",

@@ -71,14 +71,15 @@ check_hierarchy <- function(data, hierarchy, tol) {
   if (is.null(var) || !var %in% data$by) mt_abort("`hierarchy$var` must be a stratum column.", class = "hierarchy")
   st <- data$strata
   total <- hierarchy$total
-  parts <- hierarchy$parts %||% setdiff(unique(st[[var]]), total)
+  part_levels <- hierarchy$parts %||% setdiff(unique(st[[var]]), total)
+  n_parts <- length(part_levels)
   others <- setdiff(data$by, var)
   D <- merge(data$obs$deaths, st, by = "stratum")
   keys <- c(others, "age_lo", "age_hi", "period_lo", "period_hi")
   tot <- D[get(var) == total, c(keys, "value"), with = FALSE]
-  prt <- D[get(var) %in% parts, list(parts = sum(value), k = .N), by = keys]
+  prt <- D[get(var) %in% part_levels, list(parts = sum(value), k = .N), by = keys]
   j <- merge(tot, prt, by = keys)
-  j <- j[k == length(parts) & parts > 0]
+  j <- j[k == n_parts & parts > 0]
   if (!nrow(j)) {
     return(data.table(check = "hierarchy", severity = "info", measure = "deaths", stratum = total, n = 0L,
                       detail = "no cells with the total and all parts observed"))

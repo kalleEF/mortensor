@@ -41,7 +41,7 @@ pclm_fit <- function(y, C, o, B, pen, lambda = NULL, criterion = c("bic", "aic")
   }
   ic_of <- function(fit) fit$dev + (if (criterion == "bic") log(length(y)) else 2) * fit$ed
   if (!is.null(lambda)) {
-    fit <- pclm_irls(y, C, o, B, pen, rep_len(lambda, np), beta)
+    fit <- pclm_irls(y, C, o, B, pen, rep_len(lambda, np), beta, se = TRUE)
     fit$ic <- ic_of(fit)
     fit$at_bound <- FALSE
     return(fit)
@@ -66,17 +66,17 @@ pclm_fit <- function(y, C, o, B, pen, lambda = NULL, criterion = c("bic", "aic")
           l2[k] <- z
           obj(l2)
         }
-        ll[k] <- stats::optimize(obj_k, lr, tol = 0.05)$minimum
+        ll[k] <- stats::optimize(obj_k, lr, tol = 0.1)$minimum
       }
     }
   }
-  fit <- pclm_irls(y, C, o, B, pen, 10^ll, state$beta)
+  fit <- pclm_irls(y, C, o, B, pen, 10^ll, state$beta, se = TRUE)
   fit$ic <- ic_of(fit)
   fit$at_bound <- any(ll < lr[1] + 0.1 | ll > lr[2] - 0.1)
   fit
 }
 
-pclm_irls <- function(y, C, o, B, pen, lambda, beta, maxit = 100L, tol = 1e-6) {
+pclm_irls <- function(y, C, o, B, pen, lambda, beta, maxit = 100L, tol = 1e-6, se = FALSE) {
   P <- Reduce(`+`, Map(`*`, lambda, pen))
   pdev <- function(b) {
     eta <- as.numeric(B %*% b)
@@ -94,7 +94,10 @@ pclm_irls <- function(y, C, o, B, pen, lambda, beta, maxit = 100L, tol = 1e-6) {
     XtWX <- crossprod(X, X / mu)
     A <- XtWX + P
     rhs <- crossprod(X, (y - mu) / mu) + XtWX %*% beta
-    beta_new <- tryCatch(as.numeric(solve(A, rhs)), error = function(e) NULL)
+    beta_new <- tryCatch({
+      R <- chol(A)
+      as.numeric(backsolve(R, forwardsolve(t(R), rhs)))
+    }, error = function(e) tryCatch(as.numeric(solve(A, rhs)), error = function(e2) NULL))
     if (is.null(beta_new) || anyNA(beta_new)) break
     step <- beta_new - beta
     obj_new <- pdev(beta + step)
@@ -121,8 +124,11 @@ pclm_irls <- function(y, C, o, B, pen, lambda, beta, maxit = 100L, tol = 1e-6) {
   A <- XtWX + P
   Ainv <- tryCatch(chol2inv(chol(A)), error = function(e) MASS_ginv(A))
   ed <- sum(Ainv * XtWX)
-  BV <- as.matrix(B %*% Ainv)
-  se_eta <- sqrt(pmax(rowSums(BV * as.matrix(B)), 0))
+  se_eta <- NULL
+  if (se) {
+    BV <- as.matrix(B %*% Ainv)
+    se_eta <- sqrt(pmax(rowSums(BV * as.matrix(B)), 0))
+  }
   list(gamma = gam, beta = beta, mu = mu, lambda = lambda, ed = ed, dev = poisson_dev(y, mu),
        se_eta = se_eta, converged = converged, iterations = it)
 }

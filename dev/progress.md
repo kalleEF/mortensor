@@ -38,6 +38,17 @@ work: `claude/vigilant-albattani-2ssw1x` (plays the role of `dev-0.2`).
 | C4.6, C4.7 | open | | Performance pass (2D PCLM about 90 s for 71 x 32), release 0.2.0 |
 | D1.12 (HMD) | done | this branch | `mt_from_hmd()`, `mt_read_hmd()` (HMDHFDplus, credentials from `HMD_USER`/`HMD_PASSWORD`) |
 
+| P5.1 | done | this branch | `hyndman_ullah()` (demography; draws via `simulate()`); 95% coverage 0.90 on the benchmark, 0.73 on France |
+| P5.2 | done | this branch | `stmomo()` APC, CBD, RH, M6, LC with integer ages, initial exposures for logit links, `simulate()` draws; RH fails to converge at some origins (recorded) |
+| P5.3 | done | this branch | `cause_shares()` (Tucker4 on ILR cause shares, any all-cause model), `mt_example_causes()` |
+| P5.4 | done | this branch | `mt_reconcile()` draw by draw (MinT with draw covariance, WLS, OLS) |
+| P5.5 | done | this branch | `mt_cohere()`, `li_lee()`, `product_ratio()` (Lee-Carter-type version) |
+| P5.6 | done | this branch | `mt_ensemble(weights = "stack")` |
+| P5.7 | partial | this branch | Whittaker smoothing; Gaussian GAM and GAM-Bayes smoothing uncertainty not ported |
+| P5.8 | partial | this branch | Monotone (Hyman) splitting of deaths; natural-Gompertz and Hyman-Kannisto disaggregation not ported (PCLM is the documented method) |
+| P5.9 | partial | this branch | Multi-cause vignette on `mt_example_causes()` (HMD has no causes); release 0.3.0 open |
+| C4.6 | partial | this branch | 2D PCLM 87 s to 45 s (standard errors only for the final fit, Cholesky solves); no further work |
+
 ## Decisions taken during implementation
 
 - 2026-10-12: Exported verbs use the `mt_` prefix; `mt_obs()` returns an
@@ -84,6 +95,16 @@ work: `claude/vigilant-albattani-2ssw1x` (plays the role of `dev-0.2`).
 - 2026-10-12: lintr's `object_name_linter` is disabled (matrix notation such
   as `D`, `E`, `XtWX` is used throughout; lintr 3.1.1 failed with custom
   regexes); line length 120.
+
+- 2026-10-12: `fdm()` renamed `hyndman_ullah()` (clash with `demography::fdm`).
+- 2026-10-12: `cause_shares()` with noisy cause-specific rates over-covered
+  (95% coverage 0.99) unless the rates are smoothed first
+  (`step_smooth()`); with smoothing 0.94-0.97. Residual cause added only when
+  the listed causes leave more than 0.1% unexplained (`residual = "auto"`).
+- 2026-10-12: France 1986-1995 origins, h = 10 (CRPS, 95% coverage): Li-Lee
+  0.058/0.95, product-ratio 0.059/0.91, Lee-Carter 0.061/0.95, StMoMo APC
+  0.067/0.95, RH 0.067/0.97 (2 of 4 origins failed), FDM 0.069/0.73, CBD
+  0.194/0.67 (CBD is designed for older ages; ages 30+ used here).
 
 ## Open questions
 

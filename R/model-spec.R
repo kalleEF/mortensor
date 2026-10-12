@@ -126,8 +126,11 @@ extra_noise_sd <- function(spec, fits, D, E) {
     f <- if (spec$joint) fitted[, , s] else fits[[s]]$fitted
     if (is.null(f)) next
     r <- log_rates(D[, , s], E[, , s]) - log(f)
-    pois <- rowMeans(1 / pmax(f * E[, , s], 0.5))
-    v <- rowSums((r - rowMeans(r))^2) / max(ncol(r) - 1, 1) - pois
+    r[!is.finite(r)] <- NA
+    pois <- rowMeans(1 / pmax(f * E[, , s], 0.5), na.rm = TRUE)
+    n <- rowSums(!is.na(r))
+    v <- rowSums((r - rowMeans(r, na.rm = TRUE))^2, na.rm = TRUE) / pmax(n - 1, 1) - pois
+    v[n < 3 | !is.finite(v)] <- 0
     out[, s] <- sqrt(pmax(v, 0))
   }
   out
@@ -251,7 +254,9 @@ predictive_rates <- function(arr, fit, exposure, spec) {
     sd <- array(fit$noise_sd[, rep(seq_len(d[3]), each = d[2])], d[1:3])
     arr <- arr * exp(stats::rnorm(length(arr), 0, as.vector(sd)))
     mu <- arr * as.vector(E)
-    deaths <- array(stats::rpois(length(mu), mu), d)
+    ok <- !is.na(mu)
+    deaths <- array(NA_real_, d)
+    deaths[ok] <- stats::rpois(sum(ok), mu[ok])
     arr <- pmax(deaths, 0.5) / as.vector(E)
   }
   arr

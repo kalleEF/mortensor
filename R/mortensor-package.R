@@ -12,9 +12,12 @@
 #'   [mt_smooth()] smooths rates; [mt_prep()] bundles these steps so that
 #'   backtests refit them on every training window.
 #' * **Models**: [rwd()], [lee_carter()], [tucker3()], [arima_series()],
-#'   [ets_series()], [apc_bayes()] (package bamp) and [mt_ensemble()], fitted
-#'   with [mt_fit()] and forecast with [mt_forecast()] as simulated paths
-#'   ([mt_draws]).
+#'   [ets_series()], [hyndman_ullah()], [stmomo()], [li_lee()], [product_ratio()],
+#'   [apc_bayes()] (package bamp), [cause_shares()] for coherent multi-cause
+#'   forecasts and [mt_ensemble()], fitted with [mt_fit()] (optionally tuned
+#'   with [mt_tuned()]) and forecast with [mt_forecast()] as simulated paths
+#'   ([mt_draws]); [mt_reconcile()] and [mt_cohere()] impose hierarchies and
+#'   orderings draw by draw.
 #' * **Evaluation**: [mt_backtest()] and [mt_score()].
 #' * **Derived quantities and plots**: [life_table()], [life_expectancy()],
 #'   [mt_deaths()], [mt_plot_forecast()] and the other `mt_plot_*()`
@@ -34,7 +37,7 @@ utils::globalVariables(c(
   "observed", "q", "metric", "target", "estimate", "lower", "upper",
   "nalo", "nahi", "nplo", "nphi", "area", "pw", "full", "value.d", "value.e",
   "value.next", "k", "ratio", "label", "sex", "d", "e", "g_lo", "g_hi", "N",
-  "a1", "a2", "p1", "p2", "a", "p", "i.value", "i.provenance", "lr", "scale",
-  "crps", "wis", "ae", "cov50", "cov80", "cov95", "pit", "at", "status", "rep",
+  "a1", "a2", "p1", "p2", "a", "p", "i.value", "i.provenance", "lr", "scale", "component", "draw",
+  "crps", "wis", "ae", "cov50", "cov80", "cov95", "pit", "at", "status", "rep", "parts",
   ".data", "q0.5", "lo", "hi", "med", "x", "x_hi", "level", "coverage", "v"
 ))

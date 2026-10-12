@@ -28,6 +28,9 @@
 #'
 #' @param data An [mt_data] object.
 #' @param dims 1 or 2.
+#' @param method Method for deaths: `"pclm"` (default) or `"monotone"`
+#'   (cumulative deaths interpolated by a monotone Hyman spline, counts only,
+#'   1D; an alternative ported from mortensor 0.1 that ignores exposures).
 #' @param exposure_method `"pclm"` or `"monotone"`.
 #' @param lambda Fixed smoothing parameter(s); `NULL` selects them by
 #'   `criterion`.
@@ -55,10 +58,12 @@
 #' u
 #' head(attr(u, "ungroup"))
 #' @export
-mt_ungroup <- function(data, dims = 1, exposure_method = c("pclm", "monotone"), lambda = NULL,
+mt_ungroup <- function(data, dims = 1, method = c("pclm", "monotone"), exposure_method = c("pclm", "monotone"),
+                       lambda = NULL,
                        criterion = c("bic", "aic"), kr = 2, deg = 3, pord = 2,
                        lambda_range = c(1e-2, 1e8), preserve_totals = TRUE) {
   check_class(data, "mt_data", "data")
+  method <- match.arg(method)
   exposure_method <- match.arg(exposure_method)
   criterion <- match.arg(criterion)
   check_number(dims, "dims", lower = 1, upper = 2, integerish = TRUE)
@@ -73,7 +78,9 @@ mt_ungroup <- function(data, dims = 1, exposure_method = c("pclm", "monotone"), 
   }
   if (!is.null(data$obs$deaths) && needs_ungroup(data$obs$deaths, g)) {
     E <- data$obs$exposure
-    if (!is.null(E) && !needs_ungroup(E, g)) {
+    if (method == "monotone") {
+      res <- ungroup_counts_1d(data$obs$deaths, g, data$omega, ctl, "monotone", "deaths")
+    } else if (!is.null(E) && !needs_ungroup(E, g)) {
       res <- ungroup_rates(data$obs$deaths, E, g, data$omega, ctl, dims)
     } else {
       if (dims == 2) {

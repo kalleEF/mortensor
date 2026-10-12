@@ -120,23 +120,24 @@ simulate_model.mt_spec_tucker3 <- function(spec, fit, h, n_draws, ...) {
   out
 }
 
-# Higher-order orthogonal iteration for a 3-way array
+# Higher-order orthogonal iteration for an N-way array
 hooi <- function(X, ranks, maxit = 200, tol = 1e-8) {
-  U <- lapply(1:3, function(n) {
+  N <- length(dim(X))
+  U <- lapply(seq_len(N), function(n) {
     s <- svd(unfold(X, n), nu = ranks[n], nv = 0)
     s$u[, seq_len(ranks[n]), drop = FALSE]
   })
   fit_old <- 0
   normX <- sum(X^2)
   for (it in seq_len(maxit)) {
-    for (n in 1:3) {
+    for (n in seq_len(N)) {
       Y <- X
-      for (m in setdiff(1:3, n)) Y <- mode_product(Y, t(U[[m]]), m)
+      for (m in setdiff(seq_len(N), n)) Y <- mode_product(Y, t(U[[m]]), m)
       s <- svd(unfold(Y, n), nu = ranks[n], nv = 0)
       U[[n]] <- s$u[, seq_len(ranks[n]), drop = FALSE]
     }
     G <- X
-    for (m in 1:3) G <- mode_product(G, t(U[[m]]), m)
+    for (m in seq_len(N)) G <- mode_product(G, t(U[[m]]), m)
     fit <- sum(G^2) / normX
     if (abs(fit - fit_old) < tol) break
     fit_old <- fit
@@ -161,7 +162,7 @@ mode_product <- function(X, M, n) {
 
 tucker_reconstruct <- function(G, U) {
   X <- G
-  for (m in 1:3) X <- mode_product(X, U[[m]], m)
+  for (m in seq_along(U)) X <- mode_product(X, U[[m]], m)
   X
 }
 

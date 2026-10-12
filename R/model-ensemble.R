@@ -12,7 +12,10 @@
 #' * a numeric vector (normalised to sum to 1);
 #' * `"crps"`: inverse mean CRPS of an inner rolling-origin backtest on the
 #'   last `inner_origins` years of the training window, so the weights never
-#'   use data after the forecast origin.
+#'   use data after the forecast origin;
+#' * `"stack"`: weights on the simplex that minimise the squared error of the
+#'   weighted median forecasts (log scale) in the same inner backtest (the
+#'   non-negative stacking of mortensor 0.1, fitted on training data only).
 #'
 #' A component that fails in a stratum is dropped for that stratum and the
 #' remaining weights are renormalised; this is recorded in the diagnostics.
@@ -37,7 +40,7 @@ mt_ensemble <- function(..., weights = "equal", inner_origins = 3, inner_h = 5) 
   if (is.numeric(weights)) {
     if (length(weights) != length(comps) || any(weights < 0)) mt_abort("Invalid weights.", class = "argument")
   } else {
-    check_choice(weights, c("equal", "crps"), "weights")
+    check_choice(weights, c("equal", "crps", "stack"), "weights")
   }
   sp <- new_mt_spec("ensemble", list(components = comps, weights = weights, inner_origins = inner_origins,
                                      inner_h = inner_h),
@@ -59,7 +62,7 @@ mt_fit.mt_spec_ensemble <- function(spec, data, prep = NULL, cores = 1, ...) {
   } else if (p$weights == "equal") {
     rep(1, length(fits))
   } else {
-    ensemble_crps_weights(p, data, prep)
+    ensemble_inner_weights(p, data, prep)
   }
   w[!ok] <- 0
   w <- w / sum(w)
@@ -83,18 +86,33 @@ mt_fit.mt_spec_ensemble <- function(spec, data, prep = NULL, cores = 1, ...) {
   out
 }
 
-ensemble_crps_weights <- function(p, data, prep) {
+ensemble_inner_weights <- function(p, data, prep) {
   last <- max(mt_grid(data)$period$lower)
   origins <- seq(last - p$inner_origins - p$inner_h + 1, last - p$inner_h)
-  crps <- vapply(p$components, function(cs) {
-    bt <- tryCatch(mt_backtest(cs, data, origins = origins, h = p$inner_h, prep = prep, n_draws = 100),
-                   error = function(e) NULL)
-    if (is.null(bt)) NA_real_ else mean(bt$crps)
-  }, 0)
-  w <- 1 / crps
-  w[!is.finite(w)] <- 0
-  if (all(w == 0)) w[] <- 1
+  bts <- lapply(p$components, function(cs) {
+    suppressWarnings(tryCatch(mt_backtest(cs, data, origins = origins, h = p$inner_h, prep = prep, n_draws = 100),
+                              error = function(e) NULL))
+  })
+  ok <- !vapply(bts, is.null, logical(1))
+  if (!any(ok)) return(rep(1, length(bts)))
+  if (p$weights == "crps") {
+    w <- vapply(bts, function(b) if (is.null(b)) 0 else 1 / mean(b$crps), 0)
+    return(if (all(w == 0)) rep(1, length(w)) else w)
+  }
+  M <- do.call(cbind, lapply(bts[ok], `[[`, "median"))
+  y <- bts[[which(ok)[1]]]$observed
+  w <- numeric(length(bts))
+  w[ok] <- simplex_least_squares(M, y)
   w
+}
+
+# Least squares with weights on the simplex (softmax parametrisation)
+simplex_least_squares <- function(M, y) {
+  k <- ncol(M)
+  if (k == 1) return(1)
+  sm <- function(z) exp(z - max(z)) / sum(exp(z - max(z)))
+  f <- function(z) mean((M %*% sm(z) - y)^2)
+  sm(stats::optim(rep(0, k), f, method = "BFGS")$par)
 }
 
 #' @export

@@ -23,6 +23,12 @@ Clean break: the 0.1.x interface is replaced (see `dev/revamp-plan.md`).
   age-period-cohort models) with convergence checks and draws on the grid.
 * Plots (`mt_plot_*()`, ggplot2), HMD readers (`mt_from_hmd()`,
   `mt_read_hmd()`), and four vignettes using HMD data.
+* Ports of the 0.1 models and methods: `hyndman_ullah()`, `stmomo()` (APC, CBD, RH,
+  M6, LC), `li_lee()`, `product_ratio()`, `cause_shares()` (Tucker4-ILR
+  multi-cause forecasts), `mt_reconcile()` (MinT, WLS, OLS),
+  `mt_cohere()`, stacking weights in `mt_ensemble()`, Whittaker smoothing,
+  Kannisto closure in `life_table()`, monotone splitting of deaths, and the
+  simulated multi-cause dataset `mt_example_causes()`.
 * `mt_tune()` and `mt_tuned()`; `prob_dying()`, `asr()` (ESP 2013),
   `yll()`, `mt_export()`.
 * `mt_backtest()` (rolling origin, scored at the observed resolution) and

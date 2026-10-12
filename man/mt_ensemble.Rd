@@ -30,7 +30,10 @@ Weights:
 \item a numeric vector (normalised to sum to 1);
 \item \code{"crps"}: inverse mean CRPS of an inner rolling-origin backtest on the
 last \code{inner_origins} years of the training window, so the weights never
-use data after the forecast origin.
+use data after the forecast origin;
+\item \code{"stack"}: weights on the simplex that minimise the squared error of the
+weighted median forecasts (log scale) in the same inner backtest (the
+non-negative stacking of mortensor 0.1, fitted on training data only).
 }
 
 A component that fails in a stratum is dropped for that stratum and the

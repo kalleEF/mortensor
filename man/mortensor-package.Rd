@@ -20,9 +20,12 @@ estimates single-year data with the penalized composite link model,
 \code{\link[=mt_smooth]{mt_smooth()}} smooths rates; \code{\link[=mt_prep]{mt_prep()}} bundles these steps so that
 backtests refit them on every training window.
 \item \strong{Models}: \code{\link[=rwd]{rwd()}}, \code{\link[=lee_carter]{lee_carter()}}, \code{\link[=tucker3]{tucker3()}}, \code{\link[=arima_series]{arima_series()}},
-\code{\link[=ets_series]{ets_series()}}, \code{\link[=apc_bayes]{apc_bayes()}} (package bamp) and \code{\link[=mt_ensemble]{mt_ensemble()}}, fitted
-with \code{\link[=mt_fit]{mt_fit()}} and forecast with \code{\link[=mt_forecast]{mt_forecast()}} as simulated paths
-(\link{mt_draws}).
+\code{\link[=ets_series]{ets_series()}}, \code{\link[=hyndman_ullah]{hyndman_ullah()}}, \code{\link[=stmomo]{stmomo()}}, \code{\link[=li_lee]{li_lee()}}, \code{\link[=product_ratio]{product_ratio()}},
+\code{\link[=apc_bayes]{apc_bayes()}} (package bamp), \code{\link[=cause_shares]{cause_shares()}} for coherent multi-cause
+forecasts and \code{\link[=mt_ensemble]{mt_ensemble()}}, fitted with \code{\link[=mt_fit]{mt_fit()}} (optionally tuned
+with \code{\link[=mt_tuned]{mt_tuned()}}) and forecast with \code{\link[=mt_forecast]{mt_forecast()}} as simulated paths
+(\link{mt_draws}); \code{\link[=mt_reconcile]{mt_reconcile()}} and \code{\link[=mt_cohere]{mt_cohere()}} impose hierarchies and
+orderings draw by draw.
 \item \strong{Evaluation}: \code{\link[=mt_backtest]{mt_backtest()}} and \code{\link[=mt_score]{mt_score()}}.
 \item \strong{Derived quantities and plots}: \code{\link[=life_table]{life_table()}}, \code{\link[=life_expectancy]{life_expectancy()}},
 \code{\link[=mt_deaths]{mt_deaths()}}, \code{\link[=mt_plot_forecast]{mt_plot_forecast()}} and the other \verb{mt_plot_*()}

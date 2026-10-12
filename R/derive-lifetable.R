@@ -11,13 +11,19 @@
 #'   is below 0.01 years);
 #' * open interval: `"reciprocal"` uses `L = l / m`; `"gompertz"` fits a
 #'   Gompertz line to the log rates of the last `k` closed single-year ages and
-#'   integrates it from the start of the open interval to age 130.
+#'   integrates it from the start of the open interval to age 130;
+#'   `"kannisto"` does the same with the Kannisto model, a line for the logit
+#'   of the rates, whose hazard levels off at old ages (Thatcher, Kannisto and
+#'   Vaupel 1998).
+#' @references
+#' Thatcher AR, Kannisto V, Vaupel JW (1998). *The Force of Mortality at Ages
+#' 80 to 120*. Odense University Press.
 #'
 #' @param mx Death rates, one per interval of `age`.
 #' @param age An [mt_axis] (default: single ages from 0 with an open last
 #'   interval).
 #' @param ax Optional average years lived in the interval by those who die.
-#' @param open `"reciprocal"` or `"gompertz"`.
+#' @param open `"reciprocal"`, `"gompertz"` or `"kannisto"`.
 #' @param k Number of ages used for the Gompertz fit.
 #' @param radix Starting number of survivors.
 #' @return A `data.table` with `age_lo`, `age_hi`, `n`, `mx`, `ax`, `qx`,
@@ -27,7 +33,8 @@
 #' lt <- life_table(m, single_ages(30, 100))
 #' lt[age_lo %in% c(30, 65, 100)]
 #' @export
-life_table <- function(mx, age = NULL, ax = NULL, open = c("reciprocal", "gompertz"), k = 10, radix = 1e5) {
+life_table <- function(mx, age = NULL, ax = NULL, open = c("reciprocal", "gompertz", "kannisto"), k = 10,
+                       radix = 1e5) {
   open <- match.arg(open)
   age <- age %||% single_ages(0, length(mx) - 1)
   check_class(age, "mt_axis", "age")
@@ -57,7 +64,7 @@ lt_columns <- function(M, age, ax = NULL, open = "reciprocal", k = 10) {
   Dx <- L * Q
   Lx <- nn * (L - Dx) + A * Dx
   if (is_open) {
-    Lx[na, ] <- if (open == "reciprocal") L[na, ] / M[na, ] else L[na, ] * gompertz_open_ex(M, age, k)
+    Lx[na, ] <- if (open == "reciprocal") L[na, ] / M[na, ] else L[na, ] * gompertz_open_ex(M, age, k, open)
   }
   Tx <- apply(Lx, 2, function(z) rev(cumsum(rev(z))))
   if (is.null(dim(Tx))) Tx <- matrix(Tx, nrow = na)
@@ -65,7 +72,7 @@ lt_columns <- function(M, age, ax = NULL, open = "reciprocal", k = 10) {
 }
 
 # Life expectancy at the start of the open interval under a Gompertz extension
-gompertz_open_ex <- function(M, age, k) {
+gompertz_open_ex <- function(M, age, k, law = "gompertz") {
   na <- nrow(M)
   single <- which(age$upper - age$lower == 1)
   use <- tail(single[single < na], k)
@@ -73,9 +80,12 @@ gompertz_open_ex <- function(M, age, k) {
                                 class = "lifetable")
   x <- age$lower[use] + 0.5
   X <- cbind(1, x)
-  coef <- solve(crossprod(X), crossprod(X, log(M[use, , drop = FALSE])))
+  Y <- M[use, , drop = FALSE]
+  Y <- if (law == "kannisto") log(pmin(Y, 0.99) / (1 - pmin(Y, 0.99))) else log(Y)
+  coef <- solve(crossprod(X), crossprod(X, Y))
   ages <- seq(age$lower[na], 129) + 0.5
-  mm <- exp(cbind(1, ages) %*% coef)
+  eta <- cbind(1, ages) %*% coef
+  mm <- if (law == "kannisto") exp(eta) / (1 + exp(eta)) else exp(eta)
   p <- exp(-mm)
   l <- rbind(1, apply(p, 2, cumprod))[seq_along(ages), , drop = FALSE]
   Lx <- l * (1 - p) / pmax(mm, 1e-12)

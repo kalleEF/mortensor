@@ -8,7 +8,7 @@ life_table(
   mx,
   age = NULL,
   ax = NULL,
-  open = c("reciprocal", "gompertz"),
+  open = c("reciprocal", "gompertz", "kannisto"),
   k = 10,
   radix = 1e+05
 )
@@ -21,7 +21,7 @@ interval).}
 
 \item{ax}{Optional average years lived in the interval by those who die.}
 
-\item{open}{\code{"reciprocal"} or \code{"gompertz"}.}
+\item{open}{\code{"reciprocal"}, \code{"gompertz"} or \code{"kannisto"}.}
 
 \item{k}{Number of ages used for the Gompertz fit.}
 
@@ -45,11 +45,18 @@ time lived by infants who die; the effect on e0 at low infant mortality
 is below 0.01 years);
 \item open interval: \code{"reciprocal"} uses \code{L = l / m}; \code{"gompertz"} fits a
 Gompertz line to the log rates of the last \code{k} closed single-year ages and
-integrates it from the start of the open interval to age 130.
+integrates it from the start of the open interval to age 130;
+\code{"kannisto"} does the same with the Kannisto model, a line for the logit
+of the rates, whose hazard levels off at old ages (Thatcher, Kannisto and
+Vaupel 1998).
 }
 }
 \examples{
 m <- 3e-4 + 2e-5 * exp(0.1 * (30:100))
 lt <- life_table(m, single_ages(30, 100))
 lt[age_lo \%in\% c(30, 65, 100)]
+}
+\references{
+Thatcher AR, Kannisto V, Vaupel JW (1998). \emph{The Force of Mortality at Ages
+80 to 120}. Odense University Press.
 }
