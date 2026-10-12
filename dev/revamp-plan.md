@@ -311,8 +311,8 @@ summarise(fc, life_expectancy(age = 30), deaths(), asr(standard = "esp2013"),
   - Simulation-based calibration for the Bayesian engine.
   - Regression tests against `demography`, `StMoMo` and `bamp` on fixtures.
   - A small public benchmark run in CI. Ship only data whose licence allows
-    redistribution; HMD terms do not, so use simulated or openly licensed
-    data.
+    redistribution (check the terms of use of sources such as the HMD before
+    including any extract); otherwise use simulated data.
 - **CI:** R CMD check on release, devel, oldrel and the minimum R version;
   coverage; pkgdown site built from executable vignettes, with precomputed
   results for slow models.
