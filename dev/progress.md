@@ -35,7 +35,7 @@ work: `claude/vigilant-albattani-2ssw1x` (plays the role of `dev-0.2`).
 | C4.3 | done | this branch | `mt_plot_forecast()`, `mt_plot_age()`, `mt_plot_life_expectancy()`, `mt_plot_rates()`, `mt_plot_ungroup()`, `mt_plot_coverage()` (tests check that plots build; no vdiffr snapshots) |
 | C4.4 | done | this branch | `mt_export()` (summary or long draws, CSV) |
 | C4.5 | done | this branch | Vignettes: getting started (simulated), granularity and ungrouping (HMD E&W, France), forecasting and backtesting (HMD France, E&W), Bayesian APC with bamp (HMD France; precomputed via `dev/precompute-vignettes.R`) |
-| C4.6, C4.7 | open | | Performance pass (2D PCLM about 90 s for 71 x 32), release 0.2.0 |
+| C4.7 | partial | this branch | Migration vignette (0.1 to 0.2 function map), pkgdown reference index; tagging a release is the owner's decision |
 | D1.12 (HMD) | done | this branch | `mt_from_hmd()`, `mt_read_hmd()` (HMDHFDplus, credentials from `HMD_USER`/`HMD_PASSWORD`) |
 
 | P5.1 | done | this branch | `hyndman_ullah()` (demography; draws via `simulate()`); 95% coverage 0.90 on the benchmark, 0.73 on France |
@@ -44,7 +44,7 @@ work: `claude/vigilant-albattani-2ssw1x` (plays the role of `dev-0.2`).
 | P5.4 | done | this branch | `mt_reconcile()` draw by draw (MinT with draw covariance, WLS, OLS) |
 | P5.5 | done | this branch | `mt_cohere()`, `li_lee()`, `product_ratio()` (Lee-Carter-type version) |
 | P5.6 | done | this branch | `mt_ensemble(weights = "stack")` |
-| P5.7 | partial | this branch | Whittaker smoothing; Gaussian GAM and GAM-Bayes smoothing uncertainty not ported |
+| P5.7 | partial | this branch | Whittaker and Gaussian GAM (mgcv) smoothing in `mt_smooth()`; GAM-Bayes smoothing uncertainty not ported |
 | P5.8 | partial | this branch | Monotone (Hyman) splitting of deaths; natural-Gompertz and Hyman-Kannisto disaggregation not ported (PCLM is the documented method) |
 | P5.9 | partial | this branch | Multi-cause vignette on `mt_example_causes()` (HMD has no causes); release 0.3.0 open |
 | C4.6 | partial | this branch | 2D PCLM 87 s to 45 s (standard errors only for the final fit, Cholesky solves); no further work |

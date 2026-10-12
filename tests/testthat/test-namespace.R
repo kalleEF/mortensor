@@ -16,3 +16,11 @@ test_that("conditions carry mortensor classes", {
   expect_s3_class(err, "mt_error_x")
   expect_s3_class(err, "mt_error")
 })
+
+test_that("datasets of suggested packages are found", {
+  skip_if_not_installed("demography")
+  skip_if_not_installed("StMoMo")
+  expect_s3_class(mortensor:::pkg_data("fr.mort", "demography"), "demogdata")
+  expect_s3_class(mortensor:::pkg_data("EWMaleData", "StMoMo"), "StMoMoData")
+  expect_error(mortensor:::pkg_data("no_such_data", "StMoMo"), class = "mt_error")
+})

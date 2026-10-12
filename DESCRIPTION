@@ -30,6 +30,7 @@ Suggests:
     ggplot2,
     HMDHFDplus,
     knitr,
+    mgcv,
     rmarkdown,
     StMoMo,
     testthat (>= 3.0.0),

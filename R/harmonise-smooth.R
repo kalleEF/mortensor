@@ -14,7 +14,9 @@
 #'   (Whittaker-Henderson smoothing of log rates over age with weights equal
 #'   to the deaths, the approximate inverse variance of a log rate;
 #'   smoothing parameter by generalised cross-validation unless `lambda` is
-#'   given; an option ported from mortensor 0.1).
+#'   given; an option ported from mortensor 0.1) or `"gam"` (Gaussian
+#'   additive model of log rates on age per period with deaths as weights,
+#'   `mgcv::gam()` with REML, as in mortensor 0.1).
 #' @inheritParams mt_ungroup
 #' @return An `mt_data` object with smoothed deaths; diagnostics as attribute
 #'   `"smooth"`.
@@ -27,7 +29,7 @@
 #' head(attr(s, "smooth"))
 #' @export
 mt_smooth <- function(data, dims = 1, lambda = NULL, criterion = c("bic", "aic"), kr = 2, deg = 3,
-                      pord = 2, lambda_range = c(1e-2, 1e8), method = c("pspline", "whittaker")) {
+                      pord = 2, lambda_range = c(1e-2, 1e8), method = c("pspline", "whittaker", "gam")) {
   check_class(data, "mt_data", "data")
   criterion <- match.arg(criterion)
   method <- match.arg(method)
@@ -39,8 +41,8 @@ mt_smooth <- function(data, dims = 1, lambda = NULL, criterion = c("bic", "aic")
       mt_abort(sprintf("The %s table is coarser than the grid; use mt_ungroup() first.", m), class = "resolution")
     }
   }
-  if (method == "whittaker") {
-    res <- whittaker_smooth_obs(data, g, lambda, pord)
+  if (method %in% c("whittaker", "gam")) {
+    res <- if (method == "whittaker") whittaker_smooth_obs(data, g, lambda, pord) else gam_smooth_obs(data, g)
     data$obs$deaths <- res$obs
     data$grid <- g
     attr(data, "smooth") <- res$diag
@@ -79,6 +81,30 @@ whittaker_smooth_obs <- function(data, g, lambda, pord) {
       out[, j, s] <- E[, j, s] * exp(z)
       diag_rows[[length(diag_rows) + 1L]] <- data.table(measure = "deaths", stratum = s, period = g$period$labels[j],
                                                         method = "whittaker", lambda_age = l)
+    }
+  }
+  obs <- data.table(stratum = rep(seq_len(dim(D)[3]), each = na * dim(D)[2]),
+                    a = rep(seq_len(na), dim(D)[2] * dim(D)[3]),
+                    p = rep(rep(seq_len(dim(D)[2]), each = na), dim(D)[3]),
+                    value = as.vector(out), provenance = "smoothed")
+  list(obs = grid_table(obs, g), diag = rbindlist(diag_rows))
+}
+
+gam_smooth_obs <- function(data, g) {
+  need_pkg("mgcv", "for method = \"gam\"")
+  D <- mt_array(data, "deaths")
+  E <- mt_array(data, "exposure")
+  na <- dim(D)[1]
+  age <- axis_midpoints(g$age, data$omega)
+  out <- D
+  diag_rows <- list()
+  for (s in seq_len(dim(D)[3])) {
+    for (j in seq_len(dim(D)[2])) {
+      df <- data.frame(y = log(pmax(D[, j, s], 0.5) / E[, j, s]), w = pmax(D[, j, s], 0.5), age = age)
+      fit <- mgcv::gam(y ~ s(age, k = min(20, na - 1)), weights = w / mean(w), data = df, method = "REML")
+      out[, j, s] <- E[, j, s] * exp(stats::fitted(fit))
+      diag_rows[[length(diag_rows) + 1L]] <- data.table(measure = "deaths", stratum = s, period = g$period$labels[j],
+                                                        method = "gam", edf = sum(fit$edf))
     }
   }
   obs <- data.table(stratum = rep(seq_len(dim(D)[3]), each = na * dim(D)[2]),

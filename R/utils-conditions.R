@@ -34,7 +34,12 @@ need_pkg <- function(pkg, why) {
 # Load a dataset shipped with a suggested package
 pkg_data <- function(name, pkg) {
   need_pkg(pkg, sprintf("for the dataset %s", name))
-  env <- new.env(parent = emptyenv())
-  utils::data(list = name, package = pkg, envir = env)
-  env[[name]]
+  out <- tryCatch(getExportedValue(pkg, name), error = function(e) NULL)
+  if (is.null(out)) {
+    env <- new.env(parent = emptyenv())
+    suppressWarnings(utils::data(list = name, package = pkg, envir = env))
+    out <- env[[name]]
+  }
+  if (is.null(out)) mt_abort(sprintf("Dataset %s not found in package %s.", name, pkg), class = "missing_package")
+  out
 }

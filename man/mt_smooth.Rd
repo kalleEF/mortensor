@@ -13,7 +13,7 @@ mt_smooth(
   deg = 3,
   pord = 2,
   lambda_range = c(0.01, 1e+08),
-  method = c("pspline", "whittaker")
+  method = c("pspline", "whittaker", "gam")
 )
 }
 \arguments{
@@ -38,7 +38,9 @@ penalty.}
 (Whittaker-Henderson smoothing of log rates over age with weights equal
 to the deaths, the approximate inverse variance of a log rate;
 smoothing parameter by generalised cross-validation unless \code{lambda} is
-given; an option ported from mortensor 0.1).}
+given; an option ported from mortensor 0.1) or \code{"gam"} (Gaussian
+additive model of log rates on age per period with deaths as weights,
+\code{mgcv::gam()} with REML, as in mortensor 0.1).}
 }
 \value{
 An \code{mt_data} object with smoothed deaths; diagnostics as attribute

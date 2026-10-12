@@ -91,6 +91,10 @@ test_that("Whittaker smoothing, Kannisto closure and monotone deaths work", {
   sm <- mt_array(w, "deaths") / mt_array(w, "exposure")
   raw <- pmax(mt_array(x, "deaths"), 0.5) / mt_array(x, "exposure")
   expect_lt(median(abs(log(sm / truth))), median(abs(log(raw / truth))))
+  skip_if_not_installed("mgcv")
+  gs <- mt_smooth(x, method = "gam")
+  smg <- mt_array(gs, "deaths") / mt_array(gs, "exposure")
+  expect_lt(median(abs(log(smg / truth))), median(abs(log(raw / truth))))
   m <- truth[, 1, 1]
   ek <- tail(life_table(m, mt_grid(x)$age, open = "kannisto")$ex, 1)
   eg <- tail(life_table(m, mt_grid(x)$age, open = "gompertz")$ex, 1)
