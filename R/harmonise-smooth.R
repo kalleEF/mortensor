@@ -101,7 +101,8 @@ gam_smooth_obs <- function(data, g) {
   for (s in seq_len(dim(D)[3])) {
     for (j in seq_len(dim(D)[2])) {
       df <- data.frame(y = log(pmax(D[, j, s], 0.5) / E[, j, s]), w = pmax(D[, j, s], 0.5), age = age)
-      fit <- mgcv::gam(y ~ s(age, k = min(20, na - 1)), weights = w / mean(w), data = df, method = "REML")
+      wts <- df$w / mean(df$w)
+      fit <- mgcv::gam(y ~ s(age, k = min(20, na - 1)), weights = wts, data = df, method = "REML")
       out[, j, s] <- E[, j, s] * exp(stats::fitted(fit))
       diag_rows[[length(diag_rows) + 1L]] <- data.table(measure = "deaths", stratum = s, period = g$period$labels[j],
                                                         method = "gam", edf = sum(fit$edf))
