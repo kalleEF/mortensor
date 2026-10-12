@@ -144,7 +144,7 @@ ungroup_counts_1d <- function(obs, g, omega, ctl, method, measure) {
     res[exact, on = c(a = "a1"), `:=`(value = i.value, provenance = i.provenance)]
     out[[length(out) + 1L]] <- res
     dg[[length(dg) + 1L]] <- data.table(measure = measure, stratum = o$stratum[1], period = g$period$labels[o$p1[1]],
-                                        method = method, lambda = fit$lambda[1], ed = fit$ed,
+                                        method = method, lambda_age = fit$lambda[1], lambda_period = NA_real_, ed = fit$ed,
                                         max_rel_diff = rel, at_bound = isTRUE(fit$at_bound))
   }
   list(obs = grid_table(rbindlist(out), g), diag = rbindlist(dg))
@@ -175,7 +175,8 @@ ungroup_rates <- function(D, E, g, omega, ctl, dims) {
         out[[length(out) + 1L]] <- data.table(stratum = s, a = r$a, p = p, value = r$deaths,
                                               provenance = r$provenance)
         dg[[length(dg) + 1L]] <- data.table(measure = "deaths", stratum = s, period = g$period$labels[p],
-                                            method = "pclm_rate_1d", lambda = r$fit$lambda[1], ed = r$fit$ed,
+                                            method = paste0(ctl$method_label %||% "pclm_rate", "_1d"), lambda_age = r$fit$lambda[1],
+                                            lambda_period = NA_real_, ed = r$fit$ed,
                                             max_rel_diff = r$rel, at_bound = isTRUE(r$fit$at_bound))
       }
     } else {
@@ -188,7 +189,8 @@ ungroup_rates <- function(D, E, g, omega, ctl, dims) {
       out[[length(out) + 1L]] <- data.table(stratum = s, a = r$a, p = r$p, value = r$deaths,
                                             provenance = r$provenance)
       dg[[length(dg) + 1L]] <- data.table(measure = "deaths", stratum = s, period = "all",
-                                          method = "pclm_rate_2d", lambda = paste(signif(r$fit$lambda, 3), collapse = "/"),
+                                          method = paste0(ctl$method_label %||% "pclm_rate", "_2d"), lambda_age = r$fit$lambda[1],
+                                          lambda_period = r$fit$lambda[2],
                                           ed = r$fit$ed, max_rel_diff = r$rel, at_bound = isTRUE(r$fit$at_bound))
     }
   }
@@ -240,13 +242,14 @@ ungroup_rate_block <- function(o, e_list, fa, B, pen, ctl, omega, n_open, ps = N
   a <- rep(seq_len(ng), length(ps))
   p <- rep(ps, each = ng)
   keep <- as.vector(covered)
-  prov <- rep("pclm", length(a))
-  exact <- o[a1 == a2 & p1 == p2]
-  key_all <- paste(a, p)
-  m <- match(paste(exact$a1, exact$p1), key_all)
+  prov <- rep(ctl$provenance %||% "pclm", length(a))
   vals <- as.vector(dgrid)
-  vals[m] <- exact$value
-  prov[m] <- "observed"
+  if (!isFALSE(ctl$keep_observed)) {
+    exact <- o[a1 == a2 & p1 == p2]
+    m <- match(paste(exact$a1, exact$p1), paste(a, p))
+    vals[m] <- exact$value
+    prov[m] <- "observed"
+  }
   list(a = a[keep], p = p[keep], deaths = vals[keep], provenance = prov[keep], fit = fit, rel = rel)
 }
 

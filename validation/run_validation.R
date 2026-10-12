@@ -76,7 +76,9 @@ cmp <- function(v, op, t) {
 }
 res$pass <- cmp(res$value, res$comparator, res$threshold)
 res$status <- ifelse(res$metric == "error", "ERROR", ifelse(is.na(res$pass), "info", ifelse(res$pass, "pass", "FAIL")))
-res <- res[order(match(res$check, names(todo))), ]
+res$order <- seq_len(nrow(res))
+res <- res[order(match(res$check, names(todo)), match(res$metric, unique(res$metric)), res$order), ]
+res$order <- NULL
 
 sha <- tryCatch(system2("git", c("-C", root, "rev-parse", "--short", "HEAD"), stdout = TRUE), error = function(e) "unknown")
 if (!length(sha)) sha <- "unknown"

@@ -23,5 +23,6 @@ utils::globalVariables(c(
   "observed", "q", "metric", "target", "estimate", "lower", "upper",
   "nalo", "nahi", "nplo", "nphi", "area", "pw", "full", "value.d", "value.e",
   "value.next", "k", "ratio", "label", "sex", "d", "e", "g_lo", "g_hi", "N",
-  "a1", "a2", "p1", "p2", "a", "p", "i.value", "i.provenance"
+  "a1", "a2", "p1", "p2", "a", "p", "i.value", "i.provenance", "lr", "scale",
+  "crps", "wis", "ae", "cov50", "cov80", "cov95", "pit", "at", "status", "rep"
 ))

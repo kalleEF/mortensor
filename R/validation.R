@@ -35,3 +35,66 @@ benchmark_ungroup_ew <- function(years = 1980:2011, dims = 1, ...) {
   list(male_30_89 = stats::median(le[ages < 90, ]), male_90_100 = stats::median(le[ages >= 90, ]),
        seconds = secs, estimate = est)
 }
+
+#' Simulated Lee-Carter-type data for calibration checks
+#'
+#' The generator of the 0.1 review: `log m = a_x + b_x k_t + shift_g + e`,
+#' with `k_t` a random walk with drift (-0.015, sd 0.02) per stratum, iid
+#' noise e (sd 0.03), 5-year age groups 30-34 ... 90-94 and 10 strata
+#' (2 sexes x 5 deprivation quintiles). Deaths are Poisson.
+#'
+#' @param n_t Number of years.
+#' @param seed Random seed.
+#' @param pop Population at age 30 per stratum.
+#' @return An [mt_data] object.
+#' @keywords internal
+simulate_lc_dgp <- function(n_t = 40, seed = 1, pop = 2e5, sd_k = 0.02, drift = -0.015, sd_obs = 0.03) {
+  with_seed(seed, {
+    ages <- seq(30, 90, 5)
+    na <- length(ages)
+    groups <- expand.grid(sex = c("male", "female"), quintile = paste0("Q", 1:5), stringsAsFactors = FALSE)
+    a_x <- -10.5 + 0.085 * ages
+    b_x <- seq(1.3, 0.7, length.out = na)
+    rows <- vector("list", nrow(groups))
+    for (g in seq_len(nrow(groups))) {
+      shift <- ifelse(groups$sex[g] == "male", 0.3, 0) + (g - 1) %/% 2 * 0.08
+      k <- cumsum(drift + stats::rnorm(n_t, 0, sd_k))
+      m <- exp(a_x + outer(b_x, k) + shift + matrix(stats::rnorm(na * n_t, 0, sd_obs), na))
+      e <- matrix(round(pop * 5 * exp(-0.03 * (ages - 30))), na, n_t)
+      rows[[g]] <- data.table(sex = groups$sex[g], quintile = groups$quintile[g],
+                              year = rep(2000 + seq_len(n_t), each = na), age_lo = rep(ages, n_t),
+                              age_hi = rep(ages + 5, n_t), deaths = stats::rpois(na * n_t, m * e),
+                              exposure = as.vector(e))
+    }
+    long <- rbindlist(rows)
+    x <- mt_data(deaths = long, exposure = long, by = c("sex", "quintile"), age = c("age_lo", "age_hi"))
+    mt_set_grid(x, age = age_groups(ages, open = FALSE, last_upper = 95))
+  })
+}
+
+#' Interval calibration benchmark on simulated data
+#'
+#' Fits `spec` on 30 years of [simulate_lc_dgp()] data and scores predictive
+#' draws for the next `h` years, over `n_rep` replicates.
+#'
+#' @param spec Model specification.
+#' @param n_rep Replicates.
+#' @param h Horizon.
+#' @param n_draws Draws per forecast.
+#' @param n_train Training years.
+#' @return A `data.table` with coverage by horizon and a summary list in
+#'   attribute `"summary"` (`cov95_mean`, `cov95_min`, `cov80_mean`,
+#'   `cov50_mean`).
+#' @keywords internal
+benchmark_coverage <- function(spec, n_rep = 10, h = 10, n_draws = 300, n_train = 30, prep = NULL) {
+  bt <- rbindlist(lapply(seq_len(n_rep), function(r) {
+    x <- simulate_lc_dgp(n_t = n_train + h, seed = 1000 + r)
+    b <- mt_backtest(spec, x, origins = 2000 + n_train, h = h, n_draws = n_draws, prep = prep, seed = r)
+    b[, rep := r]
+  }))
+  by_h <- mt_score(bt, by = "horizon")
+  attr(by_h, "summary") <- list(cov95_mean = mean(by_h$cov95), cov95_min = min(by_h$cov95),
+                                cov80_mean = mean(by_h$cov80), cov50_mean = mean(by_h$cov50),
+                                crps = mean(bt$crps))
+  by_h
+}

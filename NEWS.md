@@ -11,6 +11,16 @@ Clean break: the 0.1.x interface is replaced (see `dev/revamp-plan.md`).
 * Native penalized composite link model and `mt_ungroup()`: deaths are
   ungrouped as rates with exposures as offset; the open interval is expanded
   to omega; 1D (default) and 2D; group totals preserved.
+* `mt_smooth()` and preprocessing pipelines (`mt_prep()`, `step_*()`) that
+  backtests refit on every training window.
+* Interval-aware `life_table()` and `life_expectancy()` (also path by path
+  on forecast draws).
+* Model contract (`mt_fit()`, `mt_forecast()`, `mt_draws`) with models
+  `rwd()`, `lee_carter()` (Poisson and SVD; agrees with StMoMo and
+  demography), `tucker3()` (native HOOI; log and CoDa), `arima_series()`,
+  `ets_series()`, and `mt_ensemble()`.
+* `mt_backtest()` (rolling origin, scored at the observed resolution) and
+  `mt_score()` (CRPS, WIS, coverage, PIT, MASE).
 * Validation pipeline in `validation/` and GitHub workflows for R CMD check
   (R 4.3 to devel), coverage, lint and validation.
 * Dependencies reduced to data.table and Matrix (plus base packages).

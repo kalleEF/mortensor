@@ -18,7 +18,18 @@ work: `claude/vigilant-albattani-2ssw1x` (plays the role of `dev-0.2`).
 | D1.7 | done | this branch | `mt_as_exposure()` (mid-year, January 1) |
 | D1.8 | done | this branch | Native PCLM (1D, 2D), rate-based with stationary weights in the open interval |
 | D1.9 | done | this branch | `mt_ungroup()`; E&W benchmark 0.015 / 0.024 (1D), 0.015 / 0.023 (2D) |
-| D1.12 | partial | this branch | `as_mt_data()` for data frames, StMoMoData, demogdata; `mt_example()` |
+| D1.10 | done | this branch | `mt_smooth()` (Poisson P-splines, 1D/2D), `mt_prep()` with `step_ungroup()`, `step_smooth()`, `step_regroup()`, `step_grid()`, `step_shocks()` |
+| D1.11 | done | this branch | `life_table()` (interval widths, reciprocal or Gompertz open interval), `life_expectancy()` |
+| D1.12 | partial | this branch | `as_mt_data()` for data frames, StMoMoData, demogdata; `mt_example()`; ONS reader not ported |
+| M2.1 | done | this branch | `new_mt_spec()`, `mt_fit()`, `mt_forecast()` (incl. predictive draws), per-stratum failures in diagnostics; contract test `expect_mt_model()` |
+| M2.2 | done | this branch | `mt_draws`, `mt_summarise()`, `mt_deaths()` |
+| M2.3 | done | this branch | `rwd()` (bootstrap or Gaussian), `arima_series()`, `ets_series()` |
+| M2.4 | done | this branch | `lee_carter()` Poisson and SVD, jump-off, bootstrap; agrees with StMoMo (6e-5) and demography (1e-6 on fitted log rates) |
+| M2.5 | done | this branch | `tucker3()` native HOOI, log and CoDa (open interval via auxiliary series), RW/ARIMA/ETS factors, residual noise; regression vs 0.1.0 not reproduced (different preprocessing; see notes) |
+| M2.6 | done | this branch | `mt_backtest()` scores at the observed resolution; leakage test |
+| M2.7 | done | this branch | `mt_score()`: CRPS, WIS (Bracher et al. 2021), coverage, PIT, MASE |
+| M2.8 | open | | `mt_tune()` |
+| C4.1 | done | this branch | `mt_ensemble()` (equal, numeric, inner-backtest CRPS weights) |
 
 ## Decisions taken during implementation
 
@@ -34,6 +45,25 @@ work: `claude/vigilant-albattani-2ssw1x` (plays the role of `dev-0.2`).
   the same accuracy within 0.003).
 - 2026-10-12: 2D ungrouping takes about 90 s for 71 ages x 32 years; it is
   an option, 1D per year is the default.
+
+- 2026-10-12: Backtests score predictive draws of observed log rates: smooth
+  models (Lee-Carter, Tucker3) add extra-Poisson noise estimated from
+  in-sample residuals and Poisson variation given the test-year exposures;
+  models on observed log rates (random walk, ARIMA, ETS) are used as they
+  are.
+- 2026-10-12: Calibration on the simulation benchmark (6 replicates, h =
+  1-10, 95% intervals): Lee-Carter 0.959 (min 0.924), Tucker3 0.947 (0.923),
+  Tucker3-CoDa 0.943 (0.917), random walk 0.987 (over-covers: it treats iid
+  noise as persistent). Tucker3 needs `residual_noise = TRUE` (default;
+  0.87 without).
+- 2026-10-12: England & Wales men 30-100, origins 1996-2001, h = 10:
+  Lee-Carter CRPS 0.069 with 95% coverage 0.75; random walk 0.059 and 0.97.
+  Lee-Carter fitted from 1981 with observed jump-off: CRPS 0.054, coverage
+  0.74. Lee-Carter intervals are too narrow on these data (known limitation:
+  only period-index uncertainty).
+- 2026-10-12: The 0.1.0 regression baseline (`dev/baseline/`) used GAM
+  smoothing and the old data structures; exact reproduction is not a goal.
+  The Tucker3 core is tested by exact recovery of a low-rank array instead.
 
 ## Open questions
 
