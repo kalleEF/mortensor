@@ -23,6 +23,8 @@ Clean break: the 0.1.x interface is replaced (see `dev/revamp-plan.md`).
   age-period-cohort models) with convergence checks and draws on the grid.
 * Plots (`mt_plot_*()`, ggplot2), HMD readers (`mt_from_hmd()`,
   `mt_read_hmd()`), and four vignettes using HMD data.
+* `mt_tune()` and `mt_tuned()`; `prob_dying()`, `asr()` (ESP 2013),
+  `yll()`, `mt_export()`.
 * `mt_backtest()` (rolling origin, scored at the observed resolution) and
   `mt_score()` (CRPS, WIS, coverage, PIT, MASE).
 * Validation pipeline in `validation/` and GitHub workflows for R CMD check
