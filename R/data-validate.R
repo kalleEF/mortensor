@@ -22,10 +22,11 @@
 #' @export
 mt_validate <- function(data, hierarchy = NULL, tol = 0.005) {
   check_class(data, "mt_data", "data")
-  out <- list()
+  found <- new.env(parent = emptyenv())
+  found$rows <- list()
   add <- function(check, severity, measure, stratum, n, detail) {
-    out[[length(out) + 1L]] <<- data.table(check = check, severity = severity, measure = measure,
-                                           stratum = stratum, n = n, detail = detail)
+    found$rows[[length(found$rows) + 1L]] <- data.table(check = check, severity = severity, measure = measure,
+                                                        stratum = stratum, n = n, detail = detail)
   }
   D <- data$obs$deaths
   E <- data$obs$exposure
@@ -56,8 +57,8 @@ mt_validate <- function(data, hierarchy = NULL, tol = 0.005) {
       if (area < total) add("grid coverage", "info", m, "all", total - area, "grid cells not covered by observations")
     }
   }
-  if (!is.null(hierarchy)) out <- c(out, list(check_hierarchy(data, hierarchy, tol)))
-  res <- rbindlist(out)
+  if (!is.null(hierarchy)) found$rows <- c(found$rows, list(check_hierarchy(data, hierarchy, tol)))
+  res <- rbindlist(found$rows)
   if (!nrow(res)) {
     res <- data.table(check = character(), severity = character(), measure = character(),
                       stratum = character(), n = integer(), detail = character())
