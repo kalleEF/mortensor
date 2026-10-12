@@ -11,3 +11,7 @@
 ^data-raw$
 ^\.claude$
 ^dev$
+^validation$
+^CLAUDE\.md$
+^\.lintr$
+^codecov\.yml$

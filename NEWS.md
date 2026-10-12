@@ -1,3 +1,20 @@
+# mortensor 0.1.9000 (development of 0.2.0)
+
+Clean break: the 0.1.x interface is replaced (see `dev/revamp-plan.md`).
+
+* Data layer: `mt_axis` (`single_ages()`, `age_groups()`, `single_years()`,
+  `parse_age_labels()`), `mt_data()` with tables at their own resolution,
+  `mt_grid()`/`mt_set_grid()`, `mt_array()`, `mt_window()`,
+  `mt_granularity()`, `mt_validate()` (including hierarchy sums),
+  `mt_regroup()`, `mt_operator()`, `mt_as_exposure()`, `as_mt_data()` for
+  data frames, `StMoMoData` and `demogdata`, and the simulated `mt_example()`.
+* Native penalized composite link model and `mt_ungroup()`: deaths are
+  ungrouped as rates with exposures as offset; the open interval is expanded
+  to omega; 1D (default) and 2D; group totals preserved.
+* Validation pipeline in `validation/` and GitHub workflows for R CMD check
+  (R 4.3 to devel), coverage, lint and validation.
+* Dependencies reduced to data.table and Matrix (plus base packages).
+
 # mortensor 0.1.1
 
 Maintenance release before the 0.2 rewrite (see `dev/implementation-plan.md`).

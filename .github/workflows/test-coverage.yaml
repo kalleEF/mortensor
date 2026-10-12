@@ -1,0 +1,52 @@
+on:
+  push:
+    branches: [main, master, "dev-*", "claude/**"]
+  pull_request:
+  workflow_dispatch:
+
+name: test-coverage
+
+permissions: read-all
+
+jobs:
+  test-coverage:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          extra-packages: any::covr, any::xml2
+          needs: coverage
+
+      - name: Test coverage
+        run: |
+          cov <- covr::package_coverage(quiet = FALSE, clean = FALSE,
+            install_path = file.path(normalizePath(Sys.getenv("RUNNER_TEMP"), winslash = "/"), "package"))
+          print(cov)
+          pct <- covr::percent_coverage(cov)
+          cat(sprintf("Total coverage: %.1f%%\n", pct))
+          cat(sprintf("### Test coverage: %.1f%%\n", pct), file = Sys.getenv("GITHUB_STEP_SUMMARY"), append = TRUE)
+          covr::to_cobertura(cov)
+          if (pct < 80) stop("Coverage below 80%")
+        shell: Rscript {0}
+
+      - uses: codecov/codecov-action@v4
+        if: env.CODECOV_TOKEN != ''
+        with:
+          files: ./cobertura.xml
+          fail_ci_if_error: false
+
+      - name: Upload test results on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-test-failures
+          path: ${{ runner.temp }}/package
