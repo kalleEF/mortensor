@@ -18,7 +18,12 @@
 #' Ranks are reduced to the array dimensions where needed, so the model also
 #' runs with one stratum.
 #'
-#' @param ranks Tucker ranks for age, period and stratum.
+#' @param ranks Tucker ranks for age, period and stratum, or `"bic"` /
+#'   `"aic"` to choose them by an information criterion on the training data
+#'   (the rank selection of mortensor 0.1: `n log(RSS / n)` plus the penalty
+#'   times the number of parameters of the factor matrices and the core;
+#'   ranks up to 6 for age and period and up to 4 for strata). For selection
+#'   by forecast accuracy use [mt_tuned()].
 #' @param transform `"log"` or `"coda"`.
 #' @param ts Forecast method for the period factors: `"rwd"`, `"arima"`,
 #'   `"ets"`.
@@ -48,11 +53,16 @@ tucker3 <- function(ranks = c(3, 3, 2), transform = c("log", "coda"), ts = c("rw
   transform <- match.arg(transform)
   ts <- match.arg(ts)
   if (ts != "rwd") need_pkg("forecast", sprintf("for ts = \"%s\"", ts))
-  if (length(ranks) != 3) mt_abort("`ranks` needs three values.", class = "argument")
+  if (is.character(ranks)) {
+    check_choice(ranks, c("bic", "aic"), "ranks")
+  } else if (length(ranks) != 3) {
+    mt_abort("`ranks` needs three values or \"bic\"/\"aic\".", class = "argument")
+  }
   new_mt_spec("tucker3", list(ranks = ranks, transform = transform, ts = ts, residual_noise = residual_noise,
                               maxit = maxit, tol = tol),
               joint = TRUE, min_periods = 6,
-              label = sprintf("Tucker3-%s", if (transform == "log") "Direct" else "CoDa"))
+              label = sprintf("Tucker3-%s%s", if (transform == "log") "Direct" else "CoDa",
+                              if (is.character(ranks)) sprintf(" (%s ranks)", toupper(ranks)) else ""))
 }
 
 #' @export
@@ -61,7 +71,8 @@ fit_model.mt_spec_tucker3 <- function(spec, D, E, ages, periods, ...) {
   m <- pmax(D, 0.5) / E
   X <- if (p$transform == "log") log(m) else coda_forward(m, ages)
   dims <- dim(X)
-  ranks <- pmin(p$ranks, dims - c(1, 1, 0), dims)
+  rk <- if (is.character(p$ranks)) tucker_select_ranks(X, p$ranks)$ranks else p$ranks
+  ranks <- pmin(rk, dims - c(1, 1, 0), dims)
   ranks <- pmax(ranks, 1)
   dec <- hooi(X, ranks, p$maxit, p$tol)
   dims <- dim(X)
@@ -217,4 +228,21 @@ simulate_series_models <- function(models, h, n_draws) {
     }
   }
   out
+}
+
+# Rank selection by information criterion (mortensor 0.1, tucker3_info_criterion)
+tucker_select_ranks <- function(X, criterion = "bic", max_ranks = c(6, 6, 4)) {
+  dims <- dim(X)
+  grid <- expand.grid(a = seq_len(min(max_ranks[1], dims[1] - 1)), b = seq_len(min(max_ranks[2], dims[2] - 1)),
+                      c = seq_len(min(max_ranks[3], dims[3])))
+  n <- prod(dims)
+  ic <- apply(grid, 1, function(r) {
+    if (r[3] > r[1] * r[2] || r[1] > r[2] * r[3] || r[2] > r[1] * r[3]) return(Inf)
+    dec <- hooi(X, r, maxit = 50, tol = 1e-6)
+    rss <- sum((X - tucker_reconstruct(dec$G, dec$U))^2)
+    k <- sum(r * dims) + prod(r)
+    n * log(rss / n) + (if (criterion == "bic") log(n) else 2) * k
+  })
+  i <- which.min(ic)
+  list(ranks = as.numeric(grid[i, ]), table = cbind(grid, ic = ic))
 }

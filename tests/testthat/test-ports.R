@@ -103,3 +103,34 @@ test_that("Whittaker smoothing, Kannisto closure and monotone deaths work", {
                  class = "mt_warning_ungroup_open_counts")
   expect_equal(sum(mt_obs(u)$value), sum(mt_obs(mt_example(years = 2001:2002))$value))
 })
+
+test_that("bootstrap refits pool draws and widen intervals", {
+  x <- mt_example(deaths = "single", years = 2000:2019)
+  for (type in c("grid", "data")) {
+    fit <- mt_fit(mt_bootstrap(lee_carter(), n_boot = 4, type = type), x)
+    expect_s3_class(fit, "mt_fit_bootstrap")
+    expect_length(fit$boot, 4)
+    fc <- mt_forecast(fit, h = 3, n_draws = 40, seed = 1)
+    expect_identical(dim(fc$rates), c(71L, 3L, 2L, 40L))
+    expect_true(all(is.finite(fc$rates) & fc$rates > 0))
+  }
+  fc1 <- mt_forecast(fit, h = 3, n_draws = 40, seed = 2)
+  fc2 <- mt_forecast(fit, h = 3, n_draws = 40, seed = 2)
+  expect_identical(fc1$rates, fc2$rates)
+  xg <- mt_example(years = 2000:2019)
+  fit <- mt_fit(mt_bootstrap(rwd(), n_boot = 2, type = "data"), xg, prep = mt_prep(step_ungroup()))
+  expect_match(fit$diagnostics$message[3], "2 of 2")
+  expect_error(mt_bootstrap(lee_carter(), n_boot = 0), class = "mt_error_argument")
+})
+
+test_that("Tucker3 ranks can be chosen by an information criterion", {
+  x <- mt_example(deaths = "single", years = 2000:2019)
+  X <- log(mt_array(x, "deaths") / mt_array(x, "exposure"))
+  sel <- tucker_select_ranks(sweep(X, c(1, 3), apply(X, c(1, 3), mean)), "bic")
+  expect_length(sel$ranks, 3)
+  expect_true(all(is.finite(sel$table$ic) | is.infinite(sel$table$ic)))
+  fit <- mt_fit(tucker3(ranks = "bic"), x)
+  expect_match(fit$spec$label, "BIC")
+  expect_error(tucker3(ranks = "dic"), class = "mt_error_argument")
+  expect_s3_class(mt_forecast(fit, h = 2, n_draws = 10, seed = 1), "mt_draws")
+})

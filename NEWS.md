@@ -38,6 +38,11 @@ Clean break: the 0.1.x interface is replaced (see `dev/revamp-plan.md`).
   non-negativity; `mt_reconciled()` for reconciliation inside fits and
   backtests; `mt_aggregate_draws()`; `li_lee(common_by = "sex")`;
   simulated `mt_example_regions()` and a vignette.
+* Rate-based spline ungrouping (`mt_ungroup(method = "hyman_kannisto")`,
+  `"natural_gompertz"`, `"gam"`), `mt_disaggregate()` for forecast draws,
+  `mt_bootstrap()` (parameter and preprocessing uncertainty by Poisson
+  resampling and refitting) and information-criterion rank selection in
+  `tucker3(ranks = "bic")`.
 * `mt_tune()` and `mt_tuned()`; `prob_dying()`, `asr()` (ESP 2013),
   `yll()`, `mt_export()`.
 * `mt_backtest()` (rolling origin, scored at the observed resolution) and

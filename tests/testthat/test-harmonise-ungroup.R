@@ -75,3 +75,50 @@ test_that("England & Wales benchmark (HMD) meets the accuracy thresholds", {
   expect_lt(res$male_30_89, 0.02)
   expect_lt(res$male_90_100, 0.035)
 })
+
+test_that("rate-based spline ungrouping preserves group rates and approximates the truth", {
+  x <- mt_example(years = 2015:2019)
+  truth <- attr(x, "truth")
+  D0 <- mt_obs(x)
+  for (m in c("hyman_kannisto", "natural_gompertz", "gam")) {
+    if (m == "gam") skip_if_not_installed("mgcv")
+    u <- mt_ungroup(x, method = m)
+    expect_equal(sum(mt_obs(u)$value), sum(D0$value), tolerance = 1e-8)
+    D <- mt_array(u, "deaths")
+    E <- mt_array(u, "exposure")
+    ages <- mt_grid(u)$age$lower
+    m90 <- apply(D[ages >= 90, , , drop = FALSE], 2:3, sum) / apply(E[ages >= 90, , , drop = FALSE], 2:3, sum)
+    expect_equal(as.vector(m90), D0[age_lo == 90][order(stratum, period_lo)]$value /
+                   as.vector(apply(E[ages >= 90, , , drop = FALSE], 2:3, sum)), tolerance = 1e-8)
+    le <- abs(log((D / E) / truth))
+    expect_lt(stats::median(le), 0.05)
+  }
+  y <- x
+  y$obs$exposure <- NULL
+  expect_error(mt_ungroup(y, method = "hyman_kannisto"), class = "mt_error_ungroup")
+})
+
+test_that("forecast draws disaggregate to single ages with the group rates preserved", {
+  x <- mt_example(years = 2000:2019, deaths = "single")
+  lo <- c(seq(30, 85, 5), 90)
+  xg <- mt_regroup(x, age = lo)
+  fc <- mt_forecast(mt_fit(lee_carter(), xg), h = 2, n_draws = 5, seed = 1)
+  e <- mt_array(x, "exposure")[, 20, ]
+  grp <- findInterval(mt_grid(x)$age$lower, lo)
+  group_rates <- function(r) {
+    out <- array(NA_real_, dim(fc$rates))
+    for (s in 1:2) for (t in 1:2) for (j in 1:5) {
+      out[, t, s, j] <- rowsum(r[, t, s, j] * e[, s], grp) / rowsum(e[, s], grp)
+    }
+    out
+  }
+  for (m in c("hyman_kannisto", "natural_gompertz")) {
+    fs <- mt_disaggregate(fc, mt_grid(x)$age, exposure = e, method = m)
+    expect_identical(dim(fs$rates), c(71L, 2L, 2L, 5L))
+    expect_equal(as.vector(group_rates(fs$rates)), as.vector(fc$rates), tolerance = 1e-6)
+  }
+  sh <- mt_disaggregate(fc, mt_grid(x)$age, exposure = e, method = "shape",
+                        shape_rates = mt_array(x, "deaths")[, 20, ] / e)
+  expect_equal(as.vector(group_rates(sh$rates)), as.vector(fc$rates), tolerance = 1e-6)
+  expect_error(mt_disaggregate(fc, mt_grid(x)$age, exposure = e, method = "shape"), class = "mt_error_argument")
+})

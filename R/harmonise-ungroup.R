@@ -28,9 +28,21 @@
 #'
 #' @param data An [mt_data] object.
 #' @param dims 1 or 2.
-#' @param method Method for deaths: `"pclm"` (default) or `"monotone"`
+#' @param method Method for deaths: `"pclm"` (default); `"monotone"`
 #'   (cumulative deaths interpolated by a monotone Hyman spline, counts only,
-#'   1D; an alternative ported from mortensor 0.1 that ignores exposures).
+#'   1D, ignores exposures); or the rate-based methods of mortensor 0.1, which
+#'   need exposures on the grid: `"hyman_kannisto"` (monotone spline of log
+#'   group rates with a Kannisto tail for the open interval),
+#'   `"natural_gompertz"` (natural spline with a log-linear tail) and `"gam"`
+#'   (2D tensor-product GAM of log group rates over age and year with a
+#'   Kannisto tail, package mgcv). All three preserve the exposure-weighted
+#'   group rates exactly. Median absolute log errors against single-year
+#'   rates (England & Wales men 1980-2011, 5-year groups to 90-100; and the
+#'   simulated [mt_example()] with deaths to 90+): PCLM 0.015/0.024 and
+#'   0.012/0.006 (ages 30-89/90+), `"hyman_kannisto"` 0.015/0.029 and
+#'   0.013/0.028, `"natural_gompertz"` 0.015/0.027 and 0.013/0.030, `"gam"`
+#'   0.015/0.031 and 0.012/0.031. PCLM is the most accurate in the open
+#'   interval; the spline methods are 5 to 10 times faster.
 #' @param exposure_method `"pclm"` or `"monotone"`.
 #' @param lambda Fixed smoothing parameter(s); `NULL` selects them by
 #'   `criterion`.
@@ -58,7 +70,8 @@
 #' u
 #' head(attr(u, "ungroup"))
 #' @export
-mt_ungroup <- function(data, dims = 1, method = c("pclm", "monotone"), exposure_method = c("pclm", "monotone"),
+mt_ungroup <- function(data, dims = 1, method = c("pclm", "monotone", "hyman_kannisto", "natural_gompertz", "gam"),
+                       exposure_method = c("pclm", "monotone"),
                        lambda = NULL,
                        criterion = c("bic", "aic"), kr = 2, deg = 3, pord = 2,
                        lambda_range = c(1e-2, 1e8), preserve_totals = TRUE) {
@@ -80,6 +93,12 @@ mt_ungroup <- function(data, dims = 1, method = c("pclm", "monotone"), exposure_
     E <- data$obs$exposure
     if (method == "monotone") {
       res <- ungroup_counts_1d(data$obs$deaths, g, data$omega, ctl, "monotone", "deaths")
+    } else if (method %in% c("hyman_kannisto", "natural_gompertz", "gam")) {
+      if (is.null(E) || needs_ungroup(E, g)) {
+        mt_abort(sprintf("method = \"%s\" needs exposures on the grid.", method), class = "ungroup")
+      }
+      res <- list(obs = ungroup_rates_spline(data$obs$deaths, E, g, data$omega, method),
+                  diag = data.table(measure = "deaths", stratum = NA_integer_, period = "all", method = method))
     } else if (!is.null(E) && !needs_ungroup(E, g)) {
       res <- ungroup_rates(data$obs$deaths, E, g, data$omega, ctl, dims)
     } else {

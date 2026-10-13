@@ -25,6 +25,7 @@ reference:
       - mt_regroup
       - mt_operator
       - mt_ungroup
+      - mt_disaggregate
       - mt_smooth
       - mt_prep
   - title: Models
@@ -43,6 +44,7 @@ reference:
       - cause_shares
       - mt_ensemble
       - mt_tune
+      - mt_bootstrap
       - new_mt_spec
   - title: Hierarchies and coherence
     contents:

@@ -43,5 +43,6 @@ utils::globalVariables(c(
   "value.next", "k", "ratio", "label", "sex", "d", "e", "g_lo", "g_hi", "N",
   "a1", "a2", "p1", "p2", "a", "p", "i.value", "i.provenance", "lr", "scale", "component", "draw",
   "crps", "wis", "ae", "cov50", "cov80", "cov95", "pit", "at", "status", "rep", "parts",
-  ".data", "q0.5", "lo", "hi", "med", "x", "x_hi", "level", "coverage", "v", "region", "quintile", "m", "severity"
+  ".data", "q0.5", "lo", "hi", "med", "x", "x_hi", "level", "coverage", "v", "region", "quintile", "m", "severity",
+  "lev", "w"
 ))

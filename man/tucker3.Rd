@@ -14,7 +14,12 @@ tucker3(
 )
 }
 \arguments{
-\item{ranks}{Tucker ranks for age, period and stratum.}
+\item{ranks}{Tucker ranks for age, period and stratum, or \code{"bic"} /
+\code{"aic"} to choose them by an information criterion on the training data
+(the rank selection of mortensor 0.1: \verb{n log(RSS / n)} plus the penalty
+times the number of parameters of the factor matrices and the core;
+ranks up to 6 for age and period and up to 4 for strata). For selection
+by forecast accuracy use \code{\link[=mt_tuned]{mt_tuned()}}.}
 
 \item{transform}{\code{"log"} or \code{"coda"}.}
 
