@@ -18,7 +18,7 @@
   </clipPath>
 </defs>
 <g clip-path='url(#cpMC4wMHw3MjAuMDB8MC4wMHw1NzYuMDA=)'>
-<rect x='0.00' y='0.00' width='720.00' height='576.00' style='stroke-width: 1.07; stroke: #FFFFFF; fill: #FFFFFF;' />
+<rect x='0.000000000000064' y='0.00' width='720.00' height='576.00' style='stroke-width: 1.07; stroke: #FFFFFF; fill: #FFFFFF;' />
 </g>
 <defs>
   <clipPath id='cpNDAuMTN8MjIwLjUzfDM5LjQzfDU0NS4xMQ=='>
@@ -154,15 +154,15 @@
 <polyline points='37.39,62.42 40.13,62.42 ' style='stroke-width: 1.07; stroke: #333333; stroke-linecap: butt;' />
 <text x='316.20' y='568.24' text-anchor='middle' style='font-size: 11.00px; font-family: sans;' textLength='75.20px' lengthAdjust='spacingAndGlyphs'>Horizon (years)</text>
 <text transform='translate(13.05,292.27) rotate(-90)' text-anchor='middle' style='font-size: 11.00px; font-family: sans;' textLength='93.56px' lengthAdjust='spacingAndGlyphs'>Empirical coverage</text>
-<rect x='603.23' y='272.25' width='111.29' height='40.04' style='stroke-width: 1.07; stroke: none; fill: #FFFFFF;' />
-<rect x='603.23' y='277.73' width='17.28' height='17.28' style='stroke-width: 1.07; stroke: none; fill: #FFFFFF;' />
-<line x1='604.96' y1='286.37' x2='618.78' y2='286.37' style='stroke-width: 1.07; stroke: #F8766D; stroke-linecap: butt;' />
-<circle cx='611.87' cy='286.37' r='1.95' style='stroke-width: 0.71; stroke: #F8766D; fill: #F8766D;' />
-<rect x='603.23' y='295.01' width='17.28' height='17.28' style='stroke-width: 1.07; stroke: none; fill: #FFFFFF;' />
-<line x1='604.96' y1='303.65' x2='618.78' y2='303.65' style='stroke-width: 1.07; stroke: #00BFC4; stroke-linecap: butt;' />
-<circle cx='611.87' cy='303.65' r='1.95' style='stroke-width: 0.71; stroke: #00BFC4; fill: #00BFC4;' />
-<text x='625.99' y='289.40' style='font-size: 8.80px; font-family: sans;' textLength='42.07px' lengthAdjust='spacingAndGlyphs'>Lee-Carter</text>
-<text x='625.99' y='306.68' style='font-size: 8.80px; font-family: sans;' textLength='88.53px' lengthAdjust='spacingAndGlyphs'>Random walk with drift</text>
+<rect x='603.23' y='274.99' width='111.29' height='34.56' style='stroke-width: 1.07; stroke: none; fill: #FFFFFF;' />
+<rect x='603.23' y='274.99' width='17.28' height='17.28' style='stroke-width: 1.07; stroke: none; fill: #FFFFFF;' />
+<line x1='604.96' y1='283.63' x2='618.78' y2='283.63' style='stroke-width: 1.07; stroke: #F8766D; stroke-linecap: butt;' />
+<circle cx='611.87' cy='283.63' r='1.95' style='stroke-width: 0.71; stroke: #F8766D; fill: #F8766D;' />
+<rect x='603.23' y='292.27' width='17.28' height='17.28' style='stroke-width: 1.07; stroke: none; fill: #FFFFFF;' />
+<line x1='604.96' y1='300.91' x2='618.78' y2='300.91' style='stroke-width: 1.07; stroke: #00BFC4; stroke-linecap: butt;' />
+<circle cx='611.87' cy='300.91' r='1.95' style='stroke-width: 0.71; stroke: #00BFC4; fill: #00BFC4;' />
+<text x='625.99' y='286.66' style='font-size: 8.80px; font-family: sans;' textLength='42.07px' lengthAdjust='spacingAndGlyphs'>Lee-Carter</text>
+<text x='625.99' y='303.94' style='font-size: 8.80px; font-family: sans;' textLength='88.53px' lengthAdjust='spacingAndGlyphs'>Random walk with drift</text>
 <text x='40.13' y='14.56' style='font-size: 13.20px; font-family: sans;' textLength='54.32px' lengthAdjust='spacingAndGlyphs'>coverage</text>
 </g>
 </svg>

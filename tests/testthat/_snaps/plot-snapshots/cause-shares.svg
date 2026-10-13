@@ -116,26 +116,26 @@
 <polyline points='32.50,367.24 35.24,367.24 ' style='stroke-width: 1.07; stroke: #333333; stroke-linecap: butt;' />
 <polyline points='32.50,196.94 35.24,196.94 ' style='stroke-width: 1.07; stroke: #333333; stroke-linecap: butt;' />
 <text transform='translate(13.05,298.57) rotate(-90)' text-anchor='middle' style='font-size: 11.00px; font-family: sans;' textLength='77.68px' lengthAdjust='spacingAndGlyphs'>Share of deaths</text>
-<rect x='655.55' y='244.41' width='58.97' height='40.04' style='stroke-width: 1.07; stroke: none; fill: #FFFFFF;' />
+<rect x='655.55' y='249.89' width='49.18' height='51.84' style='stroke-width: 1.07; stroke: none; fill: #FFFFFF;' />
 <rect x='655.55' y='249.89' width='17.28' height='17.28' style='stroke-width: 1.07; stroke: none; fill: #FFFFFF;' />
-<line x1='657.28' y1='258.53' x2='671.10' y2='258.53' style='stroke-width: 1.07; stroke-linecap: butt;' />
+<rect x='656.26' y='250.60' width='15.86' height='15.86' style='stroke-width: 1.07; stroke: none; stroke-linecap: butt; fill: #F8766D; fill-opacity: 0.20;' />
+<line x1='657.28' y1='258.53' x2='671.10' y2='258.53' style='stroke-width: 1.07; stroke: #F8766D; stroke-linecap: butt;' />
 <rect x='655.55' y='267.17' width='17.28' height='17.28' style='stroke-width: 1.07; stroke: none; fill: #FFFFFF;' />
-<line x1='657.28' y1='275.81' x2='671.10' y2='275.81' style='stroke-width: 1.07; stroke-dasharray: 2.85,2.85; stroke-linecap: butt;' />
-<text x='678.31' y='261.56' style='font-size: 8.80px; font-family: sans;' textLength='31.31px' lengthAdjust='spacingAndGlyphs'>forecast</text>
-<text x='678.31' y='278.84' style='font-size: 8.80px; font-family: sans;' textLength='36.21px' lengthAdjust='spacingAndGlyphs'>observed</text>
-<rect x='655.55' y='295.41' width='49.18' height='57.32' style='stroke-width: 1.07; stroke: none; fill: #FFFFFF;' />
-<rect x='655.55' y='300.89' width='17.28' height='17.28' style='stroke-width: 1.07; stroke: none; fill: #FFFFFF;' />
-<rect x='656.26' y='301.60' width='15.86' height='15.86' style='stroke-width: 1.07; stroke: none; stroke-linecap: butt; stroke-linejoin: miter; fill: #F8766D; fill-opacity: 0.20;' />
-<line x1='657.28' y1='309.53' x2='671.10' y2='309.53' style='stroke-width: 1.07; stroke: #F8766D; stroke-linecap: butt;' />
-<rect x='655.55' y='318.17' width='17.28' height='17.28' style='stroke-width: 1.07; stroke: none; fill: #FFFFFF;' />
-<rect x='656.26' y='318.88' width='15.86' height='15.86' style='stroke-width: 1.07; stroke: none; stroke-linecap: butt; stroke-linejoin: miter; fill: #00BA38; fill-opacity: 0.20;' />
-<line x1='657.28' y1='326.81' x2='671.10' y2='326.81' style='stroke-width: 1.07; stroke: #00BA38; stroke-linecap: butt;' />
-<rect x='655.55' y='335.45' width='17.28' height='17.28' style='stroke-width: 1.07; stroke: none; fill: #FFFFFF;' />
-<rect x='656.26' y='336.16' width='15.86' height='15.86' style='stroke-width: 1.07; stroke: none; stroke-linecap: butt; stroke-linejoin: miter; fill: #619CFF; fill-opacity: 0.20;' />
-<line x1='657.28' y1='344.09' x2='671.10' y2='344.09' style='stroke-width: 1.07; stroke: #619CFF; stroke-linecap: butt;' />
-<text x='678.31' y='312.56' style='font-size: 8.80px; font-family: sans;' textLength='26.42px' lengthAdjust='spacingAndGlyphs'>cancer</text>
-<text x='678.31' y='329.84' style='font-size: 8.80px; font-family: sans;' textLength='13.70px' lengthAdjust='spacingAndGlyphs'>cvd</text>
-<text x='678.31' y='347.12' style='font-size: 8.80px; font-family: sans;' textLength='20.06px' lengthAdjust='spacingAndGlyphs'>other</text>
+<rect x='656.26' y='267.88' width='15.86' height='15.86' style='stroke-width: 1.07; stroke: none; stroke-linecap: butt; fill: #00BA38; fill-opacity: 0.20;' />
+<line x1='657.28' y1='275.81' x2='671.10' y2='275.81' style='stroke-width: 1.07; stroke: #00BA38; stroke-linecap: butt;' />
+<rect x='655.55' y='284.45' width='17.28' height='17.28' style='stroke-width: 1.07; stroke: none; fill: #FFFFFF;' />
+<rect x='656.26' y='285.16' width='15.86' height='15.86' style='stroke-width: 1.07; stroke: none; stroke-linecap: butt; fill: #619CFF; fill-opacity: 0.20;' />
+<line x1='657.28' y1='293.09' x2='671.10' y2='293.09' style='stroke-width: 1.07; stroke: #619CFF; stroke-linecap: butt;' />
+<text x='678.31' y='261.56' style='font-size: 8.80px; font-family: sans;' textLength='26.42px' lengthAdjust='spacingAndGlyphs'>cancer</text>
+<text x='678.31' y='278.84' style='font-size: 8.80px; font-family: sans;' textLength='13.70px' lengthAdjust='spacingAndGlyphs'>cvd</text>
+<text x='678.31' y='296.12' style='font-size: 8.80px; font-family: sans;' textLength='20.06px' lengthAdjust='spacingAndGlyphs'>other</text>
+<rect x='655.55' y='312.69' width='58.97' height='34.56' style='stroke-width: 1.07; stroke: none; fill: #FFFFFF;' />
+<rect x='655.55' y='312.69' width='17.28' height='17.28' style='stroke-width: 1.07; stroke: none; fill: #FFFFFF;' />
+<line x1='657.28' y1='321.33' x2='671.10' y2='321.33' style='stroke-width: 1.07; stroke-linecap: butt;' />
+<rect x='655.55' y='329.97' width='17.28' height='17.28' style='stroke-width: 1.07; stroke: none; fill: #FFFFFF;' />
+<line x1='657.28' y1='338.61' x2='671.10' y2='338.61' style='stroke-width: 1.07; stroke-dasharray: 2.85,2.85; stroke-linecap: butt;' />
+<text x='678.31' y='324.36' style='font-size: 8.80px; font-family: sans;' textLength='31.31px' lengthAdjust='spacingAndGlyphs'>forecast</text>
+<text x='678.31' y='341.64' style='font-size: 8.80px; font-family: sans;' textLength='36.21px' lengthAdjust='spacingAndGlyphs'>observed</text>
 <text x='35.24' y='14.56' style='font-size: 13.20px; font-family: sans;' textLength='157.02px' lengthAdjust='spacingAndGlyphs'>Cause shares (Lee-Carter)</text>
 </g>
 </svg>

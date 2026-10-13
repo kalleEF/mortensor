@@ -1,7 +1,8 @@
 # Visual regression tests (vdiffr). Inputs are small and seeded; Tucker
 # factor signs are fixed in hooi(), so the plots are reproducible across
-# platforms. Update snapshots with testthat::snapshot_review() after an
-# intended change.
+# platforms. The snapshots were made with ggplot2 4.0; older versions draw
+# differently and skip. Update snapshots with testthat::snapshot_review()
+# after an intended change or a new ggplot2 release.
 
 snapshot_inputs <- function() {
   x <- mt_example(deaths = "single", years = 2006:2019)
@@ -14,7 +15,7 @@ snapshot_inputs <- function() {
 
 test_that("plots match their snapshots", {
   skip_if_not_installed("vdiffr")
-  skip_if_not_installed("ggplot2")
+  skip_if_not_installed("ggplot2", minimum_version = "4.0.0")
   skip_on_cran()
   s <- snapshot_inputs()
   vdiffr::expect_doppelganger("forecast fan", mt_plot_forecast(s$fc, ages = c("50", "80")))
