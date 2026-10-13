@@ -65,6 +65,10 @@ Clean break: the 0.1.x interface is replaced (see `dev/revamp-plan.md`).
   decile, England 2001-2019 (ONS ad hoc release 3064, Open Government
   Licence), with the cause groups `ons_cause_groups`; built by
   `data-raw/ons_data.R`. `mt_read_ons()` reads it directly.
+* Ensembles draw one component per path for all strata (before, components
+  were picked separately per stratum, which broke the dependence between
+  strata and the coherence of reconciled components); every model type is
+  tested as a component.
 * `mt_read_genesis()` reads deaths and 31 December populations in the flat
   CSV format of GENESIS-Online (Destatis); `parse_age_labels()` understands
   the German age labels.

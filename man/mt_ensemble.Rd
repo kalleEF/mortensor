@@ -36,8 +36,13 @@ weighted median forecasts (log scale) in the same inner backtest (the
 non-negative stacking of mortensor 0.1, fitted on training data only).
 }
 
-A component that fails in a stratum is dropped for that stratum and the
-remaining weights are renormalised; this is recorded in the diagnostics.
+Each draw of the ensemble comes from one component for all strata, so
+paths keep the dependence between strata and the coherence of reconciled
+components (\code{mt_reconciled()}). A component that fails in a stratum is
+replaced there by the other components in proportion to their weights;
+this is recorded in the diagnostics. Any model specification can be a
+component, including joint models, Bayesian models, tuned, bootstrapped
+and reconciled models, and other ensembles.
 
 A mixture is wider than its components when they disagree. In backtests
 on HMD data (England & Wales, France) and on the ONS deprivation data,

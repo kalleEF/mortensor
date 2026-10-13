@@ -162,3 +162,32 @@ test_that("the random walk plus noise separates noise from the trend", {
   expect_lt(width(p_noise), width(p_plain))
   expect_error(rwd(observation_noise = NA), class = "mt_error_argument")
 })
+
+test_that("ensemble draws come from one component for all strata", {
+  x <- mt_example_causes(years = 2008:2019)
+  h <- mt_hierarchy(cause = "all", additive = "rates")
+  ens <- mt_ensemble(a = mt_reconciled(lee_carter(), h, method = "bottom_up"),
+                     b = mt_reconciled(rwd(), h, method = "bottom_up"))
+  fc <- mt_forecast(mt_fit(ens, x), h = 2, n_draws = 30, seed = 1)
+  st <- mt_strata(x)
+  for (sx in c("female", "male")) {
+    i <- st$stratum[st$sex == sx & st$cause == "all"]
+    j <- st$stratum[st$sex == sx & st$cause != "all"]
+    parts <- apply(fc$rates[, , j, , drop = FALSE], c(1, 2, 4), sum)
+    expect_lt(max(abs(parts / fc$rates[, , i, ] - 1)), 1e-8)
+  }
+})
+
+test_that("every kind of model can be an ensemble component", {
+  x <- mt_example(deaths = "single", years = 2000:2019)
+  comps <- list(tucker3(ranks = c(2, 2, 2)), li_lee(common_by = "sex"), product_ratio(), ets_series(),
+                mt_bootstrap(rwd(), n_boot = 2), mt_ensemble(lee_carter(), rwd()),
+                mt_tuned(function(w) rwd(drift_window = w), data.frame(w = c(5, 10)), inner_origins = 2, inner_h = 2))
+  if (requireNamespace("demography", quietly = TRUE)) comps <- c(comps, list(hyndman_ullah(order = 2)))
+  if (requireNamespace("StMoMo", quietly = TRUE)) comps <- c(comps, list(stmomo("cbd")))
+  for (cp in comps) {
+    fc <- mt_forecast(mt_fit(mt_ensemble(lc = lee_carter(), other = cp), x), h = 2, n_draws = 20, seed = 1,
+                      predictive = TRUE)
+    expect_true(all(is.finite(fc$rates)), label = cp$label)
+  }
+})

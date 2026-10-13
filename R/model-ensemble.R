@@ -17,8 +17,13 @@
 #'   weighted median forecasts (log scale) in the same inner backtest (the
 #'   non-negative stacking of mortensor 0.1, fitted on training data only).
 #'
-#' A component that fails in a stratum is dropped for that stratum and the
-#' remaining weights are renormalised; this is recorded in the diagnostics.
+#' Each draw of the ensemble comes from one component for all strata, so
+#' paths keep the dependence between strata and the coherence of reconciled
+#' components (`mt_reconciled()`). A component that fails in a stratum is
+#' replaced there by the other components in proportion to their weights;
+#' this is recorded in the diagnostics. Any model specification can be a
+#' component, including joint models, Bayesian models, tuned, bootstrapped
+#' and reconciled models, and other ensembles.
 #'
 #' A mixture is wider than its components when they disagree. In backtests
 #' on HMD data (England & Wales, France) and on the ONS deprivation data,
@@ -134,15 +139,25 @@ mt_forecast.mt_fit_ensemble <- function(fit, h = 10, to = NULL, n_draws = 500, s
     })
     d <- dim(comp_draws[[1]])
     arr <- array(NA_real_, d)
-    for (s in seq_len(d[3])) {
-      avail <- vapply(comp_draws, function(a) !anyNA(a[, , s, 1]), logical(1))
-      ws <- w * avail
+    # one component per draw for all strata, so that each path keeps the
+    # dependence between strata (and the coherence of reconciled components)
+    avail <- vapply(comp_draws, function(a) apply(a[, , , 1, drop = FALSE], 3, function(z) !anyNA(z)),
+                    logical(d[3]))
+    avail <- matrix(avail, d[3])
+    pick <- sample(seq_along(w), n_draws, replace = TRUE, prob = w / sum(w))
+    for (k in unique(pick)) {
+      j <- which(pick == k)
+      arr[, , , j] <- comp_draws[[k]][, , , j, drop = FALSE]
+    }
+    # a component that failed in a stratum is replaced there by the others
+    for (s in which(rowSums(!avail) > 0)) {
+      ws <- w * avail[s, ]
       if (sum(ws) == 0) next
-      pick <- sample(seq_along(ws), n_draws, replace = TRUE, prob = ws / sum(ws))
-      for (k in unique(pick)) {
-        j <- which(pick == k)
-        arr[, , s, j] <- comp_draws[[k]][, , s, j]
-      }
+      j <- which(!avail[s, pick])
+      if (!length(j)) next
+      alt <- if (sum(ws > 0) == 1) rep(which(ws > 0), length(j)) else
+        sample(seq_along(ws), length(j), replace = TRUE, prob = ws / sum(ws))
+      for (k in unique(alt)) arr[, , s, j[alt == k]] <- comp_draws[[k]][, , s, j[alt == k]]
     }
     arr
   })
