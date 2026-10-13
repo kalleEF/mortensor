@@ -65,6 +65,9 @@ Clean break: the 0.1.x interface is replaced (see `dev/revamp-plan.md`).
   decile, England 2001-2019 (ONS ad hoc release 3064, Open Government
   Licence), with the cause groups `ons_cause_groups`; built by
   `data-raw/ons_data.R`. `mt_read_ons()` reads it directly.
+* `mt_read_genesis()` reads deaths and 31 December populations in the flat
+  CSV format of GENESIS-Online (Destatis); `parse_age_labels()` understands
+  the German age labels.
 * `mt_read_ons()` (ONS Excel tables by sex, age and IMD decile, optional
   regions and cause groups), `apc_select()` (DIC-based choice of random-walk
   orders for `apc_bayes()`), and the plots `mt_plot_tucker()`,

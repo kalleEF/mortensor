@@ -39,3 +39,10 @@ test_that("axis_locate maps intervals by containment and exact match", {
   expect_equal(axis_locate(g, c(30, 30), c(35, 34), mode = "exact"), c(1L, NA))
   expect_equal(axis_locate(g, 90, Inf, mode = "exact"), 4L)
 })
+
+test_that("German GENESIS age labels are parsed in any locale", {
+  x <- c(paste0("68-J", intToUtf8(0xe4), "hrige"), "unter 1 Jahr", "1 bis unter 15 Jahre", "85 Jahre und mehr")
+  a <- parse_age_labels(x)
+  expect_equal(a$age_lo, c(68, 0, 1, 85))
+  expect_equal(a$age_hi, c(69, 1, 15, Inf))
+})

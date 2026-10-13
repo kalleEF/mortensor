@@ -45,5 +45,5 @@ utils::globalVariables(c(
   "crps", "wis", "ae", "cov50", "cov80", "cov95", "pit", "at", "status", "rep", "parts",
   ".data", "q0.5", "lo", "hi", "med", "x", "x_hi", "level", "coverage", "v", "region", "quintile", "m", "severity",
   "lev", "w", "year", "dep", "population", "i.population", "cause", "dic", "index", "factor", "kind", "score",
-  "group", "mode"
+  "group", "mode", "time"
 ))

@@ -160,7 +160,9 @@ axis_locate <- function(axis, lo, hi, mode = c("within", "exact")) {
 #'
 #' Understands the label styles of common sources, for example `"<1"`,
 #' `"01-14"`, `"30-34"`, `"90+"`, `"85 and over"`, `"under 1"`, `"0"`,
-#' `"110+"`.
+#' `"110+"`, and the German labels of the Federal Statistical Office
+#' (`"unter 1 Jahr"`, `"15 bis unter 20 Jahre"`, `"85 Jahre und mehr"`,
+#' `"68-Jährige"`).
 #'
 #' @param x Character vector of labels.
 #' @return A `data.table` with `label`, `age_lo`, `age_hi` (`Inf` for open
@@ -169,8 +171,16 @@ axis_locate <- function(axis, lo, hi, mode = c("within", "exact")) {
 #' parse_age_labels(c("<1", "01-14", "15-19", "90+"))
 #' @export
 parse_age_labels <- function(x) {
-  s <- tolower(trimws(as.character(x)))
-  s <- gsub("\u2013|\u2014", "-", s)
+  # byte-wise matching keeps non-ASCII labels working in any locale
+  s <- enc2utf8(trimws(as.character(x)))
+  s <- gsub("\u2013|\u2014", "-", s, useBytes = TRUE)
+  # German labels (GENESIS): "unter 1 Jahr", "15 bis unter 20 Jahre",
+  # "85 Jahre und mehr", "68-J\u00e4hrige"
+  s <- sub("^[Uu]nter\\s+(\\d+)\\s+Jahre?n?$", "<\\1", s, perl = TRUE, useBytes = TRUE)
+  s <- sub("^(\\d+)\\s+bis\\s+unter\\s+(\\d+)\\s+Jahre?n?$", "\\1 bis \\2", s, perl = TRUE, useBytes = TRUE)
+  s <- sub("^(\\d+)\\s+Jahre?\\s+und\\s+(?:mehr|\u00e4lter)$", "\\1+", s, perl = TRUE, useBytes = TRUE)
+  s <- sub("^(\\d+)-J\u00e4hrige$", "\\1", s, perl = TRUE, useBytes = TRUE)
+  s <- tolower(iconv(s, "UTF-8", "ASCII", sub = "?"))
   lo <- hi <- rep(NA_real_, length(s))
   num <- function(z) as.numeric(z)
   m <- regmatches(s, regexec("^(?:<|under)\\s*(\\d+)$", s, perl = TRUE))
@@ -182,6 +192,11 @@ parse_age_labels <- function(x) {
   for (k in which(lengths(m) == 3)) {
     lo[k] <- num(m[[k]][2])
     hi[k] <- num(m[[k]][3]) + 1
+  }
+  m <- regmatches(s, regexec("^(\\d+) bis (\\d+)$", s, perl = TRUE))   # upper bound exclusive
+  for (k in which(lengths(m) == 3)) {
+    lo[k] <- num(m[[k]][2])
+    hi[k] <- num(m[[k]][3])
   }
   m <- regmatches(s, regexec("^(\\d+)\\s*(?:\\+|and over|and older|plus|or older)$", s, perl = TRUE))
   for (k in which(lengths(m) == 2)) {

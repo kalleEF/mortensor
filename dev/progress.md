@@ -38,6 +38,7 @@ work: `claude/vigilant-albattani-2ssw1x` (plays the role of `dev-0.2`).
 | C4.8 | done | this branch | FAQ vignette (data, granularity, ungrouping, model choice, calibration, predictive draws, small counts, COVID-19 years, coherence, reproducibility, runtime) |
 | C4.7 | partial | this branch | pkgdown reference index; the migration vignette was removed (0.1 is not used any more); tagging a release is the owner's decision |
 | D1.13 | done | this branch | `ons_data` (ONS ad hoc 3064, part 1, 2001-2019, OGL; `data-raw/ons_data.R` downloads and checks the md5) and `ons_cause_groups` (12 groups per sex at ages 50+, chosen so that median cells by sex, quintile, age group and year have at least about 25 deaths) |
+| D1.14 | partial | this branch | `mt_read_genesis()` (Destatis flat CSV: deaths, 31 December populations, regions summed out when deaths are national, causes with a closing rest); German age labels in `parse_age_labels()`. The German regional vignette waits for deaths by Land (the supplied deaths table 23211-0002 is national) |
 | D1.12 (HMD) | done | this branch | `mt_from_hmd()`, `mt_read_hmd()` (HMDHFDplus, credentials from `HMD_USER`/`HMD_PASSWORD`) |
 
 | P5.1 | done | this branch | `hyndman_ullah()` (demography; draws via `simulate()`); 95% coverage 0.90 on the benchmark, 0.73 on France |
