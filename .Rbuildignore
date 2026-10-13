@@ -18,3 +18,4 @@
 ^vignettes/.*\.Rmd\.orig$
 ^vignettes/articles$
 ^validation-output$
+^Rplots\.pdf$
