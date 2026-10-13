@@ -106,8 +106,9 @@ GAM takes about a second.
 x <- mt_example(years = 2001:2003, deaths = "single")
 s <- mt_smooth(x)
 head(attr(s, "smooth"))
-st <- mt_smooth(mt_example(deaths = "single", years = 2000:2015), along = "period", method = "whittaker")
-mt_smooth_check(mt_example(deaths = "single", years = 2000:2015), st)
+xt <- mt_example(deaths = "single", years = 2000:2015)
+st <- mt_smooth(xt, along = "period", method = "whittaker")
+mt_smooth_check(xt, st)
 }
 \references{
 Currie ID, Durban M, Eilers PHC (2004). Smoothing and forecasting

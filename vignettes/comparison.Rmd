@@ -11,6 +11,7 @@ vignette: >
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width = 7, fig.height = 4.5, message = FALSE)
 has_gg <- requireNamespace("ggplot2", quietly = TRUE)
 res <- readRDS("comparison-results.rds")
+library(mortensor)
 library(data.table)
 fmt <- function(x, d = 3) formatC(x, digits = d, format = "f")
 ```

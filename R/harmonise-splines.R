@@ -283,8 +283,8 @@ mt_disaggregate <- function(draws, age, exposure, method = c("hyman_kannisto", "
 #' sh <- mt_shape_rates(x, periods = 2020:2022)
 #' xg <- mt_regroup(x, age = c(seq(30, 85, 5), 90))
 #' fc <- mt_forecast(mt_fit(lee_carter(), xg), h = 3, n_draws = 20, seed = 1)
-#' fs <- mt_disaggregate(fc, mt_grid(x)$age, exposure = mt_array(x, "exposure")[, 20, ], method = "shape",
-#'                       shape_rates = sh)
+#' fs <- mt_disaggregate(fc, mt_grid(x)$age, exposure = mt_array(x, "exposure")[, 20, ],
+#'                       method = "shape", shape_rates = sh)
 #' @export
 mt_shape_rates <- function(data, periods, method = c("last", "gam"), years = 5) {
   check_class(data, "mt_data", "data")

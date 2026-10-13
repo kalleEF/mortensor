@@ -45,7 +45,7 @@ over time, one panel per age.
 }
 \examples{
 x <- mt_example(deaths = "single", years = 2000:2015)
-s <- mt_smooth(x, dims = 2)
+s <- mt_smooth(x, along = "period", method = "whittaker")
 mt_smooth_check(x, s)
 if (requireNamespace("ggplot2", quietly = TRUE)) mt_plot_smooth(x, s)
 }

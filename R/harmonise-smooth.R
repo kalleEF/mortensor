@@ -70,8 +70,9 @@
 #' x <- mt_example(years = 2001:2003, deaths = "single")
 #' s <- mt_smooth(x)
 #' head(attr(s, "smooth"))
-#' st <- mt_smooth(mt_example(deaths = "single", years = 2000:2015), along = "period", method = "whittaker")
-#' mt_smooth_check(mt_example(deaths = "single", years = 2000:2015), st)
+#' xt <- mt_example(deaths = "single", years = 2000:2015)
+#' st <- mt_smooth(xt, along = "period", method = "whittaker")
+#' mt_smooth_check(xt, st)
 #' @export
 mt_smooth <- function(data, dims = 1, lambda = NULL, criterion = c("bic", "aic"), kr = 2, deg = 3,
                       pord = 2, lambda_range = c(1e-2, 1e8), method = c("pspline", "whittaker", "gam"),
@@ -314,7 +315,7 @@ gam2d_smooth_obs <- function(data, g, k = NULL) {
 #'   the measures above. `mt_plot_smooth()`: a ggplot object.
 #' @examples
 #' x <- mt_example(deaths = "single", years = 2000:2015)
-#' s <- mt_smooth(x, dims = 2)
+#' s <- mt_smooth(x, along = "period", method = "whittaker")
 #' mt_smooth_check(x, s)
 #' if (requireNamespace("ggplot2", quietly = TRUE)) mt_plot_smooth(x, s)
 #' @export
