@@ -138,8 +138,8 @@ quantity_paths <- function(x, quantity, ...) {
 #' population, the relative index of inequality (RII) their ratio. The
 #' relative rank of a level is the midpoint of its cumulative population
 #' share, with the levels ordered as in `order`. Computed path by path, with
-#' the population shares of the exposures (the last observed year for
-#' forecasts).
+#' the population shares of the exposures of each year for observed rates
+#' and of the last observed year for forecasts.
 #'
 #' @param x An [mt_draws] or [mt_data] object.
 #' @param var Ordered stratum variable (for example `"quintile"`).
@@ -169,20 +169,27 @@ mt_inequality <- function(x, var, order = NULL, quantity = c("asr", "life_expect
     mt_abort(sprintf("`order` must list every level of `%s` once.", var), class = "argument")
   }
   q <- quantity_paths(x, quantity, ...)
-  E <- x$exposure_last
-  pop <- colSums(matrix(E, nrow = dim(E)[1]))
+  # population weights per year: the exposures of each year for observed
+  # rates, those of the last observed year for forecasts
+  np <- length(x$periods)
+  pop <- if (!is.null(x$exposure) && dim(x$exposure)[2] == np) {
+    apply(x$exposure, c(2, 3), sum)
+  } else {
+    E <- x$exposure_last
+    matrix(colSums(matrix(E, nrow = dim(E)[1])), np, nrow(st), byrow = TRUE)
+  }
   others <- setdiff(names(st), c("stratum", "label", var))
   key <- if (length(others)) do.call(paste, c(lapply(others, function(o) st[[o]]), sep = "\r")) else rep("", nrow(st))
   rows <- list()
   for (k in unique(key)) {
     idx <- which(key == k)[order(match(st[[var]][key == k], order))]
     if (length(idx) < 2) next
-    w <- pop[idx] / sum(pop[idx])
-    rank <- cumsum(w) - w / 2
-    X <- cbind(1, rank)
-    H <- solve(crossprod(X, X * w), t(X * w))   # weighted least squares
     sii <- rii <- matrix(NA_real_, dim(q)[1], dim(q)[3])
     for (t in seq_len(dim(q)[1])) {
+      w <- pop[t, idx] / sum(pop[t, idx])
+      rank <- cumsum(w) - w / 2
+      X <- cbind(1, rank)
+      H <- solve(crossprod(X, X * w), t(X * w))   # weighted least squares
       b <- H %*% matrix(q[t, idx, ], length(idx))
       sii[t, ] <- b[2, ]
       rii[t, ] <- (b[1, ] + b[2, ]) / b[1, ]

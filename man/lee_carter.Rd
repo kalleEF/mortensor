@@ -8,7 +8,10 @@ lee_carter(
   method = c("poisson", "svd"),
   jump_off = c("fitted", "observed"),
   bootstrap = FALSE,
-  n_boot = 100
+  n_boot = 100,
+  adjust = c("dt", "dxt", "e0", "none"),
+  choose_period = FALSE,
+  min_years = 20
 )
 }
 \arguments{
@@ -20,6 +23,15 @@ last year) or \code{"observed"} (from the observed rates of the last year).}
 \item{bootstrap}{Semi-parametric bootstrap of the parameters.}
 
 \item{n_boot}{Number of bootstrap fits.}
+
+\item{adjust}{Re-estimation of \code{k[t]} for \code{method = "svd"}: \code{"dt"},
+\code{"dxt"}, \code{"e0"} or \code{"none"}.}
+
+\item{choose_period}{Choose the fitting period (Booth, Maindonald and
+Smith 2002).}
+
+\item{min_years}{\code{choose_period} considers fitting periods of more than
+\code{min_years} years (\code{minperiod} of \code{demography::lca()}).}
 }
 \value{
 A model specification.
@@ -33,9 +45,21 @@ A model specification.
 \item \code{method = "poisson"}: Poisson log-bilinear model (Brouhns, Denuit and
 Vermunt 2002), maximum likelihood by Newton updates;
 \item \code{method = "svd"}: original method (Lee and Carter 1992): singular value
-decomposition of centred log rates, with \code{k[t]} re-estimated so that the
-fitted deaths match the observed total deaths of each year.
+decomposition of centred log rates, with \code{k[t]} re-estimated in a
+second stage (\code{adjust}, as in \code{demography::lca()}): so that the fitted
+deaths match the observed total deaths of each year (\code{"dt"}, Lee and
+Carter 1992), by Poisson maximum likelihood of the deaths by age given
+\code{a} and \code{b} (\code{"dxt"}, Booth, Maindonald and Smith 2002), so that the
+fitted life expectancy at the first age matches the observed one
+(\code{"e0"}, Lee and Miller 2001), or not at all (\code{"none"}).
 }
+
+\code{choose_period = TRUE} fits the model to the last years only, starting in
+the year that minimises the ratio of the mean deviance of a fit with a
+linear \code{k[t]} to the mean deviance of the Lee-Carter fit (Booth,
+Maindonald and Smith 2002): the longest recent period over which the
+decline was close to linear (\code{demography::lca(chooseperiod = TRUE, breakmethod = "bms")} gives the same period). Fitted rates of earlier
+years are missing.
 
 The period index follows a random walk with drift. Draws include the
 innovations and the uncertainty of the drift. With \code{bootstrap = TRUE} the
@@ -56,6 +80,14 @@ Brouhns N, Denuit M, Vermunt JK (2002). A Poisson log-bilinear regression
 approach to the construction of projected lifetables. \emph{Insurance:
 Mathematics and Economics} 31(3): 373-393.
 \doi{10.1016/S0167-6687(02)00185-3}
+
+Booth H, Maindonald J, Smith L (2002). Applying Lee-Carter under
+conditions of variable mortality decline. \emph{Population Studies} 56(3):
+325-336. \doi{10.1080/00324720215935}
+
+Lee R, Miller T (2001). Evaluating the performance of the Lee-Carter
+method for forecasting mortality. \emph{Demography} 38(4): 537-549.
+\doi{10.1353/dem.2001.0036}
 
 Brouhns N, Denuit M, Van Keilegom I (2005). Bootstrapping the Poisson
 log-bilinear model for mortality forecasting. \emph{Scandinavian Actuarial

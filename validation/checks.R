@@ -86,6 +86,52 @@ checks$backtest_ew <- list(
                          mean(lc$crps) / mean(rw$crps)))
   })
 
+checks$calibration_ew <- list(
+  suite = "quick",
+  description = paste("calibrated() on England & Wales men (as backtest_ew: origins 1996-2001, h = 10): Lee-Carter",
+                      "with its spread recalibrated on the last 10 training years at each origin, against",
+                      "Lee-Carter alone; CRPS, coverage and the ratio of the CRPS."),
+  run = function() {
+    ew <- as_mt_data(mortensor:::pkg_data("EWMaleData", "StMoMo"))
+    ew <- mt_set_grid(ew, age = single_ages(30, 100, open = FALSE))
+    ew <- mt_regroup(ew, age = single_ages(30, 100, open = FALSE))
+    o <- 1996:2001
+    lc <- mt_backtest(lee_carter(), ew, origins = o, h = 10, n_draws = 200)
+    cl <- mt_backtest(calibrated(lee_carter()), ew, origins = o, h = 10, n_draws = 200)
+    data.frame(metric = c("lc_crps", "lc_cov95", "cal_crps", "cal_cov80", "cal_cov95", "crps_ratio_cal_lc"),
+               value = c(mean(lc$crps), mean(lc$cov95), mean(cl$crps), mean(cl$cov80), mean(cl$cov95),
+                         mean(cl$crps) / mean(lc$crps)))
+  })
+
+checks$smoothing_jumpoff <- list(
+  suite = "quick",
+  description = paste("Smoothing over time and jump-off control. England & Wales men (as backtest_ew, origins",
+                      "1996-2001, h = 10): Lee-Carter fitted to rates smoothed by the age-period GAM, with and",
+                      "without calibrated() (smoothing alone narrows the intervals, because the period index is",
+                      "smooth); Lee-Carter anchored to the observed deaths of the last 3 years. ONS quintiles",
+                      "(origins 2008-2014, h = 5): Li-Lee with and without anchoring."),
+  run = function() {
+    ew <- as_mt_data(mortensor:::pkg_data("EWMaleData", "StMoMo"))
+    ew <- mt_set_grid(ew, age = single_ages(30, 100, open = FALSE))
+    ew <- mt_regroup(ew, age = single_ages(30, 100, open = FALSE))
+    o <- 1996:2001
+    gam2d <- mt_prep(step_smooth(dims = 2, method = "gam"))
+    lc <- mt_backtest(lee_carter(), ew, origins = o, h = 10, n_draws = 200)
+    sm <- mt_backtest(lee_carter(), ew, origins = o, h = 10, n_draws = 200, prep = gam2d)
+    smc <- mt_backtest(calibrated(lee_carter()), ew, origins = o, h = 10, n_draws = 200, prep = gam2d)
+    an <- mt_backtest(anchored(lee_carter(), years = 3, decay = 10), ew, origins = o, h = 10, n_draws = 200)
+    x <- ons_quintiles()
+    ll <- mt_backtest(li_lee(common_by = "sex"), x, origins = 2008:2014, h = 5, n_draws = 200)
+    lla <- mt_backtest(anchored(li_lee(common_by = "sex"), years = 3, decay = 10), x, origins = 2008:2014, h = 5,
+                       n_draws = 200)
+    h12 <- function(b) mean(b$crps[b$horizon <= 2])
+    data.frame(metric = c("ew_lc_crps", "ew_lc_cov95", "ew_smooth_cov95", "ew_smooth_cal_crps", "ew_smooth_cal_cov95",
+                          "ew_lc_crps_h12", "ew_anchored_crps_h12", "ons_lilee_crps", "ons_lilee_anchored_crps",
+                          "ons_anchored_ratio"),
+               value = c(mean(lc$crps), mean(lc$cov95), mean(sm$cov95), mean(smc$crps), mean(smc$cov95), h12(lc),
+                         h12(an), mean(ll$crps), mean(lla$crps), mean(lla$crps) / mean(ll$crps)))
+  })
+
 checks$apc_bayes_france <- list(
   suite = "full",
   description = paste("apc_bayes() (bamp, fast MCMC) on French women (HMD via demography), 1970-2006, deaths in",
@@ -178,6 +224,37 @@ ons_quintiles <- function(causes = FALSE) {
   x <- mt_subset(x, ages = c(50, Inf))
   mt_group_levels(x, "cause", ons_cause_groups, other = "rest", total = "all", additive = "rates")
 }
+
+checks$decomposition <- list(
+  suite = "quick",
+  description = paste("mt_decompose() on ONS England (sex x IMD quintile): the gap in life expectancy at birth",
+                      "Q5 - Q1 in 2019 by age (Arriaga, line integral, stepwise; largest residual and largest",
+                      "difference of an age contribution from Arriaga), by age and cause at ages 50+ (residual and",
+                      "agreement with the all-cause decomposition), the change 2001-2019 with quintile",
+                      "composition (radix: exact; pooled: line integral) and the change 2019-2035 of Li-Lee draws."),
+  run = function() {
+    x <- ons_quintiles()
+    d <- lapply(c(arriaga = "arriaga", horiuchi = "horiuchi", stepwise = "stepwise"), function(m) {
+      mt_decompose(x, var = "quintile", ref = "Q1", periods = 2019, method = m)
+    })
+    resid <- function(dd) max(summary(dd, by = NULL)$max_residual)
+    by_age <- function(dd) summary(dd, by = "age")$mean
+    xc <- ons_quintiles(causes = TRUE)
+    h <- mt_hierarchy(cause = "all", additive = "rates")
+    dc <- mt_decompose(xc, var = "quintile", ref = "Q1", periods = 2019, cause = "cause", hierarchy = h)
+    da <- mt_decompose(mt_subset(xc, strata = cause == "all"), var = "quintile", ref = "Q1", periods = 2019)
+    dr <- mt_decompose(x, periods = c(2001, 2019), groups = "quintile")
+    dp <- mt_decompose(x, periods = c(2001, 2019), groups = "quintile", composition = "pooled")
+    fc <- mt_forecast(mt_fit(li_lee(common_by = "sex"), x), to = 2035, n_draws = 200, seed = 1)
+    df <- mt_decompose(fc, periods = c(2019, 2035))
+    data.frame(metric = c("arriaga_residual", "stepwise_residual", "horiuchi_residual", "horiuchi_vs_arriaga",
+                          "stepwise_vs_arriaga", "causes_residual", "causes_vs_allcause", "radix_residual",
+                          "pooled_residual", "forecast_residual"),
+               value = c(resid(d$arriaga), resid(d$stepwise), resid(d$horiuchi),
+                         max(abs(by_age(d$horiuchi) - by_age(d$arriaga))),
+                         max(abs(by_age(d$stepwise) - by_age(d$arriaga))), resid(dc),
+                         max(abs(by_age(dc) - by_age(da))), resid(dr), resid(dp), resid(df)))
+  })
 
 checks$ons_deprivation <- list(
   suite = "quick",

@@ -206,6 +206,127 @@ gap[level == "East" & period %in% c(2020, 2035),
 mt_plot_forecast(fc, ages = c("60-64", "80-84"), strata = c("East.both", "West.both"))
 ```
 
+### Forecasts for every Land
+
+Life expectancy at birth in 2035 for each Land, from the ensemble, next to
+the observed value of 2019:
+
+```{r e0-laender}
+e0_obs <- life_expectancy(xh)[period == 2019, .(region, sex, observed_2019 = round(q0.5, 1))]
+e0_l <- merge(e0[period == 2035, .(region, sex, q0.025 = round(q0.025, 1), q0.5 = round(q0.5, 1),
+                                   q0.975 = round(q0.975, 1))], e0_obs, by = c("region", "sex"))
+e0_l[sex == "both"][order(-q0.5), .(region, observed_2019, q0.025, q0.5, q0.975)]
+```
+
+```{r plot-e0-laender, fig.height = 6}
+library(ggplot2)
+pl <- e0[period == 2035 & sex != "both"]
+pl[, part := fifelse(region %in% east, "East", fifelse(region %in% c("East", "West", "Deutschland"),
+                                                       "aggregate", "West"))]
+ord <- e0[period == 2035 & sex == "both"][order(q0.5), region]
+ggplot(pl, aes(q0.5, factor(region, ord), colour = part)) +
+  geom_pointrange(aes(xmin = q0.025, xmax = q0.975), size = 0.2) +
+  facet_wrap(~ sex, scales = "free_x") +
+  scale_colour_mortensor(type = "categorical") +
+  labs(x = "Life expectancy at birth in 2035 (years, 95% interval)", y = NULL, colour = NULL) +
+  theme_mortensor()
+```
+
+The intervals of the Laender are wider than those of East, West and
+Germany, and widest for the small Laender (Bremen, Saarland). They are
+coherent with the aggregates path by path: the deaths of the Laender add
+up to the deaths of Germany in every draw.
+
+### How reconciliation methods change the forecasts of the Laender
+
+The backtest above compared models. To see what the reconciliation itself
+does, one set of base forecasts (Lee-Carter per stratum, for all
+`r nrow(mt_strata(xh))` strata) is reconciled with each method by
+`mt_reconcile()`; differences between the methods then come from the
+reconciliation alone:
+
+```{r reconcile-methods}
+fc_lc <- mt_forecast(mt_fit(lee_carter(), xh), to = 2035, n_draws = 1000, seed = 1)
+methods <- c("bottom_up", "ols", "structural", "wls", "mint")
+rec <- c(list(base = fc_lc),
+         lapply(setNames(methods, methods), function(m) mt_reconcile(fc_lc, h, method = m, seed = 1)))
+e0m <- rbindlist(lapply(names(rec), function(m) life_expectancy(rec[[m]], at = 0)[period == 2035][, method := m]))
+e0m[, method := factor(method, c("base", methods))]
+show <- c("Bremen", "Saarland", "Hamburg", "Sachsen", "Bayern", "Nordrhein-Westfalen", "East", "West",
+          "Deutschland")
+med <- dcast(e0m[sex == "both" & region %in% show, .(region, method, e0 = round(q0.5, 2))], region ~ method,
+             value.var = "e0")
+wid <- dcast(e0m[sex == "both" & region %in% show, .(region, method, width = round(q0.975 - q0.025, 1))],
+             region ~ method, value.var = "width")
+med[match(show, region)]
+wid[match(show, region)]
+```
+
+The first table holds the medians, the second the widths of the 95%
+intervals (years), for both sexes; note that "both sexes" of a Land is
+itself an aggregate (the sum of women and men), so bottom-up changes it as
+well. The medians change by a few tenths of a year at most. The widths
+change much more, and differently for small and large Laender:
+
+```{r plot-width, fig.height = 4.5}
+pop <- mt_obs(xh, "exposure")[period_lo == 2019, .(population = sum(value)), by = stratum]
+pop <- merge(pop, mt_strata(xh)[, .(stratum, region, sex)], by = "stratum")
+wd <- merge(e0m[sex == "both", .(region, method, width = q0.975 - q0.025)],
+            pop[sex == "both", .(region, population)], by = "region")
+ggplot(wd, aes(population / 1e6, width, colour = method)) +
+  geom_point(size = 2) +
+  scale_x_log10() +
+  scale_colour_mortensor(type = "categorical") +
+  labs(x = "Population 2019 (millions, log scale)", y = "Width of the 95% interval of e0 in 2035 (years)",
+       colour = NULL) +
+  theme_mortensor(legend = "right")
+```
+
+* **OLS** distributes the adjustment equally over all strata in deaths. An
+  adjustment of a few hundred deaths is small for Nordrhein-Westfalen and
+  large for Bremen, so the intervals of the small Laender widen most.
+* **Structural** weights widen the small Laender less than OLS.
+* **WLS** (weights from the variance of each stratum's draws) keeps the
+  intervals of the Laender close to those of their own models and narrows
+  the aggregates towards the sums of the Laender.
+* **Bottom-up** keeps the Laender of each sex as forecast and replaces all
+  aggregates by sums.
+* **MinT** uses the covariance between the strata and gives the narrowest
+  intervals at every level.
+
+Narrower intervals are better only if they still cover the observations.
+The backtest of all methods with the same base model (origins 2008, 2011,
+2014, five years ahead):
+
+```{r backtest-methods}
+specs_m <- setNames(lapply(c("bottom_up", "ols", "structural", "mint"), function(m) {
+  reconciled(lee_carter(), h, method = m)
+}), paste0("Lee-Carter, ", c("bottom-up", "OLS", "structural", "MinT")))
+bt_m <- rbindlist(lapply(names(specs_m), function(n) {
+  b <- mt_backtest(specs_m[[n]], xh, origins = c(2008, 2011, 2014), h = 5, n_draws = 300)
+  merge(b, lev, by = "label")[, spec := n]
+}))
+bt_m <- rbind(bt[spec %in% c("Lee-Carter, separate", "Lee-Carter, WLS")], bt_m)
+bt_m[, .(crps_bottom = mean(crps[level == "bottom"]), crps_aggregate = mean(crps[level != "bottom"]),
+         crps_bremen_saarland = mean(crps[level == "bottom" & region %in% c("Bremen", "Saarland")]),
+         cov95_bottom = mean(cov95[level == "bottom"]), cov95_aggregate = mean(cov95[level != "bottom"])),
+     by = spec][, lapply(.SD, function(v) if (is.numeric(v)) round(v, 3) else v)]
+```
+
+In accuracy the methods differ little for the Laender overall and most
+for the small Laender. OLS and structural weights, which move Bremen and
+Saarland most, make their forecasts less accurate (CRPS 0.144 and 0.139
+against 0.133) and wider (95% coverage of the Laender 0.87 and 0.84).
+Bottom-up and WLS keep the accuracy of the separate models. MinT gives the
+narrowest intervals and the lowest coverage at both levels (0.78 and 0.67).
+Every reconciliation covers the aggregates less often than the separate
+models of the aggregates (0.78), as in the vignette "Coherent forecasts:
+what reconciliation changes" on the ONS data. The pooled model and the
+ensemble of the first backtest, aggregated bottom-up, are more accurate
+and better calibrated than any reconciliation of separate Lee-Carter
+models: on these data, the choice of the model matters more than the
+choice of the reconciliation method.
+
 ## Causes of death at ages 50 and over
 
 **Cause groups.** Deaths by ICD-10 chapter are sparse in small Laender.
@@ -333,8 +454,8 @@ Germany by cause are better determined than the levels.
 | Period | 1998-2019, before the pandemic | `mt_subset(periods = )` |
 | Age groups | age groups of the deaths; causes from 50 | `mt_regroup(age = "deaths")`, `mt_subset(ages = )` |
 | Suppressed cells | raking to Land and national totals | `mt_fill_suppressed()` |
-| Aggregation layers | East and West; cause groups and rest | `mt_hierarchy(groups = )`, `mt_group_levels()` |
-| Shared exposures | causes share the population of their Land | `mt_hierarchy(cause = list(additive = "rates"))` |
+| Aggregation layers | East and West; cause groups and rest | `mt_hierarchy(region = list(total = , groups = ))`, `mt_group_levels()` |
+| Shared exposures | causes share the population of their Land | `mt_hierarchy(cause = list(total = "all", additive = "rates"))` |
 | Sparse cells | pooling and Whittaker smoothing | `li_lee(common_by = )`, `step_smooth()` |
 | Coherence | bottom-up sums of a joint model | `reconciled()` |
 | Calibration | ensemble with noise-robust random walks | `ensemble()`, `rwd(observation_noise = TRUE)` |

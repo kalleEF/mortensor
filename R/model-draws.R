@@ -24,9 +24,16 @@ new_mt_draws <- function(rates, age, periods, strata, model, origin, fit = NULL,
                           draw = NULL)
   structure(list(rates = rates, age = age, periods = periods, strata = strata, model = model, origin = origin,
                  seed = seed, observed = fit$observed, observed_periods = fit$periods,
-                 train_D = fit$train_D, train_E = fit$train_E,
+                 fitted = draws_fitted(fit), train_D = fit$train_D, train_E = fit$train_E,
                  exposure_last = fit$exposure_last, diagnostics = fit$diagnostics, spec = fit$spec),
             class = "mt_draws")
+}
+
+# Fitted rates of the training years (for plots), NULL if the model has none
+draws_fitted <- function(fit) {
+  if (!inherits(fit, "mt_fit") || is.null(fit$train_D)) return(NULL)
+  f <- tryCatch(stats::fitted(fit), error = function(e) NULL)
+  if (is.null(f) || all(is.na(f))) NULL else f
 }
 
 #' @export

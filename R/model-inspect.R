@@ -30,6 +30,19 @@
 mt_parameters <- function(fit) {
   check_class(fit, "mt_fit", "fit")
   sp <- fit$spec
+  # wrappers that keep the fit of their base model
+  while (inherits(sp, c("mt_spec_calibrated", "mt_spec_reconciled", "mt_spec_bootstrap"))) sp <- sp$params$base
+  out <- base_parameters(fit, sp)
+  cal <- fit$calibration
+  if (!is.null(cal)) {
+    out <- rbind(out, data.table(stratum = rep(paste("calibration:", cal$group), 3),
+                                 parameter = rep(c("scale_h1", "slope", "drift"), each = nrow(cal)), index = "",
+                                 value = c(cal$scale_h1, cal$slope, cal$drift)), fill = TRUE)
+  }
+  out
+}
+
+base_parameters <- function(fit, sp) {
   lab <- fit$strata$label
   ages <- fit$age$labels
   yrs <- as.character(fit$periods)
@@ -124,12 +137,27 @@ NULL
 fitted.mt_fit <- function(object, ...) {
   d <- dim(object$train_D)
   out <- array(NA_real_, d, dimnames(object$train_D))
-  if (isTRUE(object$spec$joint)) {
-    if (!is.null(object$fits$fitted)) out[] <- object$fits$fitted
-  } else {
-    for (s in seq_len(d[3])) {
-      f <- object$fits[[s]]$fitted
-      if (!is.null(f)) out[, , s] <- f
+  if (inherits(object, "mt_fit_ensemble")) {
+    # weighted geometric mean of the components' fitted rates
+    acc <- array(0, d)
+    ws <- array(0, d)
+    for (n in names(object$components)) {
+      f <- tryCatch(stats::fitted(object$components[[n]]), error = function(e) NULL)
+      if (is.null(f) || !identical(dim(f), d)) next
+      ok <- !is.na(f) & f > 0
+      acc[ok] <- acc[ok] + object$weights[[n]] * log(f[ok])
+      ws[ok] <- ws[ok] + object$weights[[n]]
+    }
+    out[ws > 0] <- exp(acc[ws > 0] / ws[ws > 0])
+    return(out)
+  }
+  fits <- object$fits
+  if (is.list(fits) && "fitted" %in% names(fits)) {
+    if (identical(dim(fits$fitted), d)) out[] <- fits$fitted
+  } else if (is.list(fits)) {
+    for (s in seq_len(min(length(fits), d[3]))) {
+      f <- if (is.list(fits[[s]])) fits[[s]]$fitted
+      if (!is.null(f) && length(f) == d[1] * d[2]) out[, , s] <- f
     }
   }
   out
@@ -140,7 +168,7 @@ fitted.mt_fit <- function(object, ...) {
 residuals.mt_fit <- function(object, type = c("deviance", "pearson"), ...) {
   type <- match.arg(type)
   m <- stats::fitted(object)
-  D <- object$train_D
+  D <- object$raw_D %||% object$train_D
   mu <- m * object$train_E
   r <- if (type == "pearson") {
     (D - mu) / sqrt(mu)
@@ -164,7 +192,8 @@ summary.mt_fit <- function(object, ...) {
                  prep = object$prep, diagnostics = object$diagnostics,
                  deviance = if (!is.null(res) && nrow(res)) sum(res$residual^2) else NA_real_,
                  cells = if (!is.null(res)) nrow(res) else NA_integer_,
-                 large_residuals = if (!is.null(res) && nrow(res)) mean(abs(res$residual) > 2) else NA_real_),
+                 large_residuals = if (!is.null(res) && nrow(res)) mean(abs(res$residual) > 2) else NA_real_,
+                 calibration = object$calibration),
             class = "summary.mt_fit")
 }
 
@@ -182,6 +211,12 @@ print.summary.mt_fit <- function(x, ...) {
   if (is.finite(x$deviance)) {
     cat(sprintf(paste("  fit: Poisson deviance %.1f on %d cells (%.2f per cell); %.1f%% of deviance residuals",
                       "beyond +/-2\n"), x$deviance, x$cells, x$deviance / x$cells, 100 * x$large_residuals))
+  }
+  if (!is.null(x$calibration)) {
+    cal <- x$calibration
+    cat(sprintf(paste("  calibration (%s): spread factor %.2f at horizon 1, x h^%.2f; drift %+.4f; inner CRPS",
+                      "%.4f -> %.4f, 95%% coverage %.2f -> %.2f\n"), cal$group, cal$scale_h1, cal$slope, cal$drift,
+                cal$crps_before, cal$crps_after, cal$cov95_before, cal$cov95_after), sep = "")
   }
   bad <- x$diagnostics[status != "ok" | nzchar(message)]
   if (nrow(bad)) {
@@ -221,12 +256,18 @@ model_assumptions <- function(spec) {
            "a, b and phi are fixed."),
          mt_spec_apc_bayes = paste(
            "Bayesian age-period-cohort model (bamp; Schmid and Held 2007): logit rate = age + period + cohort",
-           "effects with random-walk priors, binomial likelihood. Draws are posterior predictive samples and",
-           "include parameter uncertainty."),
+           "effects with random-walk priors, binomial likelihood, each stratum fitted separately. Draws are",
+           "posterior samples of the rates (parameters and random walks of period and cohort effects);",
+           "predictive draws add Poisson and extra-Poisson noise."),
          mt_spec_ensemble = paste("Mixture of the component models: each draw comes from one component, chosen in",
                                   "proportion to the weights; uncertainty of the components and their spread."),
          mt_spec_reconciled = paste("Base model reconciled draw by draw over the hierarchy;", spec$params$method,
                                     "projection on the deaths (or rates) scale."),
+         mt_spec_calibrated = paste(model_assumptions(p$base), sprintf(paste(
+           "Calibrated: the spread%s of the draws is rescaled to minimise the %s of forecasts from %d origins in",
+           "the last %d training years."), if (p$bias) " and drift" else "",
+           if (identical(p$target, "interval")) sprintf("%g%% interval score", 100 * p$level) else "CRPS",
+           p$n_origins, p$years)),
          paste(spec$label, "- see the help page of its constructor for the model and its uncertainty."))
 }
 
@@ -258,7 +299,8 @@ mt_plot_residuals <- function(fit, strata = NULL, type = c("deviance", "pearson"
                                   name = paste(type, "residual")) +
     ggplot2::scale_y_continuous(breaks = seq_along(fit$age$labels), labels = fit$age$labels) +
     ggplot2::facet_wrap(~stratum) +
-    ggplot2::labs(x = "Period", y = "Age")
+    ggplot2::labs(x = "Period", y = "Age") +
+    theme_mortensor(legend = "right")
 }
 
 # Check stratum labels for plots and list the available ones

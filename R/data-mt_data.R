@@ -467,7 +467,7 @@ interval_label <- function(lo, hi) {
 #' exact, see [mt_set_grid()]), `mt_obs()` one observation table.
 #'
 #' @param data An [mt_data] object (for `mt_strata()` also an [mt_draws]
-#'   object or a backtest).
+#'   object).
 #' @param hierarchy Optional [mt_hierarchy()] for the `level` column.
 #' @param measure One of `"deaths"`, `"exposure"`, `"population"`.
 #' @return A `data.table` or, for `mt_grid()`, a list with `age` and `period`

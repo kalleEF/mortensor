@@ -13,7 +13,8 @@ mt_tune(
   inner_origins = 3,
   inner_h = 5,
   metric = "crps",
-  n_draws = 100
+  n_draws = 100,
+  strategy = c("full", "two_stage")
 )
 
 tuned(
@@ -23,7 +24,8 @@ tuned(
   inner_h = 5,
   metric = "crps",
   n_draws = 100,
-  label = "Tuned model"
+  label = "Tuned model",
+  strategy = c("full", "two_stage")
 )
 }
 \arguments{
@@ -46,6 +48,12 @@ arguments of \code{spec_fun}).}
 \code{"mae"}, \code{"mase"}).}
 
 \item{n_draws}{Draws per inner forecast.}
+
+\item{strategy}{\code{"full"} evaluates every row of \code{grid}; \code{"two_stage"}
+first evaluates a coarse grid (every second value of each column,
+including the first and the last) and then the rows of \code{grid} within one
+step of the best coarse combination in every column. For large grids,
+such as Tucker ranks, this needs far fewer fits.}
 
 \item{label}{Display name.}
 }

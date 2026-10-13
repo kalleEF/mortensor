@@ -4,6 +4,11 @@
 #'
 #' * deaths with zero exposure in the same cell (error);
 #' * central death rates above 1 below age 100 (warning);
+#' * missing values (warning);
+#' * strata without any value of a measure, for example without deaths
+#'   (warning);
+#' * levels that look like totals of other levels of the same variable, for
+#'   example `"Insgesamt"` or `"all"` among the regions (warning);
 #' * zero exposures (info);
 #' * grid cells without deaths or exposures (info);
 #' * hierarchy sums, when `hierarchy` is given ([mt_hierarchy()]): every

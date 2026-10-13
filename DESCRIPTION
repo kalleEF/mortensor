@@ -12,6 +12,8 @@ Description: Tools to combine mortality and population data observed at
     tensor (Tucker3) models, Bayesian age-period-cohort models through the
     'bamp' package, ensembles, honest rolling-origin backtests with proper
     scoring rules, and life tables computed from simulated paths.
+    Experimental software written largely with AI coding assistants
+    ("vibe-coded"); use at your own risk and check results independently.
 License: GPL-3
 URL: https://github.com/kalleEF/mortensor
 BugReports: https://github.com/kalleEF/mortensor/issues
@@ -25,11 +27,13 @@ Imports:
     utils
 Suggests:
     bamp (>= 3.0.0),
+    DemoDecomp,
     demography,
     forecast,
     ggplot2,
     HMDHFDplus,
     knitr,
+    LEdecomp,
     mgcv,
     readxl,
     rmarkdown,

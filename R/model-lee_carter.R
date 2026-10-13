@@ -6,8 +6,21 @@
 #' * `method = "poisson"`: Poisson log-bilinear model (Brouhns, Denuit and
 #'   Vermunt 2002), maximum likelihood by Newton updates;
 #' * `method = "svd"`: original method (Lee and Carter 1992): singular value
-#'   decomposition of centred log rates, with `k[t]` re-estimated so that the
-#'   fitted deaths match the observed total deaths of each year.
+#'   decomposition of centred log rates, with `k[t]` re-estimated in a
+#'   second stage (`adjust`, as in `demography::lca()`): so that the fitted
+#'   deaths match the observed total deaths of each year (`"dt"`, Lee and
+#'   Carter 1992), by Poisson maximum likelihood of the deaths by age given
+#'   `a` and `b` (`"dxt"`, Booth, Maindonald and Smith 2002), so that the
+#'   fitted life expectancy at the first age matches the observed one
+#'   (`"e0"`, Lee and Miller 2001), or not at all (`"none"`).
+#'
+#' `choose_period = TRUE` fits the model to the last years only, starting in
+#' the year that minimises the ratio of the mean deviance of a fit with a
+#' linear `k[t]` to the mean deviance of the Lee-Carter fit (Booth,
+#' Maindonald and Smith 2002): the longest recent period over which the
+#' decline was close to linear (`demography::lca(chooseperiod = TRUE,
+#' breakmethod = "bms")` gives the same period). Fitted rates of earlier
+#' years are missing.
 #'
 #' The period index follows a random walk with drift. Draws include the
 #' innovations and the uncertainty of the drift. With `bootstrap = TRUE` the
@@ -16,6 +29,12 @@
 #' uncertainty of `a` and `b`.
 #'
 #' @param method `"poisson"` or `"svd"`.
+#' @param adjust Re-estimation of `k[t]` for `method = "svd"`: `"dt"`,
+#'   `"dxt"`, `"e0"` or `"none"`.
+#' @param choose_period Choose the fitting period (Booth, Maindonald and
+#'   Smith 2002).
+#' @param min_years `choose_period` considers fitting periods of more than
+#'   `min_years` years (`minperiod` of `demography::lca()`).
 #' @param jump_off `"fitted"` (forecasts start from the fitted rates of the
 #'   last year) or `"observed"` (from the observed rates of the last year).
 #' @param bootstrap Semi-parametric bootstrap of the parameters.
@@ -30,6 +49,14 @@
 #' Mathematics and Economics* 31(3): 373-393.
 #' \doi{10.1016/S0167-6687(02)00185-3}
 #'
+#' Booth H, Maindonald J, Smith L (2002). Applying Lee-Carter under
+#' conditions of variable mortality decline. *Population Studies* 56(3):
+#' 325-336. \doi{10.1080/00324720215935}
+#'
+#' Lee R, Miller T (2001). Evaluating the performance of the Lee-Carter
+#' method for forecasting mortality. *Demography* 38(4): 537-549.
+#' \doi{10.1353/dem.2001.0036}
+#'
 #' Brouhns N, Denuit M, Van Keilegom I (2005). Bootstrapping the Poisson
 #' log-bilinear model for mortality forecasting. *Scandinavian Actuarial
 #' Journal* 2005(3): 212-224.
@@ -39,12 +66,18 @@
 #' fc <- mt_forecast(fit, h = 10, n_draws = 200, seed = 1)
 #' @export
 lee_carter <- function(method = c("poisson", "svd"), jump_off = c("fitted", "observed"), bootstrap = FALSE,
-                       n_boot = 100) {
+                       n_boot = 100, adjust = c("dt", "dxt", "e0", "none"), choose_period = FALSE,
+                       min_years = 20) {
   method <- match.arg(method)
   jump_off <- match.arg(jump_off)
-  new_mt_spec("lee_carter", list(method = method, jump_off = jump_off, bootstrap = bootstrap, n_boot = n_boot),
-              min_periods = 5,
-              label = paste0("Lee-Carter", if (method == "svd") " (SVD)" else "",
+  adjust <- match.arg(adjust)
+  check_flag(choose_period, "choose_period")
+  check_number(min_years, "min_years", lower = 5, integerish = TRUE)
+  new_mt_spec("lee_carter", list(method = method, jump_off = jump_off, bootstrap = bootstrap, n_boot = n_boot,
+                                 adjust = adjust, choose_period = choose_period, min_years = min_years),
+              min_periods = if (choose_period) min_years else 5,
+              label = paste0("Lee-Carter", if (method == "svd") sprintf(" (SVD, %s)", adjust) else "",
+                             if (choose_period) ", chosen period" else "",
                              if (jump_off == "observed") ", observed jump-off" else "",
                              if (bootstrap) ", bootstrap" else ""))
 }
@@ -58,7 +91,7 @@ fit_model.mt_spec_lee_carter <- function(spec, D, E, ages, periods, ...) {
   # Poisson estimates, or SVD estimates where the Poisson likelihood has no
   # finite maximum (very sparse counts)
   est_one <- function(D, E) {
-    if (p$method == "svd") return(lc_svd(D, E))
+    if (p$method == "svd") return(lc_svd(D, E, adjust = p$adjust %||% "dt", ages = ages))
     tryCatch(lc_poisson(D, E), mt_error_model_fit = function(e) {
       fallback <<- TRUE
       tryCatch(lc_poisson(D, E, ridge = 1), mt_error_model_fit = function(e) lc_svd(D, E))
@@ -77,6 +110,15 @@ fit_model.mt_spec_lee_carter <- function(spec, D, E, ages, periods, ...) {
     e$b <- b
     e
   }
+  first <- 1L
+  if (isTRUE(p$choose_period)) {
+    first <- bms_start(D, E, est_one, p$min_years)
+    D_all <- D
+    E_all <- E
+    D <- D[, first:ncol(D), drop = FALSE]
+    E <- E[, first:ncol(E), drop = FALSE]
+    zero <- rowSums(D) == 0
+  }
   est <- fit_lc(D, E)
   if (any(zero)) {
     mt_warn(sprintf(paste("No deaths in age group(s) %s in the training years: constant rate (0.5 deaths in all",
@@ -88,6 +130,13 @@ fit_model.mt_spec_lee_carter <- function(spec, D, E, ages, periods, ...) {
   }
   est$last_log_rate <- log_rates(D[, ncol(D)], E[, ncol(E)])
   est$fitted <- exp(est$a + outer(est$b, est$k))
+  if (first > 1L) {
+    # fitted rates only for the chosen period
+    est$fitted <- cbind(matrix(NA_real_, nrow(D), first - 1L), est$fitted)
+    est$first_year <- periods[first]
+    D <- D_all
+    E <- E_all
+  }
   est$jump_off <- p$jump_off
   if (isTRUE(p$bootstrap)) {
     fitted <- E * est$fitted
@@ -131,7 +180,7 @@ lc_finish <- function(a, b, k) {
   list(a = a, b = b, k = k, dk = dk, drift = drift, sigma_k = sqrt(sum((dk - drift)^2) / max(length(dk) - 1, 1)))
 }
 
-lc_svd <- function(D, E) {
+lc_svd <- function(D, E, adjust = "dt", ages = NULL) {
   y <- log_rates(D, E)
   a <- rowMeans(y)
   s <- svd(y - a, nu = 1, nv = 1)
@@ -141,11 +190,30 @@ lc_svd <- function(D, E) {
     b <- -b
     k <- -k
   }
-  # second stage: refit k so that fitted total deaths equal observed deaths
+  # second stage: re-estimate k (Lee and Carter: total deaths; Booth et al.:
+  # deaths by age; Lee and Miller: life expectancy)
+  if (adjust == "e0" && is.null(ages)) adjust <- "dt"
+  if (adjust == "e0") e_obs <- life_expectancy(array(pmax(D, 0.5) / E, c(nrow(D), ncol(D), 1)), ages)[, 1]
   for (t in seq_len(ncol(D))) {
-    f <- function(kt) sum(E[, t] * exp(a + b * kt)) - sum(D[, t])
+    if (adjust == "none") break
+    if (adjust == "dxt") {
+      kt <- k[t]
+      for (it in 1:50) {
+        mu <- E[, t] * exp(a + b * kt)
+        step <- sum((D[, t] - mu) * b) / sum(mu * b^2)
+        kt <- kt + step
+        if (abs(step) < 1e-10) break
+      }
+      if (is.finite(kt)) k[t] <- kt
+      next
+    }
+    f <- if (adjust == "dt") {
+      function(kt) sum(E[, t] * exp(a + b * kt)) - sum(D[, t])
+    } else {
+      function(kt) life_expectancy(array(exp(a + b * kt), c(nrow(D), 1, 1)), ages)[1, 1] - e_obs[t]
+    }
     rng <- k[t] + c(-1, 1) * (10 + 10 * abs(k[t]))
-    k[t] <- tryCatch(stats::uniroot(f, rng, extendInt = "yes", tol = 1e-12)$root, error = function(e) k[t])
+    k[t] <- tryCatch(stats::uniroot(f, rng, extendInt = "yes", tol = 1e-10)$root, error = function(e) k[t])
   }
   out <- lc_finish(a, b, k)
   out$method <- "svd"
@@ -182,4 +250,28 @@ lc_poisson <- function(D, E, init = NULL, maxit = 500, tol = 1e-8, ridge = 0) {
   out$loglik <- ll
   out$iterations <- it
   out
+}
+
+# First year of the fitting period with the smallest ratio of the mean
+# deviance of a linear-k fit to the mean deviance of the Lee-Carter fit
+# (Booth, Maindonald and Smith 2002)
+bms_start <- function(D, E, est_one, min_years) {
+  nt <- ncol(D)
+  na <- nrow(D)
+  if (nt <= min_years + 1) return(1L)
+  starts <- seq_len(nt - min_years)
+  ratio <- vapply(starts, function(s) {
+    cols <- s:nt
+    Ds <- D[, cols, drop = FALSE]
+    Es <- E[, cols, drop = FALSE]
+    est <- tryCatch(est_one(Ds, Es), error = function(e) NULL)
+    if (is.null(est)) return(Inf)
+    n <- length(cols)
+    # linear k through its mean with the mean annual change as slope
+    klin <- mean(est$k) + mean(diff(est$k)) * (seq_len(n) - (n + 1) / 2)
+    dev_base <- poisson_dev(Ds, Es * exp(est$a + outer(est$b, est$k)))
+    dev_lin <- poisson_dev(Ds, Es * exp(est$a + outer(est$b, klin)))
+    (dev_lin / (na * (n - 2))) / (dev_base / ((na - 1) * (n - 2)))
+  }, 0)
+  starts[which.min(ratio)]
 }

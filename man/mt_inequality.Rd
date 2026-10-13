@@ -44,8 +44,8 @@ fitted values at the top (rank 1) and the bottom (rank 0) of the
 population, the relative index of inequality (RII) their ratio. The
 relative rank of a level is the midpoint of its cumulative population
 share, with the levels ordered as in \code{order}. Computed path by path, with
-the population shares of the exposures (the last observed year for
-forecasts).
+the population shares of the exposures of each year for observed rates
+and of the last observed year for forecasts.
 }
 \examples{
 x <- mt_example_regions(years = 2010:2019, regions = 2)

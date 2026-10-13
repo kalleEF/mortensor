@@ -56,6 +56,11 @@
 #'   penalty.
 #' @param lambda_range Search range for the smoothing parameters.
 #' @param preserve_totals Rescale estimates to observed group totals.
+#' @param tail,tail_width For `method = "gam"`: the parametric curve that
+#'   takes over from the GAM above the start of the last age group
+#'   (`"kannisto"`, logistic, or `"gompertz"`, log-linear), fitted to the GAM
+#'   rates from age 70, and the width (years) of the logistic blend between
+#'   the two.
 #' @return An `mt_data` object with deaths (and exposures) on the grid.
 #'   Diagnostics per fit are attached as attribute `"ungroup"`: smoothing
 #'   parameters, effective dimension, the largest relative difference between
@@ -79,9 +84,12 @@ mt_ungroup <- function(data, age = NULL, dims = 1,
                        exposure_method = c("pclm", "monotone"),
                        lambda = NULL,
                        criterion = c("bic", "aic"), kr = 2, deg = 3, pord = 2,
-                       lambda_range = c(1e-2, 1e8), preserve_totals = TRUE) {
+                       lambda_range = c(1e-2, 1e8), preserve_totals = TRUE, tail = c("kannisto", "gompertz"),
+                       tail_width = 2) {
   check_class(data, "mt_data", "data")
   method <- match.arg(method)
+  tail <- match.arg(tail)
+  check_number(tail_width, "tail_width", lower = 0.1)
   exposure_method <- match.arg(exposure_method)
   criterion <- match.arg(criterion)
   check_number(dims, "dims", lower = 1, upper = 2, integerish = TRUE)
@@ -108,7 +116,7 @@ mt_ungroup <- function(data, age = NULL, dims = 1,
       if (is.null(E) || needs_ungroup(E, g)) {
         mt_abort(sprintf("method = \"%s\" needs exposures on the grid.", method), class = "ungroup")
       }
-      res <- list(obs = ungroup_rates_spline(data$obs$deaths, E, g, data$omega, method),
+      res <- list(obs = ungroup_rates_spline(data$obs$deaths, E, g, data$omega, method, tail, tail_width),
                   diag = data.table(measure = "deaths", stratum = NA_integer_, period = "all", method = method))
     } else if (!is.null(E) && !needs_ungroup(E, g)) {
       res <- ungroup_rates(data$obs$deaths, E, g, data$omega, ctl, dims)

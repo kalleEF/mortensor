@@ -27,24 +27,29 @@
 #'
 #' A mixture is wider than its components when they disagree. In backtests
 #' on HMD data (England & Wales, France) and on the ONS deprivation data,
-#' Lee-Carter alone was too narrow (95% coverage 0.70 to 0.84), while an
+#' Lee-Carter alone was too narrow (95% coverage 0.79 to 0.81), while an
 #' equal-weight mixture of `lee_carter()` and `rwd()` had 95% coverage of
-#' 0.94 to 0.98 and the best or second-best CRPS (see the vignette
-#' "Comparison with demography, bamp and StMoMo"). In populations with few
+#' 0.92 to 0.98; its CRPS ranked second (France), third (England & Wales)
+#' and fifth of eight (ONS), close to the best model in each case (see the
+#' vignette "Comparison with demography, bamp and StMoMo"). In populations with few
 #' deaths per cell, use `rwd(observation_noise = TRUE)` as the random-walk
 #' component: the plain random walk accumulates the Poisson noise of
 #' observed rates and its long-horizon paths become implausible.
 #'
 #' @param ... Model specifications; names are used as labels.
 #' @param weights `"equal"`, `"crps"`, `"stack"` or a numeric vector.
-#' @param inner_origins,inner_h Inner backtest for `weights = "crps"`.
+#' @param inner_origins,inner_h Inner backtest for `weights = "crps"` and
+#'   `weights = "stack"`, and for `top_k`.
+#' @param top_k Keep only the `top_k` components with the lowest CRPS in the
+#'   inner backtest on the training years (the others get weight 0); `NULL`
+#'   keeps all.
 #' @return A model specification.
 #' @examples
 #' x <- mt_example(deaths = "single")
 #' ens <- ensemble(lc = lee_carter(), rw = rwd())
 #' fc <- mt_forecast(mt_fit(ens, x), h = 5, n_draws = 100, seed = 1)
 #' @export
-ensemble <- function(..., weights = "equal", inner_origins = 3, inner_h = 5) {
+ensemble <- function(..., weights = "equal", inner_origins = 3, inner_h = 5, top_k = NULL) {
   comps <- list(...)
   if (!length(comps) || !all(vapply(comps, inherits, logical(1), what = "mt_spec"))) {
     mt_abort("ensemble() needs model specifications.", class = "argument")
@@ -57,8 +62,9 @@ ensemble <- function(..., weights = "equal", inner_origins = 3, inner_h = 5) {
   } else {
     check_choice(weights, c("equal", "crps", "stack"), "weights")
   }
+  if (!is.null(top_k)) check_number(top_k, "top_k", lower = 1, upper = length(comps), integerish = TRUE)
   sp <- new_mt_spec("ensemble", list(components = comps, weights = weights, inner_origins = inner_origins,
-                                     inner_h = inner_h),
+                                     inner_h = inner_h, top_k = top_k),
                     min_periods = max(vapply(comps, `[[`, 0, "min_periods")),
                     label = sprintf("Ensemble (%s)", paste(names(comps), collapse = ", ")))
   sp
@@ -72,14 +78,23 @@ mt_fit.mt_spec_ensemble <- function(spec, data, prep = NULL, cores = 1, ...) {
   })
   ok <- !vapply(fits, inherits, logical(1), what = "error")
   if (!any(ok)) mt_abort("Every ensemble component failed.", class = "model_fit")
+  inner <- NULL
+  if (!is.numeric(p$weights) && p$weights != "equal" || !is.null(p$top_k)) {
+    inner <- ensemble_inner_backtests(p, data, prep)
+  }
   w <- if (is.numeric(p$weights)) {
     p$weights
   } else if (p$weights == "equal") {
     rep(1, length(fits))
   } else {
-    ensemble_inner_weights(p, data, prep)
+    ensemble_inner_weights(p, inner)
+  }
+  if (!is.null(p$top_k) && !is.null(inner)) {
+    crps <- vapply(inner, function(b) if (is.null(b)) Inf else mean(b$crps), 0)
+    w[rank(crps, ties.method = "first") > p$top_k] <- 0
   }
   w[!ok] <- 0
+  if (sum(w) == 0) w[ok] <- 1
   w <- w / sum(w)
   ref <- fits[[which(ok)[1]]]
   diag <- rbindlist(lapply(names(fits), function(n) {
@@ -101,13 +116,16 @@ mt_fit.mt_spec_ensemble <- function(spec, data, prep = NULL, cores = 1, ...) {
   out
 }
 
-ensemble_inner_weights <- function(p, data, prep) {
+ensemble_inner_backtests <- function(p, data, prep) {
   last <- max(mt_grid(data)$period$lower)
   origins <- seq(last - p$inner_origins - p$inner_h + 1, last - p$inner_h)
-  bts <- lapply(p$components, function(cs) {
+  lapply(p$components, function(cs) {
     suppressWarnings(tryCatch(mt_backtest(cs, data, origins = origins, h = p$inner_h, prep = prep, n_draws = 100),
                               error = function(e) NULL))
   })
+}
+
+ensemble_inner_weights <- function(p, bts) {
   ok <- !vapply(bts, is.null, logical(1))
   if (!any(ok)) return(rep(1, length(bts)))
   if (p$weights == "crps") {
@@ -162,11 +180,13 @@ mt_forecast.mt_fit_ensemble <- function(fit, h = 10, to = NULL, n_draws = 500, s
         sample(seq_along(ws), length(j), replace = TRUE, prob = ws / sum(ws))
       for (k in unique(alt)) arr[, , s, j[alt == k]] <- comp_draws[[k]][, , s, j[alt == k]]
     }
-    arr
+    list(arr = arr, pick = pick)
   })
-  res <- new_mt_draws(out, fit$age, last + seq_len(h), fit$strata, model = fit$spec$label, origin = last,
+  res <- new_mt_draws(out$arr, fit$age, last + seq_len(h), fit$strata, model = fit$spec$label, origin = last,
                       fit = fit, seed = seed)
   res$predictive <- predictive
   res$weights <- w
+  # component of each draw (strata where it failed use another component)
+  res$component <- out$pick
   res
 }

@@ -17,7 +17,7 @@ mt_grid(data)
 }
 \arguments{
 \item{data}{An \link{mt_data} object (for \code{mt_strata()} also an \link{mt_draws}
-object or a backtest).}
+object).}
 
 \item{hierarchy}{Optional \code{\link[=mt_hierarchy]{mt_hierarchy()}} for the \code{level} column.}
 

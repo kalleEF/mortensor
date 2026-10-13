@@ -86,6 +86,26 @@ mt_prep_apply <- function(prep, data) {
   data
 }
 
+# The preprocessed data and, when the pipeline smooths, the same data
+# without the smoothing steps (raw rates on the modelling grid): models are
+# fitted to the smoothed rates, observation noise and residuals come from
+# the raw rates
+mt_prep_apply_raw <- function(prep, data) {
+  if (is.null(prep)) return(list(data = data, raw = NULL))
+  check_class(prep, "mt_prep", "prep")
+  raw <- NULL
+  for (st in prep$steps) {
+    if (st$type == "smooth") {
+      if (is.null(raw)) raw <- data
+      data <- apply_step(st, data)
+    } else {
+      data <- apply_step(st, data)
+      if (!is.null(raw)) raw <- apply_step(st, raw)
+    }
+  }
+  list(data = data, raw = raw)
+}
+
 apply_step <- function(step, data) {
   a <- step$args
   switch(step$type,

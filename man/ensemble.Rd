@@ -4,14 +4,19 @@
 \alias{ensemble}
 \title{Ensembles of models}
 \usage{
-ensemble(..., weights = "equal", inner_origins = 3, inner_h = 5)
+ensemble(..., weights = "equal", inner_origins = 3, inner_h = 5, top_k = NULL)
 }
 \arguments{
 \item{...}{Model specifications; names are used as labels.}
 
 \item{weights}{\code{"equal"}, \code{"crps"}, \code{"stack"} or a numeric vector.}
 
-\item{inner_origins, inner_h}{Inner backtest for \code{weights = "crps"}.}
+\item{inner_origins, inner_h}{Inner backtest for \code{weights = "crps"} and
+\code{weights = "stack"}, and for \code{top_k}.}
+
+\item{top_k}{Keep only the \code{top_k} components with the lowest CRPS in the
+inner backtest on the training years (the others get weight 0); \code{NULL}
+keeps all.}
 }
 \value{
 A model specification.
@@ -46,10 +51,11 @@ and reconciled models, and other ensembles.
 
 A mixture is wider than its components when they disagree. In backtests
 on HMD data (England & Wales, France) and on the ONS deprivation data,
-Lee-Carter alone was too narrow (95\% coverage 0.70 to 0.84), while an
+Lee-Carter alone was too narrow (95\% coverage 0.79 to 0.81), while an
 equal-weight mixture of \code{lee_carter()} and \code{rwd()} had 95\% coverage of
-0.94 to 0.98 and the best or second-best CRPS (see the vignette
-"Comparison with demography, bamp and StMoMo"). In populations with few
+0.92 to 0.98; its CRPS ranked second (France), third (England & Wales)
+and fifth of eight (ONS), close to the best model in each case (see the
+vignette "Comparison with demography, bamp and StMoMo"). In populations with few
 deaths per cell, use \code{rwd(observation_noise = TRUE)} as the random-walk
 component: the plain random walk accumulates the Poisson noise of
 observed rates and its long-horizon paths become implausible.

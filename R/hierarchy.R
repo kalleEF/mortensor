@@ -243,9 +243,12 @@ mt_aggregate_strata <- function(data, hierarchy, replace = FALSE) {
 #' * `"ols"`: identity;
 #' * `"bottom_up"`: aggregates are the sums of the bottom forecasts.
 #'
-#' Negative reconciled bottom values are set to zero and the aggregates are
-#' recomputed from the bottom series, so the result is coherent and
-#' non-negative.
+#' Projections can make bottom values negative where the base forecasts
+#' disagree strongly. Such values are held at zero and the remaining bottom
+#' strata of the draw are projected again, until none is negative (a simple
+#' form of the non-negative reconciliation of Wickramasuriya et al. 2020);
+#' the aggregates are recomputed from the bottom series, so the result is
+#' coherent and non-negative, and fixed nodes are kept.
 #'
 #' Draws of strata forecast by separate models are independent, so their sums
 #' would be too narrow. With `dependence = "empirical"` (default), the paths
@@ -273,16 +276,27 @@ mt_aggregate_strata <- function(data, hierarchy, replace = FALSE) {
 #'   used; aggregates are summed.
 #' @param dependence `"empirical"` or `"none"` (keep the draws as they are).
 #' @param seed Random seed for the reordering.
+#' @param fixed Strata whose forecasts are kept unchanged (labels, or
+#'   `"total"` for the grand total of the hierarchy), for example a trusted
+#'   all-cause forecast that the causes must add up to. The projection gives
+#'   these nodes zero variance, so the other strata absorb the whole gap;
+#'   `$reconciliation$max_relative_change_fixed` reports how closely they
+#'   were kept (they move only when every bottom stratum below them would
+#'   have to be negative). Needs a projection method.
 #' @param var,total,parts One-variable form: stratum variable and its total
 #'   level (`parts` is ignored: all other levels are parts).
 #' @return The reconciled `mt_draws`, with diagnostics in `$reconciliation`
 #'   (method, largest relative gap before reconciliation, share of bottom
-#'   values set to zero, mean shrinkage intensity).
+#'   values held at zero, mean shrinkage intensity).
 #' @references
 #' Wickramasuriya SL, Athanasopoulos G, Hyndman RJ (2019). Optimal forecast
 #' reconciliation for hierarchical and grouped time series through trace
 #' minimization. *Journal of the American Statistical Association*
 #' 114(526): 804-819. \doi{10.1080/01621459.2018.1448825}
+#'
+#' Wickramasuriya SL, Turlach BA, Hyndman RJ (2020). Optimal non-negative
+#' forecast reconciliation. *Statistics and Computing* 30: 1167-1182.
+#' \doi{10.1007/s11222-020-09930-0}
 #'
 #' Clark M, Gangopadhyay S, Hay L, Rajagopalan B, Wilby R (2004). The Schaake
 #' shuffle: a method for reconstructing space-time variability in forecasted
@@ -303,7 +317,7 @@ mt_aggregate_strata <- function(data, hierarchy, replace = FALSE) {
 #' @export
 mt_reconcile <- function(draws, hierarchy = NULL, method = c("wls", "mint", "structural", "ols", "bottom_up"),
                          shrink = "auto", exposure = NULL, dependence = c("empirical", "none"), seed = NULL,
-                         var = NULL, total = NULL, parts = NULL) {
+                         fixed = NULL, var = NULL, total = NULL, parts = NULL) {
   check_class(draws, "mt_draws", "draws")
   method <- match.arg(method)
   dependence <- match.arg(dependence)
@@ -322,18 +336,46 @@ mt_reconcile <- function(draws, hierarchy = NULL, method = c("wls", "mint", "str
   hs <- tryCatch(hierarchy_structure(draws$strata, h), mt_error_hierarchy = function(e) {
     mt_abort(conditionMessage(e), class = "argument")
   })
+  fixed_idx <- fixed_nodes(fixed, draws$strata, h, hs, method)
   arr <- draws$rates
   if (dependence == "empirical" && !is.null(draws$train_D)) {
-    arr <- with_seed(seed, copula_reorder(arr, draws$train_D, draws$train_E)$arr)
+    Dc <- if (!is.null(draws$observed)) draws$observed * draws$train_E else draws$train_D
+    arr <- with_seed(seed, copula_reorder(arr, Dc, draws$train_E)$arr)
   }
-  rec <- reconcile_array(arr, hs, h$additive, method, shrink, exposure %||% draws$exposure_last, dim(arr))
+  rec <- reconcile_array(arr, hs, h$additive, method, shrink, exposure %||% draws$exposure_last, dim(arr),
+                         fixed = fixed_idx)
   draws$rates <- rec$rates
   draws$reconciliation <- rec$info
   draws
 }
 
+# Indices of the strata whose forecasts are kept in reconciliation: labels,
+# or "total" for the grand total of the hierarchy
+fixed_nodes <- function(fixed, strata, h, hs, method) {
+  if (is.null(fixed) || !length(fixed)) return(integer())
+  if (method == "bottom_up") {
+    mt_abort("`fixed` needs a projection method (\"wls\", \"mint\", \"structural\" or \"ols\").",
+             class = "argument")
+  }
+  idx <- integer()
+  if ("total" %in% fixed) {
+    tot <- Reduce(`&`, lapply(names(h$vars), function(v) strata[[v]] == h$vars[[v]]$total))
+    idx <- which(tot)
+    if (!length(idx)) mt_abort("The strata hold no grand total of the hierarchy.", class = "argument")
+  }
+  lab <- setdiff(fixed, "total")
+  bad <- setdiff(lab, strata$label)
+  if (length(bad)) mt_abort(sprintf("Unknown stratum label(s) in `fixed`: %s.", paste(bad, collapse = ", ")),
+                            class = "argument")
+  idx <- union(idx, match(lab, strata$label))
+  if (all(hs$is_bottom[idx]) && length(idx) == sum(hs$is_bottom)) {
+    mt_abort("`fixed` cannot hold every bottom stratum.", class = "argument")
+  }
+  idx
+}
+
 # Core: arr [age, period, stratum, draw] of rates
-reconcile_array <- function(arr, hs, additive, method, shrink, exposure, d) {
+reconcile_array <- function(arr, hs, additive, method, shrink, exposure, d, fixed = integer()) {
   S <- hs$S
   b <- hs$bottom
   is_agg <- !hs$is_bottom
@@ -354,6 +396,7 @@ reconcile_array <- function(arr, hs, additive, method, shrink, exposure, d) {
     Ut[, b] <- -S[agg_rows, , drop = FALSE]
   }
   gap_before <- 0
+  fixed_change <- 0
   zero_share <- 0
   shrink_used <- numeric(0)
   out <- Y
@@ -367,24 +410,47 @@ reconcile_array <- function(arr, hs, additive, method, shrink, exposure, d) {
       Yb <- if (method == "bottom_up" || !length(agg_rows)) {
         Yc[, b, drop = FALSE]
       } else {
+        # diagonal weights as vectors, MinT as a matrix
         W <- switch(method,
-                    ols = diag(d[3]),
-                    structural = diag(rowSums(S), d[3]),
-                    wls = diag(pmax(apply(Yc, 2, stats::var), 1e-20), d[3]),
+                    ols = rep(1, d[3]),
+                    structural = rowSums(S),
+                    wls = pmax(apply(Yc, 2, stats::var), 1e-20),
                     mint = {
                       sh <- shrink_cov(Yc, shrink)
                       shrink_used <- c(shrink_used, sh$lambda)
                       sh$W
                     })
-        WU <- W %*% t(Ut)
-        M <- Ut %*% WU
-        rhs <- Ut %*% t(Yc)
-        lam <- tryCatch(solve(M, rhs), error = function(e) MASS_ginv(M) %*% rhs)
-        (Yc - t(WU %*% lam))[, b, drop = FALSE]
+        WU <- if (is.matrix(W)) W %*% t(Ut)
+        Yp <- project_rows(Yc, W, Ut, fixed, WU)[, b, drop = FALSE]
+        # non-negative: bottom values below zero are held at zero and the rest
+        # projected again, so that fixed nodes and aggregates are kept; draws
+        # with the same held strata are projected together
+        held <- matrix(FALSE, nrow(Yp), nb)
+        active <- which(rowSums(Yp < 0) > 0)
+        for (it in seq_len(nb)) {
+          if (!length(active)) break
+          held[active, ] <- held[active, , drop = FALSE] | Yp[active, , drop = FALSE] < 0
+          active <- active[rowSums(held[active, , drop = FALSE]) < nb]
+          key <- do.call(paste0, as.data.frame(held[active, , drop = FALSE] + 0L))
+          for (k in unique(key)) {
+            rr <- active[key == k]
+            hb <- b[held[rr[1], ]]
+            Yk <- Yc[rr, , drop = FALSE]
+            Yk[, hb] <- 0
+            Yp[rr, ] <- project_rows(Yk, W, Ut, union(fixed, hb), WU)[, b, drop = FALSE]
+          }
+          active <- active[rowSums(Yp[active, , drop = FALSE] < 0) > 0]
+        }
+        zero_share <- zero_share + sum(held)
+        Yp
       }
       zero_share <- zero_share + sum(Yb < 0)
       Yb <- pmax(Yb, 0)
       out[a, t, , ] <- t(Yb %*% t(S))
+      if (length(fixed)) {
+        y0 <- Y[a, t, fixed, ]
+        fixed_change <- max(fixed_change, max(abs(out[a, t, fixed, ] - y0) / pmax(abs(y0), 1e-12)))
+      }
     }
   }
   zero_share <- zero_share / (d[1] * d[2] * d[4] * nb)
@@ -392,7 +458,32 @@ reconcile_array <- function(arr, hs, additive, method, shrink, exposure, d) {
   rates <- pmax(rates, 1e-12)
   list(rates = rates, exposure = E,
        info = list(method = method, max_relative_gap_before = gap_before, share_set_to_zero = zero_share,
-                   mean_shrinkage = if (length(shrink_used)) mean(shrink_used) else NA_real_))
+                   mean_shrinkage = if (length(shrink_used)) mean(shrink_used) else NA_real_,
+                   max_relative_change_fixed = if (length(fixed)) fixed_change else NA_real_))
+}
+
+# Projection of the rows of Y (draws x strata) onto the coherent subspace with
+# weights W; nodes in `keep` get (almost) zero variance, so the projection
+# leaves them unchanged
+project_rows <- function(Y, W, Ut, keep = integer(), WU = NULL) {
+  Utt <- t(Ut)
+  if (!is.matrix(W)) {
+    # diagonal weights given as a vector
+    if (length(keep)) W[keep] <- 1e-10 * max(W)
+    WU <- W * Utt
+  } else {
+    # W with the rows and columns of `keep` set to zero and a tiny diagonal,
+    # updated from the full product W %*% t(Ut)
+    WU <- WU %||% (W %*% Utt)
+    if (length(keep)) {
+      WU <- WU - W[, keep, drop = FALSE] %*% Utt[keep, , drop = FALSE]
+      WU[keep, ] <- 1e-10 * max(diag(W)) * Utt[keep, , drop = FALSE]
+    }
+  }
+  M <- Ut %*% WU
+  rhs <- Ut %*% t(Y)
+  lam <- tryCatch(solve(M, rhs), error = function(e) MASS_ginv(M) %*% rhs)
+  Y - t(WU %*% lam)
 }
 
 # Reorder the predictive noise of each bottom stratum, cell by cell, along the
@@ -515,6 +606,15 @@ shrink_cov <- function(X, shrink = "auto") {
 #' as well: Poisson and extra-Poisson variation are drawn for the bottom
 #' strata only and the aggregates are their sums.
 #'
+#' On [mt_example_regions()] (4 regions, 90 strata, origins 2005 and 2008,
+#' h = 10), `li_lee(common_by = "sex")` with `method = "bottom_up"` was the
+#' most accurate coherent forecast (CRPS 0.0425 bottom, 0.0269 aggregates;
+#' 95% coverage 0.95), and Lee-Carter per stratum with `"wls"` reconciliation
+#' was calibrated (0.95-0.97) but less accurate (0.0477, 0.0292). On the ONS
+#' and German regional data, reconciliation changed the accuracy of the
+#' bottom strata little and lowered the coverage of the totals (see the
+#' vignette "Coherent forecasts: what reconciliation changes").
+#'
 #' @param spec Base model specification (fitted to all strata).
 #' @param hierarchy An [mt_hierarchy()].
 #' @param method,shrink See [mt_reconcile()].
@@ -525,12 +625,8 @@ shrink_cov <- function(X, shrink = "auto") {
 #'   order the paths before reconciliation and the predictive noise of the
 #'   bottom strata, so aggregates of predictive draws keep the observed
 #'   co-movement.
+#' @param fixed Strata whose forecasts are kept (see [mt_reconcile()]).
 #'
-#' On [mt_example_regions()] (4 regions, 90 strata, origins 2005 and 2008,
-#' h = 10), `li_lee(common_by = "sex")` with `method = "bottom_up"` was the
-#' most accurate coherent forecast (CRPS 0.0425 bottom, 0.0269 aggregates;
-#' 95% coverage 0.95), and Lee-Carter per stratum with `"wls"` reconciliation
-#' was calibrated (0.95-0.97) but less accurate (0.0477, 0.0292).
 #' @return A model specification.
 #' @examples
 #' x <- mt_example_regions(years = 2000:2019, regions = 3)
@@ -539,13 +635,17 @@ shrink_cov <- function(X, shrink = "auto") {
 #' fc <- mt_forecast(fit, h = 5, n_draws = 50, seed = 1)
 #' @export
 reconciled <- function(spec, hierarchy, method = c("wls", "mint", "structural", "ols", "bottom_up"),
-                          shrink = "auto", dependence = c("auto", "empirical", "none")) {
+                          shrink = "auto", dependence = c("auto", "empirical", "none"), fixed = NULL) {
   check_class(spec, "mt_spec", "spec")
   method <- match.arg(method)
   dependence <- match.arg(dependence)
   if (dependence == "auto") dependence <- if (isTRUE(spec$joint)) "none" else "empirical"
+  if (length(fixed) && method == "bottom_up") {
+    mt_abort("`fixed` needs a projection method (\"wls\", \"mint\", \"structural\" or \"ols\").",
+             class = "argument")
+  }
   sp <- new_mt_spec("reconciled", list(base = spec, hierarchy = as_hierarchy(hierarchy), method = method,
-                                       shrink = shrink, dependence = dependence),
+                                       shrink = shrink, dependence = dependence, fixed = fixed),
                     min_periods = spec$min_periods, label = sprintf("%s, reconciled (%s)", spec$label, method))
   sp
 }
@@ -556,8 +656,9 @@ mt_fit.mt_spec_reconciled <- function(spec, data, prep = NULL, cores = 1, ...) {
   hs <- hierarchy_structure(data$strata, p$hierarchy)
   if (all(hs$is_bottom)) data <- mt_aggregate_strata(data, p$hierarchy)
   fit <- mt_fit(p$base, data, prep = prep, cores = cores, ...)
+  hs <- hierarchy_structure(fit$strata, p$hierarchy)
   fit$reconcile <- list(hierarchy = p$hierarchy, method = p$method, shrink = p$shrink, dependence = p$dependence,
-                        structure = hierarchy_structure(fit$strata, p$hierarchy))
+                        structure = hs, fixed = fixed_nodes(p$fixed, fit$strata, p$hierarchy, hs, p$method))
   fit$spec <- spec
   class(fit) <- c("mt_fit_reconciled", class(fit))
   fit
@@ -577,11 +678,12 @@ mt_forecast.mt_fit_reconciled <- function(fit, h = 10, to = NULL, n_draws = 500,
     arr <- fc$rates
     tau <- NULL
     if (identical(rc$dependence, "empirical")) {
-      cr <- copula_reorder(arr, fit$train_D, fit$train_E)
+      cr <- copula_reorder(arr, fit$raw_D %||% fit$train_D, fit$train_E)
       arr <- cr$arr
       tau <- cr$years
     }
-    rec <- reconcile_array(arr, rc$structure, rc$hierarchy$additive, rc$method, rc$shrink, E, d)
+    rec <- reconcile_array(arr, rc$structure, rc$hierarchy$additive, rc$method, rc$shrink, E, d,
+                           fixed = rc$fixed %||% integer())
     rates <- rec$rates
     if (predictive) {
       hs <- rc$structure
@@ -596,7 +698,7 @@ mt_forecast.mt_fit_reconciled <- function(fit, h = 10, to = NULL, n_draws = 500,
       } else {
         deaths_b <- mb * as.vector(Eb)
       }
-      if (!is.null(tau)) deaths_b <- noise_reorder(deaths_b, fit$train_D[, , b, drop = FALSE],
+      if (!is.null(tau)) deaths_b <- noise_reorder(deaths_b, (fit$raw_D %||% fit$train_D)[, , b, drop = FALSE],
                                                    fit$train_E[, , b, drop = FALSE], tau)
       # deaths add up over strata (and are divided by the summed exposures), or
       # rates add up (causes of death sharing one exposure)
@@ -690,5 +792,66 @@ mt_aggregate_draws <- function(draws, hierarchy = NULL, age = NULL, exposure = N
   out$strata <- st
   out$exposure_last <- E[, 1, , drop = FALSE]
   out$observed <- NULL
+  out$fitted <- NULL
   out
+}
+
+#' Check the coherence of forecast draws
+#'
+#' For every aggregate stratum of a hierarchy, the ratio of the sum of its
+#' bottom strata to the aggregate itself, on the deaths scale (rates times
+#' the exposures of the last observed year, or `exposure`) or on the rate
+#' scale for variables whose levels share an exposure (causes of death).
+#' Coherent forecasts give ratios of 1 in every draw; separately forecast
+#' strata show how far they disagree.
+#'
+#' @param draws An [mt_draws] object with the strata of the hierarchy.
+#' @param hierarchy An [mt_hierarchy()].
+#' @param exposure Optional exposures (see [mt_deaths()]).
+#' @return `mt_coherence()`: a `data.table` with the aggregate strata,
+#'   `period`, and the median and the 2.5% and 97.5% quantiles of the ratio
+#'   over ages and draws. `mt_plot_coherence()`: a ggplot object with the
+#'   distribution of the ratios per year.
+#' @examples
+#' x <- mt_example_regions(years = 2005:2019, regions = 2)
+#' h <- mt_hierarchy(sex = "both", region = "all", quintile = "all")
+#' fc <- mt_forecast(mt_fit(lee_carter(), mt_aggregate_strata(x, h)), h = 3, n_draws = 30, seed = 1)
+#' head(mt_coherence(fc, h))
+#' head(mt_coherence(mt_reconcile(fc, h, method = "wls"), h))
+#' @export
+mt_coherence <- function(draws, hierarchy, exposure = NULL) {
+  check_class(draws, "mt_draws", "draws")
+  h <- as_hierarchy(hierarchy)
+  hs <- hierarchy_structure(draws$strata, h)
+  d <- dim(draws$rates)
+  E <- expand_exposure(exposure %||% draws$exposure_last, d, dimnames(draws$rates))
+  by_deaths <- identical(h$additive, "deaths")
+  V <- if (by_deaths) draws$rates * as.vector(E) else draws$rates
+  agg <- which(!hs$is_bottom)
+  b <- hs$bottom
+  rows <- lapply(agg, function(i) {
+    w <- hs$S[i, ]
+    part <- apply(sweep(V[, , b, , drop = FALSE], 3, w, "*"), c(1, 2, 4), sum)
+    r <- part / V[, , i, ]
+    q <- t(apply(matrix(aperm(r, c(1, 3, 2)), ncol = d[2]), 2, stats::quantile, c(0.025, 0.5, 0.975),
+                 na.rm = TRUE))
+    data.table(stratum = i, period = draws$periods, q0.025 = q[, 1], q0.5 = q[, 2], q0.975 = q[, 3])
+  })
+  out <- merge(draws$strata, rbindlist(rows), by = "stratum", sort = FALSE)
+  out[, stratum := NULL]
+  out[]
+}
+
+#' @rdname mt_coherence
+#' @export
+mt_plot_coherence <- function(draws, hierarchy, exposure = NULL) {
+  need_ggplot()
+  tab <- mt_coherence(draws, hierarchy, exposure)
+  ggplot2::ggplot(tab, ggplot2::aes(x = factor(period), y = q0.5)) +
+    ggplot2::geom_hline(yintercept = 1, linetype = "dashed", colour = "#D7191C") +
+    ggplot2::geom_boxplot(fill = "#66C2A5", alpha = 0.6, outlier.size = 0.6) +
+    ggplot2::labs(x = NULL, y = "Sum of parts / aggregate", title = "Coherence of the forecast",
+                  subtitle = sprintf("%s; median over ages and draws per aggregate stratum; 1 = coherent",
+                                     draws$model)) +
+    theme_mortensor()
 }

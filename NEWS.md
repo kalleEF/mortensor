@@ -2,6 +2,133 @@
 
 Clean break: the 0.1.x interface is replaced (see `dev/revamp-plan.md`).
 
+## Decomposition
+
+* `mt_decompose()` splits the difference in a mortality summary between
+  two sets of rates into contributions of ages, causes and population
+  subgroups, as post-processing of observed data (optionally with Poisson
+  draws), forecast draws (draw by draw, so contributions have intervals),
+  or both (an observed year against a forecast year, or two objects).
+  Comparisons: between levels of a stratum variable (`var`, `ref`), between
+  years (`periods`), or between two objects (`y`). Methods: symmetric
+  Arriaga for life expectancy with causes split by the implied sensitivity
+  (exact), the line integral of Horiuchi, Wilmoth and Pletcher (2008) and
+  stepwise replacement of Andreev, Shkolnikov and Begun (2002) for any
+  quantity (life expectancy, probability of dying, age-standardised rate,
+  or a function of the rates), and Kitagawa's rate and age-structure
+  components of the crude death rate. With `groups`, the composition of a
+  population of subgroups is separated from their mortality: as in Riffe,
+  Tursun-zade and Trias Llimós (2024, "Arriaga meets Kitagawa"), with
+  subgroups blended at the radix (`composition = "radix"`), or for the
+  pooled rates (`"pooled"`, composition effects by age).
+* `summary()` sums contributions path by path over ages, causes or
+  subgroups; `mt_plot_decomposition()` draws them as bars, stacked by cause
+  or subgroup, with 95% intervals for forecasts.
+* Results agree with DemoDecomp (`horiuchi()`, `stepwise_replacement()`)
+  and LEdecomp (`arriaga_sym()`) to machine precision on the same life
+  table, and the Kitagawa step reproduces Table 1 of Riffe et al. (2024).
+  New validation check `decomposition`; article "Decomposing differences in
+  life expectancy" on the ONS data; plan in `dev/decomposition-plan.md`.
+
+## Smoothing, jump-off and fixed totals (methods of the earlier UK analysis)
+
+* Smoothing over time: `mt_smooth(along = "period", method = "whittaker")`
+  (one smoothing parameter per stratum, chosen by GCV pooled over ages)
+  and over the age-period surface with a quasi-Poisson GAM,
+  `mt_smooth(dims = 2, method = "gam")` (`te(age, year)`, about one second
+  per stratum; the 2D P-spline takes minutes). `mt_smooth_check()` reports
+  how far the smoother moved the data (median absolute log difference,
+  dispersion of the raw deaths around the smoothed ones, variance ratio of
+  year-to-year changes, correlation); `mt_plot_smooth()` shows observed
+  points against smoothed lines.
+* Models fitted to smoothed data keep the raw deaths (`fit$raw_D`):
+  observation noise of predictive draws, residuals, observed rates, the
+  MASE scale of backtests and the empirical copula of reconciliation refer
+  to the data before smoothing. Before, noise was estimated from the
+  smoothed rates, which made intervals too narrow.
+* Smoothing over time narrows the intervals of models with a period index;
+  combined with `calibrated()` it gave the best calibrated forecasts for
+  England & Wales men (Lee-Carter on the GAM surface, calibrated: CRPS
+  0.0646, 95% coverage 0.91 against 0.0687 and 0.75). On the ONS quintiles,
+  whose noise is close to Poisson, smoothing did not help.
+* `anchored()` moves the start of any model's forecast towards the observed
+  level of the last `years` (default 3) per age and stratum, with empirical
+  Bayes shrinkage of sparse cells and a linear fade over `decay` years;
+  ensembles are anchored per component and reconciled models stay
+  coherent. `mt_jump_off()` reports the step from the last observed and the
+  last fitted year into the first forecast year.
+* Reconciliation with fixed nodes: `mt_reconcile(fixed = )` and
+  `reconciled(fixed = )` keep trusted forecasts (for example the total, or
+  all causes) and let the other strata absorb the gap. Bottom values that a
+  projection would make negative are held at zero and the rest projected
+  again (a simple form of non-negative reconciliation), so fixed nodes and
+  aggregates are kept; before, zeroed values could move them.
+  `mt_coherence()` and `mt_plot_coherence()` show how far forecasts are
+  from adding up.
+* Backtests score derived quantities: `mt_backtest(quantities =
+  c("life_expectancy", "asr"))` adds rows with `target`, and
+  `mt_score(target = )` scores them; `mt_plot_scores(by = "model")` draws
+  a bar chart of models.
+* `lee_carter(adjust = c("dt", "dxt", "e0", "none"))` re-estimates the
+  period index as in `demography::lca()`, and `choose_period = TRUE` fits
+  the longest recent period with a linear index (Booth, Maindonald and
+  Smith 2002); `ensemble(top_k = )` keeps the best components of the inner
+  backtest; `mt_tune(strategy = "two_stage")` searches a coarse grid first.
+* Disaggregation: `tail` (`"kannisto"` or `"gompertz"`) and `tail_width`
+  for the open interval in `mt_ungroup()` and `mt_disaggregate()`,
+  year-specific shapes from `mt_shape_rates()`, `mt_disaggregate_check()`
+  and `mt_plot_disaggregation()`.
+* Vignettes: "Forecasting and backtesting with HMD data" (chosen period,
+  anchoring, smoothing with calibration, scores of life expectancy),
+  "Forecasting mortality by deprivation quintile" (smoothing check,
+  jump-off, backtests of anchoring and smoothing), "Coherent forecasts"
+  (coherence plot, a fixed total), "Causes of death by deprivation"
+  (causes reconciled to a fixed all-cause forecast). New validation check
+  `smoothing_jumpoff`.
+
+## Calibration, deprivation and coherence vignettes
+
+* `calibrated()` wraps any model specification (including `ensemble()`,
+  `reconciled()` and `bootstrapped()`) and recalibrates the spread of its
+  forecast draws, optionally also the drift, on the last `years` (default
+  10) of the training data. The base model is refitted at several origins
+  in that window. A horizon-dependent spread factor (and drift correction)
+  is chosen by minimum CRPS, or by the interval score of one central
+  interval (`target = "interval"`). Observation noise is modelled as in
+  `mt_backtest()`, and draws of an ensemble get the noise of their
+  component. Reconciled models are calibrated at the bottom level and
+  stay coherent. `by` gives separate factors for groups of strata.
+  `summary()` and `mt_parameters()` report the factors.
+* Backtests (England & Wales men, origins 1996-2001, h = 10): calibration
+  raised the 95% coverage of Lee-Carter from 0.75 to 0.88 and lowered its
+  CRPS by 4%. An already calibrated ensemble was narrowed (0.95 to 0.90)
+  at the same CRPS. Drift correction overfitted on the ONS data and is off
+  by default. New validation check `calibration_ew`.
+* Ensemble forecasts record the component of each draw (`$component`).
+* Plot layout of the owner's earlier analysis as the package standard:
+  `theme_mortensor()`, `scale_colour_mortensor()`, `scale_fill_mortensor()`,
+  `mt_palette()` (ordered red-yellow-green scale for levels such as Q1-Q5,
+  distinct colours otherwise). Forecast plots show observed points, fitted
+  lines (stored in the draws as `$fitted`), dashed forecast medians with
+  interval ribbons and a dotted line before the first forecast year;
+  `mt_plot_forecast()` has panels of age by stratum and new arguments
+  `colour` and `log_values`; `levels` defaults to 0.95. `fitted()` works
+  for ensembles (weighted geometric mean of the components).
+* `mt_inequality()` weights observed years by their own populations (it
+  used the last year's for every year).
+* Documentation review: corrected vignette titles and cross-references,
+  Model reference (series models, calibration, sources of uncertainty of
+  every model), FAQ, `mt_validate()` checks, help pages of `ensemble()`,
+  `reconciled()`, `cause_shares()` and the derived quantities.
+* Vignettes "Forecasting mortality by deprivation quintile" (ONS:
+  inequality indicators, backtests by quintile, calibration, gap
+  forecasts by model, fitting period) and "Coherent forecasts: what
+  reconciliation changes" (ONS sex x quintile with totals: incoherence of
+  separate forecasts, each reconciliation method's effect on forecasts,
+  intervals and backtest accuracy per level, dependence between strata).
+  The regional vignette adds forecasts for every Land and compares the
+  reconciliation methods on them.
+
 ## Changes after two applied reviews and stress tests
 
 * Renamed for clarity: model wrappers are nouns like the other model

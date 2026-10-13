@@ -51,9 +51,12 @@ choice matters for the level of every forecast.
 ### What does `mt_validate()` check?
 
 Cells with zero exposure, deaths without exposure, death rates above one
-below age 100, grid cells without observations, and, with a hierarchy,
-whether totals equal the sums of their parts (deaths and exposures add up over regions or sexes; rates add up over
-causes, `mt_hierarchy(cause = "all", additive = "rates")`).
+below age 100, missing values, strata without deaths or exposures, levels
+that look like totals of other levels (for example `"Insgesamt"` among the
+regions), grid cells without observations, and, with a hierarchy, whether
+totals equal the sums of their parts (deaths and exposures add up over
+regions or sexes; rates add up over causes,
+`mt_hierarchy(cause = list(total = "all", additive = "rates"))`).
 
 ## Granularity and ungrouping
 
@@ -78,7 +81,7 @@ absolute error of single-year log rates was 0.015 at ages 30-89 and 0.024 at
 90-100, close to the Poisson noise of the observed rates. The spline
 methods (`"hyman_kannisto"`, `"natural_gompertz"`, `"gam"`) were as
 accurate below 90, less accurate in the open interval, and 5 to 10 times
-faster. See "Data at different granularities".
+faster. See "Data at different granularities: ungrouping HMD data".
 
 ### Can I split the open interval 90+ into single years?
 
@@ -122,14 +125,49 @@ twice; that extra width happened to give good 95% coverage on real data.
 `rwd(observation_noise = TRUE)` removes the double counting and is sharper
 (lower CRPS), with intervals that were too narrow on real data. Mixtures of
 models (`ensemble()`) widen the intervals where the models disagree.
+`calibrated()` rescales the spread of any model's draws to its forecast
+errors in the last years of the training data (by default ten); on England
+& Wales men it raised the 95% coverage of Lee-Carter from 0.75 to 0.88.
 Check calibration with `mt_backtest()` and `mt_plot_coverage()`.
+
+### Should I smooth the data before forecasting?
+
+Smoothing over age helps where cells hold few deaths (rare causes, small
+regions): on the German cause-specific data it improved the CRPS of the
+Laender. Smoothing over time removes the year-to-year noise from the fitted
+trends and from the start of the forecast, but also the variation from
+which models such as Lee-Carter estimate the uncertainty of their period
+index: alone, it made intervals too narrow in backtests (95% coverage of
+Lee-Carter 0.59 instead of 0.75 on England & Wales men). Together with
+`calibrated()`, which re-estimates the spread against the raw
+observations, it gave the best Lee-Carter forecasts there (CRPS 0.0646
+against 0.0687, coverage 0.91). Use smoothing as a preprocessing step
+(`mt_prep(step_smooth(...))`), so that backtests refit it on each training
+window; models fitted to smoothed rates take their observation noise from
+the raw rates. `mt_smooth_check()` and `mt_plot_smooth()` show what the
+smoothing removed.
+
+### Why does the forecast start with a step?
+
+Most models start from their fitted rates of the last observed year. When
+the fit misses the level of the last years, the first forecast year jumps
+away from the observations; `mt_jump_off()` reports the step, and the
+forecast plots show it as a gap between the solid (fitted) and the dashed
+(forecast) line. `anchored(model, years = 3)` moves the start to the
+observed level of the last three years, fading out over ten years; it
+improved short-term accuracy on England & Wales men and on the ONS data.
+Starting from the last observed year alone (`years = 1`) carries its
+noise into every forecast year and was worse on the ONS data.
 
 ### What is the difference between predictive draws and forecast rates?
 
-`mt_forecast()` returns draws of the smooth death rates by default.
-`predictive = TRUE` adds the variation of observed rates around them
-(extra-Poisson and Poisson noise given the exposures), which is what an
-observed future rate will show. Backtests use predictive draws because they
+For models of smooth rates (Lee-Carter, Li-Lee, Tucker3, FDM, StMoMo,
+Bayesian APC, `rwd(observation_noise = TRUE)`), `mt_forecast()` returns
+draws of the smooth death rates by default, and `predictive = TRUE` adds
+the variation of observed rates around them (extra-Poisson and Poisson
+noise given the exposures), which is what an observed future rate will
+show. Models of observed rates (`rwd()`, `arima_series()`, `ets_series()`)
+forecast observed rates directly, and `predictive` adds nothing. Backtests use predictive draws because they
 are compared with observed rates. For life expectancy and other summaries
 of the underlying mortality, use the default draws.
 
@@ -145,8 +183,8 @@ many small cells:
 * model at a coarser resolution (age groups instead of single years, or
   wider groups at young ages, `mt_regroup()`);
 * pool information across strata, for example `li_lee(common_by = "sex")`
-  for regions or deprivation groups, or `apc_bayes()` with its smoothing
-  priors;
+  for regions or deprivation groups, or borrow strength across ages and
+  years within a stratum with the smoothing priors of `apc_bayes()`;
 * smooth before fitting with `step_smooth()` (age 0 is left out by
   default);
 * use `rwd(observation_noise = TRUE)` instead of `rwd()`, alone or in an
@@ -191,8 +229,8 @@ every node and reconcile the draws (`method = "wls"`, `"mint"`, ...).
 Totals that are not in the data are added by `mt_aggregate_strata()`.
 Reconciliation of deaths uses exposures of the forecast years; supply
 population projections as `exposure` when they are available. See
-"Coherent forecasts by sex, region and deprivation" and "Causes of death by
-deprivation".
+"Coherent forecasts: what reconciliation changes", "Coherent forecasts by
+sex, region and cause" and "Causes of death by deprivation".
 
 ### Will the gap between regions or deprivation groups keep growing?
 
@@ -203,12 +241,29 @@ only through stationary processes, so gaps return towards their past
 average. Backtests over a few years rarely separate the two; the choice
 is an assumption to state.
 
+### Which ages and causes explain a gap, and how much is composition?
+
+`mt_decompose()` splits a difference in life expectancy (or in the
+probability of dying, an age-standardised or crude rate, or any function
+of the rates) into contributions of ages and causes: between strata in one
+year (`var`, `ref`), between years (`periods`, which may combine an
+observed and a forecast year), or between two forecasts (`y`). With
+`groups`, it also separates the composition of a population of subgroups
+(for example deprivation quintiles or education groups) from the change of
+their mortality, as in Riffe, Tursun-zade and Trias Llimós (2024).
+Forecasts are decomposed draw by draw, so contributions have intervals;
+see "Decomposing differences in life expectancy".
+
 ## Practicalities
 
 ### Are forecasts reproducible?
 
 Yes, with a `seed` (`mt_forecast(..., seed = 1)`, `mt_backtest(..., seed =
-1)`). Parallel code uses L'Ecuyer random-number streams.
+1)`). Backtests and `calibrated()` seed every origin separately, so their
+results do not depend on `cores`. Fits of several strata in parallel
+(`mt_fit(..., cores = )`) run in forked processes; for models with random
+steps in the fit, set `RNGkind("L'Ecuyer-CMRG")` and a seed before the call
+to make them reproducible.
 
 ### How long does it take?
 

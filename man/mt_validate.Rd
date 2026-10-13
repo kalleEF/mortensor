@@ -25,6 +25,11 @@ Runs plausibility checks and returns one row per finding:
 \itemize{
 \item deaths with zero exposure in the same cell (error);
 \item central death rates above 1 below age 100 (warning);
+\item missing values (warning);
+\item strata without any value of a measure, for example without deaths
+(warning);
+\item levels that look like totals of other levels of the same variable, for
+example \code{"Insgesamt"} or \code{"all"} among the regions (warning);
 \item zero exposures (info);
 \item grid cells without deaths or exposures (info);
 \item hierarchy sums, when \code{hierarchy} is given (\code{\link[=mt_hierarchy]{mt_hierarchy()}}): every

@@ -3,15 +3,24 @@
 #' All plot functions return ggplot objects (package \pkg{ggplot2} must be
 #' installed) and never print or write files.
 #'
-#' * `mt_plot_forecast()`: observed rates and forecast fan (median and
-#'   central intervals) over time for selected ages, log scale. The points
-#'   are the training data after preprocessing (for example with
-#'   interpolated shock years or smoothed rates); give the original data as
-#'   `data` to show the rates as published;
-#' * `mt_plot_age()`: age profiles of the forecast for selected years;
-#' * `mt_plot_life_expectancy()`: life expectancy forecast fan with the
-#'   observed history (from `data` if given, otherwise from the training
-#'   data), optionally one panel per level of a stratum variable (`facet`);
+#' The forecast plots share one layout (see [mt_plot_style]): observed
+#' values as points, fitted values as solid lines, forecast medians as dashed
+#' lines with interval ribbons, and a dotted line before the first forecast
+#' year. A step between the solid and the dashed line shows the jump from the
+#' fitted rates to the forecast. One stratum variable gives the colours (by
+#' default the one with the most levels among the shown strata, or
+#' `colour`), the others give the panels.
+#'
+#' * `mt_plot_forecast()`: rates over time, one row of panels per age and one
+#'   column per combination of the other stratum variables. The points are
+#'   the training data after preprocessing (for example with interpolated
+#'   shock years or smoothed rates); give the original data as `data` to show
+#'   the rates as published;
+#' * `mt_plot_age()`: age profiles of the forecast for selected years
+#'   (default: the last);
+#' * `mt_plot_life_expectancy()`: life expectancy, observed, fitted and
+#'   forecast (observed from `data` if given, otherwise from the training
+#'   data), with one panel per level of `facet` if given;
 #' * `mt_plot_rates()`: Lexis surface (age by period) of observed log rates;
 #' * `mt_plot_ungroup()`: grouped rates as steps and ungrouped single-year
 #'   rates for one period;
@@ -26,6 +35,10 @@
 #' @param at Age for life expectancy.
 #' @param data An [mt_data] object (for the forecast plots: the original
 #'   data, whose observed rates are shown).
+#' @param colour Stratum variable that gives the colours (default: the one
+#'   with the most levels among the shown strata).
+#' @param log_values Show natural logarithms of the rates on a linear axis
+#'   (`log(death rate)`) instead of rates on a logarithmic axis.
 #' @param facet Stratum variable whose levels get one panel each (for
 #'   example `"sex"`), or `NULL`.
 #' @param ungrouped The [mt_ungroup()] result for `data`.
@@ -45,7 +58,8 @@ need_ggplot <- function() need_pkg("ggplot2", "for plots")
 
 #' @rdname mt_plot
 #' @export
-mt_plot_forecast <- function(draws, ages = NULL, strata = NULL, levels = c(0.8, 0.95), data = NULL) {
+mt_plot_forecast <- function(draws, ages = NULL, strata = NULL, levels = 0.95, data = NULL, colour = NULL,
+                             log_values = FALSE) {
   need_ggplot()
   check_class(draws, "mt_draws", "draws")
   ages <- ages %||% draws$age$labels[unique(round(seq(1, length(draws$age), length.out = 4)))]
@@ -55,27 +69,61 @@ mt_plot_forecast <- function(draws, ages = NULL, strata = NULL, levels = c(0.8, 
                      paste(draws$age$labels, collapse = ", ")), class = "argument")
   }
   strata <- check_strata_labels(strata %||% draws$strata$label, draws$strata$label)
+  lay <- plot_layout(draws$strata, strata, colour)
   probs <- sort(c((1 - levels) / 2, 0.5, 1 - (1 - levels) / 2))
-  s <- mt_summarise(draws, probs)
-  s <- s[age %in% ages & label %in% strata]
+  s <- mt_summarise(draws, probs)[age %in% ages & label %in% strata]
   obs <- observed_long(draws, data)[age %in% ages & label %in% strata]
+  fit <- fitted_long(draws)[age %in% ages & label %in% strata]
+  tabs <- lapply(list(s = s, obs = obs, fit = fit), function(d) {
+    d <- merge(d, lay$map, by = "label", sort = FALSE)
+    d[, age_f := factor(age, levels = ages)]
+  })
+  tr <- if (log_values) log else identity
   qn <- function(p) qnames(p)
-  p <- ggplot2::ggplot(s, ggplot2::aes(x = period))
+  p <- ggplot2::ggplot(tabs$s, ggplot2::aes(x = period, group = label))
   for (lv in sort(levels, decreasing = TRUE)) {
     lo <- qn((1 - lv) / 2)
     hi <- qn(1 - (1 - lv) / 2)
-    p <- p + ggplot2::geom_ribbon(ggplot2::aes(ymin = .data[[lo]], ymax = .data[[hi]], fill = label), alpha = 0.25)
+    p <- p + ggplot2::geom_ribbon(ggplot2::aes(ymin = tr(.data[[lo]]), ymax = tr(.data[[hi]]), fill = col),
+                                  alpha = 0.3 / length(levels))
   }
-  p + ggplot2::geom_line(ggplot2::aes(y = q0.5, colour = label)) +
-    ggplot2::geom_point(data = obs, ggplot2::aes(y = rate, colour = label), size = 0.6) +
-    ggplot2::facet_wrap(~ factor(age, levels = ages), scales = "free_y") +
-    ggplot2::scale_y_log10() +
-    ggplot2::labs(x = NULL, y = "Death rate (log scale)", colour = NULL, fill = NULL, title = draws$model,
-                  subtitle = sprintf("Median and %s intervals", paste0(levels * 100, "%", collapse = ", ")))
+  p <- p + ggplot2::geom_line(ggplot2::aes(y = tr(q0.5), colour = col), linetype = "dashed", linewidth = 0.6)
+  if (nrow(tabs$fit)) {
+    p <- p + ggplot2::geom_line(data = tabs$fit, ggplot2::aes(y = tr(rate), colour = col), linewidth = 0.5)
+  }
+  p <- p + ggplot2::geom_point(data = tabs$obs, ggplot2::aes(y = tr(rate), colour = col), size = 0.6, alpha = 0.4) +
+    ggplot2::geom_vline(xintercept = draws$origin + 0.5, linetype = "dotted", colour = "grey50")
+  p <- p + if (lay$has_panel) {
+    ggplot2::facet_grid(ggplot2::vars(age_f), ggplot2::vars(panel), scales = "free_y")
+  } else {
+    ggplot2::facet_wrap(ggplot2::vars(age_f), scales = "free_y")
+  }
+  if (!log_values) p <- p + ggplot2::scale_y_log10()
+  p + plot_colours(lay) +
+    ggplot2::labs(x = NULL, y = if (log_values) "log(death rate)" else "Death rate (log scale)",
+                  colour = lay$name, fill = lay$name, title = draws$model,
+                  subtitle = forecast_subtitle(levels, nrow(tabs$fit) > 0)) +
+    theme_mortensor(base_size = if (length(ages) > 2 || lay$has_panel) 9 else 11)
+}
+
+forecast_subtitle <- function(levels, fitted = TRUE) {
+  sprintf("Points: observed; %sdashed: forecast median with %s interval%s", if (fitted) "solid: fitted; " else "",
+          paste0(levels * 100, "%", collapse = " and "), if (length(levels) > 1) "s" else "")
 }
 
 observed_long <- function(draws, data = NULL) {
-  o <- observed_rates(draws, data)
+  array_long(observed_rates(draws, data))
+}
+
+fitted_long <- function(draws) {
+  f <- draws$fitted
+  if (!is.null(f)) {
+    dimnames(f) <- list(draws$age$labels, as.character(draws$observed_periods), draws$strata$label)
+  }
+  array_long(f)
+}
+
+array_long <- function(o) {
   if (is.null(o)) return(data.table(label = character(), age = character(), period = numeric(), rate = numeric()))
   d <- dim(o)
   data.table(label = rep(dimnames(o)[[3]], each = d[1] * d[2]), age = rep(dimnames(o)[[1]], d[2] * d[3]),
@@ -101,57 +149,108 @@ observed_rates <- function(draws, data = NULL) {
   o[, , intersect(dimnames(o)[[3]], draws$strata$label), drop = FALSE]
 }
 
-#' @rdname mt_plot
-#' @export
-mt_plot_age <- function(draws, periods = NULL, strata = NULL, levels = 0.95) {
-  need_ggplot()
-  check_class(draws, "mt_draws", "draws")
-  periods <- periods %||% range(draws$periods)
-  strata <- strata %||% draws$strata$label
-  probs <- c((1 - levels) / 2, 0.5, 1 - (1 - levels) / 2)
-  s <- mt_summarise(draws, probs)[period %in% periods & label %in% strata]
-  names(s)[names(s) %in% qnames(probs)] <- c("lo", "med", "hi")
-  ggplot2::ggplot(s, ggplot2::aes(x = age_lo, group = factor(period))) +
-    ggplot2::geom_ribbon(ggplot2::aes(ymin = lo, ymax = hi, fill = factor(period)), alpha = 0.25) +
-    ggplot2::geom_line(ggplot2::aes(y = med, colour = factor(period))) +
-    ggplot2::facet_wrap(~label) +
-    ggplot2::scale_y_log10() +
-    ggplot2::labs(x = "Age", y = "Death rate (log scale)", colour = "Year", fill = "Year", title = draws$model)
+# Colour and panels of the strata in a plot: the stratum variable with the
+# most levels among the shown strata gives the colour (unless `colour` is
+# given), the other varying variables the panels
+plot_layout <- function(strata, labels, colour = NULL, panel = NULL) {
+  st <- strata[match(labels, strata$label)]
+  vars <- setdiff(names(st), c("stratum", "label"))
+  nlev <- vapply(vars, function(v) length(unique(st[[v]])), 0)
+  if (!is.null(colour) && !colour %in% c(vars, "label")) {
+    mt_abort(sprintf("`colour` must be a stratum variable (%s).", paste(vars, collapse = ", ")), class = "argument")
+  }
+  if (is.null(colour)) {
+    cand <- setdiff(vars[nlev > 1], panel)
+    colour <- if (length(cand)) cand[max(which(nlev[cand] == max(nlev[cand])))] else "label"
+  }
+  col <- if (colour == "label") st$label else as.character(st[[colour]])
+  pvars <- panel %||% setdiff(vars[nlev > 1], colour)
+  pan <- if (length(pvars)) do.call(paste, c(as.list(st[, pvars, with = FALSE]), sep = ".")) else rep("", nrow(st))
+  lev <- unique(col)
+  map <- data.table(label = st$label, col = factor(col, levels = lev), panel = factor(pan, levels = unique(pan)))
+  list(map = map, name = if (colour == "label") NULL else colour, levels = lev, has_panel = length(pvars) > 0,
+       ordered = looks_ordered(lev))
+}
+
+# Levels such as Q1..Q5, 1..10 or D1..D10 are treated as ordered
+looks_ordered <- function(lev) length(lev) > 1 && all(grepl("^[A-Za-z]{0,3}[0-9]+$", lev))
+
+plot_colours <- function(lay) {
+  vals <- stats::setNames(mt_palette(length(lay$levels), if (lay$ordered) "ordered" else "categorical"), lay$levels)
+  list(ggplot2::scale_colour_manual(values = vals, breaks = lay$levels, aesthetics = c("colour", "fill")))
 }
 
 #' @rdname mt_plot
 #' @export
-mt_plot_life_expectancy <- function(draws, at = NULL, levels = c(0.8, 0.95), strata = NULL, facet = NULL,
-                                    data = NULL) {
+mt_plot_age <- function(draws, periods = NULL, strata = NULL, levels = 0.95, colour = NULL, log_values = FALSE) {
+  need_ggplot()
+  check_class(draws, "mt_draws", "draws")
+  periods <- periods %||% max(draws$periods)
+  strata <- check_strata_labels(strata %||% draws$strata$label, draws$strata$label)
+  lay <- plot_layout(draws$strata, strata, colour)
+  probs <- c((1 - levels) / 2, 0.5, 1 - (1 - levels) / 2)
+  s <- mt_summarise(draws, probs)[period %in% periods & label %in% strata]
+  names(s)[names(s) %in% qnames(probs)] <- c("lo", "med", "hi")
+  s <- merge(s, lay$map, by = "label", sort = FALSE)
+  s[, panel2 := if (lay$has_panel) paste(panel, period) else as.character(period)]
+  tr <- if (log_values) log else identity
+  p <- ggplot2::ggplot(s, ggplot2::aes(x = age_lo, group = label)) +
+    ggplot2::geom_ribbon(ggplot2::aes(ymin = tr(lo), ymax = tr(hi), fill = col), alpha = 0.2) +
+    ggplot2::geom_line(ggplot2::aes(y = tr(med), colour = col), linewidth = 0.8)
+  if (length(unique(s$panel2)) > 1) p <- p + ggplot2::facet_wrap(ggplot2::vars(panel2))
+  if (!log_values) p <- p + ggplot2::scale_y_log10()
+  p + plot_colours(lay) +
+    ggplot2::labs(x = "Age", y = if (log_values) "log(death rate)" else "Death rate (log scale)",
+                  colour = lay$name, fill = lay$name, title = draws$model,
+                  subtitle = sprintf("Forecast median and %s interval, %s", paste0(levels * 100, "%"),
+                                     paste(periods, collapse = ", "))) +
+    theme_mortensor(legend = "right")
+}
+
+#' @rdname mt_plot
+#' @export
+mt_plot_life_expectancy <- function(draws, at = NULL, levels = 0.95, strata = NULL, facet = NULL,
+                                    data = NULL, colour = NULL) {
   need_ggplot()
   check_class(draws, "mt_draws", "draws")
   strata <- check_strata_labels(strata %||% draws$strata$label, draws$strata$label)
+  if (!is.null(facet) && !facet %in% names(draws$strata)) {
+    mt_abort("`facet` must be a stratum variable.", class = "argument")
+  }
+  lay <- plot_layout(draws$strata, strata, colour, panel = facet)
   probs <- sort(c((1 - levels) / 2, 0.5, 1 - (1 - levels) / 2))
   e <- life_expectancy(draws, at = at, probs = probs)[label %in% strata]
-  o <- observed_rates(draws, data)
-  hist <- NULL
-  if (!is.null(o)) {
-    eo <- life_expectancy(o, draws$age, at = at)
-    hist <- data.table(label = rep(colnames(eo), each = nrow(eo)), period = rep(as.numeric(rownames(eo)), ncol(eo)),
-                       value = as.vector(eo))[label %in% strata]
+  e0_long <- function(m) {
+    if (is.null(m)) return(NULL)
+    eo <- life_expectancy(m, draws$age, at = at)
+    data.table(label = rep(colnames(eo), each = nrow(eo)), period = rep(as.numeric(rownames(eo)), ncol(eo)),
+               value = as.vector(eo))[label %in% strata]
   }
-  if (!is.null(facet)) {
-    if (!facet %in% names(draws$strata)) mt_abort("`facet` must be a stratum variable.", class = "argument")
-    map <- stats::setNames(draws$strata[[facet]], draws$strata$label)
-    e[, panel := map[label]]
-    if (!is.null(hist)) hist[, panel := map[label]]
-  }
+  hist <- e0_long(observed_rates(draws, data))
+  fr <- draws$fitted
+  if (!is.null(fr)) dimnames(fr) <- list(draws$age$labels, as.character(draws$observed_periods), draws$strata$label)
+  fit <- e0_long(fr)
+  add <- function(d) if (is.null(d)) NULL else merge(d, lay$map, by = "label", sort = FALSE)
+  e <- add(e)
+  hist <- add(hist)
+  fit <- add(fit)
   qn <- function(p) qnames(p)
-  p <- ggplot2::ggplot(e, ggplot2::aes(x = period))
+  p <- ggplot2::ggplot(e, ggplot2::aes(x = period, group = label))
   for (lv in sort(levels, decreasing = TRUE)) {
     p <- p + ggplot2::geom_ribbon(ggplot2::aes(ymin = .data[[qn((1 - lv) / 2)]], ymax = .data[[qn(1 - (1 - lv) / 2)]],
-                                               fill = label), alpha = 0.25)
+                                               fill = col), alpha = 0.3 / length(levels))
   }
-  p <- p + ggplot2::geom_line(ggplot2::aes(y = q0.5, colour = label))
-  if (!is.null(hist)) p <- p + ggplot2::geom_line(data = hist, ggplot2::aes(y = value, colour = label))
-  if (!is.null(facet)) p <- p + ggplot2::facet_wrap(~panel)
-  p + ggplot2::labs(x = NULL, y = sprintf("Life expectancy at age %s", e$at[1]), colour = NULL, fill = NULL,
-                    title = draws$model)
+  p <- p + ggplot2::geom_line(ggplot2::aes(y = q0.5, colour = col), linetype = "dashed", linewidth = 0.6)
+  if (!is.null(fit) && nrow(fit)) p <- p + ggplot2::geom_line(data = fit, ggplot2::aes(y = value, colour = col),
+                                                              linewidth = 0.5)
+  if (!is.null(hist)) p <- p + ggplot2::geom_point(data = hist, ggplot2::aes(y = value, colour = col), size = 0.8,
+                                                   alpha = 0.5)
+  p <- p + ggplot2::geom_vline(xintercept = draws$origin + 0.5, linetype = "dotted", colour = "grey50")
+  if (lay$has_panel) p <- p + ggplot2::facet_wrap(ggplot2::vars(panel))
+  p + plot_colours(lay) +
+    ggplot2::labs(x = NULL, y = sprintf("Life expectancy at age %s", e$at[1]), colour = lay$name, fill = lay$name,
+                  title = draws$model, subtitle = forecast_subtitle(levels, !is.null(fit) && nrow(fit) > 0)) +
+    theme_mortensor()
 }
 
 #' @rdname mt_plot
@@ -169,7 +268,8 @@ mt_plot_rates <- function(data, strata = NULL) {
     ggplot2::geom_raster() +
     ggplot2::facet_wrap(~label) +
     ggplot2::scale_fill_viridis_c() +
-    ggplot2::labs(x = NULL, y = "Age", fill = "log rate")
+    ggplot2::labs(x = NULL, y = "Age", fill = "log rate") +
+    theme_mortensor(legend = "right")
 }
 
 #' @rdname mt_plot
@@ -197,7 +297,8 @@ mt_plot_ungroup <- function(data, ungrouped, period = NULL, strata = NULL) {
     ggplot2::facet_wrap(~label) +
     ggplot2::scale_y_log10() +
     ggplot2::labs(x = "Age", y = "Death rate (log scale)",
-                  title = sprintf("Grouped (grey) and ungrouped (red) rates, %s", period))
+                  title = sprintf("Grouped (grey) and ungrouped (red) rates, %s", period)) +
+    theme_mortensor()
 }
 
 #' @rdname mt_plot
@@ -214,7 +315,10 @@ mt_plot_coverage <- function(backtest) {
     ggplot2::geom_point() +
     ggplot2::facet_wrap(~ paste0(level * 100, "% interval")) +
     ggplot2::coord_cartesian(ylim = c(0, 1)) +
-    ggplot2::labs(x = "Horizon (years)", y = "Empirical coverage", colour = NULL)
+    scale_colour_mortensor(type = "categorical") +
+    ggplot2::labs(x = "Horizon (years)", y = "Empirical coverage", colour = NULL,
+                  subtitle = "Dashed: nominal level") +
+    theme_mortensor()
 }
 
 #' Further plots: Tucker factors, cause shares and backtest scores
@@ -227,7 +331,8 @@ mt_plot_coverage <- function(backtest) {
 #'   forecast with a cause variable among the strata (for example from
 #'   [cause_shares()]).
 #' * `mt_plot_scores()`: mean score of each model by horizon or age from a
-#'   backtest.
+#'   backtest, or one bar per model (`by = "model"`); `target` selects
+#'   rates or a derived quantity scored by the backtest.
 #'
 #' @param fit A fitted [tucker3()] model.
 #' @param draws An [mt_draws] object whose strata include `var`.
@@ -242,7 +347,9 @@ mt_plot_coverage <- function(backtest) {
 #'   computed among all levels).
 #' @param backtest An [mt_backtest()] result.
 #' @param metric Score column, for example `"crps"`, `"wis"` or `"ae"`.
-#' @param by `"horizon"` or `"age"`.
+#' @param by `"horizon"`, `"age"` or `"model"`.
+#' @param target `"rate"`, `"life_expectancy"` or `"asr"` (see
+#'   [mt_backtest()]).
 #' @return A ggplot object.
 #' @examples
 #' if (requireNamespace("ggplot2", quietly = TRUE)) {
@@ -274,6 +381,8 @@ mt_plot_tucker <- function(fit) {
     ggplot2::geom_line() +
     ggplot2::geom_point(data = long[mode == "stratum"]) +
     ggplot2::facet_wrap(~ mode, scales = "free") +
+    scale_colour_mortensor(type = "categorical") +
+    theme_mortensor(legend = "right") +
     ggplot2::labs(x = NULL, y = "Loading", colour = "Factor", title = fit$spec$label,
                   caption = sprintf("Strata: %s", paste(seq_len(nrow(fit$strata)), fit$strata$label, sep = " = ",
                                                         collapse = ", ")))
@@ -331,19 +440,43 @@ mt_plot_shares <- function(draws, var = NULL, total_level = NULL, ages = NULL, g
   if (!is.null(causes)) tab <- tab[cause %in% causes]
   ggplot2::ggplot(tab, ggplot2::aes(x = period, y = med, colour = cause)) +
     ggplot2::geom_ribbon(data = tab[kind == "forecast"], ggplot2::aes(ymin = lo, ymax = hi, fill = cause),
-                         alpha = 0.2, colour = NA) +
-    ggplot2::geom_line(ggplot2::aes(linetype = kind)) +
+                         alpha = 0.15, colour = NA) +
+    ggplot2::geom_line(ggplot2::aes(linetype = kind), linewidth = 0.6) +
+    ggplot2::geom_vline(xintercept = draws$origin + 0.5, linetype = "dotted", colour = "grey50") +
     ggplot2::facet_wrap(~ group) +
-    ggplot2::labs(x = NULL, y = "Share of deaths", colour = NULL, fill = NULL, linetype = NULL, title = draws$model)
+    ggplot2::scale_linetype_manual(values = c(observed = "solid", forecast = "dashed")) +
+    scale_colour_mortensor(type = "categorical") + scale_fill_mortensor(type = "categorical") +
+    ggplot2::labs(x = NULL, y = "Share of deaths", colour = NULL, fill = NULL, linetype = NULL, title = draws$model,
+                  subtitle = "Solid: observed; dashed: forecast median with 95% interval") +
+    theme_mortensor()
 }
 
 #' @rdname mt_plot_more
 #' @export
-mt_plot_scores <- function(backtest, metric = "crps", by = c("horizon", "age")) {
+mt_plot_scores <- function(backtest, metric = "crps", by = c("horizon", "age", "model"),
+                           target = c("rate", "life_expectancy", "asr")) {
   need_ggplot()
   by <- match.arg(by)
+  target <- match.arg(target)
   if (!metric %in% names(backtest)) mt_abort(sprintf("No column `%s` in the backtest.", metric), class = "argument")
   tab <- as.data.table(unclass_backtest(backtest))
+  if ("target" %in% names(tab)) {
+    keep <- tab[["target"]] == target
+    tab <- tab[keep]
+  }
+  if (!nrow(tab)) mt_abort(sprintf("The backtest holds no scores for target \"%s\".", target), class = "argument")
+  if (by == "model") {
+    s <- tab[, list(score = mean(get(metric), na.rm = TRUE)), by = "model"]
+    s[, model := stats::reorder(model, score)]
+    return(ggplot2::ggplot(s, ggplot2::aes(x = model, y = score, fill = model)) +
+             ggplot2::geom_col(show.legend = FALSE, alpha = 0.9) +
+             ggplot2::coord_flip() +
+             scale_fill_mortensor(type = "categorical") +
+             ggplot2::labs(x = NULL, y = sprintf("Mean %s", toupper(metric)),
+                           title = sprintf("Model comparison (%s)", toupper(metric)),
+                           subtitle = sprintf("Backtest of %s; lower is better", gsub("_", " ", target))) +
+             theme_mortensor())
+  }
   if (by == "age") {
     s <- tab[, list(score = mean(get(metric), na.rm = TRUE)), by = c("model", "age_lo")]
     setnames(s, "age_lo", "x")
@@ -354,6 +487,8 @@ mt_plot_scores <- function(backtest, metric = "crps", by = c("horizon", "age")) 
   ggplot2::ggplot(s, ggplot2::aes(x = x, y = score, colour = model)) +
     ggplot2::geom_line() +
     ggplot2::geom_point() +
+    scale_colour_mortensor(type = "categorical") +
     ggplot2::labs(x = if (by == "age") "Age" else "Horizon (years)", y = sprintf("Mean %s", toupper(metric)),
-                  colour = NULL)
+                  colour = NULL) +
+    theme_mortensor()
 }

@@ -12,6 +12,10 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width = 7, fig.height
 has_gg <- requireNamespace("ggplot2", quietly = TRUE)
 ```
 
+*mortensor is experimental software written largely with AI coding
+assistants ("vibe-coded"). Use it at your own risk and check results
+independently.*
+
 mortensor builds probabilistic mortality forecasts from data observed at
 different granularities. A forecast is assembled from interchangeable parts:
 
@@ -25,7 +29,8 @@ different granularities. A forecast is assembled from interchangeable parts:
    `apc_bayes()`, ...), fitted with `mt_fit()` and forecast with
    `mt_forecast()` as simulated paths,
 4. **derived quantities** computed path by path (`life_expectancy()`,
-   `prob_dying()`, `asr()`), and
+   `prob_dying()`, `asr()`) and their decomposition by age, cause and
+   subgroup (`mt_decompose()`), and
 5. **evaluation** with rolling-origin backtests (`mt_backtest()`,
    `mt_score()`).
 
@@ -77,7 +82,8 @@ registration, so areas move between deciles four times in this period
 (column `imd_version` of `ons_data`: 2004, 2007, 2010, 2015 and 2019).
 
 `mt_validate()` checks plausibility (deaths without exposure, rates above
-1, gaps in the grid, and the sums of aggregate strata):
+1, missing values, strata without deaths or exposures, levels that look
+like totals, gaps in the grid, and the sums of aggregate strata):
 
 ```{r}
 mt_validate(x)
@@ -140,7 +146,7 @@ s[age == "70-74" & period %in% c(2020, 2034) & quintile %in% c("Q1", "Q5"),
   .(sex, quintile, period, q0.025, q0.5, q0.975)]
 ```
 
-```{r, eval = has_gg}
+```{r, eval = has_gg, fig.height = 7}
 mt_plot_forecast(fc_ll, ages = c("50-54", "70-74", "85-89"),
                  strata = c("female.Q1", "female.Q5", "male.Q1", "male.Q5"))
 ```
@@ -177,10 +183,15 @@ observed_gap <- mt_contrast(x, var = "quintile", ref = "Q1", at = 0)[level == "Q
 library(ggplot2)
 ggplot(gaps, aes(period)) +
   geom_ribbon(aes(ymin = q0.025, ymax = q0.975, fill = model), alpha = 0.2) +
-  geom_line(aes(y = q0.5, colour = model)) +
-  geom_line(data = observed_gap, aes(y = q0.5)) +
+  geom_line(aes(y = q0.5, colour = model), linetype = "dashed") +
+  geom_point(data = observed_gap, aes(y = q0.5), size = 0.8, alpha = 0.6) +
+  geom_vline(xintercept = 2019.5, linetype = "dotted", colour = "grey50") +
   facet_wrap(~ sex) +
-  labs(x = NULL, y = "Gap in life expectancy at birth, Q5 - Q1 (years)", colour = NULL, fill = NULL)
+  scale_colour_mortensor(type = "categorical") +
+  scale_fill_mortensor(type = "categorical") +
+  labs(x = NULL, y = "Gap in life expectancy at birth, Q5 - Q1 (years)", colour = NULL, fill = NULL,
+       subtitle = "Points: observed; dashed: forecast median with 95% interval") +
+  theme_mortensor()
 ```
 
 The two models make different assumptions, and the data cannot decide
@@ -233,12 +244,21 @@ mt_plot_coverage(bt)
 
 ## Where next
 
-* "Coherent forecasts by sex, region and deprivation": forecasts that add up
-  over strata (for example quintiles to England).
+* "Forecasting mortality by deprivation quintile": gaps between quintiles,
+  backtests by quintile, calibration of the intervals on the last ten
+  years.
+* "Coherent forecasts: what reconciliation changes": forecasts that add up
+  over strata (quintiles and sexes to England), method by method.
+* "Decomposing differences in life expectancy": the ages, causes and
+  subgroup composition behind gaps and changes, observed and forecast.
 * "Causes of death by deprivation": cause-specific forecasts that add up to
   all causes, on the same ONS data.
-* "Data at different granularities": ungrouping and its accuracy on HMD data
-  with known single-year rates.
-* "Forecasting with Human Mortality Database data", "Bayesian
-  age-period-cohort models" and "Comparison with demography and bamp".
-* "Frequently asked questions".
+* "Coherent forecasts by sex, region and cause": the 16 German Laender, with
+  suppressed cells, pooling and smoothing of sparse cause-specific data.
+* "Your own data, from CSV to report": reading official exports with their
+  peculiarities, and a report from them.
+* "Data at different granularities: ungrouping HMD data": ungrouping and its
+  accuracy on HMD data with known single-year rates.
+* "Forecasting and backtesting with HMD data", "Bayesian age-period-cohort
+  models with bamp" and "Comparison with demography, bamp and StMoMo".
+* "Model reference" and "Frequently asked questions".

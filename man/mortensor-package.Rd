@@ -30,12 +30,29 @@ with \code{\link[=tuned]{tuned()}}) and forecast with \code{\link[=mt_forecast]{
 \code{\link[=mt_aggregate_strata]{mt_aggregate_strata()}} adds the aggregates, \code{\link[=mt_reconcile]{mt_reconcile()}} and
 \code{\link[=reconciled]{reconciled()}} make forecasts add up draw by draw, \code{\link[=mt_order_strata]{mt_order_strata()}}
 imposes orderings.
-\item \strong{Evaluation}: \code{\link[=mt_backtest]{mt_backtest()}} and \code{\link[=mt_score]{mt_score()}}.
+\item \strong{Wrappers for any model}: \code{\link[=ensemble]{ensemble()}}, \code{\link[=reconciled]{reconciled()}},
+\code{\link[=calibrated]{calibrated()}} (spread fitted to recent forecast errors), \code{\link[=anchored]{anchored()}}
+(jump-off at the observed level), \code{\link[=bootstrapped]{bootstrapped()}} and \code{\link[=tuned]{tuned()}}.
+\item \strong{Evaluation}: \code{\link[=mt_backtest]{mt_backtest()}} and \code{\link[=mt_score]{mt_score()}}, for rates, life
+expectancy and age-standardised rates.
+\item \strong{The past}: \code{\link[=mt_observed]{mt_observed()}}, \code{\link[=mt_contrast]{mt_contrast()}} and \code{\link[=mt_inequality]{mt_inequality()}}.
 \item \strong{Derived quantities and plots}: \code{\link[=life_table]{life_table()}}, \code{\link[=life_expectancy]{life_expectancy()}},
 \code{\link[=mt_deaths]{mt_deaths()}}, \code{\link[=mt_plot_forecast]{mt_plot_forecast()}} and the other \verb{mt_plot_*()}
 functions.
+\item \strong{Decomposition}: \code{\link[=mt_decompose]{mt_decompose()}} splits differences in life
+expectancy and other summaries by age, cause and subgroup composition,
+for observed data, forecasts or both.
 }
 }
+\section{Caution}{
+
+mortensor is experimental software written largely with AI coding
+assistants ("vibe-coded"). It has unit tests and a validation pipeline,
+but it has not been peer reviewed and its interfaces still change. Use it
+at your own risk and check results independently before using them in
+publications, reports or decisions.
+}
+
 \seealso{
 Useful links:
 \itemize{

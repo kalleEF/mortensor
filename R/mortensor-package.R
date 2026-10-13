@@ -22,10 +22,25 @@
 #'   [mt_aggregate_strata()] adds the aggregates, [mt_reconcile()] and
 #'   [reconciled()] make forecasts add up draw by draw, [mt_order_strata()]
 #'   imposes orderings.
-#' * **Evaluation**: [mt_backtest()] and [mt_score()].
+#' * **Wrappers for any model**: [ensemble()], [reconciled()],
+#'   [calibrated()] (spread fitted to recent forecast errors), [anchored()]
+#'   (jump-off at the observed level), [bootstrapped()] and [tuned()].
+#' * **Evaluation**: [mt_backtest()] and [mt_score()], for rates, life
+#'   expectancy and age-standardised rates.
+#' * **The past**: [mt_observed()], [mt_contrast()] and [mt_inequality()].
 #' * **Derived quantities and plots**: [life_table()], [life_expectancy()],
 #'   [mt_deaths()], [mt_plot_forecast()] and the other `mt_plot_*()`
 #'   functions.
+#' * **Decomposition**: [mt_decompose()] splits differences in life
+#'   expectancy and other summaries by age, cause and subgroup composition,
+#'   for observed data, forecasts or both.
+#'
+#' @section Caution:
+#' mortensor is experimental software written largely with AI coding
+#' assistants ("vibe-coded"). It has unit tests and a validation pipeline,
+#' but it has not been peer reviewed and its interfaces still change. Use it
+#' at your own risk and check results independently before using them in
+#' publications, reports or decisions.
 #'
 #' @keywords internal
 #' @import data.table
@@ -47,5 +62,6 @@ utils::globalVariables(c(
   "lev", "w", "year", "dep", "population", "i.population", "cause", "dic", "index", "factor", "kind", "score",
   "group", "mode", "time", "cell", "n_members", "symbol", "raw", "age_group", "cause_label", "idx",
   "group_", "new_", "n_", "first_", "members", "n", "s", ".value", "nxt", "u", "g", "n_lev", "sum_all", "var",
-  "age_i", "effect", "q0.05", "q0.95", "residual", "p_positive", "ages", "panel"
+  "age_i", "effect", "q0.05", "q0.95", "residual", "p_positive", "ages", "panel", "age_f", "panel2", "col", "row",
+  "comparison", "xvar", "fvar", "max_residual", "q0.025", "q0.975", "forecast", "fitted"
 ))

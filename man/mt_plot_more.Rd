@@ -18,7 +18,12 @@ mt_plot_shares(
   causes = NULL
 )
 
-mt_plot_scores(backtest, metric = "crps", by = c("horizon", "age"))
+mt_plot_scores(
+  backtest,
+  metric = "crps",
+  by = c("horizon", "age", "model"),
+  target = c("rate", "life_expectancy", "asr")
+)
 }
 \arguments{
 \item{fit}{A fitted \code{\link[=tucker3]{tucker3()}} model.}
@@ -43,7 +48,10 @@ computed among all levels).}
 
 \item{metric}{Score column, for example \code{"crps"}, \code{"wis"} or \code{"ae"}.}
 
-\item{by}{\code{"horizon"} or \code{"age"}.}
+\item{by}{\code{"horizon"}, \code{"age"} or \code{"model"}.}
+
+\item{target}{\code{"rate"}, \code{"life_expectancy"} or \code{"asr"} (see
+\code{\link[=mt_backtest]{mt_backtest()}}).}
 }
 \value{
 A ggplot object.
@@ -58,7 +66,8 @@ selected ages, observed and forecast (median and 95\% interval), from a
 forecast with a cause variable among the strata (for example from
 \code{\link[=cause_shares]{cause_shares()}}).
 \item \code{mt_plot_scores()}: mean score of each model by horizon or age from a
-backtest.
+backtest, or one bar per model (\code{by = "model"}); \code{target} selects
+rates or a derived quantity scored by the backtest.
 }
 }
 \examples{
