@@ -1,60 +1,66 @@
-# Compute life expectancy
+# Life expectancy from rates or forecast draws
 
-Generic function for computing life expectancy from mortality data or
-forecasts. Dispatches to methods for `mort_data` and `mort_forecast`
-objects.
+Life expectancy from rates or forecast draws
 
 ## Usage
 
 ``` r
-life_expectancy(object, ...)
-
-# S3 method for class 'mort_data'
-life_expectancy(object, width = 5, open_age_method = "reciprocal", ...)
-
-# S3 method for class 'mort_forecast'
-life_expectancy(object, width = 5, open_age_method = "reciprocal", ...)
+life_expectancy(
+  x,
+  age = NULL,
+  at = NULL,
+  probs = c(0.025, 0.1, 0.5, 0.9, 0.975),
+  paths = FALSE,
+  ...
+)
 ```
 
 ## Arguments
 
-- object:
+- x:
 
-  A `mort_data` or `mort_forecast` object.
+  A matrix or array of rates with age in the first dimension, an
+  [mt_draws](mt_draws.md) object, or an [mt_data](mt_data.md) object
+  (observed rates with Poisson intervals, see
+  [`mt_observed()`](mt_observed.md)).
+
+- age:
+
+  An [mt_axis](mt_axis.md) (taken from `x` for draws).
+
+- at:
+
+  Age at which life expectancy is computed (start of an interval;
+  default the first age).
+
+- probs:
+
+  Quantiles reported for draws.
+
+- paths:
+
+  For draws, return the values of every path, an array
+  `[period, stratum, draw]`.
 
 - ...:
 
-  Additional arguments passed to methods.
-
-- width:
-
-  Age-group width. Default 5.
-
-- open_age_method:
-
-  Method for open interval; see
-  [`life_table`](https://kalleEF.github.io/mortensor/reference/life_table.md).
+  Passed to the life-table calculation (`ax`, `open`, `k`).
 
 ## Value
 
-A `data.table` with life expectancy values.
+For arrays, an array without the age dimension. For draws, a
+`data.table` with the mean and quantiles per stratum and period,
+computed path by path.
 
-A `data.table` with columns: `year`, `group`, `ex` (life expectancy at
-the youngest observed age).
+## Examples
 
-A `data.table` with columns: `year`, `group`, `ex`, and optionally
-`ex_lower`, `ex_upper`.
-
-## Methods (by class)
-
-- `life_expectancy(mort_data)`: Compute life expectancy for observed
-  mortality data
-
-  Computes period life expectancy at the youngest age for all groups and
-  years in a `mort_data` object.
-
-- `life_expectancy(mort_forecast)`: Compute life expectancy for
-  mortality forecasts
-
-  Computes period life expectancy from forecast mortality rates,
-  including prediction interval bounds if available.
+``` r
+x <- mt_example(deaths = "single")
+m <- mt_array(x, "deaths") / mt_array(x, "exposure")
+life_expectancy(m, mt_grid(x)$age, at = 65)[1:3, ]
+#>       stratum
+#> period   female     male
+#>   1990 21.17552 16.96333
+#>   1991 21.28877 16.89039
+#>   1992 21.36637 16.94218
+```

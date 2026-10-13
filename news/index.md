@@ -1,0 +1,457 @@
+# Changelog
+
+## mortensor 0.1.9000 (development of 0.2.0)
+
+Clean break: the 0.1.x interface is replaced (see `dev/revamp-plan.md`).
+
+### Decomposition
+
+- [`mt_decompose()`](../reference/mt_decompose.md) splits the difference
+  in a mortality summary between two sets of rates into contributions of
+  ages, causes and population subgroups, as post-processing of observed
+  data (optionally with Poisson draws), forecast draws (draw by draw, so
+  contributions have intervals), or both (an observed year against a
+  forecast year, or two objects). Comparisons: between levels of a
+  stratum variable (`var`, `ref`), between years (`periods`), or between
+  two objects (`y`). Methods: symmetric Arriaga for life expectancy with
+  causes split by the implied sensitivity (exact), the line integral of
+  Horiuchi, Wilmoth and Pletcher (2008) and stepwise replacement of
+  Andreev, Shkolnikov and Begun (2002) for any quantity (life
+  expectancy, probability of dying, age-standardised rate, or a function
+  of the rates), and Kitagawa’s rate and age-structure components of the
+  crude death rate. With `groups`, the composition of a population of
+  subgroups is separated from their mortality: as in Riffe, Tursun-zade
+  and Trias Llimós (2024, “Arriaga meets Kitagawa”), with subgroups
+  blended at the radix (`composition = "radix"`), or for the pooled
+  rates (`"pooled"`, composition effects by age).
+- [`summary()`](https://rdrr.io/r/base/summary.html) sums contributions
+  path by path over ages, causes or subgroups;
+  [`mt_plot_decomposition()`](../reference/mt_plot_decomposition.md)
+  draws them as bars, stacked by cause or subgroup, with 95% intervals
+  for forecasts.
+- Results agree with DemoDecomp (`horiuchi()`, `stepwise_replacement()`)
+  and LEdecomp (`arriaga_sym()`) to machine precision on the same life
+  table, and the Kitagawa step reproduces Table 1 of Riffe et
+  al. (2024). New validation check `decomposition`; article “Decomposing
+  differences in life expectancy” on the ONS data; plan in
+  `dev/decomposition-plan.md`.
+
+### Smoothing, jump-off and fixed totals (methods of the earlier UK analysis)
+
+- Smoothing over time:
+  `mt_smooth(along = "period", method = "whittaker")` (one smoothing
+  parameter per stratum, chosen by GCV pooled over ages) and over the
+  age-period surface with a quasi-Poisson GAM,
+  `mt_smooth(dims = 2, method = "gam")` (`te(age, year)`, about one
+  second per stratum; the 2D P-spline takes minutes).
+  [`mt_smooth_check()`](../reference/mt_smooth_check.md) reports how far
+  the smoother moved the data (median absolute log difference,
+  dispersion of the raw deaths around the smoothed ones, variance ratio
+  of year-to-year changes, correlation);
+  [`mt_plot_smooth()`](../reference/mt_smooth_check.md) shows observed
+  points against smoothed lines.
+- Models fitted to smoothed data keep the raw deaths (`fit$raw_D`):
+  observation noise of predictive draws, residuals, observed rates, the
+  MASE scale of backtests and the empirical copula of reconciliation
+  refer to the data before smoothing. Before, noise was estimated from
+  the smoothed rates, which made intervals too narrow.
+- Smoothing over time narrows the intervals of models with a period
+  index; combined with [`calibrated()`](../reference/calibrated.md) it
+  gave the best calibrated forecasts for England & Wales men (Lee-Carter
+  on the GAM surface, calibrated: CRPS 0.0646, 95% coverage 0.91 against
+  0.0687 and 0.75). On the ONS quintiles, whose noise is close to
+  Poisson, smoothing did not help.
+- [`anchored()`](../reference/anchored.md) moves the start of any
+  model’s forecast towards the observed level of the last `years`
+  (default 3) per age and stratum, with empirical Bayes shrinkage of
+  sparse cells and a linear fade over `decay` years; ensembles are
+  anchored per component and reconciled models stay coherent.
+  [`mt_jump_off()`](../reference/mt_jump_off.md) reports the step from
+  the last observed and the last fitted year into the first forecast
+  year.
+- Reconciliation with fixed nodes: `mt_reconcile(fixed = )` and
+  `reconciled(fixed = )` keep trusted forecasts (for example the total,
+  or all causes) and let the other strata absorb the gap. Bottom values
+  that a projection would make negative are held at zero and the rest
+  projected again (a simple form of non-negative reconciliation), so
+  fixed nodes and aggregates are kept; before, zeroed values could move
+  them. [`mt_coherence()`](../reference/mt_coherence.md) and
+  [`mt_plot_coherence()`](../reference/mt_coherence.md) show how far
+  forecasts are from adding up.
+- Backtests score derived quantities:
+  `mt_backtest(quantities = c("life_expectancy", "asr"))` adds rows with
+  `target`, and `mt_score(target = )` scores them;
+  `mt_plot_scores(by = "model")` draws a bar chart of models.
+- `lee_carter(adjust = c("dt", "dxt", "e0", "none"))` re-estimates the
+  period index as in
+  [`demography::lca()`](https://pkg.robjhyndman.com/demography/reference/lca.html),
+  and `choose_period = TRUE` fits the longest recent period with a
+  linear index (Booth, Maindonald and Smith 2002); `ensemble(top_k = )`
+  keeps the best components of the inner backtest;
+  `mt_tune(strategy = "two_stage")` searches a coarse grid first.
+- Disaggregation: `tail` (`"kannisto"` or `"gompertz"`) and `tail_width`
+  for the open interval in [`mt_ungroup()`](../reference/mt_ungroup.md)
+  and [`mt_disaggregate()`](../reference/mt_disaggregate.md),
+  year-specific shapes from
+  [`mt_shape_rates()`](../reference/mt_shape_rates.md),
+  [`mt_disaggregate_check()`](../reference/mt_disaggregate_check.md) and
+  [`mt_plot_disaggregation()`](../reference/mt_disaggregate_check.md).
+- Vignettes: “Forecasting and backtesting with HMD data” (chosen period,
+  anchoring, smoothing with calibration, scores of life expectancy),
+  “Forecasting mortality by deprivation quintile” (smoothing check,
+  jump-off, backtests of anchoring and smoothing), “Coherent forecasts”
+  (coherence plot, a fixed total), “Causes of death by deprivation”
+  (causes reconciled to a fixed all-cause forecast). New validation
+  check `smoothing_jumpoff`.
+
+### Calibration, deprivation and coherence vignettes
+
+- [`calibrated()`](../reference/calibrated.md) wraps any model
+  specification (including [`ensemble()`](../reference/ensemble.md),
+  [`reconciled()`](../reference/reconciled.md) and
+  [`bootstrapped()`](../reference/bootstrapped.md)) and recalibrates the
+  spread of its forecast draws, optionally also the drift, on the last
+  `years` (default
+  10. of the training data. The base model is refitted at several
+      origins in that window. A horizon-dependent spread factor (and
+      drift correction) is chosen by minimum CRPS, or by the interval
+      score of one central interval (`target = "interval"`). Observation
+      noise is modelled as in
+      [`mt_backtest()`](../reference/mt_backtest.md), and draws of an
+      ensemble get the noise of their component. Reconciled models are
+      calibrated at the bottom level and stay coherent. `by` gives
+      separate factors for groups of strata.
+      [`summary()`](https://rdrr.io/r/base/summary.html) and
+      [`mt_parameters()`](../reference/mt_parameters.md) report the
+      factors.
+- Backtests (England & Wales men, origins 1996-2001, h = 10):
+  calibration raised the 95% coverage of Lee-Carter from 0.75 to 0.88
+  and lowered its CRPS by 4%. An already calibrated ensemble was
+  narrowed (0.95 to 0.90) at the same CRPS. Drift correction overfitted
+  on the ONS data and is off by default. New validation check
+  `calibration_ew`.
+- Ensemble forecasts record the component of each draw (`$component`).
+- Plot layout of the owner’s earlier analysis as the package standard:
+  [`theme_mortensor()`](../reference/mt_plot_style.md),
+  [`scale_colour_mortensor()`](../reference/mt_plot_style.md),
+  [`scale_fill_mortensor()`](../reference/mt_plot_style.md),
+  [`mt_palette()`](../reference/mt_plot_style.md) (ordered
+  red-yellow-green scale for levels such as Q1-Q5, distinct colours
+  otherwise). Forecast plots show observed points, fitted lines (stored
+  in the draws as `$fitted`), dashed forecast medians with interval
+  ribbons and a dotted line before the first forecast year;
+  [`mt_plot_forecast()`](../reference/mt_plot.md) has panels of age by
+  stratum and new arguments `colour` and `log_values`; `levels` defaults
+  to 0.95. [`fitted()`](https://rdrr.io/r/stats/fitted.values.html)
+  works for ensembles (weighted geometric mean of the components).
+- [`mt_inequality()`](../reference/mt_inequality.md) weights observed
+  years by their own populations (it used the last year’s for every
+  year).
+- Documentation review: corrected vignette titles and cross-references,
+  Model reference (series models, calibration, sources of uncertainty of
+  every model), FAQ, [`mt_validate()`](../reference/mt_validate.md)
+  checks, help pages of [`ensemble()`](../reference/ensemble.md),
+  [`reconciled()`](../reference/reconciled.md),
+  [`cause_shares()`](../reference/cause_shares.md) and the derived
+  quantities.
+- Vignettes “Forecasting mortality by deprivation quintile” (ONS:
+  inequality indicators, backtests by quintile, calibration, gap
+  forecasts by model, fitting period) and “Coherent forecasts: what
+  reconciliation changes” (ONS sex x quintile with totals: incoherence
+  of separate forecasts, each reconciliation method’s effect on
+  forecasts, intervals and backtest accuracy per level, dependence
+  between strata). The regional vignette adds forecasts for every Land
+  and compares the reconciliation methods on them.
+
+### Changes after two applied reviews and stress tests
+
+- Renamed for clarity: model wrappers are nouns like the other model
+  constructors, [`ensemble()`](../reference/ensemble.md),
+  [`reconciled()`](../reference/reconciled.md),
+  [`tuned()`](../reference/mt_tune.md),
+  [`bootstrapped()`](../reference/bootstrapped.md) (were
+  `mt_ensemble()`, `mt_reconciled()`, `mt_tuned()`, `mt_bootstrap()`);
+  [`mt_order_strata()`](../reference/mt_order_strata.md) (was
+  `mt_cohere()`); [`mt_parameters()`](../reference/mt_parameters.md)
+  replaces `lc_parameters()` and `apc_effects()`; `mt_window()` is
+  internal (`mt_subset(periods = )`).
+
+- Hierarchies: additivity per variable
+  (`mt_hierarchy(region = "DE", cause = list(total = "all", additive = "rates"))`);
+  exposures of crossed region-by-cause hierarchies are summed over
+  regions and taken once over causes in aggregation, validation and
+  reconciliation. Before, all-cause exposures were multiplied by the
+  number of causes.
+
+- [`mt_fill_suppressed()`](../reference/mt_fill_suppressed.md) takes the
+  bounds of suppressed counts (`lower`, `upper`), also without published
+  totals; it stops when no total of the hierarchy is in the data and
+  leaves uncovered cells missing (before, they kept the exposures as
+  starting values).
+
+- Inspection: [`summary()`](https://rdrr.io/r/base/summary.html) of fits
+  (model, sources of uncertainty, fit),
+  [`mt_parameters()`](../reference/mt_parameters.md) for Lee-Carter,
+  Li-Lee, product-ratio, random walks and Bayesian APC models (with
+  R-hat), [`fitted()`](https://rdrr.io/r/stats/fitted.values.html),
+  [`residuals()`](https://rdrr.io/r/stats/residuals.html),
+  [`mt_plot_residuals()`](../reference/mt_plot_residuals.md).
+
+- Results: [`mt_observed()`](../reference/mt_observed.md) and observed
+  indicators ([`life_expectancy()`](../reference/life_expectancy.md),
+  [`asr()`](../reference/derived.md),
+  [`prob_dying()`](../reference/derived.md) accept data, with Poisson
+  intervals), [`mt_contrast()`](../reference/mt_contrast.md)
+  (differences and ratios between strata, path by path),
+  [`mt_inequality()`](../reference/mt_inequality.md) (slope and relative
+  index of inequality), `life_expectancy(paths = TRUE)`, `asr(per = )`
+  with `ages`, `standard` and `per` columns, standards `"esp1976"` and
+  `"who2000"`, [`mt_export()`](../reference/mt_export.md) for any table.
+
+- Future exposures ([`mt_deaths()`](../reference/mt_deaths.md),
+  [`mt_forecast()`](../reference/mt_forecast.md),
+  [`mt_reconcile()`](../reference/mt_reconcile.md),
+  [`mt_aggregate_draws()`](../reference/mt_aggregate_draws.md)) are
+  matched by age, year and stratum names and can be `mt_data` objects;
+  unnamed arrays give a warning.
+
+- Data input: broader age labels (`"1 to 4"`, `"85 years and over"`,
+  `"90 & over"`, German labels), financial years (`"2001/02"`), total
+  rows left out and unknown ages distributed with warnings, thousands
+  separators and `decimal = ","`, trimmed labels, warnings for levels
+  that differ between tables, detection of total levels among the parts,
+  [`mt_relabel()`](../reference/mt_relabel.md),
+  `mt_regroup(age = "common")`;
+  [`mt_as_exposure()`](../reference/mt_as_exposure.md) needs an explicit
+  `type`; [`mt_read_genesis()`](../reference/mt_read_genesis.md) makes
+  no analysis decisions.
+
+- Errors name the missing periods, strata or cells and the likely cause;
+  duplicates name unused columns; overlapping age groups and rates above
+  1 are located.
+
+- Robustness: Lee-Carter handles age groups without deaths and sparse
+  counts (ridge fallback); failed strata give one warning; forecasts
+  with rates above 1 give a warning; `rwd(observation_noise = TRUE)`
+  pools the level variance over ages where deaths are few; smoothing
+  leaves age 0 out and respects group widths; models with one age group
+  work.
+
+- Backtests: `n_origins` origins with complete horizons, seeded PIT,
+  estimated cells not scored by default (`score_estimated`).
+
+- [`step_window()`](../reference/mt_prep.md) (fitting period),
+  [`as_demogdata()`](../reference/as_demogdata.md),
+  [`as_stmomodata()`](../reference/as_demogdata.md), plots with the
+  original data (`data`), stratum selection and facets for life
+  expectancy, share plots that take their defaults from the hierarchy, a
+  warning when both `h` and `to` are given.
+
+- Documentation: reference index by analysis step, a function map with
+  workflow diagrams, the “Model reference” vignette, a model-choice
+  table and an aggregation table in the FAQ, no references to 0.1 or
+  internal files in help pages.
+
+- Data layer: `mt_axis` ([`single_ages()`](../reference/mt_axis.md),
+  [`age_groups()`](../reference/mt_axis.md),
+  [`single_years()`](../reference/mt_axis.md),
+  [`parse_age_labels()`](../reference/parse_age_labels.md)),
+  [`mt_data()`](../reference/mt_data.md) with tables at their own
+  resolution,
+  [`mt_grid()`](../reference/mt_strata.md)/[`mt_set_grid()`](../reference/mt_set_grid.md),
+  [`mt_array()`](../reference/mt_array.md),
+  [`mt_granularity()`](../reference/mt_granularity.md),
+  [`mt_validate()`](../reference/mt_validate.md) (including hierarchy
+  sums), [`mt_regroup()`](../reference/mt_regroup.md),
+  [`mt_operator()`](../reference/mt_operator.md),
+  [`mt_as_exposure()`](../reference/mt_as_exposure.md),
+  [`as_mt_data()`](../reference/as_mt_data.md) for data frames,
+  `StMoMoData` and `demogdata`, and the simulated
+  [`mt_example()`](../reference/mt_example.md).
+
+- Native penalized composite link model and
+  [`mt_ungroup()`](../reference/mt_ungroup.md): deaths are ungrouped as
+  rates with exposures as offset; the open interval is expanded to
+  omega; 1D (default) and 2D; group totals preserved.
+
+- [`mt_smooth()`](../reference/mt_smooth.md) and preprocessing pipelines
+  ([`mt_prep()`](../reference/mt_prep.md), `step_*()`) that backtests
+  refit on every training window.
+
+- Interval-aware [`life_table()`](../reference/life_table.md) and
+  [`life_expectancy()`](../reference/life_expectancy.md) (also path by
+  path on forecast draws).
+
+- Model contract ([`mt_fit()`](../reference/mt_fit.md),
+  [`mt_forecast()`](../reference/mt_forecast.md), `mt_draws`) with
+  models [`rwd()`](../reference/rwd.md),
+  [`lee_carter()`](../reference/lee_carter.md) (Poisson and SVD; agrees
+  with StMoMo and demography), [`tucker3()`](../reference/tucker3.md)
+  (native HOOI; log and CoDa),
+  [`arima_series()`](../reference/arima_series.md),
+  [`ets_series()`](../reference/arima_series.md), and
+  [`ensemble()`](../reference/ensemble.md).
+
+- [`apc_bayes()`](../reference/apc_bayes.md): seamless wrapper of the
+  bamp package (Bayesian age-period-cohort models) with convergence
+  checks and draws on the grid.
+
+- Plots (`mt_plot_*()`, ggplot2), HMD readers
+  ([`mt_from_hmd()`](../reference/mt_from_hmd.md),
+  [`mt_read_hmd()`](../reference/mt_from_hmd.md)), and four vignettes
+  using HMD data.
+
+- Ports of the 0.1 models and methods:
+  [`hyndman_ullah()`](../reference/hyndman_ullah.md),
+  [`stmomo()`](../reference/stmomo.md) (APC, CBD, RH, M6, LC),
+  [`li_lee()`](../reference/li_lee.md),
+  [`product_ratio()`](../reference/li_lee.md),
+  [`cause_shares()`](../reference/cause_shares.md) (Tucker4-ILR
+  multi-cause forecasts),
+  [`mt_reconcile()`](../reference/mt_reconcile.md) (MinT, WLS, OLS),
+  [`mt_order_strata()`](../reference/mt_order_strata.md), stacking
+  weights in [`ensemble()`](../reference/ensemble.md), Whittaker and GAM
+  smoothing, Kannisto closure in
+  [`life_table()`](../reference/life_table.md), monotone splitting of
+  deaths, and the simulated multi-cause dataset
+  [`mt_example_causes()`](../reference/mt_example_causes.md).
+
+- Grouped hierarchies for coherent forecasts (for example sex x region x
+  deprivation quintile):
+  [`mt_hierarchy()`](../reference/mt_hierarchy.md),
+  [`mt_aggregate_strata()`](../reference/mt_aggregate_strata.md),
+  multi-variable hierarchy checks in
+  [`mt_validate()`](../reference/mt_validate.md),
+  [`mt_reconcile()`](../reference/mt_reconcile.md) on the death scale
+  with WLS, MinT, structural, OLS or bottom-up reconciliation, an
+  empirical copula for separately fitted strata and non-negativity;
+  [`reconciled()`](../reference/reconciled.md) for reconciliation inside
+  fits and backtests;
+  [`mt_aggregate_draws()`](../reference/mt_aggregate_draws.md);
+  `li_lee(common_by = "sex")`; simulated
+  [`mt_example_regions()`](../reference/mt_example_regions.md) and a
+  vignette.
+
+- Rate-based spline ungrouping (`mt_ungroup(method = "hyman_kannisto")`,
+  `"natural_gompertz"`, `"gam"`),
+  [`mt_disaggregate()`](../reference/mt_disaggregate.md) for forecast
+  draws, [`bootstrapped()`](../reference/bootstrapped.md) (parameter and
+  preprocessing uncertainty by Poisson resampling and refitting) and
+  information-criterion rank selection in `tucker3(ranks = "bic")`.
+
+- “Frequently asked questions” vignette; vdiffr snapshot tests of all
+  plots; Tucker factor signs are fixed so that fits are identical across
+  LAPACK builds.
+
+- Vignettes “Getting started” and “Causes of death by deprivation” use
+  `ons_data`; the 0.1-to-0.2 migration vignette is removed.
+
+- [`li_lee()`](../reference/li_lee.md) and
+  [`product_ratio()`](../reference/li_lee.md) gain
+  `jump_off = "observed"`; Lee-Carter labels name their variant (SVD,
+  observed jump-off, bootstrap).
+
+- [`asr()`](../reference/derived.md) and
+  [`prob_dying()`](../reference/derived.md) return the values of every
+  path with `paths = TRUE`;
+  [`mt_plot_shares()`](../reference/mt_plot_more.md) gains `groups` and
+  `causes` filters.
+
+- General preprocessing replaces the dataset-specific readers
+  (`mt_read_ons()` is removed): [`mt_data()`](../reference/mt_data.md)
+  reads text values with symbols for suppressed or missing cells
+  (`missing`, `zero`), wide tables with one value column per level of a
+  stratum variable (one column per sex or cause), and tables without
+  some stratum columns, which are shared over their levels (populations
+  shared by causes of death).
+  [`mt_group_levels()`](../reference/mt_group_levels.md) adds an
+  aggregation layer to any stratum variable (cause groups, deciles to
+  quintiles, districts to regions) with summed or shared exposures, a
+  residual group (`other`, or the `total` minus the groups) and a new
+  name for the layer. [`mt_subset()`](../reference/mt_subset.md)
+  restricts strata, ages and periods. `mt_regroup(age = "deaths")`
+  aggregates to the age groups of a table.
+
+- The default modelling grid is the coarsest grid on which every table
+  is exact (the age groups of the data when all tables share them), so
+  models fit grouped data directly;
+  [`mt_ungroup()`](../reference/mt_ungroup.md) ungroups to single years
+  by default (new argument `age`). The error for deaths coarser than the
+  grid names both remedies.
+
+- Fixed: reconciled predictive draws of rate-additive hierarchies
+  (causes) returned aggregated deaths instead of rates; the European
+  Standard Population weights of 95+ were dropped for an open 90+ grid
+  group; smoothing of 5-year age groups failed because of singular
+  starting values.
+
+- `rwd(observation_noise = TRUE)`: random walk with drift plus noise
+  (local level model); sharper than the plain random walk. Interval
+  calibration of random walks, Lee-Carter and ensembles on simulated,
+  HMD and ONS data is documented in `dev/calibration.md`; the defaults
+  stay.
+
+- `ons_data`: deaths by cause and populations by sex, age group and IMD
+  decile, England 2001-2019 (ONS ad hoc release 3064, Open Government
+  Licence), with the cause groups `ons_cause_groups`; built by
+  `data-raw/ons_data.R`.
+
+- German regional data: `de_deaths` (deaths by Land, sex, age group and
+  ICD-10 chapter, 1998-2024, GBE-Bund) and `de_population` (31 December
+  populations, GENESIS-Online), Datenlizenz Deutschland by-2-0;
+  [`mt_read_gbe()`](../reference/mt_read_gbe.md) parses GBE-Bund
+  exports, and
+  [`mt_fill_suppressed()`](../reference/mt_fill_suppressed.md) estimates
+  suppressed death counts by raking them to the published totals.
+  `mt_as_exposure(type = "dec31")` for populations on 31 December.
+  Missing cells are reported by
+  [`mt_validate()`](../reference/mt_validate.md).
+
+- Ensembles draw one component per path for all strata (before,
+  components were picked separately per stratum, which broke the
+  dependence between strata and the coherence of reconciled components);
+  every model type is tested as a component.
+
+- [`mt_read_genesis()`](../reference/mt_read_genesis.md) reads deaths
+  and 31 December populations in the flat CSV format of GENESIS-Online
+  (Destatis); [`parse_age_labels()`](../reference/parse_age_labels.md)
+  understands the German age labels.
+
+- [`apc_select()`](../reference/apc_select.md) (DIC-based choice of
+  random-walk orders for [`apc_bayes()`](../reference/apc_bayes.md)),
+  and the plots [`mt_plot_tucker()`](../reference/mt_plot_more.md),
+  [`mt_plot_shares()`](../reference/mt_plot_more.md) and
+  [`mt_plot_scores()`](../reference/mt_plot_more.md).
+
+- [`mt_tune()`](../reference/mt_tune.md) and
+  [`tuned()`](../reference/mt_tune.md);
+  [`prob_dying()`](../reference/derived.md),
+  [`asr()`](../reference/derived.md) (ESP 2013),
+  [`yll()`](../reference/derived.md),
+  [`mt_export()`](../reference/mt_export.md).
+
+- [`mt_backtest()`](../reference/mt_backtest.md) (rolling origin, scored
+  at the observed resolution) and
+  [`mt_score()`](../reference/mt_score.md) (CRPS, WIS, coverage, PIT,
+  MASE).
+
+- Validation pipeline in `validation/` and GitHub workflows for R CMD
+  check (R 4.3 to devel), coverage, lint and validation.
+
+- Dependencies reduced to data.table and Matrix (plus base packages).
+
+## mortensor 0.1.1
+
+Maintenance release before the 0.2 rewrite (see
+`dev/implementation-plan.md`).
+
+- `%||%` is imported from rlang, so the package works on R \< 4.4
+  (review D1).
+- `forecast()` and `accuracy()` are the generics from the generics
+  package (re-exported); methods dispatch correctly after
+  [`library(forecast)`](https://pkg.robjhyndman.com/forecast/) (D2).
+- Licence changed to GPL-3.
+- Undefined global variables declared; stray files removed from the
+  repository.
+- `dev/baseline/` records point forecasts of every model as a regression
+  baseline for the rewrite.

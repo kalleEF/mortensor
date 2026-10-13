@@ -1,0 +1,54 @@
+# Summarise backtest scores
+
+Summarise backtest scores
+
+## Usage
+
+``` r
+mt_score(backtest, by = "model", target = c("rate", "life_expectancy", "asr"))
+```
+
+## Arguments
+
+- backtest:
+
+  An [`mt_backtest()`](mt_backtest.md) result (or several combined with
+  [`rbind()`](https://rdrr.io/r/base/cbind.html)).
+
+- by:
+
+  Grouping columns, for example `c("model", "horizon")`.
+
+- target:
+
+  `"rate"` (log death rates per cell, default), `"life_expectancy"` or
+  `"asr"` (when the backtest scored these quantities, see `quantities`
+  in [`mt_backtest()`](mt_backtest.md)).
+
+## Value
+
+A `data.table` with the mean CRPS, WIS and absolute error, MASE (mean of
+absolute error over the scale; rates only), empirical coverage of the
+50%, 80% and 95% intervals, mean PIT and the number of scored cells.
+
+## Examples
+
+``` r
+x <- mt_example(deaths = "single", years = 1990:2012)
+bt <- mt_backtest(rwd(), x, origins = 2007, h = 5, n_draws = 100)
+mt_score(bt, by = c("model", "horizon"))
+#>                     model horizon       crps        wis        mae     mase
+#>                    <char>   <num>      <num>      <num>      <num>    <num>
+#> 1: Random walk with drift       1 0.04454219 0.03992641 0.06272241 1.048261
+#> 2: Random walk with drift       2 0.04654157 0.04148880 0.06166271 1.157779
+#> 3: Random walk with drift       3 0.05565911 0.04972059 0.07710375 1.386932
+#> 4: Random walk with drift       4 0.05812890 0.05190181 0.07358098 1.287454
+#> 5: Random walk with drift       5 0.06429823 0.05740455 0.08308110 1.459025
+#>        cov50     cov80     cov95  pit_mean     n
+#>        <num>     <num>     <num>     <num> <int>
+#> 1: 0.4859155 0.7253521 0.8661972 0.5020423   142
+#> 2: 0.6126761 0.8591549 0.9718310 0.5157746   142
+#> 3: 0.6478873 0.8943662 0.9647887 0.4927465   142
+#> 4: 0.7183099 0.9577465 1.0000000 0.4763380   142
+#> 5: 0.7605634 0.9507042 1.0000000 0.4895070   142
+```

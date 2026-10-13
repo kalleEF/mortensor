@@ -1,0 +1,47 @@
+# Fit a model to mortality data
+
+Applies the preprocessing pipeline, takes deaths and exposures on the
+grid and fits the model per stratum (or jointly). A failure in one
+stratum is recorded in the diagnostics and does not stop the other
+strata.
+
+## Usage
+
+``` r
+mt_fit(spec, data, prep = NULL, cores = 1, ...)
+```
+
+## Arguments
+
+- spec:
+
+  A model specification (`mt_spec`).
+
+- data:
+
+  An [mt_data](mt_data.md) object.
+
+- prep:
+
+  An [mt_prep](mt_prep.md) pipeline or `NULL`.
+
+- cores:
+
+  Number of cores for per-stratum fits (forked processes; 1 on Windows).
+
+- ...:
+
+  Passed to methods.
+
+## Value
+
+An object of class `mt_fit`.
+
+## Examples
+
+``` r
+x <- mt_example(deaths = "single")
+fit <- mt_fit(lee_carter(), x)
+fit
+#> <mt_fit> Lee-Carter; 2 strata; ages 30 to 100+; periods 1990-2019
+```

@@ -1,0 +1,172 @@
+# Reconcile forecast draws over a hierarchy
+
+Makes forecasts of nested or crossed strata add up, draw by draw. For
+each age, year and draw, the base forecasts `y` of all strata in the
+hierarchy (bottom series and aggregates) are projected onto the coherent
+subspace, `y - W U (U' W U)^-1 U' y`, where `U' y = 0` are the
+aggregation constraints (each aggregate equals the sum of its bottom
+series). With `additive = "deaths"` in the hierarchy, the projection
+works on expected deaths (rates times exposures; exposures of aggregates
+are the sums of their bottom series), and reconciled rates are
+reconciled deaths divided by exposures. Methods choose `W`:
+
+## Usage
+
+``` r
+mt_reconcile(
+  draws,
+  hierarchy = NULL,
+  method = c("wls", "mint", "structural", "ols", "bottom_up"),
+  shrink = "auto",
+  exposure = NULL,
+  dependence = c("empirical", "none"),
+  seed = NULL,
+  fixed = NULL,
+  var = NULL,
+  total = NULL,
+  parts = NULL
+)
+```
+
+## Arguments
+
+- draws:
+
+  An [mt_draws](mt_draws.md) object with the strata of the hierarchy.
+
+- hierarchy:
+
+  An [`mt_hierarchy()`](mt_hierarchy.md) (or, for one variable, `var`
+  and `total`).
+
+- method:
+
+  `"wls"` (default), `"mint"`, `"structural"`, `"ols"` or `"bottom_up"`.
+  In a backtest on [`mt_example_regions()`](mt_example_regions.md)
+  (Lee-Carter per stratum, 90 strata) WLS and structural scaling kept
+  95% coverage of bottom and aggregate strata at 0.95-0.98 and improved
+  the bottom-level CRPS; MinT with the draw covariance under-covered
+  aggregates (0.88).
+
+- shrink:
+
+  Shrinkage intensity for `"mint"` (number between 0 and 1), or
+  `"auto"`.
+
+- exposure:
+
+  Exposures `[age, period, stratum]` or `[age, stratum]` for the
+  forecast years (default: last training year). Only bottom strata are
+  used; aggregates are summed.
+
+- dependence:
+
+  `"empirical"` or `"none"` (keep the draws as they are).
+
+- seed:
+
+  Random seed for the reordering.
+
+- fixed:
+
+  Strata whose forecasts are kept unchanged (labels, or `"total"` for
+  the grand total of the hierarchy), for example a trusted all-cause
+  forecast that the causes must add up to. The projection gives these
+  nodes zero variance, so the other strata absorb the whole gap;
+  `$reconciliation$max_relative_change_fixed` reports how closely they
+  were kept (they move only when every bottom stratum below them would
+  have to be negative). Needs a projection method.
+
+- var, total, parts:
+
+  One-variable form: stratum variable and its total level (`parts` is
+  ignored: all other levels are parts).
+
+## Value
+
+The reconciled `mt_draws`, with diagnostics in `$reconciliation`
+(method, largest relative gap before reconciliation, share of bottom
+values held at zero, mean shrinkage intensity).
+
+## Details
+
+- `"mint"`: covariance of the base draws across strata, shrunk towards
+  its diagonal (Schaefer-Strimmer intensity by default). This follows
+  the minimum-trace reconciliation of Wickramasuriya et al. (2019), with
+  the covariance of the forecast draws in place of in-sample residuals;
+
+- `"wls"`: diagonal with the variance of each stratum's draws;
+
+- `"structural"`: diagonal with the number of bottom series in each
+  node;
+
+- `"ols"`: identity;
+
+- `"bottom_up"`: aggregates are the sums of the bottom forecasts.
+
+Projections can make bottom values negative where the base forecasts
+disagree strongly. Such values are held at zero and the remaining bottom
+strata of the draw are projected again, until none is negative (a simple
+form of the non-negative reconciliation of Wickramasuriya et al. 2020);
+the aggregates are recomputed from the bottom series, so the result is
+coherent and non-negative, and fixed nodes are kept.
+
+Draws of strata forecast by separate models are independent, so their
+sums would be too narrow. With `dependence = "empirical"` (default), the
+paths of each stratum are first reordered so that their ranks follow the
+co-movement of the strata in the training data (an empirical copula, the
+"Schaake shuffle" of Clark et al. 2004): every draw is matched to a
+training year, and the stratum whose average year-to-year change of log
+rates was relatively large in that year receives a relatively high path.
+The marginal distribution of each stratum is unchanged.
+
+The one-variable interface with `var` and `total` is still accepted.
+
+## References
+
+Wickramasuriya SL, Athanasopoulos G, Hyndman RJ (2019). Optimal forecast
+reconciliation for hierarchical and grouped time series through trace
+minimization. *Journal of the American Statistical Association*
+114(526): 804-819.
+[doi:10.1080/01621459.2018.1448825](https://doi.org/10.1080/01621459.2018.1448825)
+
+Wickramasuriya SL, Turlach BA, Hyndman RJ (2020). Optimal non-negative
+forecast reconciliation. *Statistics and Computing* 30: 1167-1182.
+[doi:10.1007/s11222-020-09930-0](https://doi.org/10.1007/s11222-020-09930-0)
+
+Clark M, Gangopadhyay S, Hay L, Rajagopalan B, Wilby R (2004). The
+Schaake shuffle: a method for reconstructing space-time variability in
+forecasted precipitation and temperature fields. *Journal of
+Hydrometeorology* 5(1): 243-262.
+
+Schaefer J, Strimmer K (2005). A shrinkage approach to large-scale
+covariance matrix estimation and implications for functional genomics.
+*Statistical Applications in Genetics and Molecular Biology* 4(1):
+Article 32.
+[doi:10.2202/1544-6115.1175](https://doi.org/10.2202/1544-6115.1175)
+
+## Examples
+
+``` r
+x <- mt_example_regions(years = 2005:2019, regions = 3)
+h <- mt_hierarchy(sex = "both", region = "all", quintile = "all")
+xa <- mt_aggregate_strata(x, h)
+fc <- mt_forecast(mt_fit(lee_carter(), xa), h = 3, n_draws = 50, seed = 1)
+rc <- mt_reconcile(fc, h, method = "wls")
+rc$reconciliation
+#> $method
+#> [1] "wls"
+#> 
+#> $max_relative_gap_before
+#> [1] 0.2521229
+#> 
+#> $share_set_to_zero
+#> [1] 0
+#> 
+#> $mean_shrinkage
+#> [1] NA
+#> 
+#> $max_relative_change_fixed
+#> [1] NA
+#> 
+```

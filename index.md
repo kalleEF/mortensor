@@ -1,286 +1,122 @@
 # mortensor
 
-**🚸CAUTION: This package is vibe-coded ✨. Use at your own risk🚸**
+Flexible probabilistic mortality forecasting from data observed at
+different granularities: age groups and open age intervals, single or
+grouped periods, population strata and causes.
 
-**Cause-Specific Coherent Ensemble Mortality Forecasting including
-Tensor Decomposition Approaches**
+> **Caution: experimental, vibe-coded software. Use at your own risk.**
+> mortensor is written largely with AI coding assistants (“vibe-coded”).
+> It has unit tests and a validation pipeline with thresholds (see
+> `validation/`), but it has not been peer reviewed, its interfaces
+> still change, and its results can be wrong in ways the tests do not
+> catch. Check results independently before you use them in
+> publications, reports or decisions.
 
-`mortensor` is a modular R package for forecasting age-specific
-mortality rates across population strata (e.g. sex × deprivation
-quintile) and causes of death. It combines Tucker tensor decomposition
-with compositional data analysis, ensemble time-series methods, and
-rigorous uncertainty quantification.
-
-------------------------------------------------------------------------
-
-## Why mortensor?
-
-Mortality data are inherently multi-way: rates vary by **age**,
-**period**, and **population group** simultaneously. Univariate methods
-(Lee-Carter, ARIMA per series) ignore this structure. `mortensor` models
-the full age × period × group array jointly via Tucker3 decomposition,
-extracting low-rank patterns that generalise better out-of-sample.
-
-Key design goals:
-
-- **Stratified by default** — designed for sex × deprivation (or
-  similar) cross-classifications, not just aggregate data
-- **Ensemble-first** — automatic model comparison and inverse-MASE
-  weighting over Tucker3, Lee-Carter, FDM, StMoMo, ARIMA, ETS, and RWD
-- **Coherent multi-cause** — WLS reconciliation and Tucker4-ILR ensure
-  disease-specific forecasts sum to all-cause
-- **Honest uncertainty** — residual bootstrap and GAM-Bayes posterior
-  propagation produce well-calibrated 95% prediction intervals
-- **Actuarially complete** — disaggregates 5-year groups to single-year
-  ages and computes full abridged life tables
-
-------------------------------------------------------------------------
+**Status:** version 0.2 is a rewrite in development (see
+`dev/progress.md`).
 
 ## Installation
 
 ``` r
-# From GitHub
+
+# install.packages("remotes")
 remotes::install_github("kalleEF/mortensor")
-
-# From a local clone
-devtools::install("path/to/mortensor")
 ```
 
-### Optional backends
+Requires R \>= 4.3.0. Hard dependencies are data.table and Matrix;
+models and data adapters that build on other packages (forecast, bamp,
+StMoMo, demography, ggplot2) use them when installed.
 
-``` r
-install.packages("demography")  # Lee-Carter and FDM models
-install.packages("StMoMo")      # Stochastic mortality models
-install.packages("nnls")        # NNLS ensemble stacking
-install.packages("readxl")      # ONS Excel import
+## What it does
+
+| Layer | Functions |
+|----|----|
+| Data at any granularity | [`mt_data()`](reference/mt_data.md) (long or wide tables, symbols for suppressed cells, shared populations), [`mt_add()`](reference/mt_add.md), [`as_mt_data()`](reference/as_mt_data.md) (StMoMo, demography), [`mt_from_hmd()`](reference/mt_from_hmd.md), [`mt_read_hmd()`](reference/mt_from_hmd.md), [`mt_read_genesis()`](reference/mt_read_genesis.md), [`mt_read_gbe()`](reference/mt_read_gbe.md), [`mt_validate()`](reference/mt_validate.md), `ons_data`, `de_deaths` |
+| Preparation | [`mt_as_exposure()`](reference/mt_as_exposure.md), [`mt_subset()`](reference/mt_subset.md), [`mt_group_levels()`](reference/mt_group_levels.md) (aggregation layers: cause groups, quintiles, regions), [`mt_relabel()`](reference/mt_relabel.md), [`mt_fill_suppressed()`](reference/mt_fill_suppressed.md) |
+| Harmonisation | [`mt_regroup()`](reference/mt_regroup.md), [`mt_ungroup()`](reference/mt_ungroup.md) (penalized composite link model with exposure offset, 1D/2D; spline and GAM methods), [`mt_smooth()`](reference/mt_smooth.md) (over age, over time or both; P-splines, Whittaker, GAM), [`mt_smooth_check()`](reference/mt_smooth_check.md), [`mt_plot_smooth()`](reference/mt_smooth_check.md) |
+| Preprocessing pipelines | [`mt_prep()`](reference/mt_prep.md) with [`step_ungroup()`](reference/mt_prep.md), [`step_smooth()`](reference/mt_prep.md), [`step_regroup()`](reference/mt_prep.md), [`step_grid()`](reference/mt_prep.md), [`step_shocks()`](reference/mt_prep.md), [`step_window()`](reference/mt_prep.md); models fitted to smoothed rates take their observation noise from the raw rates |
+| Describing the past | [`mt_observed()`](reference/mt_observed.md), [`life_expectancy()`](reference/life_expectancy.md), [`asr()`](reference/derived.md), [`prob_dying()`](reference/derived.md) on data, [`mt_contrast()`](reference/mt_contrast.md) (gaps, ratios), [`mt_inequality()`](reference/mt_inequality.md) (SII, RII), [`standard_population()`](reference/standard_population.md) |
+| Models | [`rwd()`](reference/rwd.md), [`lee_carter()`](reference/lee_carter.md) (Poisson or SVD with the adjustments and period choice of demography), [`tucker3()`](reference/tucker3.md), [`arima_series()`](reference/arima_series.md), [`ets_series()`](reference/arima_series.md), [`hyndman_ullah()`](reference/hyndman_ullah.md) (demography), [`stmomo()`](reference/stmomo.md) (APC, CBD, RH, M6, LC), [`li_lee()`](reference/li_lee.md), [`product_ratio()`](reference/li_lee.md), [`apc_bayes()`](reference/apc_bayes.md) and [`apc_select()`](reference/apc_select.md) (bamp), [`cause_shares()`](reference/cause_shares.md) |
+| Wrappers for any model | [`ensemble()`](reference/ensemble.md) (weights from inner backtests, `top_k`), [`reconciled()`](reference/reconciled.md), [`calibrated()`](reference/calibrated.md) (spread fitted to the errors of the last 10 years), [`anchored()`](reference/anchored.md) (jump-off at the observed level), [`bootstrapped()`](reference/bootstrapped.md), [`tuned()`](reference/mt_tune.md) and [`mt_tune()`](reference/mt_tune.md) (full or two-stage grids) |
+| Coherence | [`mt_hierarchy()`](reference/mt_hierarchy.md), [`mt_aggregate_strata()`](reference/mt_aggregate_strata.md), [`mt_reconcile()`](reference/mt_reconcile.md) and [`reconciled()`](reference/reconciled.md) (bottom-up, WLS, MinT, structural, OLS; draw by draw; `fixed` nodes such as a trusted total), [`mt_coherence()`](reference/mt_coherence.md), [`mt_plot_coherence()`](reference/mt_coherence.md), [`mt_aggregate_draws()`](reference/mt_aggregate_draws.md), [`mt_order_strata()`](reference/mt_order_strata.md) |
+| Forecasts | [`mt_fit()`](reference/mt_fit.md), [`summary()`](https://rdrr.io/r/base/summary.html), [`mt_parameters()`](reference/mt_parameters.md), [`residuals()`](https://rdrr.io/r/stats/residuals.html), [`mt_forecast()`](reference/mt_forecast.md) (simulated paths), [`mt_jump_off()`](reference/mt_jump_off.md), [`mt_summarise()`](reference/mt_draws.md), [`mt_deaths()`](reference/mt_deaths.md), [`mt_disaggregate()`](reference/mt_disaggregate.md) with [`mt_shape_rates()`](reference/mt_shape_rates.md) and [`mt_disaggregate_check()`](reference/mt_disaggregate_check.md) |
+| Evaluation | [`mt_backtest()`](reference/mt_backtest.md) (rolling origin, no leakage; rates, life expectancy, ASR), [`mt_score()`](reference/mt_score.md) (CRPS, WIS, coverage, PIT, MASE) |
+| Decomposition | [`mt_decompose()`](reference/mt_decompose.md) (differences by age, cause and subgroup: Arriaga, Horiuchi, stepwise replacement, Kitagawa, and Arriaga meets Kitagawa for subgroup composition; on observed data, forecast draws or both), [`mt_plot_decomposition()`](reference/mt_plot_decomposition.md) |
+| Results and plots | [`life_table()`](reference/life_table.md), [`life_expectancy()`](reference/life_expectancy.md), [`prob_dying()`](reference/derived.md), [`asr()`](reference/derived.md), [`yll()`](reference/derived.md), [`mt_contrast()`](reference/mt_contrast.md), [`mt_inequality()`](reference/mt_inequality.md), [`mt_plot_forecast()`](reference/mt_plot.md), [`mt_plot_life_expectancy()`](reference/mt_plot.md), [`mt_plot_scores()`](reference/mt_plot_more.md), [`mt_plot_shares()`](reference/mt_plot_more.md), [`theme_mortensor()`](reference/mt_plot_style.md), [`mt_export()`](reference/mt_export.md), [`as_demogdata()`](reference/as_demogdata.md), [`as_stmomodata()`](reference/as_demogdata.md) |
+
+## Function map
+
+The objects of an analysis and the functions that connect them. The
+[function map](vignettes/articles/function-map.Rmd) (on the website:
+Articles, Function map) shows every function with its purpose, the
+possible workflows and what the package does not cover.
+
+``` mermaid
+flowchart LR
+  T["`**your tables**
+  deaths, populations`"]
+  D["`**mt_data**
+  any resolution, strata`"]
+  S["`**model specification**
+  lee_carter(), li_lee(), rwd(),
+  ensemble(), reconciled(), calibrated()`"]
+  F["`**mt_fit**`"]
+  P["`**mt_draws**
+  simulated future rates`"]
+  R["`**results**
+  life expectancy, ASR, deaths,
+  gaps, plots, CSV`"]
+  B["`**backtest scores**`"]
+  T -- "mt_data()" --> D
+  D -- "mt_as_exposure(), mt_subset(), mt_group_levels(),
+  mt_fill_suppressed(), mt_regroup(), mt_validate()" --> D
+  S --> F
+  D -- "mt_fit()" --> F
+  F -- "mt_forecast()" --> P
+  P -- "life_expectancy(), asr(), mt_contrast(),
+  mt_decompose(), mt_plot_*(), mt_export()" --> R
+  D -- "mt_backtest(), mt_score()" --> B
+  D -- "mt_observed()" --> R
 ```
 
-------------------------------------------------------------------------
-
-## Quick start
+## Example
 
 ``` r
+
 library(mortensor)
 
-# Load the example dataset (mort_data object)
-data(example_mortality)
+# deaths and populations by sex, age group and deprivation decile, England
+# 2001-2019 (ONS; Open Government Licence)
+x <- mt_data(deaths = ons_data, population = ons_data, by = c("sex", "imd_decile"),
+             age = "age_group", value = c(deaths = "all_causes", population = "population"))
+x <- mt_as_exposure(x, type = "midyear")
+# deciles to quintiles: an aggregation layer with its own name
+x <- mt_group_levels(x, "imd_decile", function(d) paste0("Q", ceiling(as.numeric(d) / 2)),
+                     name = "quintile")
+mt_validate(x)
 
-# 1. Smooth — 2D GAM P-spline, exclude COVID years
-sm <- smooth_mortality(example_mortality, method = "gam",
-                       covid_years = c(2020L, 2021L))
+fit <- mt_fit(li_lee(common_by = "sex"), x)
+fc <- mt_forecast(fit, h = 15, n_draws = 500, seed = 1)
+life_expectancy(fc, at = 0)
 
-# 2. Calibrate — compare Tucker3, Lee-Carter, FDM, ETS, ARIMA, RWD;
-#    build inverse-MASE ensemble from top 3
-cal <- calibrate(sm, holdout_frac = 0.2, ensemble = TRUE)
-print(cal)
-
-# 3. Forecast
-fc <- forecast(cal, h = 10)
-
-# 4. Add 95% prediction intervals (bootstrap)
-fc <- add_pi(fc, n_sim = 500, method = "bootstrap")
-
-# 5. Disaggregate to single-year ages (30–100)
-fc_1yr <- disaggregate(fc, target_ages = 30:100,
-                       method = "natural_gompertz")
-
-# 6. Life expectancy (with PI bounds)
-le <- life_expectancy(fc)
-print(le)
-
-# 7. Export to CSV
-export(fc, dir = "results/")
+bt <- mt_backtest(li_lee(common_by = "sex"), x, origins = 2008:2014, h = 5)
+mt_score(bt)
 ```
 
-------------------------------------------------------------------------
+Vignettes: *Getting started* (ONS deprivation data), *Your own data,
+from CSV to report*, *Forecasting mortality by deprivation quintile*,
+*Causes of death by deprivation*, *Coherent forecasts by sex, region and
+cause* (German Laender), *Coherent forecasts: what reconciliation
+changes*, *Model reference*, *Data at different granularities* and
+*Forecasting and backtesting* (HMD data), *Bayesian age-period-cohort
+models with bamp*, *Comparison with demography, bamp and StMoMo*,
+*Frequently asked questions*.
 
-## Pipeline overview
+## Development
 
-    mort_data ──► smooth_mortality() ──► calibrate() ──► forecast()
-                                                              │
-                                                         add_pi()
-                                                              │
-                                                      disaggregate()
-                                                              │
-                                                  life_expectancy() / export()
+See `CLAUDE.md` for conventions and commands, `validation/README.md` for
+the validation pipeline, and `dev/implementation-plan.md` for the plan.
 
-Every step returns an S3 object with
-[`print()`](https://rdrr.io/r/base/print.html),
-[`summary()`](https://rdrr.io/r/base/summary.html),
-[`plot()`](https://rdrr.io/r/graphics/plot.default.html), and
-[`export()`](https://kalleEF.github.io/mortensor/reference/export.md)
-methods.
+## Licence
 
-------------------------------------------------------------------------
-
-## Core features
-
-### Tensor decomposition (Tucker3)
-
-Mortality rates $m_{x,t,g}$ are arranged in a 3D array (age × year ×
-group) and decomposed as:
-
-$$\mathcal{X} \approx \mathcal{G} \times_{1}\mathbf{A} \times_{2}\mathbf{B} \times_{3}\mathbf{C}$$
-
-The temporal mode $\mathbf{B}$ is the only component that changes over
-time — its columns are forecast individually using ARIMA, ETS, or random
-walk with drift. Two transform strategies are provided:
-
-- **Tucker3-CoDa**: CLR transform on death *shares* (compositional,
-  bounded)
-- **Tucker3-Direct**: log-transform on mortality *rates* (simpler, often
-  competitive for all-cause)
-
-Ranks $\left( R_{A},R_{B},R_{C} \right)$ and the time-series method are
-selected by rolling-origin cross-validation or BIC/AIC.
-
-### Model ensemble
-
-[`calibrate()`](https://kalleEF.github.io/mortensor/reference/calibrate.md)
-evaluates all available models on a holdout period and builds an
-ensemble via **inverse-MASE weighting**:
-
-| Model               | Backend                |
-|---------------------|------------------------|
-| Tucker3-CoDa        | rTensor + compositions |
-| Tucker3-Direct      | rTensor                |
-| Lee-Carter          | demography             |
-| FDM                 | demography             |
-| StMoMo APC          | StMoMo                 |
-| ARIMA per series    | forecast               |
-| ETS (damped)        | forecast               |
-| Random walk + drift | —                      |
-
-### Prediction intervals
-
-Two methods are available via
-[`add_pi()`](https://kalleEF.github.io/mortensor/reference/add_pi.md):
-
-| Method        | Description                                     | Speed            |
-|---------------|-------------------------------------------------|------------------|
-| `"bootstrap"` | Residual resampling + ARIMA/ETS simulation      | Fast (seconds)   |
-| `"gam_bayes"` | GAM posterior draws → full pipeline re-forecast | Slower (minutes) |
-
-Both produce `mx_lower` / `mx_upper` / `mx_median` arrays and a full
-`sims` array for custom quantile extraction.
-
-### Age disaggregation
-
-Three methods disaggregate abridged (5-year) age groups to single years:
-
-| Method               | Interpolation           | Old-age extrapolation   |
-|----------------------|-------------------------|-------------------------|
-| `"hyman_kannisto"`   | Monotone Hermite spline | Kannisto logistic       |
-| `"natural_gompertz"` | Natural cubic spline    | Gompertz log-linear     |
-| `"gam"`              | 2D GAM (age × year)     | Blended parametric tail |
-
-All methods enforce the group-mean constraint (mean of single-year rates
-matches the original 5-year grouped rate).
-
-### Multi-cause coherence
-
-For cause-of-death forecasting, two coherence strategies are available:
-
-**WLS reconciliation**
-([`reconcile()`](https://kalleEF.github.io/mortensor/reference/reconcile.md)):
-Forecast each cause independently, then adjust via weighted least
-squares so that diseases sum to all-cause. Works with any per-cause
-model.
-
-**Tucker4-ILR**
-([`run_coherent_forecast()`](https://kalleEF.github.io/mortensor/reference/run_coherent_forecast.md)):
-Model cause *shares* jointly in a 4D tensor via ILR-transformed simplex
-coordinates. Coherence is guaranteed by construction.
-
-### Scoring rules
-
-`mortensor` implements all major proper scoring rules for forecast
-evaluation:
-
-| Metric           | Function                                                                                                          | Type          |
-|------------------|-------------------------------------------------------------------------------------------------------------------|---------------|
-| Combined MASE    | [`compute_mase_combined()`](https://kalleEF.github.io/mortensor/reference/compute_mase_combined.md)               | Point         |
-| Cell MASE        | [`compute_mase_array()`](https://kalleEF.github.io/mortensor/reference/compute_mase_array.md)                     | Point         |
-| Trend MASE       | [`compute_mase_group_trend()`](https://kalleEF.github.io/mortensor/reference/compute_mase_group_trend.md)         | Point         |
-| RMSE (log)       | [`compute_rmse_log()`](https://kalleEF.github.io/mortensor/reference/compute_rmse_log.md)                         | Point         |
-| CRPS (empirical) | [`compute_crps_empirical()`](https://kalleEF.github.io/mortensor/reference/compute_crps_empirical.md)             | Probabilistic |
-| CRPS (Gaussian)  | [`compute_crps_gaussian()`](https://kalleEF.github.io/mortensor/reference/compute_crps_gaussian.md)               | Probabilistic |
-| Interval score   | [`compute_interval_score_array()`](https://kalleEF.github.io/mortensor/reference/compute_interval_score_array.md) | Probabilistic |
-| WIS              | [`compute_wis()`](https://kalleEF.github.io/mortensor/reference/compute_wis.md)                                   | Probabilistic |
-| Log-score        | [`compute_log_score_gaussian()`](https://kalleEF.github.io/mortensor/reference/compute_log_score_gaussian.md)     | Probabilistic |
-
-------------------------------------------------------------------------
-
-## S3 classes
-
-| Class                | Constructor                                                                                                                                                        | Key methods                                                                            |
-|----------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------|
-| `mort_data`          | [`mort_data()`](https://kalleEF.github.io/mortensor/reference/mort_data.md), [`read_mortality()`](https://kalleEF.github.io/mortensor/reference/read_mortality.md) | `print`, `summary`, `plot`, `[`, `as.data.table`, `life_expectancy`                    |
-| `mort_calibration`   | [`calibrate()`](https://kalleEF.github.io/mortensor/reference/calibrate.md)                                                                                        | `print`, `summary`, `plot`, `forecast`, `export`                                       |
-| `mort_forecast`      | [`forecast()`](https://kalleEF.github.io/mortensor/reference/forecast.md)                                                                                          | `print`, `summary`, `plot`, `coef`, `fitted`, `residuals`, `export`, `life_expectancy` |
-| `mort_config`        | [`mort_config()`](https://kalleEF.github.io/mortensor/reference/mort_config.md)                                                                                    | `print`                                                                                |
-| `mort_shared_config` | [`mort_shared_config()`](https://kalleEF.github.io/mortensor/reference/mort_shared_config.md)                                                                      | `print`                                                                                |
-
-------------------------------------------------------------------------
-
-## Batch pipelines
-
-For end-to-end processing without interactive inspection:
-
-``` r
-# Single cause
-config <- mort_config(cause_label = "All causes", forecast_h = 10,
-                      n_sim = 500, disagg_method = "natural_gompertz")
-result <- run_forecast(data, config)
-
-# Multi-cause with WLS reconciliation
-shared <- mort_shared_config(output_dir = "results/", forecast_h = 10)
-result <- run_reconciled_forecast(disease_configs, all_cause_config, shared)
-
-# Multi-cause Tucker4-ILR (coherent by construction)
-result <- run_coherent_forecast(disease_configs, all_cause_config, shared)
-```
-
-------------------------------------------------------------------------
-
-## Vignettes
-
-| Vignette                                                                                               | Topic                                                        |
-|--------------------------------------------------------------------------------------------------------|--------------------------------------------------------------|
-| [Getting Started](https://kalleEF.github.io/mortensor/vignettes/getting-started.Rmd)                   | Installation, data loading, full pipeline walkthrough        |
-| [Tensor Decomposition](https://kalleEF.github.io/mortensor/vignettes/tensor-decomposition.Rmd)         | Tucker3 CoDa/Direct, Tucker4-ILR, B-mode forecasting         |
-| [Model Calibration](https://kalleEF.github.io/mortensor/vignettes/model-calibration-and-selection.Rmd) | CV/BIC rank selection, ensemble building, holdout comparison |
-| [Prediction Intervals](https://kalleEF.github.io/mortensor/vignettes/prediction-intervals.Rmd)         | Bootstrap, GAM-Bayes, custom quantiles                       |
-| [Age Disaggregation](https://kalleEF.github.io/mortensor/vignettes/age-disaggregation.Rmd)             | Hyman+Kannisto, Natural+Gompertz, GAM, quality checks        |
-| [Life Tables](https://kalleEF.github.io/mortensor/vignettes/life-tables.Rmd)                           | Abridged life tables, life expectancy, dx/mx conversions     |
-| [Multi-Cause Forecasting](https://kalleEF.github.io/mortensor/vignettes/multi-cause-forecasting.Rmd)   | WLS reconciliation, Tucker4-ILR, batch pipelines             |
-| [Scoring & Evaluation](https://kalleEF.github.io/mortensor/vignettes/scoring-and-evaluation.Rmd)       | MASE, CRPS, interval score, WIS, model comparison            |
-| [Visualization Gallery](https://kalleEF.github.io/mortensor/vignettes/visualization-gallery.Rmd)       | All 18+ plot types with examples                             |
-
-------------------------------------------------------------------------
-
-## Dependencies
-
-**Imports** (installed automatically): `data.table`, `rTensor`,
-`compositions`, `forecast`, `mgcv`, `ggplot2`, `stats`
-
-**Suggests** (optional): `demography`, `StMoMo`, `MASS`, `nnls`,
-`readxl`, `knitr`, `rmarkdown`, `testthat`
-
-------------------------------------------------------------------------
-
-## Citation
-
-If you use `mortensor` in published work, please cite:
-
-> Emmert-Fees, Karl. (2024). *mortensor: Cause-Specific Coherent
-> Ensemble Mortality Forecasting including Tensor Decomposition
-> Approaches*. R package version 0.1.0.
-
-But seriously… don’t use this for something you want to publish… (yet)
-
-------------------------------------------------------------------------
-
-## License
-
-MIT © kalleEF
+GPL-3.

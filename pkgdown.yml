@@ -1,17 +1,19 @@
-pandoc: 3.1.11
-pkgdown: 2.2.0
+pandoc: 3.8.3
+pkgdown: 2.2.1
 pkgdown_sha: ~
 articles:
-  age-disaggregation: age-disaggregation.html
-  getting-started: getting-started.html
-  life-tables: life-tables.html
-  model-calibration-and-selection: model-calibration-and-selection.html
-  multi-cause-forecasting: multi-cause-forecasting.html
-  prediction-intervals: prediction-intervals.html
-  scoring-and-evaluation: scoring-and-evaluation.html
-  tensor-decomposition: tensor-decomposition.html
-  visualization-gallery: visualization-gallery.html
-last_built: 2026-03-18T20:57Z
-urls:
-  reference: https://kalleEF.github.io/mortensor/reference
-  article: https://kalleEF.github.io/mortensor/articles
+  bayesian-apc: bayesian-apc.html
+  causes: causes.html
+  coherence: coherence.html
+  comparison: comparison.html
+  decomposition: decomposition.html
+  deprivation: deprivation.html
+  faq: faq.html
+  forecasting-hmd: forecasting-hmd.html
+  articles/function-map: function-map.html
+  granularity-hmd: granularity-hmd.html
+  models: models.html
+  mortensor: mortensor.html
+  own-data: own-data.html
+  regions: regions.html
+last_built: 2026-10-13T17:26Z

@@ -1,0 +1,349 @@
+# Model reference
+
+This vignette states, for every model of mortensor, the model equation,
+the estimation method, how the forecast is generated, the defaults, and
+which sources of uncertainty the forecast draws contain. It is meant as
+the basis of a methods section.
+[`summary()`](https://rdrr.io/r/base/summary.html) of a fitted model
+prints the same information for the actual fit,
+[`mt_parameters()`](../reference/mt_parameters.md) returns the
+estimates.
+
+``` r
+
+library(mortensor)
+x <- mt_example(deaths = "single", years = 1995:2019)
+summary(mt_fit(lee_carter(), x))
+#> Lee-Carter
+#>   data: 2 strata; ages 30 to 100+; periods 1995-2019
+#>   model and uncertainty:
+#>     log m(x,t) = a(x) + b(x) k(t), estimated by Poisson maximum likelihood
+#>     (Brouhns et al. 2002; Lee and Carter 1992). k(t) follows a random walk with
+#>     drift; draws include its innovations and the uncertainty of the drift. a(x)
+#>     and b(x) are fixed (parameter uncertainty with bootstrapped()). Jump-off:
+#>     fitted rates.
+#>   fit: Poisson deviance 3371.3 on 3550 cells (0.95 per cell); 3.9% of deviance residuals beyond +/-2
+```
+
+Notation: `m(x,t,i)` is the central death rate at age `x` in year `t` in
+stratum `i` (deaths divided by exposure), `D` deaths, `E` exposures.
+
+## Data steps that affect every model
+
+| Step | What mortensor does | Function |
+|----|----|----|
+| Exposures | mid-year population, or the mean of two 1 January or 31 December populations | `mt_as_exposure(type = )` |
+| Suppressed cells | raking (iterative proportional fitting; Deming and Stephan 1940) of the missing counts to published totals, within optional bounds | [`mt_fill_suppressed()`](../reference/mt_fill_suppressed.md) |
+| Unknown ages | distributed over the age groups of the same stratum and year in proportion to the known deaths | [`mt_data()`](../reference/mt_data.md) |
+| Ungrouping | penalised composite link model with exposures (Rizzi, Gampe and Eilers 2015) or spline methods | [`mt_ungroup()`](../reference/mt_ungroup.md), [`step_ungroup()`](../reference/mt_prep.md) |
+| Smoothing | over age (Poisson P-splines, Currie, Durban and Eilers 2004; Whittaker; GAM), over time (Whittaker) or the age-period surface (P-splines; quasi-Poisson `te(age, year)` GAM, Wood 2017); age 0 is not smoothed; models are fitted to the smoothed rates, their observation noise, residuals and backtest scales come from the raw rates | [`mt_smooth()`](../reference/mt_smooth.md), [`step_smooth()`](../reference/mt_prep.md), [`mt_smooth_check()`](../reference/mt_smooth_check.md) |
+| Zero deaths | models on log rates use 0.5 deaths in a cell without deaths |  |
+
+All preprocessing steps given as `prep` are refitted on every training
+window of a backtest.
+
+## Single-population models
+
+### Lee-Carter: `lee_carter()`
+
+`log m(x,t) = a(x) + b(x) k(t)`, with `sum b(x) = 1` and `sum k(t) = 0`
+(Lee and Carter 1992).
+
+- **Estimation**: Poisson maximum likelihood (default; Brouhns, Denuit
+  and Vermunt 2002) or SVD of the log rates (`method = "svd"`, as
+  [`demography::lca()`](https://pkg.robjhyndman.com/demography/reference/lca.html)),
+  with `k(t)` re-estimated to match the observed total deaths
+  (`adjust = "dt"`), the deaths by age (`"dxt"`, Booth, Maindonald and
+  Smith 2002) or life expectancy (`"e0"`, Lee and Miller 2001).
+  `choose_period = TRUE` fits the model to the longest recent period
+  over which `k(t)` was close to linear (Booth, Maindonald and Smith
+  2002). Age groups without any death get a constant rate of 0.5 deaths
+  over the training period and `b(x) = 0`; when the Poisson likelihood
+  has no finite maximum (very sparse counts), `b(x)` is shrunk towards
+  equal shares by a ridge penalty. Both are reported as warnings.
+- **Forecast**: `k(t)` follows a random walk with drift; the drift and
+  the innovation variance are estimated from the year-to-year changes of
+  `k(t)`.
+- **Jump-off**: fitted rates of the last year (default) or observed
+  rates (`jump_off = "observed"`).
+- **Uncertainty in the draws**: innovations of `k(t)` and the
+  uncertainty of its drift. `a(x)` and `b(x)` are fixed;
+  `bootstrap = TRUE` or [`bootstrapped()`](../reference/bootstrapped.md)
+  adds their uncertainty.
+
+### Random walk with drift: `rwd()`
+
+Each age: `log m(x,t) = log m(x,t-1) + mu(x) + e(x,t)`.
+
+- **Estimation**: drift as the mean year-to-year change (over the last
+  `drift_window` years); innovations are resampled vectors of observed
+  changes across ages (`innovations = "bootstrap"`, keeps the
+  correlation between ages) or normal (`"gaussian"`).
+- **Uncertainty**: innovations and drift. The observed changes contain
+  the Poisson noise of two years, so the intervals are wide where deaths
+  are few, and over long horizons very wide.
+- **`observation_noise = TRUE`**: log rate = level + noise, the level a
+  random walk with drift (local level model). The noise variance is the
+  Poisson part (one over the deaths) plus an extra part common to all
+  ages; the level variance is estimated from the variance and first
+  autocovariance of the changes and partly pooled across ages (ages with
+  few deaths borrow from the median of the others). The level is Kalman
+  filtered; draws include level, drift and, for predictive draws, noise.
+
+### Functional demographic model: `hyndman_ullah()`
+
+Calls
+[`demography::fdm()`](https://pkg.robjhyndman.com/demography/reference/fdm.html)
+(Hyndman and Ullah 2007): smoothed log rates decomposed into a mean
+function and functional principal components, whose scores are forecast
+with time-series models. Draws are simulated from the fitted model. Its
+intervals are those of the simulated paths, which are somewhat narrower
+at short horizons than demography’s analytic intervals (see the
+comparison vignette).
+
+### Time series per age: `arima_series()`, `ets_series()`
+
+Benchmarks that model the observed log rate of every age as a separate
+time series with the forecast package (Hyndman and Khandakar 2008): an
+ARIMA model chosen by
+[`forecast::auto.arima()`](https://pkg.robjhyndman.com/forecast/reference/auto.arima.html)
+(drift allowed) or an exponential smoothing model chosen by
+[`forecast::ets()`](https://pkg.robjhyndman.com/forecast/reference/ets.html)
+(damped trends allowed). **Uncertainty**: simulated future paths of the
+fitted models, so the intervals grow with the horizon; ages are
+simulated independently and parameter uncertainty is not included. The
+series are observed rates, so their draws already contain observation
+noise.
+
+### StMoMo models: `stmomo()`
+
+Calls [`StMoMo::fit()`](https://rdrr.io/pkg/StMoMo/man/fit.html) and
+[`simulate()`](https://rdrr.io/r/stats/simulate.html) (Villegas, Kaishev
+and Millossovich 2018) for the Lee-Carter, CBD, APC, RH and M6 families.
+Draws contain the period and cohort index uncertainty that StMoMo
+simulates; parameter uncertainty is not included.
+
+### Bayesian age-period-cohort model: `apc_bayes()`
+
+Calls
+[`bamp::bamp()`](https://volkerschmid.github.io/bamp/reference/bamp.html)
+(Schmid and Held 2007): logit death probability = age + period + cohort
+effects with random-walk priors of order 1 or 2, binomial likelihood,
+MCMC. Convergence is checked with the Gelman-Rubin statistic of the
+identified quantities (reported by
+[`mt_parameters()`](../reference/mt_parameters.md) as `rhat`); chains
+that have not converged are refitted with longer runs. **Uncertainty**:
+posterior samples of the forecast rates, including the uncertainty of
+the parameters and of the random walks of period and cohort effects;
+predictive draws add Poisson and extra-Poisson noise as for the other
+models of smooth rates. Each stratum is fitted separately.
+[`apc_select()`](../reference/apc_select.md) compares random-walk orders
+by DIC.
+
+## Models for several populations
+
+### Li-Lee: `li_lee()`
+
+`log m(x,t,i) = a(x,i) + B(x) K(t) + b(x,i) k(t,i)` (Li and Lee 2005).
+
+- **Estimation**: the common factor `B(x) K(t)` is a Lee-Carter model
+  (SVD, `k` refitted to deaths) of the pooled deaths and exposures of
+  the strata in a group (`common_by`, for example one common factor per
+  sex); the stratum factors come from an SVD of the residual log rates.
+- **Forecast**: `K(t)` random walk with drift; each `k(t,i)` an AR(1)
+  process without intercept, `|phi| <= 0.99`, so the deviations of a
+  stratum from the common trend stay bounded (“coherent” in the sense
+  that the strata do not diverge).
+- **Uncertainty**: innovations and drift of `K(t)`, innovations of the
+  AR(1) processes (independent across strata). `a`, `b`, `B` and `phi`
+  are fixed.
+
+### Product-ratio: `product_ratio()`
+
+The same structure on the geometric mean of the strata (common factor)
+and their ratios to it (Hyndman, Booth and Yasmeen 2013), with
+Lee-Carter components in place of functional data models.
+
+### Tucker3 and cause shares (experimental)
+
+[`tucker3()`](../reference/tucker3.md) decomposes the array of log rates
+`[age, period, stratum]` (or of the log-ratio coordinates of life-table
+deaths, `transform = "coda"`) into factor matrices and a core; the
+period factors are forecast as a multivariate random walk with drift or
+with ARIMA/ETS models, and the in-sample residual variation is added to
+the draws. [`cause_shares()`](../reference/cause_shares.md) forecasts
+all-cause mortality with any model and the shares of causes with a
+Tucker model of their isometric log-ratio coordinates, so the causes add
+up to all causes in every draw. Neither has a published evaluation for
+mortality; compare them with the models above in a backtest.
+
+## Jump-off: `anchored()`
+
+Forecasts start from the fitted rates of the last year for most models.
+[`anchored()`](../reference/anchored.md) moves the start towards the
+observed level of the last `years` years for any model: the log ratio of
+observed to fitted deaths per age and stratum, shrunk towards the
+stratum mean where deaths are few, multiplies the draws with a weight
+that fades out over `decay` years.
+[`mt_jump_off()`](../reference/mt_jump_off.md) reports the step between
+the last observed (and fitted) year and the first forecast year.
+
+## Combining models
+
+### Ensembles: `ensemble()`
+
+A mixture of the predictive distributions of its components: each draw
+comes from one component, for all strata at once, chosen with
+probabilities equal to the weights (equal, inverse CRPS of an inner
+backtest, or stacking). The mixture contains the uncertainty of each
+component and the disagreement between them.
+
+### Reconciled forecasts: `reconciled()`
+
+Forecasts of all nodes of a hierarchy (bottom strata and their totals)
+are made to add up draw by draw: bottom-up sums, or projections of the
+base forecasts with weights from their variances (WLS), the shrunk
+covariance (MinT; Wickramasuriya, Athanasopoulos and Hyndman 2019), the
+structure (Hyndman et al. 2011) or equal weights (OLS). Deaths add up
+over every hierarchy variable; exposures add up over variables that
+divide the population and are shared by the levels of variables such as
+causes of death (`additive = "rates"`). The exposures of the forecast
+years are those of the last observed year unless projections are given.
+
+### Calibration on recent years: `calibrated()`
+
+Refits a model at several origins in the last `years` (default 10) of
+the training data, compares its forecasts with the observed rates of
+that window, and rescales the spread of the draws around their median
+per cell by a factor `s(h) = s1 h^gamma` that minimises the CRPS (or the
+interval score of one interval), with the Poisson and extra-Poisson
+variation of the observations as in a backtest (minimum-CRPS estimation;
+Gneiting et al. 2005). Optionally a drift correction is estimated as
+well. Ranks within each cell are kept, so the draws remain paths.
+Calibration widens models that were persistently too narrow (Lee-Carter
+on England & Wales: 95% coverage 0.75 to 0.88 in backtests) and can
+narrow mixtures that were already wide.
+
+### Bootstrap and tuning: `bootstrapped()`, `tuned()`
+
+[`bootstrapped()`](../reference/bootstrapped.md) refits a model to
+Poisson resamples of the deaths (parameter uncertainty, including
+preprocessing with `type = "data"`).
+[`tuned()`](../reference/mt_tune.md) chooses settings (for example the
+rank) by an inner rolling-origin backtest on the training data only. The
+fitting period matters for Lee-Carter forecasts when the pace of decline
+changed (Booth, Maindonald and Smith 2002); `step_window(years)` makes
+it a preprocessing step that a backtest compares across windows.
+
+## Sources of uncertainty at a glance
+
+| Model | Index innovations | Drift | Parameters | Poisson noise | Extra noise |
+|----|----|----|----|----|----|
+| [`lee_carter()`](../reference/lee_carter.md) | yes | yes | with `bootstrap = TRUE` | predictive draws | predictive draws |
+| [`rwd()`](../reference/rwd.md) | yes (observed changes) | yes | no | contained in the changes | contained in the changes |
+| `rwd(observation_noise = TRUE)` | yes (level) | yes | no | predictive draws | predictive draws |
+| [`arima_series()`](../reference/arima_series.md), [`ets_series()`](../reference/arima_series.md) | yes | as the fitted model | no | contained in the series | contained in the series |
+| [`li_lee()`](../reference/li_lee.md), [`product_ratio()`](../reference/li_lee.md) | yes (common and stratum) | common factor | no | predictive draws | predictive draws |
+| [`tucker3()`](../reference/tucker3.md) | yes (period factors) | yes | no | predictive draws | residual variation and predictive draws |
+| [`cause_shares()`](../reference/cause_shares.md) | of the total model and the share factors | yes | no | predictive draws | residual variation and predictive draws |
+| [`hyndman_ullah()`](../reference/hyndman_ullah.md) | yes | as fdm | no | predictive draws | predictive draws |
+| [`stmomo()`](../reference/stmomo.md) | yes | yes | no | predictive draws | predictive draws |
+| [`apc_bayes()`](../reference/apc_bayes.md) | yes | posterior | yes (posterior) | predictive draws | predictive draws |
+| [`ensemble()`](../reference/ensemble.md) | of the components | of the components | of the components, plus model choice | of the components | of the components |
+| [`bootstrapped()`](../reference/bootstrapped.md) | of the base model | of the base model | yes | as the base model | as the base model |
+| [`reconciled()`](../reference/reconciled.md) | of the base model, projected |  |  | bottom strata, summed | bottom strata, summed |
+| [`calibrated()`](../reference/calibrated.md) | of the base model, rescaled | rescaled (optional correction) |  | as the base model | as the base model |
+| [`anchored()`](../reference/anchored.md) | of the base model | of the base model |  | as the base model | as the base model |
+
+Predictive draws (`predictive = TRUE`, always used in backtests)
+describe observable rates. For models of smooth rates they add Poisson
+deaths given the exposures and an extra-Poisson part estimated from the
+in-sample residual variance. For models of observed rates
+([`rwd()`](../reference/rwd.md) without `observation_noise`,
+[`arima_series()`](../reference/arima_series.md),
+[`ets_series()`](../reference/arima_series.md)) the draws already
+describe observable rates and nothing is added. Forecast draws of models
+of smooth rates without `predictive` describe the underlying rates.
+
+## Evaluation
+
+[`mt_backtest()`](../reference/mt_backtest.md) refits preprocessing and
+model at each origin and scores predictive draws against the observed
+log rates of the test years with the continuous ranked probability score
+(CRPS; Gneiting and Raftery 2007), the weighted interval score (Bracher
+et al. 2021), interval coverage, the probability integral transform and
+the absolute error of the median. Cells with estimated (suppressed)
+deaths are not scored unless `score_estimated = TRUE`.
+
+## References
+
+Booth H, Maindonald J, Smith L (2002). Applying Lee-Carter under
+conditions of variable mortality decline. *Population Studies* 56(3):
+325-336.
+
+Bracher J, Ray EL, Gneiting T, Reich NG (2021). Evaluating epidemic
+forecasts in an interval format. *PLoS Computational Biology* 17(2):
+e1008618.
+
+Brouhns N, Denuit M, Vermunt JK (2002). A Poisson log-bilinear
+regression approach to the construction of projected lifetables.
+*Insurance: Mathematics and Economics* 31(3): 373-393.
+
+Currie ID, Durban M, Eilers PHC (2004). Smoothing and forecasting
+mortality rates. *Statistical Modelling* 4(4): 279-298.
+
+Deming WE, Stephan FF (1940). On a least squares adjustment of a sampled
+frequency table when the expected marginal totals are known. *Annals of
+Mathematical Statistics* 11(4): 427-444.
+
+Gneiting T, Raftery AE, Westveld AH, Goldman T (2005). Calibrated
+probabilistic forecasting using ensemble model output statistics and
+minimum CRPS estimation. *Monthly Weather Review* 133(5): 1098-1118.
+
+Gneiting T, Raftery AE (2007). Strictly proper scoring rules,
+prediction, and estimation. *Journal of the American Statistical
+Association* 102(477): 359-378.
+
+Hyndman RJ, Ahmed RA, Athanasopoulos G, Shang HL (2011). Optimal
+combination forecasts for hierarchical time series. *Computational
+Statistics & Data Analysis* 55(9): 2579-2589.
+
+Hyndman RJ, Khandakar Y (2008). Automatic time series forecasting: the
+forecast package for R. *Journal of Statistical Software* 27(3): 1-22.
+
+Hyndman RJ, Booth H, Yasmeen F (2013). Coherent mortality forecasting:
+the product-ratio method with functional time series models.
+*Demography* 50(1): 261-283.
+
+Hyndman RJ, Ullah MS (2007). Robust forecasting of mortality and
+fertility rates: a functional data approach. *Computational Statistics &
+Data Analysis* 51(10): 4942-4956.
+
+Lee RD, Carter LR (1992). Modeling and forecasting U.S. mortality.
+*Journal of the American Statistical Association* 87(419): 659-671.
+
+Lee R, Miller T (2001). Evaluating the performance of the Lee-Carter
+method for forecasting mortality. *Demography* 38(4): 537-549.
+
+Li N, Lee R (2005). Coherent mortality forecasts for a group of
+populations: an extension of the Lee-Carter method. *Demography* 42(3):
+575-594.
+
+Rizzi S, Gampe J, Eilers PHC (2015). Efficient estimation of smooth
+distributions from coarsely grouped data. *American Journal of
+Epidemiology* 182(2): 138-147.
+
+Schmid VJ, Held L (2007). Bayesian age-period-cohort modeling and
+prediction: BAMP. *Journal of Statistical Software* 21(8): 1-15.
+
+Villegas AM, Kaishev VK, Millossovich P (2018). StMoMo: an R package for
+stochastic mortality modeling. *Journal of Statistical Software* 84(3):
+1-38.
+
+Wood SN (2017). *Generalized Additive Models: An Introduction with R*
+(2nd ed.). Chapman and Hall/CRC.
+
+Wickramasuriya SL, Athanasopoulos G, Hyndman RJ (2019). Optimal forecast
+reconciliation for hierarchical and grouped time series through trace
+minimization. *Journal of the American Statistical Association*
+114(526): 804-819.

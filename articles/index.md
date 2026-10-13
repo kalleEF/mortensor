@@ -1,31 +1,25 @@
 # Articles
 
-### Getting Started
+### Getting started
 
-- [Getting Started with
-  mortensor](https://kalleEF.github.io/mortensor/articles/getting-started.md):
+- [Getting started with mortensor](mortensor.md):
+- [Your own data, from CSV to report](own-data.md):
+- [Function map](function-map.md):
 
-### Methods
+### Applications
 
-- [Tensor Decomposition Methods in
-  mortensor](https://kalleEF.github.io/mortensor/articles/tensor-decomposition.md):
-- [Model Calibration, Selection, and
-  Ensembles](https://kalleEF.github.io/mortensor/articles/model-calibration-and-selection.md):
-- [Prediction Intervals: Bootstrap and GAM-Bayes
-  Methods](https://kalleEF.github.io/mortensor/articles/prediction-intervals.md):
-- [Age Disaggregation: From 5-Year Groups to Single
-  Years](https://kalleEF.github.io/mortensor/articles/age-disaggregation.md):
-- [Life Tables and Life
-  Expectancy](https://kalleEF.github.io/mortensor/articles/life-tables.md):
-- [Scoring Rules and Forecast
-  Evaluation](https://kalleEF.github.io/mortensor/articles/scoring-and-evaluation.md):
+- [Forecasting mortality by deprivation quintile](deprivation.md):
+- [Causes of death by deprivation](causes.md):
+- [Coherent forecasts by sex, region and cause](regions.md):
+- [Data at different granularities: ungrouping HMD
+  data](granularity-hmd.md):
+- [Forecasting and backtesting with HMD data](forecasting-hmd.md):
+- [Bayesian age-period-cohort models with bamp](bayesian-apc.md):
 
-### Multi-Cause
+### Methods and evidence
 
-- [Multi-Cause Mortality Forecasting and
-  Reconciliation](https://kalleEF.github.io/mortensor/articles/multi-cause-forecasting.md):
-
-### Reference
-
-- [Visualization
-  Gallery](https://kalleEF.github.io/mortensor/articles/visualization-gallery.md):
+- [Model reference](models.md):
+- [Coherent forecasts: what reconciliation changes](coherence.md):
+- [Decomposing differences in life expectancy](decomposition.md):
+- [Comparison with demography, bamp and StMoMo](comparison.md):
+- [Frequently asked questions](faq.md):
