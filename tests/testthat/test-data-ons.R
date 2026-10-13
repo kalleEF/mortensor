@@ -1,61 +1,60 @@
-test_that("ONS Excel tables are read with deciles combined to quintiles", {
-  skip_if_not_installed("readxl")
-  f <- test_path("fixtures", "ons-synthetic.xlsx")
-  raw <- as.data.frame(readxl::read_excel(f, sheet = "1", skip = 2))
-  expect_warning(x <- mt_read_ons(f, f), class = "mt_warning_ons_fill")
+test_that("wide tables are read with one value column per level", {
+  d <- data.frame(Year = 2020, Region = rep(c("A", "B"), each = 2), Age = rep(c("85-89", "90+"), 2),
+                  Female = 1:4, Male = c("9", ".", "11", "12"))
+  p <- data.frame(Year = 2020, Region = rep(c("A", "B"), each = 2), Age = rep(c("85-89", "90+"), 2),
+                  Population = 100)
+  expect_warning(x <- mt_data(deaths = d, population = p, by = c("Region", "sex"), age = "Age", period = "Year",
+                              value = list(deaths = c(female = "Female", male = "Male"), population = "Population")),
+                 class = "mt_warning_missing")
   st <- mt_strata(x)
-  expect_identical(sort(unique(st$quintile)), paste0("Q", 1:5))
-  expect_identical(sort(unique(st$sex)), c("female", "male"))
-  expect_equal(sum(mt_obs(x, "deaths")$value), sum(raw[["All causes"]]))
-  e <- mt_obs(x, "exposure")
-  expect_equal(e[period_lo == 2021]$value, e[period_lo == 2020]$value)
-  expect_identical(mt_grid(x)$age$labels, c("85-89", "90+"))
-  expect_identical(dim(mt_array(x, "deaths")), c(2L, 3L, 10L))
+  expect_identical(nrow(st), 4L)
+  expect_setequal(st$sex, c("female", "male"))
+  expect_equal(sum(mt_obs(x)$value), sum(1:4) + sum(c(9, 11:12)))
+  expect_identical(nrow(mt_obs(x, "population")), 8L)
+  expect_error(mt_data(deaths = d, by = c("Region", "sex", "cause"), age = "Age", period = "Year",
+                       value = list(deaths = c("Female", "Male"))), class = "mt_error_obs")
+  expect_error(mt_data(deaths = d, by = c("Region", "sex"), age = "Age", period = "Year",
+                       value = list(deaths = c("Female", "Other"))), class = "mt_error_obs")
 })
 
-test_that("cause levels sum the listed columns and the rest closes the total", {
-  skip_if_not_installed("readxl")
-  f <- test_path("fixtures", "ons-synthetic.xlsx")
-  x <- suppressWarnings(mt_read_ons(f, f, causes = list(circ = "Stroke", dem = "dementia", other = "rest"),
-                                    deprivation = "decile", years = 2019:2020))
-  st <- mt_strata(x)
-  expect_setequal(unique(st$cause), c("all", "circ", "dem", "other"))
-  expect_setequal(unique(st$decile), paste0("D", 1:10))
-  d <- mt_obs(x, "deaths")
-  tot <- d[, list(all = sum(value[cause == "all"]), parts = sum(value[cause != "all"])),
-           by = list(sex, decile, age_lo, period_lo)]
-  expect_equal(tot$all, tot$parts)
-  expect_error(mt_read_ons(f, f, causes = list(a = "nonexistent")), class = "mt_error_ons")
-  expect_error(mt_read_ons(f, f, fill_population = FALSE), class = "mt_error_ons")
-})
-
-test_that("data frames in the ONS layout are accepted, with regions", {
-  d <- data.frame(Year = 2020, Region = rep(c("A", "B"), each = 8), Sex = rep(c("Males", "Females"), each = 4),
-                  Age = rep(c("85-89", "90+"), 8), IMD = rep(rep(1:2, each = 2), 4), `All causes` = 1:16,
-                  check.names = FALSE)
-  p <- cbind(d[, 1:5], Population = 100)
-  x <- mt_read_ons(d, p, region = "Region")
-  expect_identical(x$by, c("sex", "region", "quintile"))
-  expect_equal(nrow(mt_strata(x)), 4)
-  expect_equal(sum(mt_obs(x, "deaths")$value), sum(1:16))
-  expect_error(mt_read_ons(d[, -5], p), class = "mt_error_ons")
-  x <- mt_read_ons(d, p, region = "Region", deprivation = "decile")
-  expect_equal(nrow(mt_strata(x)), 8)
-  names(d)[5] <- names(p)[5] <- "IMD quintile"
-  expect_error(mt_read_ons(d, p, deprivation = "decile"), class = "mt_error_ons")
-})
-
-test_that("the packaged ONS data read into consistent strata", {
+test_that("the ONS data read into consistent strata with the general functions", {
   expect_identical(dim(ons_data), c(7600L, 36L))
-  x <- mt_read_ons(ons_data)
+  x <- mt_data(deaths = ons_data, population = ons_data, by = c("sex", "imd_decile"), age = "age_group",
+               value = c(deaths = "all_causes", population = "population"))
+  x <- mt_as_exposure(x)
   expect_equal(sum(mt_obs(x, "deaths")$value), sum(ons_data$all_causes))
   expect_equal(sum(mt_obs(x, "exposure")$value), sum(ons_data$population))
-  expect_identical(attr(x, "imd_version")$imd_version[c(1, 19)], c(2004L, 2019L))
-  y <- mt_read_ons(ons_data, min_age = 50, causes = ons_cause_groups, deprivation = "decile")
+  expect_identical(mt_grid(x)$age$labels[1:3], c("0", "1-4", "5-9"))
+  q <- mt_group_levels(x, "imd_decile", function(d) paste0("Q", ceiling(as.numeric(d) / 2)), name = "imd_quintile")
+  expect_identical(q$by, c("sex", "imd_quintile"))
+  expect_identical(unique(mt_strata(q)$imd_quintile), paste0("Q", 1:5))
+  expect_equal(sum(mt_obs(q, "exposure")$value), sum(ons_data$population))
+  causes <- names(ons_data)[-(1:6)]
+  y <- mt_data(deaths = ons_data, population = ons_data, by = c("sex", "imd_decile", "cause"), age = "age_group",
+               value = list(deaths = causes, population = "population"))
+  y <- mt_subset(mt_as_exposure(y), ages = c(50, Inf), periods = c(2015, 2019))
+  y <- mt_group_levels(y, "cause", ons_cause_groups, other = "rest", total = "all_causes", additive = "rates")
   expect_identical(mt_grid(y)$age$labels[1], "50-54")
   d <- mt_obs(y)
-  expect_equal(sum(d[cause == "all"]$value), sum(d[cause != "all"]$value))
+  expect_equal(sum(d[cause == "all_causes"]$value), sum(d[cause != "all_causes"]$value))
   expect_true(all(d[cause == "rest"]$value >= 0))
-  expect_error(mt_read_ons(ons_data, min_age = 120), class = "mt_error_ons")
-  expect_error(mt_read_ons(ons_data[, -6]), class = "mt_error_ons")
+  v <- mt_validate(y, hierarchy = mt_hierarchy(cause = "all_causes", additive = "rates"))
+  expect_true(all(v$severity == "info"))
+  e <- mt_obs(y, "exposure")
+  expect_equal(e[cause == "rest"]$value, e[cause == "all_causes"]$value)
+  expect_warning(mt_group_levels(y, "cause", list(big = c("ihd", "rest", "lung_cancer", "stroke", "dementia",
+                                                          "other_cancers")), other = "small",
+                                 total = "all_causes", additive = "rates"), NA)
+})
+
+test_that("grouped ages are the default grid and regroup to a table's intervals", {
+  d <- data.frame(year = 2020, age = c("0-4", "5-9", "10+"), deaths = 1:3)
+  p <- data.frame(year = 2020, age = c(0:14, "15+"), exposure = 100)
+  p$age[16] <- "15+"
+  x <- mt_data(deaths = d, exposure = p)
+  expect_identical(length(mt_grid(x)$age), 16L)
+  expect_error(mt_fit(rwd(), x), class = "mt_error_model_data")
+  y <- mt_regroup(x, age = "deaths")
+  expect_identical(mt_grid(y)$age$labels, c("0-4", "5-9", "10+"))
+  expect_equal(mt_obs(y, "exposure")$value, c(500, 500, 600))
 })

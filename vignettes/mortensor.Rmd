@@ -15,8 +15,10 @@ has_gg <- requireNamespace("ggplot2", quietly = TRUE)
 mortensor builds probabilistic mortality forecasts from data observed at
 different granularities. A forecast is assembled from interchangeable parts:
 
-1. **data** in their original resolution (`mt_data()`, readers such as
-   `mt_read_ons()`),
+1. **data** in their original resolution (`mt_data()`), prepared with
+   general steps: subsets of ages, years and strata (`mt_subset()`),
+   aggregation layers such as deprivation quintiles or cause groups
+   (`mt_group_levels()`), exposures from populations (`mt_as_exposure()`),
 2. **harmonisation** onto a modelling grid (`mt_ungroup()`, `mt_smooth()`,
    `mt_regroup()`), bundled as a preprocessing pipeline (`mt_prep()`),
 3. a **model** (`lee_carter()`, `li_lee()`, `rwd()`, `tucker3()`,
@@ -46,21 +48,33 @@ most deprived.
 head(ons_data[, 1:8])
 ```
 
-`mt_read_ons()` reads the ONS tables (Excel files or this data frame) and
-combines deciles to quintiles:
+`mt_data()` reads tables in long format, one row per cell: here the
+all-cause deaths and the mid-year populations, with sex and IMD decile as
+stratum variables (`by`). Age groups such as `"<1"`, `"01-04"` and `"90+"`
+are recognised. `mt_as_exposure()` takes the mid-year population as the
+person-years at risk:
 
 ```{r}
-x <- mt_read_ons(ons_data)
+x <- mt_data(deaths = ons_data, population = ons_data, by = c("sex", "imd_decile"), age = "age_group",
+             value = c(deaths = "all_causes", population = "population"))
+x <- mt_as_exposure(x)
+```
+
+Deciles are combined to quintiles with `mt_group_levels()`, which adds an
+aggregation layer to any stratum variable (cause groups, regions,
+deprivation): deaths and exposures of deciles 1 and 2 are summed to quintile
+1, and so on. A function maps the deciles to the quintiles, and `name`
+labels the new layer:
+
+```{r}
+x <- mt_group_levels(x, "imd_decile", function(d) paste0("Q", ceiling(as.numeric(d) / 2)), name = "quintile")
 x
 mt_strata(x)
 ```
 
 The deciles are defined by the IMD version current at the time of
-registration, so areas move between deciles four times in this period:
-
-```{r}
-attr(x, "imd_version")[c(1, 5, 6, 8, 9, 12, 13, 17, 18), ]
-```
+registration, so areas move between deciles four times in this period
+(column `imd_version` of `ons_data`: 2004, 2007, 2010, 2015 and 2019).
 
 `mt_validate()` checks plausibility (deaths without exposure, rates above
 1, gaps in the grid, and the sums of aggregate strata):

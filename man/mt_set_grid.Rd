@@ -17,7 +17,11 @@ The updated \code{mt_data} object.
 \description{
 The grid is the resolution on which models work. Every observed cell must
 be a union of grid cells, so the grid is at least as fine as the finest
-table. Coarser grids are obtained with \code{\link[=mt_regroup]{mt_regroup()}}.
+table. Without a grid set, the grid is the coarsest one on which every
+table is exact: the age groups of the data when all tables have the same
+groups, single years when one table (for example populations) has single
+years. Coarser grids are obtained with \code{\link[=mt_regroup]{mt_regroup()}}, single years from
+grouped deaths with \code{\link[=mt_ungroup]{mt_ungroup()}}.
 }
 \examples{
 x <- mt_example()

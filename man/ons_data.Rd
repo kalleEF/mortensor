@@ -7,12 +7,12 @@
 \title{Deaths and populations by deprivation decile, England 2001-2019}
 \format{
 \code{ons_data}: a data frame with 7,600 rows (19 years x 2 sexes x 20
-age groups x 10 deciles) and columns \code{year}, \code{sex} (\code{"males"},
-\code{"females"}), \code{age_group} (\code{"<1"}, \code{"01-04"}, 5-year groups, \code{"90+"}),
+age groups x 10 deciles) and columns \code{year}, \code{sex} (\code{"female"},
+\code{"male"}), \code{age_group} (\code{"<1"}, \code{"01-04"}, 5-year groups, \code{"90+"}),
 \code{imd_decile} (1-10), \code{imd_version}, \code{population}, \code{all_causes} and 29
 cause columns. \code{ons_cause_groups}: a named list of cause columns.
 
-An object of class \code{list} of length 12.
+An object of class \code{list} of length 11.
 }
 \source{
 Office for National Statistics (2025). Death registrations and
@@ -45,18 +45,33 @@ lookup of the workbook); neonatal deaths have no cause and count only in
 \code{all_causes}.
 
 \code{ons_cause_groups} lists the cause groups used in the vignettes for ages
-50 and over, for \code{mt_read_ons(causes = )}: lung, colorectal, breast or
+50 and over, for \code{\link[=mt_group_levels]{mt_group_levels()}}: lung, colorectal, breast or
 prostate (sex-specific cancers; for men including the few male breast
 cancers), other cancers, ischaemic heart disease, stroke, other
 circulatory (heart failure, hypertension, atrial fibrillation), dementia,
 chronic lower respiratory (COPD, asthma), diabetes, liver disease and
-alcohol-specific causes, and the rest (all other causes, including
-suicide). Small causes are combined within their ICD-10 chapter so that
-cells by sex, quintile, 5-year age group and year have enough deaths.
+alcohol-specific causes. All other deaths, including suicide and the
+causes not listed in the table, form the remainder, all causes minus
+these groups (\verb{other = "rest", total = "all_causes"}). Small causes are
+combined within their ICD-10 chapter so that cells by sex, quintile,
+5-year age group and year have enough deaths.
 }
 \examples{
 head(ons_data[, 1:8])
-x <- mt_read_ons(ons_data)
+# all causes by sex and deprivation quintile
+x <- mt_data(deaths = ons_data, population = ons_data, by = c("sex", "imd_decile"),
+             age = "age_group", value = c(deaths = "all_causes", population = "population"))
+x <- mt_as_exposure(x)
+x <- mt_group_levels(x, "imd_decile", function(d) paste0("Q", ceiling(as.numeric(d) / 2)),
+                     name = "imd_quintile")
 x
+# cause groups at ages 50 and over: one column per cause
+causes <- names(ons_data)[-(1:6)]
+y <- mt_data(deaths = ons_data, population = ons_data, by = c("sex", "imd_decile", "cause"),
+             age = "age_group", value = list(deaths = causes, population = "population"))
+y <- mt_subset(mt_as_exposure(y), ages = c(50, Inf))
+y <- mt_group_levels(y, "cause", ons_cause_groups, other = "rest", total = "all_causes",
+                     additive = "rates")
+unique(mt_strata(y)$cause)
 }
 \keyword{datasets}

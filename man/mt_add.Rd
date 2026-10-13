@@ -15,7 +15,9 @@ mt_add(
   age = "age",
   period = "year",
   value = NULL,
-  age_open = NULL
+  age_open = NULL,
+  missing = c(".", "..", "...", ":", "x", "X", "/", "NA", ""),
+  zero = "-"
 )
 
 mt_add_deaths(data, x, ...)
@@ -44,6 +46,13 @@ the lower and upper bound (\code{Inf} for an open interval).}
 
 \item{age_open}{Lower bound of an open age interval coded as a single
 numeric age (for example 110 for the Human Mortality Database "110+").}
+
+\item{missing}{Values that mark missing cells in character value columns,
+for example the symbols of official statistics for confidential or
+unknown counts (\code{"."}, \code{"x"}). Missing cells are left out; suppressed
+death counts can then be estimated with \code{\link[=mt_fill_suppressed]{mt_fill_suppressed()}}.}
+
+\item{zero}{Values that mark a count of zero (for example \code{"-"}).}
 
 \item{...}{Arguments passed to \code{mt_add()}.}
 }

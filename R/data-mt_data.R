@@ -16,12 +16,28 @@
 #' @param period Period column: calendar years (numeric), labels such as
 #'   `"2010-2014"`, or two columns with lower and upper bounds.
 #' @param value Name of the value column. Either one name used for all tables,
-#'   or a named vector such as `c(deaths = "D", exposure = "E")`. By default
-#'   the column named after the measure, otherwise `"value"`.
+#'   or a named vector or list such as `c(deaths = "D", exposure = "E")`. By
+#'   default the column named after the measure, otherwise `"value"`. A table
+#'   in wide format, with one value column per level of a stratum variable
+#'   (for example columns `Female` and `Male`, or one column per cause of
+#'   death), is read by giving all its value columns, for example
+#'   `value = list(deaths = c(female = "Female", male = "Male"))`: the
+#'   columns become the levels (named by the names of the vector, else the
+#'   column names) of the one variable in `by` that the table lacks.
 #' @param age_open Lower bound of an open age interval coded as a single
 #'   numeric age (for example 110 for the Human Mortality Database "110+").
 #' @param omega Assumed maximum age, used wherever an open interval needs a
 #'   finite upper bound.
+#' @param missing Values that mark missing cells in character value columns,
+#'   for example the symbols of official statistics for confidential or
+#'   unknown counts (`"."`, `"x"`). Missing cells are left out; suppressed
+#'   death counts can then be estimated with [mt_fill_suppressed()].
+#' @param zero Values that mark a count of zero (for example `"-"`).
+#' @details A table may leave out stratum columns over which its values are
+#'   shared. For example, deaths by region, sex and cause of death and
+#'   populations by region and sex: every cause of death then uses the
+#'   population of its region and sex. Tables with all stratum columns are
+#'   read first and define the strata.
 #' @return An object of class `mt_data`.
 #' @seealso [mt_add_deaths()], [mt_grid()], [mt_regroup()], [mt_ungroup()],
 #'   [as_mt_data()].
@@ -32,16 +48,50 @@
 #' @export
 mt_data <- function(deaths = NULL, exposure = NULL, population = NULL, by = NULL,
                     age = "age", period = "year", value = NULL, age_open = NULL,
-                    omega = 110) {
+                    omega = 110, missing = c(".", "..", "...", ":", "x", "X", "/", "NA", ""), zero = "-") {
   check_number(omega, "omega", lower = 1)
   out <- new_mt_data(omega = omega)
   inputs <- list(deaths = deaths, exposure = exposure, population = population)
+  inputs <- inputs[!vapply(inputs, is.null, logical(1))]
+  values <- list()
   for (m in names(inputs)) {
-    if (is.null(inputs[[m]])) next
-    out <- mt_add(out, m, inputs[[m]], by = by, age = age, period = period,
-                  value = pick_value_col(value, m, inputs[[m]]), age_open = age_open)
+    w <- melt_wide(inputs[[m]], pick_value_col(value, m, inputs[[m]]), by, m)
+    inputs[[m]] <- w$x
+    values[[m]] <- w$value
+  }
+  # tables with every stratum column first: they define the strata
+  complete <- vapply(inputs, function(x) all(by %in% names(x)), logical(1))
+  for (m in names(inputs)[order(!complete)]) {
+    out <- mt_add(out, m, inputs[[m]], by = by, age = age, period = period, value = values[[m]],
+                  age_open = age_open, missing = missing, zero = zero)
   }
   out
+}
+
+# A wide table (one value column per level of a stratum variable) in long format
+melt_wide <- function(x, value, by, measure) {
+  if (length(value) <= 1L) return(list(x = x, value = value))
+  if (!is.data.frame(x)) mt_abort(sprintf("The %s table must be a data frame.", measure), class = "obs")
+  x <- as.data.table(x)
+  miss <- setdiff(value, names(x))
+  if (length(miss)) {
+    mt_abort(sprintf("Column(s) not found in the %s table: %s.", measure, paste(miss, collapse = ", ")),
+             class = "obs")
+  }
+  var <- setdiff(by, names(x))
+  if (length(var) != 1L) {
+    mt_abort(sprintf(paste("Several value columns of the %s table are read as the levels of a stratum variable,",
+                           "which must be the one variable in `by` that the table lacks."), measure), class = "obs")
+  }
+  labs <- names(value) %||% value
+  labs[!nzchar(labs)] <- value[!nzchar(labs)]
+  if (!all(vapply(x[, value, with = FALSE], is.numeric, logical(1)))) {
+    x[, (value) := lapply(.SD, as.character), .SDcols = value]
+  }
+  long <- melt(x, id.vars = setdiff(names(x), value), measure.vars = unname(value), variable.name = var,
+               value.name = ".value", variable.factor = FALSE)
+  set(long, j = var, value = labs[match(long[[var]], value)])
+  list(x = long, value = ".value")
 }
 
 new_mt_data <- function(omega = 110) {
@@ -75,7 +125,8 @@ mt_measures <- c("deaths", "exposure", "population")
 #' x
 #' @export
 mt_add <- function(data, measure, x, by = NULL, age = "age", period = "year",
-                   value = NULL, age_open = NULL) {
+                   value = NULL, age_open = NULL, missing = c(".", "..", "...", ":", "x", "X", "/", "NA", ""),
+                   zero = "-") {
   check_class(data, "mt_data", "data")
   check_choice(measure, mt_measures, "measure")
   if (!is.data.frame(x)) mt_abort("`x` must be a data frame.", class = "obs")
@@ -84,8 +135,13 @@ mt_add <- function(data, measure, x, by = NULL, age = "age", period = "year",
     mt_abort(sprintf("All tables need the same stratum columns (%s).",
                      paste(data$by, collapse = ", ")), class = "obs")
   }
+  w <- melt_wide(x, value %||% pick_value_col(NULL, measure, x), by, measure)
+  x <- as.data.table(w$x)
+  value <- w$value
+  absent <- setdiff(by, names(x))
+  if (length(absent)) x <- share_over_strata(x, data$strata, by, absent, measure)
   value <- value %||% pick_value_col(NULL, measure, x)
-  obs <- ingest_obs(as.data.table(x), by, age, period, value, measure, age_open)
+  obs <- ingest_obs(x, by, age, period, value, measure, age_open, missing = missing, zero = zero)
   st <- register_strata(data$strata, obs, by)
   data$strata <- st
   data$by <- by
@@ -104,6 +160,24 @@ mt_add <- function(data, measure, x, by = NULL, age = "age", period = "year",
   data
 }
 
+# A table without some stratum columns is shared over their levels (for
+# example populations shared by all causes of death)
+share_over_strata <- function(x, strata, by, absent, measure) {
+  if (!nrow(strata) || !all(absent %in% names(strata))) {
+    mt_abort(sprintf(paste("The %s table has no column(s) %s. Tables without some stratum columns are shared over",
+                           "their levels, which must come from another table (for example the deaths)."),
+                     measure, paste(absent, collapse = ", ")), class = "obs")
+  }
+  present <- setdiff(by, absent)
+  combos <- unique(strata[, by, with = FALSE])
+  if (!length(present)) {
+    idx <- CJ(i = seq_len(nrow(x)), j = seq_len(nrow(combos)))
+    return(cbind(x[idx$i], combos[idx$j]))
+  }
+  for (b in present) set(x, j = b, value = as.character(x[[b]]))
+  merge(x, combos, by = present, allow.cartesian = TRUE)
+}
+
 #' @rdname mt_add
 #' @param ... Arguments passed to `mt_add()`.
 #' @export
@@ -117,7 +191,8 @@ mt_add_exposure <- function(data, x, ...) mt_add(data, "exposure", x, ...)
 #' @export
 mt_add_population <- function(data, x, ...) mt_add(data, "population", x, ...)
 
-ingest_obs <- function(x, by, age, period, value, measure, age_open = NULL) {
+ingest_obs <- function(x, by, age, period, value, measure, age_open = NULL, missing = character(),
+                       zero = character()) {
   need <- unique(c(by, age, period, value))
   miss <- setdiff(need, names(x))
   if (length(miss)) {
@@ -127,16 +202,33 @@ ingest_obs <- function(x, by, age, period, value, measure, age_open = NULL) {
   a <- interval_cols(x, age, "age", age_open)
   p <- interval_cols(x, period, "period")
   out <- data.table(age_lo = a$lo, age_hi = a$hi, period_lo = p$lo, period_hi = p$hi,
-                    value = suppressWarnings(as.numeric(x[[value]])))
+                    value = parse_values(x[[value]], missing, zero, measure))
   if (length(by)) {
     for (b in by) set(out, j = b, value = as.character(x[[b]]))
   }
   nas <- is.na(out$value)
   if (any(nas)) {
-    mt_warn(sprintf("%d missing %s value(s) dropped.", sum(nas), measure), class = "missing")
+    mt_warn(sprintf("%d missing %s value(s) left out%s.", sum(nas), measure,
+                    if (measure == "deaths") "; suppressed counts can be estimated with mt_fill_suppressed()" else ""),
+            class = "missing")
     out <- out[!nas]
   }
   out
+}
+
+# Numeric values from numbers or text with markers of missing and zero cells
+parse_values <- function(v, missing, zero, measure) {
+  if (is.numeric(v)) return(as.numeric(v))
+  v <- trimws(as.character(v))
+  num <- suppressWarnings(as.numeric(v))
+  num[v %in% zero] <- 0
+  unknown <- unique(v[is.na(num) & !is.na(v) & !v %in% c(missing, zero)])
+  if (length(unknown)) {
+    mt_warn(sprintf(paste("Values of %s that are neither numbers nor declared markers are treated as missing: %s.",
+                          "Declare them with `missing` or `zero`."), measure,
+                    paste0("\"", utils::head(unknown, 5), "\"", collapse = ", ")), class = "markers")
+  }
+  num
 }
 
 interval_cols <- function(x, cols, kind, open = NULL) {
@@ -249,25 +341,46 @@ mt_grid <- function(data) {
   data$grid %||% default_grid(data)
 }
 
+# The coarsest grid on which every table is exact: all interval bounds of
+# all tables (age groups when every table has the same groups, single years
+# when one table has single years)
 default_grid <- function(data) {
   if (!length(data$obs)) mt_abort("No observations.", class = "obs")
   all <- rbindlist(lapply(data$obs, function(o) o[, c("age_lo", "age_hi", "period_lo", "period_hi")]))
+  ab <- sort(unique(c(all$age_lo, all$age_hi)))
+  fin <- ab[is.finite(ab)]
+  age <- if (any(is.infinite(ab))) {
+    mt_axis(fin, c(fin[-1], Inf), kind = "age")
+  } else {
+    mt_axis(fin[-length(fin)], fin[-1], kind = "age")
+  }
+  pb <- sort(unique(c(all$period_lo, all$period_hi)))
+  list(age = age, period = mt_axis(pb[-length(pb)], pb[-1], kind = "period"))
+}
+
+# Single years of age from the lowest age to the start of the open interval
+# (or the highest age), the target of ungrouping
+single_year_grid <- function(data) {
+  all <- rbindlist(lapply(data$obs, function(o) o[, c("age_lo", "age_hi")]))
   open_lo <- all$age_lo[is.infinite(all$age_hi)]
   a0 <- min(all$age_lo)
   if (length(open_lo)) {
     top <- max(c(open_lo, all$age_hi[is.finite(all$age_hi)]))
-    age <- if (top > a0) single_ages(a0, top, open = TRUE) else age_groups(a0)
+    if (top > a0) single_ages(a0, top, open = TRUE) else age_groups(a0)
   } else {
-    age <- single_ages(a0, max(all$age_hi) - 1, open = FALSE)
+    single_ages(a0, max(all$age_hi) - 1, open = FALSE)
   }
-  list(age = age, period = single_years(min(all$period_lo), max(all$period_hi) - 1))
 }
 
 #' Set the modelling grid
 #'
 #' The grid is the resolution on which models work. Every observed cell must
 #' be a union of grid cells, so the grid is at least as fine as the finest
-#' table. Coarser grids are obtained with [mt_regroup()].
+#' table. Without a grid set, the grid is the coarsest one on which every
+#' table is exact: the age groups of the data when all tables have the same
+#' groups, single years when one table (for example populations) has single
+#' years. Coarser grids are obtained with [mt_regroup()], single years from
+#' grouped deaths with [mt_ungroup()].
 #'
 #' @param data An [mt_data] object.
 #' @param age,period [mt_axis] objects (`NULL` keeps the current axis).

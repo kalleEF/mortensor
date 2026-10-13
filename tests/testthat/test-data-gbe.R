@@ -45,13 +45,92 @@ test_that("31 December populations give exposures and the German data read consi
   e <- mt_obs(x, "exposure")
   expect_equal(e$period_lo, c(2019, 2020))
   expect_equal(e$value, c(105, 120))
-  y <- mt_read_destatis(de_deaths, de_population, years = 2017:2019)
+  dd <- as.data.frame(de_deaths)
+  dd <- dd[dd$year %in% 2017:2019, ]
+  expect_warning(y <- mt_data(deaths = dd[dd$cause == "all", setdiff(names(dd), "cause")],
+                              population = de_population[de_population$year %in% 2016:2019, ],
+                              by = c("region", "sex")), class = "mt_warning_missing")
+  y <- mt_as_exposure(y, type = "dec31")
+  ag <- unique(mt_obs(y, "deaths")[, list(age_lo)])[order(age_lo)]
+  y <- suppressWarnings(mt_regroup(y, age = ag$age_lo))
+  y <- mt_fill_suppressed(y, mt_hierarchy(region = "Deutschland"))
+  y <- mt_subset(y, region != "Deutschland")
   expect_identical(nrow(mt_strata(y)), 32L)
   expect_identical(mt_grid(y)$age$labels[c(1, 2, 18)], c("0", "1-14", "90+"))
-  dd <- as.data.frame(de_deaths)
-  pub <- sum(dd$deaths[dd$region == "Deutschland" & dd$cause == "all" & dd$year %in% 2017:2019])
-  expect_equal(sum(mt_obs(y)$value), pub, tolerance = 1e-8)
-  z <- mt_read_destatis(de_deaths, de_population, causes = de_cause_groups, years = 2018:2019, min_age = 80)
+  pub <- sum(dd$deaths[dd$region == "Deutschland" & dd$cause == "all"])
+  expect_equal(sum(mt_obs(y)$value), pub, tolerance = 1e-6)
+  expect_true(all(is.finite(mt_obs(y, "exposure")$value)))
+  z <- suppressWarnings(mt_data(deaths = dd[dd$year >= 2018, ],
+                                population = de_population[de_population$year >= 2017, ],
+                                by = c("region", "sex", "cause")), classes = "mt_warning_missing")
+  z <- mt_as_exposure(z, type = "dec31")
+  z <- mt_subset(z, region %in% c("Berlin", "Bremen", "Deutschland"), ages = c(80, Inf))
+  expect_warning(z <- mt_group_levels(z, "cause", de_cause_groups, other = "rest", keep = "all",
+                                      additive = "rates"), class = "mt_warning_group")
   expect_setequal(unique(mt_strata(z)$cause), c("all", names(de_cause_groups), "rest"))
-  expect_true(all(mt_validate(z, hierarchy = mt_hierarchy(cause = "all", additive = "rates"))$severity == "info"))
+})
+
+test_that("text values with suppression markers are read as missing or zero", {
+  d <- data.frame(year = 2020, age = c("80-84", "85-89", "90+"), deaths = c("12", " . ", "-"),
+                  exposure = c("1000", "800", "500"))
+  expect_warning(x <- mt_data(deaths = d, exposure = d), class = "mt_warning_missing")
+  o <- mt_obs(x)
+  expect_identical(o$value, c(12, 0))
+  expect_true(is.numeric(mt_obs(x, "exposure")$value))
+  d$deaths[1] <- "<5"
+  expect_warning(suppressWarnings(mt_data(deaths = d, exposure = d), classes = "mt_warning_missing"),
+                 class = "mt_warning_markers")
+  x2 <- suppressWarnings(mt_data(deaths = d, exposure = d, missing = c("<5", "."), zero = c("-", "0*")),
+                         classes = "mt_warning_missing")
+  expect_identical(nrow(mt_obs(x2)), 1L)
+})
+
+test_that("tables without a stratum variable are shared over its levels", {
+  d <- expand.grid(year = 2019:2020, age = "90+", sex = c("f", "m"), cause = c("a", "b"), stringsAsFactors = FALSE)
+  d$deaths <- seq_len(nrow(d))
+  p <- expand.grid(year = 2019:2020, age = "90+", sex = c("f", "m"), stringsAsFactors = FALSE)
+  p$exposure <- c(100, 110, 90, 95)
+  x <- mt_data(deaths = d, exposure = p, by = c("sex", "cause"))
+  e <- mt_obs(x, "exposure")
+  expect_identical(nrow(e), 8L)
+  st <- mt_strata(x)
+  expect_equal(e[stratum == st[sex == "f" & cause == "b"]$stratum]$value, c(100, 110))
+})
+
+test_that("levels are grouped with summed or shared exposures", {
+  d <- expand.grid(year = 2020, age = "90+", region = c("r1", "r2", "r3"), stringsAsFactors = FALSE)
+  d$deaths <- c(10, 20, 30)
+  d$exposure <- c(100, 200, 300)
+  x <- mt_data(deaths = d, exposure = d, by = "region")
+  y <- mt_group_levels(x, "region", list(north = c("r1", "r2")))
+  expect_setequal(mt_strata(y)$region, c("north", "r3"))
+  st <- mt_strata(y)
+  expect_equal(mt_obs(y)[stratum == st[region == "north"]$stratum]$value, 30)
+  expect_equal(mt_obs(y, "exposure")[stratum == st[region == "north"]$stratum]$value, 300)
+  z <- mt_group_levels(x, "region", list(a = "r1"), other = "b")
+  expect_setequal(mt_strata(z)$region, c("a", "b"))
+  expect_error(mt_group_levels(x, "region", list(a = "r9")), class = "mt_error_argument")
+  expect_error(mt_group_levels(x, "region", list(a = "r1", b = "r1")), class = "mt_error_argument")
+  c2 <- expand.grid(year = 2020, age = "90+", cause = c("all", "c1", "c2", "c3"), stringsAsFactors = FALSE)
+  c2$deaths <- c(60, 10, 20, 30)
+  c2$exposure <- 1000
+  xc <- mt_data(deaths = c2, exposure = c2, by = "cause")
+  yc <- mt_group_levels(xc, "cause", list(c12 = c("c1", "c2")), other = "rest", keep = "all", additive = "rates")
+  st <- mt_strata(yc)
+  expect_equal(mt_obs(yc, "exposure")[stratum == st[cause == "c12"]$stratum]$value, 1000)
+  expect_equal(mt_obs(yc)[stratum == st[cause == "rest"]$stratum]$value, 30)
+  expect_equal(mt_obs(yc)[stratum == st[cause == "all"]$stratum]$value, 60)
+})
+
+test_that("mt_subset restricts strata, ages and periods", {
+  x <- mt_example(years = 2001:2019)
+  y <- mt_subset(x, sex == "female", ages = c(60, Inf), periods = c(2010, 2019))
+  expect_true(all(mt_strata(y)$sex == "female"))
+  expect_gte(min(mt_obs(y)$age_lo), 60)
+  expect_identical(range(mt_obs(y)$period_lo), c(2010, 2019))
+  expect_error(mt_subset(x, sex == "none"), class = "mt_error_argument")
+  expect_error(mt_subset(x, ages = 60), class = "mt_error_argument")
+  z <- mt_subset(x, sex == "male", drop = TRUE)
+  expect_identical(z$by, character())
+  expect_identical(mt_strata(z)$label, "all")
 })

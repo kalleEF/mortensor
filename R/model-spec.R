@@ -142,14 +142,15 @@ model_inputs <- function(d, spec) {
   for (m in c("deaths", "exposure")) {
     if (is.null(d$obs[[m]])) mt_abort(sprintf("Models need a %s table.", m), class = "model_data")
   }
-  D <- tryCatch(mt_array(d, "deaths"), mt_error_resolution = function(e) {
-    mt_abort("Deaths are coarser than the grid; add step_ungroup() to the preprocessing.", class = "model_data",
-             call = NULL)
-  })
-  E <- tryCatch(mt_array(d, "exposure"), mt_error_resolution = function(e) {
-    mt_abort("Exposures are coarser than the grid; add step_ungroup() to the preprocessing.", class = "model_data",
-             call = NULL)
-  })
+  coarse <- function(m) {
+    other <- setdiff(c("deaths", "exposure"), m)
+    mt_abort(sprintf(paste("The %s are in coarser age (or period) groups than the grid, which follows the %s.",
+                           "Either model the groups, by aggregating the %s with mt_regroup(x, age = \"%s\"),",
+                           "or estimate single years with mt_ungroup() or step_ungroup()."), m, other, other, m),
+             class = "model_data", call = NULL)
+  }
+  D <- tryCatch(mt_array(d, "deaths"), mt_error_resolution = function(e) coarse("deaths"))
+  E <- tryCatch(mt_array(d, "exposure"), mt_error_resolution = function(e) coarse("exposure"))
   if (anyNA(D) || anyNA(E)) {
     mt_abort(paste("Deaths and exposures must be complete on the grid (no missing cells); suppressed cells can be",
                    "estimated from published totals with mt_fill_suppressed()."), class = "model_data")

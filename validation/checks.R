@@ -165,6 +165,20 @@ checks$regions_coherence <- list(
                          a[lev == "aggregate"]$cov95, w[lev == "bottom"]$cov95, w[lev == "aggregate"]$cov95, gap))
   })
 
+# ONS data by sex and IMD quintile (all causes, or cause groups at ages 50+)
+ons_quintiles <- function(causes = FALSE) {
+  cols <- names(ons_data)[-(1:7)]
+  x <- mt_data(deaths = ons_data, population = ons_data,
+               by = c("sex", "imd_decile", if (causes) "cause"), age = "age_group",
+               value = list(deaths = if (causes) c(all = "all_causes", cols) else "all_causes",
+                            population = "population"))
+  x <- mt_as_exposure(x)
+  x <- mt_group_levels(x, "imd_decile", function(d) paste0("Q", ceiling(as.numeric(d) / 2)), name = "quintile")
+  if (!causes) return(x)
+  x <- mt_subset(x, ages = c(50, Inf))
+  mt_group_levels(x, "cause", ons_cause_groups, other = "rest", total = "all", additive = "rates")
+}
+
 checks$ons_deprivation <- list(
   suite = "quick",
   description = paste("ONS England 2001-2019 (ons_data), sex x IMD quintile, 5-year groups: backtest from 2008 to",
@@ -172,10 +186,10 @@ checks$ons_deprivation <- list(
                       "and 95% coverage. Causes at ages 50+ (ons_cause_groups): Lee-Carter per cause summed",
                       "bottom-up, all-cause CRPS from origins 2008, 2011, 2014 and the largest coherence gap."),
   run = function() {
-    x <- mt_read_ons(ons_data)
+    x <- ons_quintiles()
     ll <- mt_backtest(li_lee(common_by = "sex"), x, origins = 2008:2014, h = 5, n_draws = 200)
     en <- mt_backtest(mt_ensemble(lc = lee_carter(), rw = rwd()), x, origins = 2008:2014, h = 5, n_draws = 200)
-    xc <- mt_read_ons(ons_data, min_age = 50, causes = ons_cause_groups)
+    xc <- ons_quintiles(causes = TRUE)
     h <- mt_hierarchy(cause = "all", additive = "rates")
     sp <- mt_reconciled(lee_carter(), h, method = "bottom_up")
     bc <- mt_backtest(sp, xc, origins = c(2008, 2011, 2014), h = 5, n_draws = 100)

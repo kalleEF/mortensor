@@ -9,18 +9,24 @@
 #' data.
 #'
 #' @param data An [mt_data] object.
-#' @param age Target age axis ([mt_axis]) or numeric lower bounds; `NULL`
-#'   keeps the age intervals.
-#' @param period Target period axis or numeric lower bounds; `NULL` keeps the
-#'   periods.
+#' @param age Target age axis ([mt_axis]), numeric lower bounds, or the
+#'   name of a table (`"deaths"`, `"exposure"`, `"population"`) whose age
+#'   intervals are the target (for example deaths in 5-year groups and
+#'   populations in single years: `age = "deaths"`); `NULL` keeps the age
+#'   intervals.
+#' @param period Target period axis, numeric lower bounds or the name of a
+#'   table; `NULL` keeps the periods.
 #' @return An `mt_data` object.
 #' @examples
 #' x <- mt_example()
 #' mt_regroup(x, age = c(30, seq(40, 90, 10)))
+#' mt_regroup(x, age = "deaths")
 #' @export
 mt_regroup <- function(data, age = NULL, period = NULL) {
   check_class(data, "mt_data", "data")
   g <- mt_grid(data)
+  if (is.character(age)) age <- table_axis(data, age, "age")
+  if (is.character(period)) period <- table_axis(data, period, "period")
   if (is.numeric(age)) {
     age <- if (is_open(g$age)) age_groups(age) else age_groups(age, open = FALSE, last_upper = max(g$age$upper))
   }
@@ -36,6 +42,23 @@ mt_regroup <- function(data, age = NULL, period = NULL) {
   new_period <- if (is.null(period)) g$period else axis_trim(period, min(all$period_lo), max(all$period_hi))
   data$grid <- NULL
   mt_set_grid(data, age = new_age, period = new_period)
+}
+
+# The intervals of one table as an axis
+table_axis <- function(data, measure, kind) {
+  if (length(measure) != 1 || !measure %in% names(data$obs)) {
+    mt_abort(sprintf("`%s` must be an axis, numeric bounds or one of the tables (%s).", kind,
+                     paste(names(data$obs), collapse = ", ")), class = "argument")
+  }
+  cols <- paste0(kind, c("_lo", "_hi"))
+  iv <- unique(data$obs[[measure]][, cols, with = FALSE])
+  setorderv(iv, cols)
+  if (anyDuplicated(iv[[1]]) || any(iv[[2]][-nrow(iv)] != iv[[1]][-1])) {
+    mt_abort(sprintf(paste("The %s intervals of the %s table overlap or have gaps (for example different groups",
+                           "in different years); give the target intervals explicitly."), kind, measure),
+             class = "regroup")
+  }
+  mt_axis(iv[[1]], iv[[2]], kind = kind)
 }
 
 axis_trim <- function(axis, lo, hi) {

@@ -29,9 +29,14 @@ mt_data(deaths = d, exposure = d, by = "region")
 ```
 
 Deaths and exposures may come at different resolutions (for example deaths
-in 5-year groups, exposures by single year of age). Readers exist for
-Human Mortality Database tables (`mt_from_hmd()`, `mt_read_hmd()`), ONS
-tables by deprivation (`mt_read_ons()`), `StMoMoData` and `demogdata`
+in 5-year groups, exposures by single year of age). Tables in wide format,
+with one value column per sex or cause, are read by listing the columns
+(`value = list(deaths = c(female = "Female", male = "Male"))`). Values
+given as text with symbols for suppressed or missing cells (`"."`, `"x"`,
+`"-"`) are recognised; other symbols are declared with `missing` and
+`zero`. Readers exist for Human Mortality Database tables (`mt_from_hmd()`,
+`mt_read_hmd()`), GENESIS and GBE-Bund exports from Destatis
+(`mt_read_genesis()`, `mt_read_gbe()`), `StMoMoData` and `demogdata`
 objects (`as_mt_data()`).
 
 ### I have populations on 31 December, not exposures. What now?

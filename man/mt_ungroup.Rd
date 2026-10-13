@@ -6,6 +6,7 @@
 \usage{
 mt_ungroup(
   data,
+  age = NULL,
   dims = 1,
   method = c("pclm", "monotone", "hyman_kannisto", "natural_gompertz", "gam"),
   exposure_method = c("pclm", "monotone"),
@@ -20,6 +21,11 @@ mt_ungroup(
 }
 \arguments{
 \item{data}{An \link{mt_data} object.}
+
+\item{age}{Target age axis (\link{mt_axis}). By default the grid when it was
+set (with \code{\link[=mt_set_grid]{mt_set_grid()}} or \code{step_grid()}) and is finer than the data,
+otherwise single years of age from the lowest age to the start of the
+open interval.}
 
 \item{dims}{1 or 2.}
 

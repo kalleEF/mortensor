@@ -26,7 +26,8 @@ demography, ggplot2) use them when installed.
 
 | Layer | Functions |
 |---|---|
-| Data at any granularity | `mt_data()`, `mt_add_deaths()`, `as_mt_data()` (StMoMo, demography), `mt_from_hmd()`, `mt_read_hmd()`, `mt_read_ons()`, `mt_validate()`, `ons_data` |
+| Data at any granularity | `mt_data()` (long or wide tables, symbols for suppressed cells, shared populations), `mt_add_deaths()`, `as_mt_data()` (StMoMo, demography), `mt_from_hmd()`, `mt_read_hmd()`, `mt_read_genesis()`, `mt_read_gbe()`, `mt_validate()`, `ons_data`, `de_deaths` |
+| Preparation | `mt_subset()`, `mt_group_levels()` (aggregation layers: cause groups, quintiles, regions), `mt_fill_suppressed()`, `mt_as_exposure()` |
 | Harmonisation | `mt_regroup()`, `mt_ungroup()` (penalized composite link model with exposure offset, 1D/2D; spline methods), `mt_smooth()`, `mt_as_exposure()`, `mt_disaggregate()` |
 | Preprocessing pipelines | `mt_prep()` with `step_ungroup()`, `step_smooth()`, `step_regroup()`, `step_grid()`, `step_shocks()` |
 | Models | `rwd()`, `lee_carter()`, `tucker3()`, `arima_series()`, `ets_series()`, `hyndman_ullah()` (demography), `stmomo()` (APC, CBD, RH, M6, LC), `li_lee()`, `product_ratio()`, `apc_bayes()` and `apc_select()` (bamp), `cause_shares()`, `mt_ensemble()`, `mt_tuned()`, `mt_bootstrap()` |
@@ -40,9 +41,14 @@ demography, ggplot2) use them when installed.
 ```r
 library(mortensor)
 
-# deaths and populations by sex, age group and deprivation, England 2001-2019
-# (ONS; Open Government Licence)
-x <- mt_read_ons(ons_data)
+# deaths and populations by sex, age group and deprivation decile, England
+# 2001-2019 (ONS; Open Government Licence)
+x <- mt_data(deaths = ons_data, population = ons_data, by = c("sex", "imd_decile"),
+             age = "age_group", value = c(deaths = "all_causes", population = "population"))
+x <- mt_as_exposure(x)
+# deciles to quintiles: an aggregation layer with its own name
+x <- mt_group_levels(x, "imd_decile", function(d) paste0("Q", ceiling(as.numeric(d) / 2)),
+                     name = "quintile")
 mt_validate(x)
 
 fit <- mt_fit(li_lee(common_by = "sex"), x)
@@ -54,7 +60,8 @@ mt_score(bt)
 ```
 
 Vignettes: *Getting started* (ONS deprivation data), *Causes of death by
-deprivation*, *Coherent forecasts by sex, region and deprivation*, *Data at
+deprivation*, *Coherent forecasts by sex, region and cause* (German
+Laender), *Data at
 different granularities* and *Forecasting and backtesting* (HMD data),
 *Bayesian age-period-cohort models with bamp*, *Comparison with demography,
 bamp and StMoMo*, *Frequently asked questions*.

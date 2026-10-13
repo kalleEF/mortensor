@@ -47,6 +47,7 @@ ages <- c("<1", "01-04", sprintf("%02d-%02d", seq(5, 85, 5), seq(9, 89, 5)), "90
 ons_data[, age_group := factor(age_group, levels = ages)]
 setorderv(ons_data, c("year", "sex", "age_group", "imd_decile"))
 ons_data[, age_group := as.character(age_group)]
+ons_data[, sex := sub("s$", "", sex)]       # "female", "male"
 num <- setdiff(names(ons_data), c("sex", "age_group"))
 ons_data[, (num) := lapply(.SD, as.integer), .SDcols = num]
 setcolorder(ons_data, c(keys, "imd_version", "population", "all_causes"))
@@ -56,7 +57,8 @@ ons_data <- as.data.frame(ons_data)
 # Cause groups used in the vignettes (deaths at ages 50 and over): the causes
 # of the table are mutually exclusive (ICD-10 lookup of the workbook). Common
 # cancers and causes stay separate; small causes are combined within their
-# ICD-10 chapter; everything else, including suicide, is in "rest".
+# ICD-10 chapter; everything else, including suicide, forms the remainder
+# (all causes minus these groups, mt_group_levels(other = "rest", total = "all_causes")).
 ons_cause_groups <- list(
   lung_cancer = "lung_cancer",
   colorectal_cancer = "colorectal_cancer",
@@ -68,8 +70,7 @@ ons_cause_groups <- list(
   dementia = "dementia",
   respiratory = c("copd", "asthma"),
   diabetes = c("type_1_diabetes", "type_2_diabetes", "diabetes_other"),
-  liver_alcohol = c("alcohol_related_liver_disease", "non_alcohol_related_liver_disease", "alcohol_specific"),
-  rest = "rest")
+  liver_alcohol = c("alcohol_related_liver_disease", "non_alcohol_related_liver_disease", "alcohol_specific"))
 
 save(ons_data, file = "data/ons_data.rda", compress = "xz")
 save(ons_cause_groups, file = "data/ons_cause_groups.rda", compress = "xz")

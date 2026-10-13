@@ -13,7 +13,9 @@ mt_data(
   period = "year",
   value = NULL,
   age_open = NULL,
-  omega = 110
+  omega = 110,
+  missing = c(".", "..", "...", ":", "x", "X", "/", "NA", ""),
+  zero = "-"
 )
 }
 \arguments{
@@ -30,14 +32,27 @@ the lower and upper bound (\code{Inf} for an open interval).}
 \code{"2010-2014"}, or two columns with lower and upper bounds.}
 
 \item{value}{Name of the value column. Either one name used for all tables,
-or a named vector such as \code{c(deaths = "D", exposure = "E")}. By default
-the column named after the measure, otherwise \code{"value"}.}
+or a named vector or list such as \code{c(deaths = "D", exposure = "E")}. By
+default the column named after the measure, otherwise \code{"value"}. A table
+in wide format, with one value column per level of a stratum variable
+(for example columns \code{Female} and \code{Male}, or one column per cause of
+death), is read by giving all its value columns, for example
+\code{value = list(deaths = c(female = "Female", male = "Male"))}: the
+columns become the levels (named by the names of the vector, else the
+column names) of the one variable in \code{by} that the table lacks.}
 
 \item{age_open}{Lower bound of an open age interval coded as a single
 numeric age (for example 110 for the Human Mortality Database "110+").}
 
 \item{omega}{Assumed maximum age, used wherever an open interval needs a
 finite upper bound.}
+
+\item{missing}{Values that mark missing cells in character value columns,
+for example the symbols of official statistics for confidential or
+unknown counts (\code{"."}, \code{"x"}). Missing cells are left out; suppressed
+death counts can then be estimated with \code{\link[=mt_fill_suppressed]{mt_fill_suppressed()}}.}
+
+\item{zero}{Values that mark a count of zero (for example \code{"-"}).}
 }
 \value{
 An object of class \code{mt_data}.
@@ -49,6 +64,13 @@ period resolution, for example deaths in 5-year age groups with an open
 90+ interval and exposures in single years of age. The container keeps
 the observations as they were supplied; harmonisation onto a common grid
 happens explicitly with \code{\link[=mt_regroup]{mt_regroup()}} and \code{\link[=mt_ungroup]{mt_ungroup()}}.
+}
+\details{
+A table may leave out stratum columns over which its values are
+shared. For example, deaths by region, sex and cause of death and
+populations by region and sex: every cause of death then uses the
+population of its region and sex. Tables with all stratum columns are
+read first and define the strata.
 }
 \examples{
 d <- data.frame(sex = "female", year = 2001:2002, age = "90+",

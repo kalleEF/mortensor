@@ -2,7 +2,10 @@
 # Run from the package root: Rscript dev/calibration-ons.R
 suppressMessages(devtools::load_all(quiet = TRUE))
 library(data.table)
-x <- mt_read_ons(ons_data)
+x <- mt_data(deaths = ons_data, population = ons_data, by = c("sex", "imd_decile"), age = "age_group",
+             value = c(deaths = "all_causes", population = "population"))
+x <- mt_group_levels(mt_as_exposure(x), "imd_decile", function(d) paste0("Q", ceiling(as.numeric(d) / 2)),
+                     name = "quintile")
 specs <- list(rwd = rwd(), rwdn = rwd(observation_noise = TRUE), ensn = mt_ensemble(lc = lee_carter(), rw = rwd(observation_noise = TRUE)),
               lc = lee_carter(),
               ens = mt_ensemble(lc = lee_carter(), rw = rwd()),

@@ -52,6 +52,23 @@ Clean break: the 0.1.x interface is replaced (see `dev/revamp-plan.md`).
   labels name their variant (SVD, observed jump-off, bootstrap).
 * `asr()` and `prob_dying()` return the values of every path with
   `paths = TRUE`; `mt_plot_shares()` gains `groups` and `causes` filters.
+* General preprocessing replaces the dataset-specific readers
+  (`mt_read_ons()` is removed): `mt_data()` reads text values with symbols
+  for suppressed or missing cells (`missing`, `zero`), wide tables with one
+  value column per level of a stratum variable (one column per sex or
+  cause), and tables without some stratum columns, which are shared over
+  their levels (populations shared by causes of death).
+  `mt_group_levels()` adds an aggregation layer to any stratum variable
+  (cause groups, deciles to quintiles, districts to regions) with summed or
+  shared exposures, a residual group (`other`, or the `total` minus the
+  groups) and a new name for the layer. `mt_subset()` restricts strata,
+  ages and periods. `mt_regroup(age = "deaths")` aggregates to the age
+  groups of a table.
+* The default modelling grid is the coarsest grid on which every table is
+  exact (the age groups of the data when all tables share them), so models
+  fit grouped data directly; `mt_ungroup()` ungroups to single years by
+  default (new argument `age`). The error for deaths coarser than the grid
+  names both remedies.
 * Fixed: reconciled predictive draws of rate-additive hierarchies (causes)
   returned aggregated deaths instead of rates; the European Standard
   Population weights of 95+ were dropped for an open 90+ grid group;
@@ -64,14 +81,12 @@ Clean break: the 0.1.x interface is replaced (see `dev/revamp-plan.md`).
 * `ons_data`: deaths by cause and populations by sex, age group and IMD
   decile, England 2001-2019 (ONS ad hoc release 3064, Open Government
   Licence), with the cause groups `ons_cause_groups`; built by
-  `data-raw/ons_data.R`. `mt_read_ons()` reads it directly.
+  `data-raw/ons_data.R`.
 * German regional data: `de_deaths` (deaths by Land, sex, age group and
   ICD-10 chapter, 1998-2024, GBE-Bund) and `de_population` (31 December
   populations, GENESIS-Online), Datenlizenz Deutschland by-2-0;
-  `mt_read_gbe()` parses GBE-Bund exports, `mt_read_destatis()` builds
-  `mt_data` with cause groups (`de_cause_groups`), and
-  `mt_fill_suppressed()` estimates suppressed death counts by raking them to
-  the published totals. `mt_as_exposure(type = "dec31")` for populations on
+  `mt_read_gbe()` parses GBE-Bund exports, and `mt_fill_suppressed()`
+  estimates suppressed death counts by raking them to the published totals. `mt_as_exposure(type = "dec31")` for populations on
   31 December. Missing cells are reported by `mt_validate()`.
 * Ensembles draw one component per path for all strata (before, components
   were picked separately per stratum, which broke the dependence between
@@ -80,8 +95,7 @@ Clean break: the 0.1.x interface is replaced (see `dev/revamp-plan.md`).
 * `mt_read_genesis()` reads deaths and 31 December populations in the flat
   CSV format of GENESIS-Online (Destatis); `parse_age_labels()` understands
   the German age labels.
-* `mt_read_ons()` (ONS Excel tables by sex, age and IMD decile, optional
-  regions and cause groups), `apc_select()` (DIC-based choice of random-walk
+* `apc_select()` (DIC-based choice of random-walk
   orders for `apc_bayes()`), and the plots `mt_plot_tucker()`,
   `mt_plot_shares()` and `mt_plot_scores()`.
 * `mt_tune()` and `mt_tuned()`; `prob_dying()`, `asr()` (ESP 2013),

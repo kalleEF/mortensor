@@ -24,11 +24,11 @@ raw[, sex := ifelse(grepl("^M", sex), "male", "female")]
 stopifnot(all(raw[symbol == "X", unique(cause)] == "O00-O99"), all(raw[symbol == "X", unique(sex)] == "male"))
 raw[symbol == "X", value := 0]
 # 2025: cause chapters do not add up to all causes (provisional); kept out
-de_deaths <- raw[year <= 2024, list(year, region, sex, age_group, cause, deaths = as.integer(round(value)))]
+de_deaths <- raw[year <= 2024, list(year, region, sex, age = age_group, cause, deaths = as.integer(round(value)))]
 ages <- unique(raw$age_group)
-de_deaths[, age_group := factor(age_group, levels = ages)]
-setorderv(de_deaths, c("year", "region", "sex", "age_group", "cause"))
-de_deaths[, age_group := as.character(age_group)]
+de_deaths[, age := factor(age, levels = ages)]
+setorderv(de_deaths, c("year", "region", "sex", "age", "cause"))
+de_deaths[, age := as.character(age)]
 de_cause_labels <- unique(raw[, list(cause, cause_label)])
 
 pop <- mortensor:::genesis_long(mortensor:::genesis_table(args[2]))
@@ -40,8 +40,6 @@ setorderv(de_population, c("year", "region", "sex", "age_lo"))
 de_population[, age_lo := NULL]
 
 # consistency checks
-chk <- dcast(de_deaths[region != "Deutschland"], year + sex + age_group + cause ~ ., fun.aggregate = sum,
-             value.var = "deaths")
 stopifnot(nrow(de_population) == 28 * 16 * 2 * 91)
 
 de_deaths <- as.data.frame(de_deaths)

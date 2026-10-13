@@ -27,6 +27,10 @@
 #' sees only the training window.
 #'
 #' @param data An [mt_data] object.
+#' @param age Target age axis ([mt_axis]). By default the grid when it was
+#'   set (with [mt_set_grid()] or `step_grid()`) and is finer than the data,
+#'   otherwise single years of age from the lowest age to the start of the
+#'   open interval.
 #' @param dims 1 or 2.
 #' @param method Method for deaths: `"pclm"` (default); `"monotone"`
 #'   (cumulative deaths interpolated by a monotone Hyman spline, counts only,
@@ -70,7 +74,8 @@
 #' u
 #' head(attr(u, "ungroup"))
 #' @export
-mt_ungroup <- function(data, dims = 1, method = c("pclm", "monotone", "hyman_kannisto", "natural_gompertz", "gam"),
+mt_ungroup <- function(data, age = NULL, dims = 1,
+                       method = c("pclm", "monotone", "hyman_kannisto", "natural_gompertz", "gam"),
                        exposure_method = c("pclm", "monotone"),
                        lambda = NULL,
                        criterion = c("bic", "aic"), kr = 2, deg = 3, pord = 2,
@@ -81,6 +86,12 @@ mt_ungroup <- function(data, dims = 1, method = c("pclm", "monotone", "hyman_kan
   criterion <- match.arg(criterion)
   check_number(dims, "dims", lower = 1, upper = 2, integerish = TRUE)
   g <- mt_grid(data)
+  if (!is.null(age)) {
+    check_class(age, "mt_axis", "age")
+    g$age <- age
+  } else if (is.null(data$grid) || !any(vapply(data$obs, needs_ungroup, logical(1), g = g))) {
+    g$age <- single_year_grid(data)
+  }
   ctl <- list(lambda = lambda, criterion = criterion, kr = kr, deg = deg, pord = pord,
               lambda_range = lambda_range, preserve_totals = preserve_totals)
   diag_rows <- list()

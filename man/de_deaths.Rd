@@ -8,7 +8,7 @@
 \title{Deaths and populations by Land, Germany}
 \format{
 \code{de_deaths}: a data frame with columns \code{year}, \code{region}, \code{sex}
-(\code{"male"}, \code{"female"}), \code{age_group}, \code{cause}, \code{deaths}.
+(\code{"male"}, \code{"female"}), \code{age}, \code{cause}, \code{deaths}.
 \code{de_population}: a data frame with columns \code{year} (population on 31
 December), \code{region}, \code{sex}, \code{age} (\code{"unter 1 Jahr"}, single years, \code{"90 Jahre und mehr"}), \code{population}. \code{de_cause_groups}: a named list of
 chapter codes.
@@ -30,11 +30,14 @@ de_cause_groups
 \description{
 Deaths by year (1998-2024), Land, sex, age group and ICD-10 chapter, and
 populations on 31 December (1997-2024) by Land, sex and single year of
-age, for the regional examples. Read them with \code{\link[=mt_read_destatis]{mt_read_destatis()}}.
+age. The vignette "Coherent forecasts by sex, region and cause" reads them
+with \code{\link[=mt_data]{mt_data()}} and prepares them with \code{\link[=mt_as_exposure]{mt_as_exposure()}},
+\code{\link[=mt_regroup]{mt_regroup()}}, \code{\link[=mt_subset]{mt_subset()}}, \code{\link[=mt_fill_suppressed]{mt_fill_suppressed()}} and
+\code{\link[=mt_group_levels]{mt_group_levels()}}.
 }
 \details{
 \code{de_deaths} holds the national total (\code{region = "Deutschland"}) and the 16
-Laender, 18 age groups (\code{"Unter 1 Jahr"}, \code{"1 Jahr bis unter 15 Jahre"},
+Laender, 18 age groups (column \code{age}: \code{"Unter 1 Jahr"}, \code{"1 Jahr bis unter 15 Jahre"},
 5-year groups, \code{"90 Jahre und aelter"} with umlaut), all causes (\code{cause = "all"}) and the 18 ICD-10 chapters of the source table (codes such as
 \code{"C00-D48"}; the labels are in attribute \code{"cause_labels"}). Deaths that
 the source suppresses for confidentiality (\code{"."}) are \code{NA}: 13\% of the
@@ -49,11 +52,14 @@ and poisonings (S00-T98) are the chapter of external causes.
 50 and over: neoplasms, diseases of the circulatory, respiratory and
 digestive systems, mental and nervous system disorders combined (dementia
 is coded in both chapters), endocrine diseases and external causes; the
-remaining chapters form \code{"rest"} in \code{\link[=mt_read_destatis]{mt_read_destatis()}}.
+remaining chapters form \code{"rest"} with \code{\link[=mt_group_levels]{mt_group_levels()}}.
 }
 \examples{
 head(de_deaths)
-x <- mt_read_destatis(de_deaths, de_population, years = 2017:2019)
+x <- mt_data(deaths = subset(de_deaths, cause == "all" & year >= 2018),
+             population = subset(de_population, year >= 2017),
+             by = c("region", "sex"))
+x <- mt_as_exposure(x, type = "dec31")
 x
 }
 \keyword{datasets}

@@ -9,11 +9,14 @@ mt_regroup(data, age = NULL, period = NULL)
 \arguments{
 \item{data}{An \link{mt_data} object.}
 
-\item{age}{Target age axis (\link{mt_axis}) or numeric lower bounds; \code{NULL}
-keeps the age intervals.}
+\item{age}{Target age axis (\link{mt_axis}), numeric lower bounds, or the
+name of a table (\code{"deaths"}, \code{"exposure"}, \code{"population"}) whose age
+intervals are the target (for example deaths in 5-year groups and
+populations in single years: \code{age = "deaths"}); \code{NULL} keeps the age
+intervals.}
 
-\item{period}{Target period axis or numeric lower bounds; \code{NULL} keeps the
-periods.}
+\item{period}{Target period axis, numeric lower bounds or the name of a
+table; \code{NULL} keeps the periods.}
 }
 \value{
 An \code{mt_data} object.
@@ -30,4 +33,5 @@ data.
 \examples{
 x <- mt_example()
 mt_regroup(x, age = c(30, seq(40, 90, 10)))
+mt_regroup(x, age = "deaths")
 }

@@ -38,14 +38,28 @@ library(data.table)
 The workbook has 29 causes, defined by mutually exclusive ICD-10 codes.
 Several are rare, so cells by sex, quintile, 5-year age group and year would
 often hold a handful of deaths. `ons_cause_groups` keeps the common cancers
-and causes separate and combines small causes within their ICD-10 chapter;
-all other causes, including suicide, form the rest. The analysis starts at
-age 50, where the groups have enough deaths in almost every cell (dementia
-and diabetes are sparse below 50).
+and causes separate and combines small causes within their ICD-10 chapter.
+The analysis starts at age 50, where the groups have enough deaths in almost
+every cell (dementia and diabetes are sparse below 50).
+
+The deaths of `ons_data` are in wide format, one column per cause.
+`mt_data()` reads them by listing the cause columns as the levels of the
+stratum variable `cause` (the all-cause column is named `"all"`); the
+populations have no cause and are shared by all causes. `mt_subset()` keeps
+ages 50 and over, and `mt_group_levels()` combines the causes. With
+`total = "all"` and `other = "rest"`, the rest is all causes minus the
+groups, so it also holds deaths from causes the table does not list
+(including suicide).
 
 ```{r}
 str(ons_cause_groups)
-xc <- mt_read_ons(ons_data, min_age = 50, causes = ons_cause_groups)
+causes <- names(ons_data)[-(1:7)]
+xc <- mt_data(deaths = ons_data, population = ons_data, by = c("sex", "imd_decile", "cause"),
+              age = "age_group", value = list(deaths = c(all = "all_causes", causes), population = "population"))
+xc <- mt_as_exposure(xc)
+xc <- mt_subset(xc, ages = c(50, Inf))
+xc <- mt_group_levels(xc, "imd_decile", function(d) paste0("Q", ceiling(as.numeric(d) / 2)), name = "quintile")
+xc <- mt_group_levels(xc, "cause", ons_cause_groups, other = "rest", total = "all", additive = "rates")
 xc
 ```
 
