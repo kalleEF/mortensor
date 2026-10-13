@@ -2,6 +2,34 @@
 
 Clean break: the 0.1.x interface is replaced (see `dev/revamp-plan.md`).
 
+## Decomposition
+
+* `mt_decompose()` splits the difference in a mortality summary between
+  two sets of rates into contributions of ages, causes and population
+  subgroups, as post-processing of observed data (optionally with Poisson
+  draws), forecast draws (draw by draw, so contributions have intervals),
+  or both (an observed year against a forecast year, or two objects).
+  Comparisons: between levels of a stratum variable (`var`, `ref`), between
+  years (`periods`), or between two objects (`y`). Methods: symmetric
+  Arriaga for life expectancy with causes split by the implied sensitivity
+  (exact), the line integral of Horiuchi, Wilmoth and Pletcher (2008) and
+  stepwise replacement of Andreev, Shkolnikov and Begun (2002) for any
+  quantity (life expectancy, probability of dying, age-standardised rate,
+  or a function of the rates), and Kitagawa's rate and age-structure
+  components of the crude death rate. With `groups`, the composition of a
+  population of subgroups is separated from their mortality: as in Riffe,
+  Tursun-zade and Trias Llimós (2024, "Arriaga meets Kitagawa"), with
+  subgroups blended at the radix (`composition = "radix"`), or for the
+  pooled rates (`"pooled"`, composition effects by age).
+* `summary()` sums contributions path by path over ages, causes or
+  subgroups; `mt_plot_decomposition()` draws them as bars, stacked by cause
+  or subgroup, with 95% intervals for forecasts.
+* Results agree with DemoDecomp (`horiuchi()`, `stepwise_replacement()`)
+  and LEdecomp (`arriaga_sym()`) to machine precision on the same life
+  table, and the Kitagawa step reproduces Table 1 of Riffe et al. (2024).
+  New validation check `decomposition`; article "Decomposing differences in
+  life expectancy" on the ONS data; plan in `dev/decomposition-plan.md`.
+
 ## Smoothing, jump-off and fixed totals (methods of the earlier UK analysis)
 
 * Smoothing over time: `mt_smooth(along = "period", method = "whittaker")`

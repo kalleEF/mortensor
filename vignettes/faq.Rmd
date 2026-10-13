@@ -241,6 +241,19 @@ only through stationary processes, so gaps return towards their past
 average. Backtests over a few years rarely separate the two; the choice
 is an assumption to state.
 
+### Which ages and causes explain a gap, and how much is composition?
+
+`mt_decompose()` splits a difference in life expectancy (or in the
+probability of dying, an age-standardised or crude rate, or any function
+of the rates) into contributions of ages and causes: between strata in one
+year (`var`, `ref`), between years (`periods`, which may combine an
+observed and a forecast year), or between two forecasts (`y`). With
+`groups`, it also separates the composition of a population of subgroups
+(for example deprivation quintiles or education groups) from the change of
+their mortality, as in Riffe, Tursun-zade and Trias Llimós (2024).
+Forecasts are decomposed draw by draw, so contributions have intervals;
+see "Decomposing differences in life expectancy".
+
 ## Practicalities
 
 ### Are forecasts reproducible?

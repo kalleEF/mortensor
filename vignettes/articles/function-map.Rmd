@@ -217,6 +217,9 @@ flowchart TD
     C2["`**mt_inequality()**
     slope and relative index
     of inequality`"]
+    C3["`**mt_decompose()**
+    differences by age, cause
+    and subgroup composition`"]
   end
   subgraph AGG["Aggregation"]
     direction LR
@@ -281,6 +284,7 @@ flowchart TD
 | Report | `yll()`, `mt_deaths()` | years of life lost, deaths with projected populations | `mt_draws` | table, array |
 | Report | `life_table()`, `standard_population()` | life tables from rates; standard populations esp2013, esp1976, who2000 | rates, name | table |
 | Report | `mt_contrast()`, `mt_inequality()` | gaps, ratios, SII, RII | `mt_draws` or `mt_data` | table |
+| Report | `mt_decompose()`, `mt_plot_decomposition()` | differences in life expectancy (or other summaries) by age, cause and subgroup composition: Arriaga, Horiuchi, stepwise replacement, Kitagawa, Arriaga meets Kitagawa | `mt_draws` or `mt_data` (or both) | `mt_decomposition`, table, ggplot |
 | Report | `mt_plot_forecast()`, `mt_plot_age()`, `mt_plot_life_expectancy()`, `mt_plot_shares()`, `mt_plot_rates()`, `mt_plot_ungroup()`, `mt_plot_tucker()`, `mt_export()` | figures and CSV files | draws, data, tables | ggplot, file |
 | Data | `ons_data`, `ons_cause_groups`, `de_deaths`, `de_population`, `de_cause_groups`, `mt_example()`, `mt_example_causes()`, `mt_example_regions()` | example data (published and simulated) | | tables, `mt_data` |
 | Report | `theme_mortensor()`, `scale_colour_mortensor()`, `mt_palette()` | the package's plot style for your own figures | | theme, scales |

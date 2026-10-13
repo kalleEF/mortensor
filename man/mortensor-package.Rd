@@ -39,6 +39,9 @@ expectancy and age-standardised rates.
 \item \strong{Derived quantities and plots}: \code{\link[=life_table]{life_table()}}, \code{\link[=life_expectancy]{life_expectancy()}},
 \code{\link[=mt_deaths]{mt_deaths()}}, \code{\link[=mt_plot_forecast]{mt_plot_forecast()}} and the other \verb{mt_plot_*()}
 functions.
+\item \strong{Decomposition}: \code{\link[=mt_decompose]{mt_decompose()}} splits differences in life
+expectancy and other summaries by age, cause and subgroup composition,
+for observed data, forecasts or both.
 }
 }
 \section{Caution}{

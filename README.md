@@ -45,6 +45,7 @@ demography, ggplot2) use them when installed.
 | Coherence | `mt_hierarchy()`, `mt_aggregate_strata()`, `mt_reconcile()` and `reconciled()` (bottom-up, WLS, MinT, structural, OLS; draw by draw; `fixed` nodes such as a trusted total), `mt_coherence()`, `mt_plot_coherence()`, `mt_aggregate_draws()`, `mt_order_strata()` |
 | Forecasts | `mt_fit()`, `summary()`, `mt_parameters()`, `residuals()`, `mt_forecast()` (simulated paths), `mt_jump_off()`, `mt_summarise()`, `mt_deaths()`, `mt_disaggregate()` with `mt_shape_rates()` and `mt_disaggregate_check()` |
 | Evaluation | `mt_backtest()` (rolling origin, no leakage; rates, life expectancy, ASR), `mt_score()` (CRPS, WIS, coverage, PIT, MASE) |
+| Decomposition | `mt_decompose()` (differences by age, cause and subgroup: Arriaga, Horiuchi, stepwise replacement, Kitagawa, and Arriaga meets Kitagawa for subgroup composition; on observed data, forecast draws or both), `mt_plot_decomposition()` |
 | Results and plots | `life_table()`, `life_expectancy()`, `prob_dying()`, `asr()`, `yll()`, `mt_contrast()`, `mt_inequality()`, `mt_plot_forecast()`, `mt_plot_life_expectancy()`, `mt_plot_scores()`, `mt_plot_shares()`, `theme_mortensor()`, `mt_export()`, `as_demogdata()`, `as_stmomodata()` |
 
 ## Function map
@@ -77,7 +78,7 @@ flowchart LR
   D -- "mt_fit()" --> F
   F -- "mt_forecast()" --> P
   P -- "life_expectancy(), asr(), mt_contrast(),
-  mt_plot_*(), mt_export()" --> R
+  mt_decompose(), mt_plot_*(), mt_export()" --> R
   D -- "mt_backtest(), mt_score()" --> B
   D -- "mt_observed()" --> R
 ```

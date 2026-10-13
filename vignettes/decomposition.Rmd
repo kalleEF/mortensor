@@ -1,0 +1,298 @@
+---
+title: "Decomposing differences in life expectancy"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Decomposing differences in life expectancy}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width = 7, fig.height = 4.5, message = FALSE)
+has_gg <- requireNamespace("ggplot2", quietly = TRUE)
+```
+
+A difference in life expectancy, between deprivation quintiles, between
+two years or between two forecasts, is the sum of differences in death
+rates at many ages and from many causes. A decomposition attributes it to
+those ages and causes, and, for populations made of subgroups, separates
+the effect of the subgroups' mortality from the effect of their
+composition. In mortensor this is a post-processing step,
+`mt_decompose()`, that works on observed data, on forecast draws, and on
+both together. Forecasts are decomposed draw by draw, so every
+contribution has an interval.
+
+| Method | Decomposes | Reference |
+|---|---|---|
+| `"arriaga"` (default for life expectancy) | life expectancy, by age (and cause) | Arriaga (1984), symmetric form as in Riffe et al. (2024) |
+| `"horiuchi"` | any function of the rates | Horiuchi, Wilmoth and Pletcher (2008) |
+| `"stepwise"` | any function of the rates | Andreev, Shkolnikov and Begun (2002) |
+| `"kitagawa"` | crude death rate: rates and age structure | Kitagawa (1955) |
+| `groups` with `composition = "radix"` | life expectancy of a population of subgroups: subgroup rates and composition | Riffe, Tursun-zade and Trias Llimós (2024), "Arriaga meets Kitagawa" |
+| `groups` with `composition = "pooled"` | life expectancy of the pooled rates: subgroup rates and age-specific composition | Horiuchi et al. (2008) |
+
+```{r}
+library(mortensor)
+library(data.table)
+x <- mt_data(deaths = ons_data, population = ons_data, by = c("sex", "imd_decile"), age = "age_group",
+             value = c(deaths = "all_causes", population = "population"))
+x <- mt_as_exposure(x, type = "midyear")
+x <- mt_group_levels(x, "imd_decile", function(d) paste0("Q", ceiling(as.numeric(d) / 2)), name = "quintile")
+```
+
+The data are the ONS deaths and populations of England by sex, 5-year age
+group and IMD quintile, 2001-2019 (`ons_data`; Source: Office for National
+Statistics licensed under the Open Government Licence v3.0). Q1 is the most
+deprived quintile.
+
+## The deprivation gap by age
+
+Each quintile compared with Q1 in 2019, with 200 Poisson draws of the
+deaths for the intervals:
+
+```{r}
+gap <- mt_decompose(x, var = "quintile", ref = "Q1", periods = 2019, n_draws = 200)
+gap
+```
+
+The totals list one comparison per row: the life expectancy of the
+reference (`from_value`) and of the level (`to_value`), their difference
+with its interval, and the sum of the age contributions, which equals the
+difference (`max_residual` is the largest discrepancy over draws).
+`summary(gap, by = "age")` gives the contributions; the plot shows them for
+the gap between Q5 and Q1 (comparisons 4 and 8):
+
+```{r, eval = has_gg}
+mt_plot_decomposition(gap, by = "age", comparisons = c(4, 8))
+```
+
+```{r}
+s <- summary(gap, by = "age")[to == "Q5"]
+s[, band := cut(as.numeric(sub("[-+].*", "", age)), c(-1, 39, 64, 84, Inf),
+                labels = c("0-39", "40-64", "65-84", "85+"))]
+dcast(s[, .(contribution = round(sum(mean), 2)), by = .(sex, band)], sex ~ band, value.var = "contribution")
+```
+
+The gap of 6.5 years for women and 7.7 years for men comes mostly from
+ages 40 to 84 (5.2 and 6.3 years): deaths at working ages and in early old
+age are much more frequent in Q1. Ages below 40 add 0.6 years for women
+and 0.9 years for men; infant mortality alone adds 0.2 years for women.
+With Poisson draws of the observed deaths, the intervals of single ages
+are narrow.
+
+The methods agree closely. Symmetric Arriaga and symmetric stepwise
+replacement are identical for life expectancy, because Arriaga's
+decomposition is stepwise replacement from the oldest to the youngest age;
+the line integral assigns interactions between ages slightly differently:
+
+```{r}
+meth <- rbindlist(lapply(c("arriaga", "horiuchi", "stepwise"), function(m) {
+  d <- mt_decompose(x, var = "quintile", ref = "Q1", periods = 2019, method = m)
+  summary(d, by = "age")[to == "Q5" & sex == "female", .(age, method = m, mean = round(mean, 3))]
+}))
+meth[, age := factor(age, unique(age))]
+dcast(meth, age ~ method, value.var = "mean")[age %in% c("0", "40-44", "60-64", "75-79", "90+")]
+```
+
+## Causes behind the gap
+
+Causes of death are a stratum variable whose rates add up to all causes.
+`cause` names it, and the hierarchy tells `mt_decompose()` which level is
+the total. At ages 50 and over (as in "Causes of death by deprivation"):
+
+```{r}
+causes <- names(ons_data)[-(1:7)]
+xc <- mt_data(deaths = ons_data, population = ons_data, by = c("sex", "imd_decile", "cause"),
+              age = "age_group", value = list(deaths = c(all = "all_causes", causes), population = "population"))
+xc <- mt_as_exposure(xc, type = "midyear")
+xc <- mt_subset(xc, ages = c(50, Inf), periods = c(2019, 2019))
+xc <- mt_group_levels(xc, "imd_decile", function(d) paste0("Q", ceiling(as.numeric(d) / 2)), name = "quintile")
+xc <- mt_group_levels(xc, "cause", ons_cause_groups, other = "rest", total = "all", additive = "rates")
+gc <- mt_decompose(xc, var = "quintile", ref = "Q1", cause = "cause",
+                   hierarchy = mt_hierarchy(cause = "all", additive = "rates"))
+sc <- summary(gc, by = "cause")[to == "Q5"]
+dcast(sc, cause ~ sex, value.var = "mean")[order(-female), lapply(.SD, function(v) if (is.numeric(v)) round(v, 2) else v)]
+```
+
+```{r, eval = has_gg, fig.height = 5.5}
+mt_plot_decomposition(gc, by = "age", fill = "cause", comparisons = c(4, 8))
+```
+
+Each age contribution is split over the causes in proportion to their
+rate differences (Riffe et al. 2024, eqs. 12-13). Of the gap in life
+expectancy at 50, respiratory diseases, lung cancer and ischaemic heart
+disease contribute most among the named causes, for both sexes, and the
+remaining causes together (`rest`) contribute a large share. Causes with
+higher rates in Q5 than in Q1 would have negative contributions.
+
+## Change over time and the composition of England
+
+The life expectancy of England changes because the mortality of every
+quintile changes and because the population shifts between quintiles. Riffe,
+Tursun-zade and Trias Llimós (2024) treat the life expectancy of a
+population of subgroups as the mean of the subgroups' life expectancies,
+weighted by their shares at the start of life (the radix). A Kitagawa
+decomposition of that mean separates the composition from the change
+within each subgroup, which is then split by age:
+
+```{r}
+eng <- mt_decompose(x, periods = c(2001, 2019), groups = "quintile")
+eng
+summary(eng, by = c("component", "group"))[, .(sex, component, group, mean = round(mean, 3))]
+```
+
+Life expectancy at birth of England, computed this way, rose by 2.7 years
+for women and 3.7 years for men. Every quintile contributed about half a
+year or more; for men, Q1 contributed most. The composition effect is
+negative: in 2019 a larger share of births was in the more deprived
+quintiles than in 2001. The deciles are defined by the IMD version of each
+year, so the shares partly reflect reclassification of areas.
+
+The radix-weighted life expectancy is not the life expectancy of the
+pooled rates of England, which weight the quintiles by their population at
+each age (Vaupel 2002 calls these "current conditions" and "current
+rates"). `composition = "pooled"` decomposes the latter, with the shares at
+every age as parameters of a line-integral decomposition:
+
+```{r}
+eng_pooled <- mt_decompose(x, periods = c(2001, 2019), groups = "quintile", composition = "pooled")
+summary(eng_pooled, by = NULL)[, .(sex, from_value, to_value, difference)]
+summary(eng_pooled, by = c("component", "group"))[, .(sex, component, group, mean = round(mean, 3))]
+E <- mt_array(x, "exposure")
+women <- x$strata$label[x$strata$sex == "female"]
+round(rbind(birth_2001 = E["0", "2001", women], birth_2019 = E["0", "2019", women],
+            age75_2001 = E["75-79", "2001", women], age75_2019 = E["75-79", "2019", women]) /
+        rep(c(sum(E["0", "2001", women]), sum(E["0", "2019", women]), sum(E["75-79", "2001", women]),
+              sum(E["75-79", "2019", women])), 5), 3)
+```
+
+The pooled life expectancy is 0.2 to 0.5 years higher, and its
+composition effect is positive. The shares explain the difference: at
+birth the share of Q5 fell (from 18% to 16% for girls), while at ages
+75-79, where many deaths occur, it rose from 19% to 24% and the share of
+Q1 fell from 19% to 14%. The two decompositions
+answer different questions; the radix version is the one of Riffe et al.
+and is exact, the pooled one matches the life expectancy published for
+the whole population. The composition effect is a single number (radix)
+or one per age (pooled): the separate composition terms of the subgroups
+are not identified.
+
+## Forecasts
+
+Li-Lee forecasts to 2035, decomposed draw by draw. With draws, `periods`
+can combine an observed year (held in the draws) with forecast years:
+
+```{r}
+fc <- mt_forecast(mt_fit(li_lee(common_by = "sex"), x), to = 2035, n_draws = 500, seed = 1)
+change <- mt_decompose(fc, periods = c(2019, 2035))
+summary(change, by = NULL)[, .(sex, quintile, from_value, to_value, difference, difference_q0.025,
+                               difference_q0.975)]
+```
+
+```{r, eval = has_gg}
+mt_plot_decomposition(change, by = "age", comparisons = c(1, 5))
+```
+
+The forecast gain of women in Q1 (3.5 years by 2035) comes mostly from
+ages 50 to 84 (2.5 years). The bars give the mean contribution and the
+lines the 95% interval of each age over the draws. The intervals are wide
+and include zero at most ages: the common trend of Li-Lee is uncertain 16
+years ahead, and it moves all ages together, so the uncertainty of the
+ages adds up in the total (its interval is in the table above).
+
+The gap between Q5 and Q1, observed in 2019 and forecast for 2035:
+
+```{r}
+g <- mt_decompose(fc, var = "quintile", ref = "Q1", periods = c(2019, 2035))
+sg <- summary(g, by = "age")[to == "Q5" & sex == "female"]
+sg[, age := factor(age, unique(age))]
+dcast(sg, age ~ period, value.var = "mean")[, lapply(.SD, function(v) if (is.numeric(v)) round(v, 3) else v)]
+```
+
+Li-Lee narrows the female gap from 6.5 to 4.6 years mainly at ages 60 to
+84, where its deviations of Q1 from the common trend return towards their
+average (see "Forecasting mortality by deprivation quintile").
+
+Two forecasts of the same year are compared by giving the second as `y`.
+Lee-Carter per quintile against Li-Lee, for 2035:
+
+```{r}
+fl <- mt_forecast(mt_fit(lee_carter(), x), to = 2035, n_draws = 500, seed = 1)
+mm <- mt_decompose(fc, fl, periods = 2035)
+summary(mm, by = NULL)[sex == "female", .(quintile, from_value, to_value, difference)]
+```
+
+```{r, eval = has_gg}
+mt_plot_decomposition(mm, by = "age", comparisons = c(1, 5))
+```
+
+For women in Q1, Lee-Carter forecasts 1.9 years less than Li-Lee, 1.5
+years of it at ages 60 and over: Lee-Carter extrapolates the slower
+improvement of Q1 at these ages in 2001-2019, while Li-Lee lets Q1 return
+towards the common trend of all quintiles.
+
+## Other quantities
+
+`quantity` selects the summary. The probability of dying between 30 and
+75 and the age-standardised rate are decomposed by age with the line
+integral; any function of the rates can be given as well:
+
+```{r}
+pd <- mt_decompose(x, periods = c(2001, 2019), quantity = "prob_dying", at = 30, to = 75)
+summary(pd, by = NULL)[sex == "male", .(quintile, from_value, to_value, difference)]
+```
+
+The crude death rate changes with the rates and with the age structure of
+the population. Kitagawa's decomposition separates the two:
+
+```{r}
+cr <- mt_decompose(x, periods = c(2001, 2019), quantity = "crude_rate")
+dcast(summary(cr, by = "component"), sex + quintile ~ component, value.var = "mean")[
+  , lapply(.SD, function(v) if (is.numeric(v)) round(v) else v)]
+```
+
+Per 100,000, falling rates lowered the crude death rate of every quintile
+by 140 to 360 deaths. Ageing raised it, most in the least deprived
+quintiles, whose populations are oldest; only for women in Q1 and Q2 did
+the age structure lower it. For men in Q5 the crude rate rose although the
+rates fell.
+
+## Choosing a method
+
+* Life expectancy by age and cause: `"arriaga"` (exact and fast). Other
+  quantities: `"horiuchi"` or `"stepwise"`; the line integral distributes
+  interactions evenly, stepwise replacement depends on the order of the
+  ages.
+* Populations of subgroups: `composition = "radix"` for the
+  decomposition of Riffe et al.; `"pooled"` when the target is the life
+  expectancy of the whole population as usually published.
+* Forecasts: contributions and their sums come with intervals, because
+  every draw is decomposed. Sums over ages or causes are formed draw by
+  draw (`summary(by = )`), so their intervals are not sums of intervals.
+* Cause-specific contributions are only as good as the coding of causes;
+  trends in coding (dementia, ill-defined causes) move between causes, not
+  in the total.
+
+## References
+
+Andreev EM, Shkolnikov VM, Begun AZ (2002). Algorithm for decomposition of
+differences between aggregate demographic measures and its application to
+life expectancies, healthy life expectancies, parity-progression ratios and
+total fertility rates. *Demographic Research* 7: 499-522.
+
+Arriaga EE (1984). Measuring and explaining the change in life
+expectancies. *Demography* 21(1): 83-96.
+
+Horiuchi S, Wilmoth JR, Pletcher SD (2008). A decomposition method based on
+a model of continuous change. *Demography* 45(4): 785-801.
+
+Kitagawa EM (1955). Components of a difference between two rates. *Journal
+of the American Statistical Association* 50(272): 1168-1194.
+
+Riffe T, Tursun-zade R, Trias Llimós S (2024). Arriaga meets Kitagawa. Life
+expectancy decomposition with population subgroups. MPIDR Working Paper
+WP-2024-029. doi:10.4054/MPIDR-WP-2024-029.
+
+Vaupel JW (2002). Life expectancy at current rates vs. current conditions:
+a reflexion stimulated by Bongaarts and Feeney's "How long do we live?".
+*Demographic Research* 7: 365-378.

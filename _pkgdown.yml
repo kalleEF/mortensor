@@ -51,13 +51,15 @@ reference:
       - mt_prep
       - mt_set_grid
   - title: 4. Describe the past
-    desc: Observed indicators with Poisson intervals, gaps between strata and inequality indices.
+    desc: Observed indicators with Poisson intervals, gaps between strata, inequality indices and decompositions (which also work on forecasts).
     contents:
       - mt_observed
       - life_expectancy
       - derived
       - mt_contrast
       - mt_inequality
+      - mt_decompose
+      - mt_plot_decomposition
       - standard_population
       - life_table
   - title: 5. Models for one population
@@ -151,5 +153,6 @@ articles:
     contents:
       - models
       - coherence
+      - decomposition
       - comparison
       - faq

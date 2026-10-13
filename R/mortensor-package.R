@@ -31,6 +31,9 @@
 #' * **Derived quantities and plots**: [life_table()], [life_expectancy()],
 #'   [mt_deaths()], [mt_plot_forecast()] and the other `mt_plot_*()`
 #'   functions.
+#' * **Decomposition**: [mt_decompose()] splits differences in life
+#'   expectancy and other summaries by age, cause and subgroup composition,
+#'   for observed data, forecasts or both.
 #'
 #' @section Caution:
 #' mortensor is experimental software written largely with AI coding

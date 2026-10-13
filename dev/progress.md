@@ -46,6 +46,7 @@ work: `claude/vigilant-albattani-2ssw1x` (plays the role of `dev-0.2`).
 | D1.19 | done | this branch | `calibrated()`: recalibration of the spread (and optionally the drift) of any model's draws on the last 10 training years by minimum CRPS or interval score, nested in backtests; works with ensembles (per-draw observation noise), reconciled (bottom level, coherent) and bootstrapped models; validation check `calibration_ew` |
 | V4 | done | this branch | Vignettes on deprivation quintiles (ONS) and on the effect of reconciliation methods (ONS sex x quintile with totals), precomputed; regional vignette extended with forecasts for every Land by reconciliation method |
 | U0 | done | this branch | Review of the owner's earlier UK analysis (`uk_analysis.R`, methodology document, plots) and integration plan `dev/integration-plan-uk-analysis.md`: plot layout as standard, jump-off control, reconciliation with a fixed total, diagnostics; list of elements not to port. Package labelled experimental and vibe-coded (README, DESCRIPTION, package help, startup message); documentation rule in `CLAUDE.md` |
+| Q1 | done | this branch | Decomposition as post-processing (`dev/decomposition-plan.md`): `mt_decompose()` for observed data, forecast draws or both (comparisons between strata, years or objects); symmetric Arriaga with cause split, Horiuchi line integral, stepwise replacement, Kitagawa (crude rate), subgroup composition at the radix (Riffe, Tursun-zade and Trias Llimós 2024) or pooled; `summary()`, `mt_plot_decomposition()`; tests against DemoDecomp, LEdecomp and Table 1 of Riffe et al.; validation check `decomposition`; article on ONS data |
 | U1 | done | this branch | Methods of the earlier UK analysis (plan 4.2-4.8): `mt_smooth(along = "period")` (Whittaker over time, GCV pooled per stratum), `mt_smooth(dims = 2, method = "gam")` (quasi-Poisson `te(age, year)`), `mt_smooth_check()`, `mt_plot_smooth()`; models fitted to smoothed rates take residuals, observation noise, MASE scale and copula from the raw deaths (`fit$raw_D`); `anchored()` and `mt_jump_off()`; `fixed` nodes in `mt_reconcile()`/`reconciled()` with non-negative projection, `mt_coherence()`, `mt_plot_coherence()`; `mt_backtest(quantities = )` and `mt_score(target = )` for life expectancy and ASR, `mt_plot_scores(by = "model")`; `lee_carter(adjust = , choose_period = )` (demography's `lca` adjustments and BMS period); `ensemble(top_k = )`; `mt_tune(strategy = "two_stage")`; tail options and diagnostics of disaggregation (`mt_shape_rates()`, `mt_disaggregate_check()`, `mt_plot_disaggregation()`); validation check `smoothing_jumpoff`; vignettes updated (HMD, deprivation, coherence, causes) |
 | V3 | done | this branch | Comparison vignette (fidelity and accuracy vs demography, bamp, StMoMo; stored results of `dev/compare-packages.R`, full run 2026-10-13); regional vignette on German Laender (precomputed); validation check `de_regions` |
 | D1.12 (HMD) | done | this branch | `mt_from_hmd()`, `mt_read_hmd()` (HMDHFDplus, credentials from `HMD_USER`/`HMD_PASSWORD`) |
@@ -178,6 +179,16 @@ work: `claude/vigilant-albattani-2ssw1x` (plays the role of `dev-0.2`).
   up to 51%. The projection now holds such bottoms at zero and projects the
   rest again; fixed totals are kept to 1.5e-7 (40 s for 130 strata x 135
   cells x 200 draws).
+
+- 2026-10-13: Decomposition on ONS data. Gap Q5 - Q1 in life expectancy at
+  birth, 2019: women 6.46 years (ages 40-84: 5.2), men 7.66 (6.3). Symmetric
+  Arriaga and symmetric stepwise replacement are identical for life
+  expectancy (difference 1.6e-14); the line integral (20 steps) differs by
+  up to 0.007 years per age with a residual of 2e-4. England 2001-2019,
+  quintile composition at the radix: women +2.72 years (composition
+  -0.10), men +3.74 (-0.13); pooled rates: +2.98 (+0.10) and +3.95 (+0.03).
+  The signs differ because the share of Q5 fell at birth and rose at ages
+  75-84.
 
 ## Open questions
 

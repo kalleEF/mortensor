@@ -27,11 +27,13 @@ Imports:
     utils
 Suggests:
     bamp (>= 3.0.0),
+    DemoDecomp,
     demography,
     forecast,
     ggplot2,
     HMDHFDplus,
     knitr,
+    LEdecomp,
     mgcv,
     readxl,
     rmarkdown,

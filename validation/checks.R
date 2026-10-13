@@ -225,6 +225,37 @@ ons_quintiles <- function(causes = FALSE) {
   mt_group_levels(x, "cause", ons_cause_groups, other = "rest", total = "all", additive = "rates")
 }
 
+checks$decomposition <- list(
+  suite = "quick",
+  description = paste("mt_decompose() on ONS England (sex x IMD quintile): the gap in life expectancy at birth",
+                      "Q5 - Q1 in 2019 by age (Arriaga, line integral, stepwise; largest residual and largest",
+                      "difference of an age contribution from Arriaga), by age and cause at ages 50+ (residual and",
+                      "agreement with the all-cause decomposition), the change 2001-2019 with quintile",
+                      "composition (radix: exact; pooled: line integral) and the change 2019-2035 of Li-Lee draws."),
+  run = function() {
+    x <- ons_quintiles()
+    d <- lapply(c(arriaga = "arriaga", horiuchi = "horiuchi", stepwise = "stepwise"), function(m) {
+      mt_decompose(x, var = "quintile", ref = "Q1", periods = 2019, method = m)
+    })
+    resid <- function(dd) max(summary(dd, by = NULL)$max_residual)
+    by_age <- function(dd) summary(dd, by = "age")$mean
+    xc <- ons_quintiles(causes = TRUE)
+    h <- mt_hierarchy(cause = "all", additive = "rates")
+    dc <- mt_decompose(xc, var = "quintile", ref = "Q1", periods = 2019, cause = "cause", hierarchy = h)
+    da <- mt_decompose(mt_subset(xc, strata = cause == "all"), var = "quintile", ref = "Q1", periods = 2019)
+    dr <- mt_decompose(x, periods = c(2001, 2019), groups = "quintile")
+    dp <- mt_decompose(x, periods = c(2001, 2019), groups = "quintile", composition = "pooled")
+    fc <- mt_forecast(mt_fit(li_lee(common_by = "sex"), x), to = 2035, n_draws = 200, seed = 1)
+    df <- mt_decompose(fc, periods = c(2019, 2035))
+    data.frame(metric = c("arriaga_residual", "stepwise_residual", "horiuchi_residual", "horiuchi_vs_arriaga",
+                          "stepwise_vs_arriaga", "causes_residual", "causes_vs_allcause", "radix_residual",
+                          "pooled_residual", "forecast_residual"),
+               value = c(resid(d$arriaga), resid(d$stepwise), resid(d$horiuchi),
+                         max(abs(by_age(d$horiuchi) - by_age(d$arriaga))),
+                         max(abs(by_age(d$stepwise) - by_age(d$arriaga))), resid(dc),
+                         max(abs(by_age(dc) - by_age(da))), resid(dr), resid(dp), resid(df)))
+  })
+
 checks$ons_deprivation <- list(
   suite = "quick",
   description = paste("ONS England 2001-2019 (ons_data), sex x IMD quintile, 5-year groups: backtest from 2008 to",

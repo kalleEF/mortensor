@@ -29,7 +29,8 @@ different granularities. A forecast is assembled from interchangeable parts:
    `apc_bayes()`, ...), fitted with `mt_fit()` and forecast with
    `mt_forecast()` as simulated paths,
 4. **derived quantities** computed path by path (`life_expectancy()`,
-   `prob_dying()`, `asr()`), and
+   `prob_dying()`, `asr()`) and their decomposition by age, cause and
+   subgroup (`mt_decompose()`), and
 5. **evaluation** with rolling-origin backtests (`mt_backtest()`,
    `mt_score()`).
 
@@ -248,6 +249,8 @@ mt_plot_coverage(bt)
   years.
 * "Coherent forecasts: what reconciliation changes": forecasts that add up
   over strata (quintiles and sexes to England), method by method.
+* "Decomposing differences in life expectancy": the ages, causes and
+  subgroup composition behind gaps and changes, observed and forecast.
 * "Causes of death by deprivation": cause-specific forecasts that add up to
   all causes, on the same ONS data.
 * "Coherent forecasts by sex, region and cause": the 16 German Laender, with
