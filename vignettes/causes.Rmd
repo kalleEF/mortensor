@@ -83,13 +83,7 @@ Population 2013) per cause and quintile, and the ratio between the most and
 the least deprived quintile, 2017-2019:
 
 ```{r}
-st <- mt_strata(xc)
-m <- mt_array(xc, "deaths") / mt_array(xc, "exposure")
-esp <- standard_population("esp2013")
-w <- esp$weight[match(mt_grid(xc)$age$lower, esp$age_lo)]
-w[length(w)] <- sum(esp$weight[esp$age_lo >= 90])
-asr_obs <- apply(m[, c("2017", "2018", "2019"), ], 3, function(r) sum(colMeans(t(r)) * w) / sum(w) * 1e5)
-obs <- cbind(st, asr = asr_obs)
+obs <- asr(mt_subset(xc, periods = c(2017, 2019)))[, .(asr = mean(q0.5)), by = .(sex, quintile, cause)]
 ratio <- dcast(obs[quintile %in% c("Q1", "Q5")], sex + cause ~ quintile, value.var = "asr")
 ratio[, `Q1 / Q5` := round(Q1 / Q5, 2)]
 ratio[, c("Q1", "Q5") := lapply(.SD, round), .SDcols = c("Q1", "Q5")]
@@ -161,16 +155,8 @@ Age-standardised rates and the ratio Q1 / Q5, path by path, so that the
 intervals of the ratio include the joint uncertainty of both quintiles:
 
 ```{r}
-a <- asr(fc, paths = TRUE)   # [period, stratum, draw]
-rr <- rbindlist(lapply(c("female", "male"), function(sx) {
-  rbindlist(lapply(unique(st$cause), function(cs) {
-    q1 <- a["2034", st$sex == sx & st$quintile == "Q1" & st$cause == cs, ]
-    q5 <- a["2034", st$sex == sx & st$quintile == "Q5" & st$cause == cs, ]
-    q <- quantile(q1 / q5, c(0.025, 0.5, 0.975))
-    data.table(sex = sx, cause = cs, q0.025 = q[1], q0.5 = q[2], q0.975 = q[3])
-  }))
-}))
-rr[, (3:5) := lapply(.SD, round, 2), .SDcols = 3:5]
+rr <- mt_contrast(fc, var = "quintile", ref = "Q5", quantity = "asr", type = "ratio")[level == "Q1" & period == 2034]
+rr <- rr[, .(sex, cause, q0.025 = round(q0.025, 2), q0.5 = round(q0.5, 2), q0.975 = round(q0.975, 2))]
 merge(rr, ratio[, .(sex, cause, `2017-2019` = `Q1 / Q5`)], by = c("sex", "cause"))[order(sex, -q0.5)]
 ```
 
@@ -182,15 +168,10 @@ close to their average over the training years:
 
 ```{r}
 fc_ll <- mt_forecast(mt_fit(specs[[3]], xc), h = 15, n_draws = 500, seed = 1)
-a_ll <- asr(fc_ll, paths = TRUE)
-rr_ll <- rbindlist(lapply(c("female", "male"), function(sx) {
-  rbindlist(lapply(unique(st$cause), function(cs) {
-    q1 <- a_ll["2034", st$sex == sx & st$quintile == "Q1" & st$cause == cs, ]
-    q5 <- a_ll["2034", st$sex == sx & st$quintile == "Q5" & st$cause == cs, ]
-    data.table(sex = sx, cause = cs, li_lee = round(median(q1 / q5), 2))
-  }))
-}))
-merge(rr[, .(sex, cause, lee_carter = q0.5)], rr_ll, by = c("sex", "cause"))[order(sex, -lee_carter)]
+rr_ll <- mt_contrast(fc_ll, var = "quintile", ref = "Q5", quantity = "asr", type = "ratio")[level == "Q1" &
+                                                                                              period == 2034]
+merge(rr[, .(sex, cause, lee_carter = q0.5)], rr_ll[, .(sex, cause, li_lee = round(q0.5, 2))],
+      by = c("sex", "cause"))[order(sex, -lee_carter)]
 ```
 
 Which assumption is more plausible is a judgement the backtest cannot

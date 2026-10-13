@@ -94,7 +94,8 @@ bt <- mt_backtest(li_lee(common_by = "sex"), x, origins = 2008:2014, h = 5)
 mt_score(bt)
 ```
 
-Vignettes: *Getting started* (ONS deprivation data), *Causes of death by
+Vignettes: *Getting started* (ONS deprivation data), *Your own data, from
+CSV to report*, *Causes of death by
 deprivation*, *Coherent forecasts by sex, region and cause* (German
 Laender), *Model reference*, *Data at
 different granularities* and *Forecasting and backtesting* (HMD data),

@@ -212,7 +212,8 @@ mt_subset <- function(data, ..., ages = NULL, periods = NULL, drop = FALSE) {
   }
   if (!is.null(periods)) {
     if (length(periods) != 2) mt_abort("`periods` must be c(first, last).", class = "argument")
-    data <- mt_window(data, if (is.na(periods[1])) NULL else periods[1], if (is.na(periods[2])) NULL else periods[2])
+    data <- mt_window(data, if (is.na(periods[1])) -Inf else periods[1],
+                      if (is.na(periods[2])) Inf else periods[2])
   }
   data$obs <- data$obs[vapply(data$obs, nrow, 1L) > 0L]
   if (!length(data$obs)) mt_abort("No observations left.", class = "argument")

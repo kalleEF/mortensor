@@ -55,6 +55,16 @@ mt_validate <- function(data, hierarchy = NULL, tol = 0.005) {
     for (i in seq_len(nrow(z))) add("rate above 1", "warning", "deaths", lab(z$stratum[i]), z$N[i],
                                     sprintf("central death rate > 1 below age 100 (ages %s)", z$ex[i]))
   }
+  # strata without any observation of a measure (for example populations
+  # that lack the national total)
+  for (m in intersect(c("deaths", "exposure"), names(data$obs))) {
+    none <- setdiff(data$strata$stratum, unique(data$obs[[m]]$stratum))
+    if (length(none)) {
+      add(sprintf("no %s", m), "warning", m, paste(utils::head(lab(none), 4), collapse = ", "), length(none),
+          sprintf("%d stratum/strata without any %s; remove them with mt_subset() or add the table", length(none),
+                  m))
+    }
+  }
   g <- tryCatch(mt_grid(data), error = function(e) NULL)
   if (!is.null(g)) {
     for (m in intersect(c("deaths", "exposure"), names(data$obs))) {

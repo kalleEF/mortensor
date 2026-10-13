@@ -113,7 +113,7 @@ year-to-year noise. It is slower and, inside backtests, must be refitted on
 each training window (use `step_ungroup(dims = 2)` in the preprocessing).
 
 ```{r}
-x_recent <- mt_window(x, from = 2000)
+x_recent <- mt_subset(x, periods = c(2000, NA))
 u2 <- mt_ungroup(x_recent, dims = 2)
 attr(u2, "ungroup")
 obs_recent <- obs[, as.character(2000:2011)]
@@ -166,7 +166,7 @@ ungrouped without offset; the monotone spline of cumulative exposures
 reproduces group totals exactly.
 
 ```{r}
-fr2 <- mt_regroup(mt_window(fr, from = 1990), age = 30:85)
+fr2 <- mt_regroup(mt_subset(fr, periods = c(1990, NA)), age = 30:85)
 fr_grouped <- fr2
 fr_grouped$obs$exposure <- mt_regroup(fr2, age = seq(30, 85, 5))$obs$exposure
 fr_grouped$obs$deaths <- NULL
@@ -184,7 +184,7 @@ inside 85+ from the totals alone; mortensor warns, and the comparison with
 the observed exposures shows why:
 
 ```{r}
-fr3 <- mt_regroup(mt_window(fr, from = 1990), age = 30:100)
+fr3 <- mt_regroup(mt_subset(fr, periods = c(1990, NA)), age = 30:100)
 fr3_grouped <- fr3
 fr3_grouped$obs$exposure <- mt_regroup(fr3, age = seq(30, 85, 5))$obs$exposure
 fr3_grouped$obs$deaths <- NULL

@@ -100,7 +100,7 @@ the penalized composite link model; deaths are ungrouped as rates with the
 exposures as offset, and the estimates add up to the observed totals.
 
 ```{r}
-xs <- mt_set_grid(mt_window(x, 2019, 2019), age = single_ages(0, 90))
+xs <- mt_subset(x, periods = c(2019, 2019))
 u <- mt_ungroup(xs)
 u
 ```
@@ -160,34 +160,25 @@ mt_plot_life_expectancy(fc_ll, at = 65)
 ```
 
 Because the draws are paths, differences between strata carry their own
-uncertainty. The gap in life expectancy at birth between the least (Q5) and
-the most deprived quintile (Q1), path by path, for Li-Lee and for separate
-Lee-Carter models:
+uncertainty. `mt_contrast()` computes the gap in life expectancy at birth
+between the least (Q5) and the most deprived quintile (Q1), path by path,
+for Li-Lee and for separate Lee-Carter models, and for the observed years
+(with Poisson intervals):
 
 ```{r}
-st <- mt_strata(x)
-gap_paths <- function(fc, model) {
-  e <- life_expectancy(fc$rates, fc$age)   # [period, stratum, draw]
-  rbindlist(lapply(c("female", "male"), function(sx) {
-    g <- e[, st$label == paste0(sx, ".Q5"), ] - e[, st$label == paste0(sx, ".Q1"), ]
-    q <- apply(g, 1, quantile, c(0.025, 0.5, 0.975))
-    data.table(model = model, sex = sx, period = as.numeric(colnames(q)), lo = q[1, ], med = q[2, ], hi = q[3, ])
-  }))
-}
 fc_lc <- mt_forecast(fit_lc, h = 15, n_draws = 500, seed = 1)
-gaps <- rbind(gap_paths(fc_ll, "Li-Lee"), gap_paths(fc_lc, "Lee-Carter"))
-gaps[period %in% c(2020, 2034)]
-observed_gap <- rbindlist(lapply(c("female", "male"), function(sx) {
-  data.table(sex = sx, period = 2001:2019, gap = e0[, paste0(sx, ".Q5")] - e0[, paste0(sx, ".Q1")])
-}))
+gaps <- rbind(mt_contrast(fc_ll, var = "quintile", ref = "Q1", at = 0)[level == "Q5"][, model := "Li-Lee"],
+              mt_contrast(fc_lc, var = "quintile", ref = "Q1", at = 0)[level == "Q5"][, model := "Lee-Carter"])
+gaps[period %in% c(2020, 2034), .(model, sex, period, q0.025, q0.5, q0.975)]
+observed_gap <- mt_contrast(x, var = "quintile", ref = "Q1", at = 0)[level == "Q5"]
 ```
 
 ```{r, eval = has_gg}
 library(ggplot2)
 ggplot(gaps, aes(period)) +
-  geom_ribbon(aes(ymin = lo, ymax = hi, fill = model), alpha = 0.2) +
-  geom_line(aes(y = med, colour = model)) +
-  geom_line(data = observed_gap, aes(y = gap)) +
+  geom_ribbon(aes(ymin = q0.025, ymax = q0.975, fill = model), alpha = 0.2) +
+  geom_line(aes(y = q0.5, colour = model)) +
+  geom_line(data = observed_gap, aes(y = q0.5)) +
   facet_wrap(~ sex) +
   labs(x = NULL, y = "Gap in life expectancy at birth, Q5 - Q1 (years)", colour = NULL, fill = NULL)
 ```

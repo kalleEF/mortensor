@@ -206,6 +206,41 @@ checks$ons_deprivation <- list(
                          mean(bc[cause == "all"]$crps), gap))
   })
 
+checks$de_regions <- list(
+  suite = "quick",
+  description = paste("German Laender 1998-2019 (de_deaths, de_population), all causes: suppressed cells filled to",
+                      "the national totals; Laender by sex with East, West and Germany; backtest from 2008, 2011,",
+                      "2014 (h = 5) of the ensemble of li_lee(common_by = 'sex') and rwd(observation_noise = TRUE),",
+                      "bottom-up; CRPS and 95% coverage of bottom and aggregate strata; share of 2035 draws with",
+                      "rates above 1."),
+  run = function() {
+    d <- as.data.frame(de_deaths)
+    d <- d[d$cause == "all" & d$year <= 2019, setdiff(names(d), "cause")]
+    x <- suppressWarnings(mt_data(deaths = d, population = de_population[de_population$year <= 2019, ],
+                                  by = c("region", "sex")))
+    x <- mt_regroup(mt_as_exposure(x, type = "dec31"), age = "deaths")
+    x <- mt_fill_suppressed(x, mt_hierarchy(region = "Deutschland"))
+    gap <- attr(x, "fill")$max_gap
+    xa <- mt_subset(x, region != "Deutschland")
+    laender <- unique(mt_strata(xa)$region)
+    east <- c("Berlin", "Brandenburg", "Mecklenburg-Vorpommern", "Sachsen", "Sachsen-Anhalt",
+              grep("^Th", laender, value = TRUE))
+    h <- mt_hierarchy(region = list(total = "Deutschland", groups = list(West = setdiff(laender, east), East = east)),
+                      sex = "both")
+    xh <- mt_aggregate_strata(xa, h)
+    sp <- reconciled(ensemble(ll = li_lee(common_by = "sex"), rw = rwd(observation_noise = TRUE)), h,
+                     method = "bottom_up")
+    bt <- mt_backtest(sp, xh, origins = c(2008, 2011, 2014), h = 5, n_draws = 200)
+    bt <- merge(bt, mt_strata(xh, h)[, list(label, level)], by = "label")
+    fc <- suppressWarnings(mt_forecast(mt_fit(sp, xh), to = 2035, n_draws = 200, seed = 1))
+    closed <- is.finite(fc$age$upper)
+    implausible <- mean(apply(fc$rates[closed, , , , drop = FALSE] > 1, 4, any))
+    data.frame(metric = c("fill_max_gap", "crps_bottom", "crps_aggregate", "cov95_bottom", "cov95_aggregate",
+                          "implausible_draws"),
+               value = c(gap, mean(bt[level == "bottom"]$crps), mean(bt[level != "bottom"]$crps),
+                         mean(bt[level == "bottom"]$cov95), mean(bt[level != "bottom"]$cov95), implausible))
+  })
+
 checks$ungroup_ew_2d <- list(
   suite = "full",
   description = "As ungroup_ew_1d for 1980-2011 with the 2D PCLM (age-period surface).",

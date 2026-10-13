@@ -92,10 +92,10 @@ add("age_labels_variants", "age labels '0 to 4', '5 - 9', '85 years and over', '
                                       error = function(e) "FAILED"))
   paste(sprintf("%s -> %s", l, unlist(r)), collapse = "; ")
 })
-add("age_numeric_open", "single ages 0-100 where 100 means 100+ (open, as in many tables), no age_open", function() {
-  d <- CJ(sex = c("female", "male"), year = 2001:2020, age = 0:100)
+add("age_numeric_open", "single ages 0-90 where 90 means 90+ (open, as in many census tables), no age_open", function() {
+  d <- CJ(sex = c("female", "male"), year = 2001:2020, age = 0:90)
   d[, population := round(1e5 * exp(-age / 40))]
-  d[age == 100, population := 2000]
+  d[age == 90, population := round(sum(1e5 * exp(-(90:105) / 40)))]
   d[, deaths := rpois(.N, population * pmin(exp(-9.5 + 0.09 * age), 0.6))]
   pipeline(d, by = "sex")
 })

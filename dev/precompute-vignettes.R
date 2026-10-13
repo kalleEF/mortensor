@@ -4,3 +4,4 @@
 old <- setwd("vignettes")
 on.exit(setwd(old))
 knitr::knit("bayesian-apc.Rmd.orig", output = "bayesian-apc.Rmd")
+knitr::knit("regions.Rmd.orig", output = "regions.Rmd")

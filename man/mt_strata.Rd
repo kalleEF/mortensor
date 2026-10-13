@@ -7,7 +7,7 @@
 \alias{as.data.table.mt_data}
 \title{Strata, grid and tables of an \code{mt_data} object}
 \usage{
-mt_strata(data)
+mt_strata(data, hierarchy = NULL)
 
 mt_obs(data, measure = "deaths")
 
@@ -16,7 +16,10 @@ mt_grid(data)
 \method{as.data.table}{mt_data}(x, keep.rownames = FALSE, ...)
 }
 \arguments{
-\item{data}{An \link{mt_data} object.}
+\item{data}{An \link{mt_data} object (for \code{mt_strata()} also an \link{mt_draws}
+object or a backtest).}
+
+\item{hierarchy}{Optional \code{\link[=mt_hierarchy]{mt_hierarchy()}} for the \code{level} column.}
 
 \item{measure}{One of \code{"deaths"}, \code{"exposure"}, \code{"population"}.}
 
@@ -29,9 +32,10 @@ A \code{data.table} or, for \code{mt_grid()}, a list with \code{age} and \code{p
 axes.
 }
 \description{
-\code{mt_strata()} returns the stratum table, \code{mt_grid()} the modelling grid
-(single years of age and calendar years by default, see \code{\link[=mt_set_grid]{mt_set_grid()}}),
-\code{mt_obs()} one observation table.
+\code{mt_strata()} returns the stratum table (with a column \code{level},
+\code{"bottom"}, \code{"aggregate"} or \code{"total"}, when a hierarchy is given),
+\code{mt_grid()} the modelling grid (the coarsest grid on which every table is
+exact, see \code{\link[=mt_set_grid]{mt_set_grid()}}), \code{mt_obs()} one observation table.
 }
 \examples{
 x <- mt_example()

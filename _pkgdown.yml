@@ -129,6 +129,7 @@ articles:
     navbar: ~
     contents:
       - mortensor
+      - own-data
       - articles/function-map
   - title: Applications
     contents:

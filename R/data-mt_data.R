@@ -460,11 +460,14 @@ interval_label <- function(lo, hi) {
 
 #' Strata, grid and tables of an `mt_data` object
 #'
-#' `mt_strata()` returns the stratum table, `mt_grid()` the modelling grid
-#' (single years of age and calendar years by default, see [mt_set_grid()]),
-#' `mt_obs()` one observation table.
+#' `mt_strata()` returns the stratum table (with a column `level`,
+#' `"bottom"`, `"aggregate"` or `"total"`, when a hierarchy is given),
+#' `mt_grid()` the modelling grid (the coarsest grid on which every table is
+#' exact, see [mt_set_grid()]), `mt_obs()` one observation table.
 #'
-#' @param data An [mt_data] object.
+#' @param data An [mt_data] object (for `mt_strata()` also an [mt_draws]
+#'   object or a backtest).
+#' @param hierarchy Optional [mt_hierarchy()] for the `level` column.
 #' @param measure One of `"deaths"`, `"exposure"`, `"population"`.
 #' @return A `data.table` or, for `mt_grid()`, a list with `age` and `period`
 #'   axes.
@@ -474,9 +477,16 @@ interval_label <- function(lo, hi) {
 #' mt_grid(x)
 #' head(mt_obs(x, "deaths"))
 #' @export
-mt_strata <- function(data) {
-  check_class(data, "mt_data", "data")
-  copy(data$strata)
+mt_strata <- function(data, hierarchy = NULL) {
+  if (!inherits(data, c("mt_data", "mt_draws"))) check_class(data, "mt_data", "data")
+  st <- copy(data$strata)
+  if (!is.null(hierarchy)) {
+    h <- as_hierarchy(hierarchy)
+    hs <- hierarchy_structure(st, h)
+    tot <- Reduce(`&`, lapply(names(h$vars), function(v) st[[v]] == h$vars[[v]]$total))
+    st[, level := ifelse(hs$is_bottom, "bottom", ifelse(tot, "total", "aggregate"))]
+  }
+  st[]
 }
 
 #' @rdname mt_strata
