@@ -39,6 +39,13 @@ mt_validate <- function(data, hierarchy = NULL, tol = 0.005) {
       add("zero exposure", "info", "exposure", lab(z$stratum[i]), z$N[i], "cells with zero exposure")
     }
   }
+  for (m in names(data$obs)) {
+    z <- data$obs[[m]][is.na(value), .N, by = "stratum"]
+    for (i in seq_len(nrow(z))) {
+      add("missing values", "warning", m, lab(z$stratum[i]), z$N[i],
+          "cells without a value (suppressed or unknown); see mt_fill_suppressed()")
+    }
+  }
   if (!is.null(D) && !is.null(E)) {
     j <- merge(D, E, by = c("stratum", "age_lo", "age_hi", "period_lo", "period_hi"), suffixes = c(".d", ".e"))
     z <- j[value.d > 0 & value.e == 0, .N, by = "stratum"]

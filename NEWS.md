@@ -65,6 +65,14 @@ Clean break: the 0.1.x interface is replaced (see `dev/revamp-plan.md`).
   decile, England 2001-2019 (ONS ad hoc release 3064, Open Government
   Licence), with the cause groups `ons_cause_groups`; built by
   `data-raw/ons_data.R`. `mt_read_ons()` reads it directly.
+* German regional data: `de_deaths` (deaths by Land, sex, age group and
+  ICD-10 chapter, 1998-2024, GBE-Bund) and `de_population` (31 December
+  populations, GENESIS-Online), Datenlizenz Deutschland by-2-0;
+  `mt_read_gbe()` parses GBE-Bund exports, `mt_read_destatis()` builds
+  `mt_data` with cause groups (`de_cause_groups`), and
+  `mt_fill_suppressed()` estimates suppressed death counts by raking them to
+  the published totals. `mt_as_exposure(type = "dec31")` for populations on
+  31 December. Missing cells are reported by `mt_validate()`.
 * Ensembles draw one component per path for all strata (before, components
   were picked separately per stratum, which broke the dependence between
   strata and the coherence of reconciled components); every model type is

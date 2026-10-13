@@ -151,7 +151,8 @@ model_inputs <- function(d, spec) {
              call = NULL)
   })
   if (anyNA(D) || anyNA(E)) {
-    mt_abort("Deaths and exposures must be complete on the grid (no missing cells).", class = "model_data")
+    mt_abort(paste("Deaths and exposures must be complete on the grid (no missing cells); suppressed cells can be",
+                   "estimated from published totals with mt_fill_suppressed()."), class = "model_data")
   }
   if (any(E <= 0)) mt_abort("Exposures must be positive on the grid.", class = "model_data")
   if (any(g$period$upper - g$period$lower != 1)) {

@@ -8,7 +8,7 @@ in `dev/implementation-plan.md`, and `dev/revamp-plan.md` for the design.
 | Path | Content |
 |---|---|
 | `R/data-*.R` | Axes, `mt_data` container, regrouping, validation, exposures, adapters (HMD, ONS, GENESIS), simulated examples, `ons_data` documentation |
-| `data/`, `data-raw/` | `ons_data` and `ons_cause_groups`, rebuilt by `data-raw/ons_data.R` |
+| `data/`, `data-raw/` | `ons_data`, `ons_cause_groups` (`data-raw/ons_data.R`); `de_deaths`, `de_population`, `de_cause_groups` (`data-raw/de_data.R`) |
 | `R/harmonise-*.R` | PCLM engine and `mt_ungroup()`, smoothing and preprocessing steps |
 | `R/model-*.R` | Model specifications, fitting, forecast draws |
 | `R/hierarchy.R` | Hierarchies of strata, aggregation, reconciliation |
@@ -70,6 +70,7 @@ R CMD build . && R CMD check --as-cran mortensor_*.tar.gz
   threshold, not only unit tests.
 - Data from other packages (HMD extracts in StMoMo and demography) is loaded
   in tests and vignettes, never copied into the repository. The owner's
-  German data stays outside the repository. `ons_data` (ONS, Open Government
-  Licence) is the exception: it is built by `data-raw/ons_data.R` and ships
-  in `data/`.
+  German data stays outside the repository. Exceptions, with the owner's
+  agreement: `ons_data` (ONS, Open Government Licence) and the German
+  regional data `de_deaths`/`de_population` (Destatis, Datenlizenz
+  Deutschland by-2-0), built by the scripts in `data-raw/`.

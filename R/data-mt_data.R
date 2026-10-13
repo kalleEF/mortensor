@@ -188,7 +188,7 @@ register_strata <- function(strata, obs, by) {
 }
 
 validate_obs <- function(obs, measure) {
-  if (any(obs$value < 0)) mt_abort(sprintf("Negative %s values.", measure), class = "obs")
+  if (any(obs$value < 0, na.rm = TRUE)) mt_abort(sprintf("Negative %s values.", measure), class = "obs")
   if (any(obs$age_hi <= obs$age_lo) || any(obs$period_hi <= obs$period_lo)) {
     mt_abort("Every interval needs upper > lower.", class = "obs")
   }
@@ -204,7 +204,7 @@ validate_obs <- function(obs, measure) {
   pov <- pp[, list(bad = any(head(period_hi, -1) > tail(period_lo, -1) + 1e-9) |
                      anyDuplicated(period_lo) > 0), by = "stratum"]
   if (any(pov$bad)) mt_abort(sprintf("Overlapping period intervals in the %s table.", measure), class = "obs")
-  if (measure == "deaths" && any(abs(obs$value - round(obs$value)) > 1e-6)) {
+  if (measure == "deaths" && any(abs(obs$value - round(obs$value)) > 1e-6, na.rm = TRUE)) {
     mt_warn("Death counts are not whole numbers; they are kept as supplied.", class = "noninteger")
   }
   invisible(TRUE)

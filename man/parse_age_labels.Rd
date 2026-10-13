@@ -18,7 +18,7 @@ Understands the label styles of common sources, for example \code{"<1"},
 \code{"01-14"}, \code{"30-34"}, \code{"90+"}, \code{"85 and over"}, \code{"under 1"}, \code{"0"},
 \code{"110+"}, and the German labels of the Federal Statistical Office
 (\code{"unter 1 Jahr"}, \code{"15 bis unter 20 Jahre"}, \code{"85 Jahre und mehr"},
-\code{"68-Jährige"}).
+and single years written as \code{"68-Jaehrige"} with an umlaut).
 }
 \examples{
 parse_age_labels(c("<1", "01-14", "15-19", "90+"))

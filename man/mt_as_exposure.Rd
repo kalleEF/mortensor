@@ -4,12 +4,12 @@
 \alias{mt_as_exposure}
 \title{Exposures from population counts}
 \usage{
-mt_as_exposure(data, type = c("midyear", "jan1"))
+mt_as_exposure(data, type = c("midyear", "jan1", "dec31"))
 }
 \arguments{
 \item{data}{An \link{mt_data} object with a population table.}
 
-\item{type}{\code{"midyear"} or \code{"jan1"}.}
+\item{type}{\code{"midyear"}, \code{"jan1"} or \code{"dec31"}.}
 }
 \value{
 The \code{mt_data} object with an exposure table.
@@ -25,6 +25,10 @@ exposure of that year;
 \item \code{"jan1"}: the exposure of year t is the mean of the January 1
 populations of years t and t + 1 in the same age interval. The last year
 has no successor and is dropped.
+\item \code{"dec31"}: populations on 31 December of year t (as published by the
+German Federal Statistical Office); the exposure of year t is the mean
+of the populations on 31 December of years t - 1 and t. The first year
+has no predecessor and is dropped.
 }
 
 Both are standard approximations; the HMD uses more refined cohort-based

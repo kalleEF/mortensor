@@ -162,7 +162,7 @@ axis_locate <- function(axis, lo, hi, mode = c("within", "exact")) {
 #' `"01-14"`, `"30-34"`, `"90+"`, `"85 and over"`, `"under 1"`, `"0"`,
 #' `"110+"`, and the German labels of the Federal Statistical Office
 #' (`"unter 1 Jahr"`, `"15 bis unter 20 Jahre"`, `"85 Jahre und mehr"`,
-#' `"68-Jährige"`).
+#' and single years written as `"68-Jaehrige"` with an umlaut).
 #'
 #' @param x Character vector of labels.
 #' @return A `data.table` with `label`, `age_lo`, `age_hi` (`Inf` for open
@@ -177,7 +177,8 @@ parse_age_labels <- function(x) {
   # German labels (GENESIS): "unter 1 Jahr", "15 bis unter 20 Jahre",
   # "85 Jahre und mehr", "68-J\u00e4hrige"
   s <- sub("^[Uu]nter\\s+(\\d+)\\s+Jahre?n?$", "<\\1", s, perl = TRUE, useBytes = TRUE)
-  s <- sub("^(\\d+)\\s+bis\\s+unter\\s+(\\d+)\\s+Jahre?n?$", "\\1 bis \\2", s, perl = TRUE, useBytes = TRUE)
+  s <- sub("^(\\d+)\\s+(?:Jahre?n?\\s+)?bis\\s+unter\\s+(\\d+)\\s+Jahre?n?$", "\\1 bis \\2", s, perl = TRUE,
+           useBytes = TRUE)
   s <- sub("^(\\d+)\\s+Jahre?\\s+und\\s+(?:mehr|\u00e4lter)$", "\\1+", s, perl = TRUE, useBytes = TRUE)
   s <- sub("^(\\d+)-J\u00e4hrige$", "\\1", s, perl = TRUE, useBytes = TRUE)
   s <- tolower(iconv(s, "UTF-8", "ASCII", sub = "?"))

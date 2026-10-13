@@ -20,9 +20,13 @@ reference:
       - mt_from_hmd
       - mt_read_ons
       - mt_read_genesis
+      - mt_read_gbe
+      - mt_read_destatis
+      - mt_fill_suppressed
       - mt_example
       - mt_example_causes
       - ons_data
+      - de_deaths
   - title: Harmonisation and preprocessing
     contents:
       - mt_regroup
