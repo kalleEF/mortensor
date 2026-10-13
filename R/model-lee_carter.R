@@ -52,7 +52,40 @@ lee_carter <- function(method = c("poisson", "svd"), jump_off = c("fitted", "obs
 #' @export
 fit_model.mt_spec_lee_carter <- function(spec, D, E, ages, periods, ...) {
   p <- spec$params
-  est <- if (p$method == "poisson") lc_poisson(D, E) else lc_svd(D, E)
+  zero <- rowSums(D) == 0
+  if (sum(!zero) < 2) mt_abort("Fewer than two age groups with deaths.", class = "model_fit")
+  fallback <- FALSE
+  # Poisson estimates, or SVD estimates where the Poisson likelihood has no
+  # finite maximum (very sparse counts)
+  est_one <- function(D, E) {
+    if (p$method == "svd") return(lc_svd(D, E))
+    tryCatch(lc_poisson(D, E), mt_error_model_fit = function(e) {
+      fallback <<- TRUE
+      tryCatch(lc_poisson(D, E, ridge = 1), mt_error_model_fit = function(e) lc_svd(D, E))
+    })
+  }
+  fit_lc <- function(D, E) {
+    if (!any(zero)) return(est_one(D, E))
+    # age groups without any death: constant rate of 0.5 deaths over the
+    # training years, no trend (the Poisson estimate would be minus infinity)
+    e <- est_one(D[!zero, , drop = FALSE], E[!zero, , drop = FALSE])
+    a <- b <- numeric(nrow(D))
+    a[!zero] <- e$a
+    b[!zero] <- e$b
+    a[zero] <- log(0.5 / rowSums(E[zero, , drop = FALSE]))
+    e$a <- a
+    e$b <- b
+    e
+  }
+  est <- fit_lc(D, E)
+  if (any(zero)) {
+    mt_warn(sprintf(paste("No deaths in age group(s) %s in the training years: constant rate (0.5 deaths in all",
+                          "years), no trend."), paste(ages$labels[zero], collapse = ", ")), class = "sparse")
+  }
+  if (fallback) {
+    mt_warn(paste("The Poisson likelihood has no finite maximum (sparse counts); the age pattern of change b",
+                  "is shrunk towards equal shares (ridge penalty)."), class = "sparse")
+  }
   est$last_log_rate <- log_rates(D[, ncol(D)], E[, ncol(E)])
   est$fitted <- exp(est$a + outer(est$b, est$k))
   est$jump_off <- p$jump_off
@@ -60,7 +93,7 @@ fit_model.mt_spec_lee_carter <- function(spec, D, E, ages, periods, ...) {
     fitted <- E * est$fitted
     est$boot <- lapply(seq_len(p$n_boot), function(i) {
       Db <- matrix(stats::rpois(length(fitted), fitted), nrow(fitted))
-      tryCatch(if (p$method == "poisson") lc_poisson(Db, E, init = est) else lc_svd(Db, E), error = function(e) NULL)
+      tryCatch(fit_lc(Db, E), error = function(e) NULL)
     })
     est$boot <- Filter(Negate(is.null), est$boot)
   }
@@ -119,11 +152,12 @@ lc_svd <- function(D, E) {
   out
 }
 
-lc_poisson <- function(D, E, init = NULL, maxit = 500, tol = 1e-8) {
+lc_poisson <- function(D, E, init = NULL, maxit = 500, tol = 1e-8, ridge = 0) {
   if (is.null(init)) init <- lc_svd(D, E)
   a <- init$a
-  b <- init$b
+  b <- if (ridge > 0) rep(1 / nrow(D), nrow(D)) else init$b
   k <- init$k
+  b0 <- 1 / nrow(D)
   ll_old <- -Inf
   for (it in seq_len(maxit)) {
     Dh <- E * exp(a + outer(b, k))
@@ -134,7 +168,9 @@ lc_poisson <- function(D, E, init = NULL, maxit = 500, tol = 1e-8) {
     k <- k - mean(k)
     Dh <- E * exp(a + outer(b, k))
     kk <- matrix(k, nrow(D), ncol(D), byrow = TRUE)
-    b <- b + rowSums((D - Dh) * kk) / rowSums(Dh * kk^2)
+    # a ridge penalty shrinks b towards equal shares where the counts are
+    # too sparse for a finite maximum likelihood estimate
+    b <- b + (rowSums((D - Dh) * kk) - ridge * (b - b0)) / (rowSums(Dh * kk^2) + ridge)
     Dh <- E * exp(a + outer(b, k))
     ll <- sum(D * log(Dh) - Dh)
     if (!is.finite(ll)) mt_abort("Lee-Carter fit diverged.", class = "model_fit")

@@ -46,5 +46,5 @@ utils::globalVariables(c(
   ".data", "q0.5", "lo", "hi", "med", "x", "x_hi", "level", "coverage", "v", "region", "quintile", "m", "severity",
   "lev", "w", "year", "dep", "population", "i.population", "cause", "dic", "index", "factor", "kind", "score",
   "group", "mode", "time", "cell", "n_members", "symbol", "raw", "age_group", "cause_label", "idx",
-  "group_", "new_", "n_", "first_", "members", "n", "s", ".value"
+  "group_", "new_", "n_", "first_", "members", "n", "s", ".value", "nxt", "u"
 ))

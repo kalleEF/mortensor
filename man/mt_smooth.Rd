@@ -13,7 +13,8 @@ mt_smooth(
   deg = 3,
   pord = 2,
   lambda_range = c(0.01, 1e+08),
-  method = c("pspline", "whittaker", "gam")
+  method = c("pspline", "whittaker", "gam"),
+  ages = NULL
 )
 }
 \arguments{
@@ -41,6 +42,12 @@ smoothing parameter by generalised cross-validation unless \code{lambda} is
 given; an option ported from mortensor 0.1) or \code{"gam"} (Gaussian
 additive model of log rates on age per period with deaths as weights,
 \code{mgcv::gam()} with REML, as in mortensor 0.1).}
+
+\item{ages}{Range of ages that is smoothed, \code{c(lower, upper)}; other
+ages keep their observed deaths and do not enter the fit. By default
+all ages except the first year of life when the grid starts with age 0
+as its own interval (infant mortality does not follow the age pattern
+of the following ages).}
 }
 \value{
 An \code{mt_data} object with smoothed deaths; diagnostics as attribute

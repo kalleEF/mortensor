@@ -15,11 +15,13 @@ intervals), in the order of \code{x}.
 }
 \description{
 Understands the label styles of common sources, for example \code{"<1"},
-\code{"01-14"}, \code{"30-34"}, \code{"90+"}, \code{"85 and over"}, \code{"under 1"}, \code{"0"},
-\code{"110+"}, and the German labels of the Federal Statistical Office
-(\code{"unter 1 Jahr"}, \code{"15 bis unter 20 Jahre"}, \code{"85 Jahre und mehr"},
-and single years written as \code{"68-Jaehrige"} with an umlaut).
+\code{"Under 1"}, \code{"01-14"}, \code{"1 to 4"}, \code{"30-34"}, \code{"30-34 years"},
+\code{"1 and under 5"}, \code{"90+"}, \code{"85 and over"}, \code{"85 years and older"},
+\code{"90 & over"}, \code{"Age 85+"}, \code{"0"}, \code{"110+"}, and the German labels of
+the Federal Statistical Office (\code{"unter 1 Jahr"}, \code{"15 bis unter 20 Jahre"}, \code{"1 bis 4 Jahre"}, \code{"85 Jahre und mehr"}, and single years
+written as \code{"68-Jaehrige"} with an umlaut).
 }
 \examples{
 parse_age_labels(c("<1", "01-14", "15-19", "90+"))
+parse_age_labels(c("Under 1", "1 to 4", "85 years and over"))
 }

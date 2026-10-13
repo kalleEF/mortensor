@@ -4,7 +4,7 @@
 \alias{mt_subset}
 \title{Restrict data to ages, periods and strata}
 \usage{
-mt_subset(data, ..., ages = NULL, periods = NULL)
+mt_subset(data, ..., ages = NULL, periods = NULL, drop = FALSE)
 }
 \arguments{
 \item{data}{An \link{mt_data} object.}
@@ -17,6 +17,9 @@ above \code{lower} and upper bound at or below \code{upper} (\code{Inf} for an o
 interval) are kept.}
 
 \item{periods}{Period range \code{c(first, last)} (calendar years, inclusive).}
+
+\item{drop}{Remove stratum variables that have a single level left (for
+example \code{cause} after \code{cause == "all"}).}
 }
 \value{
 The restricted \code{mt_data} object; strata are renumbered and the

@@ -64,7 +64,7 @@ fit_model.mt_spec_rwd <- function(spec, D, E, ages, periods, ...) {
               innovations = spec$params$innovations)
   if (isTRUE(spec$params$observation_noise)) {
     Dw <- D[, (nt - w + 1):nt, drop = FALSE]
-    out <- c(out, local_level_fit(y, dy, mu, rowMeans(1 / pmax(Dw, 0.5))))
+    out <- c(out, local_level_fit(y, dy, mu, rowMeans(1 / pmax(Dw, 0.5)), weights = rowSums(Dw)))
   }
   out
 }
@@ -80,7 +80,7 @@ simulate_model.mt_spec_rwd <- function(spec, fit, h, n_draws, ...) {
 # differences: Var(dy) = s2_eta + 2 s2_e, Cov(dy[t], dy[t-1]) = -s2_e. The
 # noise variance is the Poisson part (1 / deaths) plus a common extra part
 # (median over ages of -Cov - Poisson part); the level is Kalman filtered.
-local_level_fit <- function(y, dy, mu, pois) {
+local_level_fit <- function(y, dy, mu, pois, weights = NULL) {
   na <- nrow(y)
   w <- ncol(y)
   r <- dy - mu
@@ -89,6 +89,17 @@ local_level_fit <- function(y, dy, mu, pois) {
   extra <- max(0, stats::median(-g1 - pois))
   s2e <- pmin(pois + extra, 0.45 * g0)
   s2eta <- pmax(g0 - 2 * s2e, 0.1 * g0)
+  # partial pooling over ages: where deaths are few, the moment estimate is
+  # dominated by sampling noise (variance about 2 g0^2 / n) and is shrunk
+  # towards the median of the ages, weighted by their deaths; the prior is
+  # weak (standard deviation three times the median), so well observed ages
+  # keep their own estimate
+  if (!is.null(weights) && na > 2) {
+    pooled <- weighted_median(s2eta, weights)
+    v_age <- 2 * g0^2 / max(ncol(r) - 1, 1)
+    v_pool <- (3 * pooled)^2
+    s2eta <- (s2eta / v_age + pooled / v_pool) / (1 / v_age + 1 / v_pool)
+  }
   L <- matrix(NA_real_, na, w)
   P <- matrix(NA_real_, na, w)
   Lp <- L
@@ -128,6 +139,12 @@ local_level_paths <- function(fit, h, n_draws) {
     out[, , j] <- path
   }
   exp(out)
+}
+
+weighted_median <- function(x, w) {
+  o <- order(x)
+  cw <- cumsum(w[o]) / sum(w)
+  x[o][which(cw >= 0.5)[1]]
 }
 
 # Multivariate random walk with drift: returns exp(paths) as [dim, h, draw]

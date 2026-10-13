@@ -15,7 +15,8 @@ mt_data(
   age_open = NULL,
   omega = 110,
   missing = c(".", "..", "...", ":", "x", "X", "/", "NA", ""),
-  zero = "-"
+  zero = "-",
+  decimal = "."
 )
 }
 \arguments{
@@ -53,6 +54,10 @@ unknown counts (\code{"."}, \code{"x"}). Missing cells are left out; suppressed
 death counts can then be estimated with \code{\link[=mt_fill_suppressed]{mt_fill_suppressed()}}.}
 
 \item{zero}{Values that mark a count of zero (for example \code{"-"}).}
+
+\item{decimal}{Decimal mark of values given as text: \code{"."} (thousands
+separators such as \code{"12,345"} are recognised) or \code{","} (as in many
+European exports: \code{"1.234,5"}).}
 }
 \value{
 An object of class \code{mt_data}.
@@ -66,6 +71,18 @@ the observations as they were supplied; harmonisation onto a common grid
 happens explicitly with \code{\link[=mt_regroup]{mt_regroup()}} and \code{\link[=mt_ungroup]{mt_ungroup()}}.
 }
 \details{
+Age labels of many sources are recognised (see
+\code{\link[=parse_age_labels]{parse_age_labels()}}); periods are years, ranges of years or financial
+years (\code{"2001/02"}). Rows whose age or period is labelled as a total
+(\code{"All ages"}, \code{"Total"}, \code{"Insgesamt"}) are left out with a warning.
+Values of unknown age (\code{"Unknown"}, \code{"not stated"}, \code{"unbekannt"}) are
+distributed over the age groups of the same stratum and period in
+proportion to the known values, the usual practice of the Human
+Mortality Database, with a warning. Leading and trailing spaces in
+stratum labels are removed; rows without a stratum label are left out.
+A warning lists levels of a stratum variable that occur in one table
+only (for example \code{"F"} in one table and \code{"female"} in another).
+
 A table may leave out stratum columns over which its values are
 shared. For example, deaths by region, sex and cause of death and
 populations by region and sex: every cause of death then uses the

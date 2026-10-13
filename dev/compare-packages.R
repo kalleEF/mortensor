@@ -89,7 +89,11 @@ registerS3method("simulate_model", "mt_spec_native_bamp", function(spec, fit, h,
 
 # ---- Data --------------------------------------------------------------------
 
-ons <- mt_regroup(mt_read_ons(ons_data), age = c(0, seq(5, 90, 5)))   # equal 5-year groups for bamp
+ons <- mt_data(deaths = ons_data, population = ons_data, by = c("sex", "imd_decile"), age = "age_group",
+               value = c(deaths = "all_causes", population = "population"))
+ons <- mt_group_levels(mt_as_exposure(ons), "imd_decile", function(d) paste0("Q", ceiling(as.numeric(d) / 2)),
+                       name = "quintile")
+ons <- mt_regroup(ons, age = c(0, seq(5, 90, 5)))   # equal 5-year groups for bamp
 fr <- mt_set_grid(as_mt_data(pkg_data("fr.mort", "demography"), years = 1950:2006),
                   age = single_ages(0, 95, open = FALSE))
 ew <- mt_set_grid(mt_window(as_mt_data(pkg_data("EWMaleData", "StMoMo")), 1961, 2011),

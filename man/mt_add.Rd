@@ -17,7 +17,8 @@ mt_add(
   value = NULL,
   age_open = NULL,
   missing = c(".", "..", "...", ":", "x", "X", "/", "NA", ""),
-  zero = "-"
+  zero = "-",
+  decimal = "."
 )
 
 mt_add_deaths(data, x, ...)
@@ -53,6 +54,10 @@ unknown counts (\code{"."}, \code{"x"}). Missing cells are left out; suppressed
 death counts can then be estimated with \code{\link[=mt_fill_suppressed]{mt_fill_suppressed()}}.}
 
 \item{zero}{Values that mark a count of zero (for example \code{"-"}).}
+
+\item{decimal}{Decimal mark of values given as text: \code{"."} (thousands
+separators such as \code{"12,345"} are recognised) or \code{","} (as in many
+European exports: \code{"1.234,5"}).}
 
 \item{...}{Arguments passed to \code{mt_add()}.}
 }

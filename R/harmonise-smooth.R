@@ -17,6 +17,11 @@
 #'   given; an option ported from mortensor 0.1) or `"gam"` (Gaussian
 #'   additive model of log rates on age per period with deaths as weights,
 #'   `mgcv::gam()` with REML, as in mortensor 0.1).
+#' @param ages Range of ages that is smoothed, `c(lower, upper)`; other
+#'   ages keep their observed deaths and do not enter the fit. By default
+#'   all ages except the first year of life when the grid starts with age 0
+#'   as its own interval (infant mortality does not follow the age pattern
+#'   of the following ages).
 #' @inheritParams mt_ungroup
 #' @return An `mt_data` object with smoothed deaths; diagnostics as attribute
 #'   `"smooth"`.
@@ -29,12 +34,32 @@
 #' head(attr(s, "smooth"))
 #' @export
 mt_smooth <- function(data, dims = 1, lambda = NULL, criterion = c("bic", "aic"), kr = 2, deg = 3,
-                      pord = 2, lambda_range = c(1e-2, 1e8), method = c("pspline", "whittaker", "gam")) {
+                      pord = 2, lambda_range = c(1e-2, 1e8), method = c("pspline", "whittaker", "gam"),
+                      ages = NULL) {
   check_class(data, "mt_data", "data")
   criterion <- match.arg(criterion)
   method <- match.arg(method)
   check_number(dims, "dims", lower = 1, upper = 2, integerish = TRUE)
   g <- mt_grid(data)
+  if (is.null(ages)) ages <- if (g$age$lower[1] == 0 && g$age$upper[1] == 1 && length(g$age) > 3) c(1, Inf) else
+    c(-Inf, Inf)
+  if (length(ages) != 2) mt_abort("`ages` must be c(lower, upper).", class = "argument")
+  inside <- g$age$lower >= ages[1] - 1e-9 & g$age$upper <= ages[2] + 1e-9
+  if (!any(inside)) mt_abort("No grid age is inside `ages`.", class = "argument")
+  if (!all(inside)) {
+    # ages outside the range (by default the first year of life, whose rate
+    # does not follow the age pattern of the other ages) are neither smoothed
+    # nor used in the fit
+    data$grid <- g
+    sm <- mt_smooth(mt_subset(data, ages = ages), dims = dims, lambda = lambda, criterion = criterion, kr = kr,
+                    deg = deg, pord = pord, lambda_range = lambda_range, method = method, ages = c(-Inf, Inf))
+    d0 <- data$obs$deaths
+    keep <- !(d0$age_lo >= ages[1] - 1e-9 & d0$age_hi <= ages[2] + 1e-9)
+    data$obs$deaths <- rbind(sm$obs$deaths, d0[keep])
+    setorderv(data$obs$deaths, c("stratum", "period_lo", "age_lo"))
+    attr(data, "smooth") <- attr(sm, "smooth")
+    return(data)
+  }
   for (m in c("deaths", "exposure")) {
     if (is.null(data$obs[[m]])) mt_abort(sprintf("Smoothing needs a %s table.", m), class = "missing_measure")
     if (needs_ungroup(data$obs[[m]], g)) {
@@ -58,11 +83,30 @@ mt_smooth <- function(data, dims = 1, lambda = NULL, criterion = c("bic", "aic")
   data
 }
 
+# Matrix of divided differences of order k at the points x, scaled by the
+# mean spacing so that equal spacing gives the ordinary differences
+divided_differences <- function(x, k) {
+  n <- length(x)
+  M <- diag(n)
+  h <- mean(diff(x))
+  for (j in seq_len(k)) {
+    m <- nrow(M)
+    span <- x[(j + 1):n] - x[1:(n - j)]
+    M <- (M[-1, , drop = FALSE] - M[-m, , drop = FALSE]) / (span / (j * h))
+  }
+  M
+}
+
 whittaker_smooth_obs <- function(data, g, lambda, pord) {
   D <- mt_array(data, "deaths")
   E <- mt_array(data, "exposure")
   na <- dim(D)[1]
-  Dm <- diff(diag(na), differences = pord)
+  # divided differences at the interval midpoints, so that age groups of
+  # different widths are smoothed on the age scale
+  mid <- axis_midpoints(g$age)
+  n <- length(mid)
+  if (is_open(g$age) && n > 1) mid[n] <- g$age$lower[n] + (g$age$upper[n - 1] - g$age$lower[n - 1]) / 2
+  Dm <- divided_differences(mid, pord)
   P <- crossprod(Dm)
   out <- D
   diag_rows <- list()

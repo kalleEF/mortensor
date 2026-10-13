@@ -110,12 +110,29 @@ mt_fit.mt_spec <- function(spec, data, prep = NULL, cores = 1, ...) {
   if (all(diagnostics$status == "failed")) {
     mt_abort(sprintf("The model failed in every stratum: %s", diagnostics$message[1]), class = "model_fit")
   }
+  report_fit_problems(diagnostics, spec$label)
   structure(list(spec = spec, prep = prep, fits = fits, diagnostics = diagnostics, age = md$age,
                  periods = md$periods, strata = st, omega = d$omega,
                  observed = md$D / md$E, train_D = md$D, train_E = md$E,
                  exposure_last = md$E[, length(md$periods), , drop = FALSE],
                  noise_sd = extra_noise_sd(spec, fits, md$D, md$E)),
             class = "mt_fit")
+}
+
+# One warning per fit for failed strata and for warnings inside strata
+report_fit_problems <- function(diagnostics, label) {
+  bad <- diagnostics[status == "failed"]
+  if (nrow(bad)) {
+    mt_warn(sprintf(paste("%s failed in %d of %d strata (%s: %s); their forecasts are missing. Sparse strata often",
+                          "fit better with wider age groups (mt_regroup()), pooling (li_lee(common_by = )) or",
+                          "smoothing (step_smooth())."), label, nrow(bad), nrow(diagnostics),
+                    paste(utils::head(bad$stratum, 3), collapse = ", "), bad$message[1]), class = "model_fit")
+  }
+  msg <- diagnostics[status == "ok" & nzchar(message)]
+  if (nrow(msg)) {
+    mt_warn(sprintf("%s: warnings in %d stratum/strata, for example %s: %s (see the diagnostics of the fit).", label,
+                    nrow(msg), msg$stratum[1], msg$message[1]), class = "model_fit")
+  }
 }
 
 # Extra-Poisson noise on the log scale per age and stratum, from in-sample fitted rates
@@ -235,10 +252,30 @@ mt_forecast.mt_fit <- function(fit, h = 10, to = NULL, n_draws = 500, seed = NUL
     }
     if (predictive) arr <- predictive_rates(arr, fit, exposure, spec)
   })
+  check_draws_plausible(arr, fit$age, fit$strata, spec$label)
   out <- new_mt_draws(arr, fit$age, last + seq_len(h), fit$strata, model = spec$label, origin = last, fit = fit,
                       seed = seed)
   out$predictive <- predictive
   out
+}
+
+# Warn when forecast death rates exceed 1 below the open age interval: the
+# model is then unstable, usually because of sparse counts
+check_draws_plausible <- function(arr, age, strata, label) {
+  closed <- which(is.finite(age$upper))
+  if (!length(closed)) return(invisible())
+  a <- arr[closed, , , , drop = FALSE]
+  bad <- !is.na(a) & a > 1
+  if (!any(bad)) return(invisible())
+  share <- mean(apply(bad, 4, any))
+  by_s <- apply(bad, 3, any)
+  ages <- closed[apply(bad, 1, any)]
+  mt_warn(sprintf(paste("%s: forecast death rates above 1 in %.1f%% of the draws (strata %s; ages %s).",
+                        "The model is unstable here, often because of sparse counts; consider wider age groups",
+                        "(mt_regroup()), pooling (li_lee(common_by = )), smoothing (step_smooth()) or an ensemble."),
+                  label, 100 * share, paste(utils::head(strata$label[by_s], 3), collapse = ", "),
+                  paste(utils::head(age$labels[ages], 4), collapse = ", ")), class = "implausible")
+  invisible()
 }
 
 # Observed-rate draws: extra-Poisson noise (smooth models) and Poisson deaths given exposures

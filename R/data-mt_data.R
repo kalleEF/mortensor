@@ -33,7 +33,22 @@
 #'   unknown counts (`"."`, `"x"`). Missing cells are left out; suppressed
 #'   death counts can then be estimated with [mt_fill_suppressed()].
 #' @param zero Values that mark a count of zero (for example `"-"`).
-#' @details A table may leave out stratum columns over which its values are
+#' @param decimal Decimal mark of values given as text: `"."` (thousands
+#'   separators such as `"12,345"` are recognised) or `","` (as in many
+#'   European exports: `"1.234,5"`).
+#' @details Age labels of many sources are recognised (see
+#'   [parse_age_labels()]); periods are years, ranges of years or financial
+#'   years (`"2001/02"`). Rows whose age or period is labelled as a total
+#'   (`"All ages"`, `"Total"`, `"Insgesamt"`) are left out with a warning.
+#'   Values of unknown age (`"Unknown"`, `"not stated"`, `"unbekannt"`) are
+#'   distributed over the age groups of the same stratum and period in
+#'   proportion to the known values, the usual practice of the Human
+#'   Mortality Database, with a warning. Leading and trailing spaces in
+#'   stratum labels are removed; rows without a stratum label are left out.
+#'   A warning lists levels of a stratum variable that occur in one table
+#'   only (for example `"F"` in one table and `"female"` in another).
+#'
+#'   A table may leave out stratum columns over which its values are
 #'   shared. For example, deaths by region, sex and cause of death and
 #'   populations by region and sex: every cause of death then uses the
 #'   population of its region and sex. Tables with all stratum columns are
@@ -48,7 +63,8 @@
 #' @export
 mt_data <- function(deaths = NULL, exposure = NULL, population = NULL, by = NULL,
                     age = "age", period = "year", value = NULL, age_open = NULL,
-                    omega = 110, missing = c(".", "..", "...", ":", "x", "X", "/", "NA", ""), zero = "-") {
+                    omega = 110, missing = c(".", "..", "...", ":", "x", "X", "/", "NA", ""), zero = "-",
+                    decimal = ".") {
   check_number(omega, "omega", lower = 1)
   out <- new_mt_data(omega = omega)
   inputs <- list(deaths = deaths, exposure = exposure, population = population)
@@ -63,7 +79,7 @@ mt_data <- function(deaths = NULL, exposure = NULL, population = NULL, by = NULL
   complete <- vapply(inputs, function(x) all(by %in% names(x)), logical(1))
   for (m in names(inputs)[order(!complete)]) {
     out <- mt_add(out, m, inputs[[m]], by = by, age = age, period = period, value = values[[m]],
-                  age_open = age_open, missing = missing, zero = zero)
+                  age_open = age_open, missing = missing, zero = zero, decimal = decimal)
   }
   out
 }
@@ -126,7 +142,7 @@ mt_measures <- c("deaths", "exposure", "population")
 #' @export
 mt_add <- function(data, measure, x, by = NULL, age = "age", period = "year",
                    value = NULL, age_open = NULL, missing = c(".", "..", "...", ":", "x", "X", "/", "NA", ""),
-                   zero = "-") {
+                   zero = "-", decimal = ".") {
   check_class(data, "mt_data", "data")
   check_choice(measure, mt_measures, "measure")
   if (!is.data.frame(x)) mt_abort("`x` must be a data frame.", class = "obs")
@@ -138,10 +154,13 @@ mt_add <- function(data, measure, x, by = NULL, age = "age", period = "year",
   w <- melt_wide(x, value %||% pick_value_col(NULL, measure, x), by, measure)
   x <- as.data.table(w$x)
   value <- w$value
+  x <- clean_strata_cols(x, intersect(by, names(x)), measure)
+  check_levels(x, data, intersect(by, names(x)), measure)
   absent <- setdiff(by, names(x))
   if (length(absent)) x <- share_over_strata(x, data$strata, by, absent, measure)
   value <- value %||% pick_value_col(NULL, measure, x)
-  obs <- ingest_obs(x, by, age, period, value, measure, age_open, missing = missing, zero = zero)
+  if (!nrow(x)) mt_abort(sprintf("The %s table has no rows.", measure), class = "obs")
+  obs <- ingest_obs(x, by, age, period, value, measure, age_open, missing = missing, zero = zero, decimal = decimal)
   st <- register_strata(data$strata, obs, by)
   data$strata <- st
   data$by <- by
@@ -153,11 +172,53 @@ mt_add <- function(data, measure, x, by = NULL, age = "age", period = "year",
   }
   setcolorder(obs, c("stratum", "age_lo", "age_hi", "period_lo", "period_hi", "value"))
   setorderv(obs, c("stratum", "period_lo", "age_lo"))
-  validate_obs(obs, measure)
+  validate_obs(obs, measure, st, unused = setdiff(names(x), c(by, age, period, value)))
   obs[, provenance := "observed"]
   data$obs[[measure]] <- obs
   data$grid <- NULL
   data
+}
+
+# Stratum columns as trimmed text; rows without a level are left out
+clean_strata_cols <- function(x, cols, measure) {
+  for (b in cols) {
+    v <- trimws(as.character(x[[b]]))
+    v[!is.na(v) & !nzchar(v)] <- NA
+    set(x, j = b, value = v)
+  }
+  if (length(cols)) {
+    na <- Reduce(`|`, lapply(cols, function(b) is.na(x[[b]])))
+    if (any(na)) {
+      mt_warn(sprintf("%d row(s) of the %s table have no value in %s and are left out.", sum(na), measure,
+                      paste0("`", cols[vapply(cols, function(b) anyNA(x[[b]]), logical(1))], "`", collapse = ", ")),
+              class = "missing")
+      x <- x[!na]
+    }
+  }
+  x
+}
+
+# Levels of stratum variables that one table has and the others lack
+# (often different coding, such as "F" and "female")
+check_levels <- function(x, data, cols, measure) {
+  if (!length(data$obs) || !nrow(data$strata)) return(invisible())
+  for (b in intersect(cols, names(data$strata))) {
+    new <- unique(x[[b]])
+    old <- unique(data$strata[[b]])
+    only_new <- setdiff(new, old)
+    only_old <- setdiff(old, new)
+    if (!length(only_new) && !length(only_old)) next
+    if (!length(only_new)) next   # a table may cover fewer levels
+    case <- only_new[tolower(only_new) %in% tolower(old)]
+    mt_warn(sprintf(paste("Levels of `%s` differ between the tables: only in the %s table: %s; only in the other",
+                          "tables: %s.%s Check the coding (for example \"F\" and \"female\")."), b, measure,
+                    paste(utils::head(only_new, 6), collapse = ", "),
+                    if (length(only_old)) paste(utils::head(only_old, 6), collapse = ", ") else "none",
+                    if (length(case)) sprintf(" Levels that differ only in upper and lower case: %s.",
+                                              paste(utils::head(case, 6), collapse = ", ")) else ""),
+            class = "strata")
+  }
+  invisible()
 }
 
 # A table without some stratum columns is shared over their levels (for
@@ -192,7 +253,7 @@ mt_add_exposure <- function(data, x, ...) mt_add(data, "exposure", x, ...)
 mt_add_population <- function(data, x, ...) mt_add(data, "population", x, ...)
 
 ingest_obs <- function(x, by, age, period, value, measure, age_open = NULL, missing = character(),
-                       zero = character()) {
+                       zero = character(), decimal = ".") {
   need <- unique(c(by, age, period, value))
   miss <- setdiff(need, names(x))
   if (length(miss)) {
@@ -202,10 +263,28 @@ ingest_obs <- function(x, by, age, period, value, measure, age_open = NULL, miss
   a <- interval_cols(x, age, "age", age_open)
   p <- interval_cols(x, period, "period")
   out <- data.table(age_lo = a$lo, age_hi = a$hi, period_lo = p$lo, period_hi = p$hi,
-                    value = parse_values(x[[value]], missing, zero, measure))
+                    value = parse_values(x[[value]], missing, zero, measure, decimal))
   if (length(by)) {
     for (b in by) set(out, j = b, value = as.character(x[[b]]))
   }
+  tot <- (a$total %||% FALSE) | (p$total %||% FALSE)
+  if (any(tot)) {
+    labs <- unique(c(x[[age[1]]][a$total %||% FALSE], x[[period[1]]][p$total %||% FALSE]))
+    mt_warn(sprintf("%d row(s) of the %s table with age or period labelled as a total (%s) are left out.", sum(tot),
+                    measure, paste0("\"", labs, "\"", collapse = ", ")), class = "totals")
+    out <- out[!tot]
+    a$unknown <- a$unknown[!tot]
+    p$unknown <- p$unknown[!tot]
+  }
+  if (any(p$unknown %||% FALSE)) {
+    mt_warn(sprintf("%d row(s) of the %s table without a known period are left out.", sum(p$unknown), measure),
+            class = "missing")
+    keep <- !p$unknown
+    out <- out[keep]
+    a$unknown <- a$unknown[keep]
+  }
+  if (any(a$unknown %||% FALSE)) out <- distribute_unknown_age(out, a$unknown, by, measure)
+  if (length(age) == 1L && is.null(age_open)) check_open_age(out, measure)
   nas <- is.na(out$value)
   if (any(nas)) {
     mt_warn(sprintf("%d missing %s value(s) left out%s.", sum(nas), measure,
@@ -216,19 +295,70 @@ ingest_obs <- function(x, by, age, period, value, measure, age_open = NULL, miss
   out
 }
 
-# Numeric values from numbers or text with markers of missing and zero cells
-parse_values <- function(v, missing, zero, measure) {
+# Numeric values from numbers or text with markers of missing and zero cells,
+# thousands separators and decimal commas
+parse_values <- function(v, missing, zero, measure, decimal = ".") {
   if (is.numeric(v)) return(as.numeric(v))
   v <- trimws(as.character(v))
-  num <- suppressWarnings(as.numeric(v))
+  t <- gsub(" ", "", gsub(rawToChar(as.raw(c(0xc2, 0xa0))), "", v, fixed = TRUE, useBytes = TRUE), fixed = TRUE)
+  if (decimal == ",") {
+    t <- gsub(".", "", t, fixed = TRUE)
+    t <- sub(",", ".", t, fixed = TRUE)
+  } else {
+    big <- grepl("^-?[0-9]{1,3}(,[0-9]{3})+(\\.[0-9]+)?$", t)
+    t[big] <- gsub(",", "", t[big], fixed = TRUE)
+  }
+  num <- suppressWarnings(as.numeric(t))
   num[v %in% zero] <- 0
+  num[v %in% missing] <- NA
   unknown <- unique(v[is.na(num) & !is.na(v) & !v %in% c(missing, zero)])
   if (length(unknown)) {
+    hint <- if (decimal == "." && any(grepl("^-?[0-9]+,[0-9]+$", unknown))) {
+      " Values with a decimal comma are read with `decimal = \",\"`."
+    } else {
+      ""
+    }
     mt_warn(sprintf(paste("Values of %s that are neither numbers nor declared markers are treated as missing: %s.",
-                          "Declare them with `missing` or `zero`."), measure,
-                    paste0("\"", utils::head(unknown, 5), "\"", collapse = ", ")), class = "markers")
+                          "Declare them with `missing` or `zero`.%s"), measure,
+                    paste0("\"", utils::head(unknown, 5), "\"", collapse = ", "), hint), class = "markers")
   }
   num
+}
+
+# Deaths (or exposures) of unknown age are distributed over the age groups of
+# the same stratum and period in proportion to the known values
+distribute_unknown_age <- function(out, unknown, by, measure) {
+  u <- out[unknown]
+  k <- out[!unknown]
+  keys <- c(by, "period_lo", "period_hi")
+  tot_u <- u[, list(u = sum(value, na.rm = TRUE)), by = keys]
+  k <- merge(k, tot_u, by = keys, all.x = TRUE, sort = FALSE)
+  k[is.na(u), u := 0]
+  k[, value := value + u * if (sum(value, na.rm = TRUE) > 0) value / sum(value, na.rm = TRUE) else 1 / .N,
+    by = keys]
+  share <- sum(tot_u$u) / (sum(k$value, na.rm = TRUE))
+  mt_warn(sprintf(paste("%s of unknown age (%s, %.2f%% of the total) are distributed over the age groups of the",
+                        "same stratum and period in proportion to the known values."),
+                  tools::toTitleCase(measure), format(sum(tot_u$u), big.mark = ","), 100 * share),
+          class = "unknown_age")
+  k[, u := NULL]
+  k[]
+}
+
+# A numeric single age at the top with much more than the age below is
+# probably an open interval (for example 100 meaning 100+)
+check_open_age <- function(out, measure) {
+  if (any(is.infinite(out$age_hi)) || any(out$age_hi - out$age_lo != 1)) return(invisible())
+  top <- max(out$age_lo)
+  if (top < 80) return(invisible())
+  v_top <- sum(out$value[out$age_lo == top], na.rm = TRUE)
+  v_below <- sum(out$value[out$age_lo == top - 1], na.rm = TRUE)
+  if (v_below > 0 && v_top > 1.5 * v_below) {
+    mt_warn(sprintf(paste("The highest age %s has %.1f times the %s of age %s; it may be an open interval (%s+).",
+                          "If so, read it with `age_open = %s`."), top, v_top / v_below, measure, top - 1, top, top),
+            class = "open_age")
+  }
+  invisible()
 }
 
 interval_cols <- function(x, cols, kind, open = NULL) {
@@ -238,24 +368,22 @@ interval_cols <- function(x, cols, kind, open = NULL) {
   if (length(cols) != 1L) mt_abort(sprintf("`%s` must name one or two columns.", kind), class = "obs")
   v <- x[[cols]]
   if (is.factor(v)) v <- as.character(v)
+  if (is.character(v) && !anyNA(suppressWarnings(as.numeric(v[!is.na(v)])))) v <- as.numeric(v)
   if (is.numeric(v)) {
     lo <- as.numeric(v)
     hi <- lo + 1
     if (!is.null(open)) hi[lo >= open] <- Inf
-    if (any(abs(lo - round(lo)) > 1e-9)) {
+    if (any(abs(lo - round(lo)) > 1e-9, na.rm = TRUE)) {
       mt_abort(sprintf("Numeric %s values must be whole numbers (single years).", kind), class = "obs")
     }
     return(list(lo = lo, hi = hi))
   }
   u <- unique(v)
-  p <- parse_age_labels(u)
-  i <- match(v, u)
-  lo <- p$age_lo[i]
-  hi <- p$age_hi[i]
-  if (kind == "period" && any(is.infinite(hi))) {
-    mt_abort("Period intervals must be closed.", class = "obs")
-  }
-  list(lo = lo, hi = hi)
+  # totals and unknown values are handled by the caller
+  special <- is_total_label(u) | is_unknown_label(u) | is.na(u)
+  p <- if (kind == "period") parse_period_labels(u[!special]) else parse_age_labels(u[!special])
+  i <- match(v, u[!special])
+  list(lo = p[[2]][i], hi = p[[3]][i], total = is_total_label(v), unknown = is_unknown_label(v) | is.na(v))
 }
 
 register_strata <- function(strata, obs, by) {
@@ -279,27 +407,55 @@ register_strata <- function(strata, obs, by) {
   old[]
 }
 
-validate_obs <- function(obs, measure) {
-  if (any(obs$value < 0, na.rm = TRUE)) mt_abort(sprintf("Negative %s values.", measure), class = "obs")
+validate_obs <- function(obs, measure, strata = NULL, unused = character()) {
+  where <- function(i) {
+    lab <- if (!is.null(strata) && nrow(strata)) strata$label[match(obs$stratum[i], strata$stratum)] else NULL
+    sprintf("%sage %s, period %s", if (length(lab) && !is.na(lab)) paste0(lab, ", ") else "",
+            interval_label(obs$age_lo[i], obs$age_hi[i]), interval_label(obs$period_lo[i], obs$period_hi[i]))
+  }
+  neg <- which(obs$value < 0)
+  if (length(neg)) {
+    mt_abort(sprintf("%d negative %s value(s), for example %s (%s).", length(neg), measure, obs$value[neg[1]],
+                     where(neg[1])), class = "obs")
+  }
   if (any(obs$age_hi <= obs$age_lo) || any(obs$period_hi <= obs$period_lo)) {
     mt_abort("Every interval needs upper > lower.", class = "obs")
   }
-  dup <- duplicated(obs, by = c("stratum", "age_lo", "period_lo"))
-  if (any(dup)) {
-    mt_abort(sprintf("Duplicate %s cells (same stratum, age and period), e.g. age %s in %s.",
-                     measure, obs$age_lo[dup][1], obs$period_lo[dup][1]), class = "obs")
+  dup <- which(duplicated(obs, by = c("stratum", "age_lo", "age_hi", "period_lo", "period_hi")))
+  if (length(dup)) {
+    mt_abort(sprintf(paste("%d duplicate %s cell(s) (same stratum, age and period), for example %s. Rows that",
+                           "repeat a cell come from repeated rows or from a column that distinguishes them but is",
+                           "not in `by`%s."), length(dup), measure, where(dup[1]),
+                     if (length(unused)) sprintf(" (columns not used: %s)", paste(unused, collapse = ", ")) else ""),
+             class = "obs")
   }
-  ov <- obs[order(stratum, period_lo, age_lo), list(bad = any(head(age_hi, -1) > tail(age_lo, -1) + 1e-9)),
-            by = c("stratum", "period_lo")]
-  if (any(ov$bad)) mt_abort(sprintf("Overlapping age intervals in the %s table.", measure), class = "obs")
+  o <- obs[order(stratum, period_lo, age_lo, -age_hi)]
+  o[, nxt := shift(age_lo, -1L), by = c("stratum", "period_lo")]
+  ov <- which(!is.na(o$nxt) & o$age_hi > o$nxt + 1e-9)
+  if (length(ov)) {
+    i <- ov[1]
+    mt_abort(sprintf(paste("Overlapping age groups in the %s table, for example %s and %s (%s). The table may",
+                           "contain subtotals (such as 85+ next to 85-89 and 90+) or totals over all ages; remove",
+                           "them before reading."), measure, interval_label(o$age_lo[i], o$age_hi[i]),
+                     interval_label(o$age_lo[i + 1], o$age_hi[i + 1]),
+                     sub(", age .*", "", where(match(TRUE, obs$stratum == o$stratum[i] &
+                                                       obs$period_lo == o$period_lo[i])))), class = "obs")
+  }
   pp <- unique(obs[, c("stratum", "period_lo", "period_hi")])[order(stratum, period_lo)]
   pov <- pp[, list(bad = any(head(period_hi, -1) > tail(period_lo, -1) + 1e-9) |
                      anyDuplicated(period_lo) > 0), by = "stratum"]
-  if (any(pov$bad)) mt_abort(sprintf("Overlapping period intervals in the %s table.", measure), class = "obs")
+  if (any(pov$bad)) {
+    mt_abort(sprintf("Overlapping periods in the %s table (for example single years next to multi-year totals).",
+                     measure), class = "obs")
+  }
   if (measure == "deaths" && any(abs(obs$value - round(obs$value)) > 1e-6, na.rm = TRUE)) {
     mt_warn("Death counts are not whole numbers; they are kept as supplied.", class = "noninteger")
   }
   invisible(TRUE)
+}
+
+interval_label <- function(lo, hi) {
+  ifelse(is.infinite(hi), paste0(lo, "+"), ifelse(abs(hi - lo - 1) < 1e-9, as.character(lo), paste0(lo, "-", hi - 1)))
 }
 
 #' Strata, grid and tables of an `mt_data` object

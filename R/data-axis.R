@@ -159,47 +159,40 @@ axis_locate <- function(axis, lo, hi, mode = c("within", "exact")) {
 #' Parse age-group labels
 #'
 #' Understands the label styles of common sources, for example `"<1"`,
-#' `"01-14"`, `"30-34"`, `"90+"`, `"85 and over"`, `"under 1"`, `"0"`,
-#' `"110+"`, and the German labels of the Federal Statistical Office
-#' (`"unter 1 Jahr"`, `"15 bis unter 20 Jahre"`, `"85 Jahre und mehr"`,
-#' and single years written as `"68-Jaehrige"` with an umlaut).
+#' `"Under 1"`, `"01-14"`, `"1 to 4"`, `"30-34"`, `"30-34 years"`,
+#' `"1 and under 5"`, `"90+"`, `"85 and over"`, `"85 years and older"`,
+#' `"90 & over"`, `"Age 85+"`, `"0"`, `"110+"`, and the German labels of
+#' the Federal Statistical Office (`"unter 1 Jahr"`, `"15 bis unter 20
+#' Jahre"`, `"1 bis 4 Jahre"`, `"85 Jahre und mehr"`, and single years
+#' written as `"68-Jaehrige"` with an umlaut).
 #'
 #' @param x Character vector of labels.
 #' @return A `data.table` with `label`, `age_lo`, `age_hi` (`Inf` for open
 #'   intervals), in the order of `x`.
 #' @examples
 #' parse_age_labels(c("<1", "01-14", "15-19", "90+"))
+#' parse_age_labels(c("Under 1", "1 to 4", "85 years and over"))
 #' @export
 parse_age_labels <- function(x) {
-  # byte-wise matching keeps non-ASCII labels working in any locale
-  s <- enc2utf8(trimws(as.character(x)))
-  s <- gsub("\u2013|\u2014", "-", s, useBytes = TRUE)
-  # German labels (GENESIS): "unter 1 Jahr", "15 bis unter 20 Jahre",
-  # "85 Jahre und mehr", "68-J\u00e4hrige"
-  s <- sub("^[Uu]nter\\s+(\\d+)\\s+Jahre?n?$", "<\\1", s, perl = TRUE, useBytes = TRUE)
-  s <- sub("^(\\d+)\\s+(?:Jahre?n?\\s+)?bis\\s+unter\\s+(\\d+)\\s+Jahre?n?$", "\\1 bis \\2", s, perl = TRUE,
-           useBytes = TRUE)
-  s <- sub("^(\\d+)\\s+Jahre?\\s+und\\s+(?:mehr|\u00e4lter)$", "\\1+", s, perl = TRUE, useBytes = TRUE)
-  s <- sub("^(\\d+)-J\u00e4hrige$", "\\1", s, perl = TRUE, useBytes = TRUE)
-  s <- tolower(iconv(s, "UTF-8", "ASCII", sub = "?"))
+  s <- normalise_interval_labels(x)
   lo <- hi <- rep(NA_real_, length(s))
   num <- function(z) as.numeric(z)
-  m <- regmatches(s, regexec("^(?:<|under)\\s*(\\d+)$", s, perl = TRUE))
+  m <- regmatches(s, regexec("^<(\\d+)$", s, perl = TRUE))
   for (k in which(lengths(m) == 2)) {
     lo[k] <- 0
     hi[k] <- num(m[[k]][2])
   }
-  m <- regmatches(s, regexec("^(\\d+)\\s*-\\s*(\\d+)$", s, perl = TRUE))
+  m <- regmatches(s, regexec("^(\\d+)-(\\d+)$", s, perl = TRUE))
   for (k in which(lengths(m) == 3)) {
     lo[k] <- num(m[[k]][2])
     hi[k] <- num(m[[k]][3]) + 1
   }
-  m <- regmatches(s, regexec("^(\\d+) bis (\\d+)$", s, perl = TRUE))   # upper bound exclusive
+  m <- regmatches(s, regexec("^(\\d+):(\\d+)$", s, perl = TRUE))   # upper bound exclusive
   for (k in which(lengths(m) == 3)) {
     lo[k] <- num(m[[k]][2])
     hi[k] <- num(m[[k]][3])
   }
-  m <- regmatches(s, regexec("^(\\d+)\\s*(?:\\+|and over|and older|plus|or older)$", s, perl = TRUE))
+  m <- regmatches(s, regexec("^(\\d+)\\+$", s, perl = TRUE))
   for (k in which(lengths(m) == 2)) {
     lo[k] <- num(m[[k]][2])
     hi[k] <- Inf
@@ -209,12 +202,89 @@ parse_age_labels <- function(x) {
     lo[k] <- num(m[[k]][2])
     hi[k] <- lo[k] + 1
   }
-  bad <- is.na(lo)
+  bad <- is.na(lo) | (!is.na(hi) & hi <= lo)
   if (any(bad)) {
-    mt_abort(sprintf("Cannot parse age label(s): %s.", paste0("\"", unique(x[bad]), "\"", collapse = ", ")),
-             class = "axis")
+    mt_abort(sprintf("Cannot parse age label(s): %s.", paste0("\"", utils::head(unique(x[bad]), 8), "\"",
+                                                              collapse = ", ")), class = "axis")
   }
   data.table(label = as.character(x), age_lo = lo, age_hi = hi)
+}
+
+# Labels in a canonical form: "<1", "5-9" (inclusive), "1:5" (upper bound
+# exclusive), "85+", "30"
+normalise_interval_labels <- function(x) {
+  # byte-wise matching keeps non-ASCII labels working in any locale
+  s <- enc2utf8(trimws(as.character(x)))
+  # UTF-8 bytes of the en dash, em dash and minus sign, and of the umlaut a
+  # (byte patterns work in every locale, including C)
+  b <- function(...) rawToChar(as.raw(c(...)))
+  for (d in list(b(0xe2, 0x80, 0x93), b(0xe2, 0x80, 0x94), b(0xe2, 0x88, 0x92))) {
+    s <- gsub(d, "-", s, fixed = TRUE, useBytes = TRUE)
+  }
+  s <- gsub(b(0xc3, 0xa4), "ae", s, fixed = TRUE, useBytes = TRUE)
+  s <- tolower(iconv(s, "UTF-8", "ASCII", sub = "?"))
+  s <- gsub("\\s+", " ", s)
+  s <- gsub("^(?:age[ds]?|alter|im alter von) ", "", s, perl = TRUE)
+  s <- gsub("&", " and ", s, fixed = TRUE)
+  # German labels (GENESIS, GBE): "unter 1 jahr", "15 bis unter 20 jahre",
+  # "85 jahre und mehr", "68-jaehrige"
+  s <- sub("^(\\d+)-jaehrige$", "\\1", s, perl = TRUE)
+  s <- gsub("\\b(?:years?|yrs?|jahre?n?|ans?)\\b", " ", s, perl = TRUE)
+  s <- gsub("\\s+", " ", trimws(s))
+  s <- sub("^(?:under|unter|less than|below|<) ?(\\d+)$", "<\\1", s, perl = TRUE)
+  s <- sub("^(\\d+) (?:bis unter|and under|to under|to less than) (\\d+)$", "\\1:\\2", s, perl = TRUE)
+  s <- sub("^(\\d+) ?(?:-|to|bis) ?(\\d+)$", "\\1-\\2", s, perl = TRUE)
+  s <- sub("^(\\d+) ?(?:\\+|plus|and over|and older|or over|or older|or more|and more|und mehr|und aelter|und alter)$",
+           "\\1+", s, perl = TRUE)
+  s
+}
+
+# Labels of totals and of unknown values in age or period columns
+is_total_label <- function(x) {
+  totals <- c("all", "total", "totals", "all ages", "all age groups", "all years", "insgesamt", "zusammen", "gesamt",
+              "alle", "alle altersgruppen", "alle altersjahre")
+  tolower(trimws(as.character(x))) %in% totals
+}
+is_unknown_label <- function(x) {
+  grepl("^(unknown|not stated|not known|missing|n/?a|unbekannt|ohne angabe|unbekanntes alter|age unknown)$",
+        tolower(trimws(as.character(x))))
+}
+
+# Period labels: years ("2001"), ranges of years ("2001-2005", inclusive),
+# financial or academic years starting in the first year ("2001/02",
+# "2001-02", "2001/2002")
+parse_period_labels <- function(x) {
+  s <- trimws(as.character(x))
+  lo <- hi <- rep(NA_real_, length(s))
+  m <- regmatches(s, regexec("^(\\d{4})$", s, perl = TRUE))
+  for (k in which(lengths(m) == 2)) {
+    lo[k] <- as.numeric(m[[k]][2])
+    hi[k] <- lo[k] + 1
+  }
+  m <- regmatches(s, regexec("^(\\d{4}) ?- ?(\\d{4})$", s, perl = TRUE))
+  for (k in which(lengths(m) == 3)) {
+    a <- as.numeric(m[[k]][2])
+    b <- as.numeric(m[[k]][3])
+    lo[k] <- a
+    hi[k] <- if (b == a + 1 && grepl("/", s[k])) a + 1 else b + 1
+  }
+  m <- regmatches(s, regexec("^(\\d{4}) ?/ ?(\\d{4})$", s, perl = TRUE))
+  for (k in which(lengths(m) == 3)) {
+    lo[k] <- as.numeric(m[[k]][2])
+    hi[k] <- lo[k] + 1
+  }
+  m <- regmatches(s, regexec("^(\\d{4}) ?[-/] ?(\\d{2})$", s, perl = TRUE))
+  for (k in which(lengths(m) == 3)) {
+    lo[k] <- as.numeric(m[[k]][2])
+    hi[k] <- lo[k] + 1
+  }
+  bad <- is.na(lo) | (!is.na(hi) & hi <= lo)
+  if (any(bad)) {
+    mt_abort(sprintf(paste("Cannot parse period label(s): %s. Periods are years (\"2001\"), ranges (\"2001-2005\")",
+                           "or financial years (\"2001/02\")."),
+                     paste0("\"", utils::head(unique(x[bad]), 8), "\"", collapse = ", ")), class = "axis")
+  }
+  data.table(label = s, period_lo = lo, period_hi = hi)
 }
 
 #' Build an axis from interval bounds found in data
