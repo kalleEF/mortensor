@@ -1,14 +1,23 @@
 # R CMD check on the supported platforms. R 4.3 is the minimum version
-# declared in DESCRIPTION and is tested explicitly.
+# declared in DESCRIPTION and is tested explicitly. Pushes run Ubuntu with
+# the current release and R 4.3; pull requests, the weekly schedule and
+# manual runs add R-devel, the previous release, macOS and Windows (macOS
+# and Windows minutes count several times against the Actions quota).
 on:
   push:
     branches: [main, master, "dev-*", "claude/**"]
   pull_request:
+  schedule:
+    - cron: '41 2 * * 1'
   workflow_dispatch:
 
 name: R-CMD-check
 
 permissions: read-all
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   R-CMD-check:
@@ -17,13 +26,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        config:
-          - {os: ubuntu-latest,  r: 'devel', http-user-agent: 'release'}
-          - {os: ubuntu-latest,  r: 'release'}
-          - {os: ubuntu-latest,  r: 'oldrel-1'}
-          - {os: ubuntu-latest,  r: '4.3'}
-          - {os: macos-latest,   r: 'release'}
-          - {os: windows-latest, r: 'release'}
+        config: ${{ fromJSON(github.event_name == 'push' && '[{"os":"ubuntu-latest","r":"release"},{"os":"ubuntu-latest","r":"4.3"}]' || '[{"os":"ubuntu-latest","r":"devel","http-user-agent":"release"},{"os":"ubuntu-latest","r":"release"},{"os":"ubuntu-latest","r":"oldrel-1"},{"os":"ubuntu-latest","r":"4.3"},{"os":"macos-latest","r":"release"},{"os":"windows-latest","r":"release"}]') }}
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
       R_KEEP_PKG_SOURCE: yes
