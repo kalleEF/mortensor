@@ -1,0 +1,604 @@
+#' Hierarchies of strata
+#'
+#' Describes how strata add up, for example women and men to both sexes,
+#' regions to the country and deprivation quintiles to all quintiles. Several
+#' variables give a crossed (grouped) structure: with `sex`, `region` and
+#' `quintile` every combination of a level or a total is a node, from the
+#' bottom series (one sex, one region, one quintile) to the national total
+#' for both sexes. Intermediate groups of levels, such as federal states
+#' grouped into East and West, are given with `groups`.
+#'
+#' Deaths and exposures add up over strata, rates do not (unless all parts
+#' share one population, as causes of death do). `additive = "deaths"`
+#' (default) therefore aggregates and reconciles deaths, using exposures;
+#' `additive = "rates"` is for causes of death.
+#'
+#' @param ... One argument per aggregated stratum variable: the label of its
+#'   total level (for example `region = "Germany"`), or a list with `total`
+#'   and `groups` (a named list of intermediate groups, each a vector of
+#'   bottom levels).
+#' @param additive `"deaths"` or `"rates"`.
+#' @return An object of class `mt_hierarchy`.
+#' @seealso [mt_aggregate_strata()], [mt_validate()], [mt_reconcile()],
+#'   [mt_reconciled()].
+#' @examples
+#' h <- mt_hierarchy(sex = "both", region = list(total = "DE", groups = list(East = c("BE", "SN"))),
+#'                   quintile = "all")
+#' h
+#' @export
+mt_hierarchy <- function(..., additive = c("deaths", "rates")) {
+  additive <- match.arg(additive)
+  specs <- list(...)
+  if (!length(specs) || is.null(names(specs)) || any(!nzchar(names(specs)))) {
+    mt_abort("mt_hierarchy() needs named arguments, one per stratum variable.", class = "hierarchy")
+  }
+  vars <- lapply(specs, function(s) {
+    if (is.character(s) && length(s) == 1) return(list(total = s, groups = list()))
+    if (is.list(s) && !is.null(s$total)) return(list(total = s$total, groups = s$groups %||% list()))
+    mt_abort("Each hierarchy variable needs a total label or list(total, groups).", class = "hierarchy")
+  })
+  structure(list(vars = vars, additive = additive), class = "mt_hierarchy")
+}
+
+#' @export
+print.mt_hierarchy <- function(x, ...) {
+  cat(sprintf("<mt_hierarchy> additive on %s\n", x$additive))
+  for (v in names(x$vars)) {
+    g <- x$vars[[v]]$groups
+    cat(sprintf("  %s: total \"%s\"%s\n", v, x$vars[[v]]$total,
+                if (length(g)) sprintf("; groups %s", paste(names(g), collapse = ", ")) else ""))
+  }
+  invisible(x)
+}
+
+as_hierarchy <- function(h) {
+  if (inherits(h, "mt_hierarchy")) return(h)
+  if (is.list(h) && !is.null(h$var) && !is.null(h$total)) {
+    args <- stats::setNames(list(h$total), h$var)
+    return(do.call(mt_hierarchy, c(args, list(additive = h$additive %||% "deaths"))))
+  }
+  mt_abort("`hierarchy` must be an mt_hierarchy() object.", class = "hierarchy")
+}
+
+# Membership of nodes in terms of bottom strata: S [node, bottom]
+membership <- function(nodes, bottom, h) {
+  vars <- names(h$vars)
+  others <- setdiff(intersect(names(nodes), names(bottom)), c("stratum", "label", vars))
+  members <- function(v, level) {
+    hv <- h$vars[[v]]
+    if (identical(level, hv$total)) return(NULL)
+    if (level %in% names(hv$groups)) return(hv$groups[[level]])
+    level
+  }
+  S <- matrix(0, nrow(nodes), nrow(bottom))
+  for (i in seq_len(nrow(nodes))) {
+    ok <- rep(TRUE, nrow(bottom))
+    for (v in vars) {
+      m <- members(v, nodes[[v]][i])
+      if (!is.null(m)) ok <- ok & bottom[[v]] %in% m
+    }
+    for (o in others) ok <- ok & bottom[[o]] == nodes[[o]][i]
+    S[i, ok] <- 1
+  }
+  S
+}
+
+# Structure of the strata present: S [stratum row, bottom stratum], positions of the bottom rows
+hierarchy_structure <- function(strata, h) {
+  h <- as_hierarchy(h)
+  vars <- names(h$vars)
+  miss <- setdiff(vars, names(strata))
+  if (length(miss)) mt_abort(sprintf("Hierarchy variable(s) not in the strata: %s.", paste(miss, collapse = ", ")),
+                             class = "hierarchy")
+  agg_levels <- lapply(vars, function(v) c(h$vars[[v]]$total, names(h$vars[[v]]$groups)))
+  names(agg_levels) <- vars
+  is_bottom <- Reduce(`&`, lapply(vars, function(v) !strata[[v]] %in% agg_levels[[v]]))
+  if (!any(is_bottom)) mt_abort("No bottom-level strata found.", class = "hierarchy")
+  S <- membership(strata, strata[is_bottom], h)
+  if (any(rowSums(S) == 0)) mt_abort("Some aggregate strata have no bottom strata.", class = "hierarchy")
+  list(S = S, bottom = which(is_bottom), is_bottom = is_bottom, hierarchy = h)
+}
+
+hierarchy_nodes <- function(bottom, h, by) {
+  vars <- names(h$vars)
+  others <- setdiff(by, vars)
+  level_sets <- lapply(vars, function(v) c(unique(bottom[[v]]), names(h$vars[[v]]$groups), h$vars[[v]]$total))
+  names(level_sets) <- vars
+  other_sets <- lapply(others, function(o) unique(bottom[[o]]))
+  names(other_sets) <- others
+  nodes <- do.call(CJ, c(level_sets, other_sets, list(sorted = FALSE)))
+  setcolorder(nodes, by)
+  nodes[, label := do.call(paste, c(lapply(by, function(b) nodes[[b]]), sep = "."))]
+  nodes[]
+}
+
+#' Add aggregate strata to data
+#'
+#' Sums deaths, exposures and populations of the bottom strata into every
+#' node of the hierarchy (all combinations of levels, groups and totals of
+#' the hierarchy variables). Cells are aggregated where all member strata
+#' observe the same age and period interval; other cells are dropped with a
+#' warning. Aggregate strata that are already in the data are kept as
+#' observed unless `replace = TRUE`; use [mt_validate()] with the hierarchy
+#' to check that they agree with the sums.
+#'
+#' @param data An [mt_data] object with (at least) the bottom strata.
+#' @param hierarchy An [mt_hierarchy()].
+#' @param replace Replace aggregate strata that are already in the data.
+#' @return An `mt_data` object with all nodes as strata; the hierarchy is
+#'   stored in `$hierarchy`.
+#' @examples
+#' x <- mt_example_regions(years = 2010:2014)
+#' xa <- mt_aggregate_strata(x, mt_hierarchy(sex = "both", region = "all", quintile = "all"))
+#' nrow(mt_strata(xa))
+#' @export
+mt_aggregate_strata <- function(data, hierarchy, replace = FALSE) {
+  check_class(data, "mt_data", "data")
+  h <- as_hierarchy(hierarchy)
+  st <- data$strata
+  by <- data$by
+  hs <- hierarchy_structure(st, h)
+  bottom <- st[hs$is_bottom]
+  nodes <- hierarchy_nodes(bottom, h, by)
+  key_of <- function(d) do.call(paste, c(lapply(by, function(v) d[[v]]), sep = "\r"))
+  keep <- if (replace) st[hs$is_bottom] else st
+  new_nodes <- nodes[!key_of(nodes) %in% key_of(keep)]
+  S_new <- membership(new_nodes, bottom, h)
+  final <- rbind(keep[, c(by, "label"), with = FALSE], new_nodes)
+  final[, stratum := seq_len(.N)]
+  setcolorder(final, c("stratum", by, "label"))
+  old_to_new <- stats::setNames(match(key_of(keep), key_of(final)), keep$stratum)
+  dropped <- 0L
+  for (m in names(data$obs)) {
+    o <- data$obs[[m]]
+    o <- o[o$stratum %in% keep$stratum]
+    ob <- o[o$stratum %in% bottom$stratum]
+    add <- vector("list", nrow(new_nodes))
+    for (i in seq_len(nrow(new_nodes))) {
+      mem <- bottom$stratum[S_new[i, ] > 0]
+      agg <- ob[ob$stratum %in% mem, list(value = sum(value), n = .N),
+                by = c("age_lo", "age_hi", "period_lo", "period_hi")]
+      complete <- agg$n == length(mem)
+      dropped <- dropped + sum(!complete)
+      agg <- agg[complete]
+      if (nrow(agg)) {
+        agg[, `:=`(stratum = nrow(keep) + i, provenance = "aggregated", n = NULL)]
+        add[[i]] <- agg
+      }
+    }
+    o <- copy(o)
+    o[, stratum := as.integer(old_to_new[as.character(stratum)])]
+    o <- rbind(o, rbindlist(add), fill = TRUE)
+    setcolorder(o, c("stratum", "age_lo", "age_hi", "period_lo", "period_hi", "value", "provenance"))
+    setorderv(o, c("stratum", "period_lo", "age_lo"))
+    data$obs[[m]] <- o
+  }
+  if (dropped > 0) {
+    mt_warn(sprintf("%d aggregate cell(s) dropped because not all member strata observe them.", dropped),
+            class = "aggregate_incomplete")
+  }
+  data$strata <- final
+  data$hierarchy <- h
+  data
+}
+
+#' Reconcile forecast draws over a hierarchy
+#'
+#' Makes forecasts of nested or crossed strata add up, draw by draw. For each
+#' age, year and draw, the base forecasts `y` of all strata in the hierarchy
+#' (bottom series and aggregates) are projected onto the coherent subspace,
+#' `y - W U (U' W U)^-1 U' y`, where `U' y = 0` are the aggregation
+#' constraints (each aggregate equals the sum of its bottom series). With
+#' `additive = "deaths"` in the hierarchy, the projection works on expected
+#' deaths (rates times exposures; exposures of aggregates are the sums of
+#' their bottom series), and reconciled rates are reconciled deaths divided
+#' by exposures. Methods choose `W`:
+#'
+#' * `"mint"`: covariance of the base draws across strata, shrunk towards
+#'   its diagonal (Schaefer-Strimmer intensity by default). This follows the
+#'   minimum-trace reconciliation of Wickramasuriya et al. (2019), with the
+#'   covariance of the forecast draws in place of in-sample residuals;
+#' * `"wls"`: diagonal with the variance of each stratum's draws;
+#' * `"structural"`: diagonal with the number of bottom series in each node;
+#' * `"ols"`: identity;
+#' * `"bottom_up"`: aggregates are the sums of the bottom forecasts.
+#'
+#' Negative reconciled bottom values are set to zero and the aggregates are
+#' recomputed from the bottom series, so the result is coherent and
+#' non-negative.
+#'
+#' Draws of strata forecast by separate models are independent, so their sums
+#' would be too narrow. With `dependence = "empirical"` (default), the paths
+#' of each stratum are first reordered so that their ranks follow the
+#' co-movement of the strata in the training data (an empirical copula, the
+#' "Schaake shuffle" of Clark et al. 2004): every draw is matched to a
+#' training year, and the stratum whose average year-to-year change of log
+#' rates was relatively large in that year receives a relatively high path.
+#' The marginal distribution of each stratum is unchanged.
+#'
+#' The one-variable interface with `var` and `total` is still accepted.
+#'
+#' @param draws An [mt_draws] object with the strata of the hierarchy.
+#' @param hierarchy An [mt_hierarchy()] (or, for one variable, `var` and
+#'   `total`).
+#' @param method `"wls"` (default), `"mint"`, `"structural"`, `"ols"` or
+#'   `"bottom_up"`. In a backtest on [mt_example_regions()] (Lee-Carter per
+#'   stratum, 90 strata) WLS and structural scaling kept 95% coverage of
+#'   bottom and aggregate strata at 0.95-0.98 and improved the bottom-level
+#'   CRPS; MinT with the draw covariance under-covered aggregates (0.88).
+#' @param shrink Shrinkage intensity for `"mint"` (number between 0 and 1),
+#'   or `"auto"`.
+#' @param exposure Exposures `[age, period, stratum]` or `[age, stratum]` for
+#'   the forecast years (default: last training year). Only bottom strata are
+#'   used; aggregates are summed.
+#' @param dependence `"empirical"` or `"none"` (keep the draws as they are).
+#' @param seed Random seed for the reordering.
+#' @param var,total,parts One-variable form: stratum variable and its total
+#'   level (`parts` is ignored: all other levels are parts).
+#' @return The reconciled `mt_draws`, with diagnostics in `$reconciliation`
+#'   (method, largest relative gap before reconciliation, share of bottom
+#'   values set to zero, mean shrinkage intensity).
+#' @references
+#' Wickramasuriya SL, Athanasopoulos G, Hyndman RJ (2019). Optimal forecast
+#' reconciliation for hierarchical and grouped time series through trace
+#' minimization. *Journal of the American Statistical Association*
+#' 114(526): 804-819. \doi{10.1080/01621459.2018.1448825}
+#'
+#' Clark M, Gangopadhyay S, Hay L, Rajagopalan B, Wilby R (2004). The Schaake
+#' shuffle: a method for reconstructing space-time variability in forecasted
+#' precipitation and temperature fields. *Journal of Hydrometeorology* 5(1):
+#' 243-262.
+#'
+#' Schaefer J, Strimmer K (2005). A shrinkage approach to large-scale
+#' covariance matrix estimation and implications for functional genomics.
+#' *Statistical Applications in Genetics and Molecular Biology* 4(1):
+#' Article 32. \doi{10.2202/1544-6115.1175}
+#' @examples
+#' x <- mt_example_regions(years = 2005:2019, regions = 3)
+#' h <- mt_hierarchy(sex = "both", region = "all", quintile = "all")
+#' xa <- mt_aggregate_strata(x, h)
+#' fc <- mt_forecast(mt_fit(lee_carter(), xa), h = 3, n_draws = 50, seed = 1)
+#' rc <- mt_reconcile(fc, h, method = "wls")
+#' rc$reconciliation
+#' @export
+mt_reconcile <- function(draws, hierarchy = NULL, method = c("wls", "mint", "structural", "ols", "bottom_up"),
+                         shrink = "auto", exposure = NULL, dependence = c("empirical", "none"), seed = NULL,
+                         var = NULL, total = NULL, parts = NULL) {
+  check_class(draws, "mt_draws", "draws")
+  method <- match.arg(method)
+  dependence <- match.arg(dependence)
+  if (is.character(hierarchy) && length(hierarchy) == 1 && is.null(var)) {
+    var <- hierarchy
+    hierarchy <- NULL
+  }
+  if (is.null(hierarchy)) {
+    if (is.null(var) || is.null(total)) mt_abort("Give a hierarchy or `var` and `total`.", class = "argument")
+    if (!var %in% names(draws$strata)) mt_abort("`var` is not a stratum variable.", class = "argument")
+    if (!total %in% draws$strata[[var]]) mt_abort("No total with parts found for the hierarchy.", class = "argument")
+    hierarchy <- do.call(mt_hierarchy, c(stats::setNames(list(total), var),
+                                         list(additive = if (is.null(exposure)) "rates" else "deaths")))
+  }
+  h <- as_hierarchy(hierarchy)
+  hs <- tryCatch(hierarchy_structure(draws$strata, h), mt_error_hierarchy = function(e) {
+    mt_abort(conditionMessage(e), class = "argument")
+  })
+  arr <- draws$rates
+  if (dependence == "empirical" && !is.null(draws$train_D)) {
+    arr <- with_seed(seed, copula_reorder(arr, draws$train_D, draws$train_E)$arr)
+  }
+  rec <- reconcile_array(arr, hs, h$additive, method, shrink, exposure %||% draws$exposure_last, dim(arr))
+  draws$rates <- rec$rates
+  draws$reconciliation <- rec$info
+  draws
+}
+
+# Core: arr [age, period, stratum, draw] of rates
+reconcile_array <- function(arr, hs, additive, method, shrink, exposure, d) {
+  S <- hs$S
+  b <- hs$bottom
+  is_agg <- !hs$is_bottom
+  agg_rows <- which(is_agg)
+  nb <- length(b)
+  E <- expand_exposure(exposure, d)
+  if (additive == "deaths") {
+    for (t in seq_len(d[2])) E[, t, ] <- matrix(E[, t, b], d[1]) %*% t(S)
+    Y <- arr * as.vector(E)
+  } else {
+    Y <- arr
+  }
+  Ut <- NULL
+  if (length(agg_rows)) {
+    Ut <- matrix(0, length(agg_rows), d[3])
+    Ut[cbind(seq_along(agg_rows), agg_rows)] <- 1
+    Ut[, b] <- -S[agg_rows, , drop = FALSE]
+  }
+  gap_before <- 0
+  zero_share <- 0
+  shrink_used <- numeric(0)
+  out <- Y
+  for (a in seq_len(d[1])) {
+    for (t in seq_len(d[2])) {
+      Yc <- t(matrix(Y[a, t, , ], nrow = d[3]))
+      if (length(agg_rows)) {
+        tot_b <- Yc[, b, drop = FALSE] %*% t(S[agg_rows, , drop = FALSE])
+        gap_before <- max(gap_before, max(abs(Yc[, agg_rows] - tot_b) / pmax(abs(tot_b), 1e-12)))
+      }
+      Yb <- if (method == "bottom_up" || !length(agg_rows)) {
+        Yc[, b, drop = FALSE]
+      } else {
+        W <- switch(method,
+                    ols = diag(d[3]),
+                    structural = diag(rowSums(S), d[3]),
+                    wls = diag(pmax(apply(Yc, 2, stats::var), 1e-20), d[3]),
+                    mint = {
+                      sh <- shrink_cov(Yc, shrink)
+                      shrink_used <- c(shrink_used, sh$lambda)
+                      sh$W
+                    })
+        WU <- W %*% t(Ut)
+        M <- Ut %*% WU
+        rhs <- Ut %*% t(Yc)
+        lam <- tryCatch(solve(M, rhs), error = function(e) MASS_ginv(M) %*% rhs)
+        (Yc - t(WU %*% lam))[, b, drop = FALSE]
+      }
+      zero_share <- zero_share + sum(Yb < 0)
+      Yb <- pmax(Yb, 0)
+      out[a, t, , ] <- t(Yb %*% t(S))
+    }
+  }
+  zero_share <- zero_share / (d[1] * d[2] * d[4] * nb)
+  rates <- if (additive == "deaths") out / as.vector(E) else out
+  rates <- pmax(rates, 1e-12)
+  list(rates = rates, exposure = E,
+       info = list(method = method, max_relative_gap_before = gap_before, share_set_to_zero = zero_share,
+                   mean_shrinkage = if (length(shrink_used)) mean(shrink_used) else NA_real_))
+}
+
+# Reorder the predictive noise of each bottom stratum, cell by cell, along the
+# training-year ranks used for the paths (keeps co-movement of observation noise)
+noise_reorder <- function(deaths, D, E, tau) {
+  d <- dim(deaths)
+  y <- log(pmax(D, 0.5) / E)
+  nt <- dim(y)[2]
+  ch <- apply(y[, -1, , drop = FALSE] - y[, -nt, , drop = FALSE], c(2, 3), mean)
+  out <- deaths
+  for (s in seq_len(d[3])) {
+    r <- rank(ch[tau, s], ties.method = "random")
+    for (a in seq_len(d[1])) {
+      for (t in seq_len(d[2])) out[a, t, s, ] <- sort(deaths[a, t, s, ])[r]
+    }
+  }
+  out
+}
+
+# Empirical copula: reorder whole paths of each stratum so that their ranks follow
+# the strata's average one-year changes of log rates in sampled training years
+copula_reorder <- function(arr, D, E) {
+  d <- dim(arr)
+  y <- log(pmax(D, 0.5) / E)
+  nt <- dim(y)[2]
+  if (nt < 3) return(list(arr = arr, years = NULL))
+  ch <- apply(y[, -1, , drop = FALSE] - y[, -nt, , drop = FALSE], c(2, 3), mean)
+  tau <- sample.int(nt - 1, d[4], replace = TRUE)
+  out <- arr
+  for (s in seq_len(d[3])) {
+    v <- apply(log(pmax(arr[, , s, , drop = FALSE], 1e-300)), 4, mean)
+    if (anyNA(v)) next
+    paths <- order(v)
+    r <- rank(ch[tau, s], ties.method = "random")
+    out[, , s, ] <- arr[, , s, paths[r], drop = FALSE]
+  }
+  list(arr = out, years = tau)
+}
+
+expand_exposure <- function(exposure, d) {
+  E <- exposure
+  if (length(dim(E)) == 2) E <- array(E, c(d[1], 1, d[3]))
+  if (dim(E)[2] == 1) E <- E[, rep(1, d[2]), , drop = FALSE]
+  if (!all(dim(E) == d[1:3])) mt_abort("`exposure` does not match the draws.", class = "argument")
+  E
+}
+
+# Shrinkage covariance towards the diagonal (Schaefer and Strimmer 2005, target D)
+shrink_cov <- function(X, shrink = "auto") {
+  n <- nrow(X)
+  V <- stats::cov(X)
+  s <- sqrt(pmax(diag(V), 1e-30))
+  if (is.numeric(shrink)) {
+    lambda <- shrink
+  } else {
+    Z <- sweep(sweep(X, 2, colMeans(X)), 2, s, "/")
+    R <- crossprod(Z) / (n - 1)
+    Z2 <- Z^2
+    v_r <- (crossprod(Z2) - crossprod(Z)^2 / n) * n / (n - 1)^3
+    off <- row(R) != col(R)
+    lambda <- sum(v_r[off]) / max(sum(R[off]^2), 1e-30)
+    lambda <- min(max(lambda, 0), 1)
+  }
+  W <- (1 - lambda) * V + lambda * diag(diag(V), ncol(V))
+  diag(W) <- pmax(diag(W), 1e-20)
+  list(W = W, lambda = lambda)
+}
+
+#' Models with reconciled forecasts
+#'
+#' Wraps a model specification so that its forecasts are reconciled over a
+#' hierarchy every time it is forecast, also inside [mt_backtest()]. If the
+#' training data contain only the bottom strata, the aggregate strata are
+#' added with [mt_aggregate_strata()] before fitting, so that the base model
+#' forecasts every node. Predictive draws (used by backtests) are coherent
+#' as well: Poisson and extra-Poisson variation are drawn for the bottom
+#' strata only and the aggregates are their sums.
+#'
+#' @param spec Base model specification (fitted to all strata).
+#' @param hierarchy An [mt_hierarchy()].
+#' @param method,shrink See [mt_reconcile()].
+#' @param dependence `"auto"` (default: `"none"` for models fitted jointly
+#'   across strata, whose draws already carry their dependence, such as
+#'   [li_lee()] and [tucker3()]; `"empirical"` for models fitted per stratum),
+#'   `"empirical"` or `"none"`. With `"empirical"` the same training years
+#'   order the paths before reconciliation and the predictive noise of the
+#'   bottom strata, so aggregates of predictive draws keep the observed
+#'   co-movement.
+#'
+#' On [mt_example_regions()] (4 regions, 90 strata, origins 2005 and 2008,
+#' h = 10), `li_lee(common_by = "sex")` with `method = "bottom_up"` was the
+#' most accurate coherent forecast (CRPS 0.0425 bottom, 0.0269 aggregates;
+#' 95% coverage 0.95), and Lee-Carter per stratum with `"wls"` reconciliation
+#' was calibrated (0.95-0.97) but less accurate (0.0477, 0.0292).
+#' @return A model specification.
+#' @examples
+#' x <- mt_example_regions(years = 2000:2019, regions = 3)
+#' h <- mt_hierarchy(sex = "both", region = "all", quintile = "all")
+#' fit <- mt_fit(mt_reconciled(lee_carter(), h, method = "wls"), mt_aggregate_strata(x, h))
+#' fc <- mt_forecast(fit, h = 5, n_draws = 50, seed = 1)
+#' @export
+mt_reconciled <- function(spec, hierarchy, method = c("wls", "mint", "structural", "ols", "bottom_up"),
+                          shrink = "auto", dependence = c("auto", "empirical", "none")) {
+  check_class(spec, "mt_spec", "spec")
+  method <- match.arg(method)
+  dependence <- match.arg(dependence)
+  if (dependence == "auto") dependence <- if (isTRUE(spec$joint)) "none" else "empirical"
+  sp <- new_mt_spec("reconciled", list(base = spec, hierarchy = as_hierarchy(hierarchy), method = method,
+                                       shrink = shrink, dependence = dependence),
+                    min_periods = spec$min_periods, label = sprintf("%s, reconciled (%s)", spec$label, method))
+  sp
+}
+
+#' @export
+mt_fit.mt_spec_reconciled <- function(spec, data, prep = NULL, cores = 1, ...) {
+  p <- spec$params
+  hs <- hierarchy_structure(data$strata, p$hierarchy)
+  if (all(hs$is_bottom)) data <- mt_aggregate_strata(data, p$hierarchy)
+  fit <- mt_fit(p$base, data, prep = prep, cores = cores, ...)
+  fit$reconcile <- list(hierarchy = p$hierarchy, method = p$method, shrink = p$shrink, dependence = p$dependence,
+                        structure = hierarchy_structure(fit$strata, p$hierarchy))
+  fit$spec <- spec
+  class(fit) <- c("mt_fit_reconciled", class(fit))
+  fit
+}
+
+#' @export
+mt_forecast.mt_fit_reconciled <- function(fit, h = 10, to = NULL, n_draws = 500, seed = NULL, predictive = FALSE,
+                                          exposure = NULL, ...) {
+  base_fit <- fit
+  class(base_fit) <- setdiff(class(fit), "mt_fit_reconciled")
+  base_fit$spec <- fit$spec$params$base
+  rc <- fit$reconcile
+  out <- with_seed(seed, {
+    fc <- mt_forecast(base_fit, h = h, to = to, n_draws = n_draws)
+    d <- dim(fc$rates)
+    E <- expand_exposure(exposure %||% fit$exposure_last, d)
+    arr <- fc$rates
+    tau <- NULL
+    if (identical(rc$dependence, "empirical")) {
+      cr <- copula_reorder(arr, fit$train_D, fit$train_E)
+      arr <- cr$arr
+      tau <- cr$years
+    }
+    rec <- reconcile_array(arr, rc$structure, rc$hierarchy$additive, rc$method, rc$shrink, E, d)
+    rates <- rec$rates
+    if (predictive) {
+      hs <- rc$structure
+      b <- hs$bottom
+      Eb <- rec$exposure[, , b, drop = FALSE]
+      mb <- rates[, , b, , drop = FALSE]
+      if (isTRUE(fit$spec$params$base$smooth)) {
+        sd <- array(fit$noise_sd[, b, drop = FALSE][, rep(seq_along(b), each = d[2])], c(d[1], d[2], length(b)))
+        mb <- mb * exp(stats::rnorm(length(mb), 0, as.vector(sd)))
+        mu <- mb * as.vector(Eb)
+        deaths_b <- array(stats::rpois(length(mu), mu), dim(mu))
+      } else {
+        deaths_b <- mb * as.vector(Eb)
+      }
+      if (!is.null(tau)) deaths_b <- noise_reorder(deaths_b, fit$train_D[, , b, drop = FALSE],
+                                                   fit$train_E[, , b, drop = FALSE], tau)
+      full <- array(NA_real_, d)
+      for (j in seq_len(d[4])) {
+        for (t in seq_len(d[2])) full[, t, , j] <- matrix(deaths_b[, t, , j], d[1]) %*% t(hs$S)
+      }
+      rates <- if (rc$hierarchy$additive == "deaths") full / as.vector(rec$exposure) else full
+    }
+    list(fc = fc, rates = rates, info = rec$info)
+  })
+  res <- out$fc
+  res$rates <- out$rates
+  dimnames(res$rates) <- dimnames(out$fc$rates)
+  res$model <- fit$spec$label
+  res$predictive <- predictive
+  res$reconciliation <- out$info
+  res
+}
+
+#' Aggregate forecast draws over strata or ages
+#'
+#' Computes draws for coarser groups from draws on the grid, path by path:
+#' over strata along a hierarchy (bottom-up: deaths are summed and divided
+#' by summed exposures) and over age groups (exposure-weighted mean rates).
+#'
+#' @param draws An [mt_draws] object.
+#' @param hierarchy Optional [mt_hierarchy()]; aggregate strata are added
+#'   bottom-up from the bottom strata.
+#' @param age Optional coarser [mt_axis] (cells must nest).
+#' @param exposure Exposures `[age, period, stratum]` or `[age, stratum]`
+#'   (default: last training year).
+#' @return An `mt_draws` object.
+#' @examples
+#' x <- mt_example(deaths = "single", years = 2000:2019)
+#' fc <- mt_forecast(mt_fit(lee_carter(), x), h = 3, n_draws = 20, seed = 1)
+#' fa <- mt_aggregate_draws(fc, hierarchy = mt_hierarchy(sex = "both"),
+#'                          age = age_groups(c(30, seq(40, 100, 10))))
+#' fa
+#' @export
+mt_aggregate_draws <- function(draws, hierarchy = NULL, age = NULL, exposure = NULL) {
+  check_class(draws, "mt_draws", "draws")
+  d <- dim(draws$rates)
+  E <- expand_exposure(exposure %||% draws$exposure_last, d)
+  st <- draws$strata
+  X <- draws$rates * as.vector(E)
+  if (!is.null(hierarchy)) {
+    h <- as_hierarchy(hierarchy)
+    hs0 <- hierarchy_structure(st, h)
+    by <- setdiff(names(st), c("stratum", "label"))
+    nodes <- hierarchy_nodes(st[hs0$is_bottom], h, by)
+    nodes[, stratum := seq_len(.N)]
+    setcolorder(nodes, c("stratum", by, "label"))
+    hs <- hierarchy_structure(nodes, h)
+    bpos <- match(nodes$label[hs$bottom], st$label)
+    Xb <- X[, , bpos, , drop = FALSE]
+    Eb <- E[, , bpos, drop = FALSE]
+    Xn <- array(NA_real_, c(d[1], d[2], nrow(nodes), d[4]))
+    En <- array(NA_real_, c(d[1], d[2], nrow(nodes)))
+    for (t in seq_len(d[2])) {
+      En[, t, ] <- matrix(Eb[, t, ], d[1]) %*% t(hs$S)
+      for (j in seq_len(d[4])) Xn[, t, , j] <- matrix(Xb[, t, , j], d[1]) %*% t(hs$S)
+    }
+    X <- Xn
+    E <- En
+    st <- nodes
+  }
+  ages <- draws$age
+  if (!is.null(age)) {
+    check_class(age, "mt_axis", "age")
+    ia <- axis_locate(age, ages$lower, ages$upper)
+    if (anyNA(ia)) mt_abort("The grid ages do not nest in `age`.", class = "argument")
+    A <- matrix(0, length(age), length(ages))
+    A[cbind(ia, seq_along(ia))] <- 1
+    keep <- rowSums(A) > 0
+    A <- A[keep, , drop = FALSE]
+    X <- apply(X, 2:4, function(v) as.numeric(A %*% v))
+    E <- apply(E, 2:3, function(v) as.numeric(A %*% v))
+    if (length(dim(X)) == 3) X <- array(X, c(1, dim(X)))
+    if (length(dim(E)) == 2) E <- array(E, c(1, dim(E)))
+    ages <- mt_axis(age$lower[keep], age$upper[keep], age$labels[keep], kind = "age")
+  }
+  rates <- X / as.vector(E)
+  out <- draws
+  dimnames(rates) <- list(age = ages$labels, period = as.character(draws$periods), stratum = st$label, draw = NULL)
+  out$rates <- rates
+  out$age <- ages
+  out$strata <- st
+  out$exposure_last <- E[, 1, , drop = FALSE]
+  out$observed <- NULL
+  out
+}

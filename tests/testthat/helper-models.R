@@ -19,3 +19,8 @@ expect_mt_model <- function(spec, data = NULL, h = 3, n_draws = 20) {
 }
 
 `%||%` <- function(x, y) if (is.null(x)) y else x
+
+with_seed_test <- function(seed, expr) {
+  set.seed(seed)
+  expr
+}

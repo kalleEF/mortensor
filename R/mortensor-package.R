@@ -16,8 +16,12 @@
 #'   [apc_bayes()] (package bamp), [cause_shares()] for coherent multi-cause
 #'   forecasts and [mt_ensemble()], fitted with [mt_fit()] (optionally tuned
 #'   with [mt_tuned()]) and forecast with [mt_forecast()] as simulated paths
-#'   ([mt_draws]); [mt_reconcile()] and [mt_cohere()] impose hierarchies and
-#'   orderings draw by draw.
+#'   ([mt_draws]).
+#' * **Hierarchies**: [mt_hierarchy()] describes crossed or nested strata
+#'   (for example sex x region x deprivation quintile with their totals),
+#'   [mt_aggregate_strata()] adds the aggregates, [mt_reconcile()] and
+#'   [mt_reconciled()] make forecasts add up draw by draw, [mt_cohere()]
+#'   imposes orderings.
 #' * **Evaluation**: [mt_backtest()] and [mt_score()].
 #' * **Derived quantities and plots**: [life_table()], [life_expectancy()],
 #'   [mt_deaths()], [mt_plot_forecast()] and the other `mt_plot_*()`
@@ -39,5 +43,5 @@ utils::globalVariables(c(
   "value.next", "k", "ratio", "label", "sex", "d", "e", "g_lo", "g_hi", "N",
   "a1", "a2", "p1", "p2", "a", "p", "i.value", "i.provenance", "lr", "scale", "component", "draw",
   "crps", "wis", "ae", "cov50", "cov80", "cov95", "pit", "at", "status", "rep", "parts",
-  ".data", "q0.5", "lo", "hi", "med", "x", "x_hi", "level", "coverage", "v"
+  ".data", "q0.5", "lo", "hi", "med", "x", "x_hi", "level", "coverage", "v", "region", "quintile", "m", "severity"
 ))

@@ -10,6 +10,7 @@ in `dev/implementation-plan.md`, and `dev/revamp-plan.md` for the design.
 | `R/data-*.R` | Axes, `mt_data` container, regrouping, validation, exposures, adapters, simulated example |
 | `R/harmonise-*.R` | PCLM engine and `mt_ungroup()`, smoothing and preprocessing steps |
 | `R/model-*.R` | Model specifications, fitting, forecast draws |
+| `R/hierarchy.R` | Hierarchies of strata, aggregation, reconciliation |
 | `R/eval-*.R` | Backtests and scoring |
 | `R/derive-*.R` | Life tables and derived quantities |
 | `R/validation.R` | Benchmarks shared by slow tests and `validation/` |

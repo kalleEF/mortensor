@@ -96,7 +96,7 @@ mt_fit.mt_spec <- function(spec, data, prep = NULL, cores = 1, ...) {
          message = if (ok) paste(unique(w$msg), collapse = " | ") else conditionMessage(res), seconds = secs)
   }
   if (spec$joint) {
-    r <- run(function() fit_model(spec, md$D, md$E, md$age, md$periods))
+    r <- run(function() fit_model(spec, md$D, md$E, md$age, md$periods, strata = st, hierarchy = d$hierarchy))
     fits <- r$fit
     diagnostics <- data.table(stratum = st$label, status = r$status, message = r$message, seconds = r$seconds)
   } else {

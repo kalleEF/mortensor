@@ -126,6 +126,38 @@ checks$cause_shares_coherence <- list(
     data.frame(metric = c("max_gap", "crps", "cov95"), value = c(gap, mean(bt$crps), mean(bt$cov95)))
   })
 
+checks$regions_coherence <- list(
+  suite = "quick",
+  description = paste("mt_example_regions() (2 sexes x 4 regions x 5 quintiles plus all aggregates, 90 strata):",
+                      "backtest from 2005 and 2008 (h = 10) of li_lee(common_by = 'sex') aggregated bottom-up and",
+                      "of Lee-Carter reconciled with WLS; CRPS and 95% coverage for bottom and aggregate strata,",
+                      "and the largest coherence gap of the reconciled forecast."),
+  run = function() {
+    x <- mt_example_regions(years = 1990:2019, regions = 4)
+    h <- mt_hierarchy(sex = "both", region = "all", quintile = "all")
+    xa <- mt_aggregate_strata(x, h)
+    hs <- mortensor:::hierarchy_structure(mt_strata(xa), h)
+    lev <- ifelse(hs$is_bottom, "bottom", "aggregate")
+    score <- function(sp) {
+      b <- mt_backtest(sp, xa, origins = c(2005, 2008), h = 10, n_draws = 200)
+      b[, lev := lev[stratum]]
+      b[, list(crps = mean(crps), cov95 = mean(cov95)), by = lev]
+    }
+    a <- score(mt_reconciled(li_lee(common_by = "sex"), h, method = "bottom_up"))
+    w <- score(mt_reconciled(lee_carter(), h, method = "wls"))
+    fc <- mt_forecast(mt_fit(mt_reconciled(lee_carter(), h, method = "wls"), xa), h = 3, n_draws = 50, seed = 1)
+    E <- mortensor:::expand_exposure(fc$exposure_last, dim(fc$rates))
+    D <- fc$rates * as.vector(E)
+    gap <- max(vapply(seq_len(dim(D)[4]), function(j) {
+      full <- matrix(D[, 3, hs$bottom, j], dim(D)[1]) %*% t(hs$S)
+      max(abs(full / matrix(D[, 3, , j], dim(D)[1]) - 1))
+    }, 0))
+    data.frame(metric = c("lilee_crps_bottom", "lilee_crps_aggregate", "lilee_cov95_bottom", "lilee_cov95_aggregate",
+                          "lc_wls_cov95_bottom", "lc_wls_cov95_aggregate", "max_gap"),
+               value = c(a[lev == "bottom"]$crps, a[lev == "aggregate"]$crps, a[lev == "bottom"]$cov95,
+                         a[lev == "aggregate"]$cov95, w[lev == "bottom"]$cov95, w[lev == "aggregate"]$cov95, gap))
+  })
+
 checks$ungroup_ew_2d <- list(
   suite = "full",
   description = "As ungroup_ew_1d for 1980-2011 with the 2D PCLM (age-period surface).",

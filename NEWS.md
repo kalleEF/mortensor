@@ -30,6 +30,14 @@ Clean break: the 0.1.x interface is replaced (see `dev/revamp-plan.md`).
   smoothing,
   Kannisto closure in `life_table()`, monotone splitting of deaths, and the
   simulated multi-cause dataset `mt_example_causes()`.
+* Grouped hierarchies for coherent forecasts (for example sex x region x
+  deprivation quintile): `mt_hierarchy()`, `mt_aggregate_strata()`,
+  multi-variable hierarchy checks in `mt_validate()`, `mt_reconcile()` on
+  the death scale with WLS, MinT, structural, OLS or bottom-up
+  reconciliation, an empirical copula for separately fitted strata and
+  non-negativity; `mt_reconciled()` for reconciliation inside fits and
+  backtests; `mt_aggregate_draws()`; `li_lee(common_by = "sex")`;
+  simulated `mt_example_regions()` and a vignette.
 * `mt_tune()` and `mt_tuned()`; `prob_dying()`, `asr()` (ESP 2013),
   `yll()`, `mt_export()`.
 * `mt_backtest()` (rolling origin, scored at the observed resolution) and

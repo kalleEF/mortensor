@@ -1,0 +1,123 @@
+---
+title: "Coherent forecasts by sex, region and deprivation"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Coherent forecasts by sex, region and deprivation}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width = 7, fig.height = 4.5, message = FALSE)
+has_gg <- requireNamespace("ggplot2", quietly = TRUE)
+```
+
+Small-area mortality forecasts are usually needed at several levels at once:
+for each sex, region and deprivation quintile, and for their totals (a
+region for both sexes, a quintile nationally, the whole country). Forecasts
+made separately for each of these strata do not add up. This vignette shows
+how mortensor produces coherent forecasts for such a grouped (crossed)
+structure.
+
+*The data here are simulated with `mt_example_regions()` (2 sexes x 4
+regions x 5 quintiles); the vignette will be rerun with real data.*
+
+```{r}
+library(mortensor)
+library(data.table)
+x <- mt_example_regions(years = 1990:2019, regions = 4)
+x
+```
+
+## The hierarchy
+
+Deaths and exposures add up over strata, rates do not. A hierarchy lists the
+stratum variables that are aggregated and the label of their totals.
+Intermediate groups (for example regions grouped into larger areas) are
+given with `groups`.
+
+```{r}
+h <- mt_hierarchy(sex = "both", region = "all", quintile = "all")
+h
+xa <- mt_aggregate_strata(x, h)
+nrow(mt_strata(xa))
+tail(mt_strata(xa))
+```
+
+The aggregated data have 90 strata: 40 bottom series and 50 aggregates. If
+official totals are available as data, they can be supplied as strata of
+their own, and `mt_validate()` checks that they agree with the sums of their
+parts:
+
+```{r}
+mt_validate(xa, hierarchy = h)
+```
+
+## Three ways to coherent forecasts
+
+1. **A joint model, aggregated bottom-up.** `li_lee(common_by = "sex")` fits
+   one common trend per sex from the pooled bottom strata, and lets regions
+   and quintiles deviate from it with stationary (AR(1)) factors, so their
+   gaps neither vanish nor explode. Aggregates are sums of the bottom
+   forecasts (`method = "bottom_up"`).
+2. **Separate models, reconciled.** Any model is fitted to every node
+   (bottom and aggregates) and the forecasts are projected onto the coherent
+   subspace draw by draw (`method = "wls"`, `"mint"`, `"structural"`,
+   `"ols"`). Because separately fitted strata have independent draws, the
+   draws are first reordered along the co-movement observed in the training
+   data (an empirical copula), otherwise the aggregates would be too
+   certain.
+3. **No reconciliation**: the base forecasts, for comparison.
+
+`mt_reconciled()` wraps a model so that reconciliation is part of every fit,
+also inside backtests.
+
+```{r}
+specs <- list(
+  lee_carter(),
+  mt_reconciled(lee_carter(), h, method = "wls"),
+  li_lee(common_by = "sex"),
+  mt_reconciled(li_lee(common_by = "sex"), h, method = "bottom_up"))
+hs <- mortensor:::hierarchy_structure(mt_strata(xa), h)
+level <- ifelse(hs$is_bottom, "bottom", "aggregate")
+bt <- rbindlist(lapply(specs, function(sp) {
+  b <- mt_backtest(sp, xa, origins = c(2005, 2008), h = 10, n_draws = 200)
+  b[, level := level[stratum]]
+}))
+dcast(bt[, .(crps = round(mean(crps), 4), cov95 = round(mean(cov95), 3)), by = .(model, level)],
+      model ~ level, value.var = c("crps", "cov95"))
+```
+
+On these data the joint model aggregated bottom-up is both coherent and the
+most accurate. Reconciling separate Lee-Carter fits makes them coherent with
+well calibrated intervals at every level, at a small cost in accuracy of the
+aggregates.
+
+## Forecasts at every level
+
+```{r}
+fit <- mt_fit(mt_reconciled(li_lee(common_by = "sex"), h, method = "bottom_up"), xa)
+fc <- mt_forecast(fit, h = 15, n_draws = 500, seed = 1)
+fc$reconciliation
+```
+
+```{r, eval = has_gg}
+mt_plot_forecast(fc, ages = c("60-64", "75-79"), strata = c("both.all.Q1", "both.all.Q5", "both.all.all"))
+```
+
+Path-by-path quantities stay coherent too, for example the deprivation gap
+in the probability of dying between ages 40 and 75:
+
+```{r}
+p <- prob_dying(fc, from = 40, to = 75)
+p[sex == "both" & region == "all" & quintile %in% c("Q1", "Q5") & period %in% c(2020, 2034),
+  .(quintile, period, q0.025, q0.5, q0.975)]
+```
+
+## Future populations
+
+Reconciliation on deaths uses exposures for the forecast years. By default
+these are the exposures of the last observed year; external population
+projections can be supplied as `exposure` to `mt_forecast()` and
+`mt_reconcile()` (an array `[age, year, stratum]`; only the bottom strata are
+used, aggregates are summed).

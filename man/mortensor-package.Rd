@@ -24,8 +24,12 @@ backtests refit them on every training window.
 \code{\link[=apc_bayes]{apc_bayes()}} (package bamp), \code{\link[=cause_shares]{cause_shares()}} for coherent multi-cause
 forecasts and \code{\link[=mt_ensemble]{mt_ensemble()}}, fitted with \code{\link[=mt_fit]{mt_fit()}} (optionally tuned
 with \code{\link[=mt_tuned]{mt_tuned()}}) and forecast with \code{\link[=mt_forecast]{mt_forecast()}} as simulated paths
-(\link{mt_draws}); \code{\link[=mt_reconcile]{mt_reconcile()}} and \code{\link[=mt_cohere]{mt_cohere()}} impose hierarchies and
-orderings draw by draw.
+(\link{mt_draws}).
+\item \strong{Hierarchies}: \code{\link[=mt_hierarchy]{mt_hierarchy()}} describes crossed or nested strata
+(for example sex x region x deprivation quintile with their totals),
+\code{\link[=mt_aggregate_strata]{mt_aggregate_strata()}} adds the aggregates, \code{\link[=mt_reconcile]{mt_reconcile()}} and
+\code{\link[=mt_reconciled]{mt_reconciled()}} make forecasts add up draw by draw, \code{\link[=mt_cohere]{mt_cohere()}}
+imposes orderings.
 \item \strong{Evaluation}: \code{\link[=mt_backtest]{mt_backtest()}} and \code{\link[=mt_score]{mt_score()}}.
 \item \strong{Derived quantities and plots}: \code{\link[=life_table]{life_table()}}, \code{\link[=life_expectancy]{life_expectancy()}},
 \code{\link[=mt_deaths]{mt_deaths()}}, \code{\link[=mt_plot_forecast]{mt_plot_forecast()}} and the other \verb{mt_plot_*()}

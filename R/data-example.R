@@ -96,3 +96,80 @@ with_seed <- function(seed, expr) {
   set.seed(seed)
   expr
 }
+
+#' Simulated deaths by sex, region and deprivation quintile
+#'
+#' A grouped structure as in small-area mortality data: `sex` x `region` x
+#' `quintile` bottom strata. Log rates follow a Lee-Carter-type model with a
+#' period index per sex, region-specific deviations (AR(1)), a deprivation
+#' gradient that widens slowly over time, Gompertz-Makeham age patterns and
+#' regional population sizes that differ by a factor of up to four. Deaths
+#' are Poisson. True rates of the bottom strata are attached as attribute
+#' `"truth"`.
+#'
+#' @param years Calendar years.
+#' @param regions Number of regions.
+#' @param ages `"grouped"` (5-year groups 40-44 ... 85-89 and 90+, also used
+#'   as grid) or `"single"` (single years 40-99 and 100+).
+#' @param size Population at age 40 per bottom stratum in the largest region.
+#' @param seed Random seed.
+#' @return An [mt_data] object with strata `sex` x `region` x `quintile`
+#'   (bottom level only; add aggregates with [mt_aggregate_strata()]).
+#' @examples
+#' x <- mt_example_regions(years = 2010:2019, regions = 3)
+#' x
+#' @export
+mt_example_regions <- function(years = 1995:2019, regions = 4, ages = c("grouped", "single"), size = 2e4,
+                               seed = 1) {
+  ages <- match.arg(ages)
+  with_seed(seed, {
+    a <- 40:109
+    nt <- length(years)
+    reg <- paste0("R", seq_len(regions))
+    reg_size <- seq(1, 0.25, length.out = regions)
+    reg_level <- stats::rnorm(regions, 0, 0.08)
+    bx <- 0.02 * (1 - (a - 40) / 90)
+    rows <- list()
+    for (sx in c("female", "male")) {
+      lvl <- if (sx == "female") 0.6 else 1
+      kt <- cumsum(c(0, stats::rnorm(nt - 1, -1, 0.5)))
+      kt <- kt - mean(kt)
+      for (r in seq_len(regions)) {
+        dev <- numeric(nt)
+        for (t in 2:nt) dev[t] <- 0.7 * dev[t - 1] + stats::rnorm(1, 0, 0.02)
+        for (q in 1:5) {
+          grad <- 0.12 * (q - 3) * (1 + 0.01 * (seq_len(nt) - 1))
+          ax <- log(lvl * 2e-5 * exp(0.1 * a) + 3e-4)
+          logm <- ax + outer(bx, kt) + reg_level[r] + matrix(grad + dev, length(a), nt, byrow = TRUE)
+          m <- exp(logm)
+          e <- size * reg_size[r] * exp(-cumsum(c(0, utils::head(exp(ax), -1)))) %o% (1 + 0.003 * seq_len(nt))
+          d <- matrix(stats::rpois(length(m), m * e), length(a))
+          rows[[length(rows) + 1L]] <- data.table(sex = sx, region = reg[r], quintile = paste0("Q", q),
+                                                  year = rep(years, each = length(a)), age = rep(a, nt),
+                                                  deaths = as.vector(d), exposure = as.vector(e), m = as.vector(m))
+        }
+      }
+    }
+    long <- rbindlist(rows)
+    if (ages == "grouped") {
+      long[, `:=`(age_lo = ifelse(age >= 90, 90, 40 + 5 * floor((age - 40) / 5)))]
+      long[, age_hi := ifelse(age_lo >= 90, Inf, age_lo + 5)]
+    } else {
+      long[, `:=`(age_lo = pmin(age, 100))]
+      long[, age_hi := ifelse(age_lo >= 100, Inf, age_lo + 1)]
+    }
+    agg <- long[, list(deaths = sum(deaths), exposure = sum(exposure), m = sum(m * exposure) / sum(exposure)),
+                by = c("sex", "region", "quintile", "year", "age_lo", "age_hi")]
+    x <- mt_data(deaths = agg, exposure = agg, by = c("sex", "region", "quintile"), age = c("age_lo", "age_hi"))
+    if (ages == "grouped") x <- mt_set_grid(x, age = age_groups(c(seq(40, 85, 5), 90)))
+    g <- mt_grid(x)
+    st <- mt_strata(x)
+    tr <- array(NA_real_, c(length(g$age), length(g$period), nrow(st)),
+                dimnames = list(age = g$age$labels, period = g$period$labels, stratum = st$label))
+    agg[, label := paste(sex, region, quintile, sep = ".")]
+    idx <- cbind(match(agg$age_lo, g$age$lower), match(agg$year, g$period$lower), match(agg$label, st$label))
+    tr[idx] <- agg$m
+    attr(x, "truth") <- tr
+    x
+  })
+}

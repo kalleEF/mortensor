@@ -12,7 +12,7 @@ work: `claude/vigilant-albattani-2ssw1x` (plays the role of `dev-0.2`).
 | Q0.1 | done | this branch | `validation/` pipeline with quick and full suites |
 | D1.1 | done | this branch | Skeleton, conditions, checks, name-clash test |
 | D1.2 | done | this branch | `mt_axis`, `parse_age_labels()` |
-| D1.3 | partial | this branch | Strata table; hierarchy sums checked in `mt_validate()`; reconciliation later (P5.4) |
+| D1.3 | done | this branch | `mt_hierarchy()` (crossed variables, intermediate groups), `mt_aggregate_strata()`, multi-variable checks in `mt_validate()` |
 | D1.4, D1.5 | done | this branch | `mt_data()`, `mt_add_*()`, grid, `mt_array()`, `mt_window()`, `mt_granularity()`, `mt_validate()` |
 | D1.6 | done | this branch | `mt_regroup()`, `mt_operator()` |
 | D1.7 | done | this branch | `mt_as_exposure()` (mid-year, January 1) |
@@ -41,7 +41,7 @@ work: `claude/vigilant-albattani-2ssw1x` (plays the role of `dev-0.2`).
 | P5.1 | done | this branch | `hyndman_ullah()` (demography; draws via `simulate()`); 95% coverage 0.90 on the benchmark, 0.73 on France |
 | P5.2 | done | this branch | `stmomo()` APC, CBD, RH, M6, LC with integer ages, initial exposures for logit links, `simulate()` draws; RH fails to converge at some origins (recorded) |
 | P5.3 | done | this branch | `cause_shares()` (Tucker4 on ILR cause shares, any all-cause model), `mt_example_causes()` |
-| P5.4 | done | this branch | `mt_reconcile()` draw by draw (MinT with draw covariance, WLS, OLS) |
+| P5.4 | done | this branch | `mt_reconcile()` for grouped hierarchies on the death scale (WLS default, MinT, structural, OLS, bottom-up), empirical copula, non-negative; `mt_reconciled()`; `mt_aggregate_draws()` |
 | P5.5 | done | this branch | `mt_cohere()`, `li_lee()`, `product_ratio()` (Lee-Carter-type version) |
 | P5.6 | done | this branch | `mt_ensemble(weights = "stack")` |
 | P5.7 | partial | this branch | Whittaker and Gaussian GAM (mgcv) smoothing in `mt_smooth()`; GAM-Bayes smoothing uncertainty not ported |
@@ -112,6 +112,15 @@ work: `claude/vigilant-albattani-2ssw1x` (plays the role of `dev-0.2`).
   Lee-Carter, Tucker3 and the random walk over-covers on the simulation
   benchmark (95% coverage 0.994 against the target 0.90-0.98), because the
   random walk component is too wide on that generator.
+
+- 2026-10-13: Coherence for sex x region x quintile (simulated, 90 strata,
+  origins 2005/2008, h = 10; CRPS bottom/aggregate, 95% coverage
+  bottom/aggregate): Lee-Carter per stratum 0.0482/0.0286, 0.97/0.98;
+  reconciled WLS without copula 0.0466/0.0282 but aggregates 0.85; with
+  the empirical copula 0.0477/0.0292, 0.97/0.95; MinT with the copula
+  under-covers (0.88); `li_lee(common_by = "sex")` bottom-up 0.0425/0.0269,
+  0.95/0.95. Defaults: WLS, copula for per-stratum models, none for joint
+  models.
 
 ## Open questions
 

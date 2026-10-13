@@ -13,6 +13,13 @@
 #'   scores are stationary. This is a Lee-Carter-type version of the method;
 #'   the original uses functional data models.
 #'
+#' With `common_by` (for example `"sex"`), `li_lee()` fits one common factor
+#' per level of that stratum variable (women and men each with their own
+#' trend), and the other strata (for example regions and deprivation
+#' quintiles) deviate from their group's common factor. If the data carry a
+#' hierarchy (see [mt_aggregate_strata()]), the common factors are estimated
+#' from the bottom strata only, so aggregates are not counted twice.
+#'
 #' In both models the common period index follows a random walk with drift
 #' (with drift uncertainty) and the stratum-specific scores follow AR(1)
 #' processes without drift, so the differences between strata stay bounded.
@@ -20,6 +27,8 @@
 #' extra-Poisson and Poisson variation.
 #'
 #' @param ratio_order Number of stratum-specific (ratio) factors.
+#' @param common_by Stratum variable(s) defining groups with their own common
+#'   factor (`li_lee()` only).
 #' @return A model specification.
 #' @references
 #' Li N, Lee R (2005). Coherent mortality forecasts for a group of
@@ -33,9 +42,10 @@
 #' x <- mt_example(deaths = "single")
 #' fc <- mt_forecast(mt_fit(li_lee(), x), h = 10, n_draws = 100, seed = 1)
 #' @export
-li_lee <- function(ratio_order = 1) {
-  new_mt_spec("multipop", list(type = "li_lee", ratio_order = ratio_order), joint = TRUE, min_periods = 8,
-              label = "Li-Lee")
+li_lee <- function(ratio_order = 1, common_by = NULL) {
+  new_mt_spec("multipop", list(type = "li_lee", ratio_order = ratio_order, common_by = common_by), joint = TRUE,
+              min_periods = 8, label = if (is.null(common_by)) "Li-Lee" else sprintf("Li-Lee (common by %s)",
+                                                                                  paste(common_by, collapse = ", ")))
 }
 
 #' @rdname li_lee
@@ -46,19 +56,33 @@ product_ratio <- function(ratio_order = 1) {
 }
 
 #' @export
-fit_model.mt_spec_multipop <- function(spec, D, E, ages, periods, ...) {
+fit_model.mt_spec_multipop <- function(spec, D, E, ages, periods, strata = NULL, hierarchy = NULL, ...) {
   p <- spec$params
   ns <- dim(D)[3]
   y <- log(pmax(D, 0.5) / E)
-  common <- if (p$type == "li_lee") {
-    lc_svd(apply(D, 1:2, sum), apply(E, 1:2, sum))
-  } else {
-    lc_from_log(apply(y, 1:2, mean))
+  group <- rep(1L, ns)
+  if (!is.null(p$common_by)) {
+    if (is.null(strata) || !all(p$common_by %in% names(strata))) {
+      mt_abort("`common_by` must name stratum variables.", class = "argument")
+    }
+    key <- do.call(paste, c(lapply(p$common_by, function(v) strata[[v]]), sep = "."))
+    group <- match(key, unique(key))
   }
-  base <- if (p$type == "li_lee") outer(common$b, common$k) else common$a + outer(common$b, common$k)
+  pool <- rep(TRUE, ns)
+  if (!is.null(hierarchy) && !is.null(strata)) pool <- hierarchy_structure(strata, hierarchy)$is_bottom
+  commons <- lapply(seq_len(max(group)), function(g) {
+    use <- group == g & pool
+    if (!any(use)) use <- group == g
+    if (p$type == "li_lee") {
+      lc_svd(apply(D[, , use, drop = FALSE], 1:2, sum), apply(E[, , use, drop = FALSE], 1:2, sum))
+    } else {
+      lc_from_log(apply(y[, , use, drop = FALSE], 1:2, mean))
+    }
+  })
+  base_of <- function(cm) if (p$type == "li_lee") outer(cm$b, cm$k) else cm$a + outer(cm$b, cm$k)
   r <- min(p$ratio_order, ncol(D) - 2)
-  strata <- lapply(seq_len(ns), function(s) {
-    res <- y[, , s] - base
+  strata_fits <- lapply(seq_len(ns), function(s) {
+    res <- y[, , s] - base_of(commons[[group[s]]])
     a <- rowMeans(res)
     sv <- svd(res - a, nu = r, nv = r)
     b <- sv$u[, seq_len(r), drop = FALSE]
@@ -68,10 +92,10 @@ fit_model.mt_spec_multipop <- function(spec, D, E, ages, periods, ...) {
   })
   fitted <- array(NA_real_, dim(D))
   for (s in seq_len(ns)) {
-    st <- strata[[s]]
-    fitted[, , s] <- exp(base + st$a + st$b %*% t(st$k))
+    st <- strata_fits[[s]]
+    fitted[, , s] <- exp(base_of(commons[[group[s]]]) + st$a + st$b %*% t(st$k))
   }
-  list(common = common, base_type = p$type, strata = strata, fitted = fitted)
+  list(commons = commons, group = group, base_type = p$type, strata = strata_fits, fitted = fitted)
 }
 
 # Lee-Carter by SVD of a matrix of log rates (no second-stage refit of k)
@@ -97,16 +121,19 @@ ar1_fit <- function(k) {
 
 #' @export
 simulate_model.mt_spec_multipop <- function(spec, fit, h, n_draws, ...) {
-  cm <- fit$common
-  na <- length(cm$a)
+  na <- length(fit$commons[[1]]$a)
   ns <- length(fit$strata)
-  kp <- rw_paths(cm$k[length(cm$k)], cm$drift, matrix(cm$dk - cm$drift, nrow = 1), h, n_draws, "gaussian",
-                 sigma = cm$sigma_k, exp_out = FALSE)
+  kps <- lapply(fit$commons, function(cm) {
+    rw_paths(cm$k[length(cm$k)], cm$drift, matrix(cm$dk - cm$drift, nrow = 1), h, n_draws, "gaussian",
+             sigma = cm$sigma_k, exp_out = FALSE)
+  })
   out <- array(NA_real_, c(na, h, ns, n_draws))
   for (j in seq_len(n_draws)) {
-    base <- outer(cm$b, kp[1, , j])
-    if (fit$base_type == "product_ratio") base <- base + cm$a
     for (s in seq_len(ns)) {
+      g <- fit$group[s]
+      cm <- fit$commons[[g]]
+      base <- outer(cm$b, kps[[g]][1, , j])
+      if (fit$base_type == "product_ratio") base <- base + cm$a
       st <- fit$strata[[s]]
       kk <- vapply(st$ar, function(a) {
         v <- numeric(h)

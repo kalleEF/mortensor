@@ -44,14 +44,21 @@ reference:
       - mt_ensemble
       - mt_tune
       - new_mt_spec
+  - title: Hierarchies and coherence
+    contents:
+      - mt_hierarchy
+      - mt_aggregate_strata
+      - mt_reconcile
+      - mt_reconciled
+      - mt_aggregate_draws
+      - mt_cohere
+      - mt_example_regions
   - title: Fitting and forecasting
     contents:
       - mt_fit
       - mt_forecast
       - mt_draws
       - mt_deaths
-      - mt_reconcile
-      - mt_cohere
   - title: Evaluation
     contents:
       - mt_backtest

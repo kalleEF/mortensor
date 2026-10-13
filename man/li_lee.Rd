@@ -5,12 +5,15 @@
 \alias{product_ratio}
 \title{Coherent multi-population models}
 \usage{
-li_lee(ratio_order = 1)
+li_lee(ratio_order = 1, common_by = NULL)
 
 product_ratio(ratio_order = 1)
 }
 \arguments{
 \item{ratio_order}{Number of stratum-specific (ratio) factors.}
+
+\item{common_by}{Stratum variable(s) defining groups with their own common
+factor (\code{li_lee()} only).}
 }
 \value{
 A model specification.
@@ -30,6 +33,13 @@ factor, and the ratios of each stratum to the product with factors whose
 scores are stationary. This is a Lee-Carter-type version of the method;
 the original uses functional data models.
 }
+
+With \code{common_by} (for example \code{"sex"}), \code{li_lee()} fits one common factor
+per level of that stratum variable (women and men each with their own
+trend), and the other strata (for example regions and deprivation
+quintiles) deviate from their group's common factor. If the data carry a
+hierarchy (see \code{\link[=mt_aggregate_strata]{mt_aggregate_strata()}}), the common factors are estimated
+from the bottom strata only, so aggregates are not counted twice.
 
 In both models the common period index follows a random walk with drift
 (with drift uncertainty) and the stratum-specific scores follow AR(1)

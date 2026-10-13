@@ -57,12 +57,12 @@ test_that("reconciliation makes parts add up to the total", {
   i <- st$stratum[st$sex == "male" & st$cause == "all"]
   j <- st$stratum[st$sex == "male" & st$cause != "all"]
   for (m in c("mint", "wls")) {
-    r <- mt_reconcile(fc, "cause", "all", method = m)
+    r <- mt_reconcile(fc, var = "cause", total = "all", method = m)
     expect_lt(max(abs(apply(r$rates[, , j, ], c(1, 2, 4), sum) / r$rates[, , i, ] - 1)), 1e-8)
     expect_gt(r$reconciliation$max_relative_gap_before, 0)
   }
-  expect_error(mt_reconcile(fc, "region", "all"), class = "mt_error_argument")
-  expect_error(mt_reconcile(fc, "cause", "none"), class = "mt_error_argument")
+  expect_error(mt_reconcile(fc, var = "region", total = "all"), class = "mt_error_argument")
+  expect_error(mt_reconcile(fc, var = "cause", total = "none"), class = "mt_error_argument")
 })
 
 test_that("coherence keeps the lower stratum below the upper one in every draw", {

@@ -24,6 +24,7 @@ new_mt_draws <- function(rates, age, periods, strata, model, origin, fit = NULL,
                           draw = NULL)
   structure(list(rates = rates, age = age, periods = periods, strata = strata, model = model, origin = origin,
                  seed = seed, observed = fit$observed, observed_periods = fit$periods,
+                 train_D = fit$train_D, train_E = fit$train_E,
                  exposure_last = fit$exposure_last, diagnostics = fit$diagnostics),
             class = "mt_draws")
 }

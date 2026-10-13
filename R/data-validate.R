@@ -6,14 +6,16 @@
 #' * central death rates above 1 below age 100 (warning);
 #' * zero exposures (info);
 #' * grid cells without deaths or exposures (info);
-#' * hierarchy sums, when `hierarchy` is given: the total stratum is compared
-#'   with the sum of its parts per cell; ratios near 2 are reported as
-#'   "total equals twice the sum of parts", a pattern seen in real data.
+#' * hierarchy sums, when `hierarchy` is given ([mt_hierarchy()], or the
+#'   older `list(var, total)`): every aggregate stratum in the data is
+#'   compared with the sum of its bottom strata per cell, for deaths and, if
+#'   the hierarchy is additive on deaths, exposures; ratios near 2 are
+#'   reported as "total equals twice the sum of parts", a pattern seen in
+#'   real data.
 #'
 #' @param data An [mt_data] object.
-#' @param hierarchy Optional list with `var` (stratum column), `total` (value
-#'   of the total) and `parts` (values of the parts; default all other
-#'   values).
+#' @param hierarchy Optional [mt_hierarchy()], or a list with `var` (stratum
+#'   column) and `total` (value of the total).
 #' @param tol Relative tolerance for hierarchy sums.
 #' @return A `data.table` of class `mt_validation` with columns `check`,
 #'   `severity`, `measure`, `stratum`, `n`, `detail`.
@@ -68,31 +70,53 @@ mt_validate <- function(data, hierarchy = NULL, tol = 0.005) {
 }
 
 check_hierarchy <- function(data, hierarchy, tol) {
-  var <- hierarchy$var
-  if (is.null(var) || !var %in% data$by) mt_abort("`hierarchy$var` must be a stratum column.", class = "hierarchy")
+  h <- as_hierarchy(hierarchy)
   st <- data$strata
-  total <- hierarchy$total
-  part_levels <- hierarchy$parts %||% setdiff(unique(st[[var]]), total)
-  n_parts <- length(part_levels)
-  others <- setdiff(data$by, var)
-  D <- merge(data$obs$deaths, st, by = "stratum")
-  keys <- c(others, "age_lo", "age_hi", "period_lo", "period_hi")
-  tot <- D[get(var) == total, c(keys, "value"), with = FALSE]
-  prt <- D[get(var) %in% part_levels, list(parts = sum(value), k = .N), by = keys]
-  j <- merge(tot, prt, by = keys)
-  j <- j[k == n_parts & parts > 0]
-  if (!nrow(j)) {
-    return(data.table(check = "hierarchy", severity = "info", measure = "deaths", stratum = total, n = 0L,
+  hs <- tryCatch(hierarchy_structure(st, h), mt_error_hierarchy = function(e) {
+    mt_abort(conditionMessage(e), class = "hierarchy")
+  })
+  agg <- which(!hs$is_bottom)
+  if (!length(agg)) {
+    return(data.table(check = "hierarchy", severity = "info", measure = "deaths", stratum = "all", n = 0L,
+                      detail = "no aggregate strata in the data (see mt_aggregate_strata())"))
+  }
+  measures <- intersect(if (h$additive == "deaths") c("deaths", "exposure") else "deaths", names(data$obs))
+  bottom_ids <- st$stratum[hs$bottom]
+  rows <- list()
+  for (m in measures) {
+    o <- data$obs[[m]]
+    keys <- c("age_lo", "age_hi", "period_lo", "period_hi")
+    for (i in agg) {
+      mem <- bottom_ids[hs$S[i, ] > 0]
+      parts <- o[o$stratum %in% mem, list(parts = sum(value), k = .N), by = keys]
+      parts <- parts[k == length(mem)]
+      tot <- o[o$stratum == st$stratum[i], c(keys, "value"), with = FALSE]
+      j <- merge(tot, parts, by = keys)
+      j <- j[parts > 0]
+      if (!nrow(j)) next
+      ratio <- j$value / j$parts
+      bad <- abs(ratio - 1) > tol
+      med <- stats::median(ratio)
+      detail <- sprintf("total / sum(parts): median %.3f, range %.3f-%.3f; %d of %d cells outside tolerance",
+                        med, min(ratio), max(ratio), sum(bad), length(ratio))
+      if (abs(med - 2) < 0.02) detail <- paste0(detail, "; total equals twice the sum of parts")
+      rows[[length(rows) + 1L]] <- data.table(check = "hierarchy", severity = if (any(bad)) "error" else "info",
+                                              measure = m, stratum = st$label[i], n = sum(bad), detail = detail)
+    }
+  }
+  if (!length(rows)) {
+    return(data.table(check = "hierarchy", severity = "info", measure = "deaths", stratum = "all", n = 0L,
                       detail = "no cells with the total and all parts observed"))
   }
-  j[, ratio := value / parts]
-  bad <- abs(j$ratio - 1) > tol
-  med <- stats::median(j$ratio)
-  detail <- sprintf("total / sum(parts): median %.3f, range %.3f-%.3f; %d of %d cells outside tolerance",
-                    med, min(j$ratio), max(j$ratio), sum(bad), nrow(j))
-  if (abs(med - 2) < 0.02) detail <- paste0(detail, "; total equals twice the sum of parts")
-  data.table(check = "hierarchy", severity = if (any(bad)) "error" else "info", measure = "deaths",
-             stratum = total, n = sum(bad), detail = detail)
+  out <- rbindlist(rows)
+  ok <- out[severity == "info"]
+  bad <- out[severity != "info"]
+  if (nrow(ok) > 3) {
+    ok <- data.table(check = "hierarchy", severity = "info", measure = paste(unique(ok$measure), collapse = ","),
+                     stratum = sprintf("%d aggregate strata", length(unique(ok$stratum))), n = 0L,
+                     detail = "sums of parts agree with the totals within tolerance")
+  }
+  rbind(bad, ok)
 }
 
 #' @export
