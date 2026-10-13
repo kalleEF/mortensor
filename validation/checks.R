@@ -165,6 +165,33 @@ checks$regions_coherence <- list(
                          a[lev == "aggregate"]$cov95, w[lev == "bottom"]$cov95, w[lev == "aggregate"]$cov95, gap))
   })
 
+checks$ons_deprivation <- list(
+  suite = "quick",
+  description = paste("ONS England 2001-2019 (ons_data), sex x IMD quintile, 5-year groups: backtest from 2008 to",
+                      "2014 (h = 5) of li_lee(common_by = 'sex') and of the mixture of Lee-Carter and rwd(); CRPS",
+                      "and 95% coverage. Causes at ages 50+ (ons_cause_groups): Lee-Carter per cause summed",
+                      "bottom-up, all-cause CRPS from origins 2008, 2011, 2014 and the largest coherence gap."),
+  run = function() {
+    x <- mt_read_ons(ons_data)
+    ll <- mt_backtest(li_lee(common_by = "sex"), x, origins = 2008:2014, h = 5, n_draws = 200)
+    en <- mt_backtest(mt_ensemble(lc = lee_carter(), rw = rwd()), x, origins = 2008:2014, h = 5, n_draws = 200)
+    xc <- mt_read_ons(ons_data, min_age = 50, causes = ons_cause_groups)
+    h <- mt_hierarchy(cause = "all", additive = "rates")
+    sp <- mt_reconciled(lee_carter(), h, method = "bottom_up")
+    bc <- mt_backtest(sp, xc, origins = c(2008, 2011, 2014), h = 5, n_draws = 100)
+    fc <- mt_forecast(mt_fit(sp, xc), h = 5, n_draws = 50, seed = 1)
+    st <- mt_strata(xc)
+    gap <- max(vapply(unique(paste(st$sex, st$quintile)), function(g) {
+      i <- which(paste(st$sex, st$quintile) == g & st$cause == "all")
+      j <- which(paste(st$sex, st$quintile) == g & st$cause != "all")
+      max(abs(apply(fc$rates[, , j, , drop = FALSE], c(1, 2, 4), sum) / fc$rates[, , i, ] - 1))
+    }, 0))
+    data.frame(metric = c("lilee_crps", "lilee_cov95", "ensemble_crps", "ensemble_cov95", "causes_bu_crps_all",
+                          "causes_max_gap"),
+               value = c(mean(ll$crps), mean(ll$cov95), mean(en$crps), mean(en$cov95),
+                         mean(bc[cause == "all"]$crps), gap))
+  })
+
 checks$ungroup_ew_2d <- list(
   suite = "full",
   description = "As ungroup_ew_1d for 1980-2011 with the 2D PCLM (age-period surface).",

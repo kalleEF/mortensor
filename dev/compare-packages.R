@@ -5,7 +5,9 @@
 #
 # Run from the package root (about one hour, most of it bamp chains):
 #   Rscript dev/compare-packages.R
-# Set COMPARE_QUICK=true for a short run (fewer origins and draws).
+# Set COMPARE_QUICK=true for a short run (fewer origins and draws),
+# COMPARE_SKIP=ons,france to skip data sets and COMPARE_OUT to change the
+# output file.
 
 suppressMessages(devtools::load_all(quiet = TRUE))
 suppressMessages({
@@ -203,20 +205,21 @@ run_bt <- function(name, data, specs, origins, h) {
 }
 
 acc <- list()
-acc$ons <- run_bt("ONS England, sex x IMD quintile, 5-year groups", ons,
+skip <- strsplit(Sys.getenv("COMPARE_SKIP"), ",")[[1]]
+if (!"ons" %in% skip) acc$ons <- run_bt("ONS England, sex x IMD quintile, 5-year groups", ons,
                   list(native_fdm(), native_lca(), native_bamp(), hyndman_ullah(), lee_carter(),
                        li_lee(common_by = "sex"), apc_bayes(age = "rw1", period = "rw1", cohort = "rw1"),
                        mt_ensemble(lc = lee_carter(), rw = rwd())),
                   origins = if (quick) 2014 else c(2009, 2011, 2014), h = 5)
-acc$france <- run_bt("France (HMD via demography), single ages 0-95", fr,
+if (!"france" %in% skip) acc$france <- run_bt("France (HMD via demography), single ages 0-95", fr,
                      list(native_fdm(), native_lca(), hyndman_ullah(), lee_carter(), rwd(),
                           mt_ensemble(lc = lee_carter(), rw = rwd())),
                      origins = if (quick) 1996 else c(1986, 1991, 1996), h = 10)
-acc$ew <- run_bt("England & Wales men (HMD via StMoMo), single ages 55-89", ew,
+if (!"ew" %in% skip) acc$ew <- run_bt("England & Wales men (HMD via StMoMo), single ages 55-89", ew,
                  list(stmomo("lc"), stmomo("cbd"), stmomo("apc"), native_lca(), lee_carter(), rwd(),
                       mt_ensemble(lc = lee_carter(), rw = rwd())),
                  origins = if (quick) 2001 else c(1991, 1996, 2001), h = 10)
-acc$bamp_example <- run_bt("bamp example data (8 age groups, 10 years)", bamp_ex,
+if (!"bamp_example" %in% skip) acc$bamp_example <- run_bt("bamp example data (8 age groups, 10 years)", bamp_ex,
                            list(native_bamp(), apc_bayes(age = "rw1", period = "rw1", cohort = "rw1"), lee_carter(),
                                 rwd()),
                            origins = if (quick) 2008 else 2006:2008, h = 2)
@@ -235,7 +238,7 @@ results <- list(
   settings = list(n_draws = n_draws, quick = quick, date = Sys.Date(),
                   versions = vapply(c("mortensor", "demography", "bamp", "StMoMo", "forecast"),
                                     function(p) as.character(utils::packageVersion(p)), "")))
-saveRDS(results, "vignettes/comparison-results.rds")
+saveRDS(results, Sys.getenv("COMPARE_OUT", "vignettes/comparison-results.rds"))
 log_step("done")
 print(results$fidelity)
 print(results$accuracy, digits = 3)
