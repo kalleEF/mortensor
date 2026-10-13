@@ -2,6 +2,34 @@
 
 Clean break: the 0.1.x interface is replaced (see `dev/revamp-plan.md`).
 
+## Calibration, deprivation and coherence vignettes
+
+* `calibrated()` wraps any model specification (including `ensemble()`,
+  `reconciled()` and `bootstrapped()`) and recalibrates the spread of its
+  forecast draws, optionally also the drift, on the last `years` (default
+  10) of the training data. The base model is refitted at several origins
+  in that window. A horizon-dependent spread factor (and drift correction)
+  is chosen by minimum CRPS, or by the interval score of one central
+  interval (`target = "interval"`). Observation noise is modelled as in
+  `mt_backtest()`, and draws of an ensemble get the noise of their
+  component. Reconciled models are calibrated at the bottom level and
+  stay coherent. `by` gives separate factors for groups of strata.
+  `summary()` and `mt_parameters()` report the factors.
+* Backtests (England & Wales men, origins 1996-2001, h = 10): calibration
+  raised the 95% coverage of Lee-Carter from 0.75 to 0.88 and lowered its
+  CRPS by 4%. An already calibrated ensemble was narrowed (0.95 to 0.90)
+  at the same CRPS. Drift correction overfitted on the ONS data and is off
+  by default. New validation check `calibration_ew`.
+* Ensemble forecasts record the component of each draw (`$component`).
+* Vignettes "Forecasting mortality by deprivation quintile" (ONS:
+  inequality indicators, backtests by quintile, calibration, gap
+  forecasts by model, fitting period) and "Coherent forecasts: what
+  reconciliation changes" (ONS sex x quintile with totals: incoherence of
+  separate forecasts, each reconciliation method's effect on forecasts,
+  intervals and backtest accuracy per level, dependence between strata).
+  The regional vignette adds forecasts for every Land and compares the
+  reconciliation methods on them.
+
 ## Changes after two applied reviews and stress tests
 
 * Renamed for clarity: model wrappers are nouns like the other model

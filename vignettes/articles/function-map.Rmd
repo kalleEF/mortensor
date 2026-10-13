@@ -140,6 +140,9 @@ flowchart TD
     W3["`**bootstrapped(), tuned()**
     parameter uncertainty,
     inner tuning`"]
+    W4["`**calibrated(model, years = 10)**
+    spread of the draws fitted to
+    the errors of the last years`"]
   end
   H["`**mt_hierarchy(), mt_aggregate_strata()**
   totals and groups of strata; causes share exposures`"]
@@ -251,6 +254,7 @@ flowchart TD
 | Harmonise | `mt_prep()`, `step_*()` | preprocessing inside fits and backtests | steps | pipeline |
 | Model | `lee_carter()`, `rwd()`, `li_lee()`, `product_ratio()`, `hyndman_ullah()`, `stmomo()`, `arima_series()`, `apc_bayes()`, `tucker3()`, `cause_shares()` | model specifications | settings | `mt_spec` |
 | Combine | `ensemble()`, `reconciled()`, `bootstrapped()`, `tuned()` | mixtures, coherence, parameter uncertainty, tuning | `mt_spec` | `mt_spec` |
+| Calibrate | `calibrated()` | rescale the spread (optionally the drift) of any model's draws to its forecast errors in the last years | `mt_spec` | `mt_spec` |
 | Coherence | `mt_hierarchy()`, `mt_aggregate_strata()`, `mt_reconcile()`, `mt_aggregate_draws()` | define and apply totals of strata | hierarchy | `mt_data`, `mt_draws` |
 | Fit | `mt_fit()` | estimate | `mt_spec`, `mt_data` | `mt_fit` |
 | Inspect | `summary()`, `mt_parameters()`, `fitted()`, `residuals()`, `mt_plot_residuals()` | model, assumptions, estimates, fit | `mt_fit` | text, table, plot |

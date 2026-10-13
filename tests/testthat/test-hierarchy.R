@@ -1,17 +1,5 @@
 h3 <- function() mt_hierarchy(sex = "both", region = "all", quintile = "all")
 
-coherence_gap <- function(fc, h) {
-  hs <- mortensor:::hierarchy_structure(fc$strata, h)
-  E <- mortensor:::expand_exposure(fc$exposure_last, dim(fc$rates))
-  D <- fc$rates * as.vector(E)
-  g <- 0
-  for (t in seq_len(dim(D)[2])) for (j in seq_len(dim(D)[4])) {
-    full <- matrix(D[, t, hs$bottom, j], dim(D)[1]) %*% t(hs$S)
-    g <- max(g, max(abs(full / matrix(D[, t, , j], dim(D)[1]) - 1)))
-  }
-  g
-}
-
 test_that("hierarchies are defined and printed", {
   h <- mt_hierarchy(sex = "both", region = list(total = "DE", groups = list(East = c("BE", "SN"))))
   expect_s3_class(h, "mt_hierarchy")

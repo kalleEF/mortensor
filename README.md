@@ -1,6 +1,7 @@
 # mortensor
 
 <!-- badges: start -->
+[![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
 [![R-CMD-check](https://github.com/kalleEF/mortensor/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/kalleEF/mortensor/actions/workflows/R-CMD-check.yaml)
 [![validation](https://github.com/kalleEF/mortensor/actions/workflows/validation.yaml/badge.svg)](https://github.com/kalleEF/mortensor/actions/workflows/validation.yaml)
 <!-- badges: end -->
@@ -8,6 +9,14 @@
 Flexible probabilistic mortality forecasting from data observed at different
 granularities: age groups and open age intervals, single or grouped periods,
 population strata and causes.
+
+> **Caution: experimental, vibe-coded software. Use at your own risk.**
+> mortensor is written largely with AI coding assistants ("vibe-coded").
+> It has unit tests and a validation pipeline with thresholds (see
+> `validation/`), but it has not been peer reviewed, its interfaces still
+> change, and its results can be wrong in ways the tests do not catch.
+> Check results independently before you use them in publications, reports
+> or decisions.
 
 **Status:** version 0.2 is a rewrite in development (see `dev/progress.md`).
 
@@ -30,7 +39,7 @@ demography, ggplot2) use them when installed.
 | Preparation | `mt_subset()`, `mt_group_levels()` (aggregation layers: cause groups, quintiles, regions), `mt_fill_suppressed()`, `mt_as_exposure()` |
 | Harmonisation | `mt_regroup()`, `mt_ungroup()` (penalized composite link model with exposure offset, 1D/2D; spline methods), `mt_smooth()`, `mt_as_exposure()`, `mt_disaggregate()` |
 | Preprocessing pipelines | `mt_prep()` with `step_ungroup()`, `step_smooth()`, `step_regroup()`, `step_grid()`, `step_shocks()` |
-| Models | `rwd()`, `lee_carter()`, `tucker3()`, `arima_series()`, `ets_series()`, `hyndman_ullah()` (demography), `stmomo()` (APC, CBD, RH, M6, LC), `li_lee()`, `product_ratio()`, `apc_bayes()` and `apc_select()` (bamp), `cause_shares()`, `ensemble()`, `tuned()`, `bootstrapped()` |
+| Models | `rwd()`, `lee_carter()`, `tucker3()`, `arima_series()`, `ets_series()`, `hyndman_ullah()` (demography), `stmomo()` (APC, CBD, RH, M6, LC), `li_lee()`, `product_ratio()`, `apc_bayes()` and `apc_select()` (bamp), `cause_shares()`, `ensemble()`, `tuned()`, `bootstrapped()`, `calibrated()` (spread fitted to the errors of the last 10 years) |
 | Coherence | `mt_hierarchy()`, `mt_aggregate_strata()`, `mt_reconcile()` and `reconciled()` (bottom-up, WLS, MinT, structural, OLS; draw by draw), `mt_aggregate_draws()`, `mt_order_strata()` |
 | Forecasts | `mt_fit()`, `mt_forecast()` (simulated paths), `mt_summarise()`, `mt_deaths()` |
 | Evaluation | `mt_backtest()` (rolling origin, no leakage), `mt_score()` (CRPS, WIS, coverage, PIT, MASE) |
@@ -51,7 +60,7 @@ flowchart LR
   any resolution, strata`"]
   S["`**model specification**
   lee_carter(), li_lee(), rwd(),
-  ensemble(), reconciled()`"]
+  ensemble(), reconciled(), calibrated()`"]
   F["`**mt_fit**`"]
   P["`**mt_draws**
   simulated future rates`"]
@@ -95,9 +104,10 @@ mt_score(bt)
 ```
 
 Vignettes: *Getting started* (ONS deprivation data), *Your own data, from
-CSV to report*, *Causes of death by
-deprivation*, *Coherent forecasts by sex, region and cause* (German
-Laender), *Model reference*, *Data at
+CSV to report*, *Forecasting mortality by deprivation quintile*, *Causes of
+death by deprivation*, *Coherent forecasts by sex, region and cause* (German
+Laender), *Coherent forecasts: what reconciliation changes*, *Model
+reference*, *Data at
 different granularities* and *Forecasting and backtesting* (HMD data),
 *Bayesian age-period-cohort models with bamp*, *Comparison with demography,
 bamp and StMoMo*, *Frequently asked questions*.

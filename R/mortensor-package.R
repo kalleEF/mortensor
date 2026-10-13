@@ -27,6 +27,13 @@
 #'   [mt_deaths()], [mt_plot_forecast()] and the other `mt_plot_*()`
 #'   functions.
 #'
+#' @section Caution:
+#' mortensor is experimental software written largely with AI coding
+#' assistants ("vibe-coded"). It has unit tests and a validation pipeline,
+#' but it has not been peer reviewed and its interfaces still change. Use it
+#' at your own risk and check results independently before using them in
+#' publications, reports or decisions.
+#'
 #' @keywords internal
 #' @import data.table
 #' @importFrom stats median quantile sd var setNames

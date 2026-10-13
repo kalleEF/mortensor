@@ -43,6 +43,9 @@ work: `claude/vigilant-albattani-2ssw1x` (plays the role of `dev-0.2`).
 | D1.16 | done | this branch | Applied reviews (`dev/review-applied-1.md`, `-2.md`, two independent agents in the roles of an epidemiologist and a demographer without coding experience) implemented: renames (`ensemble()`, `reconciled()`, `tuned()`, `bootstrapped()`, `mt_order_strata()`, `mt_parameters()`), per-variable additivity of hierarchies (regions x causes), bounded `mt_fill_suppressed()`, inspection (`summary()`, `residuals()`, `mt_plot_residuals()`, R-hat), observed indicators (`mt_observed()`), `mt_contrast()`, `mt_inequality()`, exposures matched by names, `mt_relabel()`, `step_window()`, `as_demogdata()`, `as_stmomodata()`, backtest origins with complete horizons, Model reference and CSV-to-report vignettes, FAQ tables, reference index by analysis step |
 | D1.17 | done | this branch | Stress tests with simulated defective data (`dev/stress-tests.R`, `dev/stress-tests.md`, `tests/testthat/test-robustness.R`): 31 scenarios; every scenario ends in a correct result or a message naming the cause and remedy; Lee-Carter robust to zero-death age groups (ridge fallback), plausibility warning for forecasts, pooled level variance in `rwd(observation_noise = TRUE)` |
 | D1.18 | done | this branch | Function map (`vignettes/articles/function-map.Rmd`, Mermaid diagrams rendered by pkgdown via a header script and natively on GitHub; overview in the README) |
+| D1.19 | done | this branch | `calibrated()`: recalibration of the spread (and optionally the drift) of any model's draws on the last 10 training years by minimum CRPS or interval score, nested in backtests; works with ensembles (per-draw observation noise), reconciled (bottom level, coherent) and bootstrapped models; validation check `calibration_ew` |
+| V4 | done | this branch | Vignettes on deprivation quintiles (ONS) and on the effect of reconciliation methods (ONS sex x quintile with totals), precomputed; regional vignette extended with forecasts for every Land by reconciliation method |
+| U0 | done | this branch | Review of the owner's earlier UK analysis (`uk_analysis.R`, methodology document, plots) and integration plan `dev/integration-plan-uk-analysis.md`: plot layout as standard, jump-off control, reconciliation with a fixed total, diagnostics; list of elements not to port. Package labelled experimental and vibe-coded (README, DESCRIPTION, package help, startup message); documentation rule in `CLAUDE.md` |
 | V3 | done | this branch | Comparison vignette (fidelity and accuracy vs demography, bamp, StMoMo; stored results of `dev/compare-packages.R`, full run 2026-10-13); regional vignette on German Laender (precomputed); validation check `de_regions` |
 | D1.12 (HMD) | done | this branch | `mt_from_hmd()`, `mt_read_hmd()` (HMDHFDplus, credentials from `HMD_USER`/`HMD_PASSWORD`) |
 
@@ -129,6 +132,27 @@ work: `claude/vigilant-albattani-2ssw1x` (plays the role of `dev-0.2`).
   under-covers (0.88); `li_lee(common_by = "sex")` bottom-up 0.0425/0.0269,
   0.95/0.95. Defaults: WLS, copula for per-stratum models, none for joint
   models.
+
+- 2026-10-13: `calibrated()` in backtests (CRPS, 95% coverage). England &
+  Wales men, origins 1996-2001, h = 10: Lee-Carter 0.0687/0.746, calibrated
+  0.0657/0.877 (with drift 0.0653/0.877; interval target 0.0661/0.856);
+  rwd() 0.0586/0.967, calibrated 0.0565/0.822; ensemble of both
+  0.0593/0.945, calibrated 0.0599/0.898 (before per-draw noise of ensemble
+  components: 0.0602/0.906). ONS quintiles, 6-year window, origins
+  2012-2014, h = 5: Lee-Carter 0.0673/0.829, calibrated 0.0672/0.837,
+  interval target 0.0665/0.897; Li-Lee 0.0687/0.836, interval target
+  0.0685/0.889, with drift 0.0818/0.758. Calibration helps models that are
+  persistently too narrow; it narrows mixtures that are already wide.
+  Group-specific factors (`by`) widen contrasts between groups of joint
+  models; the spread factor is held constant beyond the longest calibrated
+  horizon.
+- 2026-10-13: Reconciliation on ONS sex x quintile with totals (18 strata,
+  origins 2008-2014, h = 5): bottom-level CRPS unchanged by any method
+  (0.0676-0.0683; Li-Lee bottom-up 0.0665); aggregates best without
+  reconciliation (England 0.0440 against 0.0449-0.0458) and 95% coverage of
+  aggregates lower after reconciliation (England 0.73 against 0.57-0.64).
+  The empirical copula raises the England coverage of bottom-up sums from
+  0.46 to 0.58 (origins 2011-2014).
 
 ## Open questions
 

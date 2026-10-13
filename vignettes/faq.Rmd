@@ -122,6 +122,9 @@ twice; that extra width happened to give good 95% coverage on real data.
 `rwd(observation_noise = TRUE)` removes the double counting and is sharper
 (lower CRPS), with intervals that were too narrow on real data. Mixtures of
 models (`ensemble()`) widen the intervals where the models disagree.
+`calibrated()` rescales the spread of any model's draws to its forecast
+errors in the last years of the training data (by default ten); on England
+& Wales men it raised the 95% coverage of Lee-Carter from 0.75 to 0.88.
 Check calibration with `mt_backtest()` and `mt_plot_coverage()`.
 
 ### What is the difference between predictive draws and forecast rates?

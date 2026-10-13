@@ -86,6 +86,23 @@ checks$backtest_ew <- list(
                          mean(lc$crps) / mean(rw$crps)))
   })
 
+checks$calibration_ew <- list(
+  suite = "quick",
+  description = paste("calibrated() on England & Wales men (as backtest_ew: origins 1996-2001, h = 10): Lee-Carter",
+                      "with its spread recalibrated on the last 10 training years at each origin, against",
+                      "Lee-Carter alone; CRPS, coverage and the ratio of the CRPS."),
+  run = function() {
+    ew <- as_mt_data(mortensor:::pkg_data("EWMaleData", "StMoMo"))
+    ew <- mt_set_grid(ew, age = single_ages(30, 100, open = FALSE))
+    ew <- mt_regroup(ew, age = single_ages(30, 100, open = FALSE))
+    o <- 1996:2001
+    lc <- mt_backtest(lee_carter(), ew, origins = o, h = 10, n_draws = 200)
+    cl <- mt_backtest(calibrated(lee_carter()), ew, origins = o, h = 10, n_draws = 200)
+    data.frame(metric = c("lc_crps", "lc_cov95", "cal_crps", "cal_cov80", "cal_cov95", "crps_ratio_cal_lc"),
+               value = c(mean(lc$crps), mean(lc$cov95), mean(cl$crps), mean(cl$cov80), mean(cl$cov95),
+                         mean(cl$crps) / mean(lc$crps)))
+  })
+
 checks$apc_bayes_france <- list(
   suite = "full",
   description = paste("apc_bayes() (bamp, fast MCMC) on French women (HMD via demography), 1970-2006, deaths in",

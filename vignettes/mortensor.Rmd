@@ -12,6 +12,10 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width = 7, fig.height
 has_gg <- requireNamespace("ggplot2", quietly = TRUE)
 ```
 
+*mortensor is experimental software written largely with AI coding
+assistants ("vibe-coded"). Use it at your own risk and check results
+independently.*
+
 mortensor builds probabilistic mortality forecasts from data observed at
 different granularities. A forecast is assembled from interchangeable parts:
 
@@ -233,8 +237,11 @@ mt_plot_coverage(bt)
 
 ## Where next
 
-* "Coherent forecasts by sex, region and deprivation": forecasts that add up
-  over strata (for example quintiles to England).
+* "Forecasting mortality by deprivation quintile": gaps between quintiles,
+  backtests by quintile, calibration of the intervals on the last ten
+  years.
+* "Coherent forecasts: what reconciliation changes": forecasts that add up
+  over strata (quintiles and sexes to England), method by method.
 * "Causes of death by deprivation": cause-specific forecasts that add up to
   all causes, on the same ONS data.
 * "Data at different granularities": ungrouping and its accuracy on HMD data

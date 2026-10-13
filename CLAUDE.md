@@ -66,6 +66,18 @@ R CMD build . && R CMD check --as-cran mortensor_*.tar.gz
 
 - One work package per commit or pull request; update `dev/progress.md` and
   `NEWS.md` in the same change.
+- Documentation is part of every feature. After a feature works (tests,
+  lint, validation), review and update in the same change: roxygen docs
+  (`roxygenise()`), README, NEWS, the vignettes that use or should use it
+  (re-knit precomputed ones with `dev/precompute-vignettes.R`), the function
+  map (`vignettes/articles/function-map.Rmd`), the FAQ, and `_pkgdown.yml`
+  (reference index and articles). Then build the pkgdown site locally
+  (`pkgdown::build_site()`, offline: `options(pkgdown.internet = FALSE)`)
+  and check that every exported function is indexed and every page
+  renders. The site is deployed from `main` by `.github/workflows/pkgdown.yaml`.
+- The package is public and labelled as experimental, vibe-coded software
+  (README notice and lifecycle badge, DESCRIPTION, package help, startup
+  message). Keep these notices.
 - New statistical code gets a validation check or a slow test with a
   threshold, not only unit tests.
 - Data from other packages (HMD extracts in StMoMo and demography) is loaded

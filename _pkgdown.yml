@@ -75,10 +75,11 @@ reference:
       - tucker3
       - cause_shares
   - title: 7. Combine models and make forecasts coherent
-    desc: Model wrappers (ensembles, reconciliation, bootstrap, tuning) and hierarchies of strata.
+    desc: Model wrappers (ensembles, reconciliation, calibration, bootstrap, tuning) and hierarchies of strata.
     contents:
       - ensemble
       - reconciled
+      - calibrated
       - bootstrapped
       - mt_tune
       - mt_hierarchy
@@ -133,6 +134,7 @@ articles:
       - articles/function-map
   - title: Applications
     contents:
+      - deprivation
       - causes
       - regions
       - granularity-hmd
@@ -141,5 +143,6 @@ articles:
   - title: Methods and evidence
     contents:
       - models
+      - coherence
       - comparison
       - faq

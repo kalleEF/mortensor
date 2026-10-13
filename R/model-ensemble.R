@@ -162,11 +162,13 @@ mt_forecast.mt_fit_ensemble <- function(fit, h = 10, to = NULL, n_draws = 500, s
         sample(seq_along(ws), length(j), replace = TRUE, prob = ws / sum(ws))
       for (k in unique(alt)) arr[, , s, j[alt == k]] <- comp_draws[[k]][, , s, j[alt == k]]
     }
-    arr
+    list(arr = arr, pick = pick)
   })
-  res <- new_mt_draws(out, fit$age, last + seq_len(h), fit$strata, model = fit$spec$label, origin = last,
+  res <- new_mt_draws(out$arr, fit$age, last + seq_len(h), fit$strata, model = fit$spec$label, origin = last,
                       fit = fit, seed = seed)
   res$predictive <- predictive
   res$weights <- w
+  # component of each draw (strata where it failed use another component)
+  res$component <- out$pick
   res
 }
