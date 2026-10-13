@@ -27,6 +27,12 @@
 #' extra-Poisson and Poisson variation.
 #'
 #' @param ratio_order Number of stratum-specific (ratio) factors.
+#' @param jump_off `"fitted"` (forecasts start from the fitted rates of the
+#'   last year) or `"observed"` (forecasts are multiplied by the ratio of
+#'   observed to fitted rates in the last year, per age and stratum; Lee and
+#'   Miller 2001). With few factors per stratum the fitted rates of the last
+#'   year can be far from the observed ones; the observed jump-off then
+#'   avoids a step between the last observed and the first forecast year.
 #' @param common_by Stratum variable(s) defining groups with their own common
 #'   factor (`li_lee()` only).
 #' @return A model specification.
@@ -35,6 +41,9 @@
 #' populations: an extension of the Lee-Carter method. *Demography* 42(3):
 #' 575-594. \doi{10.1353/dem.2005.0021}
 #'
+#' Lee R, Miller T (2001). Evaluating the performance of the Lee-Carter
+#' method for forecasting mortality. *Demography* 38(4): 537-549.
+#'
 #' Hyndman RJ, Booth H, Yasmeen F (2013). Coherent mortality forecasting: the
 #' product-ratio method with functional time series models. *Demography*
 #' 50(1): 261-283.
@@ -42,17 +51,23 @@
 #' x <- mt_example(deaths = "single")
 #' fc <- mt_forecast(mt_fit(li_lee(), x), h = 10, n_draws = 100, seed = 1)
 #' @export
-li_lee <- function(ratio_order = 1, common_by = NULL) {
-  new_mt_spec("multipop", list(type = "li_lee", ratio_order = ratio_order, common_by = common_by), joint = TRUE,
-              min_periods = 8, label = if (is.null(common_by)) "Li-Lee" else sprintf("Li-Lee (common by %s)",
-                                                                                  paste(common_by, collapse = ", ")))
+li_lee <- function(ratio_order = 1, common_by = NULL, jump_off = c("fitted", "observed")) {
+  jump_off <- match.arg(jump_off)
+  new_mt_spec("multipop", list(type = "li_lee", ratio_order = ratio_order, common_by = common_by,
+                               jump_off = jump_off), joint = TRUE,
+              min_periods = 8,
+              label = paste0(if (is.null(common_by)) "Li-Lee" else sprintf("Li-Lee (common by %s)",
+                                                                           paste(common_by, collapse = ", ")),
+                             if (jump_off == "observed") ", observed jump-off" else ""))
 }
 
 #' @rdname li_lee
 #' @export
-product_ratio <- function(ratio_order = 1) {
-  new_mt_spec("multipop", list(type = "product_ratio", ratio_order = ratio_order), joint = TRUE, min_periods = 8,
-              label = "Product-ratio")
+product_ratio <- function(ratio_order = 1, jump_off = c("fitted", "observed")) {
+  jump_off <- match.arg(jump_off)
+  new_mt_spec("multipop", list(type = "product_ratio", ratio_order = ratio_order, jump_off = jump_off), joint = TRUE,
+              min_periods = 8,
+              label = paste0("Product-ratio", if (jump_off == "observed") ", observed jump-off" else ""))
 }
 
 #' @export
@@ -95,7 +110,10 @@ fit_model.mt_spec_multipop <- function(spec, D, E, ages, periods, strata = NULL,
     st <- strata_fits[[s]]
     fitted[, , s] <- exp(base_of(commons[[group[s]]]) + st$a + st$b %*% t(st$k))
   }
-  list(commons = commons, group = group, base_type = p$type, strata = strata_fits, fitted = fitted)
+  nt <- dim(D)[2]
+  jump <- if (identical(p$jump_off, "observed")) y[, nt, , drop = TRUE] - log(fitted[, nt, , drop = TRUE]) else NULL
+  if (!is.null(jump)) jump <- matrix(jump, dim(D)[1], ns)
+  list(commons = commons, group = group, base_type = p$type, strata = strata_fits, fitted = fitted, jump = jump)
 }
 
 # Lee-Carter by SVD of a matrix of log rates (no second-stage refit of k)
@@ -144,7 +162,9 @@ simulate_model.mt_spec_multipop <- function(spec, fit, h, n_draws, ...) {
         }
         v
       }, numeric(h))
-      out[, , s, j] <- exp(base + st$a + st$b %*% t(matrix(kk, h)))
+      lp <- base + st$a + st$b %*% t(matrix(kk, h))
+      if (!is.null(fit$jump)) lp <- lp + fit$jump[, s]
+      out[, , s, j] <- exp(lp)
     }
   }
   out

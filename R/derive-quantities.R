@@ -22,8 +22,11 @@
 #' @param reference_ex Reference remaining life expectancy per grid age, or
 #'   `NULL` for the forecast's own.
 #' @param probs Quantile levels.
+#' @param paths Return the values of every path, an array `[period, stratum,
+#'   draw]`, instead of the summary (for example to compute ratios between
+#'   strata path by path).
 #' @return A `data.table` with stratum columns, `period`, `mean` and
-#'   quantiles.
+#'   quantiles, or with `paths = TRUE` an array.
 #' @examples
 #' x <- mt_example(deaths = "single")
 #' fc <- mt_forecast(mt_fit(lee_carter(), x), h = 5, n_draws = 100, seed = 1)
@@ -32,8 +35,12 @@
 #' @name derived
 NULL
 
-summarise_paths <- function(arr, draws, probs) {
+summarise_paths <- function(arr, draws, probs, paths = FALSE) {
   d <- dim(arr)
+  if (paths) {
+    dimnames(arr) <- list(period = draws$periods, stratum = draws$strata$label, draw = NULL)
+    return(arr)
+  }
   M <- matrix(arr, ncol = d[3])
   out <- data.table(stratum = rep(seq_len(d[2]), each = d[1]), period = rep(draws$periods, d[2]),
                     mean = rowMeans(M))
@@ -49,7 +56,7 @@ summarise_paths <- function(arr, draws, probs) {
 
 #' @rdname derived
 #' @export
-prob_dying <- function(draws, from, to, probs = c(0.025, 0.1, 0.5, 0.9, 0.975)) {
+prob_dying <- function(draws, from, to, probs = c(0.025, 0.1, 0.5, 0.9, 0.975), paths = FALSE) {
   check_class(draws, "mt_draws", "draws")
   a <- draws$age
   i <- match(from, a$lower)
@@ -63,6 +70,7 @@ prob_dying <- function(draws, from, to, probs = c(0.025, 0.1, 0.5, 0.9, 0.975)) 
   l_from <- lt$lx[i, ]
   l_to <- if (j > d[1]) lt$lx[d[1], ] - lt$dx[d[1], ] else lt$lx[j, ]
   q <- array(1 - l_to / l_from, d[-1])
+  if (paths) return(summarise_paths(q, draws, probs, paths = TRUE))
   out <- summarise_paths(q, draws, probs)
   out[, `:=`(from = from, to = to)]
   out[]
@@ -70,27 +78,37 @@ prob_dying <- function(draws, from, to, probs = c(0.025, 0.1, 0.5, 0.9, 0.975)) 
 
 #' @rdname derived
 #' @export
-asr <- function(draws, standard = standard_population("esp2013"), probs = c(0.025, 0.1, 0.5, 0.9, 0.975)) {
+asr <- function(draws, standard = standard_population("esp2013"), probs = c(0.025, 0.1, 0.5, 0.9, 0.975),
+                paths = FALSE) {
   check_class(draws, "mt_draws", "draws")
   w <- standard_weights(draws$age, standard)
   d <- dim(draws$rates)
   M <- matrix(draws$rates, nrow = d[1])
   v <- array(colSums(M * w) / sum(w) * 1e5, d[-1])
-  summarise_paths(v, draws, probs)
+  summarise_paths(v, draws, probs, paths = paths)
 }
 
+# Weight of each grid cell: the standard weights of the overlapping standard
+# groups, shared in proportion to the overlap (an open standard group is
+# shared equally by the grid cells it covers; an open grid cell collects all
+# standard groups above its lower bound)
 standard_weights <- function(age, standard) {
   standard <- as.data.table(standard)
   w <- numeric(length(age))
   for (k in seq_len(nrow(standard))) {
     lo <- standard$age_lo[k]
     hi <- standard$age_hi[k]
-    inside <- age$lower >= lo & age$lower < hi
+    ov_lo <- pmax(age$lower, lo)
+    ov_hi <- pmin(age$upper, hi)
+    inside <- ov_hi > ov_lo
     if (!any(inside)) next
-    width <- pmin(age$upper[inside], hi) - age$lower[inside]
-    width[!is.finite(width)] <- 1
-    total_width <- if (is.finite(hi)) hi - lo else sum(width)
-    w[inside] <- w[inside] + standard$weight[k] * width / total_width
+    width <- ov_hi[inside] - ov_lo[inside]
+    if (is.finite(hi)) {
+      w[inside] <- w[inside] + standard$weight[k] * width / (hi - lo)
+    } else {
+      width[!is.finite(width)] <- 1
+      w[inside] <- w[inside] + standard$weight[k] * width / sum(width)
+    }
   }
   if (sum(w) == 0) mt_abort("The standard population does not cover the grid ages.", class = "argument")
   w

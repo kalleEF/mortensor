@@ -184,6 +184,10 @@ mt_plot_coverage <- function(backtest) {
 #' @param var Stratum variable with the causes.
 #' @param total_level Level of `var` for all causes (left out of the shares).
 #' @param ages Age labels summed over (default all).
+#' @param groups Panels to show: combinations of the other stratum variables
+#'   joined by "." (for example `"female.Q1"`; default all).
+#' @param causes Levels of `var` to show (default all; shares are always
+#'   computed among all levels).
 #' @param backtest An [mt_backtest()] result.
 #' @param metric Score column, for example `"crps"`, `"wis"` or `"ae"`.
 #' @param by `"horizon"` or `"age"`.
@@ -225,7 +229,7 @@ mt_plot_tucker <- function(fit) {
 
 #' @rdname mt_plot_more
 #' @export
-mt_plot_shares <- function(draws, var = "cause", total_level = "all", ages = NULL) {
+mt_plot_shares <- function(draws, var = "cause", total_level = "all", ages = NULL, groups = NULL, causes = NULL) {
   need_ggplot()
   check_class(draws, "mt_draws", "draws")
   st <- draws$strata
@@ -257,6 +261,8 @@ mt_plot_shares <- function(draws, var = "cause", total_level = "all", ages = NUL
   Df <- apply(sweep(draws$rates[ai, , , , drop = FALSE], c(1, 3), E, "*"), c(2, 3, 4), sum)
   out$fc <- share_tab(Df, draws$periods, "forecast")
   tab <- rbindlist(out)
+  if (!is.null(groups)) tab <- tab[group %in% groups]
+  if (!is.null(causes)) tab <- tab[cause %in% causes]
   ggplot2::ggplot(tab, ggplot2::aes(x = period, y = med, colour = cause)) +
     ggplot2::geom_ribbon(data = tab[kind == "forecast"], ggplot2::aes(ymin = lo, ymax = hi, fill = cause),
                          alpha = 0.2, colour = NA) +

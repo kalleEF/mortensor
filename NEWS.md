@@ -43,6 +43,17 @@ Clean break: the 0.1.x interface is replaced (see `dev/revamp-plan.md`).
   `mt_bootstrap()` (parameter and preprocessing uncertainty by Poisson
   resampling and refitting) and information-criterion rank selection in
   `tucker3(ranks = "bic")`.
+* Vignettes "Getting started" and "Causes of death by deprivation" use
+  `ons_data`; the 0.1-to-0.2 migration vignette is removed.
+* `li_lee()` and `product_ratio()` gain `jump_off = "observed"`; Lee-Carter
+  labels name their variant (SVD, observed jump-off, bootstrap).
+* `asr()` and `prob_dying()` return the values of every path with
+  `paths = TRUE`; `mt_plot_shares()` gains `groups` and `causes` filters.
+* Fixed: reconciled predictive draws of rate-additive hierarchies (causes)
+  returned aggregated deaths instead of rates; the European Standard
+  Population weights of 95+ were dropped for an open 90+ grid group;
+  smoothing of 5-year age groups failed because of singular starting
+  values.
 * `rwd(observation_noise = TRUE)`: random walk with drift plus noise (local
   level model); sharper than the plain random walk. Interval calibration of
   random walks, Lee-Carter and ensembles on simulated, HMD and ONS data is

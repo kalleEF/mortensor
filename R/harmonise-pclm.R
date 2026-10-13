@@ -140,9 +140,11 @@ poisson_dev <- function(y, mu) {
   2 * sum(r - (y - mu))
 }
 
+# Minimum-norm least squares (starting values); the basis can have more
+# columns than there are cells, for example when smoothing 5-year age groups
 solve_lsq <- function(B, z) {
   B <- as.matrix(B)
-  as.numeric(qr.solve(crossprod(B) + diag(1e-8, ncol(B)), crossprod(B, z)))
+  as.numeric(MASS_ginv(crossprod(B)) %*% crossprod(B, z))
 }
 
 MASS_ginv <- function(A) {

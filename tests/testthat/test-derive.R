@@ -98,3 +98,18 @@ test_that("forecasts are exported as summaries and draws", {
   expect_match(basename(f1), "origin2015_summary.csv")
   expect_error(mt_export(fc, file.path(tempdir(), "missing-dir")), class = "mt_error_argument")
 })
+
+test_that("standard weights cover open grid intervals and paths can be returned", {
+  esp <- standard_population("esp2013")
+  w <- standard_weights(age_groups(c(seq(50, 85, 5), 90)), esp)
+  expect_equal(w[length(w)], sum(esp$weight[esp$age_lo >= 90]))
+  expect_equal(sum(w), sum(esp$weight[esp$age_lo >= 50]))
+  w1 <- standard_weights(single_ages(0, 100), esp)
+  expect_equal(sum(w1), sum(esp$weight))
+  x <- mt_example(deaths = "single", years = 2005:2019)
+  fc <- mt_forecast(mt_fit(lee_carter(), x), h = 3, n_draws = 20, seed = 1)
+  a <- asr(fc, paths = TRUE)
+  expect_identical(dim(a), c(3L, 2L, 20L))
+  expect_equal(apply(a, 1:2, stats::median)[, 1], asr(fc)[stratum == 1]$q0.5, ignore_attr = TRUE)
+  expect_identical(dim(prob_dying(fc, 30, 70, paths = TRUE)), c(3L, 2L, 20L))
+})

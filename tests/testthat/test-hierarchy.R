@@ -104,3 +104,23 @@ test_that("draws are aggregated over strata and ages", {
   expect_equal(fa$rates[1, 1, "both", 1], as.numeric(both))
   expect_error(mt_aggregate_draws(fc, age = age_groups(c(30, 35.5))), class = "mt_error_argument")
 })
+
+test_that("rate-additive hierarchies (causes) reconcile on the rate scale, also in predictive draws", {
+  x <- mt_example_causes(years = 2005:2019)
+  h <- mt_hierarchy(cause = "all", additive = "rates")
+  fit <- mt_fit(mt_reconciled(lee_carter(), h, method = "wls"), x)
+  base <- mt_forecast(mt_fit(lee_carter(), x), h = 3, n_draws = 50, seed = 1)
+  st <- mt_strata(x)
+  for (pred in c(FALSE, TRUE)) {
+    fc <- mt_forecast(fit, h = 3, n_draws = 50, seed = 1, predictive = pred)
+    for (sx in c("female", "male")) {
+      i <- st$stratum[st$sex == sx & st$cause == "all"]
+      j <- st$stratum[st$sex == sx & st$cause != "all"]
+      parts <- apply(fc$rates[, , j, , drop = FALSE], c(1, 2, 4), sum)
+      expect_lt(max(abs(parts / fc$rates[, , i, ] - 1)), 1e-8)
+      ratio <- stats::median(fc$rates[, , i, ] / base$rates[, , i, ])
+      expect_gt(ratio, 0.8)
+      expect_lt(ratio, 1.25)
+    }
+  }
+})

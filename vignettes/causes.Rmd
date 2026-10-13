@@ -1,8 +1,8 @@
 ---
-title: "Coherent forecasts by cause of death"
+title: "Causes of death by deprivation"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Coherent forecasts by cause of death}
+  %\VignetteIndexEntry{Causes of death by deprivation}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -13,79 +13,174 @@ has_gg <- requireNamespace("ggplot2", quietly = TRUE)
 ```
 
 Forecasting causes of death one at a time gives cause-specific forecasts
-that do not add up to the all-cause forecast. mortensor offers two remedies:
+that do not add up to the all-cause forecast. mortensor offers three ways
+to coherent cause-specific forecasts:
 
-* `cause_shares()` models all-cause mortality with any model and the shares
-  of the causes with a compositional tensor model (isometric log-ratio
-  coordinates and a Tucker decomposition across age, year, group and cause),
-  so causes add up to all causes in every draw;
-* `mt_reconcile()` adjusts independent forecasts draw by draw so that they
-  add up (MinT, WLS or OLS projection).
+* **bottom-up**: separate models per cause, with all causes as their sum
+  (`mt_reconciled(..., method = "bottom_up")`);
+* **reconciliation**: separate models for every cause and for all causes,
+  projected draw by draw so that they add up (`method = "wls"`, `"mint"`,
+  ...);
+* **cause shares**: all-cause mortality with any model, and the shares of
+  the causes with a compositional tensor model (`cause_shares()`).
 
-The Human Mortality Database has no causes of death, so this vignette uses
-`mt_example_causes()`: simulated deaths of women and men by cause
-(cardiovascular disease, cancer, other) with known shares that change with
-age and time.
+This vignette compares them on deaths by cause and deprivation in England,
+2001-2019 (`ons_data`; Source: Office for National Statistics licensed
+under the Open Government Licence v3.0).
 
 ```{r}
 library(mortensor)
 library(data.table)
-x <- mt_example_causes(years = 1990:2019)
-x
-mt_validate(x, hierarchy = list(var = "cause", total = "all"))
 ```
 
-`mt_validate()` with a hierarchy checks that the causes add up to all
-causes; in real data this check catches problems such as doubled totals.
+## Cause groups
 
-## Cause shares
-
-Shares of rare causes at young ages are noisy. Smoothing the cause-specific
-rates first (`step_smooth()`, Poisson P-splines over age) keeps that noise
-out of the share model; without it the forecast intervals of the causes were
-too wide in the backtest below (95% coverage above 0.99).
+The workbook has 29 causes, defined by mutually exclusive ICD-10 codes.
+Several are rare, so cells by sex, quintile, 5-year age group and year would
+often hold a handful of deaths. `ons_cause_groups` keeps the common cancers
+and causes separate and combines small causes within their ICD-10 chapter;
+all other causes, including suicide, form the rest. The analysis starts at
+age 50, where the groups have enough deaths in almost every cell (dementia
+and diabetes are sparse below 50).
 
 ```{r}
-prep <- mt_prep(step_smooth())
-fit <- mt_fit(cause_shares(total = lee_carter(), ranks = c(3, 3, 2, 2)), x, prep = prep)
-fit$diagnostics
+str(ons_cause_groups)
+xc <- mt_read_ons(ons_data, min_age = 50, causes = ons_cause_groups)
+xc
+```
+
+Breast and prostate cancer form one group, the sex-specific cancer of each
+sex (for men it also contains the few male breast cancers), so that both
+sexes have the same causes.
+
+Causes share the exposure of their stratum, so their **rates** add up to
+the all-cause rate. The hierarchy says so with `additive = "rates"`, and
+`mt_validate()` checks the sums:
+
+```{r}
+h <- mt_hierarchy(cause = "all", additive = "rates")
+mt_validate(xc, hierarchy = h)
+```
+
+## Inequality by cause
+
+Age-standardised death rates at ages 50 and over (European Standard
+Population 2013) per cause and quintile, and the ratio between the most and
+the least deprived quintile, 2017-2019:
+
+```{r}
+st <- mt_strata(xc)
+m <- mt_array(xc, "deaths") / mt_array(xc, "exposure")
+esp <- standard_population("esp2013")
+w <- esp$weight[match(mt_grid(xc)$age$lower, esp$age_lo)]
+w[length(w)] <- sum(esp$weight[esp$age_lo >= 90])
+asr_obs <- apply(m[, c("2017", "2018", "2019"), ], 3, function(r) sum(colMeans(t(r)) * w) / sum(w) * 1e5)
+obs <- cbind(st, asr = asr_obs)
+ratio <- dcast(obs[quintile %in% c("Q1", "Q5")], sex + cause ~ quintile, value.var = "asr")
+ratio[, `Q1 / Q5` := round(Q1 / Q5, 2)]
+ratio[, c("Q1", "Q5") := lapply(.SD, round), .SDcols = c("Q1", "Q5")]
+ratio[order(sex, -`Q1 / Q5`)]
+```
+
+The gradient is steepest for chronic lower respiratory disease, lung
+cancer, liver disease and alcohol, and diabetes, and flattest for the
+sex-specific cancers and colorectal cancer.
+
+## Three approaches in a backtest
+
+Forecasts from the origins 2008, 2011 and 2014 are scored on the following
+five years, separately for the causes and for all causes:
+
+```{r}
+specs <- list(
+  mt_reconciled(lee_carter(), h, method = "bottom_up"),
+  mt_reconciled(lee_carter(), h, method = "wls"),
+  mt_reconciled(li_lee(common_by = c("sex", "cause")), h, method = "bottom_up"),
+  cause_shares(total = li_lee(common_by = "sex"), ranks = c(5, 4, 6, 8)),
+  lee_carter())
+bt <- rbindlist(lapply(specs, function(sp) {
+  b <- mt_backtest(sp, xc, origins = c(2008, 2011, 2014), h = 5, n_draws = 200)
+  b[, level := ifelse(cause == "all", "all causes", "causes")]
+}))
+sc <- bt[, .(crps = round(mean(crps), 4), cov50 = round(mean(cov50), 2), cov95 = round(mean(cov95), 2)),
+         by = .(model, level)]
+dcast(sc, model ~ level, value.var = c("crps", "cov95"))
+```
+
+The last row, separate Lee-Carter models without reconciliation, is not
+coherent: its all-cause forecasts come from a model of their own. On these
+data the bottom-up sum of separate Lee-Carter models is coherent and
+forecasts all causes more accurately than a model of all-cause mortality
+itself: the trends of the causes differ (ischaemic heart disease fell much
+faster than the rest), and their sum follows the changing composition.
+Li-Lee with one common trend per sex and cause, also summed bottom-up, is
+slightly more accurate for the single causes and less accurate for all
+causes. The cause-share model is clearly less accurate here: it describes
+the composition through a few factors shared by ages, years, groups and
+causes, which these data, with large counts and diverse cause trends, do
+not need. The 95% intervals of all approaches are too narrow for all causes
+(see "Frequently asked questions" on interval calibration).
+
+## Forecasts
+
+Forecasts to 2034 with the bottom-up approach:
+
+```{r}
+fit <- mt_fit(mt_reconciled(lee_carter(), h, method = "bottom_up"), xc)
 fc <- mt_forecast(fit, h = 15, n_draws = 500, seed = 1)
-st <- fc$strata
-coherence_gap <- function(fc, sx) {
-  i <- st$stratum[st$sex == sx & st$cause == "all"]
-  j <- st$stratum[st$sex == sx & st$cause != "all"]
-  max(abs(apply(fc$rates[, , j, , drop = FALSE], c(1, 2, 4), sum) / fc$rates[, , i, ] - 1))
-}
-c(female = coherence_gap(fc, "female"), male = coherence_gap(fc, "male"))
+fc$reconciliation
 ```
 
-```{r, eval = has_gg}
-mt_plot_forecast(fc, ages = c("50", "70", "85"), strata = c("male.all", "male.cvd", "male.cancer", "male.other"))
+```{r, eval = has_gg, fig.height = 6}
+mt_plot_shares(fc, groups = c("female.Q1", "female.Q5", "male.Q1", "male.Q5"),
+               causes = c("ihd", "dementia", "lung_cancer", "respiratory", "rest"))
 ```
 
-## Independent forecasts and reconciliation
+Dementia deaths rose steeply between 2001 and 2019. Separate models per
+stratum extrapolate that rise for 15 years, which makes dementia the
+largest group by 2034 with very wide intervals. Whether such a trend
+continues is a substantive question (recorded trends of single causes can
+reflect changes in diagnosis, certification and coding as well as in risk),
+and the forecast should be read as a conditional statement.
 
-Independent Lee-Carter fits per cause do not add up:
+Age-standardised rates and the ratio Q1 / Q5, path by path, so that the
+intervals of the ratio include the joint uncertainty of both quintiles:
 
 ```{r}
-fc_ind <- mt_forecast(mt_fit(lee_carter(), x, prep = prep), h = 15, n_draws = 500, seed = 1)
-c(female = coherence_gap(fc_ind, "female"), male = coherence_gap(fc_ind, "male"))
-fc_rec <- mt_reconcile(fc_ind, var = "cause", total = "all", method = "mint")
-c(female = coherence_gap(fc_rec, "female"), male = coherence_gap(fc_rec, "male"))
+a <- asr(fc, paths = TRUE)   # [period, stratum, draw]
+rr <- rbindlist(lapply(c("female", "male"), function(sx) {
+  rbindlist(lapply(unique(st$cause), function(cs) {
+    q1 <- a["2034", st$sex == sx & st$quintile == "Q1" & st$cause == cs, ]
+    q5 <- a["2034", st$sex == sx & st$quintile == "Q5" & st$cause == cs, ]
+    q <- quantile(q1 / q5, c(0.025, 0.5, 0.975))
+    data.table(sex = sx, cause = cs, q0.025 = q[1], q0.5 = q[2], q0.975 = q[3])
+  }))
+}))
+rr[, (3:5) := lapply(.SD, round, 2), .SDcols = 3:5]
+merge(rr, ratio[, .(sex, cause, `2017-2019` = `Q1 / Q5`)], by = c("sex", "cause"))[order(sex, -q0.5)]
 ```
 
-## Backtest by cause
+Separate models per stratum extrapolate each quintile's own trend, so the
+ratios continue the recent changes of the gradient, with wide intervals.
+Li-Lee with a common trend per sex and cause lets the quintiles deviate
+from that trend only through stationary processes, which keeps the ratios
+close to their average over the training years:
 
 ```{r}
-origins <- 2005:2009
-bt <- rbind(
-  mt_backtest(cause_shares(total = lee_carter(), ranks = c(3, 3, 2, 2)), x, origins = origins, h = 10,
-              n_draws = 200, prep = prep),
-  mt_backtest(lee_carter(), x, origins = origins, h = 10, n_draws = 200, prep = prep))
-mt_score(bt, by = c("model", "cause"))[order(cause, crps)]
+fc_ll <- mt_forecast(mt_fit(specs[[3]], xc), h = 15, n_draws = 500, seed = 1)
+a_ll <- asr(fc_ll, paths = TRUE)
+rr_ll <- rbindlist(lapply(c("female", "male"), function(sx) {
+  rbindlist(lapply(unique(st$cause), function(cs) {
+    q1 <- a_ll["2034", st$sex == sx & st$quintile == "Q1" & st$cause == cs, ]
+    q5 <- a_ll["2034", st$sex == sx & st$quintile == "Q5" & st$cause == cs, ]
+    data.table(sex = sx, cause = cs, li_lee = round(median(q1 / q5), 2))
+  }))
+}))
+merge(rr[, .(sex, cause, lee_carter = q0.5)], rr_ll, by = c("sex", "cause"))[order(sex, -lee_carter)]
 ```
 
-The cause-share model borrows strength across ages, years, sexes and causes
-for the composition, while all-cause mortality keeps its own model. Which
-approach forecasts better depends on the data; the backtest above is the way
-to decide.
+Which assumption is more plausible is a judgement the backtest cannot
+settle over five years. Deprivation deciles are also reclassified with each
+new IMD version (2007, 2010, 2015 and 2019 in these data), and cause coding
+changes over time, so trends of single causes in single quintiles deserve a
+critical look before they are extrapolated.

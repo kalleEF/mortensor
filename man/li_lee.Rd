@@ -5,15 +5,22 @@
 \alias{product_ratio}
 \title{Coherent multi-population models}
 \usage{
-li_lee(ratio_order = 1, common_by = NULL)
+li_lee(ratio_order = 1, common_by = NULL, jump_off = c("fitted", "observed"))
 
-product_ratio(ratio_order = 1)
+product_ratio(ratio_order = 1, jump_off = c("fitted", "observed"))
 }
 \arguments{
 \item{ratio_order}{Number of stratum-specific (ratio) factors.}
 
 \item{common_by}{Stratum variable(s) defining groups with their own common
 factor (\code{li_lee()} only).}
+
+\item{jump_off}{\code{"fitted"} (forecasts start from the fitted rates of the
+last year) or \code{"observed"} (forecasts are multiplied by the ratio of
+observed to fitted rates in the last year, per age and stratum; Lee and
+Miller 2001). With few factors per stratum the fitted rates of the last
+year can be far from the observed ones; the observed jump-off then
+avoids a step between the last observed and the first forecast year.}
 }
 \value{
 A model specification.
@@ -55,6 +62,9 @@ fc <- mt_forecast(mt_fit(li_lee(), x), h = 10, n_draws = 100, seed = 1)
 Li N, Lee R (2005). Coherent mortality forecasts for a group of
 populations: an extension of the Lee-Carter method. \emph{Demography} 42(3):
 575-594. \doi{10.1353/dem.2005.0021}
+
+Lee R, Miller T (2001). Evaluating the performance of the Lee-Carter
+method for forecasting mortality. \emph{Demography} 38(4): 537-549.
 
 Hyndman RJ, Booth H, Yasmeen F (2013). Coherent mortality forecasting: the
 product-ratio method with functional time series models. \emph{Demography}

@@ -513,11 +513,15 @@ mt_forecast.mt_fit_reconciled <- function(fit, h = 10, to = NULL, n_draws = 500,
       }
       if (!is.null(tau)) deaths_b <- noise_reorder(deaths_b, fit$train_D[, , b, drop = FALSE],
                                                    fit$train_E[, , b, drop = FALSE], tau)
+      # deaths add up over strata (and are divided by the summed exposures), or
+      # rates add up (causes of death sharing one exposure)
+      by_deaths <- rc$hierarchy$additive == "deaths"
+      vb <- if (by_deaths) deaths_b else deaths_b / as.vector(Eb)
       full <- array(NA_real_, d)
       for (j in seq_len(d[4])) {
-        for (t in seq_len(d[2])) full[, t, , j] <- matrix(deaths_b[, t, , j], d[1]) %*% t(hs$S)
+        for (t in seq_len(d[2])) full[, t, , j] <- matrix(vb[, t, , j], d[1]) %*% t(hs$S)
       }
-      rates <- if (rc$hierarchy$additive == "deaths") full / as.vector(rec$exposure) else full
+      rates <- if (by_deaths) full / as.vector(rec$exposure) else full
     }
     list(fc = fc, rates = rates, info = rec$info)
   })

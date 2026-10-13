@@ -34,8 +34,8 @@ work: `claude/vigilant-albattani-2ssw1x` (plays the role of `dev-0.2`).
 | C4.2 | done | this branch | `life_expectancy()`, `prob_dying()`, `asr()` with `standard_population("esp2013")`, `yll()`, `mt_deaths()`; all path by path |
 | C4.3 | done | this branch | `mt_plot_forecast()`, `mt_plot_age()`, `mt_plot_life_expectancy()`, `mt_plot_rates()`, `mt_plot_ungroup()`, `mt_plot_coverage()` (tests check that plots build; no vdiffr snapshots); `mt_plot_tucker()`, `mt_plot_shares()`, `mt_plot_scores()` |
 | C4.4 | done | this branch | `mt_export()` (summary or long draws, CSV) |
-| C4.5 | done | this branch | Vignettes: getting started (simulated), granularity and ungrouping (HMD E&W, France), forecasting and backtesting (HMD France, E&W), Bayesian APC with bamp (HMD France; precomputed via `dev/precompute-vignettes.R`) |
-| C4.7 | partial | this branch | Migration vignette (0.1 to 0.2 function map), pkgdown reference index; tagging a release is the owner's decision |
+| C4.5 | done | this branch | Vignettes: getting started (ONS deprivation data: Lee-Carter and Li-Lee by sex and quintile, life expectancy gap path by path, backtests), causes of death by deprivation (ONS, 12 cause groups at ages 50+: bottom-up Lee-Carter most accurate for all causes, Li-Lee by sex and cause for single causes, cause shares less accurate), earlier: granularity and ungrouping (HMD E&W, France), forecasting and backtesting (HMD France, E&W), Bayesian APC with bamp (HMD France; precomputed via `dev/precompute-vignettes.R`) |
+| C4.7 | partial | this branch | pkgdown reference index; the migration vignette was removed (0.1 is not used any more); tagging a release is the owner's decision |
 | D1.13 | done | this branch | `ons_data` (ONS ad hoc 3064, part 1, 2001-2019, OGL; `data-raw/ons_data.R` downloads and checks the md5) and `ons_cause_groups` (12 groups per sex at ages 50+, chosen so that median cells by sex, quintile, age group and year have at least about 25 deaths) |
 | D1.12 (HMD) | done | this branch | `mt_from_hmd()`, `mt_read_hmd()` (HMDHFDplus, credentials from `HMD_USER`/`HMD_PASSWORD`) |
 

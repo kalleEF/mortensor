@@ -43,7 +43,10 @@ lee_carter <- function(method = c("poisson", "svd"), jump_off = c("fitted", "obs
   method <- match.arg(method)
   jump_off <- match.arg(jump_off)
   new_mt_spec("lee_carter", list(method = method, jump_off = jump_off, bootstrap = bootstrap, n_boot = n_boot),
-              min_periods = 5, label = "Lee-Carter")
+              min_periods = 5,
+              label = paste0("Lee-Carter", if (method == "svd") " (SVD)" else "",
+                             if (jump_off == "observed") ", observed jump-off" else "",
+                             if (bootstrap) ", bootstrap" else ""))
 }
 
 #' @export

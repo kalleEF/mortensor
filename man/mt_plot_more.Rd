@@ -9,7 +9,14 @@
 \usage{
 mt_plot_tucker(fit)
 
-mt_plot_shares(draws, var = "cause", total_level = "all", ages = NULL)
+mt_plot_shares(
+  draws,
+  var = "cause",
+  total_level = "all",
+  ages = NULL,
+  groups = NULL,
+  causes = NULL
+)
 
 mt_plot_scores(backtest, metric = "crps", by = c("horizon", "age"))
 }
@@ -23,6 +30,12 @@ mt_plot_scores(backtest, metric = "crps", by = c("horizon", "age"))
 \item{total_level}{Level of \code{var} for all causes (left out of the shares).}
 
 \item{ages}{Age labels summed over (default all).}
+
+\item{groups}{Panels to show: combinations of the other stratum variables
+joined by "." (for example \code{"female.Q1"}; default all).}
+
+\item{causes}{Levels of \code{var} to show (default all; shares are always
+computed among all levels).}
 
 \item{backtest}{An \code{\link[=mt_backtest]{mt_backtest()}} result.}
 

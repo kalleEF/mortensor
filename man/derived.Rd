@@ -7,12 +7,19 @@
 \alias{yll}
 \title{Derived quantities from forecast draws}
 \usage{
-prob_dying(draws, from, to, probs = c(0.025, 0.1, 0.5, 0.9, 0.975))
+prob_dying(
+  draws,
+  from,
+  to,
+  probs = c(0.025, 0.1, 0.5, 0.9, 0.975),
+  paths = FALSE
+)
 
 asr(
   draws,
   standard = standard_population("esp2013"),
-  probs = c(0.025, 0.1, 0.5, 0.9, 0.975)
+  probs = c(0.025, 0.1, 0.5, 0.9, 0.975),
+  paths = FALSE
 )
 
 yll(
@@ -30,6 +37,9 @@ last closed interval).}
 
 \item{probs}{Quantile levels.}
 
+\item{paths}{Return the values of every path, an array \verb{[period, stratum, draw]}, instead of the summary (for example to compute ratios between
+strata path by path).}
+
 \item{standard}{A standard population from \code{\link[=standard_population]{standard_population()}} or a
 data frame with \code{age_lo}, \code{age_hi}, \code{weight}.}
 
@@ -40,7 +50,7 @@ data frame with \code{age_lo}, \code{age_hi}, \code{weight}.}
 }
 \value{
 A \code{data.table} with stratum columns, \code{period}, \code{mean} and
-quantiles.
+quantiles, or with \code{paths = TRUE} an array.
 }
 \description{
 All quantities are computed path by path, so their intervals reflect the
