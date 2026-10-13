@@ -139,7 +139,7 @@ fitted.mt_fit <- function(object, ...) {
 #' @export
 residuals.mt_fit <- function(object, type = c("deviance", "pearson"), ...) {
   type <- match.arg(type)
-  m <- fitted(object)
+  m <- stats::fitted(object)
   D <- object$train_D
   mu <- m * object$train_E
   r <- if (type == "pearson") {
@@ -158,7 +158,7 @@ residuals.mt_fit <- function(object, type = c("deviance", "pearson"), ...) {
 #' @rdname fit-inspection
 #' @export
 summary.mt_fit <- function(object, ...) {
-  res <- tryCatch(residuals(object), error = function(e) NULL)
+  res <- tryCatch(stats::residuals(object), error = function(e) NULL)
   structure(list(label = object$spec$label, assumptions = model_assumptions(object$spec),
                  strata = nrow(object$strata), ages = object$age$labels, periods = range(object$periods),
                  prep = object$prep, diagnostics = object$diagnostics,
@@ -247,7 +247,7 @@ model_assumptions <- function(spec) {
 mt_plot_residuals <- function(fit, strata = NULL, type = c("deviance", "pearson")) {
   need_ggplot()
   type <- match.arg(type)
-  r <- residuals(fit, type = type)
+  r <- stats::residuals(fit, type = type)
   strata <- check_strata_labels(strata %||% utils::head(fit$strata$label, 4), fit$strata$label)
   r <- r[stratum %in% strata]
   r[, age_i := match(age, fit$age$labels)]

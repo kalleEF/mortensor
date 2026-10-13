@@ -161,7 +161,8 @@ mt_add <- function(data, measure, x, by = NULL, age = "age", period = "year",
   value <- value %||% pick_value_col(NULL, measure, x)
   if (!nrow(x)) mt_abort(sprintf("The %s table has no rows.", measure), class = "obs")
   obs <- ingest_obs(x, by, age, period, value, measure, age_open, missing = missing, zero = zero, decimal = decimal)
-  st <- register_strata(data$strata, obs, by)
+  # strata from all rows, also those whose values are all missing (suppressed)
+  st <- register_strata(data$strata, if (length(by)) unique(x[, by, with = FALSE]) else obs, by)
   data$strata <- st
   data$by <- by
   if (length(by)) {

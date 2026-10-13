@@ -27,5 +27,5 @@ directly and call \code{mt_observed()} with its defaults.
 }
 \examples{
 x <- mt_example(deaths = "single", years = 2015:2019)
-life_expectancy(x, at = 0)
+life_expectancy(x, at = 65)
 }

@@ -75,6 +75,7 @@ d <- expand.grid(year = 2020, age = "90+", decile = 1:10)
 d$deaths <- 10 + d$decile
 d$exposure <- 1000
 z <- mt_data(deaths = d, exposure = d, by = "decile")
-z <- mt_group_levels(z, "decile", function(l) paste0("Q", ceiling(as.numeric(l) / 2)), name = "quintile")
+z <- mt_group_levels(z, "decile", function(l) paste0("Q", ceiling(as.numeric(l) / 2)),
+                     name = "quintile")
 mt_strata(z)
 }

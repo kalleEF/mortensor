@@ -17,3 +17,4 @@
 ^codecov\.yml$
 ^vignettes/.*\.Rmd\.orig$
 ^vignettes/articles$
+^validation-output$

@@ -25,7 +25,8 @@ Gives levels of a stratum variable new labels, for example sex codes
 label are combined (see \code{\link[=mt_group_levels]{mt_group_levels()}}).
 }
 \examples{
-d <- data.frame(Sex = rep(1:2, each = 2), year = 2020:2021, age = "90+", deaths = 5:8, exposure = 100)
+d <- data.frame(Sex = rep(1:2, each = 2), year = 2020:2021, age = "90+", deaths = 5:8,
+                exposure = 100)
 x <- mt_data(deaths = d, exposure = d, by = "Sex")
 mt_strata(mt_relabel(x, "Sex", c("1" = "male", "2" = "female")))
 }

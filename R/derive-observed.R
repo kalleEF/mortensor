@@ -14,7 +14,7 @@
 #'   observed rates.
 #' @examples
 #' x <- mt_example(deaths = "single", years = 2015:2019)
-#' life_expectancy(x, at = 0)
+#' life_expectancy(x, at = 65)
 #' @export
 mt_observed <- function(data, n_draws = 500, seed = 1) {
   check_class(data, "mt_data", "data")
@@ -66,7 +66,7 @@ as_draws <- function(x) {
 #' @examples
 #' x <- mt_example(deaths = "single", years = 2001:2015)
 #' fc <- mt_forecast(mt_fit(lee_carter(), x), h = 5, n_draws = 100, seed = 1)
-#' mt_contrast(fc, var = "sex", ref = "female", at = 0)
+#' mt_contrast(fc, var = "sex", ref = "female", at = 30)
 #' @export
 mt_contrast <- function(x, var, ref, quantity = c("life_expectancy", "asr", "prob_dying", "rate"),
                         type = c("difference", "ratio"), probs = c(0.025, 0.5, 0.975), ...) {

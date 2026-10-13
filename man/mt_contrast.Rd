@@ -49,5 +49,5 @@ the deprivation gap within each sex).
 \examples{
 x <- mt_example(deaths = "single", years = 2001:2015)
 fc <- mt_forecast(mt_fit(lee_carter(), x), h = 5, n_draws = 100, seed = 1)
-mt_contrast(fc, var = "sex", ref = "female", at = 0)
+mt_contrast(fc, var = "sex", ref = "female", at = 30)
 }

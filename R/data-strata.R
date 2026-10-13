@@ -47,7 +47,8 @@
 #' d$deaths <- 10 + d$decile
 #' d$exposure <- 1000
 #' z <- mt_data(deaths = d, exposure = d, by = "decile")
-#' z <- mt_group_levels(z, "decile", function(l) paste0("Q", ceiling(as.numeric(l) / 2)), name = "quintile")
+#' z <- mt_group_levels(z, "decile", function(l) paste0("Q", ceiling(as.numeric(l) / 2)),
+#'                      name = "quintile")
 #' mt_strata(z)
 #' @export
 mt_group_levels <- function(data, var, groups, other = NULL, total = NULL, keep = character(),
@@ -152,7 +153,8 @@ add_remainder <- function(x, var, total, parts, other, additive) {
 #' @inheritParams mt_group_levels
 #' @return The `mt_data` object with the new labels.
 #' @examples
-#' d <- data.frame(Sex = rep(1:2, each = 2), year = 2020:2021, age = "90+", deaths = 5:8, exposure = 100)
+#' d <- data.frame(Sex = rep(1:2, each = 2), year = 2020:2021, age = "90+", deaths = 5:8,
+#'                 exposure = 100)
 #' x <- mt_data(deaths = d, exposure = d, by = "Sex")
 #' mt_strata(mt_relabel(x, "Sex", c("1" = "male", "2" = "female")))
 #' @export
