@@ -30,9 +30,10 @@ tree against the installed package, so install the current tree first and
 do not change it during the run.
 
 GitHub Actions (`.github/workflows/validation.yaml`) runs the quick suite on
-every push and pull request and the full suite every Monday and on demand
-(workflow dispatch). The report is shown in the job summary and uploaded as
-an artifact.
+pull requests that are ready for review and the full suite on the second day
+of each month and on demand (workflow dispatch). Development branches do not
+trigger it; run the quick suite locally before committing. The report is
+shown in the job summary and uploaded as an artifact.
 
 ## Changing thresholds
 

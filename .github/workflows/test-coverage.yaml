@@ -1,7 +1,16 @@
+# CI budget: development branches run no workflows on push (checks run
+# locally before each commit). Pull requests and pushes to main run Ubuntu
+# jobs only; Windows and R-devel run monthly; macOS (billed at ten times the
+# Linux rate) only when started by hand.
 on:
-  push:
-    branches: [main, master, "dev-*", "claude/**"]
   pull_request:
+    branches: [main, master]
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths-ignore:
+      - "dev/**"
+      - "**.md"
+      - "validation/history.csv"
+      - ".claude/**"
   workflow_dispatch:
 
 name: test-coverage
@@ -14,7 +23,9 @@ permissions: read-all
 
 jobs:
   test-coverage:
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

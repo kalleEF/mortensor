@@ -1,6 +1,10 @@
 on:
   push:
     branches: [main, master]
+    paths-ignore:
+      - "dev/**"
+      - "validation/history.csv"
+      - ".claude/**"
   workflow_dispatch:
 
 name: pkgdown
@@ -14,6 +18,7 @@ permissions: read-all
 jobs:
   pkgdown:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: write
     env:

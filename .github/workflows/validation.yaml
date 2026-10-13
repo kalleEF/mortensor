@@ -1,20 +1,29 @@
 # Validation pipeline (validation/README.md): accuracy, calibration and runtime
-# benchmarks with thresholds. The quick suite runs on every push and pull
-# request, the full suite weekly and on demand. The job fails when a metric
+# benchmarks with thresholds. The quick suite runs on pull requests and on
+# demand, the full suite monthly and on demand. The job fails when a metric
 # breaches its threshold; the report is attached as an artifact and shown in
 # the job summary.
+# CI budget: development branches run no workflows on push (checks run
+# locally before each commit). Pull requests and pushes to main run Ubuntu
+# jobs only; Windows and R-devel run monthly; macOS (billed at ten times the
+# Linux rate) only when started by hand.
 on:
-  push:
-    branches: [main, master, "dev-*", "claude/**"]
   pull_request:
+    branches: [main, master]
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths-ignore:
+      - "dev/**"
+      - "**.md"
+      - "validation/history.csv"
+      - ".claude/**"
   schedule:
-    - cron: '17 3 * * 1'
+    - cron: '17 3 2 * *'
   workflow_dispatch:
     inputs:
       suite:
         description: 'Suite to run (quick or full)'
         required: true
-        default: 'full'
+        default: 'quick'
 
 name: validation
 
@@ -26,6 +35,7 @@ permissions: read-all
 
 jobs:
   validation:
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-latest
     timeout-minutes: 120
     env:

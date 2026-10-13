@@ -1,7 +1,23 @@
+# CI budget: development branches run no workflows on push (checks run
+# locally before each commit). Pull requests and pushes to main run Ubuntu
+# jobs only; Windows and R-devel run monthly; macOS (billed at ten times the
+# Linux rate) only when started by hand.
 on:
   push:
-    branches: [main, master, "dev-*", "claude/**"]
+    branches: [main, master]
+    paths-ignore:
+      - "dev/**"
+      - "**.md"
+      - "validation/history.csv"
+      - ".claude/**"
   pull_request:
+    branches: [main, master]
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths-ignore:
+      - "dev/**"
+      - "**.md"
+      - "validation/history.csv"
+      - ".claude/**"
   workflow_dispatch:
 
 name: lint
@@ -14,7 +30,9 @@ permissions: read-all
 
 jobs:
   lint:
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
     steps:

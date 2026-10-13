@@ -58,6 +58,12 @@ R CMD build . && R CMD check --as-cran mortensor_*.tar.gz
 
 ## Workflow
 
+- CI budget: pushes to development branches start no workflows. Run the
+  unit tests, lint and the quick validation suite locally before each
+  commit. Pull requests (when ready for review) and pushes to main run the
+  Ubuntu checks; Windows and R-devel run monthly; macOS only by hand
+  (`workflow_dispatch` with `platforms = all`).
+
 - One work package per commit or pull request; update `dev/progress.md` and
   `NEWS.md` in the same change.
 - New statistical code gets a validation check or a slow test with a
