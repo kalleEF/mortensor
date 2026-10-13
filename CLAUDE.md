@@ -58,4 +58,6 @@ R CMD build . && R CMD check --as-cran mortensor_*.tar.gz
   threshold, not only unit tests.
 - Data from other packages (HMD extracts in StMoMo and demography) is loaded
   in tests and vignettes, never copied into the repository. The owner's
-  German data stays outside the repository.
+  German data stays outside the repository. `ons_data` (ONS, Open Government
+  Licence) is the exception: it is built by `data-raw/ons_data.R` and ships
+  in `data/`.

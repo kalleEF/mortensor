@@ -43,6 +43,10 @@ Clean break: the 0.1.x interface is replaced (see `dev/revamp-plan.md`).
   `mt_bootstrap()` (parameter and preprocessing uncertainty by Poisson
   resampling and refitting) and information-criterion rank selection in
   `tucker3(ranks = "bic")`.
+* `ons_data`: deaths by cause and populations by sex, age group and IMD
+  decile, England 2001-2019 (ONS ad hoc release 3064, Open Government
+  Licence), with the cause groups `ons_cause_groups`; built by
+  `data-raw/ons_data.R`. `mt_read_ons()` reads it directly.
 * `mt_read_ons()` (ONS Excel tables by sex, age and IMD decile, optional
   regions and cause groups), `apc_select()` (DIC-based choice of random-walk
   orders for `apc_bayes()`), and the plots `mt_plot_tucker()`,

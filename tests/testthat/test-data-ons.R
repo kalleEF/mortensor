@@ -44,3 +44,18 @@ test_that("data frames in the ONS layout are accepted, with regions", {
   names(d)[5] <- names(p)[5] <- "IMD quintile"
   expect_error(mt_read_ons(d, p, deprivation = "decile"), class = "mt_error_ons")
 })
+
+test_that("the packaged ONS data read into consistent strata", {
+  expect_identical(dim(ons_data), c(7600L, 36L))
+  x <- mt_read_ons(ons_data)
+  expect_equal(sum(mt_obs(x, "deaths")$value), sum(ons_data$all_causes))
+  expect_equal(sum(mt_obs(x, "exposure")$value), sum(ons_data$population))
+  expect_identical(attr(x, "imd_version")$imd_version[c(1, 19)], c(2004L, 2019L))
+  y <- mt_read_ons(ons_data, min_age = 50, causes = ons_cause_groups, deprivation = "decile")
+  expect_identical(mt_grid(y)$age$labels[1], "50-54")
+  d <- mt_obs(y)
+  expect_equal(sum(d[cause == "all"]$value), sum(d[cause != "all"]$value))
+  expect_true(all(d[cause == "rest"]$value >= 0))
+  expect_error(mt_read_ons(ons_data, min_age = 120), class = "mt_error_ons")
+  expect_error(mt_read_ons(ons_data[, -6]), class = "mt_error_ons")
+})

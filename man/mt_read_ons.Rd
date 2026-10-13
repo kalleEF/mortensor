@@ -6,11 +6,12 @@
 \usage{
 mt_read_ons(
   deaths,
-  population,
+  population = NULL,
   causes = NULL,
   deprivation = c("quintile", "decile"),
   region = NULL,
   years = NULL,
+  min_age = NULL,
   fill_population = TRUE,
   sheets = c(deaths = "1", population = "2")
 )
@@ -19,8 +20,9 @@ mt_read_ons(
 \item{deaths}{Path to the Excel file with deaths, or a data frame in the
 same layout.}
 
-\item{population}{Path(s) to Excel files with populations (stacked), or a
-data frame.}
+\item{population}{Path(s) to Excel files with populations (stacked), a
+data frame, or \code{NULL} when \code{deaths} is a data frame with a column
+\code{population} (as \link{ons_data}).}
 
 \item{causes}{\code{NULL} (all causes only) or a named list: each element lists
 the cause columns that are summed into one level of the stratum variable
@@ -34,6 +36,8 @@ conversion to lower case with underscores (\code{"Lung cancer"} becomes
 \item{region}{Name of a region column, or \code{NULL}.}
 
 \item{years}{Optional subset of years.}
+
+\item{min_age}{Optional lower age bound; younger age groups are dropped.}
 
 \item{fill_population}{Fill missing population years with the last
 earlier year.}
@@ -69,4 +73,6 @@ d <- data.frame(Year = 2020, Sex = rep(c("Males", "Females"), each = 4),
 p <- data.frame(Year = 2020, Sex = d$Sex, Age = d$Age, IMD = d$IMD, Population = 1000)
 x <- mt_read_ons(d, p, causes = list(lung = "lung_cancer", other = "rest"))
 mt_strata(x)
+ons <- mt_read_ons(ons_data, min_age = 50, causes = ons_cause_groups)
+ons
 }

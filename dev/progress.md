@@ -36,6 +36,7 @@ work: `claude/vigilant-albattani-2ssw1x` (plays the role of `dev-0.2`).
 | C4.4 | done | this branch | `mt_export()` (summary or long draws, CSV) |
 | C4.5 | done | this branch | Vignettes: getting started (simulated), granularity and ungrouping (HMD E&W, France), forecasting and backtesting (HMD France, E&W), Bayesian APC with bamp (HMD France; precomputed via `dev/precompute-vignettes.R`) |
 | C4.7 | partial | this branch | Migration vignette (0.1 to 0.2 function map), pkgdown reference index; tagging a release is the owner's decision |
+| D1.13 | done | this branch | `ons_data` (ONS ad hoc 3064, part 1, 2001-2019, OGL; `data-raw/ons_data.R` downloads and checks the md5) and `ons_cause_groups` (12 groups per sex at ages 50+, chosen so that median cells by sex, quintile, age group and year have at least about 25 deaths) |
 | D1.12 (HMD) | done | this branch | `mt_from_hmd()`, `mt_read_hmd()` (HMDHFDplus, credentials from `HMD_USER`/`HMD_PASSWORD`) |
 
 | P5.1 | done | this branch | `hyndman_ullah()` (demography; draws via `simulate()`); 95% coverage 0.90 on the benchmark, 0.73 on France |

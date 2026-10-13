@@ -18,8 +18,9 @@
 #'
 #' @param deaths Path to the Excel file with deaths, or a data frame in the
 #'   same layout.
-#' @param population Path(s) to Excel files with populations (stacked), or a
-#'   data frame.
+#' @param population Path(s) to Excel files with populations (stacked), a
+#'   data frame, or `NULL` when `deaths` is a data frame with a column
+#'   `population` (as [ons_data]).
 #' @param causes `NULL` (all causes only) or a named list: each element lists
 #'   the cause columns that are summed into one level of the stratum variable
 #'   `cause`; the value `"rest"` gives all causes minus the other levels.
@@ -29,6 +30,7 @@
 #' @param deprivation `"quintile"` or `"decile"`.
 #' @param region Name of a region column, or `NULL`.
 #' @param years Optional subset of years.
+#' @param min_age Optional lower age bound; younger age groups are dropped.
 #' @param fill_population Fill missing population years with the last
 #'   earlier year.
 #' @param sheets Sheet names of deaths and populations.
@@ -41,22 +43,43 @@
 #' p <- data.frame(Year = 2020, Sex = d$Sex, Age = d$Age, IMD = d$IMD, Population = 1000)
 #' x <- mt_read_ons(d, p, causes = list(lung = "lung_cancer", other = "rest"))
 #' mt_strata(x)
+#' ons <- mt_read_ons(ons_data, min_age = 50, causes = ons_cause_groups)
+#' ons
 #' @export
-mt_read_ons <- function(deaths, population, causes = NULL, deprivation = c("quintile", "decile"), region = NULL,
-                        years = NULL, fill_population = TRUE, sheets = c(deaths = "1", population = "2")) {
+mt_read_ons <- function(deaths, population = NULL, causes = NULL, deprivation = c("quintile", "decile"),
+                        region = NULL, years = NULL, min_age = NULL, fill_population = TRUE,
+                        sheets = c(deaths = "1", population = "2")) {
   deprivation <- match.arg(deprivation)
   dt <- ons_keys(ons_table(deaths, sheets[["deaths"]]), region, "deaths")
-  pops <- if (is.data.frame(population)) list(population) else as.list(population)
-  pop <- rbindlist(lapply(pops, function(p) ons_keys(ons_table(p, sheets[["population"]]), region, "population")))
   keys <- c("year", "sex", "age", "dep", if (!is.null(region)) "region")
-  pop <- unique(pop, by = keys)
+  version <- if ("imd_version" %in% names(dt)) unique(dt[, c("year", "imd_version")]) else NULL
+  if (is.null(population)) {
+    if (!"population" %in% names(dt)) {
+      mt_abort("`population` is missing and the deaths table has no `population` column.", class = "ons")
+    }
+    pop <- dt[, c(keys, "population"), with = FALSE]
+  } else {
+    pops <- if (is.data.frame(population)) list(population) else as.list(population)
+    pop <- rbindlist(lapply(pops, function(p) ons_keys(ons_table(p, sheets[["population"]]), region, "population")))
+    pop <- unique(pop, by = keys)
+    vals <- setdiff(names(pop), c(keys, "imd_version"))
+    if (!length(vals)) mt_abort("The population table has no population column.", class = "ons")
+    setnames(pop, vals[length(vals)], "population")
+    pop <- pop[, c(keys, "population"), with = FALSE]
+  }
+  drop <- intersect(c("population", "imd_version"), names(dt))
+  if (length(drop)) dt[, (drop) := NULL]
   if (!is.null(years)) {
     dt <- dt[year %in% years]
     pop <- pop[year %in% years]
   }
-  vals <- setdiff(names(pop), keys)
-  if (!length(vals)) mt_abort("The population table has no population column.", class = "ons")
-  setnames(pop, vals[length(vals)], "population")
+  if (!is.null(min_age)) {
+    lo <- parse_age_labels(unique(dt$age))
+    keep <- lo$label[lo$age_lo >= min_age]
+    if (!length(keep)) mt_abort("No age group starts at or above `min_age`.", class = "ons")
+    dt <- dt[age %in% keep]
+    pop <- pop[age %in% keep]
+  }
   pop[, population := as.numeric(population)]
   causes_dt <- ons_causes(dt, keys, causes)
   if (attr(dt, "dep_type") == "quintile") {
@@ -90,7 +113,9 @@ mt_read_ons <- function(deaths, population, causes = NULL, deprivation = c("quin
   out[, exposure := population]
   x <- mt_data(deaths = out, exposure = out, by = by, age = "age", period = "year")
   ag <- unique(x$obs$deaths[, c("age_lo", "age_hi")])[order(age_lo)]
-  mt_set_grid(x, age = mt_axis(ag$age_lo, ag$age_hi, kind = "age"))
+  x <- mt_set_grid(x, age = mt_axis(ag$age_lo, ag$age_hi, kind = "age"))
+  if (!is.null(version)) attr(x, "imd_version") <- as.data.frame(version[year %in% out$year])
+  x
 }
 
 ons_table <- function(x, sheet) {
@@ -170,3 +195,53 @@ ons_causes <- function(dt, keys, causes) {
   rbindlist(c(list(copy(base)[, `:=`(cause = "all", deaths = all)]),
               lapply(names(sums), function(lev) copy(base)[, `:=`(cause = lev, deaths = sums[[lev]])])))
 }
+
+# nolint start: line_length_linter.
+#' Deaths and populations by deprivation decile, England 2001-2019
+#'
+#' Death registrations and mid-year populations by sex, age group and decile
+#' of the English Index of Multiple Deprivation (IMD), with deaths by
+#' underlying cause (ICD-10), from an ONS ad hoc release. Years 2001 to 2019
+#' (before the COVID-19 pandemic) of the first workbook; the column of deaths
+#' involving COVID-19 is dropped (zero in these years). Built by
+#' `data-raw/ons_data.R`.
+#'
+#' IMD decile 1 is the most deprived. Each year uses the IMD version current
+#' at the time (`imd_version`: 2004 for 2001-2005, 2007 for 2006-2008, 2010
+#' for 2009-2012, 2015 for 2013-2017, 2019 for 2018-2019), so the deciles
+#' are reclassified four times. Deaths are by year of registration for usual
+#' residents of England. The causes are mutually exclusive (see the ICD-10
+#' lookup of the workbook); neonatal deaths have no cause and count only in
+#' `all_causes`.
+#'
+#' `ons_cause_groups` lists the cause groups used in the vignettes for ages
+#' 50 and over, for `mt_read_ons(causes = )`: lung, colorectal, breast or
+#' prostate (sex-specific cancers; for men including the few male breast
+#' cancers), other cancers, ischaemic heart disease, stroke, other
+#' circulatory (heart failure, hypertension, atrial fibrillation), dementia,
+#' chronic lower respiratory (COPD, asthma), diabetes, liver disease and
+#' alcohol-specific causes, and the rest (all other causes, including
+#' suicide). Small causes are combined within their ICD-10 chapter so that
+#' cells by sex, quintile, 5-year age group and year have enough deaths.
+#'
+#' @format `ons_data`: a data frame with 7,600 rows (19 years x 2 sexes x 20
+#'   age groups x 10 deciles) and columns `year`, `sex` (`"males"`,
+#'   `"females"`), `age_group` (`"<1"`, `"01-04"`, 5-year groups, `"90+"`),
+#'   `imd_decile` (1-10), `imd_version`, `population`, `all_causes` and 29
+#'   cause columns. `ons_cause_groups`: a named list of cause columns.
+#' @source Office for National Statistics (2025). Death registrations and
+#'   populations by Index of Multiple Deprivation, England. Ad hoc release
+#'   3064, 13 October 2025.
+#'   <https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/deaths/adhocs/3064deathregistrationsandpopulationsbyindexofmultipledeprivationengland>.
+#'   Source: Office for National Statistics licensed under the Open
+#'   Government Licence v3.0.
+#' @examples
+#' head(ons_data[, 1:8])
+#' x <- mt_read_ons(ons_data)
+#' x
+#' @name ons_data
+"ons_data"
+# nolint end
+
+#' @rdname ons_data
+"ons_cause_groups"
