@@ -43,6 +43,9 @@ Clean break: the 0.1.x interface is replaced (see `dev/revamp-plan.md`).
   `mt_bootstrap()` (parameter and preprocessing uncertainty by Poisson
   resampling and refitting) and information-criterion rank selection in
   `tucker3(ranks = "bic")`.
+* "Frequently asked questions" vignette; vdiffr snapshot tests of all plots;
+  Tucker factor signs are fixed so that fits are identical across LAPACK
+  builds.
 * Vignettes "Getting started" and "Causes of death by deprivation" use
   `ons_data`; the 0.1-to-0.2 migration vignette is removed.
 * `li_lee()` and `product_ratio()` gain `jump_off = "observed"`; Lee-Carter

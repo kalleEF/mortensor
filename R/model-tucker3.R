@@ -153,6 +153,16 @@ hooi <- function(X, ranks, maxit = 200, tol = 1e-8) {
     if (abs(fit - fit_old) < tol) break
     fit_old <- fit
   }
+  # SVD signs depend on the LAPACK build; fix them so that the entry with the
+  # largest absolute value of every factor is positive (the core absorbs the
+  # signs, so the reconstruction is unchanged)
+  for (n in seq_len(N)) {
+    sg <- apply(U[[n]], 2, function(u) if (u[which.max(abs(u))] < 0) -1 else 1)
+    if (any(sg < 0)) {
+      U[[n]] <- sweep(U[[n]], 2, sg, "*")
+      G <- mode_product(G, diag(sg, length(sg)), n)
+    }
+  }
   list(G = G, U = U, iterations = it)
 }
 
