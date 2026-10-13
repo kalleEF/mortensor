@@ -93,12 +93,11 @@ add("age_labels_variants", "age labels '0 to 4', '5 - 9', '85 years and over', '
   paste(sprintf("%s -> %s", l, unlist(r)), collapse = "; ")
 })
 add("age_numeric_open", "single ages 0-100 where 100 means 100+ (open, as in many tables), no age_open", function() {
-  d <- as.data.table(clean)[, .(region, sex, year)][, .SD[1], by = .(region, sex, year)]
-  d <- d[, .(age = 0:100), by = .(region, sex, year)]
-  d[, population := round(1e4 * exp(-age / 40))]
+  d <- CJ(sex = c("female", "male"), year = 2001:2020, age = 0:100)
+  d[, population := round(1e5 * exp(-age / 40))]
   d[age == 100, population := 2000]
   d[, deaths := rpois(.N, population * pmin(exp(-9.5 + 0.09 * age), 0.6))]
-  pipeline(d)
+  pipeline(d, by = "sex")
 })
 add("thousands_separator", "populations as text with thousands separators ('12,345')", function() {
   p <- copy(as.data.table(clean))[, population := format(population, big.mark = ",", trim = TRUE)]

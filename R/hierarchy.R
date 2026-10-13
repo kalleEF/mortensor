@@ -8,16 +8,21 @@
 #' for both sexes. Intermediate groups of levels, such as federal states
 #' grouped into East and West, are given with `groups`.
 #'
-#' Deaths and exposures add up over strata, rates do not (unless all parts
-#' share one population, as causes of death do). `additive = "deaths"`
-#' (default) therefore aggregates and reconciles deaths, using exposures;
-#' `additive = "rates"` is for causes of death.
+#' Deaths add up over every hierarchy variable. Exposures add up over
+#' variables that divide the population (sex, regions, deprivation
+#' quintiles: `additive = "deaths"`, the default) and are shared by the
+#' levels of variables that do not (causes of death: `additive = "rates"`,
+#' whose rates add up to the all-cause rate). Variables of both kinds can be
+#' crossed, for example regions and causes: deaths are summed over both,
+#' exposures over regions only, and forecasts are reconciled on the deaths
+#' scale with these exposures.
 #'
 #' @param ... One argument per aggregated stratum variable: the label of its
-#'   total level (for example `region = "Germany"`), or a list with `total`
-#'   and `groups` (a named list of intermediate groups, each a vector of
-#'   bottom levels).
-#' @param additive `"deaths"` or `"rates"`.
+#'   total level (for example `region = "Germany"`), or a list with `total`,
+#'   optionally `groups` (a named list of intermediate groups, each a vector
+#'   of bottom levels) and `additive`.
+#' @param additive Default additivity of the variables: `"deaths"` or
+#'   `"rates"`.
 #' @return An object of class `mt_hierarchy`.
 #' @seealso [mt_aggregate_strata()], [mt_validate()], [mt_reconcile()],
 #'   [mt_reconciled()].
@@ -25,28 +30,46 @@
 #' h <- mt_hierarchy(sex = "both", region = list(total = "DE", groups = list(East = c("BE", "SN"))),
 #'                   quintile = "all")
 #' h
+#' # regions crossed with causes of death, which share the exposure
+#' mt_hierarchy(region = "DE", cause = list(total = "all", additive = "rates"))
 #' @export
 mt_hierarchy <- function(..., additive = c("deaths", "rates")) {
+  if (!missing(additive) && length(additive) != 1) {
+    mt_abort(paste("`additive` must be one value; give the additivity of single variables in their list, for",
+                   "example cause = list(total = \"all\", additive = \"rates\")."), class = "hierarchy")
+  }
   additive <- match.arg(additive)
   specs <- list(...)
   if (!length(specs) || is.null(names(specs)) || any(!nzchar(names(specs)))) {
     mt_abort("mt_hierarchy() needs named arguments, one per stratum variable.", class = "hierarchy")
   }
   vars <- lapply(specs, function(s) {
-    if (is.character(s) && length(s) == 1) return(list(total = s, groups = list()))
-    if (is.list(s) && !is.null(s$total)) return(list(total = s$total, groups = s$groups %||% list()))
-    mt_abort("Each hierarchy variable needs a total label or list(total, groups).", class = "hierarchy")
+    if (is.character(s) && length(s) == 1) return(list(total = s, groups = list(), additive = additive))
+    if (is.list(s) && !is.null(s$total)) {
+      a <- s$additive %||% additive
+      if (!a %in% c("deaths", "rates") || length(a) != 1) {
+        mt_abort("`additive` of a variable must be \"deaths\" or \"rates\".", class = "hierarchy")
+      }
+      return(list(total = s$total, groups = s$groups %||% list(), additive = a))
+    }
+    mt_abort("Each hierarchy variable needs a total label or list(total, groups, additive).", class = "hierarchy")
   })
-  structure(list(vars = vars, additive = additive), class = "mt_hierarchy")
+  add <- vapply(vars, `[[`, "", "additive")
+  # deaths add up over every variable; exposures add up over the variables
+  # with additive = "deaths" and are shared by the levels of the others.
+  # Hierarchies of shared-exposure variables only are reconciled on rates.
+  structure(list(vars = vars, additive = if (all(add == "rates")) "rates" else "deaths"), class = "mt_hierarchy")
 }
 
 #' @export
 print.mt_hierarchy <- function(x, ...) {
-  cat(sprintf("<mt_hierarchy> additive on %s\n", x$additive))
+  cat("<mt_hierarchy>\n")
   for (v in names(x$vars)) {
     g <- x$vars[[v]]$groups
-    cat(sprintf("  %s: total \"%s\"%s\n", v, x$vars[[v]]$total,
-                if (length(g)) sprintf("; groups %s", paste(names(g), collapse = ", ")) else ""))
+    a <- x$vars[[v]]$additive %||% x$additive
+    cat(sprintf("  %s: total \"%s\"%s; %s\n", v, x$vars[[v]]$total,
+                if (length(g)) sprintf("; groups %s", paste(names(g), collapse = ", ")) else "",
+                if (a == "deaths") "deaths and exposures add up" else "deaths add up, exposures are shared"))
   }
   invisible(x)
 }
@@ -60,8 +83,10 @@ as_hierarchy <- function(h) {
   mt_abort("`hierarchy` must be an mt_hierarchy() object.", class = "hierarchy")
 }
 
-# Membership of nodes in terms of bottom strata: S [node, bottom]
-membership <- function(nodes, bottom, h) {
+# Membership of nodes in terms of bottom strata: S [node, bottom]. With
+# exposure = TRUE, the membership for exposures: variables whose levels share
+# one exposure (additive = "rates") contribute one representative level
+membership <- function(nodes, bottom, h, exposure = FALSE) {
   vars <- names(h$vars)
   others <- setdiff(intersect(names(nodes), names(bottom)), c("stratum", "label", vars))
   members <- function(v, level) {
@@ -70,11 +95,16 @@ membership <- function(nodes, bottom, h) {
     if (level %in% names(hv$groups)) return(hv$groups[[level]])
     level
   }
+  shared <- vars[vapply(vars, function(v) identical(h$vars[[v]]$additive %||% h$additive, "rates"), logical(1))]
   S <- matrix(0, nrow(nodes), nrow(bottom))
   for (i in seq_len(nrow(nodes))) {
     ok <- rep(TRUE, nrow(bottom))
     for (v in vars) {
       m <- members(v, nodes[[v]][i])
+      if (exposure && v %in% shared) {
+        lev <- unique(bottom[[v]])
+        m <- (if (is.null(m)) lev else intersect(lev, m))[1]
+      }
       if (!is.null(m)) ok <- ok & bottom[[v]] %in% m
     }
     for (o in others) ok <- ok & bottom[[o]] == nodes[[o]][i]
@@ -96,7 +126,8 @@ hierarchy_structure <- function(strata, h) {
   if (!any(is_bottom)) mt_abort("No bottom-level strata found.", class = "hierarchy")
   S <- membership(strata, strata[is_bottom], h)
   if (any(rowSums(S) == 0)) mt_abort("Some aggregate strata have no bottom strata.", class = "hierarchy")
-  list(S = S, bottom = which(is_bottom), is_bottom = is_bottom, hierarchy = h)
+  Sx <- membership(strata, strata[is_bottom], h, exposure = TRUE)
+  list(S = S, Sx = Sx, bottom = which(is_bottom), is_bottom = is_bottom, hierarchy = h)
 }
 
 hierarchy_nodes <- function(bottom, h, by) {
@@ -139,11 +170,19 @@ mt_aggregate_strata <- function(data, hierarchy, replace = FALSE) {
   by <- data$by
   hs <- hierarchy_structure(st, h)
   bottom <- st[hs$is_bottom]
+  tl <- find_total_levels(strata_subset(data, hs$is_bottom), intersect(names(h$vars), by))
+  if (nrow(tl)) {
+    mt_warn(sprintf(paste("Level \"%s\" of `%s` equals the sum of the other levels in %.0f%% of cells; as a bottom",
+                          "level it is counted twice in the aggregates. Declare it as the total in mt_hierarchy()",
+                          "or remove it with mt_subset()."), tl$level[1], tl$var[1], 100 * tl$share[1]),
+            class = "aggregate_total")
+  }
   nodes <- hierarchy_nodes(bottom, h, by)
   key_of <- function(d) do.call(paste, c(lapply(by, function(v) d[[v]]), sep = "\r"))
   keep <- if (replace) st[hs$is_bottom] else st
   new_nodes <- nodes[!key_of(nodes) %in% key_of(keep)]
   S_new <- membership(new_nodes, bottom, h)
+  Sx_new <- membership(new_nodes, bottom, h, exposure = TRUE)
   final <- rbind(keep[, c(by, "label"), with = FALSE], new_nodes)
   final[, stratum := seq_len(.N)]
   setcolorder(final, c("stratum", by, "label"))
@@ -154,8 +193,9 @@ mt_aggregate_strata <- function(data, hierarchy, replace = FALSE) {
     o <- o[o$stratum %in% keep$stratum]
     ob <- o[o$stratum %in% bottom$stratum]
     add <- vector("list", nrow(new_nodes))
+    Sm <- if (m == "deaths") S_new else Sx_new
     for (i in seq_len(nrow(new_nodes))) {
-      mem <- bottom$stratum[S_new[i, ] > 0]
+      mem <- bottom$stratum[Sm[i, ] > 0]
       agg <- ob[ob$stratum %in% mem, list(value = sum(value), n = .N),
                 by = c("age_lo", "age_hi", "period_lo", "period_hi")]
       complete <- agg$n == length(mem)
@@ -301,7 +341,8 @@ reconcile_array <- function(arr, hs, additive, method, shrink, exposure, d) {
   nb <- length(b)
   E <- expand_exposure(exposure, d)
   if (additive == "deaths") {
-    for (t in seq_len(d[2])) E[, t, ] <- matrix(E[, t, b], d[1]) %*% t(S)
+    Sx <- hs$Sx %||% S
+    for (t in seq_len(d[2])) E[, t, ] <- matrix(E[, t, b], d[1]) %*% t(Sx)
     Y <- arr * as.vector(E)
   } else {
     Y <- arr
@@ -574,7 +615,7 @@ mt_aggregate_draws <- function(draws, hierarchy = NULL, age = NULL, exposure = N
     Xn <- array(NA_real_, c(d[1], d[2], nrow(nodes), d[4]))
     En <- array(NA_real_, c(d[1], d[2], nrow(nodes)))
     for (t in seq_len(d[2])) {
-      En[, t, ] <- matrix(Eb[, t, ], d[1]) %*% t(hs$S)
+      En[, t, ] <- matrix(Eb[, t, ], d[1]) %*% t(hs$Sx %||% hs$S)
       for (j in seq_len(d[4])) Xn[, t, , j] <- matrix(Xb[, t, , j], d[1]) %*% t(hs$S)
     }
     X <- Xn

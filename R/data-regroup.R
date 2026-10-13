@@ -9,11 +9,13 @@
 #' data.
 #'
 #' @param data An [mt_data] object.
-#' @param age Target age axis ([mt_axis]), numeric lower bounds, or the
-#'   name of a table (`"deaths"`, `"exposure"`, `"population"`) whose age
+#' @param age Target age axis ([mt_axis]), numeric lower bounds, the name
+#'   of a table (`"deaths"`, `"exposure"`, `"population"`) whose age
 #'   intervals are the target (for example deaths in 5-year groups and
-#'   populations in single years: `age = "deaths"`); `NULL` keeps the age
-#'   intervals.
+#'   populations in single years: `age = "deaths"`), or `"common"`: the
+#'   finest groups that every table can be aggregated to (for example 85+
+#'   when the deaths of some years end with 85+ and others with 85-89 and
+#'   90+); `NULL` keeps the age intervals.
 #' @param period Target period axis, numeric lower bounds or the name of a
 #'   table; `NULL` keeps the periods.
 #' @return An `mt_data` object.
@@ -44,21 +46,28 @@ mt_regroup <- function(data, age = NULL, period = NULL) {
   mt_set_grid(data, age = new_age, period = new_period)
 }
 
-# The intervals of one table as an axis
+# The intervals of one table (or of all tables, "common") as an axis:
+# overlapping intervals are merged into their union, so that every interval
+# of the table(s) lies inside one target interval
 table_axis <- function(data, measure, kind) {
-  if (length(measure) != 1 || !measure %in% names(data$obs)) {
-    mt_abort(sprintf("`%s` must be an axis, numeric bounds or one of the tables (%s).", kind,
+  ok <- length(measure) == 1 && (measure == "common" || measure %in% names(data$obs))
+  if (!ok) {
+    mt_abort(sprintf("`%s` must be an axis, numeric bounds, \"common\" or one of the tables (%s).", kind,
                      paste(names(data$obs), collapse = ", ")), class = "argument")
   }
   cols <- paste0(kind, c("_lo", "_hi"))
-  iv <- unique(data$obs[[measure]][, cols, with = FALSE])
+  tabs <- if (measure == "common") data$obs else data$obs[measure]
+  iv <- unique(rbindlist(lapply(tabs, function(o) o[, cols, with = FALSE])))
   setorderv(iv, cols)
-  if (anyDuplicated(iv[[1]]) || any(iv[[2]][-nrow(iv)] != iv[[1]][-1])) {
-    mt_abort(sprintf(paste("The %s intervals of the %s table overlap or have gaps (for example different groups",
-                           "in different years); give the target intervals explicitly."), kind, measure),
-             class = "regroup")
+  lo <- iv[[1]]
+  hi <- iv[[2]]
+  # union of overlapping intervals
+  grp <- cumsum(c(TRUE, lo[-1] >= cummax(hi)[-length(hi)] - 1e-9))
+  u <- data.table(lo = lo, hi = hi, g = grp)[, list(lo = min(lo), hi = max(hi)), by = "g"]
+  if (any(u$hi[-nrow(u)] < u$lo[-1] - 1e-9)) {
+    mt_abort(sprintf("The %s intervals have gaps; give the target intervals explicitly.", kind), class = "regroup")
   }
-  mt_axis(iv[[1]], iv[[2]], kind = kind)
+  mt_axis(u$lo, u$hi, kind = kind)
 }
 
 axis_trim <- function(axis, lo, hi) {

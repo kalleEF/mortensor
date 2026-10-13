@@ -103,7 +103,7 @@ test_that("mt_validate flags impossible values and doubled totals", {
   v <- mt_validate(x, hierarchy = list(var = "cause", total = "all"))
   expect_s3_class(v, "mt_validation")
   expect_true("deaths without exposure" %in% v$check)
-  expect_true(any(grepl("twice the sum of parts", v$detail)))
+  expect_true(any(grepl("median 2.000", v$detail)))
   expect_output(print(v), "finding")
 })
 

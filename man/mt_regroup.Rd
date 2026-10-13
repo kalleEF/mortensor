@@ -9,11 +9,13 @@ mt_regroup(data, age = NULL, period = NULL)
 \arguments{
 \item{data}{An \link{mt_data} object.}
 
-\item{age}{Target age axis (\link{mt_axis}), numeric lower bounds, or the
-name of a table (\code{"deaths"}, \code{"exposure"}, \code{"population"}) whose age
+\item{age}{Target age axis (\link{mt_axis}), numeric lower bounds, the name
+of a table (\code{"deaths"}, \code{"exposure"}, \code{"population"}) whose age
 intervals are the target (for example deaths in 5-year groups and
-populations in single years: \code{age = "deaths"}); \code{NULL} keeps the age
-intervals.}
+populations in single years: \code{age = "deaths"}), or \code{"common"}: the
+finest groups that every table can be aggregated to (for example 85+
+when the deaths of some years end with 85+ and others with 85-89 and
+90+); \code{NULL} keeps the age intervals.}
 
 \item{period}{Target period axis, numeric lower bounds or the name of a
 table; \code{NULL} keeps the periods.}

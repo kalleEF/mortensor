@@ -37,7 +37,7 @@ test_that("aggregate strata are sums of the bottom strata", {
   tot <- st$stratum[st$label == "both.all.all"]
   bad$obs$deaths[stratum == tot, value := value * 2]
   vb <- mt_validate(bad, hierarchy = h3())
-  expect_true(any(vb$severity == "error" & grepl("twice", vb$detail)))
+  expect_true(any(vb$severity == "error" & grepl("median 2.000", vb$detail)))
   # intermediate groups
   hg <- mt_hierarchy(region = list(total = "all", groups = list(north = c("R1", "R2"))))
   xg <- mt_aggregate_strata(x, hg)

@@ -502,7 +502,10 @@ mt_grid <- function(data) {
 # when one table has single years)
 default_grid <- function(data) {
   if (!length(data$obs)) mt_abort("No observations.", class = "obs")
-  all <- rbindlist(lapply(data$obs, function(o) o[, c("age_lo", "age_hi", "period_lo", "period_hi")]))
+  # populations only define the grid when there are no exposures (a 31
+  # December population of the year before the first year is not a period)
+  tabs <- if (!is.null(data$obs$exposure)) data$obs[intersect(c("deaths", "exposure"), names(data$obs))] else data$obs
+  all <- rbindlist(lapply(tabs, function(o) o[, c("age_lo", "age_hi", "period_lo", "period_hi")]))
   ab <- sort(unique(c(all$age_lo, all$age_hi)))
   fin <- ab[is.finite(ab)]
   age <- if (any(is.infinite(ab))) {

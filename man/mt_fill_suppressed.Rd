@@ -2,43 +2,69 @@
 % Please edit documentation in R/data-suppressed.R
 \name{mt_fill_suppressed}
 \alias{mt_fill_suppressed}
-\title{Estimate suppressed death counts from published totals}
+\title{Estimate suppressed death counts}
 \usage{
-mt_fill_suppressed(data, hierarchy, maxit = 10000, tol = 1e-06)
+mt_fill_suppressed(
+  data,
+  hierarchy = NULL,
+  lower = 0,
+  upper = Inf,
+  maxit = 10000,
+  tol = 1e-06
+)
 }
 \arguments{
 \item{data}{An \link{mt_data} object in which some death cells are missing
-(cells that other strata have; rows with \code{NA} values are dropped when
-the data are created).}
+(cells that other strata have; suppressed values are left out when the
+data are read).}
 
-\item{hierarchy}{An \code{\link[=mt_hierarchy]{mt_hierarchy()}} that describes the totals in the data.}
+\item{hierarchy}{An \code{\link[=mt_hierarchy]{mt_hierarchy()}} that describes the published totals
+in the data, or \code{NULL} when there are none.}
+
+\item{lower, upper}{Bounds of the suppressed counts.}
 
 \item{maxit, tol}{Iterations and tolerance (in deaths) of the raking; cells
 are raked until no estimate changes by more than \code{tol}.}
 }
 \value{
 The \code{mt_data} object with filled deaths; a summary in attribute
-\code{"fill"}.
+\code{"fill"} (cells filled, cells left missing, inconsistent cells,
+iterations, largest relative gap to a published total).
 }
 \description{
 Official statistics often suppress small cells for confidentiality (for
-example \code{"."} in tables of the German Federal Statistical Office) while
-publishing the totals: deaths of a region over all causes, deaths of the
-whole country by cause. \code{mt_fill_suppressed()} estimates the missing death
-counts of the bottom strata so that every published total of the hierarchy
-is matched, by iterative proportional fitting (raking): starting values
-proportional to the exposures are scaled, constraint by constraint, until
-the missing cells of every aggregate with a known total add up to that
-total minus its known cells. With two crossed variables (regions and
-causes) the result is the log-linear independence fit of the missing
-cells given both margins. Missing aggregates are then filled as sums of
-their (filled) parts. Death counts sum over every hierarchy variable,
-also over causes, whatever the \code{additive} setting of the hierarchy.
+example \code{"."} in tables of the German Federal Statistical Office, \code{"<3"}
+or \code{"<5"} elsewhere) while publishing totals: deaths of a region over all
+causes, deaths of the whole country by cause. \code{mt_fill_suppressed()}
+estimates the missing death counts of the bottom strata from two sources
+of information:
 }
 \details{
-Filled cells are marked with provenance \code{"estimated"}. When the known
-cells of an aggregate already exceed its total (inconsistent data), the
-missing cells of that aggregate are set to zero and the case is reported.
+\itemize{
+\item \strong{published totals} (\code{hierarchy}): the missing cells of every
+aggregate with a known total must add up to that total minus its known
+cells. They are estimated by iterative proportional fitting (raking):
+starting values, the expected deaths at the pooled death rate of the
+same age and period, are scaled constraint by constraint until every
+total is matched. With two crossed variables (regions and causes) the
+result is the log-linear independence fit of the missing cells given
+both margins. Missing aggregates are then filled as sums of their parts.
+\item \strong{bounds of the suppressed counts} (\code{lower}, \code{upper}): the range that
+the suppression rule implies, for example \verb{lower = 1, upper = 2} when
+counts of 1 and 2 are suppressed, or \code{upper = 4} for \code{"<5"}. Estimates
+are kept inside the bounds during raking. Cells that no published total
+covers get the expected deaths at the pooled rate, limited to the
+bounds; this needs a finite \code{upper}.
+}
+
+Without bounds, cells that no published total covers stay missing (with a
+warning). The estimates are plausible values that agree with the
+published information; they carry no information beyond it, so forecasts
+of strata with many estimated cells are less certain than their intervals
+suggest. Filled cells are marked with provenance \code{"estimated"}. When the
+known cells of an aggregate already exceed its total (inconsistent data),
+the missing cells of that aggregate are set to the lower bound and the
+case is reported.
 }
 \examples{
 d <- data.frame(region = c("A", "B", "C", "all"), year = 2020, age = "90+",
@@ -47,4 +73,9 @@ x <- mt_data(deaths = d, exposure = d, by = "region")
 y <- mt_fill_suppressed(x, mt_hierarchy(region = "all"))
 mt_obs(y)
 attr(y, "fill")
+# counts below 3 suppressed, no totals: expected deaths limited to 1-2
+d2 <- data.frame(region = c("A", "B"), year = 2020, age = "90+", deaths = c(30, NA),
+                 exposure = c(1000, 50))
+z <- mt_fill_suppressed(mt_data(deaths = d2, exposure = d2, by = "region"), lower = 1, upper = 2)
+mt_obs(z)
 }

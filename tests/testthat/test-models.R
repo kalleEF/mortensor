@@ -32,7 +32,7 @@ test_that("a failing stratum is recorded and the others are kept", {
   registerS3method("simulate_model", "mt_spec_failing", function(spec, fit, h, n_draws, ...) {
     array(exp(fit$last), c(length(fit$last), h, n_draws))
   }, envir = asNamespace("mortensor"))
-  fit <- mt_fit(bad, x)
+  expect_warning(fit <- mt_fit(bad, x), class = "mt_warning_model_fit")
   expect_equal(fit$diagnostics$status, c("ok", "failed"))
   fc <- mt_forecast(fit, h = 2, n_draws = 3)
   expect_true(all(is.na(fc$rates[, , 2, ])))

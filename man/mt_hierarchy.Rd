@@ -8,11 +8,12 @@ mt_hierarchy(..., additive = c("deaths", "rates"))
 }
 \arguments{
 \item{...}{One argument per aggregated stratum variable: the label of its
-total level (for example \code{region = "Germany"}), or a list with \code{total}
-and \code{groups} (a named list of intermediate groups, each a vector of
-bottom levels).}
+total level (for example \code{region = "Germany"}), or a list with \code{total},
+optionally \code{groups} (a named list of intermediate groups, each a vector
+of bottom levels) and \code{additive}.}
 
-\item{additive}{\code{"deaths"} or \code{"rates"}.}
+\item{additive}{Default additivity of the variables: \code{"deaths"} or
+\code{"rates"}.}
 }
 \value{
 An object of class \code{mt_hierarchy}.
@@ -27,15 +28,21 @@ for both sexes. Intermediate groups of levels, such as federal states
 grouped into East and West, are given with \code{groups}.
 }
 \details{
-Deaths and exposures add up over strata, rates do not (unless all parts
-share one population, as causes of death do). \code{additive = "deaths"}
-(default) therefore aggregates and reconciles deaths, using exposures;
-\code{additive = "rates"} is for causes of death.
+Deaths add up over every hierarchy variable. Exposures add up over
+variables that divide the population (sex, regions, deprivation
+quintiles: \code{additive = "deaths"}, the default) and are shared by the
+levels of variables that do not (causes of death: \code{additive = "rates"},
+whose rates add up to the all-cause rate). Variables of both kinds can be
+crossed, for example regions and causes: deaths are summed over both,
+exposures over regions only, and forecasts are reconciled on the deaths
+scale with these exposures.
 }
 \examples{
 h <- mt_hierarchy(sex = "both", region = list(total = "DE", groups = list(East = c("BE", "SN"))),
                   quintile = "all")
 h
+# regions crossed with causes of death, which share the exposure
+mt_hierarchy(region = "DE", cause = list(total = "all", additive = "rates"))
 }
 \seealso{
 \code{\link[=mt_aggregate_strata]{mt_aggregate_strata()}}, \code{\link[=mt_validate]{mt_validate()}}, \code{\link[=mt_reconcile]{mt_reconcile()}},

@@ -6,12 +6,11 @@
 #' * central death rates above 1 below age 100 (warning);
 #' * zero exposures (info);
 #' * grid cells without deaths or exposures (info);
-#' * hierarchy sums, when `hierarchy` is given ([mt_hierarchy()], or the
-#'   older `list(var, total)`): every aggregate stratum in the data is
-#'   compared with the sum of its bottom strata per cell, for deaths and, if
-#'   the hierarchy is additive on deaths, exposures; ratios near 2 are
-#'   reported as "total equals twice the sum of parts", a pattern seen in
-#'   real data.
+#' * hierarchy sums, when `hierarchy` is given ([mt_hierarchy()]): every
+#'   aggregate stratum in the data is compared with the sum of its bottom
+#'   strata per cell, for deaths and exposures (exposures are summed over
+#'   the variables whose exposures add up and taken once over those whose
+#'   levels share an exposure, such as causes of death).
 #'
 #' @param data An [mt_data] object.
 #' @param hierarchy Optional [mt_hierarchy()], or a list with `var` (stratum
@@ -66,6 +65,23 @@ mt_validate <- function(data, hierarchy = NULL, tol = 0.005) {
       if (area < total) add("grid coverage", "info", m, "all", total - area, "grid cells not covered by observations")
     }
   }
+  # levels that are the sum of the other levels of their variable (for
+  # example "Persons" next to "female" and "male") but are not declared as
+  # totals of the hierarchy
+  declared <- if (!is.null(hierarchy)) {
+    h <- as_hierarchy(hierarchy)
+    unlist(lapply(names(h$vars), function(v) paste(v, c(h$vars[[v]]$total, names(h$vars[[v]]$groups)))))
+  } else {
+    character()
+  }
+  tl <- find_total_levels(data)
+  tl <- tl[!paste(var, level) %in% declared]
+  for (i in seq_len(nrow(tl))) {
+    add("total among levels", "warning", "deaths", sprintf("%s = %s", tl$var[i], tl$level[i]), tl$n[i],
+        sprintf(paste("equals the sum of the other levels of `%s` in %.0f%% of cells: declare it as the total in",
+                      "mt_hierarchy(%s = \"%s\") or remove it with mt_subset(), so that it is not counted twice"),
+                tl$var[i], 100 * tl$share[i], tl$var[i], tl$level[i]))
+  }
   if (!is.null(hierarchy)) found$rows <- c(found$rows, list(check_hierarchy(data, hierarchy, tol)))
   res <- rbindlist(found$rows)
   if (!nrow(res)) {
@@ -87,14 +103,15 @@ check_hierarchy <- function(data, hierarchy, tol) {
     return(data.table(check = "hierarchy", severity = "info", measure = "deaths", stratum = "all", n = 0L,
                       detail = "no aggregate strata in the data (see mt_aggregate_strata())"))
   }
-  measures <- intersect(if (h$additive == "deaths") c("deaths", "exposure") else "deaths", names(data$obs))
+  measures <- intersect(c("deaths", "exposure"), names(data$obs))
   bottom_ids <- st$stratum[hs$bottom]
   rows <- list()
   for (m in measures) {
     o <- data$obs[[m]]
     keys <- c("age_lo", "age_hi", "period_lo", "period_hi")
+    Sm <- if (m == "deaths") hs$S else hs$Sx
     for (i in agg) {
-      mem <- bottom_ids[hs$S[i, ] > 0]
+      mem <- bottom_ids[Sm[i, ] > 0]
       parts <- o[o$stratum %in% mem, list(parts = sum(value), k = .N), by = keys]
       parts <- parts[k == length(mem)]
       tot <- o[o$stratum == st$stratum[i], c(keys, "value"), with = FALSE]
@@ -106,7 +123,6 @@ check_hierarchy <- function(data, hierarchy, tol) {
       med <- stats::median(ratio)
       detail <- sprintf("total / sum(parts): median %.3f, range %.3f-%.3f; %d of %d cells outside tolerance",
                         med, min(ratio), max(ratio), sum(bad), length(ratio))
-      if (abs(med - 2) < 0.02) detail <- paste0(detail, "; total equals twice the sum of parts")
       rows[[length(rows) + 1L]] <- data.table(check = "hierarchy", severity = if (any(bad)) "error" else "info",
                                               measure = m, stratum = st$label[i], n = sum(bad), detail = detail)
     }
@@ -139,4 +155,31 @@ print.mt_validation <- function(x, ...) {
                 x$stratum[i], x$n[i], x$detail[i]))
   }
   invisible(x)
+}
+
+# Levels of a stratum variable whose deaths equal the sum of the other levels
+# (within 0.5%) in at least 90% of the cells where all levels are observed
+find_total_levels <- function(data, vars = data$by) {
+  o <- data$obs$deaths
+  empty <- data.table(var = character(), level = character(), share = numeric(), n = integer())
+  if (is.null(o) || !length(vars)) return(empty)
+  st <- data$strata
+  o <- merge(o[, c("stratum", "age_lo", "period_lo", "value"), with = FALSE], st, by = "stratum")
+  out <- list()
+  for (v in vars) {
+    levs <- unique(st[[v]])
+    if (length(levs) < 3) next
+    keys <- c(setdiff(data$by, v), "age_lo", "period_lo")
+    w <- o[, c(keys, v, "value"), with = FALSE]
+    tot <- w[, list(sum_all = sum(value), n_lev = .N), by = keys]
+    for (l in levs) {
+      x <- merge(w[w[[v]] == l, c(keys, "value"), with = FALSE], tot, by = keys)
+      x <- x[n_lev == length(levs) & value > 0]
+      if (nrow(x) < 5) next
+      rest <- x$sum_all - x$value
+      share <- mean(abs(x$value - rest) <= pmax(0.005 * x$value, 0.5))
+      if (share >= 0.9) out[[length(out) + 1L]] <- data.table(var = v, level = l, share = share, n = nrow(x))
+    }
+  }
+  if (length(out)) rbindlist(out) else empty
 }

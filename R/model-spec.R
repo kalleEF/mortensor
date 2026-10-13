@@ -100,7 +100,9 @@ mt_fit.mt_spec <- function(spec, data, prep = NULL, cores = 1, ...) {
     fits <- r$fit
     diagnostics <- data.table(stratum = st$label, status = r$status, message = r$message, seconds = r$seconds)
   } else {
-    one <- function(s) run(function() fit_model(spec, md$D[, , s], md$E[, , s], md$age, md$periods))
+    # matrices [age, period] also with a single age group
+    slice <- function(A, s) array(A[, , s], dim(A)[1:2], dimnames(A)[1:2])
+    one <- function(s) run(function() fit_model(spec, slice(md$D, s), slice(md$E, s), md$age, md$periods))
     res <- par_lapply(seq_len(nrow(st)), one, cores)
     fits <- lapply(res, `[[`, "fit")
     diagnostics <- data.table(stratum = st$label, status = vapply(res, `[[`, "", "status"),
@@ -160,19 +162,33 @@ model_inputs <- function(d, spec) {
     if (is.null(d$obs[[m]])) mt_abort(sprintf("Models need a %s table.", m), class = "model_data")
   }
   coarse <- function(m) {
+    nm <- c(deaths = "deaths", exposure = "exposures")
     other <- setdiff(c("deaths", "exposure"), m)
     mt_abort(sprintf(paste("The %s are in coarser age (or period) groups than the grid, which follows the %s.",
-                           "Either model the groups, by aggregating the %s with mt_regroup(x, age = \"%s\"),",
-                           "or estimate single years with mt_ungroup() or step_ungroup()."), m, other, other, m),
+                           "Either model the groups, by aggregating all tables to groups they share with",
+                           "mt_regroup(x, age = \"common\"), or estimate single years with mt_ungroup() or",
+                           "step_ungroup()."), nm[[m]], nm[[other]]),
              class = "model_data", call = NULL)
   }
   D <- tryCatch(mt_array(d, "deaths"), mt_error_resolution = function(e) coarse("deaths"))
   E <- tryCatch(mt_array(d, "exposure"), mt_error_resolution = function(e) coarse("exposure"))
-  if (anyNA(D) || anyNA(E)) {
-    mt_abort(paste("Deaths and exposures must be complete on the grid (no missing cells); suppressed cells can be",
-                   "estimated from published totals with mt_fill_suppressed()."), class = "model_data")
+  if (anyNA(D) || anyNA(E)) mt_abort(describe_missing(D, E, g, d$strata), class = "model_data", call = NULL)
+  if (any(E <= 0)) {
+    i <- which(E <= 0, arr.ind = TRUE)[1, ]
+    mt_abort(sprintf(paste("Exposures must be positive on the grid; %d cell(s) are zero or negative, for example %s,",
+                           "age %s, %s."), sum(E <= 0), d$strata$label[i[3]], g$age$labels[i[1]],
+                     g$period$labels[i[2]]),
+             class = "model_data", call = NULL)
   }
-  if (any(E <= 0)) mt_abort("Exposures must be positive on the grid.", class = "model_data")
+  r <- D / E
+  high <- which(r > 1 & is.finite(g$age$upper)[slice.index(r, 1)])
+  if (length(high)) {
+    i <- arrayInd(high[1], dim(r))
+    mt_warn(sprintf(paste("Death rates above 1 in %d cell(s), for example %s, age %s, %s (%s deaths, exposure %s);",
+                          "check the data with mt_validate()."), length(high), d$strata$label[i[3]],
+                    g$age$labels[i[1]], g$period$labels[i[2]], format(D[high[1]]), format(E[high[1]])),
+            class = "data_quality")
+  }
   if (any(g$period$upper - g$period$lower != 1)) {
     mt_abort("Models need single calendar years as periods.", class = "model_data")
   }
@@ -180,6 +196,40 @@ model_inputs <- function(d, spec) {
     mt_abort(sprintf("%s needs at least %d periods.", spec$label, spec$min_periods), class = "model_data")
   }
   list(D = D, E = E, age = g$age, periods = g$period$lower)
+}
+
+# Which cells are missing on the grid, and the likely reason
+describe_missing <- function(D, E, g, strata) {
+  msg <- "Deaths and exposures must be complete on the grid."
+  for (m in c("deaths", "exposures")) {
+    A <- if (m == "deaths") D else E
+    if (!anyNA(A)) next
+    na <- is.na(A)
+    per_period <- apply(na, 2, mean)
+    per_stratum <- apply(na, 3, mean)
+    full_p <- g$period$labels[per_period == 1]
+    full_s <- strata$label[per_stratum == 1]
+    part <- sum(na) - sum(na[, per_period == 1, ]) - sum(na[, per_period < 1, per_stratum == 1])
+    if (length(full_p)) {
+      msg <- c(msg, sprintf(paste("No %s in %s (all strata): restrict the years with mt_subset(periods = ), for",
+                                  "example when 31 December populations cover a year without deaths."), m,
+                            paste(utils::head(full_p, 5), collapse = ", ")))
+    }
+    if (length(full_s)) {
+      msg <- c(msg, sprintf(paste("No %s for stratum/strata %s: check the coding of the stratum variables in the",
+                                  "tables (see the warnings of mt_data()) or remove the strata with mt_subset()."), m,
+                            paste(utils::head(full_s, 5), collapse = ", ")))
+    }
+    if (part > 0) {
+      i <- which(na & (per_period < 1)[slice.index(na, 2)] & (per_stratum < 1)[slice.index(na, 3)],
+                 arr.ind = TRUE)[1, ]
+      msg <- c(msg, sprintf(paste("%d %s cell(s) are missing, for example %s, age %s, %s. Suppressed deaths are",
+                                  "estimated with mt_fill_suppressed(); single missing years can be excluded with",
+                                  "mt_subset(periods = )."), part, m, strata$label[i[3]], g$age$labels[i[1]],
+                            g$period$labels[i[2]]))
+    }
+  }
+  paste(msg, collapse = " ")
 }
 
 par_lapply <- function(x, f, cores = 1) {

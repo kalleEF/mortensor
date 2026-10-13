@@ -27,12 +27,11 @@ Runs plausibility checks and returns one row per finding:
 \item central death rates above 1 below age 100 (warning);
 \item zero exposures (info);
 \item grid cells without deaths or exposures (info);
-\item hierarchy sums, when \code{hierarchy} is given (\code{\link[=mt_hierarchy]{mt_hierarchy()}}, or the
-older \code{list(var, total)}): every aggregate stratum in the data is
-compared with the sum of its bottom strata per cell, for deaths and, if
-the hierarchy is additive on deaths, exposures; ratios near 2 are
-reported as "total equals twice the sum of parts", a pattern seen in
-real data.
+\item hierarchy sums, when \code{hierarchy} is given (\code{\link[=mt_hierarchy]{mt_hierarchy()}}): every
+aggregate stratum in the data is compared with the sum of its bottom
+strata per cell, for deaths and exposures (exposures are summed over
+the variables whose exposures add up and taken once over those whose
+levels share an exposure, such as causes of death).
 }
 }
 \examples{
