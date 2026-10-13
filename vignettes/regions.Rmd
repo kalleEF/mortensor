@@ -331,7 +331,9 @@ ord <- e0[period == 2035 & sex == "both"][order(q0.5), region]
 ggplot(pl, aes(q0.5, factor(region, ord), colour = part)) +
   geom_pointrange(aes(xmin = q0.025, xmax = q0.975), size = 0.2) +
   facet_wrap(~ sex, scales = "free_x") +
-  labs(x = "Life expectancy at birth in 2035 (years, 95% interval)", y = NULL, colour = NULL)
+  scale_colour_mortensor(type = "categorical") +
+  labs(x = "Life expectancy at birth in 2035 (years, 95% interval)", y = NULL, colour = NULL) +
+  theme_mortensor()
 ```
 
 ![plot of chunk plot-e0-laender](regions-plot-e0-laender-1.png)
@@ -376,8 +378,8 @@ med[match(show, region)]
 #> 9:         Deutschland 83.48     83.57 83.49      83.50 83.51 83.58
 wid[match(show, region)]
 #>                 region base bottom_up  ols structural wls mint
-#> 1:              Bremen  4.7       3.9 10.7        7.8 4.0  3.3
-#> 2:            Saarland  5.7       4.3  9.3        7.2 4.8  3.6
+#> 1:              Bremen  4.7       3.9 10.9        7.8 4.0  3.3
+#> 2:            Saarland  5.7       4.3  9.4        7.2 4.8  3.6
 #> 3:             Hamburg  3.3       2.9  6.1        4.5 2.9  2.3
 #> 4:             Sachsen  4.0       3.3  4.4        3.8 3.4  2.4
 #> 5:              Bayern  3.2       3.0  3.4        3.3 3.1  1.8
@@ -402,8 +404,10 @@ wd <- merge(e0m[sex == "both", .(region, method, width = q0.975 - q0.025)],
 ggplot(wd, aes(population / 1e6, width, colour = method)) +
   geom_point(size = 2) +
   scale_x_log10() +
+  scale_colour_mortensor(type = "categorical") +
   labs(x = "Population 2019 (millions, log scale)", y = "Width of the 95% interval of e0 in 2035 (years)",
-       colour = NULL)
+       colour = NULL) +
+  theme_mortensor(legend = "right")
 ```
 
 ![plot of chunk plot-width](regions-plot-width-1.png)
@@ -450,7 +454,7 @@ bt_m[, .(crps_bottom = mean(crps[level == "bottom"]), crps_aggregate = mean(crps
 #> 2:        0.818           0.716
 #> 3:        0.817           0.717
 #> 4:        0.869           0.757
-#> 5:        0.842           0.734
+#> 5:        0.843           0.733
 #> 6:        0.777           0.669
 ```
 
@@ -606,13 +610,13 @@ btc[, .(crps_causes_laender = mean(crps[level == "bottom"]),
 #>                  spec crps_causes_laender crps_causes_bremen_saarland
 #> 1:         Lee-Carter               0.133                       0.198
 #> 2:             Li-Lee               0.125                       0.184
-#> 3:   Li-Lee, smoothed               0.121                       0.171
-#> 4: Ensemble, smoothed               0.115                       0.167
+#> 3:   Li-Lee, smoothed               0.120                       0.171
+#> 4: Ensemble, smoothed               0.115                       0.168
 #>    crps_germany cov95_laender cov95_germany
 #> 1:        0.061         0.884         0.753
 #> 2:        0.068         0.870         0.721
-#> 3:        0.066         0.864         0.722
-#> 4:        0.058         0.911         0.737
+#> 3:        0.065         0.880         0.737
+#> 4:        0.058         0.921         0.751
 ```
 
 Pooling (Li-Lee) and smoothing both improve the cause-specific forecasts
@@ -654,39 +658,39 @@ a[region %in% c("Deutschland", "Bremen") & sex == "female" & period == 2035,
 #>  5:      Bremen mental_nervous    107  638   4811
 #>  6:      Bremen      endocrine     35   67    200
 #>  7:      Bremen       external     36   60    222
-#>  8:      Bremen            all   1691 2451   6434
+#>  8:      Bremen            all   1761 2446   6482
 #>  9:      Bremen           rest    172  332    671
-#> 10: Deutschland      neoplasms    417  434    460
-#> 11: Deutschland    circulatory    419  493    574
-#> 12: Deutschland    respiratory    128  156    207
-#> 13: Deutschland      digestive     61   72     79
-#> 14: Deutschland mental_nervous    534  795   1719
+#> 10: Deutschland      neoplasms    418  435    458
+#> 11: Deutschland    circulatory    417  491    575
+#> 12: Deutschland    respiratory    128  156    202
+#> 13: Deutschland      digestive     61   71     79
+#> 14: Deutschland mental_nervous    540  793   1650
 #> 15: Deutschland      endocrine     66   86    167
-#> 16: Deutschland       external     73   93    154
-#> 17: Deutschland           rest    211  256    343
-#> 18: Deutschland            all   2038 2422   3491
+#> 16: Deutschland       external     73   94    150
+#> 17: Deutschland           rest    210  256    346
+#> 18: Deutschland            all   2054 2424   3375
 d <- mt_contrast(fcc, var = "region", ref = "West", quantity = "asr")
 d[level == "East" & period == 2035,
   .(sex, cause, q0.025 = round(q0.025), q0.5 = round(q0.5), q0.975 = round(q0.975), p_positive)]
 #>        sex          cause q0.025 q0.5 q0.975 p_positive
-#>  1: female      neoplasms    -35  -11     13      0.206
-#>  2:   male      neoplasms      8   64    117      0.992
-#>  3: female    circulatory    -38   54    154      0.896
-#>  4:   male    circulatory    -17   88    190      0.948
-#>  5: female    respiratory    -67  -28     -2      0.020
-#>  6:   male    respiratory    -62  -13     33      0.272
-#>  7: female      digestive    -13   -1      9      0.422
+#>  1: female      neoplasms    -38  -11     14      0.238
+#>  2:   male      neoplasms     14   62    115      0.994
+#>  3: female    circulatory    -35   53    151      0.902
+#>  4:   male    circulatory    -20   91    185      0.948
+#>  5: female    respiratory    -65  -28     -4      0.020
+#>  6:   male    respiratory    -71  -13     25      0.274
+#>  7: female      digestive    -13   -1      8      0.430
 #>  8:   male      digestive      9   22     34      1.000
-#>  9: female mental_nervous   -773   -2   1218      0.496
-#> 10:   male mental_nervous   -402   46    425      0.570
-#> 11: female      endocrine   -105   14     71      0.744
-#> 12:   male      endocrine   -218   10     50      0.640
-#> 13: female       external    -73    4     47      0.590
-#> 14:   male       external    -27   30     73      0.918
-#> 15: female           rest   -174  -43     82      0.246
-#> 16:   male           rest   -238  -50    145      0.236
-#> 17: female            all   -795  -13   1153      0.480
-#> 18:   male            all   -482  176    583      0.786
+#>  9: female mental_nervous   -801  -19   1401      0.464
+#> 10:   male mental_nervous   -378   35    414      0.556
+#> 11: female      endocrine   -101   15     70      0.726
+#> 12:   male      endocrine   -216   10     49      0.620
+#> 13: female       external    -70    6     53      0.588
+#> 14:   male       external    -32   30     75      0.904
+#> 15: female           rest   -174  -43     95      0.240
+#> 16:   male           rest   -229  -49    138      0.256
+#> 17: female            all   -833  -28   1352      0.438
+#> 18:   male            all   -488  166    578      0.784
 ```
 
 
@@ -719,8 +723,8 @@ Germany by cause are better determined than the levels.
 | Period | 1998-2019, before the pandemic | `mt_subset(periods = )` |
 | Age groups | age groups of the deaths; causes from 50 | `mt_regroup(age = "deaths")`, `mt_subset(ages = )` |
 | Suppressed cells | raking to Land and national totals | `mt_fill_suppressed()` |
-| Aggregation layers | East and West; cause groups and rest | `mt_hierarchy(groups = )`, `mt_group_levels()` |
-| Shared exposures | causes share the population of their Land | `mt_hierarchy(cause = list(additive = "rates"))` |
+| Aggregation layers | East and West; cause groups and rest | `mt_hierarchy(region = list(total = , groups = ))`, `mt_group_levels()` |
+| Shared exposures | causes share the population of their Land | `mt_hierarchy(cause = list(total = "all", additive = "rates"))` |
 | Sparse cells | pooling and Whittaker smoothing | `li_lee(common_by = )`, `step_smooth()` |
 | Coherence | bottom-up sums of a joint model | `reconciled()` |
 | Calibration | ensemble with noise-robust random walks | `ensemble()`, `rwd(observation_noise = TRUE)` |

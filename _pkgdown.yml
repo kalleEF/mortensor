@@ -47,6 +47,7 @@ reference:
       - mt_regroup
       - mt_ungroup
       - mt_smooth
+      - mt_smooth_check
       - mt_prep
       - mt_set_grid
   - title: 4. Describe the past
@@ -75,16 +76,18 @@ reference:
       - tucker3
       - cause_shares
   - title: 7. Combine models and make forecasts coherent
-    desc: Model wrappers (ensembles, reconciliation, calibration, bootstrap, tuning) and hierarchies of strata.
+    desc: Model wrappers (ensembles, reconciliation, calibration, jump-off, bootstrap, tuning) and hierarchies of strata.
     contents:
       - ensemble
       - reconciled
       - calibrated
+      - anchored
       - bootstrapped
       - mt_tune
       - mt_hierarchy
       - mt_aggregate_strata
       - mt_reconcile
+      - mt_coherence
       - mt_aggregate_draws
       - mt_order_strata
   - title: 8. Fit, inspect and forecast
@@ -94,8 +97,12 @@ reference:
       - fit-inspection
       - mt_plot_residuals
       - mt_forecast
+      - mt_jump_off
       - mt_draws
       - mt_deaths
+      - mt_disaggregate
+      - mt_shape_rates
+      - mt_disaggregate_check
   - title: 9. Evaluate
     contents:
       - mt_backtest
@@ -104,6 +111,7 @@ reference:
     contents:
       - mt_plot
       - mt_plot_more
+      - mt_plot_style
       - mt_export
   - title: Example data
     contents:
@@ -123,7 +131,6 @@ reference:
       - mt_array
       - mt_granularity
       - mt_operator
-      - mt_disaggregate
       - new_mt_spec
 articles:
   - title: Getting started

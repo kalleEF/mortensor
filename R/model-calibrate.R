@@ -338,18 +338,11 @@ estimate_calibration <- function(pieces, strata, p) {
 #' @export
 mt_forecast.mt_fit_calibrated <- function(fit, h = 10, to = NULL, n_draws = 500, seed = NULL, predictive = FALSE,
                                           exposure = NULL, ...) {
-  base_fit <- fit
-  class(base_fit) <- setdiff(class(fit), "mt_fit_calibrated")
-  base_fit$spec <- fit$spec$params$base
   p <- fit$spec$params
-  if (!is.null(to)) h <- to - max(fit$periods)
-  out <- with_seed(seed, {
-    fc <- suppressWarnings(mt_forecast(base_fit, h = h, n_draws = n_draws, exposure = exposure))
-    arr <- fc$rates
+  key <- if (is.null(p$by)) rep("all", nrow(fit$strata)) else
+    do.call(paste, c(as.list(fit$strata[, p$by, with = FALSE]), sep = "."))
+  transform <- function(arr, targets, fc) {
     d <- dim(arr)
-    targets <- calibration_targets(fit)
-    key <- if (is.null(p$by)) rep("all", d[3]) else
-      do.call(paste, c(as.list(fit$strata[, p$by, with = FALSE]), sep = "."))
     hh <- rep(seq_len(d[2]), each = d[1])
     for (s in targets) {
       theta <- fit$calibration_theta[[key[s]]] %||% fit$calibration_theta$all
@@ -359,23 +352,35 @@ mt_forecast.mt_fit_calibrated <- function(fit, h = 10, to = NULL, n_draws = 500,
       sh <- calibration_shift(theta, hh, p$scale, p$bias, fit$calibration_hmax %||% Inf)
       arr[, , s, ] <- exp(m + sh$b + sh$s * (L - m))
     }
+    arr
+  }
+  res <- wrapped_forecast(fit, "mt_fit_calibrated", h, to, n_draws, seed, predictive, exposure, transform,
+                          h_missing = missing(h))
+  res$calibration <- fit$calibration
+  res
+}
+
+# Forecast of a wrapper whose fit is the base fit with an extra class `cls`:
+# draws of the base model (underlying rates) are transformed per stratum by
+# `transform(arr, targets, fc)`, observation noise is added for predictive
+# draws (per draw of an ensemble from its component), and the aggregates of
+# reconciled models are recomputed from the bottom strata
+wrapped_forecast <- function(fit, cls, h, to, n_draws, seed, predictive, exposure, transform, h_missing = TRUE) {
+  base_fit <- fit
+  class(base_fit) <- setdiff(class(fit), cls)
+  base_fit$spec <- fit$spec$params$base
+  if (!is.null(to)) {
+    if (!h_missing) mt_warn("Both `h` and `to` are given; `to` is used.", class = "argument")
+    h <- to - max(fit$periods)
+  }
+  out <- with_seed(seed, {
+    fc <- suppressWarnings(mt_forecast(base_fit, h = h, n_draws = n_draws, exposure = exposure))
+    arr <- fc$rates
+    d <- dim(arr)
+    targets <- calibration_targets(fit)
+    arr <- transform(arr, targets, fc)
     E <- expand_exposure(exposure %||% fit$exposure_last, d, dimnames(arr))
-    if (predictive) {
-      nz <- draw_noise(base_fit, fc, d[4])
-      if (any(nz$noise)) {
-        for (s in targets) {
-          R <- arr[, , s, ]
-          if (anyNA(R)) next
-          Es <- as.vector(E[, , s])
-          sd <- array(nz$sd(s)[rep(seq_len(d[1]), d[2]), ], d[c(1, 2, 4)])
-          mu <- R * exp(stats::rnorm(length(R), 0, sd)) * Es
-          D <- pmax(stats::rpois(length(mu), mu), 0.5) / Es
-          k <- rep(nz$noise, each = d[1] * d[2])
-          R[k] <- D[k]
-          arr[, , s, ] <- R
-        }
-      }
-    }
+    if (predictive) arr <- add_observation_noise(arr, base_fit, fc, targets, E)
     hs <- fit$reconcile$structure
     if (!is.null(hs)) arr <- aggregate_bottom(arr, E, hs, fit$reconcile$hierarchy$additive)
     list(fc = fc, rates = arr)
@@ -385,9 +390,28 @@ mt_forecast.mt_fit_calibrated <- function(fit, h = 10, to = NULL, n_draws = 500,
   dimnames(res$rates) <- dimnames(out$fc$rates)
   check_draws_plausible(res$rates, fit$age, fit$strata, fit$spec$label)
   res$model <- fit$spec$label
+  res$spec <- fit$spec
   res$predictive <- predictive
-  res$calibration <- fit$calibration
   res
+}
+
+# Poisson and extra-Poisson noise of the base model added to rate draws
+add_observation_noise <- function(arr, base_fit, fc, targets, E) {
+  d <- dim(arr)
+  nz <- draw_noise(base_fit, fc, d[4])
+  if (!any(nz$noise)) return(arr)
+  for (s in targets) {
+    R <- arr[, , s, ]
+    if (anyNA(R)) next
+    Es <- as.vector(E[, , s])
+    sd <- array(nz$sd(s)[rep(seq_len(d[1]), d[2]), ], d[c(1, 2, 4)])
+    mu <- R * exp(stats::rnorm(length(R), 0, sd)) * Es
+    D <- pmax(stats::rpois(length(mu), mu), 0.5) / Es
+    k <- rep(nz$noise, each = d[1] * d[2])
+    R[k] <- D[k]
+    arr[, , s, ] <- R
+  }
+  arr
 }
 
 # Recompute the aggregate strata of a hierarchy from the bottom strata

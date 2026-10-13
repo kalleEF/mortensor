@@ -12,6 +12,7 @@ mt_reconcile(
   exposure = NULL,
   dependence = c("empirical", "none"),
   seed = NULL,
+  fixed = NULL,
   var = NULL,
   total = NULL,
   parts = NULL
@@ -40,13 +41,21 @@ used; aggregates are summed.}
 
 \item{seed}{Random seed for the reordering.}
 
+\item{fixed}{Strata whose forecasts are kept unchanged (labels, or
+\code{"total"} for the grand total of the hierarchy), for example a trusted
+all-cause forecast that the causes must add up to. The projection gives
+these nodes zero variance, so the other strata absorb the whole gap;
+\verb{$reconciliation$max_relative_change_fixed} reports how closely they
+were kept (they move only when every bottom stratum below them would
+have to be negative). Needs a projection method.}
+
 \item{var, total, parts}{One-variable form: stratum variable and its total
 level (\code{parts} is ignored: all other levels are parts).}
 }
 \value{
 The reconciled \code{mt_draws}, with diagnostics in \verb{$reconciliation}
 (method, largest relative gap before reconciliation, share of bottom
-values set to zero, mean shrinkage intensity).
+values held at zero, mean shrinkage intensity).
 }
 \description{
 Makes forecasts of nested or crossed strata add up, draw by draw. For each
@@ -71,9 +80,12 @@ covariance of the forecast draws in place of in-sample residuals;
 \item \code{"bottom_up"}: aggregates are the sums of the bottom forecasts.
 }
 
-Negative reconciled bottom values are set to zero and the aggregates are
-recomputed from the bottom series, so the result is coherent and
-non-negative.
+Projections can make bottom values negative where the base forecasts
+disagree strongly. Such values are held at zero and the remaining bottom
+strata of the draw are projected again, until none is negative (a simple
+form of the non-negative reconciliation of Wickramasuriya et al. 2020);
+the aggregates are recomputed from the bottom series, so the result is
+coherent and non-negative, and fixed nodes are kept.
 
 Draws of strata forecast by separate models are independent, so their sums
 would be too narrow. With \code{dependence = "empirical"} (default), the paths
@@ -99,6 +111,10 @@ Wickramasuriya SL, Athanasopoulos G, Hyndman RJ (2019). Optimal forecast
 reconciliation for hierarchical and grouped time series through trace
 minimization. \emph{Journal of the American Statistical Association}
 114(526): 804-819. \doi{10.1080/01621459.2018.1448825}
+
+Wickramasuriya SL, Turlach BA, Hyndman RJ (2020). Optimal non-negative
+forecast reconciliation. \emph{Statistics and Computing} 30: 1167-1182.
+\doi{10.1007/s11222-020-09930-0}
 
 Clark M, Gangopadhyay S, Hay L, Rajagopalan B, Wilby R (2004). The Schaake
 shuffle: a method for reconstructing space-time variability in forecasted

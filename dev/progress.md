@@ -46,6 +46,7 @@ work: `claude/vigilant-albattani-2ssw1x` (plays the role of `dev-0.2`).
 | D1.19 | done | this branch | `calibrated()`: recalibration of the spread (and optionally the drift) of any model's draws on the last 10 training years by minimum CRPS or interval score, nested in backtests; works with ensembles (per-draw observation noise), reconciled (bottom level, coherent) and bootstrapped models; validation check `calibration_ew` |
 | V4 | done | this branch | Vignettes on deprivation quintiles (ONS) and on the effect of reconciliation methods (ONS sex x quintile with totals), precomputed; regional vignette extended with forecasts for every Land by reconciliation method |
 | U0 | done | this branch | Review of the owner's earlier UK analysis (`uk_analysis.R`, methodology document, plots) and integration plan `dev/integration-plan-uk-analysis.md`: plot layout as standard, jump-off control, reconciliation with a fixed total, diagnostics; list of elements not to port. Package labelled experimental and vibe-coded (README, DESCRIPTION, package help, startup message); documentation rule in `CLAUDE.md` |
+| U1 | done | this branch | Methods of the earlier UK analysis (plan 4.2-4.8): `mt_smooth(along = "period")` (Whittaker over time, GCV pooled per stratum), `mt_smooth(dims = 2, method = "gam")` (quasi-Poisson `te(age, year)`), `mt_smooth_check()`, `mt_plot_smooth()`; models fitted to smoothed rates take residuals, observation noise, MASE scale and copula from the raw deaths (`fit$raw_D`); `anchored()` and `mt_jump_off()`; `fixed` nodes in `mt_reconcile()`/`reconciled()` with non-negative projection, `mt_coherence()`, `mt_plot_coherence()`; `mt_backtest(quantities = )` and `mt_score(target = )` for life expectancy and ASR, `mt_plot_scores(by = "model")`; `lee_carter(adjust = , choose_period = )` (demography's `lca` adjustments and BMS period); `ensemble(top_k = )`; `mt_tune(strategy = "two_stage")`; tail options and diagnostics of disaggregation (`mt_shape_rates()`, `mt_disaggregate_check()`, `mt_plot_disaggregation()`); validation check `smoothing_jumpoff`; vignettes updated (HMD, deprivation, coherence, causes) |
 | V3 | done | this branch | Comparison vignette (fidelity and accuracy vs demography, bamp, StMoMo; stored results of `dev/compare-packages.R`, full run 2026-10-13); regional vignette on German Laender (precomputed); validation check `de_regions` |
 | D1.12 (HMD) | done | this branch | `mt_from_hmd()`, `mt_read_hmd()` (HMDHFDplus, credentials from `HMD_USER`/`HMD_PASSWORD`) |
 
@@ -153,6 +154,30 @@ work: `claude/vigilant-albattani-2ssw1x` (plays the role of `dev-0.2`).
   aggregates lower after reconciliation (England 0.73 against 0.57-0.64).
   The empirical copula raises the England coverage of bottom-up sums from
   0.46 to 0.58 (origins 2011-2014).
+
+- 2026-10-13: Smoothing before forecasting (CRPS, 95% coverage). England &
+  Wales men, origins 1996-2001, h = 10: Lee-Carter 0.0687/0.746; smoothed
+  over time and calibrated 0.0658/0.873; the 2D GAM surface with
+  calibration 0.0646/0.914; ensemble smoothed over time and calibrated
+  0.0562/0.917. Smoothing over time alone narrows the intervals of models
+  with a period index (its random walk is fitted to a smoother series), so
+  smoothing is combined with `calibrated()`. ONS quintiles (origins
+  2008-2014, h = 5): Li-Lee 0.0666/0.847, smoothed over time 0.0669/0.774;
+  life expectancy at birth 0.336/0.81 against 0.348/0.61 years. The ONS
+  rates vary around the smoothed trend no more than Poisson noise
+  (dispersion 0.4-1.0), so smoothing has little to remove there.
+- 2026-10-13: Jump-off. England & Wales men: `anchored(lee_carter(), years
+  = 3, decay = 10)` 0.0648 (first two years 0.033 against 0.040); observed
+  jump-off 0.0583. ONS: anchored Li-Lee 0.0658 against 0.0666 (e0 0.313
+  against 0.336, Q1 0.495 against 0.584); the observed jump-off of one year
+  0.0709. Anchoring to three years is the safer default where the last year
+  is noisy.
+- 2026-10-13: Fixed nodes. With a total far below the sum of its parts
+  (causes of ONS data reconciled to separately forecast all-cause rates,
+  gap up to 84%), setting negative bottoms to zero moved the fixed totals by
+  up to 51%. The projection now holds such bottoms at zero and projects the
+  rest again; fixed totals are kept to 1.5e-7 (40 s for 130 strata x 135
+  cells x 200 draws).
 
 ## Open questions
 

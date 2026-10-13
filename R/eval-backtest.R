@@ -27,20 +27,33 @@
 #'   example suppressed cells filled by [mt_fill_suppressed()]); by default
 #'   only observed cells are scored.
 #' @param cores Cores used over origins (forked processes; 1 on Windows).
+#' @param quantities Derived quantities scored in addition to the rates:
+#'   `"life_expectancy"` (at the first observed age, in years) and/or
+#'   `"asr"` (age-standardised rate, European Standard Population 2013, on
+#'   the log scale), computed from the predictive draws aggregated to the
+#'   observed age groups of each stratum and test year (years with missing
+#'   or suppressed cells are skipped). They are added as rows with `target`
+#'   `"life_expectancy"` or `"asr"`; summarise them with
+#'   `mt_score(..., target = )`.
 #' @return An object of class `mt_backtest`: a `data.table` with one row per
 #'   observed cell, origin and horizon: `model`, `origin`, `horizon`,
 #'   stratum columns, `age_lo`, `age_hi`, `period`, `observed` (log rate),
 #'   `median`, `mean`, quantiles, and the scores `crps`, `wis`, `ae`
 #'   (absolute error of the median), `cov50`, `cov80`, `cov95`, `pit` and the
 #'   MASE scale `scale` (mean absolute year-to-year change in the training
-#'   data). Summarise with [mt_score()].
+#'   data), and `target` (`"rate"`, or the derived quantity). Summarise with
+#'   [mt_score()].
 #' @examples
 #' x <- mt_example(deaths = "single", years = 1990:2012)
 #' bt <- mt_backtest(rwd(), x, origins = c(2005, 2007), h = 5, n_draws = 100)
 #' mt_score(bt)
 #' @export
 mt_backtest <- function(spec, data, origins = NULL, h = 10, prep = NULL, n_draws = 200, n_origins = 5,
-                        seed = 1, cores = 1, score_estimated = FALSE) {
+                        seed = 1, cores = 1, score_estimated = FALSE, quantities = NULL) {
+  if (length(quantities)) {
+    bad <- setdiff(quantities, c("life_expectancy", "asr"))
+    if (length(bad)) mt_abort("`quantities` can be \"life_expectancy\" and \"asr\".", class = "argument")
+  }
   check_class(data, "mt_data", "data")
   g <- mt_grid(data)
   last <- max(g$period$lower)
@@ -60,7 +73,7 @@ mt_backtest <- function(spec, data, origins = NULL, h = 10, prep = NULL, n_draws
   origins <- origins[origins < last]
   if (!length(origins)) mt_abort("No origin leaves test data.", class = "backtest")
   one <- function(o) {
-    res <- tryCatch(backtest_origin(spec, data, o, h, prep, n_draws, seed + o, score_estimated),
+    res <- tryCatch(backtest_origin(spec, data, o, h, prep, n_draws, seed + o, score_estimated, quantities),
                     error = function(e) e)
     if (inherits(res, "error")) {
       mt_warn(sprintf("Origin %s failed: %s", o, conditionMessage(res)), class = "backtest_origin")
@@ -74,7 +87,7 @@ mt_backtest <- function(spec, data, origins = NULL, h = 10, prep = NULL, n_draws
   out
 }
 
-backtest_origin <- function(spec, data, origin, h, prep, n_draws, seed, score_estimated = FALSE) {
+backtest_origin <- function(spec, data, origin, h, prep, n_draws, seed, score_estimated = FALSE, quantities = NULL) {
   train <- mt_window(data, to = origin)
   fit <- mt_fit(spec, train, prep = prep)
   last_fit <- max(fit$periods)
@@ -114,13 +127,55 @@ backtest_origin <- function(spec, data, origin, h, prep, n_draws, seed, score_es
     scale <- mase_scale(fit, s, o)
     rows[[length(rows) + 1L]] <- cbind(
       data.table(model = spec$label, origin = origin, horizon = o$period_lo - origin, stratum = s,
-                 age_lo = o$age_lo, age_hi = o$age_hi, period = o$period_lo, observed = y, scale = scale),
+                 age_lo = o$age_lo, age_hi = o$age_hi, period = o$period_lo, observed = y, scale = scale,
+                 target = "rate"),
       sc)
+    if (length(quantities)) {
+      qr <- quantity_scores(X, o, Ecell, quantities, probs)
+      if (!is.null(qr)) {
+        rows[[length(rows) + 1L]] <- cbind(data.table(model = spec$label, origin = origin,
+                                                      horizon = qr$period - origin, stratum = s, age_lo = NA_real_,
+                                                      age_hi = NA_real_, period = qr$period, observed = qr$observed,
+                                                      scale = NA_real_, target = qr$target),
+                                           qr$scores)
+      }
+    }
   }
   if (!length(rows)) mt_abort("The model failed in every stratum.", class = "backtest")
   out <- rbindlist(rows)
   out <- merge(data$strata, out, by = "stratum", sort = FALSE)
   out[]
+}
+
+# Scores of derived quantities per test year from the draws of log rates X
+# at the observed cells o (complete age axes only)
+quantity_scores <- function(X, o, Ecell, quantities, probs) {
+  out <- list()
+  for (pp in sort(unique(o$period_lo))) {
+    k <- which(o$period_lo == pp)
+    k <- k[order(o$age_lo[k])]
+    lo <- o$age_lo[k]
+    hi <- o$age_hi[k]
+    if (length(k) < 2 || any(abs(hi[-length(hi)] - lo[-1]) > 1e-9)) next
+    ax <- mt_axis(lo, hi, kind = "age")
+    R <- exp(X[k, , drop = FALSE])
+    r_obs <- o$value[k] / Ecell[k]
+    for (q in quantities) {
+      if (q == "life_expectancy") {
+        qd <- as.vector(life_expectancy(array(R, c(length(k), 1, 1, ncol(R))), ax))
+        qo <- as.vector(life_expectancy(array(r_obs, c(length(k), 1, 1)), ax))
+      } else {
+        w <- standard_weights(ax, standard_population("esp2013"))
+        qd <- log(colSums(R * w) / sum(w))
+        qo <- log(sum(r_obs * w) / sum(w))
+      }
+      out[[length(out) + 1L]] <- list(period = pp, target = q, observed = qo,
+                                      scores = score_samples(matrix(qd, 1), qo, probs))
+    }
+  }
+  if (!length(out)) return(NULL)
+  list(period = vapply(out, `[[`, 0, "period"), target = vapply(out, `[[`, "", "target"),
+       observed = vapply(out, `[[`, 0, "observed"), scores = rbindlist(lapply(out, `[[`, "scores")))
 }
 
 # Exposures of the forecast periods on the grid (ungrouped if needed; deaths not used)
@@ -140,7 +195,7 @@ mase_scale <- function(fit, s, o) {
   cells <- unique(data.table(age_lo = o$age_lo, age_hi = o$age_hi))
   a1 <- match_bound(cells$age_lo, fit$age$lower)
   a2 <- match_bound(cells$age_hi, fit$age$upper)
-  D <- fit$train_D[, , s]
+  D <- (fit$raw_D %||% fit$train_D)[, , s]
   E <- fit$train_E[, , s]
   cells[, scale := vapply(seq_len(.N), function(i) {
     if (is.na(a1[i]) || is.na(a2[i])) return(NA_real_)
@@ -217,18 +272,32 @@ wis_from_quantiles <- function(Q, y, probs) {
 #' @param backtest An [mt_backtest()] result (or several combined with
 #'   `rbind()`).
 #' @param by Grouping columns, for example `c("model", "horizon")`.
+#' @param target `"rate"` (log death rates per cell, default),
+#'   `"life_expectancy"` or `"asr"` (when the backtest scored these
+#'   quantities, see `quantities` in [mt_backtest()]).
 #' @return A `data.table` with the mean CRPS, WIS and absolute error, MASE
-#'   (mean of absolute error over the scale), empirical coverage of the 50%,
-#'   80% and 95% intervals, mean PIT and the number of scored cells.
+#'   (mean of absolute error over the scale; rates only), empirical coverage
+#'   of the 50%, 80% and 95% intervals, mean PIT and the number of scored
+#'   cells.
 #' @examples
 #' x <- mt_example(deaths = "single", years = 1990:2012)
 #' bt <- mt_backtest(rwd(), x, origins = 2007, h = 5, n_draws = 100)
 #' mt_score(bt, by = c("model", "horizon"))
 #' @export
-mt_score <- function(backtest, by = "model") {
+mt_score <- function(backtest, by = "model", target = c("rate", "life_expectancy", "asr")) {
   if (!is.data.frame(backtest)) mt_abort("`backtest` must be a backtest table.", class = "argument")
+  target <- match.arg(target)
   bt <- as.data.table(backtest)
-  bt[, list(crps = mean(crps), wis = mean(wis), mae = mean(ae), mase = mean(ae / scale, na.rm = TRUE),
+  if ("target" %in% names(bt)) {
+    keep <- bt[["target"]] == target
+    bt <- bt[keep]
+  } else if (target != "rate") {
+    mt_abort("The backtest has no derived quantities; use `quantities` in mt_backtest().", class = "argument")
+  }
+  if (!nrow(bt)) mt_abort(sprintf("The backtest holds no scores for target \"%s\".", target), class = "argument")
+  rates_only <- identical(target, "rate")
+  bt[, list(crps = mean(crps), wis = mean(wis), mae = mean(ae),
+            mase = if (rates_only) mean(ae / scale, na.rm = TRUE) else NA_real_,
             cov50 = mean(cov50), cov80 = mean(cov80), cov95 = mean(cov95), pit_mean = mean(pit), n = .N),
      by = by]
 }

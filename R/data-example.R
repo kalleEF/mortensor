@@ -56,7 +56,7 @@ mt_example <- function(years = 1990:2019, deaths = c("grouped", "single"), size 
               dimnames = list(age = g$age$labels, period = g$period$labels, stratum = mt_strata(x)$label))
   for (s in seq_along(sim$sex)) {
     tr[!grepl("\\+", g$age$labels), , s] <- sim$m[!in_open, , s]
-    tr[length(g$age), , s] <- colSums(truth_dx[in_open, , s]) / colSums(sim$E[in_open, , s])
+    tr[length(g$age), , s] <- colSums(truth_dx[in_open, , s, drop = FALSE]) / colSums(sim$E[in_open, , s, drop = FALSE])
   }
   attr(x, "truth") <- tr
   attr(x, "truth_single") <- list(ages = ages, m = sim$m, E = sim$E)

@@ -4,18 +4,23 @@
 \alias{mt_score}
 \title{Summarise backtest scores}
 \usage{
-mt_score(backtest, by = "model")
+mt_score(backtest, by = "model", target = c("rate", "life_expectancy", "asr"))
 }
 \arguments{
 \item{backtest}{An \code{\link[=mt_backtest]{mt_backtest()}} result (or several combined with
 \code{rbind()}).}
 
 \item{by}{Grouping columns, for example \code{c("model", "horizon")}.}
+
+\item{target}{\code{"rate"} (log death rates per cell, default),
+\code{"life_expectancy"} or \code{"asr"} (when the backtest scored these
+quantities, see \code{quantities} in \code{\link[=mt_backtest]{mt_backtest()}}).}
 }
 \value{
 A \code{data.table} with the mean CRPS, WIS and absolute error, MASE
-(mean of absolute error over the scale), empirical coverage of the 50\%,
-80\% and 95\% intervals, mean PIT and the number of scored cells.
+(mean of absolute error over the scale; rates only), empirical coverage
+of the 50\%, 80\% and 95\% intervals, mean PIT and the number of scored
+cells.
 }
 \description{
 Summarise backtest scores

@@ -9,7 +9,8 @@ reconciled(
   hierarchy,
   method = c("wls", "mint", "structural", "ols", "bottom_up"),
   shrink = "auto",
-  dependence = c("auto", "empirical", "none")
+  dependence = c("auto", "empirical", "none"),
+  fixed = NULL
 )
 }
 \arguments{
@@ -26,6 +27,8 @@ across strata, whose draws already carry their dependence, such as
 order the paths before reconciliation and the predictive noise of the
 bottom strata, so aggregates of predictive draws keep the observed
 co-movement.}
+
+\item{fixed}{Strata whose forecasts are kept (see \code{\link[=mt_reconcile]{mt_reconcile()}}).}
 }
 \value{
 A model specification.

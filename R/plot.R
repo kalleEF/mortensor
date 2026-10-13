@@ -331,7 +331,8 @@ mt_plot_coverage <- function(backtest) {
 #'   forecast with a cause variable among the strata (for example from
 #'   [cause_shares()]).
 #' * `mt_plot_scores()`: mean score of each model by horizon or age from a
-#'   backtest.
+#'   backtest, or one bar per model (`by = "model"`); `target` selects
+#'   rates or a derived quantity scored by the backtest.
 #'
 #' @param fit A fitted [tucker3()] model.
 #' @param draws An [mt_draws] object whose strata include `var`.
@@ -346,7 +347,9 @@ mt_plot_coverage <- function(backtest) {
 #'   computed among all levels).
 #' @param backtest An [mt_backtest()] result.
 #' @param metric Score column, for example `"crps"`, `"wis"` or `"ae"`.
-#' @param by `"horizon"` or `"age"`.
+#' @param by `"horizon"`, `"age"` or `"model"`.
+#' @param target `"rate"`, `"life_expectancy"` or `"asr"` (see
+#'   [mt_backtest()]).
 #' @return A ggplot object.
 #' @examples
 #' if (requireNamespace("ggplot2", quietly = TRUE)) {
@@ -450,11 +453,30 @@ mt_plot_shares <- function(draws, var = NULL, total_level = NULL, ages = NULL, g
 
 #' @rdname mt_plot_more
 #' @export
-mt_plot_scores <- function(backtest, metric = "crps", by = c("horizon", "age")) {
+mt_plot_scores <- function(backtest, metric = "crps", by = c("horizon", "age", "model"),
+                           target = c("rate", "life_expectancy", "asr")) {
   need_ggplot()
   by <- match.arg(by)
+  target <- match.arg(target)
   if (!metric %in% names(backtest)) mt_abort(sprintf("No column `%s` in the backtest.", metric), class = "argument")
   tab <- as.data.table(unclass_backtest(backtest))
+  if ("target" %in% names(tab)) {
+    keep <- tab[["target"]] == target
+    tab <- tab[keep]
+  }
+  if (!nrow(tab)) mt_abort(sprintf("The backtest holds no scores for target \"%s\".", target), class = "argument")
+  if (by == "model") {
+    s <- tab[, list(score = mean(get(metric), na.rm = TRUE)), by = "model"]
+    s[, model := stats::reorder(model, score)]
+    return(ggplot2::ggplot(s, ggplot2::aes(x = model, y = score, fill = model)) +
+             ggplot2::geom_col(show.legend = FALSE, alpha = 0.9) +
+             ggplot2::coord_flip() +
+             scale_fill_mortensor(type = "categorical") +
+             ggplot2::labs(x = NULL, y = sprintf("Mean %s", toupper(metric)),
+                           title = sprintf("Model comparison (%s)", toupper(metric)),
+                           subtitle = sprintf("Backtest of %s; lower is better", gsub("_", " ", target))) +
+             theme_mortensor())
+  }
   if (by == "age") {
     s <- tab[, list(score = mean(get(metric), na.rm = TRUE)), by = c("model", "age_lo")]
     setnames(s, "age_lo", "x")

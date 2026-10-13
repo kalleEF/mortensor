@@ -35,15 +35,17 @@ demography, ggplot2) use them when installed.
 
 | Layer | Functions |
 |---|---|
-| Data at any granularity | `mt_data()` (long or wide tables, symbols for suppressed cells, shared populations), `mt_add_deaths()`, `as_mt_data()` (StMoMo, demography), `mt_from_hmd()`, `mt_read_hmd()`, `mt_read_genesis()`, `mt_read_gbe()`, `mt_validate()`, `ons_data`, `de_deaths` |
-| Preparation | `mt_subset()`, `mt_group_levels()` (aggregation layers: cause groups, quintiles, regions), `mt_fill_suppressed()`, `mt_as_exposure()` |
-| Harmonisation | `mt_regroup()`, `mt_ungroup()` (penalized composite link model with exposure offset, 1D/2D; spline methods), `mt_smooth()`, `mt_as_exposure()`, `mt_disaggregate()` |
-| Preprocessing pipelines | `mt_prep()` with `step_ungroup()`, `step_smooth()`, `step_regroup()`, `step_grid()`, `step_shocks()` |
-| Models | `rwd()`, `lee_carter()`, `tucker3()`, `arima_series()`, `ets_series()`, `hyndman_ullah()` (demography), `stmomo()` (APC, CBD, RH, M6, LC), `li_lee()`, `product_ratio()`, `apc_bayes()` and `apc_select()` (bamp), `cause_shares()`, `ensemble()`, `tuned()`, `bootstrapped()`, `calibrated()` (spread fitted to the errors of the last 10 years) |
-| Coherence | `mt_hierarchy()`, `mt_aggregate_strata()`, `mt_reconcile()` and `reconciled()` (bottom-up, WLS, MinT, structural, OLS; draw by draw), `mt_aggregate_draws()`, `mt_order_strata()` |
-| Forecasts | `mt_fit()`, `mt_forecast()` (simulated paths), `mt_summarise()`, `mt_deaths()` |
-| Evaluation | `mt_backtest()` (rolling origin, no leakage), `mt_score()` (CRPS, WIS, coverage, PIT, MASE) |
-| Derived quantities and plots | `life_table()`, `life_expectancy()`, `prob_dying()`, `asr()`, `yll()`, `mt_plot_forecast()`, `mt_plot_scores()`, `mt_plot_shares()`, ... |
+| Data at any granularity | `mt_data()` (long or wide tables, symbols for suppressed cells, shared populations), `mt_add()`, `as_mt_data()` (StMoMo, demography), `mt_from_hmd()`, `mt_read_hmd()`, `mt_read_genesis()`, `mt_read_gbe()`, `mt_validate()`, `ons_data`, `de_deaths` |
+| Preparation | `mt_as_exposure()`, `mt_subset()`, `mt_group_levels()` (aggregation layers: cause groups, quintiles, regions), `mt_relabel()`, `mt_fill_suppressed()` |
+| Harmonisation | `mt_regroup()`, `mt_ungroup()` (penalized composite link model with exposure offset, 1D/2D; spline and GAM methods), `mt_smooth()` (over age, over time or both; P-splines, Whittaker, GAM), `mt_smooth_check()`, `mt_plot_smooth()` |
+| Preprocessing pipelines | `mt_prep()` with `step_ungroup()`, `step_smooth()`, `step_regroup()`, `step_grid()`, `step_shocks()`, `step_window()`; models fitted to smoothed rates take their observation noise from the raw rates |
+| Describing the past | `mt_observed()`, `life_expectancy()`, `asr()`, `prob_dying()` on data, `mt_contrast()` (gaps, ratios), `mt_inequality()` (SII, RII), `standard_population()` |
+| Models | `rwd()`, `lee_carter()` (Poisson or SVD with the adjustments and period choice of demography), `tucker3()`, `arima_series()`, `ets_series()`, `hyndman_ullah()` (demography), `stmomo()` (APC, CBD, RH, M6, LC), `li_lee()`, `product_ratio()`, `apc_bayes()` and `apc_select()` (bamp), `cause_shares()` |
+| Wrappers for any model | `ensemble()` (weights from inner backtests, `top_k`), `reconciled()`, `calibrated()` (spread fitted to the errors of the last 10 years), `anchored()` (jump-off at the observed level), `bootstrapped()`, `tuned()` and `mt_tune()` (full or two-stage grids) |
+| Coherence | `mt_hierarchy()`, `mt_aggregate_strata()`, `mt_reconcile()` and `reconciled()` (bottom-up, WLS, MinT, structural, OLS; draw by draw; `fixed` nodes such as a trusted total), `mt_coherence()`, `mt_plot_coherence()`, `mt_aggregate_draws()`, `mt_order_strata()` |
+| Forecasts | `mt_fit()`, `summary()`, `mt_parameters()`, `residuals()`, `mt_forecast()` (simulated paths), `mt_jump_off()`, `mt_summarise()`, `mt_deaths()`, `mt_disaggregate()` with `mt_shape_rates()` and `mt_disaggregate_check()` |
+| Evaluation | `mt_backtest()` (rolling origin, no leakage; rates, life expectancy, ASR), `mt_score()` (CRPS, WIS, coverage, PIT, MASE) |
+| Results and plots | `life_table()`, `life_expectancy()`, `prob_dying()`, `asr()`, `yll()`, `mt_contrast()`, `mt_inequality()`, `mt_plot_forecast()`, `mt_plot_life_expectancy()`, `mt_plot_scores()`, `mt_plot_shares()`, `theme_mortensor()`, `mt_export()`, `as_demogdata()`, `as_stmomodata()` |
 
 ## Function map
 

@@ -103,6 +103,35 @@ checks$calibration_ew <- list(
                          mean(cl$crps) / mean(lc$crps)))
   })
 
+checks$smoothing_jumpoff <- list(
+  suite = "quick",
+  description = paste("Smoothing over time and jump-off control. England & Wales men (as backtest_ew, origins",
+                      "1996-2001, h = 10): Lee-Carter fitted to rates smoothed by the age-period GAM, with and",
+                      "without calibrated() (smoothing alone narrows the intervals, because the period index is",
+                      "smooth); Lee-Carter anchored to the observed deaths of the last 3 years. ONS quintiles",
+                      "(origins 2008-2014, h = 5): Li-Lee with and without anchoring."),
+  run = function() {
+    ew <- as_mt_data(mortensor:::pkg_data("EWMaleData", "StMoMo"))
+    ew <- mt_set_grid(ew, age = single_ages(30, 100, open = FALSE))
+    ew <- mt_regroup(ew, age = single_ages(30, 100, open = FALSE))
+    o <- 1996:2001
+    gam2d <- mt_prep(step_smooth(dims = 2, method = "gam"))
+    lc <- mt_backtest(lee_carter(), ew, origins = o, h = 10, n_draws = 200)
+    sm <- mt_backtest(lee_carter(), ew, origins = o, h = 10, n_draws = 200, prep = gam2d)
+    smc <- mt_backtest(calibrated(lee_carter()), ew, origins = o, h = 10, n_draws = 200, prep = gam2d)
+    an <- mt_backtest(anchored(lee_carter(), years = 3, decay = 10), ew, origins = o, h = 10, n_draws = 200)
+    x <- ons_quintiles()
+    ll <- mt_backtest(li_lee(common_by = "sex"), x, origins = 2008:2014, h = 5, n_draws = 200)
+    lla <- mt_backtest(anchored(li_lee(common_by = "sex"), years = 3, decay = 10), x, origins = 2008:2014, h = 5,
+                       n_draws = 200)
+    h12 <- function(b) mean(b$crps[b$horizon <= 2])
+    data.frame(metric = c("ew_lc_crps", "ew_lc_cov95", "ew_smooth_cov95", "ew_smooth_cal_crps", "ew_smooth_cal_cov95",
+                          "ew_lc_crps_h12", "ew_anchored_crps_h12", "ons_lilee_crps", "ons_lilee_anchored_crps",
+                          "ons_anchored_ratio"),
+               value = c(mean(lc$crps), mean(lc$cov95), mean(sm$cov95), mean(smc$crps), mean(smc$cov95), h12(lc),
+                         h12(an), mean(ll$crps), mean(lla$crps), mean(lla$crps) / mean(ll$crps)))
+  })
+
 checks$apc_bayes_france <- list(
   suite = "full",
   description = paste("apc_bayes() (bamp, fast MCMC) on French women (HMD via demography), 1970-2006, deaths in",

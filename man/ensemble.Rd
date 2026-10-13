@@ -4,7 +4,7 @@
 \alias{ensemble}
 \title{Ensembles of models}
 \usage{
-ensemble(..., weights = "equal", inner_origins = 3, inner_h = 5)
+ensemble(..., weights = "equal", inner_origins = 3, inner_h = 5, top_k = NULL)
 }
 \arguments{
 \item{...}{Model specifications; names are used as labels.}
@@ -12,7 +12,11 @@ ensemble(..., weights = "equal", inner_origins = 3, inner_h = 5)
 \item{weights}{\code{"equal"}, \code{"crps"}, \code{"stack"} or a numeric vector.}
 
 \item{inner_origins, inner_h}{Inner backtest for \code{weights = "crps"} and
-\code{weights = "stack"}.}
+\code{weights = "stack"}, and for \code{top_k}.}
+
+\item{top_k}{Keep only the \code{top_k} components with the lowest CRPS in the
+inner backtest on the training years (the others get weight 0); \code{NULL}
+keeps all.}
 }
 \value{
 A model specification.

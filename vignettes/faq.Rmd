@@ -130,6 +130,35 @@ errors in the last years of the training data (by default ten); on England
 & Wales men it raised the 95% coverage of Lee-Carter from 0.75 to 0.88.
 Check calibration with `mt_backtest()` and `mt_plot_coverage()`.
 
+### Should I smooth the data before forecasting?
+
+Smoothing over age helps where cells hold few deaths (rare causes, small
+regions): on the German cause-specific data it improved the CRPS of the
+Laender. Smoothing over time removes the year-to-year noise from the fitted
+trends and from the start of the forecast, but also the variation from
+which models such as Lee-Carter estimate the uncertainty of their period
+index: alone, it made intervals too narrow in backtests (95% coverage of
+Lee-Carter 0.59 instead of 0.75 on England & Wales men). Together with
+`calibrated()`, which re-estimates the spread against the raw
+observations, it gave the best Lee-Carter forecasts there (CRPS 0.0646
+against 0.0687, coverage 0.91). Use smoothing as a preprocessing step
+(`mt_prep(step_smooth(...))`), so that backtests refit it on each training
+window; models fitted to smoothed rates take their observation noise from
+the raw rates. `mt_smooth_check()` and `mt_plot_smooth()` show what the
+smoothing removed.
+
+### Why does the forecast start with a step?
+
+Most models start from their fitted rates of the last observed year. When
+the fit misses the level of the last years, the first forecast year jumps
+away from the observations; `mt_jump_off()` reports the step, and the
+forecast plots show it as a gap between the solid (fitted) and the dashed
+(forecast) line. `anchored(model, years = 3)` moves the start to the
+observed level of the last three years, fading out over ten years; it
+improved short-term accuracy on England & Wales men and on the ONS data.
+Starting from the last observed year alone (`years = 1`) carries its
+noise into every forecast year and was worse on the ONS data.
+
 ### What is the difference between predictive draws and forecast rates?
 
 For models of smooth rates (Lee-Carter, Li-Lee, Tucker3, FDM, StMoMo,

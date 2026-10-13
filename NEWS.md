@@ -2,6 +2,62 @@
 
 Clean break: the 0.1.x interface is replaced (see `dev/revamp-plan.md`).
 
+## Smoothing, jump-off and fixed totals (methods of the earlier UK analysis)
+
+* Smoothing over time: `mt_smooth(along = "period", method = "whittaker")`
+  (one smoothing parameter per stratum, chosen by GCV pooled over ages)
+  and over the age-period surface with a quasi-Poisson GAM,
+  `mt_smooth(dims = 2, method = "gam")` (`te(age, year)`, about one second
+  per stratum; the 2D P-spline takes minutes). `mt_smooth_check()` reports
+  how far the smoother moved the data (median absolute log difference,
+  dispersion of the raw deaths around the smoothed ones, variance ratio of
+  year-to-year changes, correlation); `mt_plot_smooth()` shows observed
+  points against smoothed lines.
+* Models fitted to smoothed data keep the raw deaths (`fit$raw_D`):
+  observation noise of predictive draws, residuals, observed rates, the
+  MASE scale of backtests and the empirical copula of reconciliation refer
+  to the data before smoothing. Before, noise was estimated from the
+  smoothed rates, which made intervals too narrow.
+* Smoothing over time narrows the intervals of models with a period index;
+  combined with `calibrated()` it gave the best calibrated forecasts for
+  England & Wales men (Lee-Carter on the GAM surface, calibrated: CRPS
+  0.0646, 95% coverage 0.91 against 0.0687 and 0.75). On the ONS quintiles,
+  whose noise is close to Poisson, smoothing did not help.
+* `anchored()` moves the start of any model's forecast towards the observed
+  level of the last `years` (default 3) per age and stratum, with empirical
+  Bayes shrinkage of sparse cells and a linear fade over `decay` years;
+  ensembles are anchored per component and reconciled models stay
+  coherent. `mt_jump_off()` reports the step from the last observed and the
+  last fitted year into the first forecast year.
+* Reconciliation with fixed nodes: `mt_reconcile(fixed = )` and
+  `reconciled(fixed = )` keep trusted forecasts (for example the total, or
+  all causes) and let the other strata absorb the gap. Bottom values that a
+  projection would make negative are held at zero and the rest projected
+  again (a simple form of non-negative reconciliation), so fixed nodes and
+  aggregates are kept; before, zeroed values could move them.
+  `mt_coherence()` and `mt_plot_coherence()` show how far forecasts are
+  from adding up.
+* Backtests score derived quantities: `mt_backtest(quantities =
+  c("life_expectancy", "asr"))` adds rows with `target`, and
+  `mt_score(target = )` scores them; `mt_plot_scores(by = "model")` draws
+  a bar chart of models.
+* `lee_carter(adjust = c("dt", "dxt", "e0", "none"))` re-estimates the
+  period index as in `demography::lca()`, and `choose_period = TRUE` fits
+  the longest recent period with a linear index (Booth, Maindonald and
+  Smith 2002); `ensemble(top_k = )` keeps the best components of the inner
+  backtest; `mt_tune(strategy = "two_stage")` searches a coarse grid first.
+* Disaggregation: `tail` (`"kannisto"` or `"gompertz"`) and `tail_width`
+  for the open interval in `mt_ungroup()` and `mt_disaggregate()`,
+  year-specific shapes from `mt_shape_rates()`, `mt_disaggregate_check()`
+  and `mt_plot_disaggregation()`.
+* Vignettes: "Forecasting and backtesting with HMD data" (chosen period,
+  anchoring, smoothing with calibration, scores of life expectancy),
+  "Forecasting mortality by deprivation quintile" (smoothing check,
+  jump-off, backtests of anchoring and smoothing), "Coherent forecasts"
+  (coherence plot, a fixed total), "Causes of death by deprivation"
+  (causes reconciled to a fixed all-cause forecast). New validation check
+  `smoothing_jumpoff`.
+
 ## Calibration, deprivation and coherence vignettes
 
 * `calibrated()` wraps any model specification (including `ensemble()`,

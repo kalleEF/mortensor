@@ -109,6 +109,19 @@ same: the female England model forecasts about 0.2 years more in 2035
 than the sum of the female quintiles (table below, `base` against
 `bottom_up`).
 
+`mt_coherence()` and `mt_plot_coherence()` summarise the ratio of the sum
+of the parts to each aggregate, per year: the boxes show how the median
+ratios of the eight aggregates (over ages and draws) spread around 1. The
+medians agree within 2%; single paths disagree far more (table above), and
+`mt_coherence()` reports their 2.5% and 97.5% quantiles.
+
+
+```r
+mt_plot_coherence(fc_base, h)
+```
+
+![plot of chunk plot-coherence](coherence-plot-coherence-1.png)
+
 ## The methods
 
 All methods of `mt_reconcile()` and `reconciled()` work draw by draw and
@@ -142,7 +155,7 @@ rbindlist(lapply(names(rec), function(m) {
 #> 1:  bottom_up   2.2e-16      1.098
 #> 2:        ols   1.2e-12      1.098
 #> 3: structural   2.2e-16      1.098
-#> 4:        wls   2.2e-16      1.098
+#> 4:        wls   3.3e-16      1.098
 #> 5:       mint   2.2e-16      1.098
 ```
 
@@ -181,7 +194,9 @@ show <- c("female.Q1", "female.Q5", "male.Q1", "male.Q5", "both.Q1", "both.Q5", 
           "male.England", "both.England")
 ggplot(e0[label %in% show], aes(q0.5, factor(label, rev(show)), colour = method)) +
   geom_pointrange(aes(xmin = q0.025, xmax = q0.975), position = position_dodge(width = 0.7), size = 0.2) +
-  labs(x = "Life expectancy at birth in 2035 (years)", y = NULL, colour = NULL)
+  scale_colour_mortensor(type = "categorical") +
+  labs(x = "Life expectancy at birth in 2035 (years)", y = NULL, colour = NULL) +
+  theme_mortensor(legend = "right")
 ```
 
 ![plot of chunk plot-e0-methods](coherence-plot-e0-methods-1.png)
@@ -231,6 +246,41 @@ The intervals of England and of the two sexes narrow under every method:
 sums of strata whose paths are only partly dependent vary less than the
 aggregates' own models.
 
+## Keeping a trusted total
+
+Sometimes one node is trusted more than the others: an official
+projection of the total population, or an all-cause forecast that the
+causes of death must add up to. `fixed` keeps such nodes unchanged in
+every draw (labels, or `"total"` for the grand total); the projection gives
+them zero variance, so the other strata absorb the whole gap. It works
+with every projection method:
+
+
+```r
+rec_fixed <- mt_reconcile(fc_base, h, method = "wls", fixed = "total", seed = 1)
+rec_fixed$reconciliation$max_relative_change_fixed
+#> [1] 1.098298e-09
+e0_fixed <- life_expectancy(rec_fixed)[period == 2035][, method := "wls, England fixed"]
+dcast(rbind(e0[method %in% c("base", "wls")], e0_fixed, fill = TRUE)[
+  label %in% c("both.England", "female.England", "male.England", "female.Q1", "male.Q5"),
+  .(label, method, e0 = round(q0.5, 2))], label ~ method, value.var = "e0")
+#>             label  base   wls wls, England fixed
+#> 1:   both.England 84.55 84.48              84.55
+#> 2: female.England 86.09 85.80              85.88
+#> 3:      female.Q1 81.52 81.50              81.65
+#> 4:   male.England 83.25 83.11              83.12
+#> 5:        male.Q5 86.31 86.31              86.24
+```
+
+England keeps the life expectancy of its own model (column `base`), and
+the sexes and quintiles move towards it. In the backtest below (`"wls,
+England fixed"`), England keeps the expected rates of its own model, but
+its predictive draws add up the observation noise of the bottom series,
+so its scores differ from those of its own model (CRPS 0.0452 against
+0.0440). The quintiles and the bottom series absorb the trend of England
+and become less accurate than with plain WLS (bottom series 0.0694 against
+0.0677): here the total was not better informed than its parts.
+
 ## What reconciliation changes in accuracy
 
 The same comparison in a rolling-origin backtest, with the reconciliation
@@ -242,7 +292,8 @@ as a model that is coherent by construction:
 ```r
 specs <- c(list(base = lee_carter()),
            setNames(lapply(methods, function(m) reconciled(lee_carter(), h, method = m)), methods),
-           list("Li-Lee, bottom_up" = reconciled(li_lee(common_by = "sex"), h, method = "bottom_up"),
+           list("wls, England fixed" = reconciled(lee_carter(), h, method = "wls", fixed = "total"),
+                "Li-Lee, bottom_up" = reconciled(li_lee(common_by = "sex"), h, method = "bottom_up"),
                 "Ensemble, bottom_up" = reconciled(ensemble(ll = li_lee(common_by = "sex"),
                                                             rw = rwd(observation_noise = TRUE)),
                                                    h, method = "bottom_up")))
@@ -260,8 +311,9 @@ dcast(bt[, .(crps = round(mean(crps), 4)), by = .(method, node)], method ~ node,
 #> 4:          structural  0.0449   0.0593 0.0480         0.0678
 #> 5:                 wls  0.0451   0.0591 0.0481         0.0677
 #> 6:                mint  0.0458   0.0592 0.0484         0.0676
-#> 7:   Li-Lee, bottom_up  0.0481   0.0574 0.0500         0.0665
-#> 8: Ensemble, bottom_up  0.0465   0.0574 0.0503         0.0666
+#> 7:  wls, England fixed  0.0452   0.0602 0.0491         0.0694
+#> 8:   Li-Lee, bottom_up  0.0481   0.0574 0.0500         0.0665
+#> 9: Ensemble, bottom_up  0.0465   0.0574 0.0503         0.0666
 dcast(bt[, .(cov95 = round(mean(cov95), 3)), by = .(method, node)], method ~ node, value.var = "cov95")
 #>                 method England quintile   sex sex x quintile
 #> 1:                base   0.734    0.825 0.775          0.832
@@ -270,8 +322,9 @@ dcast(bt[, .(cov95 = round(mean(cov95), 3)), by = .(method, node)], method ~ nod
 #> 4:          structural   0.620    0.730 0.700          0.847
 #> 5:                 wls   0.616    0.709 0.686          0.833
 #> 6:                mint   0.570    0.677 0.650          0.801
-#> 7:   Li-Lee, bottom_up   0.666    0.756 0.786          0.845
-#> 8: Ensemble, bottom_up   0.683    0.806 0.754          0.896
+#> 7:  wls, England fixed   0.651    0.743 0.704          0.848
+#> 8:   Li-Lee, bottom_up   0.666    0.756 0.786          0.845
+#> 9: Ensemble, bottom_up   0.683    0.806 0.754          0.896
 ```
 
 Reconciliation leaves the accuracy of the bottom series almost unchanged
@@ -331,6 +384,8 @@ for the bottom series.
   equally in all strata and widens the intervals of small strata.
 * **MinT** gives the narrowest intervals; check that they still cover the
   observations (here they covered least).
+* `fixed` keeps a node that is trusted more than the others (an official
+  total, an all-cause forecast) and lets the rest of the hierarchy adapt.
 * Check the choice in a backtest at every level of the hierarchy, as above.
   When the totals are well estimated by their own models, report how much
   coherence changes them. The vignette "Coherent forecasts by sex, region

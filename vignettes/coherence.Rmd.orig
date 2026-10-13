@@ -100,6 +100,16 @@ same: the female England model forecasts about 0.2 years more in 2035
 than the sum of the female quintiles (table below, `base` against
 `bottom_up`).
 
+`mt_coherence()` and `mt_plot_coherence()` summarise the ratio of the sum
+of the parts to each aggregate, per year: the boxes show how the median
+ratios of the eight aggregates (over ages and draws) spread around 1. The
+medians agree within 2%; single paths disagree far more (table above), and
+`mt_coherence()` reports their 2.5% and 97.5% quantiles.
+
+```{r plot-coherence, fig.height = 3.5}
+mt_plot_coherence(fc_base, h)
+```
+
 ## The methods
 
 All methods of `mt_reconcile()` and `reconciled()` work draw by draw and
@@ -186,6 +196,33 @@ The intervals of England and of the two sexes narrow under every method:
 sums of strata whose paths are only partly dependent vary less than the
 aggregates' own models.
 
+## Keeping a trusted total
+
+Sometimes one node is trusted more than the others: an official
+projection of the total population, or an all-cause forecast that the
+causes of death must add up to. `fixed` keeps such nodes unchanged in
+every draw (labels, or `"total"` for the grand total); the projection gives
+them zero variance, so the other strata absorb the whole gap. It works
+with every projection method:
+
+```{r}
+rec_fixed <- mt_reconcile(fc_base, h, method = "wls", fixed = "total", seed = 1)
+rec_fixed$reconciliation$max_relative_change_fixed
+e0_fixed <- life_expectancy(rec_fixed)[period == 2035][, method := "wls, England fixed"]
+dcast(rbind(e0[method %in% c("base", "wls")], e0_fixed, fill = TRUE)[
+  label %in% c("both.England", "female.England", "male.England", "female.Q1", "male.Q5"),
+  .(label, method, e0 = round(q0.5, 2))], label ~ method, value.var = "e0")
+```
+
+England keeps the life expectancy of its own model (column `base`), and
+the sexes and quintiles move towards it. In the backtest below (`"wls,
+England fixed"`), England keeps the expected rates of its own model, but
+its predictive draws add up the observation noise of the bottom series,
+so its scores differ from those of its own model (CRPS 0.0452 against
+0.0440). The quintiles and the bottom series absorb the trend of England
+and become less accurate than with plain WLS (bottom series 0.0694 against
+0.0677): here the total was not better informed than its parts.
+
 ## What reconciliation changes in accuracy
 
 The same comparison in a rolling-origin backtest, with the reconciliation
@@ -196,7 +233,8 @@ as a model that is coherent by construction:
 ```{r backtest}
 specs <- c(list(base = lee_carter()),
            setNames(lapply(methods, function(m) reconciled(lee_carter(), h, method = m)), methods),
-           list("Li-Lee, bottom_up" = reconciled(li_lee(common_by = "sex"), h, method = "bottom_up"),
+           list("wls, England fixed" = reconciled(lee_carter(), h, method = "wls", fixed = "total"),
+                "Li-Lee, bottom_up" = reconciled(li_lee(common_by = "sex"), h, method = "bottom_up"),
                 "Ensemble, bottom_up" = reconciled(ensemble(ll = li_lee(common_by = "sex"),
                                                             rw = rwd(observation_noise = TRUE)),
                                                    h, method = "bottom_up")))
@@ -263,6 +301,8 @@ for the bottom series.
   equally in all strata and widens the intervals of small strata.
 * **MinT** gives the narrowest intervals; check that they still cover the
   observations (here they covered least).
+* `fixed` keeps a node that is trusted more than the others (an official
+  total, an all-cause forecast) and lets the rest of the hierarchy adapt.
 * Check the choice in a backtest at every level of the hierarchy, as above.
   When the totals are well estimated by their own models, report how much
   coherence changes them. The vignette "Coherent forecasts by sex, region

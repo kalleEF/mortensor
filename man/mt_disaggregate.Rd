@@ -23,7 +23,9 @@ mt_disaggregate(
 
 \item{method}{\code{"shape"}, \code{"hyman_kannisto"} or \code{"natural_gompertz"}.}
 
-\item{shape_rates}{For \code{"shape"}: rates on the finer ages, \verb{[age, stratum]}.}
+\item{shape_rates}{For \code{"shape"}: rates on the finer ages, \verb{[age, stratum]}
+or \verb{[age, period, stratum]} for the forecast periods (see
+\code{\link[=mt_shape_rates]{mt_shape_rates()}}).}
 
 \item{omega}{Maximum age.}
 }
@@ -38,8 +40,10 @@ deaths. Two approaches:
 \details{
 \itemize{
 \item \code{"shape"}: age-specific factors relative to the group rate, estimated
-from fine-resolution rates (\code{shape_rates}, for example ungrouped training
-data of the last years), exposure-weighted to 1 within each group;
+from fine-resolution rates (\code{shape_rates}), exposure-weighted to 1
+within each group. \code{\link[=mt_shape_rates]{mt_shape_rates()}} estimates them from training data
+at the finer resolution, constant (mean of the last years) or changing
+over the forecast years (an age-period GAM extrapolated in time);
 \item \code{"hyman_kannisto"} or \code{"natural_gompertz"}: a spline through the group
 rates of each draw (monotone Hyman spline with a Kannisto tail, or a
 natural spline with a log-linear tail), corrected so that the

@@ -168,7 +168,7 @@ fitted.mt_fit <- function(object, ...) {
 residuals.mt_fit <- function(object, type = c("deviance", "pearson"), ...) {
   type <- match.arg(type)
   m <- stats::fitted(object)
-  D <- object$train_D
+  D <- object$raw_D %||% object$train_D
   mu <- m * object$train_E
   r <- if (type == "pearson") {
     (D - mu) / sqrt(mu)

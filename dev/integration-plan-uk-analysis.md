@@ -72,6 +72,15 @@ Each package follows the conventions of `CLAUDE.md`: tests, a validation
 check with thresholds for statistical code, documentation and pkgdown
 updates in the same change.
 
+Status 2026-10-13: 4.1 to 4.8 are implemented (4.1 in `NEWS.md`, the others
+in `dev/progress.md`, row U1). 4.9 is covered by `bootstrapped(type = "data")`, which redraws the
+observed deaths and refits the whole preprocessing, smoothing included, for
+any smoother. In addition to the plan: smoothing over time with residuals
+and observation noise taken from the raw deaths, `anchored()` for every
+model (ensembles per component, reconciled models coherent), non-negative
+reconciliation that keeps fixed nodes, and life expectancy and ASR as
+backtest targets.
+
 ### 4.1 Plot layout as the package standard (P1, first)
 
 The owner prefers the layout of the earlier plots

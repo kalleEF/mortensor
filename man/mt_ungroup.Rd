@@ -16,7 +16,9 @@ mt_ungroup(
   deg = 3,
   pord = 2,
   lambda_range = c(0.01, 1e+08),
-  preserve_totals = TRUE
+  preserve_totals = TRUE,
+  tail = c("kannisto", "gompertz"),
+  tail_width = 2
 )
 }
 \arguments{
@@ -60,6 +62,12 @@ penalty.}
 \item{lambda_range}{Search range for the smoothing parameters.}
 
 \item{preserve_totals}{Rescale estimates to observed group totals.}
+
+\item{tail, tail_width}{For \code{method = "gam"}: the parametric curve that
+takes over from the GAM above the start of the last age group
+(\code{"kannisto"}, logistic, or \code{"gompertz"}, log-linear), fitted to the GAM
+rates from age 70, and the width (years) of the logistic blend between
+the two.}
 }
 \value{
 An \code{mt_data} object with deaths (and exposures) on the grid.

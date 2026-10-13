@@ -14,14 +14,16 @@ mt_smooth(
   pord = 2,
   lambda_range = c(0.01, 1e+08),
   method = c("pspline", "whittaker", "gam"),
-  ages = NULL
+  ages = NULL,
+  along = c("age", "period"),
+  k = NULL
 )
 }
 \arguments{
 \item{data}{An \link{mt_data} object.}
 
-\item{dims}{1 (over age, separately per period) or 2 (age-period
-surface; P-splines only).}
+\item{dims}{1 (over one direction, see \code{along}) or 2 (age-period
+surface; \code{"pspline"} or \code{"gam"}).}
 
 \item{lambda}{Fixed smoothing parameter(s); \code{NULL} selects them by
 \code{criterion}.}
@@ -35,38 +37,82 @@ penalty.}
 
 \item{lambda_range}{Search range for the smoothing parameters.}
 
-\item{method}{\code{"pspline"} (Poisson P-splines, default) or \code{"whittaker"}
-(Whittaker-Henderson smoothing of log rates over age with weights equal
-to the deaths, the approximate inverse variance of a log rate;
-smoothing parameter by generalised cross-validation unless \code{lambda} is
-given) or \code{"gam"} (Gaussian
-additive model of log rates on age per period with deaths as weights,
-\code{mgcv::gam()} with REML).}
+\item{method}{\code{"pspline"} (Poisson P-splines, default), \code{"whittaker"} or
+\code{"gam"} (package \pkg{mgcv}); see Details.}
 
 \item{ages}{Range of ages that is smoothed, \code{c(lower, upper)}; other
 ages keep their observed deaths and do not enter the fit. By default
 all ages except the first year of life when the grid starts with age 0
 as its own interval (infant mortality does not follow the age pattern
 of the following ages).}
+
+\item{along}{For \code{dims = 1}: \code{"age"} or \code{"period"} (\code{"whittaker"} only).}
+
+\item{k}{Basis dimensions of the tensor-product smooth for \code{dims = 2},
+\code{method = "gam"}: ages and years (default: up to 10 each).}
 }
 \value{
 An \code{mt_data} object with smoothed deaths; diagnostics as attribute
 \code{"smooth"}.
 }
 \description{
-Poisson P-spline smoothing of death rates with the exposures as offset
-(Currie, Durban and Eilers 2004 for the 2D case): the same engine as
-\code{\link[=mt_ungroup]{mt_ungroup()}} with every grid cell as its own observation. Deaths are
-replaced by exposure times the smoothed rate; exposures are unchanged.
-Deaths and exposures must be available on the grid (use \code{\link[=mt_ungroup]{mt_ungroup()}}
-first for grouped data).
+Smooths death rates over age, over time or over both, with the exposures
+as weights or offset. Deaths are replaced by exposure times the smoothed
+rate; exposures are unchanged. Deaths and exposures must be available on
+the grid (use \code{\link[=mt_ungroup]{mt_ungroup()}} first for grouped data). In a forecasting
+pipeline, use it as a preprocessing step (\code{mt_prep(step_smooth(...))}):
+models are then fitted to the smoothed rates, while the observation noise
+of their predictive draws, residuals and backtest scales come from the
+rates before smoothing ("smooth input, raw residuals").
+}
+\details{
+Methods and directions:
+\itemize{
+\item \verb{dims = 1, along = "age"} (default): each year separately over age,
+with Poisson P-splines (\code{"pspline"}), Whittaker smoothing of log rates
+with the deaths as weights (\code{"whittaker"}), or a Gaussian additive
+model of log rates with the deaths as weights (\code{"gam"});
+\item \verb{dims = 1, along = "period"}: each age separately over time, Whittaker
+smoothing of log rates with the deaths as weights and one smoothing
+parameter per stratum (generalised cross-validation pooled over ages);
+\item \code{dims = 2}: the age-period surface, with a Poisson P-spline surface
+(\code{"pspline"}; Currie, Durban and Eilers 2004) or a quasi-Poisson
+additive model with a tensor-product P-spline \code{te(age, year)} and the
+exposures as offset (\code{"gam"}; Wood 2017), smoothing parameters by REML
+and overdispersion estimated, so that year-to-year variation beyond
+Poisson noise is not taken for signal.
+}
+
+Smoothing over time removes year-to-year fluctuations from the fitted
+trends and from the starting level of forecasts; the last years are
+estimated from one side only. It also removes the year-to-year variation
+from which models such as Lee-Carter estimate the uncertainty of their
+period index, so their intervals become too narrow: in backtests on
+England & Wales men (origins 1996-2001, h = 10) the 95\% coverage of
+Lee-Carter fell from 0.75 to 0.59 with the age-period GAM, and on the ONS
+deprivation data from 0.83 to 0.72. Combined with \code{\link[=calibrated]{calibrated()}}, which
+re-estimates the spread against the raw observations, the same smoothing
+gave the best Lee-Carter forecasts on England & Wales (CRPS 0.0646
+against 0.0687, 95\% coverage 0.91), and an ensemble of Lee-Carter and
+\code{rwd(observation_noise = TRUE)} on rates smoothed over time with
+calibration the best overall (0.0562, 0.92). Smoothing over age alone
+changed little for large populations and helped for sparse
+cause-specific data (German Laender). Use \code{\link[=mt_smooth_check]{mt_smooth_check()}} to see how
+much was removed and \code{\link[=mt_plot_smooth]{mt_plot_smooth()}} to look at it. The 2D P-spline
+surface is slow for many ages and years (minutes per stratum); the 2D
+GAM takes about a second.
 }
 \examples{
 x <- mt_example(years = 2001:2003, deaths = "single")
 s <- mt_smooth(x)
 head(attr(s, "smooth"))
+st <- mt_smooth(mt_example(deaths = "single", years = 2000:2015), along = "period", method = "whittaker")
+mt_smooth_check(mt_example(deaths = "single", years = 2000:2015), st)
 }
 \references{
 Currie ID, Durban M, Eilers PHC (2004). Smoothing and forecasting
 mortality rates. \emph{Statistical Modelling} 4(4): 279-298.
+
+Wood SN (2017). \emph{Generalized Additive Models: An Introduction with R}
+(2nd ed.). Chapman and Hall/CRC.
 }

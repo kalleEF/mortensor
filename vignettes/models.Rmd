@@ -35,7 +35,7 @@ stratum `i` (deaths divided by exposure), `D` deaths, `E` exposures.
 | Suppressed cells | raking (iterative proportional fitting; Deming and Stephan 1940) of the missing counts to published totals, within optional bounds | `mt_fill_suppressed()` |
 | Unknown ages | distributed over the age groups of the same stratum and year in proportion to the known deaths | `mt_data()` |
 | Ungrouping | penalised composite link model with exposures (Rizzi, Gampe and Eilers 2015) or spline methods | `mt_ungroup()`, `step_ungroup()` |
-| Smoothing | Poisson P-splines (Currie, Durban and Eilers 2004) or Whittaker smoothing of log rates over age; age 0 is not smoothed | `mt_smooth()`, `step_smooth()` |
+| Smoothing | over age (Poisson P-splines, Currie, Durban and Eilers 2004; Whittaker; GAM), over time (Whittaker) or the age-period surface (P-splines; quasi-Poisson `te(age, year)` GAM, Wood 2017); age 0 is not smoothed; models are fitted to the smoothed rates, their observation noise, residuals and backtest scales come from the raw rates | `mt_smooth()`, `step_smooth()`, `mt_smooth_check()` |
 | Zero deaths | models on log rates use 0.5 deaths in a cell without deaths | |
 
 All preprocessing steps given as `prep` are refitted on every training
@@ -49,9 +49,12 @@ window of a backtest.
 (Lee and Carter 1992).
 
 * **Estimation**: Poisson maximum likelihood (default; Brouhns, Denuit
-  and Vermunt 2002) or SVD of the log rates with `k(t)` refitted so that
-  the fitted deaths match the observed deaths (`method = "svd"`, as
-  `demography::lca()`). Age groups without any death get a constant rate
+  and Vermunt 2002) or SVD of the log rates (`method = "svd"`, as
+  `demography::lca()`), with `k(t)` re-estimated to match the observed
+  total deaths (`adjust = "dt"`), the deaths by age (`"dxt"`, Booth,
+  Maindonald and Smith 2002) or life expectancy (`"e0"`, Lee and Miller
+  2001). `choose_period = TRUE` fits the model to the longest recent period
+  over which `k(t)` was close to linear (Booth, Maindonald and Smith 2002). Age groups without any death get a constant rate
   of 0.5 deaths over the training period and `b(x) = 0`; when the Poisson
   likelihood has no finite maximum (very sparse counts), `b(x)` is shrunk
   towards equal shares by a ridge penalty. Both are reported as warnings.
@@ -159,6 +162,16 @@ a Tucker model of their isometric log-ratio coordinates, so the causes add
 up to all causes in every draw. Neither has a published evaluation for
 mortality; compare them with the models above in a backtest.
 
+## Jump-off: `anchored()`
+
+Forecasts start from the fitted rates of the last year for most models.
+`anchored()` moves the start towards the observed level of the last
+`years` years for any model: the log ratio of observed to fitted deaths
+per age and stratum, shrunk towards the stratum mean where deaths are few,
+multiplies the draws with a weight that fades out over `decay` years.
+`mt_jump_off()` reports the step between the last observed (and fitted)
+year and the first forecast year.
+
 ## Combining models
 
 ### Ensembles: `ensemble()`
@@ -223,6 +236,7 @@ step that a backtest compares across windows.
 | `bootstrapped()` | of the base model | of the base model | yes | as the base model | as the base model |
 | `reconciled()` | of the base model, projected | | | bottom strata, summed | bottom strata, summed |
 | `calibrated()` | of the base model, rescaled | rescaled (optional correction) | | as the base model | as the base model |
+| `anchored()` | of the base model | of the base model | | as the base model | as the base model |
 
 Predictive draws (`predictive = TRUE`, always used in backtests) describe
 observable rates. For models of smooth rates they add Poisson deaths given
@@ -289,6 +303,9 @@ Analysis* 51(10): 4942-4956.
 Lee RD, Carter LR (1992). Modeling and forecasting U.S. mortality.
 *Journal of the American Statistical Association* 87(419): 659-671.
 
+Lee R, Miller T (2001). Evaluating the performance of the Lee-Carter method
+for forecasting mortality. *Demography* 38(4): 537-549.
+
 Li N, Lee R (2005). Coherent mortality forecasts for a group of
 populations: an extension of the Lee-Carter method. *Demography* 42(3):
 575-594.
@@ -303,6 +320,9 @@ prediction: BAMP. *Journal of Statistical Software* 21(8): 1-15.
 Villegas AM, Kaishev VK, Millossovich P (2018). StMoMo: an R package for
 stochastic mortality modeling. *Journal of Statistical Software* 84(3):
 1-38.
+
+Wood SN (2017). *Generalized Additive Models: An Introduction with R* (2nd
+ed.). Chapman and Hall/CRC.
 
 Wickramasuriya SL, Athanasopoulos G, Hyndman RJ (2019). Optimal forecast
 reconciliation for hierarchical and grouped time series through trace

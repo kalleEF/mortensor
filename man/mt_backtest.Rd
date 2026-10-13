@@ -14,7 +14,8 @@ mt_backtest(
   n_origins = 5,
   seed = 1,
   cores = 1,
-  score_estimated = FALSE
+  score_estimated = FALSE,
+  quantities = NULL
 )
 }
 \arguments{
@@ -41,6 +42,15 @@ equally often.}
 \item{score_estimated}{Score cells whose deaths were estimated (for
 example suppressed cells filled by \code{\link[=mt_fill_suppressed]{mt_fill_suppressed()}}); by default
 only observed cells are scored.}
+
+\item{quantities}{Derived quantities scored in addition to the rates:
+\code{"life_expectancy"} (at the first observed age, in years) and/or
+\code{"asr"} (age-standardised rate, European Standard Population 2013, on
+the log scale), computed from the predictive draws aggregated to the
+observed age groups of each stratum and test year (years with missing
+or suppressed cells are skipped). They are added as rows with \code{target}
+\code{"life_expectancy"} or \code{"asr"}; summarise them with
+\code{mt_score(..., target = )}.}
 }
 \value{
 An object of class \code{mt_backtest}: a \code{data.table} with one row per
@@ -49,7 +59,8 @@ stratum columns, \code{age_lo}, \code{age_hi}, \code{period}, \code{observed} (l
 \code{median}, \code{mean}, quantiles, and the scores \code{crps}, \code{wis}, \code{ae}
 (absolute error of the median), \code{cov50}, \code{cov80}, \code{cov95}, \code{pit} and the
 MASE scale \code{scale} (mean absolute year-to-year change in the training
-data). Summarise with \code{\link[=mt_score]{mt_score()}}.
+data), and \code{target} (\code{"rate"}, or the derived quantity). Summarise with
+\code{\link[=mt_score]{mt_score()}}.
 }
 \description{
 For each forecast origin, the data are cut at the origin, the

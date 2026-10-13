@@ -78,8 +78,10 @@ mt_fit <- function(spec, data, prep = NULL, cores = 1, ...) UseMethod("mt_fit")
 #' @export
 mt_fit.mt_spec <- function(spec, data, prep = NULL, cores = 1, ...) {
   check_class(data, "mt_data", "data")
-  d <- mt_prep_apply(prep, data)
+  pr <- mt_prep_apply_raw(prep, data)
+  d <- pr$data
   md <- model_inputs(d, spec)
+  raw_D <- raw_deaths(pr$raw, md)
   st <- d$strata
   run <- function(expr_fun) {
     t0 <- proc.time()[["elapsed"]]
@@ -113,12 +115,25 @@ mt_fit.mt_spec <- function(spec, data, prep = NULL, cores = 1, ...) {
     mt_abort(sprintf("The model failed in every stratum: %s", diagnostics$message[1]), class = "model_fit")
   }
   report_fit_problems(diagnostics, spec$label)
+  # observation noise, observed rates and residuals refer to the raw rates
+  # (before smoothing); the model is fitted to the preprocessed rates
+  D_obs <- raw_D %||% md$D
   structure(list(spec = spec, prep = prep, fits = fits, diagnostics = diagnostics, age = md$age,
                  periods = md$periods, strata = st, omega = d$omega,
-                 observed = md$D / md$E, train_D = md$D, train_E = md$E,
+                 observed = D_obs / md$E, train_D = md$D, raw_D = raw_D, train_E = md$E,
                  exposure_last = md$E[, length(md$periods), , drop = FALSE],
-                 noise_sd = extra_noise_sd(spec, fits, md$D, md$E)),
+                 noise_sd = extra_noise_sd(spec, fits, D_obs, md$E)),
             class = "mt_fit")
+}
+
+# Raw deaths [age, period, stratum] on the modelling grid, when the
+# preprocessing smooths (NULL otherwise)
+raw_deaths <- function(raw, md) {
+  if (is.null(raw)) return(NULL)
+  D <- tryCatch(mt_array(raw, "deaths"), error = function(e) NULL)
+  if (is.null(D) || !identical(dim(D), dim(md$D)) || anyNA(D)) return(NULL)
+  dimnames(D) <- dimnames(md$D)
+  D
 }
 
 # One warning per fit for failed strata and for warnings inside strata

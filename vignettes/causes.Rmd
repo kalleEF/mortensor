@@ -174,6 +174,28 @@ merge(rr[, .(sex, cause, lee_carter = q0.5)], rr_ll[, .(sex, cause, li_lee = rou
       by = c("sex", "cause"))[order(sex, -lee_carter)]
 ```
 
+When an all-cause forecast is trusted more than the sum of the causes
+(for example one that matches an official projection), the causes can be
+reconciled to it: `fixed = "total"` keeps the strata of the total level,
+here all causes in every sex and quintile, and a projection method moves
+only the causes. On these data the bottom-up sum forecast all causes more
+accurately, so this is shown for illustration:
+
+```{r}
+fc_fx <- mt_forecast(mt_fit(reconciled(lee_carter(), h, method = "wls", fixed = "total"), xc), h = 10,
+                     n_draws = 100, seed = 1)
+fc_fx$reconciliation$max_relative_change_fixed
+a <- rbind(asr(fc)[, approach := "bottom-up"], asr(fc_fx)[, approach := "all causes fixed"])
+dcast(a[period == 2029 & sex == "female" & cause %in% c("all", "ihd", "dementia", "lung_cancer"),
+        .(approach, quintile, cause, asr = round(q0.5))], quintile + cause ~ approach, value.var = "asr")
+```
+
+The all-cause model forecasts lower rates than the sum of the cause models.
+With WLS the difference falls mostly on dementia, whose draws vary most and
+so carry the largest weight; the other causes barely change. Which cause
+absorbs the gap follows from the weights, not from evidence about the
+causes, so a fixed total is a modelling decision that should be reported.
+
 Which assumption is more plausible is a judgement the backtest cannot
 settle over five years. Deprivation deciles are also reclassified with each
 new IMD version (2007, 2010, 2015 and 2019 in these data), and cause coding
