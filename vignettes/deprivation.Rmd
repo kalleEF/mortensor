@@ -391,7 +391,7 @@ gap below the observed gap of 2019: its deviations from the common trend
 return towards zero, and its forecasts start from the fitted rates of 2019,
 which for women give a life expectancy 0.4 years above the observed one
 in Q1 and 0.3 years below it in Q5, so the forecast gap starts about 0.8
-years below the observed gap (see "Getting started";
+years below the observed gap (see "Getting started with mortensor";
 `li_lee(jump_off = "observed")` starts from the observed rates). The mixture lies between the two. The calibrated Li-Lee model
 keeps the medians of Li-Lee and widens its intervals.
 

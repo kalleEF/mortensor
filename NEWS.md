@@ -21,6 +21,21 @@ Clean break: the 0.1.x interface is replaced (see `dev/revamp-plan.md`).
   at the same CRPS. Drift correction overfitted on the ONS data and is off
   by default. New validation check `calibration_ew`.
 * Ensemble forecasts record the component of each draw (`$component`).
+* Plot layout of the owner's earlier analysis as the package standard:
+  `theme_mortensor()`, `scale_colour_mortensor()`, `scale_fill_mortensor()`,
+  `mt_palette()` (ordered red-yellow-green scale for levels such as Q1-Q5,
+  distinct colours otherwise). Forecast plots show observed points, fitted
+  lines (stored in the draws as `$fitted`), dashed forecast medians with
+  interval ribbons and a dotted line before the first forecast year;
+  `mt_plot_forecast()` has panels of age by stratum and new arguments
+  `colour` and `log_values`; `levels` defaults to 0.95. `fitted()` works
+  for ensembles (weighted geometric mean of the components).
+* `mt_inequality()` weights observed years by their own populations (it
+  used the last year's for every year).
+* Documentation review: corrected vignette titles and cross-references,
+  Model reference (series models, calibration, sources of uncertainty of
+  every model), FAQ, `mt_validate()` checks, help pages of `ensemble()`,
+  `reconciled()`, `cause_shares()` and the derived quantities.
 * Vignettes "Forecasting mortality by deprivation quintile" (ONS:
   inequality indicators, backtests by quintile, calibration, gap
   forecasts by model, fitting period) and "Coherent forecasts: what

@@ -227,7 +227,9 @@ ord <- e0[period == 2035 & sex == "both"][order(q0.5), region]
 ggplot(pl, aes(q0.5, factor(region, ord), colour = part)) +
   geom_pointrange(aes(xmin = q0.025, xmax = q0.975), size = 0.2) +
   facet_wrap(~ sex, scales = "free_x") +
-  labs(x = "Life expectancy at birth in 2035 (years, 95% interval)", y = NULL, colour = NULL)
+  scale_colour_mortensor(type = "categorical") +
+  labs(x = "Life expectancy at birth in 2035 (years, 95% interval)", y = NULL, colour = NULL) +
+  theme_mortensor()
 ```
 
 The intervals of the Laender are wider than those of East, West and
@@ -274,8 +276,10 @@ wd <- merge(e0m[sex == "both", .(region, method, width = q0.975 - q0.025)],
 ggplot(wd, aes(population / 1e6, width, colour = method)) +
   geom_point(size = 2) +
   scale_x_log10() +
+  scale_colour_mortensor(type = "categorical") +
   labs(x = "Population 2019 (millions, log scale)", y = "Width of the 95% interval of e0 in 2035 (years)",
-       colour = NULL)
+       colour = NULL) +
+  theme_mortensor(legend = "right")
 ```
 
 * **OLS** distributes the adjustment equally over all strata in deaths. An
@@ -450,8 +454,8 @@ Germany by cause are better determined than the levels.
 | Period | 1998-2019, before the pandemic | `mt_subset(periods = )` |
 | Age groups | age groups of the deaths; causes from 50 | `mt_regroup(age = "deaths")`, `mt_subset(ages = )` |
 | Suppressed cells | raking to Land and national totals | `mt_fill_suppressed()` |
-| Aggregation layers | East and West; cause groups and rest | `mt_hierarchy(groups = )`, `mt_group_levels()` |
-| Shared exposures | causes share the population of their Land | `mt_hierarchy(cause = list(additive = "rates"))` |
+| Aggregation layers | East and West; cause groups and rest | `mt_hierarchy(region = list(total = , groups = ))`, `mt_group_levels()` |
+| Shared exposures | causes share the population of their Land | `mt_hierarchy(cause = list(total = "all", additive = "rates"))` |
 | Sparse cells | pooling and Whittaker smoothing | `li_lee(common_by = )`, `step_smooth()` |
 | Coherence | bottom-up sums of a joint model | `reconciled()` |
 | Calibration | ensemble with noise-robust random walks | `ensemble()`, `rwd(observation_noise = TRUE)` |

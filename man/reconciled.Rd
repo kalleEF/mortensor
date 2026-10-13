@@ -25,13 +25,7 @@ across strata, whose draws already carry their dependence, such as
 \code{"empirical"} or \code{"none"}. With \code{"empirical"} the same training years
 order the paths before reconciliation and the predictive noise of the
 bottom strata, so aggregates of predictive draws keep the observed
-co-movement.
-
-On \code{\link[=mt_example_regions]{mt_example_regions()}} (4 regions, 90 strata, origins 2005 and 2008,
-h = 10), \code{li_lee(common_by = "sex")} with \code{method = "bottom_up"} was the
-most accurate coherent forecast (CRPS 0.0425 bottom, 0.0269 aggregates;
-95\% coverage 0.95), and Lee-Carter per stratum with \code{"wls"} reconciliation
-was calibrated (0.95-0.97) but less accurate (0.0477, 0.0292).}
+co-movement.}
 }
 \value{
 A model specification.
@@ -44,6 +38,16 @@ added with \code{\link[=mt_aggregate_strata]{mt_aggregate_strata()}} before fitt
 forecasts every node. Predictive draws (used by backtests) are coherent
 as well: Poisson and extra-Poisson variation are drawn for the bottom
 strata only and the aggregates are their sums.
+}
+\details{
+On \code{\link[=mt_example_regions]{mt_example_regions()}} (4 regions, 90 strata, origins 2005 and 2008,
+h = 10), \code{li_lee(common_by = "sex")} with \code{method = "bottom_up"} was the
+most accurate coherent forecast (CRPS 0.0425 bottom, 0.0269 aggregates;
+95\% coverage 0.95), and Lee-Carter per stratum with \code{"wls"} reconciliation
+was calibrated (0.95-0.97) but less accurate (0.0477, 0.0292). On the ONS
+and German regional data, reconciliation changed the accuracy of the
+bottom strata little and lowered the coverage of the totals (see the
+vignette "Coherent forecasts: what reconciliation changes").
 }
 \examples{
 x <- mt_example_regions(years = 2000:2019, regions = 3)

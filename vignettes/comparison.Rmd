@@ -144,7 +144,9 @@ ggplot(res$by_horizon, aes(horizon, crps, colour = model)) +
   geom_line() + geom_point(size = 0.8) +
   facet_wrap(~ data, scales = "free", ncol = 2) +
   labs(x = "Horizon (years)", y = "Mean CRPS", colour = NULL) +
-  theme(legend.position = "bottom", legend.text = element_text(size = 7)) +
+  scale_colour_mortensor(type = "categorical") +
+  theme_mortensor() +
+  theme(legend.text = element_text(size = 7)) +
   guides(colour = guide_legend(ncol = 2))
 ```
 

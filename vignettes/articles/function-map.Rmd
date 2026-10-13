@@ -261,7 +261,9 @@ flowchart TD
 | Forecast | `mt_forecast()` | simulated paths | `mt_fit` | `mt_draws` |
 | Evaluate | `mt_backtest()`, `mt_score()` | rolling-origin scores | `mt_spec`, `mt_data` | table |
 | Describe | `mt_observed()` | observed rates as draws | `mt_data` | `mt_draws` |
-| Report | `life_expectancy()`, `asr()`, `prob_dying()`, `yll()`, `mt_deaths()` | indicators path by path | `mt_draws` or `mt_data` | table |
+| Report | `life_expectancy()`, `asr()`, `prob_dying()` | indicators path by path, observed or forecast | `mt_draws` or `mt_data` | table |
+| Report | `yll()`, `mt_deaths()` | years of life lost, deaths with projected populations | `mt_draws` | table, array |
+| Report | `life_table()`, `standard_population()` | life tables from rates; standard populations esp2013, esp1976, who2000 | rates, name | table |
 | Report | `mt_contrast()`, `mt_inequality()` | gaps, ratios, SII, RII | `mt_draws` or `mt_data` | table |
 | Report | `mt_plot_*()`, `mt_export()` | figures and CSV files | draws, tables | ggplot, file |
 | Exchange | `as_demogdata()`, `as_stmomodata()` | cross-checks with demography and StMoMo | `mt_data` | `demogdata`, `StMoMoData` |
@@ -276,8 +278,8 @@ development points:
   example of the statistical office, passed as `exposure`.
 * **Spatial models for small areas.** There is no model with spatial
   smoothing between neighbouring regions (such as BYM models); pooling
-  works through common trends (`li_lee()`) and Bayesian APC models per
-  stratum.
+  works through common trends (`li_lee()`); Bayesian APC models smooth over
+  age, period and cohort within each stratum.
 * **Backtest targets other than death rates.** Backtests score log death
   rates per cell; life expectancy or age-standardised rates as targets are
   not yet available.

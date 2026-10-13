@@ -31,8 +31,9 @@ yll(
 )
 }
 \arguments{
-\item{draws}{An \link{mt_draws} object, or an \link{mt_data} object for observed
-rates.}
+\item{draws}{An \link{mt_draws} object; \code{prob_dying()} and \code{asr()} also take an
+\link{mt_data} object for observed rates (with Poisson intervals, see
+\code{\link[=mt_observed]{mt_observed()}}).}
 
 \item{from, to}{Ages (starts of grid intervals; \code{to} may be the end of the
 last closed interval).}

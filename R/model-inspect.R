@@ -137,12 +137,27 @@ NULL
 fitted.mt_fit <- function(object, ...) {
   d <- dim(object$train_D)
   out <- array(NA_real_, d, dimnames(object$train_D))
-  if (isTRUE(object$spec$joint)) {
-    if (!is.null(object$fits$fitted)) out[] <- object$fits$fitted
-  } else {
-    for (s in seq_len(d[3])) {
-      f <- object$fits[[s]]$fitted
-      if (!is.null(f)) out[, , s] <- f
+  if (inherits(object, "mt_fit_ensemble")) {
+    # weighted geometric mean of the components' fitted rates
+    acc <- array(0, d)
+    ws <- array(0, d)
+    for (n in names(object$components)) {
+      f <- tryCatch(stats::fitted(object$components[[n]]), error = function(e) NULL)
+      if (is.null(f) || !identical(dim(f), d)) next
+      ok <- !is.na(f) & f > 0
+      acc[ok] <- acc[ok] + object$weights[[n]] * log(f[ok])
+      ws[ok] <- ws[ok] + object$weights[[n]]
+    }
+    out[ws > 0] <- exp(acc[ws > 0] / ws[ws > 0])
+    return(out)
+  }
+  fits <- object$fits
+  if (is.list(fits) && "fitted" %in% names(fits)) {
+    if (identical(dim(fits$fitted), d)) out[] <- fits$fitted
+  } else if (is.list(fits)) {
+    for (s in seq_len(min(length(fits), d[3]))) {
+      f <- if (is.list(fits[[s]])) fits[[s]]$fitted
+      if (!is.null(f) && length(f) == d[1] * d[2]) out[, , s] <- f
     }
   }
   out
@@ -241,8 +256,9 @@ model_assumptions <- function(spec) {
            "a, b and phi are fixed."),
          mt_spec_apc_bayes = paste(
            "Bayesian age-period-cohort model (bamp; Schmid and Held 2007): logit rate = age + period + cohort",
-           "effects with random-walk priors, binomial likelihood. Draws are posterior predictive samples and",
-           "include parameter uncertainty."),
+           "effects with random-walk priors, binomial likelihood, each stratum fitted separately. Draws are",
+           "posterior samples of the rates (parameters and random walks of period and cohort effects);",
+           "predictive draws add Poisson and extra-Poisson noise."),
          mt_spec_ensemble = paste("Mixture of the component models: each draw comes from one component, chosen in",
                                   "proportion to the weights; uncertainty of the components and their spread."),
          mt_spec_reconciled = paste("Base model reconciled draw by draw over the hierarchy;", spec$params$method,
@@ -283,7 +299,8 @@ mt_plot_residuals <- function(fit, strata = NULL, type = c("deviance", "pearson"
                                   name = paste(type, "residual")) +
     ggplot2::scale_y_continuous(breaks = seq_along(fit$age$labels), labels = fit$age$labels) +
     ggplot2::facet_wrap(~stratum) +
-    ggplot2::labs(x = "Period", y = "Age")
+    ggplot2::labs(x = "Period", y = "Age") +
+    theme_mortensor(legend = "right")
 }
 
 # Check stratum labels for plots and list the available ones

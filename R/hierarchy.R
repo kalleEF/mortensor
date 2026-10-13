@@ -515,6 +515,15 @@ shrink_cov <- function(X, shrink = "auto") {
 #' as well: Poisson and extra-Poisson variation are drawn for the bottom
 #' strata only and the aggregates are their sums.
 #'
+#' On [mt_example_regions()] (4 regions, 90 strata, origins 2005 and 2008,
+#' h = 10), `li_lee(common_by = "sex")` with `method = "bottom_up"` was the
+#' most accurate coherent forecast (CRPS 0.0425 bottom, 0.0269 aggregates;
+#' 95% coverage 0.95), and Lee-Carter per stratum with `"wls"` reconciliation
+#' was calibrated (0.95-0.97) but less accurate (0.0477, 0.0292). On the ONS
+#' and German regional data, reconciliation changed the accuracy of the
+#' bottom strata little and lowered the coverage of the totals (see the
+#' vignette "Coherent forecasts: what reconciliation changes").
+#'
 #' @param spec Base model specification (fitted to all strata).
 #' @param hierarchy An [mt_hierarchy()].
 #' @param method,shrink See [mt_reconcile()].
@@ -526,11 +535,6 @@ shrink_cov <- function(X, shrink = "auto") {
 #'   bottom strata, so aggregates of predictive draws keep the observed
 #'   co-movement.
 #'
-#' On [mt_example_regions()] (4 regions, 90 strata, origins 2005 and 2008,
-#' h = 10), `li_lee(common_by = "sex")` with `method = "bottom_up"` was the
-#' most accurate coherent forecast (CRPS 0.0425 bottom, 0.0269 aggregates;
-#' 95% coverage 0.95), and Lee-Carter per stratum with `"wls"` reconciliation
-#' was calibrated (0.95-0.97) but less accurate (0.0477, 0.0292).
 #' @return A model specification.
 #' @examples
 #' x <- mt_example_regions(years = 2000:2019, regions = 3)
@@ -690,5 +694,6 @@ mt_aggregate_draws <- function(draws, hierarchy = NULL, age = NULL, exposure = N
   out$strata <- st
   out$exposure_last <- E[, 1, , drop = FALSE]
   out$observed <- NULL
+  out$fitted <- NULL
   out
 }

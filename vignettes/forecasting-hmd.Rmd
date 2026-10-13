@@ -110,7 +110,7 @@ fc <- mt_forecast(fit_ens, to = 2030, n_draws = 1000, seed = 2026)
 fc
 ```
 
-```{r, eval = has_data && has_gg}
+```{r, eval = has_data && has_gg, fig.height = 6}
 mt_plot_forecast(fc, ages = c("40", "65", "80", "95"))
 mt_plot_age(fc, periods = c(2007, 2030))
 ```

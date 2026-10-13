@@ -81,7 +81,10 @@ ggplot2::ggplot(eff, ggplot2::aes(as.numeric(index), value, colour = stratum, fi
   ggplot2::geom_ribbon(ggplot2::aes(ymin = lower, ymax = upper), alpha = 0.2, colour = NA) +
   ggplot2::geom_line() +
   ggplot2::facet_wrap(~parameter, scales = "free") +
-  ggplot2::labs(x = "Index (age group, period or cohort)", y = "Effect (logit scale)", colour = NULL, fill = NULL)
+  ggplot2::labs(x = "Index (age group, period or cohort)", y = "Effect (logit scale)", colour = NULL, fill = NULL) +
+  scale_colour_mortensor(type = "categorical") +
+  scale_fill_mortensor(type = "categorical") +
+  theme_mortensor()
 ```
 
 ## Forecast

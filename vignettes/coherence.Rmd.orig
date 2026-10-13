@@ -155,7 +155,9 @@ show <- c("female.Q1", "female.Q5", "male.Q1", "male.Q5", "both.Q1", "both.Q5", 
           "male.England", "both.England")
 ggplot(e0[label %in% show], aes(q0.5, factor(label, rev(show)), colour = method)) +
   geom_pointrange(aes(xmin = q0.025, xmax = q0.975), position = position_dodge(width = 0.7), size = 0.2) +
-  labs(x = "Life expectancy at birth in 2035 (years)", y = NULL, colour = NULL)
+  scale_colour_mortensor(type = "categorical") +
+  labs(x = "Life expectancy at birth in 2035 (years)", y = NULL, colour = NULL) +
+  theme_mortensor(legend = "right")
 ```
 
 How far each method moves the median and how it changes the width of the

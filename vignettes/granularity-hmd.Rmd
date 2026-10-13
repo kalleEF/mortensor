@@ -133,7 +133,9 @@ long <- rbind(
   data.table(source = "PCLM 2D", year = 2000:2011, rate = est2["95", ]))
 ggplot2::ggplot(long, ggplot2::aes(year, rate, colour = source)) +
   ggplot2::geom_line() + ggplot2::geom_point(size = 0.8) +
-  ggplot2::labs(x = NULL, y = "Death rate at age 95", colour = NULL)
+  ggplot2::labs(x = NULL, y = "Death rate at age 95", colour = NULL) +
+  scale_colour_mortensor(type = "categorical") +
+  theme_mortensor()
 ```
 
 ### Without exposures

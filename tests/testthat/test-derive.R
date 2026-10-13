@@ -113,3 +113,19 @@ test_that("standard weights cover open grid intervals and paths can be returned"
   expect_equal(apply(a, 1:2, stats::median)[, 1], asr(fc)[stratum == 1]$q0.5, ignore_attr = TRUE)
   expect_identical(dim(prob_dying(fc, 30, 70, paths = TRUE)), c(3L, 2L, 20L))
 })
+
+test_that("observed inequality indices use the population weights of each year", {
+  x <- mt_example_regions(years = 2010:2012, regions = 1)
+  x <- mt_subset(x, sex == "female", region == unique(mt_strata(x)$region)[1])
+  iq <- mt_inequality(x, "quintile", quantity = "rate", age = mt_grid(x)$age$labels[10])[index == "sii"]
+  ob <- mt_observed(x)
+  r <- ob$rates[10, , , 1]
+  E <- apply(ob$exposure, c(2, 3), sum)
+  manual <- vapply(seq_len(nrow(E)), function(t) {
+    w <- E[t, ] / sum(E[t, ])
+    rk <- cumsum(w) - w / 2
+    stats::coef(stats::lm(r[t, ] ~ rk, weights = w))[2]
+  }, 0)
+  expect_equal(iq$mean, manual, tolerance = 0.05)
+  expect_equal(nrow(iq), 3)
+})

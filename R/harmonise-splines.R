@@ -231,6 +231,7 @@ mt_disaggregate <- function(draws, age, exposure, method = c("hyman_kannisto", "
   res$rates <- out
   res$age <- age
   res$observed <- NULL
+  res$fitted <- NULL
   res$exposure_last <- exposure[, 1, , drop = FALSE]
   res
 }

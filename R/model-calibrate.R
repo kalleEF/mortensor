@@ -56,8 +56,7 @@
 #' (0.069 to 0.082). An equal-weight [ensemble()] of Lee-Carter and [rwd()]
 #' was already calibrated; calibration then narrowed it (95% coverage 0.93
 #' to 0.85 on ONS, 0.95 to 0.90 on England & Wales) at the same CRPS
-#' (see `validation/` and the vignette "Forecasting by deprivation
-#' quintile").
+#' (see the vignette "Forecasting mortality by deprivation quintile").
 #'
 #' `target = "crps"` (default) balances calibration and sharpness;
 #' `target = "interval"` minimises the interval score of the central `level`

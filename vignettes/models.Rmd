@@ -92,6 +92,17 @@ from the fitted model. Its intervals are those of the simulated paths,
 which are somewhat narrower at short horizons than demography's analytic
 intervals (see the comparison vignette).
 
+### Time series per age: `arima_series()`, `ets_series()`
+
+Benchmarks that model the observed log rate of every age as a separate
+time series with the forecast package (Hyndman and Khandakar 2008): an
+ARIMA model chosen by `forecast::auto.arima()` (drift allowed) or an
+exponential smoothing model chosen by `forecast::ets()` (damped trends
+allowed). **Uncertainty**: simulated future paths of the fitted models,
+so the intervals grow with the horizon; ages are simulated independently
+and parameter uncertainty is not included. The series are observed rates,
+so their draws already contain observation noise.
+
 ### StMoMo models: `stmomo()`
 
 Calls `StMoMo::fit()` and `simulate()` (Villegas, Kaishev and
@@ -106,8 +117,11 @@ age + period + cohort effects with random-walk priors of order 1 or 2,
 binomial likelihood, MCMC. Convergence is checked with the Gelman-Rubin
 statistic of the identified quantities (reported by `mt_parameters()` as
 `rhat`); chains that have not converged are refitted with longer runs.
-**Uncertainty**: the posterior predictive distribution, including
-parameter uncertainty. `apc_select()` compares random-walk orders by DIC.
+**Uncertainty**: posterior samples of the forecast rates, including the
+uncertainty of the parameters and of the random walks of period and cohort
+effects; predictive draws add Poisson and extra-Poisson noise as for the
+other models of smooth rates. Each stratum is fitted separately.
+`apc_select()` compares random-walk orders by DIC.
 
 ## Models for several populations
 
@@ -135,11 +149,15 @@ Lee-Carter components in place of functional data models.
 
 ### Tucker3 and cause shares (experimental)
 
-`tucker3()` decomposes the array of log rates `[age, period, stratum]`;
-`cause_shares()` forecasts all-cause mortality and the shares of causes
-with a tensor model of their log-ratio coordinates. Neither has a published
-evaluation for mortality; compare them with the models above in a
-backtest.
+`tucker3()` decomposes the array of log rates `[age, period, stratum]`
+(or of the log-ratio coordinates of life-table deaths, `transform =
+"coda"`) into factor matrices and a core; the period factors are forecast
+as a multivariate random walk with drift or with ARIMA/ETS models, and the
+in-sample residual variation is added to the draws. `cause_shares()`
+forecasts all-cause mortality with any model and the shares of causes with
+a Tucker model of their isometric log-ratio coordinates, so the causes add
+up to all causes in every draw. Neither has a published evaluation for
+mortality; compare them with the models above in a backtest.
 
 ## Combining models
 
@@ -163,6 +181,20 @@ population and are shared by the levels of variables such as causes of
 death (`additive = "rates"`). The exposures of the forecast years are
 those of the last observed year unless projections are given.
 
+### Calibration on recent years: `calibrated()`
+
+Refits a model at several origins in the last `years` (default 10) of
+the training data, compares its forecasts with the observed rates of that
+window, and rescales the spread of the draws around their median per cell
+by a factor `s(h) = s1 h^gamma` that minimises the CRPS (or the interval
+score of one interval), with the Poisson and extra-Poisson variation of
+the observations as in a backtest (minimum-CRPS estimation; Gneiting et
+al. 2005). Optionally a drift correction is estimated as well. Ranks
+within each cell are kept, so the draws remain paths. Calibration widens
+models that were persistently too narrow (Lee-Carter on England & Wales:
+95% coverage 0.75 to 0.88 in backtests) and can narrow mixtures that were
+already wide.
+
 ### Bootstrap and tuning: `bootstrapped()`, `tuned()`
 
 `bootstrapped()` refits a model to Poisson resamples of the deaths
@@ -180,16 +212,25 @@ step that a backtest compares across windows.
 | `lee_carter()` | yes | yes | with `bootstrap = TRUE` | predictive draws | predictive draws |
 | `rwd()` | yes (observed changes) | yes | no | contained in the changes | contained in the changes |
 | `rwd(observation_noise = TRUE)` | yes (level) | yes | no | predictive draws | predictive draws |
+| `arima_series()`, `ets_series()` | yes | as the fitted model | no | contained in the series | contained in the series |
 | `li_lee()`, `product_ratio()` | yes (common and stratum) | common factor | no | predictive draws | predictive draws |
-| `hyndman_ullah()` | yes | as fdm | no | predictive draws | model error |
-| `stmomo()` | yes | yes | no | predictive draws | no |
-| `apc_bayes()` | yes | posterior | yes (posterior) | yes | with `overdispersion = TRUE` |
-| `ensemble()` | of the components | of the components | of the components, plus model choice | | |
+| `tucker3()` | yes (period factors) | yes | no | predictive draws | residual variation and predictive draws |
+| `cause_shares()` | of the total model and the share factors | yes | no | predictive draws | residual variation and predictive draws |
+| `hyndman_ullah()` | yes | as fdm | no | predictive draws | predictive draws |
+| `stmomo()` | yes | yes | no | predictive draws | predictive draws |
+| `apc_bayes()` | yes | posterior | yes (posterior) | predictive draws | predictive draws |
+| `ensemble()` | of the components | of the components | of the components, plus model choice | of the components | of the components |
+| `bootstrapped()` | of the base model | of the base model | yes | as the base model | as the base model |
+| `reconciled()` | of the base model, projected | | | bottom strata, summed | bottom strata, summed |
+| `calibrated()` | of the base model, rescaled | rescaled (optional correction) | | as the base model | as the base model |
 
 Predictive draws (`predictive = TRUE`, always used in backtests) describe
-observable rates: Poisson deaths given the exposures, and for models of
-smooth rates an extra-Poisson part estimated from the in-sample residual
-variance. Forecast draws without it describe the underlying rates.
+observable rates. For models of smooth rates they add Poisson deaths given
+the exposures and an extra-Poisson part estimated from the in-sample
+residual variance. For models of observed rates (`rwd()` without
+`observation_noise`, `arima_series()`, `ets_series()`) the draws already
+describe observable rates and nothing is added. Forecast draws of models
+of smooth rates without `predictive` describe the underlying rates.
 
 ## Evaluation
 
@@ -222,6 +263,10 @@ Deming WE, Stephan FF (1940). On a least squares adjustment of a sampled
 frequency table when the expected marginal totals are known. *Annals of
 Mathematical Statistics* 11(4): 427-444.
 
+Gneiting T, Raftery AE, Westveld AH, Goldman T (2005). Calibrated
+probabilistic forecasting using ensemble model output statistics and
+minimum CRPS estimation. *Monthly Weather Review* 133(5): 1098-1118.
+
 Gneiting T, Raftery AE (2007). Strictly proper scoring rules, prediction,
 and estimation. *Journal of the American Statistical Association*
 102(477): 359-378.
@@ -229,6 +274,9 @@ and estimation. *Journal of the American Statistical Association*
 Hyndman RJ, Ahmed RA, Athanasopoulos G, Shang HL (2011). Optimal
 combination forecasts for hierarchical time series. *Computational
 Statistics & Data Analysis* 55(9): 2579-2589.
+
+Hyndman RJ, Khandakar Y (2008). Automatic time series forecasting: the
+forecast package for R. *Journal of Statistical Software* 27(3): 1-22.
 
 Hyndman RJ, Booth H, Yasmeen F (2013). Coherent mortality forecasting: the
 product-ratio method with functional time series models. *Demography*

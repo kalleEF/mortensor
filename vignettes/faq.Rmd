@@ -51,9 +51,12 @@ choice matters for the level of every forecast.
 ### What does `mt_validate()` check?
 
 Cells with zero exposure, deaths without exposure, death rates above one
-below age 100, grid cells without observations, and, with a hierarchy,
-whether totals equal the sums of their parts (deaths and exposures add up over regions or sexes; rates add up over
-causes, `mt_hierarchy(cause = "all", additive = "rates")`).
+below age 100, missing values, strata without deaths or exposures, levels
+that look like totals of other levels (for example `"Insgesamt"` among the
+regions), grid cells without observations, and, with a hierarchy, whether
+totals equal the sums of their parts (deaths and exposures add up over
+regions or sexes; rates add up over causes,
+`mt_hierarchy(cause = list(total = "all", additive = "rates"))`).
 
 ## Granularity and ungrouping
 
@@ -78,7 +81,7 @@ absolute error of single-year log rates was 0.015 at ages 30-89 and 0.024 at
 90-100, close to the Poisson noise of the observed rates. The spline
 methods (`"hyman_kannisto"`, `"natural_gompertz"`, `"gam"`) were as
 accurate below 90, less accurate in the open interval, and 5 to 10 times
-faster. See "Data at different granularities".
+faster. See "Data at different granularities: ungrouping HMD data".
 
 ### Can I split the open interval 90+ into single years?
 
@@ -129,10 +132,13 @@ Check calibration with `mt_backtest()` and `mt_plot_coverage()`.
 
 ### What is the difference between predictive draws and forecast rates?
 
-`mt_forecast()` returns draws of the smooth death rates by default.
-`predictive = TRUE` adds the variation of observed rates around them
-(extra-Poisson and Poisson noise given the exposures), which is what an
-observed future rate will show. Backtests use predictive draws because they
+For models of smooth rates (Lee-Carter, Li-Lee, Tucker3, FDM, StMoMo,
+Bayesian APC, `rwd(observation_noise = TRUE)`), `mt_forecast()` returns
+draws of the smooth death rates by default, and `predictive = TRUE` adds
+the variation of observed rates around them (extra-Poisson and Poisson
+noise given the exposures), which is what an observed future rate will
+show. Models of observed rates (`rwd()`, `arima_series()`, `ets_series()`)
+forecast observed rates directly, and `predictive` adds nothing. Backtests use predictive draws because they
 are compared with observed rates. For life expectancy and other summaries
 of the underlying mortality, use the default draws.
 
@@ -148,8 +154,8 @@ many small cells:
 * model at a coarser resolution (age groups instead of single years, or
   wider groups at young ages, `mt_regroup()`);
 * pool information across strata, for example `li_lee(common_by = "sex")`
-  for regions or deprivation groups, or `apc_bayes()` with its smoothing
-  priors;
+  for regions or deprivation groups, or borrow strength across ages and
+  years within a stratum with the smoothing priors of `apc_bayes()`;
 * smooth before fitting with `step_smooth()` (age 0 is left out by
   default);
 * use `rwd(observation_noise = TRUE)` instead of `rwd()`, alone or in an
@@ -194,8 +200,8 @@ every node and reconcile the draws (`method = "wls"`, `"mint"`, ...).
 Totals that are not in the data are added by `mt_aggregate_strata()`.
 Reconciliation of deaths uses exposures of the forecast years; supply
 population projections as `exposure` when they are available. See
-"Coherent forecasts by sex, region and deprivation" and "Causes of death by
-deprivation".
+"Coherent forecasts: what reconciliation changes", "Coherent forecasts by
+sex, region and cause" and "Causes of death by deprivation".
 
 ### Will the gap between regions or deprivation groups keep growing?
 
@@ -211,7 +217,11 @@ is an assumption to state.
 ### Are forecasts reproducible?
 
 Yes, with a `seed` (`mt_forecast(..., seed = 1)`, `mt_backtest(..., seed =
-1)`). Parallel code uses L'Ecuyer random-number streams.
+1)`). Backtests and `calibrated()` seed every origin separately, so their
+results do not depend on `cores`. Fits of several strata in parallel
+(`mt_fit(..., cores = )`) run in forked processes; for models with random
+steps in the fit, set `RNGkind("L'Ecuyer-CMRG")` and a seed before the call
+to make them reproducible.
 
 ### How long does it take?
 

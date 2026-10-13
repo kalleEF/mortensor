@@ -14,19 +14,29 @@ mt_plot_forecast(
   draws,
   ages = NULL,
   strata = NULL,
-  levels = c(0.8, 0.95),
-  data = NULL
+  levels = 0.95,
+  data = NULL,
+  colour = NULL,
+  log_values = FALSE
 )
 
-mt_plot_age(draws, periods = NULL, strata = NULL, levels = 0.95)
+mt_plot_age(
+  draws,
+  periods = NULL,
+  strata = NULL,
+  levels = 0.95,
+  colour = NULL,
+  log_values = FALSE
+)
 
 mt_plot_life_expectancy(
   draws,
   at = NULL,
-  levels = c(0.8, 0.95),
+  levels = 0.95,
   strata = NULL,
   facet = NULL,
-  data = NULL
+  data = NULL,
+  colour = NULL
 )
 
 mt_plot_rates(data, strata = NULL)
@@ -46,6 +56,12 @@ mt_plot_coverage(backtest)
 
 \item{data}{An \link{mt_data} object (for the forecast plots: the original
 data, whose observed rates are shown).}
+
+\item{colour}{Stratum variable that gives the colours (default: the one
+with the most levels among the shown strata).}
+
+\item{log_values}{Show natural logarithms of the rates on a linear axis
+(\verb{log(death rate)}) instead of rates on a logarithmic axis.}
 
 \item{periods}{Forecast years (default: first and last).}
 
@@ -68,16 +84,24 @@ All plot functions return ggplot objects (package \pkg{ggplot2} must be
 installed) and never print or write files.
 }
 \details{
+The forecast plots share one layout (see \link{mt_plot_style}): observed
+values as points, fitted values as solid lines, forecast medians as dashed
+lines with interval ribbons, and a dotted line before the first forecast
+year. A step between the solid and the dashed line shows the jump from the
+fitted rates to the forecast. One stratum variable gives the colours (by
+default the one with the most levels among the shown strata, or
+\code{colour}), the others give the panels.
 \itemize{
-\item \code{mt_plot_forecast()}: observed rates and forecast fan (median and
-central intervals) over time for selected ages, log scale. The points
-are the training data after preprocessing (for example with
-interpolated shock years or smoothed rates); give the original data as
-\code{data} to show the rates as published;
-\item \code{mt_plot_age()}: age profiles of the forecast for selected years;
-\item \code{mt_plot_life_expectancy()}: life expectancy forecast fan with the
-observed history (from \code{data} if given, otherwise from the training
-data), optionally one panel per level of a stratum variable (\code{facet});
+\item \code{mt_plot_forecast()}: rates over time, one row of panels per age and one
+column per combination of the other stratum variables. The points are
+the training data after preprocessing (for example with interpolated
+shock years or smoothed rates); give the original data as \code{data} to show
+the rates as published;
+\item \code{mt_plot_age()}: age profiles of the forecast for selected years
+(default: the last);
+\item \code{mt_plot_life_expectancy()}: life expectancy, observed, fitted and
+forecast (observed from \code{data} if given, otherwise from the training
+data), with one panel per level of \code{facet} if given;
 \item \code{mt_plot_rates()}: Lexis surface (age by period) of observed log rates;
 \item \code{mt_plot_ungroup()}: grouped rates as steps and ungrouped single-year
 rates for one period;

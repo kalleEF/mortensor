@@ -54,5 +54,5 @@ utils::globalVariables(c(
   "lev", "w", "year", "dep", "population", "i.population", "cause", "dic", "index", "factor", "kind", "score",
   "group", "mode", "time", "cell", "n_members", "symbol", "raw", "age_group", "cause_label", "idx",
   "group_", "new_", "n_", "first_", "members", "n", "s", ".value", "nxt", "u", "g", "n_lev", "sum_all", "var",
-  "age_i", "effect", "q0.05", "q0.95", "residual", "p_positive", "ages", "panel"
+  "age_i", "effect", "q0.05", "q0.95", "residual", "p_positive", "ages", "panel", "age_f", "panel2", "col"
 ))

@@ -69,8 +69,11 @@ dcast(e0[period %in% c(2001, 2011, 2019), .(sex, quintile, period, e0 = round(q0
 ```{r plot-e0-observed}
 ggplot(e0, aes(period, q0.5, colour = quintile)) +
   geom_line() +
+  geom_point(size = 0.8) +
   facet_wrap(~ sex) +
-  labs(x = NULL, y = "Life expectancy at birth (years)", colour = "IMD quintile")
+  scale_colour_mortensor() +
+  labs(x = NULL, y = "Life expectancy at birth (years)", colour = "IMD quintile") +
+  theme_mortensor()
 ```
 
 Until 2011, life expectancy rose in every quintile. From 2011 to 2019 it
@@ -243,11 +246,16 @@ gaps[period == 2035, .(measure, model, sex, q0.025 = round(q0.025, 1), q0.5 = ro
 obs_gap <- gap[, .(period, sex, q0.5)]
 ggplot(gaps[measure == "gap Q5 - Q1"], aes(period)) +
   geom_ribbon(aes(ymin = q0.025, ymax = q0.975, fill = model), alpha = 0.15) +
-  geom_line(aes(y = q0.5, colour = model)) +
-  geom_line(data = obs_gap, aes(y = q0.5)) +
+  geom_line(aes(y = q0.5, colour = model), linetype = "dashed") +
+  geom_point(data = obs_gap, aes(y = q0.5), size = 0.8, alpha = 0.6) +
+  geom_vline(xintercept = 2019.5, linetype = "dotted", colour = "grey50") +
   facet_wrap(~ sex) +
-  labs(x = NULL, y = "Gap in life expectancy at birth, Q5 - Q1 (years)", colour = NULL, fill = NULL) +
-  theme(legend.position = "bottom", legend.direction = "vertical")
+  scale_colour_mortensor(type = "categorical") +
+  scale_fill_mortensor(type = "categorical") +
+  labs(x = NULL, y = "Gap in life expectancy at birth, Q5 - Q1 (years)", colour = NULL, fill = NULL,
+       subtitle = "Points: observed; dashed: forecast median with 95% interval") +
+  theme_mortensor() +
+  theme(legend.direction = "vertical")
 ```
 
 Lee-Carter extrapolates the quintile-specific trends of 2001-2019, so the
@@ -256,7 +264,7 @@ gap below the observed gap of 2019: its deviations from the common trend
 return towards zero, and its forecasts start from the fitted rates of 2019,
 which for women give a life expectancy 0.4 years above the observed one
 in Q1 and 0.3 years below it in Q5, so the forecast gap starts about 0.8
-years below the observed gap (see "Getting started";
+years below the observed gap (see "Getting started with mortensor";
 `li_lee(jump_off = "observed")` starts from the observed rates). The mixture lies between the two. The calibrated Li-Lee model
 keeps the medians of Li-Lee and widens its intervals.
 

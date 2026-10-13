@@ -18,8 +18,9 @@
 #'   expectancy at the interval midpoint, approximated by the value at the
 #'   start of the interval).
 #'
-#' @param draws An [mt_draws] object, or an [mt_data] object for observed
-#'   rates.
+#' @param draws An [mt_draws] object; `prob_dying()` and `asr()` also take an
+#'   [mt_data] object for observed rates (with Poisson intervals, see
+#'   [mt_observed()]).
 #' @param from,to Ages (starts of grid intervals; `to` may be the end of the
 #'   last closed interval).
 #' @param standard The name of a standard population (see

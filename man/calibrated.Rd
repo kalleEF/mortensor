@@ -106,8 +106,7 @@ of Lee-Carter and Li-Lee rose with \code{target = "interval"} (0.83 to 0.90 and
 (0.069 to 0.082). An equal-weight \code{\link[=ensemble]{ensemble()}} of Lee-Carter and \code{\link[=rwd]{rwd()}}
 was already calibrated; calibration then narrowed it (95\% coverage 0.93
 to 0.85 on ONS, 0.95 to 0.90 on England & Wales) at the same CRPS
-(see \verb{validation/} and the vignette "Forecasting by deprivation
-quintile").
+(see the vignette "Forecasting mortality by deprivation quintile").
 
 \code{target = "crps"} (default) balances calibration and sharpness;
 \code{target = "interval"} minimises the interval score of the central \code{level}
