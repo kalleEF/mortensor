@@ -43,6 +43,10 @@ Clean break: the 0.1.x interface is replaced (see `dev/revamp-plan.md`).
   `mt_bootstrap()` (parameter and preprocessing uncertainty by Poisson
   resampling and refitting) and information-criterion rank selection in
   `tucker3(ranks = "bic")`.
+* `rwd(observation_noise = TRUE)`: random walk with drift plus noise (local
+  level model); sharper than the plain random walk. Interval calibration of
+  random walks, Lee-Carter and ensembles on simulated, HMD and ONS data is
+  documented in `dev/calibration.md`; the defaults stay.
 * `ons_data`: deaths by cause and populations by sex, age group and IMD
   decile, England 2001-2019 (ONS ad hoc release 3064, Open Government
   Licence), with the cause groups `ons_cause_groups`; built by

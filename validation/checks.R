@@ -52,6 +52,13 @@ checks$coverage_rwd <- list(
                       "under-coverage."),
   run = function() coverage_check(rwd(), 6))
 
+checks$coverage_rwd_noise <- list(
+  suite = "quick",
+  description = paste("As coverage_lee_carter for rwd(observation_noise = TRUE), the random walk plus noise.",
+                      "It separates the iid noise of the generator from the trend, so its intervals should be",
+                      "close to nominal at every level (see dev/calibration.md)."),
+  run = function() coverage_check(rwd(observation_noise = TRUE), 6))
+
 checks$coverage_tucker3_coda <- list(
   suite = "full",
   description = "As coverage_lee_carter for tucker3(transform = \"coda\").",

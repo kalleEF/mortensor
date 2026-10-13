@@ -20,6 +20,13 @@
 #' A component that fails in a stratum is dropped for that stratum and the
 #' remaining weights are renormalised; this is recorded in the diagnostics.
 #'
+#' A mixture is wider than its components when they disagree. In backtests
+#' on HMD data (England & Wales, France) and on the ONS deprivation data,
+#' Lee-Carter alone was too narrow (95% coverage 0.70 to 0.84), while an
+#' equal-weight mixture of `lee_carter()` and `rwd()` had 95% coverage of
+#' 0.94 to 0.98 and the best or second-best CRPS (`dev/calibration.md` in
+#' the source repository).
+#'
 #' @param ... Model specifications; names are used as labels.
 #' @param weights `"equal"`, `"crps"` or a numeric vector.
 #' @param inner_origins,inner_h Inner backtest for `weights = "crps"`.

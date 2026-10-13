@@ -29,7 +29,7 @@ work: `claude/vigilant-albattani-2ssw1x` (plays the role of `dev-0.2`).
 | M2.6 | done | this branch | `mt_backtest()` scores at the observed resolution; leakage test |
 | M2.7 | done | this branch | `mt_score()`: CRPS, WIS (Bracher et al. 2021), coverage, PIT, MASE |
 | M2.8 | done | this branch | `mt_tune()` (inner rolling origin) and `mt_tuned()` (tuning refitted inside each fit, so nested backtests do not leak) |
-| C4.1 | done | this branch | `mt_ensemble()` (equal, numeric, inner-backtest CRPS weights) |
+| C4.1 | done | this branch | `mt_ensemble()` (equal, numeric, inner-backtest CRPS weights); interval calibration evaluated in `dev/calibration.md` (mixture of Lee-Carter and `rwd()` best calibrated at 95% on real data); `rwd(observation_noise = TRUE)` added |
 | B3.1-B3.4 | done | this branch | `apc_bayes()` + `mcmc_control()`: fit at the death resolution (`periods_per_agegroup`), explicit convergence check with refits, draws mapped to the grid with shape factors, `apc_effects()`; `apc_select()` ranks random-walk orders by DIC (bamp's DIC = deviance at the posterior mean + 2 pD) |
 | C4.2 | done | this branch | `life_expectancy()`, `prob_dying()`, `asr()` with `standard_population("esp2013")`, `yll()`, `mt_deaths()`; all path by path |
 | C4.3 | done | this branch | `mt_plot_forecast()`, `mt_plot_age()`, `mt_plot_life_expectancy()`, `mt_plot_rates()`, `mt_plot_ungroup()`, `mt_plot_coverage()` (tests check that plots build; no vdiffr snapshots); `mt_plot_tucker()`, `mt_plot_shares()`, `mt_plot_scores()` |

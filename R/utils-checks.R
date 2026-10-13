@@ -11,6 +11,13 @@ check_number <- function(x, name, lower = -Inf, upper = Inf, integerish = FALSE)
   invisible(x)
 }
 
+check_flag <- function(x, name) {
+  if (!is.logical(x) || length(x) != 1L || is.na(x)) {
+    mt_abort(sprintf("`%s` must be TRUE or FALSE.", name), class = "argument")
+  }
+  invisible(x)
+}
+
 check_choice <- function(x, choices, name) {
   if (!is.character(x) || length(x) != 1L || !x %in% choices) {
     mt_abort(sprintf("`%s` must be one of %s.", name,

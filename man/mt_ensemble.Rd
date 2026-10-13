@@ -38,6 +38,13 @@ non-negative stacking of mortensor 0.1, fitted on training data only).
 
 A component that fails in a stratum is dropped for that stratum and the
 remaining weights are renormalised; this is recorded in the diagnostics.
+
+A mixture is wider than its components when they disagree. In backtests
+on HMD data (England & Wales, France) and on the ONS deprivation data,
+Lee-Carter alone was too narrow (95\% coverage 0.70 to 0.84), while an
+equal-weight mixture of \code{lee_carter()} and \code{rwd()} had 95\% coverage of
+0.94 to 0.98 and the best or second-best CRPS (\code{dev/calibration.md} in
+the source repository).
 }
 \examples{
 x <- mt_example(deaths = "single")

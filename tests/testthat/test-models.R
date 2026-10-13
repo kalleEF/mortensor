@@ -1,6 +1,8 @@
 test_that("every model satisfies the contract", {
   expect_mt_model(rwd())
   expect_mt_model(rwd(innovations = "gaussian", drift_window = 10))
+  expect_mt_model(rwd(observation_noise = TRUE))
+  expect_mt_model(rwd(observation_noise = TRUE, innovations = "gaussian"))
   expect_mt_model(lee_carter())
   expect_mt_model(lee_carter(method = "svd", jump_off = "observed"))
   expect_mt_model(tucker3())
@@ -140,4 +142,23 @@ test_that("forecast draws are summarised and life expectancy is computed path by
   p <- mt_forecast(mt_fit(lee_carter(), x), h = 3, n_draws = 50, seed = 1, predictive = TRUE)
   expect_true(p$predictive)
   expect_output(print(fc), "mt_draws")
+})
+
+test_that("the random walk plus noise separates noise from the trend", {
+  set.seed(1)
+  na <- 5
+  nt <- 30
+  level <- outer(log(seq(0.01, 0.05, length.out = na)), rep(1, nt)) + outer(rep(1, na), cumsum(rep(-0.02, nt)))
+  E <- matrix(1e4, na, nt)
+  D <- matrix(stats::rpois(na * nt, exp(level) * E), na, nt)
+  sp <- rwd(observation_noise = TRUE)
+  f <- fit_model(sp, D, E, seq_len(na), seq_len(nt))
+  # the level is deterministic here, so most of the variation of the changes is Poisson noise
+  expect_true(all(f$s2e > 0.8 * pmin(rowMeans(1 / D), 0.45 * f$sigma^2)))
+  expect_true(all(f$s2eta < 0.5 * f$sigma^2))
+  p_noise <- simulate_model(sp, f, h = 10, n_draws = 400)
+  p_plain <- simulate_model(rwd(), fit_model(rwd(), D, E, seq_len(na), seq_len(nt)), h = 10, n_draws = 400)
+  width <- function(p) mean(apply(log(p[, 10, ]), 1, stats::sd))
+  expect_lt(width(p_noise), width(p_plain))
+  expect_error(rwd(observation_noise = NA), class = "mt_error_argument")
 })
