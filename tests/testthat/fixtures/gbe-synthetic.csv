@@ -1,0 +1,16 @@
+Sterbef‰lle (synthetische Testdaten)
+Diese Tabelle bezieht sich auf:
+Sachverhalt:;Sterbef‰lle
+;;;"2020";;;"2019";;
+;;;"Alle Krankheiten und Folgen ‰uﬂerer Ursachen";"C00-D48 Neubildungen";"O00-O99 Schwangerschaft";"Alle Krankheiten und Folgen ‰uﬂerer Ursachen";"C00-D48 Neubildungen";"O00-O99 Schwangerschaft";
+"        Deutschland";"        85 bis unter 90 Jahre";"        M‰nnlich";"30";"10";"X";"28";"9";"X";
+;;"        Weiblich";"40";"12";"-";"41";"11";"-";
+;"        90 Jahre und ‰lter";"        M‰nnlich";"20";"5";"X";"21";"6";"X";
+;;"        Weiblich";"50";"9";"-";"48";"8";"-";
+"        Bremen";"        85 bis unter 90 Jahre";"        M‰nnlich";"3";".";"X";"2";"1";"X";
+;;"        Weiblich";"4";"1";"-";"5";".";"-";
+;"        90 Jahre und ‰lter";"        M‰nnlich";"2";".";"X";".";"1";"X";
+;;"        Weiblich";"5";"1";"-";"4";"1";"-";
+Fuﬂnoten
+1.;Testfuﬂnote
+Quelle(n):

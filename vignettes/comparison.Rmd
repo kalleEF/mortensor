@@ -1,0 +1,217 @@
+---
+title: "Comparison with demography, bamp and StMoMo"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Comparison with demography, bamp and StMoMo}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width = 7, fig.height = 4.5, message = FALSE)
+has_gg <- requireNamespace("ggplot2", quietly = TRUE)
+res <- readRDS("comparison-results.rds")
+library(data.table)
+fmt <- function(x, d = 3) formatC(x, digits = d, format = "f")
+```
+
+mortensor wraps established implementations (Lee-Carter as in StMoMo and
+demography, the functional demographic model of demography, Bayesian
+age-period-cohort models of bamp) and adds its own data handling,
+predictive draws, backtests and coherence. Two questions follow:
+
+1. **Fidelity**: given the same data and settings, do the wrappers reproduce
+   the original packages?
+2. **Accuracy**: how do forecasts made with the original packages, used as
+   their documentation recommends, compare with mortensor pipelines in
+   rolling-origin backtests?
+
+The computations take about an hour, mostly for MCMC chains, and are run by
+`dev/compare-packages.R` in the source repository; this vignette shows the
+code and reads the stored results. Versions used:
+
+```{r}
+res$settings$versions
+```
+
+## Fidelity
+
+### Lee-Carter
+
+`lee_carter()` fits the Poisson log-bilinear model of Brouhns, Denuit and
+Vermunt (2002) as StMoMo does, and `lee_carter(method = "svd")` the
+original least-squares version with the adjustment of k to the observed
+deaths, as `demography::lca()` does. Maximum absolute differences of log
+death rates:
+
+```{r}
+res$fidelity$lee_carter[, .(comparison, data, max_abs_difference = signif(max_abs_difference, 2))]
+```
+
+The fitted rates agree to optimisation tolerance. Central forecasts differ
+only through the drift: both packages extrapolate k with a random walk with
+drift.
+
+### Functional demographic model
+
+`hyndman_ullah()` calls `demography::fdm()` and draws paths with
+`simulate()` from the forecast. With the same input (French men 0-95,
+1950-2006, 6 components, ARIMA), the median of 2,000 mortensor draws is
+compared with demography's point forecast, and the width of the central 80%
+interval of the draws with demography's 80% interval:
+
+```{r}
+res$fidelity$fdm[, lapply(.SD, signif, 3)]
+```
+
+demography computes its intervals analytically from the variance of the
+coefficients, the model error and the observational variance; `simulate()`
+draws coefficient paths and model errors. Width ratios below one mean that
+the simulated paths are narrower than demography's analytic intervals.
+
+### Bayesian age-period-cohort models
+
+`apc_bayes()` calls `bamp::bamp()` and `bamp::predict_apc()`. On bamp's own
+example data (8 five-year age groups, 10 years), the forecast log rates of
+three future years from `apc_bayes()` are compared with a native bamp run
+with the same priors and chain settings; a second native run with another
+seed shows the Monte Carlo variation of bamp itself. Differences are in
+units of the posterior standard deviation:
+
+```{r}
+res$fidelity$bamp[, lapply(.SD, function(v) if (is.numeric(v)) signif(v, 2) else v)]
+```
+
+## Accuracy
+
+### Design
+
+Each original package is wrapped as a model specification that returns its
+own predictive distribution, so that `mt_backtest()` scores all forecasts
+in the same way: rolling origins, predictive draws compared with the
+observed death rates at their observed resolution, CRPS on the log scale,
+interval coverage. The adapters (abbreviated):
+
+```{r, eval = FALSE}
+# demography: functional demographic model, the documented workflow
+fit_model.mt_spec_native_fdm <- function(spec, D, E, ages, periods, ...) {
+  dd <- demography::demogdata(pmax(D, 0.5) / E, pop = E, ages = ages$lower, years = periods,
+                              type = "mortality", label = "native", name = "s")
+  if (all(utils::head(ages$upper - ages$lower, -1) == 1)) dd <- demography::smooth.demogdata(dd)
+  list(fit = demography::fdm(dd, series = "s", order = 6))
+}
+simulate_model.mt_spec_native_fdm <- function(spec, fit, h, n_draws, ...) {
+  fc <- forecast::forecast(fit$fit, h = h)        # point forecast and total variance
+  mu <- log(fc$rate$s)
+  sd <- sqrt(fc$var$total)
+  array(exp(rep(mu, n_draws) + rep(sd, n_draws) * rnorm(length(mu) * n_draws)), c(dim(mu), n_draws))
+}
+
+# bamp: random walks of first order, posterior samples of future rates
+fit_model.mt_spec_native_bamp <- function(spec, D, E, ages, periods, ...) {
+  list(model = bamp::bamp(round(t(D)), round(t(E)), age = "rw1", period = "rw1", cohort = "rw1",
+                          periods_per_agegroup = 5, mcmc.options = mcmc_control("fast")$options))
+}
+simulate_model.mt_spec_native_bamp <- function(spec, fit, h, n_draws, ...) {
+  pr <- bamp::predict_apc(fit$model, periods = h)$samples$pr
+  ...   # future periods, n_draws samples, as [age, period, draw]
+}
+```
+
+`demography::lca()` is wrapped in the same way (random walk with drift for
+k, its 95% bounds); StMoMo models are used through `stmomo()`, which calls
+`fit()` and `simulate()`. The native distributions describe the smooth
+death rates; mortensor's predictive draws add the variation of observed
+rates around them.
+
+Data sets: the ONS deprivation data (`ons_data`, sex by quintile, 5-year
+age groups with 0-4 combined so that bamp has equal widths), France (HMD
+via demography, single ages 0-95), England & Wales men (HMD via StMoMo,
+single ages 55-89) and bamp's example data.
+
+```{r}
+acc <- res$accuracy
+for (d in unique(acc$data)) {
+  cat("\n", d, "\n", sep = "")
+  print(acc[data == d, .(model, crps = fmt(crps, 4), cov50 = fmt(cov50, 2), cov80 = fmt(cov80, 2),
+                         cov95 = fmt(cov95, 2), seconds = round(seconds))], row.names = FALSE)
+}
+```
+
+```{r, eval = has_gg, fig.height = 6}
+library(ggplot2)
+ggplot(res$by_horizon, aes(horizon, crps, colour = model)) +
+  geom_line() + geom_point(size = 0.8) +
+  facet_wrap(~ data, scales = "free", ncol = 2) +
+  labs(x = "Horizon (years)", y = "Mean CRPS", colour = NULL) +
+  theme(legend.position = "bottom", legend.text = element_text(size = 7)) +
+  guides(colour = guide_legend(ncol = 2))
+```
+
+### Results
+
+**Fidelity.** The Lee-Carter fits agree with StMoMo and demography to
+optimisation tolerance (largest difference of log rates `r formatC(max(res$fidelity$lee_carter$max_abs_difference), format = "e", digits = 0)`).
+The medians of the simulated functional-demographic-model paths agree with
+demography's point forecasts to within
+`r fmt(100 * max(res$fidelity$fdm$median_abs_log_diff_point), 1)`% (median
+absolute log difference); the simulated 80% intervals are
+`r fmt(100 * (1 - min(res$fidelity$fdm$width80_ratio_median)), 0)`% narrower than
+demography's analytic intervals at horizon 1 and nearly as wide at 20 years.
+The Bayesian APC forecasts of `apc_bayes()` differ from native bamp by less
+than two independent bamp runs differ from each other, so the wrapper adds
+no difference beyond Monte Carlo error.
+
+**Accuracy.** Four observations hold across the data sets:
+
+* The same model used through mortensor scores better than the native
+  package in 6 of 7 comparisons, mainly because mortensor's
+  predictive draws include the variation of observed rates around the
+  smooth forecast, which the native intervals omit. This improves coverage
+  most: bamp on the ONS data covers 0.79 of observed rates at 95% natively
+  and 0.92 through `apc_bayes()`; the functional demographic model 0.76
+  against 0.84 (ONS) and 0.59 against 0.75 (France). The exception is
+  `demography::lca()` on England & Wales men, whose least-squares fit with
+  k adjusted to the observed deaths is more accurate there than the Poisson
+  Lee-Carter of `lee_carter()` and of StMoMo.
+* No single model is best everywhere. The Bayesian APC model is the most
+  accurate on the ONS data and on bamp's example, the StMoMo APC model on
+  England & Wales men 55-89 (cohort effects), and the random walk with drift
+  on France, where the age pattern of mortality decline changed over the
+  period and Lee-Carter extrapolates the old pattern.
+* Single structured models (Lee-Carter, `lca()`, functional demographic
+  model, StMoMo LC and CBD) have 95% intervals that cover 56% to 84% of the
+  observed rates, so they understate the uncertainty of real forecasts. On
+  the three larger data sets the random walk and the ensemble of Lee-Carter
+  and random walk cover 92% to 98% (bamp's example has only 48 scored
+  cells).
+* The ensemble is never the most accurate but always close to the best
+  (CRPS within 11% of the best model on the ONS data, 3% on France, 30% on
+  England & Wales men) with near-nominal coverage, at the cost of seconds;
+  the Bayesian APC models took about 40 minutes per backtest on the ONS
+  data.
+
+On data like these, an ensemble is a robust default, and a backtest on the
+data at hand (`mt_backtest()`) decides whether a structured model such as an
+APC model is worth its cost.
+
+
+## References
+
+Brouhns N, Denuit M, Vermunt JK (2002). A Poisson log-bilinear regression
+approach to the construction of projected lifetables. *Insurance:
+Mathematics and Economics* 31(3): 373-393.
+
+Hyndman RJ, Ullah MS (2007). Robust forecasting of mortality and fertility
+rates: a functional data approach. *Computational Statistics & Data
+Analysis* 51(10): 4942-4956.
+
+Lee RD, Carter LR (1992). Modeling and forecasting U.S. mortality. *Journal
+of the American Statistical Association* 87(419): 659-671.
+
+Schmid VJ, Held L (2007). Bayesian age-period-cohort modeling and
+prediction: BAMP. *Journal of Statistical Software* 21(8): 1-15.
+
+Villegas AM, Kaishev VK, Millossovich P (2018). StMoMo: an R package for
+stochastic mortality modeling. *Journal of Statistical Software* 84(3):
+1-38.

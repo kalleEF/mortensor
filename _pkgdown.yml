@@ -1,32 +1,145 @@
-url: https://kalleEF.github.io/mortensor
-
+url: ~
 template:
   bootstrap: 5
-
-navbar:
-  structure:
-    left: [intro, reference, articles]
-    right: [search, github]
-  components:
-    github:
-      icon: fa-github
-      href: https://github.com/kalleEF/mortensor
-
+  includes:
+    # Mermaid diagrams (function map, README): fenced ```mermaid blocks are
+    # turned into diagrams in the browser
+    in_header: |
+      <script type="module">
+      import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.esm.min.mjs";
+      mermaid.initialize({ startOnLoad: false, securityLevel: "strict" });
+      window.addEventListener("load", async () => {
+        const sel = "pre.mermaid, pre.sourceCode.mermaid, pre > code.mermaid, pre > code.language-mermaid";
+        document.querySelectorAll(sel).forEach((el) => {
+          const pre = el.tagName === "PRE" ? el : el.parentElement;
+          const div = document.createElement("div");
+          div.className = "mermaid-diagram";
+          div.textContent = pre.textContent;
+          pre.replaceWith(div);
+        });
+        await mermaid.run({ querySelector: "div.mermaid-diagram" });
+      });
+      </script>
+reference:
+  - title: 1. Read data
+    desc: Deaths, exposures and populations in long or wide tables, at any age and period resolution.
+    contents:
+      - mt_data
+      - mt_add
+      - parse_age_labels
+      - as_mt_data
+      - mt_from_hmd
+      - mt_read_genesis
+      - mt_read_gbe
+  - title: 2. Prepare and check
+    desc: Analysis decisions on exposures, ages, years, strata, aggregation layers and suppressed cells.
+    contents:
+      - mt_as_exposure
+      - mt_subset
+      - mt_group_levels
+      - mt_relabel
+      - mt_fill_suppressed
+      - mt_validate
+      - mt_strata
+  - title: 3. Harmonise age groups and periods
+    desc: Common resolution of all tables; ungrouping and smoothing; preprocessing pipelines refitted in backtests.
+    contents:
+      - mt_regroup
+      - mt_ungroup
+      - mt_smooth
+      - mt_prep
+      - mt_set_grid
+  - title: 4. Describe the past
+    desc: Observed indicators with Poisson intervals, gaps between strata and inequality indices.
+    contents:
+      - mt_observed
+      - life_expectancy
+      - derived
+      - mt_contrast
+      - mt_inequality
+      - standard_population
+      - life_table
+  - title: 5. Models for one population
+    contents:
+      - lee_carter
+      - rwd
+      - hyndman_ullah
+      - stmomo
+      - arima_series
+      - apc_bayes
+      - apc_select
+      - mcmc_control
+  - title: 6. Models for several populations and causes
+    contents:
+      - li_lee
+      - tucker3
+      - cause_shares
+  - title: 7. Combine models and make forecasts coherent
+    desc: Model wrappers (ensembles, reconciliation, bootstrap, tuning) and hierarchies of strata.
+    contents:
+      - ensemble
+      - reconciled
+      - bootstrapped
+      - mt_tune
+      - mt_hierarchy
+      - mt_aggregate_strata
+      - mt_reconcile
+      - mt_aggregate_draws
+      - mt_order_strata
+  - title: 8. Fit, inspect and forecast
+    contents:
+      - mt_fit
+      - mt_parameters
+      - fit-inspection
+      - mt_plot_residuals
+      - mt_forecast
+      - mt_draws
+      - mt_deaths
+  - title: 9. Evaluate
+    contents:
+      - mt_backtest
+      - mt_score
+  - title: 10. Report
+    contents:
+      - mt_plot
+      - mt_plot_more
+      - mt_export
+  - title: Example data
+    contents:
+      - ons_data
+      - de_deaths
+      - mt_example
+      - mt_example_causes
+      - mt_example_regions
+  - title: Exchange with other packages
+    contents:
+      - as_demogdata
+  - title: Low level and extending
+    desc: Building blocks for advanced use and for new models.
+    contents:
+      - mt_axis
+      - axis_widths
+      - mt_array
+      - mt_granularity
+      - mt_operator
+      - mt_disaggregate
+      - new_mt_spec
 articles:
-  - title: Getting Started
+  - title: Getting started
+    navbar: ~
     contents:
-    - getting-started
-  - title: Methods
+      - mortensor
+      - own-data
+      - articles/function-map
+  - title: Applications
     contents:
-    - tensor-decomposition
-    - model-calibration-and-selection
-    - prediction-intervals
-    - age-disaggregation
-    - life-tables
-    - scoring-and-evaluation
-  - title: Multi-Cause
+      - causes
+      - regions
+      - granularity-hmd
+      - forecasting-hmd
+      - bayesian-apc
+  - title: Methods and evidence
     contents:
-    - multi-cause-forecasting
-  - title: Reference
-    contents:
-    - visualization-gallery
+      - models
+      - comparison
+      - faq

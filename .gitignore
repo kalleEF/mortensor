@@ -5,3 +5,6 @@
 inst/doc
 docs
 _testing/
+.claude/settings.local.json
+Rplots.pdf
+validation-output/

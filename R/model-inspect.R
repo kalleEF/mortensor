@@ -1,0 +1,272 @@
+#' Parameters of a fitted model
+#'
+#' Returns the estimated parameters of a fit in one long table, for every
+#' model type that has interpretable parameters:
+#'
+#' * [lee_carter()]: `a` (age pattern), `b` (age pattern of change), `k`
+#'   (period index), and the drift and innovation standard deviation of `k`;
+#' * [li_lee()], [product_ratio()]: the common factor of each group (`B`,
+#'   `K`, its drift and standard deviation), and per stratum the deviations
+#'   `a`, `b`, `k` and their AR(1) coefficient `phi` and standard deviation;
+#' * [rwd()]: drift and innovation standard deviation per age (and, with
+#'   `observation_noise = TRUE`, the variances of level and noise);
+#' * [apc_bayes()]: posterior medians and 90% intervals of the age, period
+#'   and cohort effects (logit scale, bamp's identification), and the
+#'   Gelman-Rubin statistics (`rhat`, values below 1.1 indicate convergence)
+#'   of the identified quantities.
+#'
+#' Fits of wrapped packages (StMoMo, demography) keep the original fitted
+#' object in `fit$fits[[i]]`, where the methods of those packages apply.
+#'
+#' @param fit An `mt_fit` object.
+#' @return A `data.table` with `stratum`, `parameter`, `index` (age label,
+#'   year or position), `value` and, for Bayesian fits, `lower` and `upper`.
+#' @seealso [summary.mt_fit()], [residuals.mt_fit()].
+#' @examples
+#' x <- mt_example(deaths = "single")
+#' p <- mt_parameters(mt_fit(lee_carter(), x))
+#' head(p)
+#' @export
+mt_parameters <- function(fit) {
+  check_class(fit, "mt_fit", "fit")
+  sp <- fit$spec
+  lab <- fit$strata$label
+  ages <- fit$age$labels
+  yrs <- as.character(fit$periods)
+  row <- function(stratum, parameter, index, value) {
+    data.table(stratum = stratum, parameter = parameter, index = as.character(index), value = as.numeric(value))
+  }
+  if (inherits(sp, "mt_spec_lee_carter")) {
+    return(rbindlist(lapply(seq_along(fit$fits), function(s) {
+      f <- fit$fits[[s]]
+      if (is.null(f)) return(NULL)
+      rbind(row(lab[s], "a", ages, f$a), row(lab[s], "b", ages, f$b), row(lab[s], "k", yrs, f$k),
+            row(lab[s], "drift_k", "", f$drift), row(lab[s], "sd_k", "", f$sigma_k))
+    })))
+  }
+  if (inherits(sp, "mt_spec_rwd")) {
+    return(rbindlist(lapply(seq_along(fit$fits), function(s) {
+      f <- fit$fits[[s]]
+      if (is.null(f)) return(NULL)
+      out <- rbind(row(lab[s], "drift", ages, f$mu), row(lab[s], "sd", ages, f$sigma))
+      if (!is.null(f$s2eta)) {
+        out <- rbind(out, row(lab[s], "var_level", ages, f$s2eta), row(lab[s], "var_noise", ages, f$s2e))
+      }
+      out
+    })))
+  }
+  if (inherits(sp, "mt_spec_multipop")) {
+    f <- fit$fits
+    groups <- vapply(seq_along(f$commons), function(g) paste(lab[f$group == g], collapse = ", "), "")
+    common <- rbindlist(lapply(seq_along(f$commons), function(g) {
+      cm <- f$commons[[g]]
+      gl <- sprintf("common %d (%s)", g, groups[g])
+      rbind(if (!is.null(cm$a) && f$base_type != "li_lee") row(gl, "A", ages, cm$a),
+            row(gl, "B", ages, cm$b), row(gl, "K", yrs, cm$k),
+            row(gl, "drift_K", "", cm$drift), row(gl, "sd_K", "", cm$sigma_k))
+    }))
+    own <- rbindlist(lapply(seq_along(f$strata), function(s) {
+      st <- f$strata[[s]]
+      r <- ncol(st$b)
+      rbind(row(lab[s], "a", ages, st$a),
+            rbindlist(lapply(seq_len(r), function(j) {
+              rbind(row(lab[s], paste0("b", j), ages, st$b[, j]), row(lab[s], paste0("k", j), yrs, st$k[, j]),
+                    row(lab[s], paste0("phi", j), "", st$ar[[j]]$phi),
+                    row(lab[s], paste0("sd_k", j), "", st$ar[[j]]$sigma))
+            })))
+    }))
+    return(rbind(common, own))
+  }
+  if (inherits(sp, "mt_spec_apc_bayes")) {
+    e <- apc_effects(fit)
+    e <- e[, list(stratum, parameter = effect, index = as.character(index), value = q0.5, lower = q0.05,
+                  upper = q0.95)]
+    r <- rbindlist(lapply(seq_along(fit$fits), function(s) {
+      ps <- fit$fits[[s]]$psrf
+      if (is.null(ps)) return(NULL)
+      data.table(stratum = lab[s], parameter = "rhat", index = names(ps), value = unname(ps), lower = NA_real_,
+                 upper = NA_real_)
+    }))
+    return(rbind(e, r))
+  }
+  mt_abort(sprintf(paste("mt_parameters() has no method for %s; the fitted objects are in `fit$fits` (for",
+                         "wrapped packages, use their own methods)."), sp$label), class = "argument")
+}
+
+#' Fitted rates, residuals and summaries of fitted models
+#'
+#' `fitted()` returns the in-sample fitted death rates as an array `[age,
+#' period, stratum]` (`NA` for models without fitted values, such as the
+#' plain random walk). `residuals()` returns deviance residuals (default) or
+#' Pearson residuals of the death counts, assuming Poisson deaths given the
+#' fitted rates, as a long table; values far beyond 2 in absolute value
+#' point to structure that the model misses (for example cohort effects) or
+#' to overdispersion. `summary()` describes the model, its sources of
+#' uncertainty and the fit; [mt_plot_residuals()] shows the residuals as an
+#' age-period heat map.
+#'
+#' @param object An `mt_fit` object.
+#' @param type `"deviance"` or `"pearson"`.
+#' @param ... Not used.
+#' @return `fitted()`: an array; `residuals()`: a `data.table` with
+#'   `stratum`, `age`, `period`, `deaths`, `fitted_deaths`, `residual`;
+#'   `summary()`: an object of class `summary.mt_fit`, printed.
+#' @examples
+#' x <- mt_example(deaths = "single")
+#' fit <- mt_fit(lee_carter(), x)
+#' summary(fit)
+#' head(residuals(fit))
+#' @name fit-inspection
+NULL
+
+#' @rdname fit-inspection
+#' @export
+fitted.mt_fit <- function(object, ...) {
+  d <- dim(object$train_D)
+  out <- array(NA_real_, d, dimnames(object$train_D))
+  if (isTRUE(object$spec$joint)) {
+    if (!is.null(object$fits$fitted)) out[] <- object$fits$fitted
+  } else {
+    for (s in seq_len(d[3])) {
+      f <- object$fits[[s]]$fitted
+      if (!is.null(f)) out[, , s] <- f
+    }
+  }
+  out
+}
+
+#' @rdname fit-inspection
+#' @export
+residuals.mt_fit <- function(object, type = c("deviance", "pearson"), ...) {
+  type <- match.arg(type)
+  m <- stats::fitted(object)
+  D <- object$train_D
+  mu <- m * object$train_E
+  r <- if (type == "pearson") {
+    (D - mu) / sqrt(mu)
+  } else {
+    sign(D - mu) * sqrt(2 * pmax(ifelse(D > 0, D * log(D / mu), 0) - (D - mu), 0))
+  }
+  dn <- dimnames(D)
+  out <- data.table(stratum = rep(dn[[3]], each = length(dn[[1]]) * length(dn[[2]])),
+                    age = rep(dn[[1]], length(dn[[2]]) * length(dn[[3]])),
+                    period = rep(rep(as.numeric(dn[[2]]), each = length(dn[[1]])), length(dn[[3]])),
+                    deaths = as.vector(D), fitted_deaths = as.vector(mu), residual = as.vector(r))
+  out[!is.na(residual)]
+}
+
+#' @rdname fit-inspection
+#' @export
+summary.mt_fit <- function(object, ...) {
+  res <- tryCatch(stats::residuals(object), error = function(e) NULL)
+  structure(list(label = object$spec$label, assumptions = model_assumptions(object$spec),
+                 strata = nrow(object$strata), ages = object$age$labels, periods = range(object$periods),
+                 prep = object$prep, diagnostics = object$diagnostics,
+                 deviance = if (!is.null(res) && nrow(res)) sum(res$residual^2) else NA_real_,
+                 cells = if (!is.null(res)) nrow(res) else NA_integer_,
+                 large_residuals = if (!is.null(res) && nrow(res)) mean(abs(res$residual) > 2) else NA_real_),
+            class = "summary.mt_fit")
+}
+
+#' @export
+print.summary.mt_fit <- function(x, ...) {
+  cat(sprintf("%s\n", x$label))
+  cat(sprintf("  data: %d strata; ages %s to %s; periods %d-%d\n", x$strata, x$ages[1], x$ages[length(x$ages)],
+              x$periods[1], x$periods[2]))
+  if (!is.null(x$prep)) {
+    cat(sprintf("  preprocessing: %s\n", paste(vapply(x$prep$steps, function(s) paste0("step_", s$type), ""),
+                                               collapse = ", ")))
+  }
+  cat("  model and uncertainty:\n")
+  cat(paste0("    ", strwrap(x$assumptions, 76), collapse = "\n"), "\n", sep = "")
+  if (is.finite(x$deviance)) {
+    cat(sprintf(paste("  fit: Poisson deviance %.1f on %d cells (%.2f per cell); %.1f%% of deviance residuals",
+                      "beyond +/-2\n"), x$deviance, x$cells, x$deviance / x$cells, 100 * x$large_residuals))
+  }
+  bad <- x$diagnostics[status != "ok" | nzchar(message)]
+  if (nrow(bad)) {
+    cat(sprintf("  problems in %d stratum/strata, for example %s: %s\n", nrow(bad), bad$stratum[1],
+                bad$message[1]))
+  }
+  invisible(x)
+}
+
+# Short statement of the model and the sources of uncertainty in its draws
+model_assumptions <- function(spec) {
+  p <- spec$params
+  switch(class(spec)[1],
+         mt_spec_lee_carter = paste(
+           "log m(x,t) = a(x) + b(x) k(t), estimated by", if (p$method == "poisson") "Poisson maximum likelihood",
+           if (p$method == "svd") "SVD of log rates with k(t) refitted to the observed deaths",
+           "(Brouhns et al. 2002; Lee and Carter 1992). k(t) follows a random walk with drift; draws include",
+           "its innovations and the uncertainty of the drift. a(x) and b(x) are fixed",
+           "(parameter uncertainty with bootstrapped()). Jump-off:", p$jump_off, "rates."),
+         mt_spec_rwd = if (isTRUE(p$observation_noise)) {
+           paste("Each age: log rate = level + noise, level a random walk with drift (local level model).",
+                 "Noise variance from Poisson counts plus a common extra part; level variance partly pooled over",
+                 "ages. Draws include level and drift uncertainty; predictive draws add the noise.")
+         } else {
+           paste("Each age: log rate a random walk with drift, estimated from the year-to-year changes",
+                 if (!is.null(p$drift_window)) sprintf("of the last %d years", p$drift_window) else "",
+                 "; draws resample the observed changes (", p$innovations, ") and the drift. Noise of observed",
+                 "rates accumulates, so intervals are wide where deaths are few.")
+         },
+         mt_spec_multipop = paste(
+           if (p$type == "li_lee") "Li-Lee: log m(x,t,i) = a(x,i) + B(x) K(t) + b(x,i) k(t,i)" else
+             "Product-ratio: log m(x,t,i) = common Lee-Carter + a(x,i) + b(x,i) k(t,i)",
+           "(Li and Lee 2005; Hyndman, Booth and Yasmeen 2013). The common factor (per group of `common_by`)",
+           "follows a random walk with drift; each stratum's k(t,i) an AR(1) without intercept",
+           "(|phi| <= 0.99), independent across strata, so deviations from the common trend stay bounded.",
+           "Draws include the innovations and drift uncertainty of K and the AR(1) innovations;",
+           "a, b and phi are fixed."),
+         mt_spec_apc_bayes = paste(
+           "Bayesian age-period-cohort model (bamp; Schmid and Held 2007): logit rate = age + period + cohort",
+           "effects with random-walk priors, binomial likelihood. Draws are posterior predictive samples and",
+           "include parameter uncertainty."),
+         mt_spec_ensemble = paste("Mixture of the component models: each draw comes from one component, chosen in",
+                                  "proportion to the weights; uncertainty of the components and their spread."),
+         mt_spec_reconciled = paste("Base model reconciled draw by draw over the hierarchy;", spec$params$method,
+                                    "projection on the deaths (or rates) scale."),
+         paste(spec$label, "- see the help page of its constructor for the model and its uncertainty."))
+}
+
+#' Residual heat map of a fitted model
+#'
+#' @param fit An `mt_fit` object.
+#' @param strata Labels of the strata to show (default: up to four).
+#' @param type `"deviance"` or `"pearson"`.
+#' @return A ggplot object: residuals by age and period, one panel per
+#'   stratum. Diagonal bands indicate cohort effects, vertical bands period
+#'   shocks.
+#' @examples
+#' if (requireNamespace("ggplot2", quietly = TRUE)) {
+#'   x <- mt_example(deaths = "single")
+#'   mt_plot_residuals(mt_fit(lee_carter(), x))
+#' }
+#' @export
+mt_plot_residuals <- function(fit, strata = NULL, type = c("deviance", "pearson")) {
+  need_ggplot()
+  type <- match.arg(type)
+  r <- stats::residuals(fit, type = type)
+  strata <- check_strata_labels(strata %||% utils::head(fit$strata$label, 4), fit$strata$label)
+  r <- r[stratum %in% strata]
+  r[, age_i := match(age, fit$age$labels)]
+  lim <- max(3, stats::quantile(abs(r$residual), 0.99))
+  ggplot2::ggplot(r, ggplot2::aes(x = period, y = age_i, fill = pmax(pmin(residual, lim), -lim))) +
+    ggplot2::geom_tile() +
+    ggplot2::scale_fill_gradient2(low = "#2166ac", mid = "white", high = "#b2182b", limits = c(-lim, lim),
+                                  name = paste(type, "residual")) +
+    ggplot2::scale_y_continuous(breaks = seq_along(fit$age$labels), labels = fit$age$labels) +
+    ggplot2::facet_wrap(~stratum) +
+    ggplot2::labs(x = "Period", y = "Age")
+}
+
+# Check stratum labels for plots and list the available ones
+check_strata_labels <- function(strata, available) {
+  bad <- setdiff(strata, available)
+  if (length(bad)) {
+    mt_abort(sprintf("Unknown stratum label(s): %s. Available: %s.", paste(bad, collapse = ", "),
+                     paste(utils::head(available, 12), collapse = ", ")), class = "argument")
+  }
+  strata
+}
