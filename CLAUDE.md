@@ -7,7 +7,8 @@ in `dev/implementation-plan.md`, and `dev/revamp-plan.md` for the design.
 
 | Path | Content |
 |---|---|
-| `R/data-*.R` | Axes, `mt_data` container, regrouping, validation, exposures, adapters, simulated example |
+| `R/data-*.R` | Axes, `mt_data` container, regrouping, validation, exposures, adapters (HMD, ONS, GENESIS), simulated examples, `ons_data` documentation |
+| `data/`, `data-raw/` | `ons_data` and `ons_cause_groups`, rebuilt by `data-raw/ons_data.R` |
 | `R/harmonise-*.R` | PCLM engine and `mt_ungroup()`, smoothing and preprocessing steps |
 | `R/model-*.R` | Model specifications, fitting, forecast draws |
 | `R/hierarchy.R` | Hierarchies of strata, aggregation, reconciliation |
@@ -15,7 +16,7 @@ in `dev/implementation-plan.md`, and `dev/revamp-plan.md` for the design.
 | `R/derive-*.R` | Life tables and derived quantities |
 | `R/validation.R` | Benchmarks shared by slow tests and `validation/` |
 | `validation/` | Validation pipeline (thresholds, runner, history); see its README |
-| `dev/` | Plans, review, progress log, figures (not built into the package) |
+| `dev/` | Plans, review, progress log, calibration study, package comparison script (not built into the package) |
 
 ## Conventions
 
@@ -33,6 +34,11 @@ in `dev/implementation-plan.md`, and `dev/revamp-plan.md` for the design.
 - data.table inside the package: column names used in non-standard
   evaluation go into `utils::globalVariables()` in `R/mortensor-package.R`.
   Never name a local variable like a column used in the same `[` call.
+- Plot snapshots (vdiffr) are made with ggplot2 >= 4.0; regenerate them
+  after an intended change or a ggplot2 release (`testthat::snapshot_review()`).
+- Precomputed vignette results: `vignettes/comparison-results.rds` comes
+  from `dev/compare-packages.R` (about one hour); the bamp vignette from
+  `dev/precompute-vignettes.R`.
 - Randomness: functions that simulate take `seed = NULL` and use
   `with_seed()`; parallel code uses `parallel` with L'Ecuyer streams.
 - Code adapted from other packages carries a header with source, version,
