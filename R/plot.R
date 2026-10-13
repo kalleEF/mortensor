@@ -166,3 +166,122 @@ mt_plot_coverage <- function(backtest) {
     ggplot2::coord_cartesian(ylim = c(0, 1)) +
     ggplot2::labs(x = "Horizon (years)", y = "Empirical coverage", colour = NULL)
 }
+
+#' Further plots: Tucker factors, cause shares and backtest scores
+#'
+#' * `mt_plot_tucker()`: the factor matrices of a [tucker3()] fit (age,
+#'   period and stratum modes), one panel per mode and one line per factor;
+#'   signs are arbitrary.
+#' * `mt_plot_shares()`: shares of each cause in the deaths over the
+#'   selected ages, observed and forecast (median and 95% interval), from a
+#'   forecast with a cause variable among the strata (for example from
+#'   [cause_shares()]).
+#' * `mt_plot_scores()`: mean score of each model by horizon or age from a
+#'   backtest.
+#'
+#' @param fit A fitted [tucker3()] model.
+#' @param draws An [mt_draws] object whose strata include `var`.
+#' @param var Stratum variable with the causes.
+#' @param total_level Level of `var` for all causes (left out of the shares).
+#' @param ages Age labels summed over (default all).
+#' @param backtest An [mt_backtest()] result.
+#' @param metric Score column, for example `"crps"`, `"wis"` or `"ae"`.
+#' @param by `"horizon"` or `"age"`.
+#' @return A ggplot object.
+#' @examples
+#' if (requireNamespace("ggplot2", quietly = TRUE)) {
+#'   x <- mt_example(deaths = "single", years = 2000:2019)
+#'   mt_plot_tucker(mt_fit(tucker3(), x))
+#'   bt <- rbind(mt_backtest(rwd(), x, origins = c(2012, 2014), h = 4, n_draws = 50),
+#'               mt_backtest(lee_carter(), x, origins = c(2012, 2014), h = 4, n_draws = 50))
+#'   mt_plot_scores(bt)
+#' }
+#' @name mt_plot_more
+NULL
+
+#' @rdname mt_plot_more
+#' @export
+mt_plot_tucker <- function(fit) {
+  need_ggplot()
+  check_class(fit, "mt_fit", "fit")
+  dec <- fit$fits$dec
+  if (is.null(dec)) mt_abort("`fit` is not a Tucker3 fit.", class = "argument")
+  labs <- list(age = axis_midpoints(fit$age, fit$omega), period = fit$periods, stratum = seq_len(nrow(fit$strata)))
+  long <- rbindlist(lapply(1:3, function(n) {
+    U <- dec$U[[n]]
+    data.table(mode = names(labs)[n], index = rep(labs[[n]], ncol(U)),
+               factor = factor(rep(seq_len(ncol(U)), each = nrow(U))), value = as.vector(U))
+  }))
+  long[, mode := factor(mode, levels = names(labs))]
+  ggplot2::ggplot(long, ggplot2::aes(x = index, y = value, colour = factor)) +
+    ggplot2::geom_hline(yintercept = 0, colour = "grey70") +
+    ggplot2::geom_line() +
+    ggplot2::geom_point(data = long[mode == "stratum"]) +
+    ggplot2::facet_wrap(~ mode, scales = "free") +
+    ggplot2::labs(x = NULL, y = "Loading", colour = "Factor", title = fit$spec$label,
+                  caption = sprintf("Strata: %s", paste(seq_len(nrow(fit$strata)), fit$strata$label, sep = " = ",
+                                                        collapse = ", ")))
+}
+
+#' @rdname mt_plot_more
+#' @export
+mt_plot_shares <- function(draws, var = "cause", total_level = "all", ages = NULL) {
+  need_ggplot()
+  check_class(draws, "mt_draws", "draws")
+  st <- draws$strata
+  if (!var %in% names(st)) mt_abort(sprintf("The strata have no variable `%s`.", var), class = "argument")
+  ai <- if (is.null(ages)) seq_along(draws$age) else match(ages, draws$age$labels)
+  parts <- which(st[[var]] != total_level)
+  other <- setdiff(names(st), c("stratum", "label", var))
+  grp <- if (length(other)) do.call(paste, c(as.list(st[, other, with = FALSE]), sep = ".")) else rep("all", nrow(st))
+  share_tab <- function(Dsum, periods, kind) {
+    # Dsum: [period, stratum] or [period, stratum, draw]
+    rbindlist(lapply(unique(grp[parts]), function(g) {
+      ii <- parts[grp[parts] == g]
+      tot <- apply(Dsum[, ii, , drop = FALSE], c(1, 3), sum)
+      rbindlist(lapply(ii, function(i) {
+        sh <- Dsum[, i, , drop = FALSE][, 1, ] / tot
+        sh <- matrix(sh, nrow = length(periods))
+        q <- t(apply(sh, 1, stats::quantile, c(0.025, 0.5, 0.975), na.rm = TRUE))
+        data.table(group = g, cause = st[[var]][i], period = periods, lo = q[, 1], med = q[, 2], hi = q[, 3],
+                   kind = kind)
+      }))
+    }))
+  }
+  out <- list()
+  if (!is.null(draws$train_D)) {
+    Do <- apply(draws$train_D[ai, , , drop = FALSE], c(2, 3), sum)
+    out$obs <- share_tab(array(Do, c(dim(Do), 1)), draws$observed_periods, "observed")
+  }
+  E <- matrix(draws$exposure_last[ai, 1, ], length(ai))
+  Df <- apply(sweep(draws$rates[ai, , , , drop = FALSE], c(1, 3), E, "*"), c(2, 3, 4), sum)
+  out$fc <- share_tab(Df, draws$periods, "forecast")
+  tab <- rbindlist(out)
+  ggplot2::ggplot(tab, ggplot2::aes(x = period, y = med, colour = cause)) +
+    ggplot2::geom_ribbon(data = tab[kind == "forecast"], ggplot2::aes(ymin = lo, ymax = hi, fill = cause),
+                         alpha = 0.2, colour = NA) +
+    ggplot2::geom_line(ggplot2::aes(linetype = kind)) +
+    ggplot2::facet_wrap(~ group) +
+    ggplot2::labs(x = NULL, y = "Share of deaths", colour = NULL, fill = NULL, linetype = NULL, title = draws$model)
+}
+
+#' @rdname mt_plot_more
+#' @export
+mt_plot_scores <- function(backtest, metric = "crps", by = c("horizon", "age")) {
+  need_ggplot()
+  by <- match.arg(by)
+  if (!metric %in% names(backtest)) mt_abort(sprintf("No column `%s` in the backtest.", metric), class = "argument")
+  tab <- as.data.table(unclass_backtest(backtest))
+  if (by == "age") {
+    s <- tab[, list(score = mean(get(metric), na.rm = TRUE)), by = c("model", "age_lo")]
+    setnames(s, "age_lo", "x")
+  } else {
+    s <- tab[, list(score = mean(get(metric), na.rm = TRUE)), by = c("model", "horizon")]
+    setnames(s, "horizon", "x")
+  }
+  ggplot2::ggplot(s, ggplot2::aes(x = x, y = score, colour = model)) +
+    ggplot2::geom_line() +
+    ggplot2::geom_point() +
+    ggplot2::labs(x = if (by == "age") "Age" else "Horizon (years)", y = sprintf("Mean %s", toupper(metric)),
+                  colour = NULL)
+}

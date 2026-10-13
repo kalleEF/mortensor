@@ -274,3 +274,71 @@ apc_effects <- function(fit) {
     }))
   }))
 }
+
+#' Choose the random-walk orders of a Bayesian APC model by DIC
+#'
+#' Fits [apc_bayes()] with every combination of first- and second-order
+#' random walks for age, period and cohort (and, optionally, with and
+#' without overdispersion) and ranks the variants by the deviance
+#' information criterion (Spiegelhalter et al. 2002) that bamp reports,
+#' summed over strata. This is the prior selection of mortensor 0.1. DIC
+#' measures in-sample fit; to choose by forecast accuracy, compare the
+#' candidates with [mt_backtest()] instead. Selection on all data followed by
+#' a backtest of the selected model reuses the test years once.
+#'
+#' @param data An [mt_data] object.
+#' @param prep Optional [mt_prep()] pipeline.
+#' @param orders Random-walk orders to try.
+#' @param overdispersion Values of `overdispersion` to try.
+#' @param mcmc MCMC settings, see [mcmc_control()].
+#' @param ... Further arguments of [apc_bayes()].
+#' @return A list of class `mt_apc_selection` with `best` (the chosen
+#'   specification) and `table` (DIC, effective number of parameters `pd`
+#'   and deviance at the posterior mean per candidate, sorted by DIC; DIC =
+#'   deviance at the mean + 2 pd).
+#' @references
+#' Spiegelhalter DJ, Best NG, Carlin BP, van der Linde A (2002). Bayesian
+#' measures of model complexity and fit. *Journal of the Royal Statistical
+#' Society B* 64(4): 583-639.
+#' @examples
+#' \donttest{
+#' if (requireNamespace("bamp", quietly = TRUE)) {
+#'   x <- mt_example(years = 2005:2019)
+#'   sel <- apc_select(x, prep = mt_prep(step_ungroup()), orders = "rw1", mcmc = mcmc_control("test"))
+#'   sel$table
+#' }
+#' }
+#' @export
+apc_select <- function(data, prep = NULL, orders = c("rw1", "rw2"), overdispersion = FALSE,
+                       mcmc = mcmc_control("fast"), ...) {
+  need_pkg("bamp", "for apc_select()")
+  check_class(data, "mt_data", "data")
+  grid <- expand.grid(age = orders, period = orders, cohort = orders, overdispersion = overdispersion,
+                      stringsAsFactors = FALSE)
+  rows <- lapply(seq_len(nrow(grid)), function(i) {
+    g <- grid[i, ]
+    spec <- apc_bayes(age = g$age, period = g$period, cohort = g$cohort, overdispersion = g$overdispersion,
+                      mcmc = mcmc, ...)
+    fit <- tryCatch(mt_fit(spec, data, prep = prep), error = function(e) NULL)
+    dev <- if (is.null(fit)) NULL else lapply(Filter(Negate(is.null), fit$fits), function(f) f$model$deviance)
+    ok <- !is.null(fit) && length(dev) == nrow(fit$strata) && all(vapply(dev, function(d) !is.null(d$DIC), TRUE))
+    data.table(age = g$age, period = g$period, cohort = g$cohort, overdispersion = g$overdispersion,
+               dic = if (ok) sum(vapply(dev, function(d) d$DIC, 0)) else NA_real_,
+               pd = if (ok) sum(vapply(dev, function(d) d$pD, 0)) else NA_real_,
+               deviance_at_mean = if (ok) sum(vapply(dev, function(d) d$deviance.mean, 0)) else NA_real_,
+               converged = ok, spec = list(spec))
+  })
+  tab <- rbindlist(rows)
+  if (!any(tab$converged)) mt_abort("No candidate could be fitted in every stratum.", class = "model_fit")
+  setorderv(tab, "dic", na.last = TRUE)
+  structure(list(best = tab$spec[[1]], table = tab[, !"spec"]), class = "mt_apc_selection")
+}
+
+#' @export
+print.mt_apc_selection <- function(x, ...) {
+  b <- x$best$params
+  cat(sprintf("<mt_apc_selection> best: age %s, period %s, cohort %s%s\n", b$age, b$period, b$cohort,
+              if (isTRUE(b$overdispersion)) ", overdispersion" else ""))
+  print(x$table, ...)
+  invisible(x)
+}

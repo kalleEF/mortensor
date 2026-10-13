@@ -20,7 +20,7 @@ work: `claude/vigilant-albattani-2ssw1x` (plays the role of `dev-0.2`).
 | D1.9 | done | this branch | `mt_ungroup()`; E&W benchmark 0.015 / 0.024 (1D), 0.015 / 0.023 (2D) |
 | D1.10 | done | this branch | `mt_smooth()` (Poisson P-splines, 1D/2D), `mt_prep()` with `step_ungroup()`, `step_smooth()`, `step_regroup()`, `step_grid()`, `step_shocks()` |
 | D1.11 | done | this branch | `life_table()` (interval widths, reciprocal or Gompertz open interval), `life_expectancy()` |
-| D1.12 | partial | this branch | `as_mt_data()` for data frames, StMoMoData, demogdata; `mt_example()`; ONS reader not ported |
+| D1.12 | done | this branch | `as_mt_data()` for data frames, StMoMoData, demogdata; `mt_example()`; `mt_read_ons()` (Excel or data frames; deciles to quintiles; optional region and cause groups with a closing "rest"; population years filled with a warning); tested on a synthetic fixture |
 | M2.1 | done | this branch | `new_mt_spec()`, `mt_fit()`, `mt_forecast()` (incl. predictive draws), per-stratum failures in diagnostics; contract test `expect_mt_model()` |
 | M2.2 | done | this branch | `mt_draws`, `mt_summarise()`, `mt_deaths()` |
 | M2.3 | done | this branch | `rwd()` (bootstrap or Gaussian), `arima_series()`, `ets_series()` |
@@ -30,9 +30,9 @@ work: `claude/vigilant-albattani-2ssw1x` (plays the role of `dev-0.2`).
 | M2.7 | done | this branch | `mt_score()`: CRPS, WIS (Bracher et al. 2021), coverage, PIT, MASE |
 | M2.8 | done | this branch | `mt_tune()` (inner rolling origin) and `mt_tuned()` (tuning refitted inside each fit, so nested backtests do not leak) |
 | C4.1 | done | this branch | `mt_ensemble()` (equal, numeric, inner-backtest CRPS weights) |
-| B3.1-B3.4 | done | this branch | `apc_bayes()` + `mcmc_control()`: fit at the death resolution (`periods_per_agegroup`), explicit convergence check with refits, draws mapped to the grid with shape factors, `apc_effects()`; DIC-based selection not wrapped |
+| B3.1-B3.4 | done | this branch | `apc_bayes()` + `mcmc_control()`: fit at the death resolution (`periods_per_agegroup`), explicit convergence check with refits, draws mapped to the grid with shape factors, `apc_effects()`; `apc_select()` ranks random-walk orders by DIC (bamp's DIC = deviance at the posterior mean + 2 pD) |
 | C4.2 | done | this branch | `life_expectancy()`, `prob_dying()`, `asr()` with `standard_population("esp2013")`, `yll()`, `mt_deaths()`; all path by path |
-| C4.3 | done | this branch | `mt_plot_forecast()`, `mt_plot_age()`, `mt_plot_life_expectancy()`, `mt_plot_rates()`, `mt_plot_ungroup()`, `mt_plot_coverage()` (tests check that plots build; no vdiffr snapshots) |
+| C4.3 | done | this branch | `mt_plot_forecast()`, `mt_plot_age()`, `mt_plot_life_expectancy()`, `mt_plot_rates()`, `mt_plot_ungroup()`, `mt_plot_coverage()` (tests check that plots build; no vdiffr snapshots); `mt_plot_tucker()`, `mt_plot_shares()`, `mt_plot_scores()` |
 | C4.4 | done | this branch | `mt_export()` (summary or long draws, CSV) |
 | C4.5 | done | this branch | Vignettes: getting started (simulated), granularity and ungrouping (HMD E&W, France), forecasting and backtesting (HMD France, E&W), Bayesian APC with bamp (HMD France; precomputed via `dev/precompute-vignettes.R`) |
 | C4.7 | partial | this branch | Migration vignette (0.1 to 0.2 function map), pkgdown reference index; tagging a release is the owner's decision |

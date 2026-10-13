@@ -31,6 +31,7 @@ Suggests:
     HMDHFDplus,
     knitr,
     mgcv,
+    readxl,
     rmarkdown,
     StMoMo,
     testthat (>= 3.0.0),

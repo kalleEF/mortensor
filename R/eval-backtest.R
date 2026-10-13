@@ -212,8 +212,19 @@ mt_score <- function(backtest, by = "model") {
 
 #' @export
 print.mt_backtest <- function(x, ...) {
+  if (!all(c("model", "origin", "crps", "cov95") %in% names(x))) {
+    # a derived table (for example x[, .N, by = horizon]) keeps the class
+    print(unclass_backtest(x), ...)
+    return(invisible(x))
+  }
   cat(sprintf("<mt_backtest> %s; origins %s; %d scored cells\n", paste(unique(x$model), collapse = ", "),
               paste(unique(x$origin), collapse = ", "), nrow(x)))
   print(mt_score(x))
   invisible(x)
+}
+
+unclass_backtest <- function(x) {
+  y <- copy(x)
+  setattr(y, "class", setdiff(class(y), "mt_backtest"))
+  y
 }

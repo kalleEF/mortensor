@@ -40,3 +40,16 @@ test_that("apc_bayes fits, converges and forecasts through the common interface"
   e <- apc_effects(fit)
   expect_setequal(unique(e$effect), c("age", "period", "cohort"))
 })
+
+test_that("apc_select ranks random-walk orders by DIC", {
+  skip_if_not_installed("bamp")
+  skip_on_cran()
+  x <- mt_window(mt_example(years = 2010:2019), 2010, 2019)
+  sel <- apc_select(x, prep = mt_prep(step_ungroup()), orders = "rw1", overdispersion = FALSE,
+                    mcmc = mcmc_control("test"))
+  expect_s3_class(sel, "mt_apc_selection")
+  expect_s3_class(sel$best, "mt_spec_apc_bayes")
+  expect_true(all(c("dic", "pd", "deviance_at_mean") %in% names(sel$table)))
+  expect_equal(sel$table$dic, sel$table$deviance_at_mean + 2 * sel$table$pd, tolerance = 1e-6)
+  expect_output(print(sel), "best: age rw1")
+})

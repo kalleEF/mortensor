@@ -43,6 +43,10 @@ Clean break: the 0.1.x interface is replaced (see `dev/revamp-plan.md`).
   `mt_bootstrap()` (parameter and preprocessing uncertainty by Poisson
   resampling and refitting) and information-criterion rank selection in
   `tucker3(ranks = "bic")`.
+* `mt_read_ons()` (ONS Excel tables by sex, age and IMD decile, optional
+  regions and cause groups), `apc_select()` (DIC-based choice of random-walk
+  orders for `apc_bayes()`), and the plots `mt_plot_tucker()`,
+  `mt_plot_shares()` and `mt_plot_scores()`.
 * `mt_tune()` and `mt_tuned()`; `prob_dying()`, `asr()` (ESP 2013),
   `yll()`, `mt_export()`.
 * `mt_backtest()` (rolling origin, scored at the observed resolution) and
