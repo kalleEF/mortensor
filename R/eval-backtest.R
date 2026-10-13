@@ -1,7 +1,7 @@
 #' Rolling-origin backtest
 #'
-#' For each forecast origin, the data are cut at the origin with
-#' [mt_window()], the preprocessing pipeline and the model are fitted on the
+#' For each forecast origin, the data are cut at the origin, the
+#' preprocessing pipeline and the model are fitted on the
 #' training window only, and predictive draws for the next `h` years are
 #' compared with the observations. Nothing after the origin enters the fit,
 #' including ungrouping and smoothing (they are part of `prep`).
@@ -15,13 +15,17 @@
 #'
 #' @param spec A model specification.
 #' @param data An [mt_data] object.
-#' @param origins Last training years. Default: every year from the
-#'   `n_origins`-th last possible origin, such that horizon 1 is observed.
+#' @param origins Last training years. Default: the last `n_origins` years
+#'   whose full horizon `h` is observed, so that every horizon is scored
+#'   equally often.
 #' @param h Forecast horizon.
 #' @param prep Preprocessing pipeline ([mt_prep()]).
 #' @param n_draws Number of draws per origin.
 #' @param n_origins Number of origins when `origins` is `NULL`.
-#' @param seed Random seed.
+#' @param seed Random seed (forecast draws and the randomised PIT).
+#' @param score_estimated Score cells whose deaths were estimated (for
+#'   example suppressed cells filled by [mt_fill_suppressed()]); by default
+#'   only observed cells are scored.
 #' @param cores Cores used over origins (forked processes; 1 on Windows).
 #' @return An object of class `mt_backtest`: a `data.table` with one row per
 #'   observed cell, origin and horizon: `model`, `origin`, `horizon`,
@@ -36,14 +40,28 @@
 #' mt_score(bt)
 #' @export
 mt_backtest <- function(spec, data, origins = NULL, h = 10, prep = NULL, n_draws = 200, n_origins = 5,
-                        seed = 1, cores = 1) {
+                        seed = 1, cores = 1, score_estimated = FALSE) {
   check_class(data, "mt_data", "data")
-  last <- max(mt_grid(data)$period$lower)
-  origins <- origins %||% seq(last - h - n_origins + 2, last - 1)
+  g <- mt_grid(data)
+  last <- max(g$period$lower)
+  if (is.null(origins)) {
+    origins <- seq(last - h - n_origins + 1, last - h)
+    first_ok <- min(g$period$lower) + spec$min_periods - 1
+    if (any(origins < first_ok)) {
+      origins <- origins[origins >= first_ok]
+      if (!length(origins)) {
+        mt_abort(sprintf(paste("The data are too short for %d origins with a full horizon of %d years; give",
+                               "`origins` or a shorter `h`."), n_origins, h), class = "backtest")
+      }
+      mt_warn(sprintf("Only %d origin(s) have a full horizon of %d years and enough training years.",
+                      length(origins), h), class = "backtest_origin")
+    }
+  }
   origins <- origins[origins < last]
   if (!length(origins)) mt_abort("No origin leaves test data.", class = "backtest")
   one <- function(o) {
-    res <- tryCatch(backtest_origin(spec, data, o, h, prep, n_draws, seed + o), error = function(e) e)
+    res <- tryCatch(backtest_origin(spec, data, o, h, prep, n_draws, seed + o, score_estimated),
+                    error = function(e) e)
     if (inherits(res, "error")) {
       mt_warn(sprintf("Origin %s failed: %s", o, conditionMessage(res)), class = "backtest_origin")
       return(NULL)
@@ -56,7 +74,7 @@ mt_backtest <- function(spec, data, origins = NULL, h = 10, prep = NULL, n_draws
   out
 }
 
-backtest_origin <- function(spec, data, origin, h, prep, n_draws, seed) {
+backtest_origin <- function(spec, data, origin, h, prep, n_draws, seed, score_estimated = FALSE) {
   train <- mt_window(data, to = origin)
   fit <- mt_fit(spec, train, prep = prep)
   last_fit <- max(fit$periods)
@@ -68,6 +86,7 @@ backtest_origin <- function(spec, data, origin, h, prep, n_draws, seed) {
   D_draws <- fc$rates * as.vector(E_grid)
   obs <- test$obs$deaths
   obs <- obs[period_lo > origin]
+  if (!score_estimated) obs <- obs[provenance != "estimated"]
   gt <- mt_grid(test)
   idx <- obs_grid_index(obs, gt, "deaths", strict = TRUE)
   ok <- !is.na(idx$a1)
@@ -77,6 +96,10 @@ backtest_origin <- function(spec, data, origin, h, prep, n_draws, seed) {
   np <- length(gt$period)
   probs <- wis_probs()
   rows <- list()
+  # the randomised PIT draws uniforms: seeded like the forecast
+  old_seed <- if (exists(".Random.seed", envir = globalenv())) get(".Random.seed", envir = globalenv()) else NULL
+  if (!is.null(seed)) set.seed(seed + 1L)
+  on.exit(if (!is.null(old_seed)) assign(".Random.seed", old_seed, envir = globalenv()), add = TRUE)
   for (s in unique(obs$stratum)) {
     if (anyNA(D_draws[, , s, ])) next
     sel <- obs$stratum == s

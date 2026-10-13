@@ -7,7 +7,7 @@ test_that("every model satisfies the contract", {
   expect_mt_model(lee_carter(method = "svd", jump_off = "observed"))
   expect_mt_model(tucker3())
   expect_mt_model(tucker3(transform = "coda"))
-  expect_mt_model(mt_ensemble(lee_carter(), rwd()))
+  expect_mt_model(ensemble(lee_carter(), rwd()))
   skip_if_not_installed("forecast")
   expect_mt_model(ets_series(), h = 2, n_draws = 5)
   expect_mt_model(arima_series(), h = 2, n_draws = 5)
@@ -72,7 +72,7 @@ test_that("SVD Lee-Carter reproduces the fitted rates of demography::lca", {
 
 test_that("Lee-Carter constraints hold and parameters can be extracted", {
   fit <- mt_fit(lee_carter(), mt_example(deaths = "single", years = 2001:2015))
-  p <- lc_parameters(fit)
+  p <- mt_parameters(fit)
   for (s in c("female", "male")) {
     expect_equal(sum(p[stratum == s & parameter == "b"]$value), 1, tolerance = 1e-10)
     expect_equal(sum(p[stratum == s & parameter == "k"]$value), 0, tolerance = 1e-8)
@@ -111,7 +111,7 @@ test_that("tucker3 works with one stratum", {
 
 test_that("ensemble mixes component draws and drops failed components", {
   x <- mt_example(deaths = "single", years = 2001:2015)
-  ens <- mt_ensemble(a = lee_carter(), b = rwd(), weights = c(3, 1))
+  ens <- ensemble(a = lee_carter(), b = rwd(), weights = c(3, 1))
   fit <- mt_fit(ens, x)
   expect_equal(unname(fit$weights), c(0.75, 0.25))
   fc <- mt_forecast(fit, h = 2, n_draws = 400, seed = 1)
@@ -120,8 +120,8 @@ test_that("ensemble mixes component draws and drops failed components", {
   # the mixture is at least as wide as the narrower component
   w <- function(f) diff(stats::quantile(log(f$rates[40, 2, 1, ]), c(0.05, 0.95)))
   expect_gte(w(fc), min(w(la), w(lb)) * 0.9)
-  expect_error(mt_ensemble(1), class = "mt_error_argument")
-  bad <- mt_ensemble(lee_carter(), tucker3(ranks = c(3, 3, 2)), rwd())
+  expect_error(ensemble(1), class = "mt_error_argument")
+  bad <- ensemble(lee_carter(), tucker3(ranks = c(3, 3, 2)), rwd())
   short <- mt_example(deaths = "single", years = 2001:2005)
   fit2 <- mt_fit(bad, short)
   expect_true(any(fit2$diagnostics$status == "failed") || length(fit2$components) == 3)
@@ -166,8 +166,8 @@ test_that("the random walk plus noise separates noise from the trend", {
 test_that("ensemble draws come from one component for all strata", {
   x <- mt_example_causes(years = 2008:2019)
   h <- mt_hierarchy(cause = "all", additive = "rates")
-  ens <- mt_ensemble(a = mt_reconciled(lee_carter(), h, method = "bottom_up"),
-                     b = mt_reconciled(rwd(), h, method = "bottom_up"))
+  ens <- ensemble(a = reconciled(lee_carter(), h, method = "bottom_up"),
+                     b = reconciled(rwd(), h, method = "bottom_up"))
   fc <- mt_forecast(mt_fit(ens, x), h = 2, n_draws = 30, seed = 1)
   st <- mt_strata(x)
   for (sx in c("female", "male")) {
@@ -181,13 +181,30 @@ test_that("ensemble draws come from one component for all strata", {
 test_that("every kind of model can be an ensemble component", {
   x <- mt_example(deaths = "single", years = 2000:2019)
   comps <- list(tucker3(ranks = c(2, 2, 2)), li_lee(common_by = "sex"), product_ratio(), ets_series(),
-                mt_bootstrap(rwd(), n_boot = 2), mt_ensemble(lee_carter(), rwd()),
-                mt_tuned(function(w) rwd(drift_window = w), data.frame(w = c(5, 10)), inner_origins = 2, inner_h = 2))
+                bootstrapped(rwd(), n_boot = 2), ensemble(lee_carter(), rwd()),
+                tuned(function(w) rwd(drift_window = w), data.frame(w = c(5, 10)), inner_origins = 2, inner_h = 2))
   if (requireNamespace("demography", quietly = TRUE)) comps <- c(comps, list(hyndman_ullah(order = 2)))
   if (requireNamespace("StMoMo", quietly = TRUE)) comps <- c(comps, list(stmomo("cbd")))
   for (cp in comps) {
-    fc <- mt_forecast(mt_fit(mt_ensemble(lc = lee_carter(), other = cp), x), h = 2, n_draws = 20, seed = 1,
+    fc <- mt_forecast(mt_fit(ensemble(lc = lee_carter(), other = cp), x), h = 2, n_draws = 20, seed = 1,
                       predictive = TRUE)
     expect_true(all(is.finite(fc$rates)), label = cp$label)
   }
+})
+
+test_that("parameters, fitted values, residuals and summaries are available", {
+  x <- mt_example(deaths = "single", years = 2001:2015)
+  fit <- mt_fit(li_lee(common_by = NULL), x)
+  p <- mt_parameters(fit)
+  expect_true(all(c("B", "K", "a", "b1", "k1", "phi1") %in% p$parameter))
+  pr <- mt_parameters(mt_fit(rwd(observation_noise = TRUE), x))
+  expect_true(all(c("drift", "sd", "var_level", "var_noise") %in% pr$parameter))
+  f <- fitted(fit)
+  expect_identical(dim(f), dim(fit$train_D))
+  r <- residuals(fit)
+  expect_true(all(c("stratum", "age", "period", "residual") %in% names(r)))
+  expect_lt(abs(mean(r$residual)), 1)
+  expect_output(print(summary(fit)), "Li-Lee")
+  expect_output(print(summary(mt_fit(lee_carter(), x))), "Poisson deviance")
+  expect_error(mt_parameters(mt_fit(tucker3(), x)), class = "mt_error_argument")
 })

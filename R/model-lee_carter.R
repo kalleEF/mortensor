@@ -183,25 +183,3 @@ lc_poisson <- function(D, E, init = NULL, maxit = 500, tol = 1e-8, ridge = 0) {
   out$iterations <- it
   out
 }
-
-#' Parameters of a fitted Lee-Carter model
-#'
-#' @param fit An `mt_fit` object from [lee_carter()].
-#' @return A `data.table` with `stratum`, `parameter` (`a`, `b` or `k`),
-#'   `index` (age label or year) and `value`.
-#' @examples
-#' x <- mt_example(deaths = "single")
-#' head(lc_parameters(mt_fit(lee_carter(), x)))
-#' @export
-lc_parameters <- function(fit) {
-  check_class(fit, "mt_fit", "fit")
-  if (!inherits(fit$spec, "mt_spec_lee_carter")) mt_abort("Not a Lee-Carter fit.", class = "argument")
-  rbindlist(lapply(seq_along(fit$fits), function(s) {
-    f <- fit$fits[[s]]
-    if (is.null(f)) return(NULL)
-    lab <- fit$strata$label[s]
-    rbind(data.table(stratum = lab, parameter = "a", index = fit$age$labels, value = f$a),
-          data.table(stratum = lab, parameter = "b", index = fit$age$labels, value = f$b),
-          data.table(stratum = lab, parameter = "k", index = as.character(fit$periods), value = f$k))
-  }))
-}

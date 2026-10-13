@@ -2,8 +2,8 @@
 # Run from the package root: Rscript dev/calibration-benchmarks.R
 suppressMessages(devtools::load_all(quiet = TRUE))
 library(data.table)
-specs <- list(rwd = rwd(), rwdn = rwd(observation_noise = TRUE), rwdn_g = rwd(observation_noise = TRUE, innovations = "gaussian"), lc = lee_carter(), ensn = mt_ensemble(lc = lee_carter(), rw = rwd(observation_noise = TRUE)),
-              ens = mt_ensemble(lc = lee_carter(), rw = rwd()))
+specs <- list(rwd = rwd(), rwdn = rwd(observation_noise = TRUE), rwdn_g = rwd(observation_noise = TRUE, innovations = "gaussian"), lc = lee_carter(), ensn = ensemble(lc = lee_carter(), rw = rwd(observation_noise = TRUE)),
+              ens = ensemble(lc = lee_carter(), rw = rwd()))
 cat("simulation benchmark (LC DGP, 10 reps, h = 10)\n")
 sim <- rbindlist(lapply(names(specs), function(n) {
   r <- attr(benchmark_coverage(specs[[n]], n_rep = 10, n_draws = 300), "summary")
@@ -11,7 +11,7 @@ sim <- rbindlist(lapply(names(specs), function(n) {
 }))
 print(sim, digits = 3)
 ew <- as_mt_data(pkg_data("EWMaleData", "StMoMo"))
-ew <- mt_window(ew, 1971, 2011)
+ew <- mt_subset(ew, periods = c(1971, 2011))
 ew <- mt_set_grid(ew, age = single_ages(0, 100, open = FALSE))
 cat("England & Wales men (HMD via StMoMo), ages 0-100, origins 1996-2001, h = 10\n")
 hmd <- rbindlist(lapply(names(specs), function(n) {

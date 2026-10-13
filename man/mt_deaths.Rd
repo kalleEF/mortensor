@@ -9,9 +9,12 @@ mt_deaths(draws, exposure = NULL, noise = TRUE, seed = NULL)
 \arguments{
 \item{draws}{An \link{mt_draws} object.}
 
-\item{exposure}{Future exposures: an array \verb{[age, period, stratum]} or a
-matrix \verb{[age, stratum]} used for every period. Default: the exposures of
-the last training year.}
+\item{exposure}{Future exposures: an \link{mt_data} object with exposures
+(for example a population projection converted with
+\code{\link[=mt_as_exposure]{mt_as_exposure()}}), or an array \verb{[age, period, stratum]} or matrix
+\verb{[age, stratum]} (used for every period) with dimnames, as
+\code{\link[=mt_array]{mt_array()}} returns. Ages, years and strata are matched by their
+labels. Default: the exposures of the last training year.}
 
 \item{noise}{Add Poisson noise.}
 

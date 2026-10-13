@@ -17,7 +17,7 @@ that do not add up to the all-cause forecast. mortensor offers three ways
 to coherent cause-specific forecasts:
 
 * **bottom-up**: separate models per cause, with all causes as their sum
-  (`mt_reconciled(..., method = "bottom_up")`);
+  (`reconciled(..., method = "bottom_up")`);
 * **reconciliation**: separate models for every cause and for all causes,
   projected draw by draw so that they add up (`method = "wls"`, `"mint"`,
   ...);
@@ -56,7 +56,7 @@ str(ons_cause_groups)
 causes <- names(ons_data)[-(1:7)]
 xc <- mt_data(deaths = ons_data, population = ons_data, by = c("sex", "imd_decile", "cause"),
               age = "age_group", value = list(deaths = c(all = "all_causes", causes), population = "population"))
-xc <- mt_as_exposure(xc)
+xc <- mt_as_exposure(xc, type = "midyear")
 xc <- mt_subset(xc, ages = c(50, Inf))
 xc <- mt_group_levels(xc, "imd_decile", function(d) paste0("Q", ceiling(as.numeric(d) / 2)), name = "quintile")
 xc <- mt_group_levels(xc, "cause", ons_cause_groups, other = "rest", total = "all", additive = "rates")
@@ -107,9 +107,9 @@ five years, separately for the causes and for all causes:
 
 ```{r}
 specs <- list(
-  mt_reconciled(lee_carter(), h, method = "bottom_up"),
-  mt_reconciled(lee_carter(), h, method = "wls"),
-  mt_reconciled(li_lee(common_by = c("sex", "cause")), h, method = "bottom_up"),
+  reconciled(lee_carter(), h, method = "bottom_up"),
+  reconciled(lee_carter(), h, method = "wls"),
+  reconciled(li_lee(common_by = c("sex", "cause")), h, method = "bottom_up"),
   cause_shares(total = li_lee(common_by = "sex"), ranks = c(5, 4, 6, 8)),
   lee_carter())
 bt <- rbindlist(lapply(specs, function(sp) {
@@ -140,7 +140,7 @@ not need. The 95% intervals of all approaches are too narrow for all causes
 Forecasts to 2034 with the bottom-up approach:
 
 ```{r}
-fit <- mt_fit(mt_reconciled(lee_carter(), h, method = "bottom_up"), xc)
+fit <- mt_fit(reconciled(lee_carter(), h, method = "bottom_up"), xc)
 fc <- mt_forecast(fit, h = 15, n_draws = 500, seed = 1)
 fc$reconciliation
 ```

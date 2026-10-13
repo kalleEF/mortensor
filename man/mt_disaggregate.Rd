@@ -33,7 +33,7 @@ An \code{mt_draws} object on \code{age}.
 \description{
 Maps draws of age groups to finer ages (for example single years), path
 by path, when a model was forecast at the resolution of the observed
-deaths. The mortensor 0.1 approach:
+deaths. Two approaches:
 }
 \details{
 \itemize{

@@ -3,7 +3,9 @@
 #' Forecasts all-cause mortality with any model (`total`) and the shares of
 #' the causes in all-cause mortality with a compositional tensor model, so
 #' that cause-specific forecasts add up to the all-cause forecast in every
-#' draw. This is the Tucker4-ILR method of mortensor 0.1:
+#' draw (a Tucker4 decomposition of isometric log-ratio coordinates; an
+#' experimental method without a published application to mortality, so
+#' compare it with [reconciled()] separate models in a backtest):
 #'
 #' 1. shares of each cause (and of a residual cause, the part of all-cause
 #'    mortality not covered by the listed causes) per age, year and group;

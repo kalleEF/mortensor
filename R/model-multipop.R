@@ -176,7 +176,7 @@ simulate_model.mt_spec_multipop <- function(spec, fit, h, n_draws, ...) {
 #' that of the `upper` stratum (for example female above male mortality),
 #' both rates are replaced so that their mean is kept and their ratio equals
 #' the mean observed ratio of the last `years` training years (bounded to
-#' 0.02-0.98). This is the constraint of mortensor 0.1, applied path by path
+#' 0.02-0.98), applied path by path
 #' and reported as the share of adjusted cells.
 #'
 #' @param draws An [mt_draws] object.
@@ -189,10 +189,10 @@ simulate_model.mt_spec_multipop <- function(spec, fit, h, n_draws, ...) {
 #' @examples
 #' x <- mt_example(deaths = "single")
 #' fc <- mt_forecast(mt_fit(rwd(), x), h = 10, n_draws = 50, seed = 1)
-#' fc2 <- mt_cohere(fc, "sex", lower = "female", upper = "male")
+#' fc2 <- mt_order_strata(fc, "sex", lower = "female", upper = "male")
 #' fc2$coherence
 #' @export
-mt_cohere <- function(draws, var, lower, upper, years = 5) {
+mt_order_strata <- function(draws, var, lower, upper, years = 5) {
   check_class(draws, "mt_draws", "draws")
   st <- draws$strata
   if (!var %in% names(st)) mt_abort("`var` is not a stratum variable.", class = "argument")

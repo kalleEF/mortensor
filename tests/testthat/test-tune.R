@@ -9,9 +9,9 @@ test_that("mt_tune selects parameters with an inner backtest", {
   expect_error(mt_tune(1, data.frame(a = 1), x), class = "mt_error_argument")
 })
 
-test_that("mt_tuned tunes inside each fit using only the training data", {
+test_that("tuned tunes inside each fit using only the training data", {
   x <- mt_example(deaths = "single", years = 1990:2010)
-  sp <- mt_tuned(function(drift_window) rwd(drift_window = drift_window), data.frame(drift_window = c(5, 15)),
+  sp <- tuned(function(drift_window) rwd(drift_window = drift_window), data.frame(drift_window = c(5, 15)),
                  inner_origins = 2, inner_h = 3, n_draws = 30)
   fit <- mt_fit(sp, mt_window(x, to = 2005))
   expect_equal(nrow(fit$tuning), 2)

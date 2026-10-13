@@ -13,8 +13,7 @@
 #' * `type = "data"`: the observed deaths, at their original resolution, are
 #'   drawn from Poisson distributions with the observed counts as means, and
 #'   preprocessing and model are refitted. This propagates the uncertainty of
-#'   ungrouping and smoothing, the purpose of the GAM-Bayes option of
-#'   mortensor 0.1, without tying it to one smoother.
+#'   ungrouping and smoothing, for any smoother.
 #'
 #' @param spec A model specification.
 #' @param n_boot Number of bootstrap refits.
@@ -27,10 +26,10 @@
 #' Journal* 2005(3): 212-224.
 #' @examples
 #' x <- mt_example(deaths = "single", years = 2000:2019)
-#' fit <- mt_fit(mt_bootstrap(rwd(), n_boot = 5), x)
+#' fit <- mt_fit(bootstrapped(rwd(), n_boot = 5), x)
 #' fc <- mt_forecast(fit, h = 3, n_draws = 50, seed = 1)
 #' @export
-mt_bootstrap <- function(spec, n_boot = 50, type = c("grid", "data"), seed = 1) {
+bootstrapped <- function(spec, n_boot = 50, type = c("grid", "data"), seed = 1) {
   check_class(spec, "mt_spec", "spec")
   type <- match.arg(type)
   check_number(n_boot, "n_boot", lower = 1, integerish = TRUE)
@@ -103,7 +102,8 @@ mt_forecast.mt_fit_bootstrap <- function(fit, h = 10, to = NULL, n_draws = 500, 
     parts <- lapply(seq_len(nb), function(i) {
       if (alloc[i] == 0) return(NULL)
       bf <- boots[[i]]
-      mt_forecast(bf, h = h, to = to, n_draws = alloc[i], predictive = predictive, exposure = exposure)$rates
+      mt_forecast(bf, h = if (is.null(to)) h else to - max(bf$periods), n_draws = alloc[i], predictive = predictive,
+                  exposure = exposure)$rates
     })
     abind_draws(Filter(Negate(is.null), parts))
   })

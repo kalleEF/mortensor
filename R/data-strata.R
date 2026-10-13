@@ -140,6 +140,31 @@ add_remainder <- function(x, var, total, parts, other, additive) {
   x
 }
 
+#' Rename levels of a stratum variable
+#'
+#' Gives levels of a stratum variable new labels, for example sex codes
+#' `"1"` and `"2"` as `"male"` and `"female"`. Levels mapped to the same new
+#' label are combined (see [mt_group_levels()]).
+#'
+#' @param data An [mt_data] object.
+#' @param var Stratum variable.
+#' @param labels Named character vector, `c(old = "new")`.
+#' @inheritParams mt_group_levels
+#' @return The `mt_data` object with the new labels.
+#' @examples
+#' d <- data.frame(Sex = rep(1:2, each = 2), year = 2020:2021, age = "90+", deaths = 5:8, exposure = 100)
+#' x <- mt_data(deaths = d, exposure = d, by = "Sex")
+#' mt_strata(mt_relabel(x, "Sex", c("1" = "male", "2" = "female")))
+#' @export
+mt_relabel <- function(data, var, labels, additive = c("deaths", "rates")) {
+  check_class(data, "mt_data", "data")
+  if (!is.character(labels) || is.null(names(labels))) {
+    mt_abort("`labels` must be a named character vector, c(old = \"new\").", class = "argument")
+  }
+  groups <- split(names(labels), factor(unname(labels), levels = unique(labels)))
+  mt_group_levels(data, var, groups, additive = match.arg(additive))
+}
+
 #' Restrict data to ages, periods and strata
 #'
 #' @param data An [mt_data] object.
@@ -148,7 +173,8 @@ add_remainder <- function(x, var, total, parts, other, additive) {
 #' @param ages Age range `c(lower, upper)`: cells with lower bound at or
 #'   above `lower` and upper bound at or below `upper` (`Inf` for an open
 #'   interval) are kept.
-#' @param periods Period range `c(first, last)` (calendar years, inclusive).
+#' @param periods Period range `c(first, last)` (calendar years, inclusive;
+#'   `NA` for an open end, for example `c(NA, 2019)`).
 #' @param drop Remove stratum variables that have a single level left (for
 #'   example `cause` after `cause == "all"`).
 #' @return The restricted `mt_data` object; strata are renumbered and the
@@ -186,7 +212,7 @@ mt_subset <- function(data, ..., ages = NULL, periods = NULL, drop = FALSE) {
   }
   if (!is.null(periods)) {
     if (length(periods) != 2) mt_abort("`periods` must be c(first, last).", class = "argument")
-    data <- mt_window(data, periods[1], periods[2])
+    data <- mt_window(data, if (is.na(periods[1])) NULL else periods[1], if (is.na(periods[2])) NULL else periods[2])
   }
   data$obs <- data$obs[vapply(data$obs, nrow, 1L) > 0L]
   if (!length(data$obs)) mt_abort("No observations left.", class = "argument")

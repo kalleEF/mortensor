@@ -21,7 +21,7 @@ stmomo(
 A model specification.
 }
 \description{
-Wrapper around \pkg{StMoMo} (Villegas, Millossovich and Kaishev 2018):
+Wrapper around \pkg{StMoMo} (Villegas, Kaishev and Millossovich 2018):
 age-period-cohort (\code{"apc"}), Cairns-Blake-Dowd (\code{"cbd"}, logit link),
 Renshaw-Haberman (\code{"rh"}), M6 (\code{"m6"}, logit link) and Lee-Carter
 (\code{"lc"}). Models are fitted per stratum with real ages (the lower bounds

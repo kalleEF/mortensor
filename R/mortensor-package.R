@@ -14,13 +14,13 @@
 #' * **Models**: [rwd()], [lee_carter()], [tucker3()], [arima_series()],
 #'   [ets_series()], [hyndman_ullah()], [stmomo()], [li_lee()], [product_ratio()],
 #'   [apc_bayes()] (package bamp), [cause_shares()] for coherent multi-cause
-#'   forecasts and [mt_ensemble()], fitted with [mt_fit()] (optionally tuned
-#'   with [mt_tuned()]) and forecast with [mt_forecast()] as simulated paths
+#'   forecasts and [ensemble()], fitted with [mt_fit()] (optionally tuned
+#'   with [tuned()]) and forecast with [mt_forecast()] as simulated paths
 #'   ([mt_draws]).
 #' * **Hierarchies**: [mt_hierarchy()] describes crossed or nested strata
 #'   (for example sex x region x deprivation quintile with their totals),
 #'   [mt_aggregate_strata()] adds the aggregates, [mt_reconcile()] and
-#'   [mt_reconciled()] make forecasts add up draw by draw, [mt_cohere()]
+#'   [reconciled()] make forecasts add up draw by draw, [mt_order_strata()]
 #'   imposes orderings.
 #' * **Evaluation**: [mt_backtest()] and [mt_score()].
 #' * **Derived quantities and plots**: [life_table()], [life_expectancy()],
@@ -46,5 +46,6 @@ utils::globalVariables(c(
   ".data", "q0.5", "lo", "hi", "med", "x", "x_hi", "level", "coverage", "v", "region", "quintile", "m", "severity",
   "lev", "w", "year", "dep", "population", "i.population", "cause", "dic", "index", "factor", "kind", "score",
   "group", "mode", "time", "cell", "n_members", "symbol", "raw", "age_group", "cause_label", "idx",
-  "group_", "new_", "n_", "first_", "members", "n", "s", ".value", "nxt", "u", "g", "n_lev", "sum_all", "var"
+  "group_", "new_", "n_", "first_", "members", "n", "s", ".value", "nxt", "u", "g", "n_lev", "sum_all", "var",
+  "age_i", "effect", "q0.05", "q0.95", "residual", "p_positive", "ages", "panel"
 ))

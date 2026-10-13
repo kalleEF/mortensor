@@ -91,12 +91,12 @@ registerS3method("simulate_model", "mt_spec_native_bamp", function(spec, fit, h,
 
 ons <- mt_data(deaths = ons_data, population = ons_data, by = c("sex", "imd_decile"), age = "age_group",
                value = c(deaths = "all_causes", population = "population"))
-ons <- mt_group_levels(mt_as_exposure(ons), "imd_decile", function(d) paste0("Q", ceiling(as.numeric(d) / 2)),
+ons <- mt_group_levels(mt_as_exposure(ons, type = "midyear"), "imd_decile", function(d) paste0("Q", ceiling(as.numeric(d) / 2)),
                        name = "quintile")
 ons <- mt_regroup(ons, age = c(0, seq(5, 90, 5)))   # equal 5-year groups for bamp
 fr <- mt_set_grid(as_mt_data(pkg_data("fr.mort", "demography"), years = 1950:2006),
                   age = single_ages(0, 95, open = FALSE))
-ew <- mt_set_grid(mt_window(as_mt_data(pkg_data("EWMaleData", "StMoMo")), 1961, 2011),
+ew <- mt_set_grid(mt_subset(as_mt_data(pkg_data("EWMaleData", "StMoMo")), periods = c(1961, 2011)),
                   age = single_ages(55, 89, open = FALSE))
 data("apc", package = "bamp", envir = environment())
 bamp_ex <- local({
@@ -144,13 +144,13 @@ fid_lc <- local({
 
 log_step("fidelity: fdm")
 fid_fdm <- local({
-  x1 <- mt_window(fr, 1950, 2006)
+  x1 <- mt_subset(fr, periods = c(1950, 2006))
   D <- mt_array(x1, "deaths")[, , 2]
   E <- mt_array(x1, "exposure")[, , 2]
   dd <- demography::demogdata(pmax(D, 0.5) / E, pop = E, ages = 0:95, years = 1950:2006, type = "mortality",
                               label = "FR", name = "s")
   nat <- forecast::forecast(demography::fdm(dd, series = "s", order = 6), h = 20, method = "arima", level = 80)
-  fit <- mt_fit(hyndman_ullah(order = 6), mt_window(fr, 1950, 2006))
+  fit <- mt_fit(hyndman_ullah(order = 6), mt_subset(fr, periods = c(1950, 2006)))
   fc <- mt_forecast(fit, h = 20, n_draws = 2000, seed = 1)
   r <- log(fc$rates[, , 2, ])
   q <- apply(r, 1:2, stats::quantile, c(0.1, 0.5, 0.9))
@@ -213,15 +213,15 @@ skip <- strsplit(Sys.getenv("COMPARE_SKIP"), ",")[[1]]
 if (!"ons" %in% skip) acc$ons <- run_bt("ONS England, sex x IMD quintile, 5-year groups", ons,
                   list(native_fdm(), native_lca(), native_bamp(), hyndman_ullah(), lee_carter(),
                        li_lee(common_by = "sex"), apc_bayes(age = "rw1", period = "rw1", cohort = "rw1"),
-                       mt_ensemble(lc = lee_carter(), rw = rwd())),
+                       ensemble(lc = lee_carter(), rw = rwd())),
                   origins = if (quick) 2014 else c(2009, 2011, 2014), h = 5)
 if (!"france" %in% skip) acc$france <- run_bt("France (HMD via demography), single ages 0-95", fr,
                      list(native_fdm(), native_lca(), hyndman_ullah(), lee_carter(), rwd(),
-                          mt_ensemble(lc = lee_carter(), rw = rwd())),
+                          ensemble(lc = lee_carter(), rw = rwd())),
                      origins = if (quick) 1996 else c(1986, 1991, 1996), h = 10)
 if (!"ew" %in% skip) acc$ew <- run_bt("England & Wales men (HMD via StMoMo), single ages 55-89", ew,
                  list(stmomo("lc"), stmomo("cbd"), stmomo("apc"), native_lca(), lee_carter(), rwd(),
-                      mt_ensemble(lc = lee_carter(), rw = rwd())),
+                      ensemble(lc = lee_carter(), rw = rwd())),
                  origins = if (quick) 2001 else c(1991, 1996, 2001), h = 10)
 if (!"bamp_example" %in% skip) acc$bamp_example <- run_bt("bamp example data (8 age groups, 10 years)", bamp_ex,
                            list(native_bamp(), apc_bayes(age = "rw1", period = "rw1", cohort = "rw1"), lee_carter(),

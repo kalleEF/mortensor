@@ -14,9 +14,9 @@
 #'   (Whittaker-Henderson smoothing of log rates over age with weights equal
 #'   to the deaths, the approximate inverse variance of a log rate;
 #'   smoothing parameter by generalised cross-validation unless `lambda` is
-#'   given; an option ported from mortensor 0.1) or `"gam"` (Gaussian
+#'   given) or `"gam"` (Gaussian
 #'   additive model of log rates on age per period with deaths as weights,
-#'   `mgcv::gam()` with REML, as in mortensor 0.1).
+#'   `mgcv::gam()` with REML).
 #' @param ages Range of ages that is smoothed, `c(lower, upper)`; other
 #'   ages keep their observed deaths and do not enter the fit. By default
 #'   all ages except the first year of life when the grid starts with age 0

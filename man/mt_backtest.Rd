@@ -13,7 +13,8 @@ mt_backtest(
   n_draws = 200,
   n_origins = 5,
   seed = 1,
-  cores = 1
+  cores = 1,
+  score_estimated = FALSE
 )
 }
 \arguments{
@@ -21,8 +22,9 @@ mt_backtest(
 
 \item{data}{An \link{mt_data} object.}
 
-\item{origins}{Last training years. Default: every year from the
-\code{n_origins}-th last possible origin, such that horizon 1 is observed.}
+\item{origins}{Last training years. Default: the last \code{n_origins} years
+whose full horizon \code{h} is observed, so that every horizon is scored
+equally often.}
 
 \item{h}{Forecast horizon.}
 
@@ -32,9 +34,13 @@ mt_backtest(
 
 \item{n_origins}{Number of origins when \code{origins} is \code{NULL}.}
 
-\item{seed}{Random seed.}
+\item{seed}{Random seed (forecast draws and the randomised PIT).}
 
 \item{cores}{Cores used over origins (forked processes; 1 on Windows).}
+
+\item{score_estimated}{Score cells whose deaths were estimated (for
+example suppressed cells filled by \code{\link[=mt_fill_suppressed]{mt_fill_suppressed()}}); by default
+only observed cells are scored.}
 }
 \value{
 An object of class \code{mt_backtest}: a \code{data.table} with one row per
@@ -46,8 +52,8 @@ MASE scale \code{scale} (mean absolute year-to-year change in the training
 data). Summarise with \code{\link[=mt_score]{mt_score()}}.
 }
 \description{
-For each forecast origin, the data are cut at the origin with
-\code{\link[=mt_window]{mt_window()}}, the preprocessing pipeline and the model are fitted on the
+For each forecast origin, the data are cut at the origin, the
+preprocessing pipeline and the model are fitted on the
 training window only, and predictive draws for the next \code{h} years are
 compared with the observations. Nothing after the origin enters the fit,
 including ungrouping and smoothing (they are part of \code{prep}).

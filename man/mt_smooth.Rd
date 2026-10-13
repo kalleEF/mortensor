@@ -39,9 +39,9 @@ penalty.}
 (Whittaker-Henderson smoothing of log rates over age with weights equal
 to the deaths, the approximate inverse variance of a log rate;
 smoothing parameter by generalised cross-validation unless \code{lambda} is
-given; an option ported from mortensor 0.1) or \code{"gam"} (Gaussian
+given) or \code{"gam"} (Gaussian
 additive model of log rates on age per period with deaths as weights,
-\code{mgcv::gam()} with REML, as in mortensor 0.1).}
+\code{mgcv::gam()} with REML).}
 
 \item{ages}{Range of ages that is smoothed, \code{c(lower, upper)}; other
 ages keep their observed deaths and do not enter the fit. By default

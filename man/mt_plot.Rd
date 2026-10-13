@@ -10,11 +10,24 @@
 \alias{mt_plot_coverage}
 \title{Plots}
 \usage{
-mt_plot_forecast(draws, ages = NULL, strata = NULL, levels = c(0.8, 0.95))
+mt_plot_forecast(
+  draws,
+  ages = NULL,
+  strata = NULL,
+  levels = c(0.8, 0.95),
+  data = NULL
+)
 
 mt_plot_age(draws, periods = NULL, strata = NULL, levels = 0.95)
 
-mt_plot_life_expectancy(draws, at = NULL, levels = c(0.8, 0.95))
+mt_plot_life_expectancy(
+  draws,
+  at = NULL,
+  levels = c(0.8, 0.95),
+  strata = NULL,
+  facet = NULL,
+  data = NULL
+)
 
 mt_plot_rates(data, strata = NULL)
 
@@ -31,11 +44,15 @@ mt_plot_coverage(backtest)
 
 \item{levels}{Central interval levels for the fans.}
 
+\item{data}{An \link{mt_data} object (for the forecast plots: the original
+data, whose observed rates are shown).}
+
 \item{periods}{Forecast years (default: first and last).}
 
 \item{at}{Age for life expectancy.}
 
-\item{data}{An \link{mt_data} object.}
+\item{facet}{Stratum variable whose levels get one panel each (for
+example \code{"sex"}), or \code{NULL}.}
 
 \item{ungrouped}{The \code{\link[=mt_ungroup]{mt_ungroup()}} result for \code{data}.}
 
@@ -53,9 +70,14 @@ installed) and never print or write files.
 \details{
 \itemize{
 \item \code{mt_plot_forecast()}: observed rates and forecast fan (median and
-central intervals) over time for selected ages, log scale;
+central intervals) over time for selected ages, log scale. The points
+are the training data after preprocessing (for example with
+interpolated shock years or smoothed rates); give the original data as
+\code{data} to show the rates as published;
 \item \code{mt_plot_age()}: age profiles of the forecast for selected years;
-\item \code{mt_plot_life_expectancy()}: life expectancy forecast fan;
+\item \code{mt_plot_life_expectancy()}: life expectancy forecast fan with the
+observed history (from \code{data} if given, otherwise from the training
+data), optionally one panel per level of a stratum variable (\code{facet});
 \item \code{mt_plot_rates()}: Lexis surface (age by period) of observed log rates;
 \item \code{mt_plot_ungroup()}: grouped rates as steps and ungrouped single-year
 rates for one period;

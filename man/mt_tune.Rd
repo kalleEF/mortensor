@@ -2,7 +2,7 @@
 % Please edit documentation in R/model-tune.R
 \name{mt_tune}
 \alias{mt_tune}
-\alias{mt_tuned}
+\alias{tuned}
 \title{Tune model parameters on training data}
 \usage{
 mt_tune(
@@ -16,7 +16,7 @@ mt_tune(
   n_draws = 100
 )
 
-mt_tuned(
+tuned(
   spec_fun,
   grid,
   inner_origins = 3,
@@ -51,12 +51,12 @@ arguments of \code{spec_fun}).}
 }
 \value{
 \code{mt_tune()}: a list with \code{scores} (one row per combination) and
-\code{best} (the chosen specification). \code{mt_tuned()}: a model specification.
+\code{best} (the chosen specification). \code{tuned()}: a model specification.
 }
 \description{
 \code{mt_tune()} evaluates every combination of parameters in \code{grid} with an
 inner rolling-origin backtest on \code{data} and returns the scores and the best
-specification. \code{mt_tuned()} wraps the same procedure into a model
+specification. \code{tuned()} wraps the same procedure into a model
 specification: each time it is fitted (for example at every origin of an
 outer \code{\link[=mt_backtest]{mt_backtest()}}), the tuning uses only the training data it
 receives, so the selection never sees the years being forecast.

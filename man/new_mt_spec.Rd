@@ -35,7 +35,7 @@ An object of class \code{c("mt_spec_<model>", "mt_spec")}.
 \description{
 Every model is created by a constructor (\code{rwd()}, \code{lee_carter()},
 \code{tucker3()}, \code{arima_series()}, \code{ets_series()}, \code{apc_bayes()},
-\code{mt_ensemble()}) that returns an \code{mt_spec} object. Specifications are
+\code{ensemble()}) that returns an \code{mt_spec} object. Specifications are
 fitted with \code{\link[=mt_fit]{mt_fit()}} and forecast with \code{\link[=mt_forecast]{mt_forecast()}}.
 }
 \details{

@@ -2,9 +2,67 @@
 
 Clean break: the 0.1.x interface is replaced (see `dev/revamp-plan.md`).
 
+## Changes after two applied reviews and stress tests
+
+* Renamed for clarity: model wrappers are nouns like the other model
+  constructors, `ensemble()`, `reconciled()`, `tuned()`, `bootstrapped()`
+  (were `mt_ensemble()`, `mt_reconciled()`, `mt_tuned()`, `mt_bootstrap()`);
+  `mt_order_strata()` (was `mt_cohere()`); `mt_parameters()` replaces
+  `lc_parameters()` and `apc_effects()`; `mt_window()` is internal
+  (`mt_subset(periods = )`).
+* Hierarchies: additivity per variable
+  (`mt_hierarchy(region = "DE", cause = list(total = "all", additive =
+  "rates"))`); exposures of crossed region-by-cause hierarchies are summed
+  over regions and taken once over causes in aggregation, validation and
+  reconciliation. Before, all-cause exposures were multiplied by the number
+  of causes.
+* `mt_fill_suppressed()` takes the bounds of suppressed counts (`lower`,
+  `upper`), also without published totals; it stops when no total of the
+  hierarchy is in the data and leaves uncovered cells missing (before, they
+  kept the exposures as starting values).
+* Inspection: `summary()` of fits (model, sources of uncertainty, fit),
+  `mt_parameters()` for Lee-Carter, Li-Lee, product-ratio, random walks and
+  Bayesian APC models (with R-hat), `fitted()`, `residuals()`,
+  `mt_plot_residuals()`.
+* Results: `mt_observed()` and observed indicators (`life_expectancy()`,
+  `asr()`, `prob_dying()` accept data, with Poisson intervals),
+  `mt_contrast()` (differences and ratios between strata, path by path),
+  `mt_inequality()` (slope and relative index of inequality),
+  `life_expectancy(paths = TRUE)`, `asr(per = )` with `ages`, `standard`
+  and `per` columns, standards `"esp1976"` and `"who2000"`, `mt_export()`
+  for any table.
+* Future exposures (`mt_deaths()`, `mt_forecast()`, `mt_reconcile()`,
+  `mt_aggregate_draws()`) are matched by age, year and stratum names and
+  can be `mt_data` objects; unnamed arrays give a warning.
+* Data input: broader age labels (`"1 to 4"`, `"85 years and over"`,
+  `"90 & over"`, German labels), financial years (`"2001/02"`), total rows
+  left out and unknown ages distributed with warnings, thousands
+  separators and `decimal = ","`, trimmed labels, warnings for levels that
+  differ between tables, detection of total levels among the parts,
+  `mt_relabel()`, `mt_regroup(age = "common")`; `mt_as_exposure()` needs an
+  explicit `type`; `mt_read_genesis()` makes no analysis decisions.
+* Errors name the missing periods, strata or cells and the likely cause;
+  duplicates name unused columns; overlapping age groups and rates above 1
+  are located.
+* Robustness: Lee-Carter handles age groups without deaths and sparse
+  counts (ridge fallback); failed strata give one warning; forecasts with
+  rates above 1 give a warning; `rwd(observation_noise = TRUE)` pools the
+  level variance over ages where deaths are few; smoothing leaves age 0
+  out and respects group widths; models with one age group work.
+* Backtests: `n_origins` origins with complete horizons, seeded PIT,
+  estimated cells not scored by default (`score_estimated`).
+* `step_window()` (fitting period), `as_demogdata()`, `as_stmomodata()`,
+  plots with the original data (`data`), stratum selection and facets for
+  life expectancy, share plots that take their defaults from the
+  hierarchy, a warning when both `h` and `to` are given.
+* Documentation: reference index by analysis step, a function map with
+  workflow diagrams, the "Model reference" vignette, a model-choice table
+  and an aggregation table in the FAQ, no references to 0.1 or internal
+  files in help pages.
+
 * Data layer: `mt_axis` (`single_ages()`, `age_groups()`, `single_years()`,
   `parse_age_labels()`), `mt_data()` with tables at their own resolution,
-  `mt_grid()`/`mt_set_grid()`, `mt_array()`, `mt_window()`,
+  `mt_grid()`/`mt_set_grid()`, `mt_array()`,
   `mt_granularity()`, `mt_validate()` (including hierarchy sums),
   `mt_regroup()`, `mt_operator()`, `mt_as_exposure()`, `as_mt_data()` for
   data frames, `StMoMoData` and `demogdata`, and the simulated `mt_example()`.
@@ -18,7 +76,7 @@ Clean break: the 0.1.x interface is replaced (see `dev/revamp-plan.md`).
 * Model contract (`mt_fit()`, `mt_forecast()`, `mt_draws`) with models
   `rwd()`, `lee_carter()` (Poisson and SVD; agrees with StMoMo and
   demography), `tucker3()` (native HOOI; log and CoDa), `arima_series()`,
-  `ets_series()`, and `mt_ensemble()`.
+  `ets_series()`, and `ensemble()`.
 * `apc_bayes()`: seamless wrapper of the bamp package (Bayesian
   age-period-cohort models) with convergence checks and draws on the grid.
 * Plots (`mt_plot_*()`, ggplot2), HMD readers (`mt_from_hmd()`,
@@ -26,7 +84,7 @@ Clean break: the 0.1.x interface is replaced (see `dev/revamp-plan.md`).
 * Ports of the 0.1 models and methods: `hyndman_ullah()`, `stmomo()` (APC, CBD, RH,
   M6, LC), `li_lee()`, `product_ratio()`, `cause_shares()` (Tucker4-ILR
   multi-cause forecasts), `mt_reconcile()` (MinT, WLS, OLS),
-  `mt_cohere()`, stacking weights in `mt_ensemble()`, Whittaker and GAM
+  `mt_order_strata()`, stacking weights in `ensemble()`, Whittaker and GAM
   smoothing,
   Kannisto closure in `life_table()`, monotone splitting of deaths, and the
   simulated multi-cause dataset `mt_example_causes()`.
@@ -35,12 +93,12 @@ Clean break: the 0.1.x interface is replaced (see `dev/revamp-plan.md`).
   multi-variable hierarchy checks in `mt_validate()`, `mt_reconcile()` on
   the death scale with WLS, MinT, structural, OLS or bottom-up
   reconciliation, an empirical copula for separately fitted strata and
-  non-negativity; `mt_reconciled()` for reconciliation inside fits and
+  non-negativity; `reconciled()` for reconciliation inside fits and
   backtests; `mt_aggregate_draws()`; `li_lee(common_by = "sex")`;
   simulated `mt_example_regions()` and a vignette.
 * Rate-based spline ungrouping (`mt_ungroup(method = "hyman_kannisto")`,
   `"natural_gompertz"`, `"gam"`), `mt_disaggregate()` for forecast draws,
-  `mt_bootstrap()` (parameter and preprocessing uncertainty by Poisson
+  `bootstrapped()` (parameter and preprocessing uncertainty by Poisson
   resampling and refitting) and information-criterion rank selection in
   `tucker3(ranks = "bic")`.
 * "Frequently asked questions" vignette; vdiffr snapshot tests of all plots;
@@ -98,7 +156,7 @@ Clean break: the 0.1.x interface is replaced (see `dev/revamp-plan.md`).
 * `apc_select()` (DIC-based choice of random-walk
   orders for `apc_bayes()`), and the plots `mt_plot_tucker()`,
   `mt_plot_shares()` and `mt_plot_scores()`.
-* `mt_tune()` and `mt_tuned()`; `prob_dying()`, `asr()` (ESP 2013),
+* `mt_tune()` and `tuned()`; `prob_dying()`, `asr()` (ESP 2013),
   `yll()`, `mt_export()`.
 * `mt_backtest()` (rolling origin, scored at the observed resolution) and
   `mt_score()` (CRPS, WIS, coverage, PIT, MASE).

@@ -2,7 +2,7 @@
 #'
 #' `mt_tune()` evaluates every combination of parameters in `grid` with an
 #' inner rolling-origin backtest on `data` and returns the scores and the best
-#' specification. `mt_tuned()` wraps the same procedure into a model
+#' specification. `tuned()` wraps the same procedure into a model
 #' specification: each time it is fitted (for example at every origin of an
 #' outer [mt_backtest()]), the tuning uses only the training data it
 #' receives, so the selection never sees the years being forecast.
@@ -20,7 +20,7 @@
 #'   `"mae"`, `"mase"`).
 #' @param n_draws Draws per inner forecast.
 #' @return `mt_tune()`: a list with `scores` (one row per combination) and
-#'   `best` (the chosen specification). `mt_tuned()`: a model specification.
+#'   `best` (the chosen specification). `tuned()`: a model specification.
 #' @examples
 #' x <- mt_example(deaths = "single", years = 1990:2012)
 #' tn <- mt_tune(function(drift_window) rwd(drift_window = drift_window),
@@ -50,7 +50,7 @@ mt_tune <- function(spec_fun, grid, data, prep = NULL, inner_origins = 3, inner_
 #' @rdname mt_tune
 #' @param label Display name.
 #' @export
-mt_tuned <- function(spec_fun, grid, inner_origins = 3, inner_h = 5, metric = "crps", n_draws = 100,
+tuned <- function(spec_fun, grid, inner_origins = 3, inner_h = 5, metric = "crps", n_draws = 100,
                      label = "Tuned model") {
   new_mt_spec("tuned", list(spec_fun = spec_fun, grid = as.data.frame(grid), inner_origins = inner_origins,
                             inner_h = inner_h, metric = metric, n_draws = n_draws),

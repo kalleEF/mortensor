@@ -22,13 +22,13 @@ backtests refit them on every training window.
 \item \strong{Models}: \code{\link[=rwd]{rwd()}}, \code{\link[=lee_carter]{lee_carter()}}, \code{\link[=tucker3]{tucker3()}}, \code{\link[=arima_series]{arima_series()}},
 \code{\link[=ets_series]{ets_series()}}, \code{\link[=hyndman_ullah]{hyndman_ullah()}}, \code{\link[=stmomo]{stmomo()}}, \code{\link[=li_lee]{li_lee()}}, \code{\link[=product_ratio]{product_ratio()}},
 \code{\link[=apc_bayes]{apc_bayes()}} (package bamp), \code{\link[=cause_shares]{cause_shares()}} for coherent multi-cause
-forecasts and \code{\link[=mt_ensemble]{mt_ensemble()}}, fitted with \code{\link[=mt_fit]{mt_fit()}} (optionally tuned
-with \code{\link[=mt_tuned]{mt_tuned()}}) and forecast with \code{\link[=mt_forecast]{mt_forecast()}} as simulated paths
+forecasts and \code{\link[=ensemble]{ensemble()}}, fitted with \code{\link[=mt_fit]{mt_fit()}} (optionally tuned
+with \code{\link[=tuned]{tuned()}}) and forecast with \code{\link[=mt_forecast]{mt_forecast()}} as simulated paths
 (\link{mt_draws}).
 \item \strong{Hierarchies}: \code{\link[=mt_hierarchy]{mt_hierarchy()}} describes crossed or nested strata
 (for example sex x region x deprivation quintile with their totals),
 \code{\link[=mt_aggregate_strata]{mt_aggregate_strata()}} adds the aggregates, \code{\link[=mt_reconcile]{mt_reconcile()}} and
-\code{\link[=mt_reconciled]{mt_reconciled()}} make forecasts add up draw by draw, \code{\link[=mt_cohere]{mt_cohere()}}
+\code{\link[=reconciled]{reconciled()}} make forecasts add up draw by draw, \code{\link[=mt_order_strata]{mt_order_strata()}}
 imposes orderings.
 \item \strong{Evaluation}: \code{\link[=mt_backtest]{mt_backtest()}} and \code{\link[=mt_score]{mt_score()}}.
 \item \strong{Derived quantities and plots}: \code{\link[=life_table]{life_table()}}, \code{\link[=life_expectancy]{life_expectancy()}},

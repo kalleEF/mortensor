@@ -4,19 +4,39 @@
 \alias{standard_population}
 \title{Standard populations}
 \usage{
-standard_population(name = "esp2013")
+standard_population(name = c("esp2013", "esp1976", "who2000"))
 }
 \arguments{
 \item{name}{Name of the standard.}
 }
 \value{
-A \code{data.table} with \code{age_lo}, \code{age_hi}, \code{weight}.
+A \code{data.table} with \code{age_lo}, \code{age_hi}, \code{weight}; the name is in
+attribute \code{"name"}.
 }
 \description{
-\code{"esp2013"}: the revised European Standard Population 2013 (Eurostat 2013,
-Revision of the European Standard Population, report KS-RA-13-028), in
-5-year groups with 90-94 and 95+, total 100,000.
+\itemize{
+\item \code{"esp2013"}: the revised European Standard Population 2013 (Eurostat
+2013, Revision of the European Standard Population, report
+KS-RA-13-028), in 5-year groups with 0, 1-4 and 95+, total 100,000;
+\item \code{"esp1976"}: the European Standard Population of 1976 (0, 1-4, 5-year
+groups, 85+), total 100,000;
+\item \code{"who2000"}: the WHO World Standard Population, world average
+2000-2025 (Ahmad et al. 2001), 5-year groups to 100+; the published
+weights sum to 100,035 and are used as published (rates are divided by
+the sum of the weights).
+}
+}
+\details{
+A national standard is used by passing a data frame with \code{age_lo},
+\code{age_hi} (\code{Inf} for the open group) and \code{weight} to the \code{standard}
+argument of \code{\link[=asr]{asr()}}.
 }
 \examples{
 standard_population()
+standard_population("who2000")
+}
+\references{
+Ahmad OB, Boschi-Pinto C, Lopez AD, Murray CJL, Lozano R, Inoue M (2001).
+Age standardization of rates: a new WHO standard. GPE Discussion Paper
+Series No. 31. World Health Organization, Geneva.
 }

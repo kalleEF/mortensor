@@ -28,8 +28,8 @@ work: `claude/vigilant-albattani-2ssw1x` (plays the role of `dev-0.2`).
 | M2.5 | done | this branch | `tucker3()` native HOOI, ranks fixed or chosen by BIC/AIC (`ranks = "bic"`, port of `tucker3_info_criterion`), log and CoDa (open interval via auxiliary series), RW/ARIMA/ETS factors, residual noise; regression vs 0.1.0 not reproduced (different preprocessing; see notes) |
 | M2.6 | done | this branch | `mt_backtest()` scores at the observed resolution; leakage test |
 | M2.7 | done | this branch | `mt_score()`: CRPS, WIS (Bracher et al. 2021), coverage, PIT, MASE |
-| M2.8 | done | this branch | `mt_tune()` (inner rolling origin) and `mt_tuned()` (tuning refitted inside each fit, so nested backtests do not leak) |
-| C4.1 | done | this branch | `mt_ensemble()` (equal, numeric, inner-backtest CRPS weights); interval calibration evaluated in `dev/calibration.md` (mixture of Lee-Carter and `rwd()` best calibrated at 95% on real data); `rwd(observation_noise = TRUE)` added |
+| M2.8 | done | this branch | `mt_tune()` (inner rolling origin) and `tuned()` (tuning refitted inside each fit, so nested backtests do not leak) |
+| C4.1 | done | this branch | `ensemble()` (equal, numeric, inner-backtest CRPS weights); interval calibration evaluated in `dev/calibration.md` (mixture of Lee-Carter and `rwd()` best calibrated at 95% on real data); `rwd(observation_noise = TRUE)` added |
 | B3.1-B3.4 | done | this branch | `apc_bayes()` + `mcmc_control()`: fit at the death resolution (`periods_per_agegroup`), explicit convergence check with refits, draws mapped to the grid with shape factors, `apc_effects()`; `apc_select()` ranks random-walk orders by DIC (bamp's DIC = deviance at the posterior mean + 2 pD) |
 | C4.2 | done | this branch | `life_expectancy()`, `prob_dying()`, `asr()` with `standard_population("esp2013")`, `yll()`, `mt_deaths()`; all path by path |
 | C4.3 | done | this branch | `mt_plot_forecast()`, `mt_plot_age()`, `mt_plot_life_expectancy()`, `mt_plot_rates()`, `mt_plot_ungroup()`, `mt_plot_coverage()` (vdiffr snapshots of all plots in `tests/testthat/_snaps/plot-snapshots/`); `mt_plot_tucker()`, `mt_plot_shares()`, `mt_plot_scores()` |
@@ -45,10 +45,10 @@ work: `claude/vigilant-albattani-2ssw1x` (plays the role of `dev-0.2`).
 | P5.1 | done | this branch | `hyndman_ullah()` (demography; draws via `simulate()`); 95% coverage 0.90 on the benchmark, 0.73 on France |
 | P5.2 | done | this branch | `stmomo()` APC, CBD, RH, M6, LC with integer ages, initial exposures for logit links, `simulate()` draws; RH fails to converge at some origins (recorded) |
 | P5.3 | done | this branch | `cause_shares()` (Tucker4 on ILR cause shares, any all-cause model), `mt_example_causes()` |
-| P5.4 | done | this branch | `mt_reconcile()` for grouped hierarchies on the death scale (WLS default, MinT, structural, OLS, bottom-up), empirical copula, non-negative; `mt_reconciled()`; `mt_aggregate_draws()` |
-| P5.5 | done | this branch | `mt_cohere()`, `li_lee()`, `product_ratio()` (Lee-Carter-type version) |
-| P5.6 | done | this branch | `mt_ensemble(weights = "stack")` |
-| P5.7 | done | this branch | Whittaker and Gaussian GAM (mgcv) smoothing in `mt_smooth()`; the GAM-Bayes uncertainty is generalised as `mt_bootstrap(type = "data")` (Poisson resampling of the observed deaths, preprocessing and model refitted) and `type = "grid"` (semi-parametric, Brouhns et al. 2005); Lee-Carter grid bootstrap 95% coverage 0.934 on the calibration benchmark |
+| P5.4 | done | this branch | `mt_reconcile()` for grouped hierarchies on the death scale (WLS default, MinT, structural, OLS, bottom-up), empirical copula, non-negative; `reconciled()`; `mt_aggregate_draws()` |
+| P5.5 | done | this branch | `mt_order_strata()`, `li_lee()`, `product_ratio()` (Lee-Carter-type version) |
+| P5.6 | done | this branch | `ensemble(weights = "stack")` |
+| P5.7 | done | this branch | Whittaker and Gaussian GAM (mgcv) smoothing in `mt_smooth()`; the GAM-Bayes uncertainty is generalised as `bootstrapped(type = "data")` (Poisson resampling of the observed deaths, preprocessing and model refitted) and `type = "grid"` (semi-parametric, Brouhns et al. 2005); Lee-Carter grid bootstrap 95% coverage 0.934 on the calibration benchmark |
 | P5.8 | done | this branch | `mt_ungroup(method = "hyman_kannisto" / "natural_gompertz" / "gam")` (rate-based, exposure-weighted group rates preserved exactly) and `mt_disaggregate()` for forecast draws. Median absolute log error, E&W 30-89/90-100 and simulated 30-89/90+: PCLM 0.015/0.024, 0.012/0.006; Hyman-Kannisto 0.015/0.029, 0.013/0.028; natural-Gompertz 0.015/0.027, 0.013/0.030; GAM 0.015/0.031, 0.012/0.031. The 0.1 floor of the Kannisto tail at the open-group mean was dropped (simulated 90+ error 0.166 with it). PCLM stays the default |
 | P5.9 | partial | this branch | Multi-cause vignette on `mt_example_causes()` (HMD has no causes); release 0.3.0 open |
 | C4.6 | partial | this branch | 2D PCLM 87 s to 45 s (standard errors only for the final fit, Cholesky solves); no further work |

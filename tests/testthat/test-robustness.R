@@ -109,7 +109,7 @@ test_that("crossed hierarchies of regions and causes aggregate exposures once ov
   expect_equal(unique(e[stratum == st[region == "all" & cause == "all"]$stratum]$value), 4000)
   expect_equal(unique(e[stratum == st[region == "r1" & cause == "all"]$stratum]$value), 1000)
   expect_true(all(mt_validate(xa, hierarchy = h)$severity == "info"))
-  fc <- mt_forecast(mt_fit(mt_reconciled(rwd(), h, method = "wls"), xa), h = 2, n_draws = 20, seed = 1)
+  fc <- mt_forecast(mt_fit(reconciled(rwd(), h, method = "wls"), xa), h = 2, n_draws = 20, seed = 1)
   a <- fc$rates[1, 2, , ]
   s <- fc$strata
   expect_equal(a[s$region == "all" & s$cause == "all", ], colSums(a[s$region == "all" & s$cause != "all", ]),
@@ -143,4 +143,57 @@ test_that("smoothing leaves age 0 alone and respects group widths", {
   s <- mt_smooth(x, method = "whittaker")
   expect_equal(mt_obs(s)$value[1], 40)
   expect_identical(mt_obs(s)$provenance[1], "observed")
+})
+
+test_that("future exposures are matched by names, not by position", {
+  x <- mt_example(deaths = "single", years = 2001:2015)
+  fc <- mt_forecast(mt_fit(rwd(), x), h = 2, n_draws = 10, seed = 1)
+  E <- mt_array(x, "exposure")[, "2015", , drop = FALSE]
+  d1 <- mt_deaths(fc, exposure = E, noise = FALSE)
+  rev_E <- E[, , rev(dimnames(E)[[3]]), drop = FALSE]
+  d2 <- mt_deaths(fc, exposure = rev_E, noise = FALSE)
+  expect_equal(d1, d2)
+  expect_warning(mt_deaths(fc, exposure = unname(E), noise = FALSE), class = "mt_warning_exposure_order")
+  d3 <- mt_deaths(fc, exposure = mt_subset(x, periods = c(2015, 2015)), noise = FALSE)
+  expect_equal(d1, d3)
+  bad <- E[, , 1, drop = FALSE]
+  expect_error(mt_deaths(fc, exposure = bad), class = "mt_error_argument")
+})
+
+test_that("observed indicators, contrasts and inequality indices", {
+  x <- mt_example_regions(years = 2015:2019, regions = 2)
+  e <- life_expectancy(x)
+  expect_true(all(e$q0.025 <= e$q0.5 & e$q0.5 <= e$q0.975))
+  a <- asr(x, standard = "esp1976")
+  expect_true(all(a$standard == "esp1976" & a$per == 1e5))
+  ct <- mt_contrast(x, var = "quintile", ref = "Q1")
+  expect_setequal(unique(ct$level), paste0("Q", 2:5))
+  expect_true(all(c("sex", "region", "p_positive") %in% names(ct)))
+  iq <- mt_inequality(x, "quintile", order = paste0("Q", 5:1))
+  expect_setequal(unique(iq$index), c("sii", "rii"))
+  expect_error(mt_contrast(x, var = "quintile", ref = "Q9"), class = "mt_error_argument")
+  expect_equal(sum(standard_population("who2000")$weight), 100035)
+  expect_equal(sum(standard_population("esp1976")$weight), 1e5)
+})
+
+test_that("relabelling, window steps, exports and conversions work", {
+  d <- data.frame(Sex = rep(1:2, each = 6), year = 2001:2006, age = "90+", deaths = 5:16, exposure = 100)
+  x <- mt_data(deaths = d, exposure = d, by = "Sex")
+  y <- mt_relabel(x, "Sex", c("1" = "male", "2" = "female"))
+  expect_setequal(mt_strata(y)$Sex, c("male", "female"))
+  w <- mt_prep_apply(mt_prep(step_window(3)), y)
+  expect_identical(mt_grid(w)$period$labels, c("2004", "2005", "2006"))
+  fc <- mt_forecast(mt_fit(rwd(), y), h = 2, n_draws = 5, seed = 1)
+  f <- mt_export(asr(fc), tempdir(), file = "asr-test.csv", digits = 3)
+  expect_true(file.exists(f))
+  expect_warning(mt_forecast(mt_fit(rwd(), y), h = 3, to = 2008, n_draws = 5), class = "mt_warning_argument")
+  skip_if_not_installed("demography")
+  xe <- mt_example(deaths = "single", years = 2001:2005)
+  dd <- as_demogdata(xe)
+  expect_s3_class(dd, "demogdata")
+  expect_setequal(names(dd$rate), mt_strata(xe)$label)
+  skip_if_not_installed("StMoMo")
+  sd <- as_stmomodata(xe, "male")
+  expect_s3_class(sd, "StMoMoData")
+  expect_equal(sum(sd$Dxt), sum(mt_array(xe, "deaths")[, , "male"]))
 })

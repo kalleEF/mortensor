@@ -24,20 +24,23 @@ test_that("GENESIS flat tables give deaths and exposures from 31 December popula
                      list(list(code = "DLAND", label = grid$land), list(code = "GES", label = grid$sex),
                           list(code = "ALT103", label = grid$age)),
                      value = 100 + (grid$time - 2019) * 10)
-  expect_warning(x <- mt_read_genesis(d, p), class = "mt_warning_genesis")
+  expect_warning(x <- mt_read_genesis(d, p), class = "mt_warning_missing")
   expect_identical(x$by, "sex")
+  x <- mt_regroup(mt_as_exposure(x, type = "dec31"), age = "deaths")
   expect_identical(mt_grid(x)$age$labels, c("0", "1-84", "85+"))
   e <- mt_obs(x, "exposure")
+  st <- mt_strata(x)
+  male <- st[sex == "male"]$stratum
   # two Laender, population 100 at the end of 2019 and 110 at the end of 2020: exposure 2020 = 2 x 105
-  expect_equal(e[period_lo == 2020 & age_lo == 0 & sex == "male"]$value, 210)
-  expect_equal(e[period_lo == 2020 & age_lo == 1 & sex == "male"]$value, 84 * 210)
+  expect_equal(e[period_lo == 2020 & age_lo == 0 & stratum == male]$value, 210)
+  expect_equal(e[period_lo == 2020 & age_lo == 1 & stratum == male]$value, 84 * 210)
   dd <- mt_obs(x, "deaths")
-  expect_equal(dd[period_lo == 2020 & age_lo == 1 & sex == "male"]$value, 0)
+  expect_equal(dd[period_lo == 2020 & age_lo == 1 & stratum == male]$value, 0)
   expect_equal(nrow(dd), 11)
   expect_error(mt_read_genesis(d[, 1:3], p), class = "mt_error_genesis")
 })
 
-test_that("GENESIS cause variables become a cause stratum with a closing rest", {
+test_that("GENESIS cause variables become a cause stratum", {
   ages_d <- c("unter 1 Jahr", "1 bis unter 85 Jahre", "85 Jahre und mehr")
   d <- genesis_frame(rep(2020, 6),
                      list(list(code = "GES", label = "weiblich"), list(code = "ALT027", label = rep(ages_d, 2)),
@@ -47,11 +50,12 @@ test_that("GENESIS cause variables become a cause stratum with a closing rest", 
   p <- genesis_frame(rep(c("2019-12-31", "2020-12-31"), each = 3),
                      list(list(code = "GES", label = "weiblich"), list(code = "ALT103", label = rep(ages_d, 2))),
                      value = 1000)
-  x <- mt_read_genesis(d, p, causes = TRUE)
-  expect_setequal(mt_strata(x)$cause, c("all", "TDU-07", "rest"))
+  x <- mt_read_genesis(d, p)
+  expect_setequal(mt_strata(x)$cause, c("all", "TDU-07"))
   expect_identical(attr(x, "cause_labels")$cause, "TDU-07")
-  o <- mt_obs(x)
-  expect_equal(o[cause == "rest"]$value, c(10, 40, 180))
-  y <- mt_read_genesis(d, p)
-  expect_false("cause" %in% names(mt_strata(y)))
+  y <- mt_group_levels(mt_as_exposure(x, type = "dec31"), "cause", list(circulatory = "TDU-07"), other = "rest",
+                       total = "all", additive = "rates")
+  o <- mt_obs(y)
+  st <- mt_strata(y)
+  expect_equal(o[stratum == st[cause == "rest"]$stratum]$value, c(10, 40, 180))
 })

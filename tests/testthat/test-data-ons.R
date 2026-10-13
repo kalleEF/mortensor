@@ -21,7 +21,7 @@ test_that("the ONS data read into consistent strata with the general functions",
   expect_identical(dim(ons_data), c(7600L, 36L))
   x <- mt_data(deaths = ons_data, population = ons_data, by = c("sex", "imd_decile"), age = "age_group",
                value = c(deaths = "all_causes", population = "population"))
-  x <- mt_as_exposure(x)
+  x <- mt_as_exposure(x, type = "midyear")
   expect_equal(sum(mt_obs(x, "deaths")$value), sum(ons_data$all_causes))
   expect_equal(sum(mt_obs(x, "exposure")$value), sum(ons_data$population))
   expect_identical(mt_grid(x)$age$labels[1:3], c("0", "1-4", "5-9"))
@@ -32,7 +32,7 @@ test_that("the ONS data read into consistent strata with the general functions",
   causes <- names(ons_data)[-(1:6)]
   y <- mt_data(deaths = ons_data, population = ons_data, by = c("sex", "imd_decile", "cause"), age = "age_group",
                value = list(deaths = causes, population = "population"))
-  y <- mt_subset(mt_as_exposure(y), ages = c(50, Inf), periods = c(2015, 2019))
+  y <- mt_subset(mt_as_exposure(y, type = "midyear"), ages = c(50, Inf), periods = c(2015, 2019))
   y <- mt_group_levels(y, "cause", ons_cause_groups, other = "rest", total = "all_causes", additive = "rates")
   expect_identical(mt_grid(y)$age$labels[1], "50-54")
   d <- mt_obs(y)

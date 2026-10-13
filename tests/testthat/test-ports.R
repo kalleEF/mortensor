@@ -68,11 +68,11 @@ test_that("reconciliation makes parts add up to the total", {
 test_that("coherence keeps the lower stratum below the upper one in every draw", {
   x <- mt_example(deaths = "single")
   fc <- mt_forecast(mt_fit(rwd(), x), h = 10, n_draws = 50, seed = 1)
-  co <- mt_cohere(fc, "sex", lower = "female", upper = "male")
+  co <- mt_order_strata(fc, "sex", lower = "female", upper = "male")
   expect_true(all(co$rates[, , 1, ] <= co$rates[, , 2, ] + 1e-15))
   expect_equal((co$rates[, , 1, ] + co$rates[, , 2, ]), (fc$rates[, , 1, ] + fc$rates[, , 2, ]))
   expect_s3_class(co$coherence, "data.table")
-  expect_error(mt_cohere(fc, "region", "a", "b"), class = "mt_error_argument")
+  expect_error(mt_order_strata(fc, "region", "a", "b"), class = "mt_error_argument")
 })
 
 test_that("stacking weights lie on the simplex", {
@@ -80,7 +80,7 @@ test_that("stacking weights lie on the simplex", {
   expect_equal(sum(w), 1)
   expect_equal(w, c(0.5, 0.5), tolerance = 1e-3)
   x <- mt_example(deaths = "single", years = 1990:2010)
-  fit <- mt_fit(mt_ensemble(lee_carter(), rwd(), weights = "stack", inner_origins = 2, inner_h = 3), x)
+  fit <- mt_fit(ensemble(lee_carter(), rwd(), weights = "stack", inner_origins = 2, inner_h = 3), x)
   expect_equal(sum(fit$weights), 1)
 })
 
@@ -107,7 +107,7 @@ test_that("Whittaker smoothing, Kannisto closure and monotone deaths work", {
 test_that("bootstrap refits pool draws and widen intervals", {
   x <- mt_example(deaths = "single", years = 2000:2019)
   for (type in c("grid", "data")) {
-    fit <- mt_fit(mt_bootstrap(lee_carter(), n_boot = 4, type = type), x)
+    fit <- mt_fit(bootstrapped(lee_carter(), n_boot = 4, type = type), x)
     expect_s3_class(fit, "mt_fit_bootstrap")
     expect_length(fit$boot, 4)
     fc <- mt_forecast(fit, h = 3, n_draws = 40, seed = 1)
@@ -118,9 +118,9 @@ test_that("bootstrap refits pool draws and widen intervals", {
   fc2 <- mt_forecast(fit, h = 3, n_draws = 40, seed = 2)
   expect_identical(fc1$rates, fc2$rates)
   xg <- mt_example(years = 2000:2019)
-  fit <- mt_fit(mt_bootstrap(rwd(), n_boot = 2, type = "data"), xg, prep = mt_prep(step_ungroup()))
+  fit <- mt_fit(bootstrapped(rwd(), n_boot = 2, type = "data"), xg, prep = mt_prep(step_ungroup()))
   expect_match(fit$diagnostics$message[3], "2 of 2")
-  expect_error(mt_bootstrap(lee_carter(), n_boot = 0), class = "mt_error_argument")
+  expect_error(bootstrapped(lee_carter(), n_boot = 0), class = "mt_error_argument")
 })
 
 test_that("Tucker3 ranks can be chosen by an information criterion", {

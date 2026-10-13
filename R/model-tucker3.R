@@ -10,6 +10,11 @@
 #' correlation) or with ARIMA/ETS models per column (`ts = "arima"`,
 #' `"ets"`, package \pkg{forecast}).
 #'
+#' The model is experimental: tensor decompositions have been proposed for
+#' mortality of several populations, but this specification has no
+#' published evaluation; compare it with established models such as
+#' [li_lee()] in a backtest before using it.
+#'
 #' With `transform = "coda"`, life-table deaths (from age `x0`, the first
 #' grid age) form a composition over the age cells including the open
 #' interval; the open interval's death rate is forecast as an auxiliary
@@ -20,19 +25,18 @@
 #'
 #' @param ranks Tucker ranks for age, period and stratum, or `"bic"` /
 #'   `"aic"` to choose them by an information criterion on the training data
-#'   (the rank selection of mortensor 0.1: `n log(RSS / n)` plus the penalty
+#'   (`n log(RSS / n)` plus the penalty
 #'   times the number of parameters of the factor matrices and the core;
 #'   ranks up to 6 for age and period and up to 4 for strata). For selection
-#'   by forecast accuracy use [mt_tuned()].
+#'   by forecast accuracy use [tuned()].
 #' @param transform `"log"` or `"coda"`.
 #' @param ts Forecast method for the period factors: `"rwd"`, `"arima"`,
 #'   `"ets"`.
 #' @param residual_noise Add the in-sample residual variation (per age and
 #'   stratum, normal on the transformed scale) to the draws. It represents
 #'   structure that the low-rank model does not capture. On the calibration
-#'   benchmark of the validation pipeline (independent period trends in 10
-#'   strata) 95% predictive intervals covered 0.95 on average with it and
-#'   0.87 without it.
+#'   benchmark with independent period trends in 10 strata, 95% predictive
+#'   intervals covered 0.95 on average with it and 0.87 without it.
 #' @param maxit,tol Settings of the HOOI iterations.
 #' @return A model specification.
 #' @references

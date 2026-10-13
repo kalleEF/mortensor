@@ -39,7 +39,7 @@ run_case <- function(name, defect, f) {
 
 pipeline <- function(d, p = d, by = c("region", "sex"), ...) {
   x <- mt_data(deaths = d, population = p, by = by, ...)
-  x <- mt_as_exposure(x)
+  x <- mt_as_exposure(x, type = "midyear")
   fit <- mt_fit(lee_carter(), x)
   fc <- mt_forecast(fit, h = 5, n_draws = 50, seed = 1)
   e0 <- life_expectancy(fc, at = 0)
@@ -173,12 +173,12 @@ add("suppressed_lt5_declared", "counts below 5 published as '<5', declared with 
 })
 add("suppressed_no_totals", "suppressed cells ('.') without published totals, then mt_fill_suppressed()", function() {
   d <- copy(as.data.table(clean))[, deaths := ifelse(deaths < 3, ".", as.character(deaths))]
-  x <- mt_as_exposure(mt_data(deaths = d, population = d, by = c("region", "sex")))
+  x <- mt_as_exposure(mt_data(deaths = d, population = d, by = c("region", "sex")), type = "midyear")
   x <- mt_fill_suppressed(x, mt_hierarchy(region = "all"))
   "filled"
 })
 add("sparse_small_region", "region of 5,000 people: many zero death cells (Lee-Carter)", function() {
-  x <- mt_as_exposure(mt_data(deaths = clean, population = clean, by = c("region", "sex")))
+  x <- mt_as_exposure(mt_data(deaths = clean, population = clean, by = c("region", "sex")), type = "midyear")
   x <- mt_subset(x, region == "Island")
   o <- mt_obs(x)
   fc <- mt_forecast(mt_fit(lee_carter(), x), h = 5, n_draws = 50, seed = 1)
@@ -188,7 +188,7 @@ add("sparse_small_region", "region of 5,000 people: many zero death cells (Lee-C
             min(apply(r[1, , 1, ], 1, median)))
 })
 add("sparse_rwd_apc", "same sparse region with rwd() and li_lee()", function() {
-  x <- mt_as_exposure(mt_data(deaths = clean, population = clean, by = c("region", "sex")))
+  x <- mt_as_exposure(mt_data(deaths = clean, population = clean, by = c("region", "sex")), type = "midyear")
   out <- vapply(list(rwd = rwd(), li_lee = li_lee(), tucker3 = tucker3()), function(sp) {
     r <- tryCatch({
       fc <- mt_forecast(mt_fit(sp, x), h = 5, n_draws = 50, seed = 1)
@@ -213,7 +213,7 @@ add("many_strata", "400 districts x 2 sexes x 18 ages x 20 years (288,000 rows):
   t0 <- Sys.time()
   x <- mt_data(deaths = d, population = d, by = c("region", "sex"))
   t1 <- Sys.time()
-  x <- mt_as_exposure(x)
+  x <- mt_as_exposure(x, type = "midyear")
   t2 <- Sys.time()
   y <- mt_group_levels(x, "region", function(r) paste0("G", (as.integer(substr(r, 2, 4)) - 1) %/% 40 + 1))
   t3 <- Sys.time()

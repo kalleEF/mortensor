@@ -57,7 +57,7 @@ person-years at risk:
 ```{r}
 x <- mt_data(deaths = ons_data, population = ons_data, by = c("sex", "imd_decile"), age = "age_group",
              value = c(deaths = "all_causes", population = "population"))
-x <- mt_as_exposure(x)
+x <- mt_as_exposure(x, type = "midyear")
 ```
 
 Deciles are combined to quintiles with `mt_group_levels()`, which adds an
@@ -224,7 +224,7 @@ draws against the observed deaths. Here the forecasts from origins 2008 to
 ```{r}
 origins <- 2008:2014
 specs <- list(lee_carter(), li_lee(common_by = "sex"), rwd(),
-              mt_ensemble(lc = lee_carter(), rw = rwd()))
+              ensemble(lc = lee_carter(), rw = rwd()))
 bt <- rbindlist(lapply(specs, function(sp) mt_backtest(sp, x, origins = origins, h = 5, n_draws = 200)))
 mt_score(bt, by = "model")
 ```

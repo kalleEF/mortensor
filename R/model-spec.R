@@ -2,7 +2,7 @@
 #'
 #' Every model is created by a constructor (`rwd()`, `lee_carter()`,
 #' `tucker3()`, `arima_series()`, `ets_series()`, `apc_bayes()`,
-#' `mt_ensemble()`) that returns an `mt_spec` object. Specifications are
+#' `ensemble()`) that returns an `mt_spec` object. Specifications are
 #' fitted with [mt_fit()] and forecast with [mt_forecast()].
 #'
 #' `new_mt_spec()` is the constructor for developers who add models: a model
@@ -285,13 +285,18 @@ mt_forecast <- function(fit, h = 10, to = NULL, n_draws = 500, seed = NULL, pred
 mt_forecast.mt_fit <- function(fit, h = 10, to = NULL, n_draws = 500, seed = NULL, predictive = FALSE,
                                exposure = NULL, ...) {
   last <- max(fit$periods)
-  if (!is.null(to)) h <- to - last
+  if (!is.null(to)) {
+    if (!missing(h)) mt_warn("Both `h` and `to` are given; `to` is used.", class = "argument")
+    h <- to - last
+  }
   check_number(h, "h", lower = 1, integerish = TRUE)
   check_number(n_draws, "n_draws", lower = 1, integerish = TRUE)
   spec <- fit$spec
   na <- length(fit$age)
   ns <- nrow(fit$strata)
-  arr <- array(NA_real_, c(na, h, ns, n_draws))
+  arr <- array(NA_real_, c(na, h, ns, n_draws),
+               dimnames = list(age = fit$age$labels, period = as.character(last + seq_len(h)),
+                               stratum = fit$strata$label, draw = NULL))
   with_seed(seed, {
     if (spec$joint) {
       if (!is.null(fit$fits)) arr[] <- simulate_model(spec, fit$fits, h, n_draws)
@@ -331,15 +336,7 @@ check_draws_plausible <- function(arr, age, strata, label) {
 # Observed-rate draws: extra-Poisson noise (smooth models) and Poisson deaths given exposures
 predictive_rates <- function(arr, fit, exposure, spec) {
   d <- dim(arr)
-  E <- exposure %||% fit$exposure_last
-  if (length(dim(E)) == 2) {
-    if (!all(dim(E) == d[c(1, 3)])) mt_abort("`exposure` must be [age, stratum] or [age, period, stratum].",
-                                             class = "argument")
-    E <- array(E, c(d[1], 1, d[3]))
-  }
-  if (dim(E)[2] == 1) E <- E[, rep(1, d[2]), , drop = FALSE]
-  if (!all(dim(E) == d[1:3])) mt_abort("`exposure` must be [age, period, stratum] matching the forecast.",
-                                       class = "argument")
+  E <- expand_exposure(exposure %||% fit$exposure_last, d, dimnames(arr))
   if (isTRUE(spec$smooth)) {
     sd <- array(fit$noise_sd[, rep(seq_len(d[3]), each = d[2])], d[1:3])
     arr <- arr * exp(stats::rnorm(length(arr), 0, as.vector(sd)))

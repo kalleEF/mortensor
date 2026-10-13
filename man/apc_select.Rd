@@ -37,7 +37,7 @@ Fits \code{\link[=apc_bayes]{apc_bayes()}} with every combination of first- and 
 random walks for age, period and cohort (and, optionally, with and
 without overdispersion) and ranks the variants by the deviance
 information criterion (Spiegelhalter et al. 2002) that bamp reports,
-summed over strata. This is the prior selection of mortensor 0.1. DIC
+summed over strata. DIC
 measures in-sample fit; to choose by forecast accuracy, compare the
 candidates with \code{\link[=mt_backtest]{mt_backtest()}} instead. Selection on all data followed by
 a backtest of the selected model reuses the test years once.

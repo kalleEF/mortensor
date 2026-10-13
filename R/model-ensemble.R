@@ -15,11 +15,11 @@
 #'   use data after the forecast origin;
 #' * `"stack"`: weights on the simplex that minimise the squared error of the
 #'   weighted median forecasts (log scale) in the same inner backtest (the
-#'   non-negative stacking of mortensor 0.1, fitted on training data only).
+#'   non-negative stacking, fitted on training data only).
 #'
 #' Each draw of the ensemble comes from one component for all strata, so
 #' paths keep the dependence between strata and the coherence of reconciled
-#' components (`mt_reconciled()`). A component that fails in a stratum is
+#' components (`reconciled()`). A component that fails in a stratum is
 #' replaced there by the other components in proportion to their weights;
 #' this is recorded in the diagnostics. Any model specification can be a
 #' component, including joint models, Bayesian models, tuned, bootstrapped
@@ -29,22 +29,25 @@
 #' on HMD data (England & Wales, France) and on the ONS deprivation data,
 #' Lee-Carter alone was too narrow (95% coverage 0.70 to 0.84), while an
 #' equal-weight mixture of `lee_carter()` and `rwd()` had 95% coverage of
-#' 0.94 to 0.98 and the best or second-best CRPS (`dev/calibration.md` in
-#' the source repository).
+#' 0.94 to 0.98 and the best or second-best CRPS (see the vignette
+#' "Comparison with demography, bamp and StMoMo"). In populations with few
+#' deaths per cell, use `rwd(observation_noise = TRUE)` as the random-walk
+#' component: the plain random walk accumulates the Poisson noise of
+#' observed rates and its long-horizon paths become implausible.
 #'
 #' @param ... Model specifications; names are used as labels.
-#' @param weights `"equal"`, `"crps"` or a numeric vector.
+#' @param weights `"equal"`, `"crps"`, `"stack"` or a numeric vector.
 #' @param inner_origins,inner_h Inner backtest for `weights = "crps"`.
 #' @return A model specification.
 #' @examples
 #' x <- mt_example(deaths = "single")
-#' ens <- mt_ensemble(lc = lee_carter(), rw = rwd())
+#' ens <- ensemble(lc = lee_carter(), rw = rwd())
 #' fc <- mt_forecast(mt_fit(ens, x), h = 5, n_draws = 100, seed = 1)
 #' @export
-mt_ensemble <- function(..., weights = "equal", inner_origins = 3, inner_h = 5) {
+ensemble <- function(..., weights = "equal", inner_origins = 3, inner_h = 5) {
   comps <- list(...)
   if (!length(comps) || !all(vapply(comps, inherits, logical(1), what = "mt_spec"))) {
-    mt_abort("mt_ensemble() needs model specifications.", class = "argument")
+    mt_abort("ensemble() needs model specifications.", class = "argument")
   }
   nm <- names(comps) %||% rep("", length(comps))
   nm[!nzchar(nm)] <- vapply(comps[!nzchar(nm)], `[[`, "", "label")

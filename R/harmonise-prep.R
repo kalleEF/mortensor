@@ -11,6 +11,10 @@
 #' * `step_smooth(...)`: [mt_smooth()];
 #' * `step_regroup(age, period)`: [mt_regroup()];
 #' * `step_grid(age, period)`: [mt_set_grid()];
+#' * `step_window(years)`: keeps the last `years` years of the training
+#'   data, a fitting period chosen relative to the forecast origin (for
+#'   example after a change of trend; compare windows with [tuned()] or
+#'   [mt_backtest()]);
 #' * `step_shocks(periods, action)`: periods with exceptional mortality (for
 #'   example 2020-2022) are either replaced by log-linear interpolation of
 #'   the rates of the neighbouring periods (`"interpolate"`, deaths become
@@ -54,6 +58,15 @@ step_regroup <- function(age = NULL, period = NULL) new_step("regroup", list(age
 step_grid <- function(age = NULL, period = NULL) new_step("grid", list(age = age, period = period))
 
 #' @rdname mt_prep
+#' @param years Number of most recent training years kept by
+#'   `step_window()`.
+#' @export
+step_window <- function(years) {
+  check_number(years, "years", lower = 2, integerish = TRUE)
+  new_step("window", list(years = years))
+}
+
+#' @rdname mt_prep
 #' @param periods Calendar years affected by a shock.
 #' @param action `"interpolate"` or `"exclude"`.
 #' @export
@@ -81,6 +94,10 @@ apply_step <- function(step, data) {
          regroup = mt_regroup(data, a$age, a$period),
          grid = mt_set_grid(data, a$age, a$period),
          shocks = apply_shocks(data, a$periods, a$action),
+         window = {
+           last <- max(mt_grid(data)$period$lower)
+           mt_window(data, from = last - a$years + 1)
+         },
          mt_abort(sprintf("Unknown step '%s'.", step$type), class = "prep"))
 }
 

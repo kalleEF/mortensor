@@ -2,38 +2,45 @@
 % Please edit documentation in R/derive-quantities.R
 \name{mt_export}
 \alias{mt_export}
-\title{Export forecasts}
+\title{Export forecasts and result tables}
 \usage{
 mt_export(
-  draws,
+  x,
   dir,
   what = c("summary", "draws"),
   file = NULL,
-  probs = c(0.025, 0.1, 0.5, 0.9, 0.975)
+  probs = c(0.025, 0.1, 0.5, 0.9, 0.975),
+  digits = NULL
 )
 }
 \arguments{
-\item{draws}{An \link{mt_draws} object.}
+\item{x}{An \link{mt_draws} object or a data frame.}
 
 \item{dir}{Output directory.}
 
-\item{what}{\code{"summary"} or \code{"draws"}.}
+\item{what}{For draws: \code{"summary"} or \code{"draws"}.}
 
-\item{file}{Optional file name.}
+\item{file}{Optional file name (required for tables other than draws
+unless the default \code{"mortensor_table.csv"} is wanted).}
 
-\item{probs}{Quantiles for the summary.}
+\item{probs}{Quantiles for the summary of draws.}
+
+\item{digits}{Optional number of significant digits of numeric columns.}
 }
 \value{
 The path of the written file, invisibly.
 }
 \description{
-Writes a tidy CSV of the summary (\code{what = "summary"}) or of all draws in
-long format (\code{what = "draws"}). The file name records the model, the grid
-and the forecast origin unless \code{file} is given.
+Writes a tidy CSV of forecast draws (their summary, \code{what = "summary"},
+or all draws in long format, \code{what = "draws"}) or of any result table,
+such as those of \code{\link[=life_expectancy]{life_expectancy()}}, \code{\link[=asr]{asr()}}, \code{\link[=mt_contrast]{mt_contrast()}},
+\code{\link[=mt_inequality]{mt_inequality()}} or \code{\link[=mt_score]{mt_score()}}. The file name of a forecast records
+the model, the grid and the forecast origin unless \code{file} is given.
 }
 \examples{
 x <- mt_example(deaths = "single", years = 2005:2019)
 fc <- mt_forecast(mt_fit(rwd(), x), h = 2, n_draws = 10, seed = 1)
 f <- mt_export(fc, tempdir())
 head(read.csv(f), 3)
+f2 <- mt_export(life_expectancy(fc, at = 65), tempdir(), file = "e65.csv", digits = 4)
 }

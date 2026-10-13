@@ -51,7 +51,7 @@ simulate_model.mt_spec_fdm <- function(spec, fit, h, n_draws, ...) {
 
 #' Generalised age-period-cohort models (StMoMo)
 #'
-#' Wrapper around \pkg{StMoMo} (Villegas, Millossovich and Kaishev 2018):
+#' Wrapper around \pkg{StMoMo} (Villegas, Kaishev and Millossovich 2018):
 #' age-period-cohort (`"apc"`), Cairns-Blake-Dowd (`"cbd"`, logit link),
 #' Renshaw-Haberman (`"rh"`), M6 (`"m6"`, logit link) and Lee-Carter
 #' (`"lc"`). Models are fitted per stratum with real ages (the lower bounds

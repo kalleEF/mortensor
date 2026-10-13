@@ -31,7 +31,7 @@ open interval.}
 
 \item{method}{Method for deaths: \code{"pclm"} (default); \code{"monotone"}
 (cumulative deaths interpolated by a monotone Hyman spline, counts only,
-1D, ignores exposures); or the rate-based methods of mortensor 0.1, which
+1D, ignores exposures); or rate-based spline methods, which
 need exposures on the grid: \code{"hyman_kannisto"} (monotone spline of log
 group rates with a Kannisto tail for the open interval),
 \code{"natural_gompertz"} (natural spline with a log-linear tail) and \code{"gam"}

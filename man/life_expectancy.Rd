@@ -9,12 +9,14 @@ life_expectancy(
   age = NULL,
   at = NULL,
   probs = c(0.025, 0.1, 0.5, 0.9, 0.975),
+  paths = FALSE,
   ...
 )
 }
 \arguments{
-\item{x}{A matrix or array of rates with age in the first dimension, or an
-\link{mt_draws} object.}
+\item{x}{A matrix or array of rates with age in the first dimension, an
+\link{mt_draws} object, or an \link{mt_data} object (observed rates with Poisson
+intervals, see \code{\link[=mt_observed]{mt_observed()}}).}
 
 \item{age}{An \link{mt_axis} (taken from \code{x} for draws).}
 
@@ -22,6 +24,9 @@ life_expectancy(
 interval; default the first age).}
 
 \item{probs}{Quantiles reported for draws.}
+
+\item{paths}{For draws, return the values of every path, an array
+\verb{[period, stratum, draw]}.}
 
 \item{...}{Passed to the life-table calculation (\code{ax}, \code{open}, \code{k}).}
 }

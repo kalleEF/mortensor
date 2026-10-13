@@ -72,15 +72,15 @@ Posterior medians and 90% credible intervals of the effects (logit scale,
 identified with bamp's convention):
 
 ```{r}
-eff <- apc_effects(fit)
-eff[, .N, by = .(stratum, effect)]
+eff <- mt_parameters(fit)
+eff[, .N, by = .(stratum, parameter)]
 ```
 
 ```{r effects, fig.height = 5}
-ggplot2::ggplot(eff, ggplot2::aes(index, q0.5, colour = stratum, fill = stratum)) +
-  ggplot2::geom_ribbon(ggplot2::aes(ymin = q0.05, ymax = q0.95), alpha = 0.2, colour = NA) +
+ggplot2::ggplot(eff, ggplot2::aes(as.numeric(index), value, colour = stratum, fill = stratum)) +
+  ggplot2::geom_ribbon(ggplot2::aes(ymin = lower, ymax = upper), alpha = 0.2, colour = NA) +
   ggplot2::geom_line() +
-  ggplot2::facet_wrap(~effect, scales = "free") +
+  ggplot2::facet_wrap(~parameter, scales = "free") +
   ggplot2::labs(x = "Index (age group, period or cohort)", y = "Effect (logit scale)", colour = NULL, fill = NULL)
 ```
 
@@ -151,7 +151,7 @@ which is not useful for planning; with first-order random walks it is narrow
 but, as the backtest shows, biased when mortality keeps declining. Neither
 choice is right for every dataset. Rolling-origin backtests are the way to
 choose priors and the overdispersion term, and an ensemble with models that
-carry a drift (`mt_ensemble()`) is a way to combine the strengths.
+carry a drift (`ensemble()`) is a way to combine the strengths.
 
 ## Practical notes
 

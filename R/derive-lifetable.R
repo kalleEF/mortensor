@@ -94,12 +94,15 @@ gompertz_open_ex <- function(M, age, k, law = "gompertz") {
 
 #' Life expectancy from rates or forecast draws
 #'
-#' @param x A matrix or array of rates with age in the first dimension, or an
-#'   [mt_draws] object.
+#' @param x A matrix or array of rates with age in the first dimension, an
+#'   [mt_draws] object, or an [mt_data] object (observed rates with Poisson
+#'   intervals, see [mt_observed()]).
 #' @param age An [mt_axis] (taken from `x` for draws).
 #' @param at Age at which life expectancy is computed (start of an
 #'   interval; default the first age).
 #' @param probs Quantiles reported for draws.
+#' @param paths For draws, return the values of every path, an array
+#'   `[period, stratum, draw]`.
 #' @param ... Passed to the life-table calculation (`ax`, `open`, `k`).
 #' @return For arrays, an array without the age dimension. For draws, a
 #'   `data.table` with the mean and quantiles per stratum and period, computed
@@ -109,8 +112,17 @@ gompertz_open_ex <- function(M, age, k, law = "gompertz") {
 #' m <- mt_array(x, "deaths") / mt_array(x, "exposure")
 #' life_expectancy(m, mt_grid(x)$age, at = 65)[1:3, ]
 #' @export
-life_expectancy <- function(x, age = NULL, at = NULL, probs = c(0.025, 0.1, 0.5, 0.9, 0.975), ...) {
-  if (inherits(x, "mt_draws")) return(life_expectancy_draws(x, at, probs, ...))
+life_expectancy <- function(x, age = NULL, at = NULL, probs = c(0.025, 0.1, 0.5, 0.9, 0.975), paths = FALSE,
+                            ...) {
+  if (inherits(x, "mt_data")) x <- mt_observed(x)
+  if (inherits(x, "mt_draws")) {
+    if (paths) {
+      e <- life_expectancy(x$rates, x$age, at = at, ...)
+      dimnames(e) <- list(period = x$periods, stratum = x$strata$label, draw = NULL)
+      return(e)
+    }
+    return(life_expectancy_draws(x, at, probs, ...))
+  }
   check_class(age, "mt_axis", "age")
   d <- dim(x) %||% length(x)
   M <- matrix(x, nrow = d[1])

@@ -5,7 +5,7 @@
 \alias{prob_dying}
 \alias{asr}
 \alias{yll}
-\title{Derived quantities from forecast draws}
+\title{Derived quantities from forecast draws or observed data}
 \usage{
 prob_dying(
   draws,
@@ -17,9 +17,10 @@ prob_dying(
 
 asr(
   draws,
-  standard = standard_population("esp2013"),
+  standard = "esp2013",
   probs = c(0.025, 0.1, 0.5, 0.9, 0.975),
-  paths = FALSE
+  paths = FALSE,
+  per = 1e+05
 )
 
 yll(
@@ -30,7 +31,8 @@ yll(
 )
 }
 \arguments{
-\item{draws}{An \link{mt_draws} object.}
+\item{draws}{An \link{mt_draws} object, or an \link{mt_data} object for observed
+rates.}
 
 \item{from, to}{Ages (starts of grid intervals; \code{to} may be the end of the
 last closed interval).}
@@ -40,8 +42,11 @@ last closed interval).}
 \item{paths}{Return the values of every path, an array \verb{[period, stratum, draw]}, instead of the summary (for example to compute ratios between
 strata path by path).}
 
-\item{standard}{A standard population from \code{\link[=standard_population]{standard_population()}} or a
-data frame with \code{age_lo}, \code{age_hi}, \code{weight}.}
+\item{standard}{The name of a standard population (see
+\code{\link[=standard_population]{standard_population()}}) or a data frame with \code{age_lo}, \code{age_hi},
+\code{weight}.}
+
+\item{per}{Rates per \code{per} persons (age-standardised rates).}
 
 \item{exposure}{Future exposures for \code{yll()} (see \code{\link[=mt_deaths]{mt_deaths()}}).}
 
@@ -54,15 +59,20 @@ quantiles, or with \code{paths = TRUE} an array.
 }
 \description{
 All quantities are computed path by path, so their intervals reflect the
-joint uncertainty across ages and years.
+joint uncertainty across ages and years. For observed data (an \link{mt_data}
+object) the paths are Poisson draws of the observed death counts (see
+\code{\link[=mt_observed]{mt_observed()}}), so the intervals are those of the observed rates.
 }
 \details{
 \itemize{
 \item \code{prob_dying()}: probability of dying between ages \code{from} and \code{to} (for
 example the SDG indicator 3.4.1 uses 30 to 70), \code{1 - l(to) / l(from)}
 from the period life table;
-\item \code{asr()}: age-standardised death rate per 100,000 with weights of a
-standard population, restricted to the ages of the grid and renormalised;
+\item \code{asr()}: age-standardised death rate per \code{per} persons (default
+100,000) with weights of a standard population, restricted to the ages
+of the grid and renormalised (columns \code{ages}, \code{standard} and \code{per}
+state this; an ASR for ages 50+ is per 100,000 of the standard
+population aged 50+);
 \item \code{yll()}: years of life lost, deaths times a reference remaining life
 expectancy at each age (by default the forecast's own period life
 expectancy at the interval midpoint, approximated by the value at the

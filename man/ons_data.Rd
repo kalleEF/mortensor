@@ -61,7 +61,7 @@ head(ons_data[, 1:8])
 # all causes by sex and deprivation quintile
 x <- mt_data(deaths = ons_data, population = ons_data, by = c("sex", "imd_decile"),
              age = "age_group", value = c(deaths = "all_causes", population = "population"))
-x <- mt_as_exposure(x)
+x <- mt_as_exposure(x, type = "midyear")
 x <- mt_group_levels(x, "imd_decile", function(d) paste0("Q", ceiling(as.numeric(d) / 2)),
                      name = "imd_quintile")
 x
@@ -69,7 +69,7 @@ x
 causes <- names(ons_data)[-(1:6)]
 y <- mt_data(deaths = ons_data, population = ons_data, by = c("sex", "imd_decile", "cause"),
              age = "age_group", value = list(deaths = causes, population = "population"))
-y <- mt_subset(mt_as_exposure(y), ages = c(50, Inf))
+y <- mt_subset(mt_as_exposure(y, type = "midyear"), ages = c(50, Inf))
 y <- mt_group_levels(y, "cause", ons_cause_groups, other = "rest", total = "all_causes",
                      additive = "rates")
 unique(mt_strata(y)$cause)

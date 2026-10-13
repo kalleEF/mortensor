@@ -71,7 +71,7 @@ test_that("the empirical copula keeps each stratum's marginal distribution", {
 
 test_that("reconciled models give coherent point and predictive draws and run in backtests", {
   x <- mt_example_regions(years = 2000:2014, regions = 2)
-  sp <- mt_reconciled(lee_carter(), h3(), method = "wls")
+  sp <- reconciled(lee_carter(), h3(), method = "wls")
   expect_s3_class(sp, "mt_spec_reconciled")
   fit <- mt_fit(sp, x)
   expect_equal(nrow(fit$strata), 2 * 3 + 3 * 3 * 6 - 2 * 3 * 1 - 0)
@@ -80,7 +80,7 @@ test_that("reconciled models give coherent point and predictive draws and run in
   pr <- mt_forecast(fit, h = 2, n_draws = 30, seed = 2, predictive = TRUE)
   expect_lt(coherence_gap(pr, h3()), 1e-8)
   xa <- mt_aggregate_strata(x, h3())
-  bt <- mt_backtest(mt_reconciled(li_lee(common_by = "sex"), h3(), method = "bottom_up"), xa, origins = 2011,
+  bt <- mt_backtest(reconciled(li_lee(common_by = "sex"), h3(), method = "bottom_up"), xa, origins = 2011,
                     h = 3, n_draws = 30)
   expect_true(all(c("both", "female") %in% bt$sex))
 })
@@ -108,7 +108,7 @@ test_that("draws are aggregated over strata and ages", {
 test_that("rate-additive hierarchies (causes) reconcile on the rate scale, also in predictive draws", {
   x <- mt_example_causes(years = 2005:2019)
   h <- mt_hierarchy(cause = "all", additive = "rates")
-  fit <- mt_fit(mt_reconciled(lee_carter(), h, method = "wls"), x)
+  fit <- mt_fit(reconciled(lee_carter(), h, method = "wls"), x)
   base <- mt_forecast(mt_fit(lee_carter(), x), h = 3, n_draws = 50, seed = 1)
   st <- mt_strata(x)
   for (pred in c(FALSE, TRUE)) {

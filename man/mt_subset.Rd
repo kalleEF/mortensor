@@ -16,7 +16,8 @@ mt_subset(data, ..., ages = NULL, periods = NULL, drop = FALSE)
 above \code{lower} and upper bound at or below \code{upper} (\code{Inf} for an open
 interval) are kept.}
 
-\item{periods}{Period range \code{c(first, last)} (calendar years, inclusive).}
+\item{periods}{Period range \code{c(first, last)} (calendar years, inclusive;
+\code{NA} for an open end, for example \code{c(NA, 2019)}).}
 
 \item{drop}{Remove stratum variables that have a single level left (for
 example \code{cause} after \code{cause == "all"}).}

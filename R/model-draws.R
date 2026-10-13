@@ -25,7 +25,7 @@ new_mt_draws <- function(rates, age, periods, strata, model, origin, fit = NULL,
   structure(list(rates = rates, age = age, periods = periods, strata = strata, model = model, origin = origin,
                  seed = seed, observed = fit$observed, observed_periods = fit$periods,
                  train_D = fit$train_D, train_E = fit$train_E,
-                 exposure_last = fit$exposure_last, diagnostics = fit$diagnostics),
+                 exposure_last = fit$exposure_last, diagnostics = fit$diagnostics, spec = fit$spec),
             class = "mt_draws")
 }
 
@@ -97,9 +97,12 @@ life_expectancy_draws <- function(x, at = NULL, probs = c(0.025, 0.1, 0.5, 0.9, 
 #' that the result describes observable death counts.
 #'
 #' @param draws An [mt_draws] object.
-#' @param exposure Future exposures: an array `[age, period, stratum]` or a
-#'   matrix `[age, stratum]` used for every period. Default: the exposures of
-#'   the last training year.
+#' @param exposure Future exposures: an [mt_data] object with exposures
+#'   (for example a population projection converted with
+#'   [mt_as_exposure()]), or an array `[age, period, stratum]` or matrix
+#'   `[age, stratum]` (used for every period) with dimnames, as
+#'   [mt_array()] returns. Ages, years and strata are matched by their
+#'   labels. Default: the exposures of the last training year.
 #' @param noise Add Poisson noise.
 #' @param seed Random seed.
 #' @return An array `[age, period, stratum, draw]` of deaths.
@@ -111,17 +114,7 @@ life_expectancy_draws <- function(x, at = NULL, probs = c(0.025, 0.1, 0.5, 0.9, 
 mt_deaths <- function(draws, exposure = NULL, noise = TRUE, seed = NULL) {
   check_class(draws, "mt_draws", "draws")
   d <- dim(draws$rates)
-  E <- exposure %||% draws$exposure_last
-  if (length(dim(E)) == 2) {
-    if (!all(dim(E) == d[c(1, 3)])) mt_abort("`exposure` must be [age, stratum] or [age, period, stratum].",
-                                             class = "argument")
-    E <- array(E, c(d[1], 1, d[3]))
-  }
-  if (length(dim(E)) != 3 || dim(E)[1] != d[1] || dim(E)[3] != d[3]) {
-    mt_abort("`exposure` does not match the draws.", class = "argument")
-  }
-  if (dim(E)[2] == 1) E <- E[, rep(1, d[2]), , drop = FALSE]
-  if (dim(E)[2] != d[2]) mt_abort("`exposure` does not match the forecast periods.", class = "argument")
+  E <- expand_exposure(exposure %||% draws$exposure_last, d, dimnames(draws$rates))
   mu <- draws$rates * as.vector(E)
   if (!noise) return(mu)
   with_seed(seed, array(stats::rpois(length(mu), mu), dim(mu), dimnames(mu)))

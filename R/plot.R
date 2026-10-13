@@ -4,9 +4,14 @@
 #' installed) and never print or write files.
 #'
 #' * `mt_plot_forecast()`: observed rates and forecast fan (median and
-#'   central intervals) over time for selected ages, log scale;
+#'   central intervals) over time for selected ages, log scale. The points
+#'   are the training data after preprocessing (for example with
+#'   interpolated shock years or smoothed rates); give the original data as
+#'   `data` to show the rates as published;
 #' * `mt_plot_age()`: age profiles of the forecast for selected years;
-#' * `mt_plot_life_expectancy()`: life expectancy forecast fan;
+#' * `mt_plot_life_expectancy()`: life expectancy forecast fan with the
+#'   observed history (from `data` if given, otherwise from the training
+#'   data), optionally one panel per level of a stratum variable (`facet`);
 #' * `mt_plot_rates()`: Lexis surface (age by period) of observed log rates;
 #' * `mt_plot_ungroup()`: grouped rates as steps and ungrouped single-year
 #'   rates for one period;
@@ -19,7 +24,10 @@
 #' @param levels Central interval levels for the fans.
 #' @param periods Forecast years (default: first and last).
 #' @param at Age for life expectancy.
-#' @param data An [mt_data] object.
+#' @param data An [mt_data] object (for the forecast plots: the original
+#'   data, whose observed rates are shown).
+#' @param facet Stratum variable whose levels get one panel each (for
+#'   example `"sex"`), or `NULL`.
 #' @param ungrouped The [mt_ungroup()] result for `data`.
 #' @param period Year shown.
 #' @param backtest An [mt_backtest()] result.
@@ -37,15 +45,20 @@ need_ggplot <- function() need_pkg("ggplot2", "for plots")
 
 #' @rdname mt_plot
 #' @export
-mt_plot_forecast <- function(draws, ages = NULL, strata = NULL, levels = c(0.8, 0.95)) {
+mt_plot_forecast <- function(draws, ages = NULL, strata = NULL, levels = c(0.8, 0.95), data = NULL) {
   need_ggplot()
   check_class(draws, "mt_draws", "draws")
   ages <- ages %||% draws$age$labels[unique(round(seq(1, length(draws$age), length.out = 4)))]
-  strata <- strata %||% draws$strata$label
+  bad <- setdiff(ages, draws$age$labels)
+  if (length(bad)) {
+    mt_abort(sprintf("Unknown age label(s): %s. Available: %s.", paste(bad, collapse = ", "),
+                     paste(draws$age$labels, collapse = ", ")), class = "argument")
+  }
+  strata <- check_strata_labels(strata %||% draws$strata$label, draws$strata$label)
   probs <- sort(c((1 - levels) / 2, 0.5, 1 - (1 - levels) / 2))
   s <- mt_summarise(draws, probs)
   s <- s[age %in% ages & label %in% strata]
-  obs <- observed_long(draws)[age %in% ages & label %in% strata]
+  obs <- observed_long(draws, data)[age %in% ages & label %in% strata]
   qn <- function(p) qnames(p)
   p <- ggplot2::ggplot(s, ggplot2::aes(x = period))
   for (lv in sort(levels, decreasing = TRUE)) {
@@ -61,12 +74,31 @@ mt_plot_forecast <- function(draws, ages = NULL, strata = NULL, levels = c(0.8, 
                   subtitle = sprintf("Median and %s intervals", paste0(levels * 100, "%", collapse = ", ")))
 }
 
-observed_long <- function(draws) {
-  o <- draws$observed
+observed_long <- function(draws, data = NULL) {
+  o <- observed_rates(draws, data)
   if (is.null(o)) return(data.table(label = character(), age = character(), period = numeric(), rate = numeric()))
   d <- dim(o)
-  data.table(label = rep(draws$strata$label, each = d[1] * d[2]), age = rep(draws$age$labels, d[2] * d[3]),
-             period = rep(rep(draws$observed_periods, each = d[1]), d[3]), rate = as.vector(o))
+  data.table(label = rep(dimnames(o)[[3]], each = d[1] * d[2]), age = rep(dimnames(o)[[1]], d[2] * d[3]),
+             period = rep(rep(as.numeric(dimnames(o)[[2]]), each = d[1]), d[3]), rate = as.vector(o))
+}
+
+# Observed rates [age, period, stratum] on the grid of the draws: from the
+# original data if given, otherwise the training data of the fit
+observed_rates <- function(draws, data = NULL) {
+  if (is.null(data)) {
+    o <- draws$observed
+    if (is.null(o)) return(NULL)
+    dimnames(o) <- list(draws$age$labels, as.character(draws$observed_periods), draws$strata$label)
+    return(o)
+  }
+  check_class(data, "mt_data", "data")
+  y <- tryCatch(mt_set_grid(data, age = draws$age), error = function(e) {
+    mt_abort("`data` must have the age groups of the forecast (or finer groups that add up to them).",
+             class = "argument")
+  })
+  y <- mt_regroup(y, age = draws$age)
+  o <- mt_array(y, "deaths") / mt_array(y, "exposure")
+  o[, , intersect(dimnames(o)[[3]], draws$strata$label), drop = FALSE]
 }
 
 #' @rdname mt_plot
@@ -89,19 +121,37 @@ mt_plot_age <- function(draws, periods = NULL, strata = NULL, levels = 0.95) {
 
 #' @rdname mt_plot
 #' @export
-mt_plot_life_expectancy <- function(draws, at = NULL, levels = c(0.8, 0.95)) {
+mt_plot_life_expectancy <- function(draws, at = NULL, levels = c(0.8, 0.95), strata = NULL, facet = NULL,
+                                    data = NULL) {
   need_ggplot()
+  check_class(draws, "mt_draws", "draws")
+  strata <- check_strata_labels(strata %||% draws$strata$label, draws$strata$label)
   probs <- sort(c((1 - levels) / 2, 0.5, 1 - (1 - levels) / 2))
-  e <- life_expectancy(draws, at = at, probs = probs)
+  e <- life_expectancy(draws, at = at, probs = probs)[label %in% strata]
+  o <- observed_rates(draws, data)
+  hist <- NULL
+  if (!is.null(o)) {
+    eo <- life_expectancy(o, draws$age, at = at)
+    hist <- data.table(label = rep(colnames(eo), each = nrow(eo)), period = rep(as.numeric(rownames(eo)), ncol(eo)),
+                       value = as.vector(eo))[label %in% strata]
+  }
+  if (!is.null(facet)) {
+    if (!facet %in% names(draws$strata)) mt_abort("`facet` must be a stratum variable.", class = "argument")
+    map <- stats::setNames(draws$strata[[facet]], draws$strata$label)
+    e[, panel := map[label]]
+    if (!is.null(hist)) hist[, panel := map[label]]
+  }
   qn <- function(p) qnames(p)
   p <- ggplot2::ggplot(e, ggplot2::aes(x = period))
   for (lv in sort(levels, decreasing = TRUE)) {
     p <- p + ggplot2::geom_ribbon(ggplot2::aes(ymin = .data[[qn((1 - lv) / 2)]], ymax = .data[[qn(1 - (1 - lv) / 2)]],
                                                fill = label), alpha = 0.25)
   }
-  p + ggplot2::geom_line(ggplot2::aes(y = q0.5, colour = label)) +
-    ggplot2::labs(x = NULL, y = sprintf("Life expectancy at age %s", e$at[1]), colour = NULL, fill = NULL,
-                  title = draws$model)
+  p <- p + ggplot2::geom_line(ggplot2::aes(y = q0.5, colour = label))
+  if (!is.null(hist)) p <- p + ggplot2::geom_line(data = hist, ggplot2::aes(y = value, colour = label))
+  if (!is.null(facet)) p <- p + ggplot2::facet_wrap(~panel)
+  p + ggplot2::labs(x = NULL, y = sprintf("Life expectancy at age %s", e$at[1]), colour = NULL, fill = NULL,
+                    title = draws$model)
 }
 
 #' @rdname mt_plot
@@ -181,8 +231,10 @@ mt_plot_coverage <- function(backtest) {
 #'
 #' @param fit A fitted [tucker3()] model.
 #' @param draws An [mt_draws] object whose strata include `var`.
-#' @param var Stratum variable with the causes.
-#' @param total_level Level of `var` for all causes (left out of the shares).
+#' @param var Stratum variable with the causes (default: the variable with
+#'   shared exposures in the hierarchy of a reconciled forecast).
+#' @param total_level Level of `var` for all causes (left out of the shares;
+#'   default: its total in the hierarchy).
 #' @param ages Age labels summed over (default all).
 #' @param groups Panels to show: combinations of the other stratum variables
 #'   joined by "." (for example `"female.Q1"`; default all).
@@ -229,10 +281,24 @@ mt_plot_tucker <- function(fit) {
 
 #' @rdname mt_plot_more
 #' @export
-mt_plot_shares <- function(draws, var = "cause", total_level = "all", ages = NULL, groups = NULL, causes = NULL) {
+mt_plot_shares <- function(draws, var = NULL, total_level = NULL, ages = NULL, groups = NULL, causes = NULL) {
   need_ggplot()
   check_class(draws, "mt_draws", "draws")
   st <- draws$strata
+  if ((is.null(var) || is.null(total_level)) && inherits(draws$spec, "mt_spec_cause_shares")) {
+    var <- var %||% draws$spec$params$var
+    total_level <- total_level %||% draws$spec$params$total_level
+  }
+  if (is.null(var) || is.null(total_level)) {
+    h <- draws$hierarchy
+    shared <- if (!is.null(h)) names(h$vars)[vapply(h$vars, function(v) identical(v$additive, "rates"), logical(1))]
+    if (!length(shared)) {
+      mt_abort(paste("Give `var` and `total_level` (for example var = \"cause\", total_level = \"all\"), or",
+                     "plot a forecast of reconciled() with causes in its hierarchy."), class = "argument")
+    }
+    var <- var %||% shared[1]
+    total_level <- total_level %||% h$vars[[var]]$total
+  }
   if (!var %in% names(st)) mt_abort(sprintf("The strata have no variable `%s`.", var), class = "argument")
   ai <- if (is.null(ages)) seq_along(draws$age) else match(ages, draws$age$labels)
   parts <- which(st[[var]] != total_level)

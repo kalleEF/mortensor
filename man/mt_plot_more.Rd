@@ -11,8 +11,8 @@ mt_plot_tucker(fit)
 
 mt_plot_shares(
   draws,
-  var = "cause",
-  total_level = "all",
+  var = NULL,
+  total_level = NULL,
   ages = NULL,
   groups = NULL,
   causes = NULL
@@ -25,9 +25,11 @@ mt_plot_scores(backtest, metric = "crps", by = c("horizon", "age"))
 
 \item{draws}{An \link{mt_draws} object whose strata include \code{var}.}
 
-\item{var}{Stratum variable with the causes.}
+\item{var}{Stratum variable with the causes (default: the variable with
+shared exposures in the hierarchy of a reconciled forecast).}
 
-\item{total_level}{Level of \code{var} for all causes (left out of the shares).}
+\item{total_level}{Level of \code{var} for all causes (left out of the shares;
+default: its total in the hierarchy).}
 
 \item{ages}{Age labels summed over (default all).}
 

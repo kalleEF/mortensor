@@ -4,44 +4,45 @@
 \alias{mt_read_genesis}
 \title{Read deaths and populations from GENESIS (Destatis) flat files}
 \usage{
-mt_read_genesis(deaths, population, causes = FALSE, years = NULL)
+mt_read_genesis(deaths, population = NULL, years = NULL)
 }
 \arguments{
 \item{deaths}{Path of a flat CSV file with deaths, or a data frame read
 from one.}
 
-\item{population}{Path or data frame with populations on 31 December.}
+\item{population}{Path or data frame with populations, or \code{NULL}.}
 
-\item{causes}{\code{FALSE} (all causes only) or \code{TRUE} (all causes as level
-\code{"all"}, the listed causes, and \code{"rest"}, all causes minus the listed
-ones) when the deaths table has a cause variable.}
-
-\item{years}{Optional subset of years.}
+\item{years}{Optional subset of years of the deaths (populations of the
+year before are kept for exposures from 31 December populations).}
 }
 \value{
-An \link{mt_data} object; the grid has the age groups of the deaths.
-With \code{causes = TRUE}, the levels of \code{cause} are the GENESIS codes (for
-example \code{"TDU-021"}), and attribute \code{"cause_labels"} holds their labels.
+An \link{mt_data} object with deaths and populations.
 }
 \description{
 Reads tables of the German Federal Statistical Office in the "flat" CSV
 format of GENESIS-Online and the regional database (columns \code{time},
 \verb{1_variable_code}, \verb{1_variable_attribute_label}, ..., \code{value}): deaths
-(for example table 23211-0002) and population on 31 December (for example
-table 12411-0013).
+(for example table 23211-0002) and populations (for example table
+12411-0013, on 31 December).
 }
 \details{
 Variables are recognised by their codes: \code{GES} (sex), codes starting with
 \code{ALT} (age, German labels such as \code{"unter 1 Jahr"}, \code{"15 bis unter 20 Jahre"}, \code{"85 Jahre und mehr"}, \code{"68-Jaehrige"} with umlaut), \code{DLAND},
 \code{KREISE} or \code{REGBEZ} (region), codes starting with \code{TODUR} (cause of
-death), and \code{DINSG} (Germany as a whole, dropped). Other variables are
-kept as stratum variables named by their code. Values \code{"-"} (nothing) are
-zero; \code{"."}, \code{"..."}, \code{"x"} and \code{"/"} are missing.
+death; the total "Insgesamt" becomes level \code{"all"}, the other levels are
+the GENESIS codes, their labels are in attribute \code{"cause_labels"}), and
+\code{DINSG} (Germany as a whole, dropped). Other variables are kept as
+stratum variables named by their code. Values \code{"-"} (nothing) are zero;
+\code{"."}, \code{"..."}, \code{"x"} and \code{"/"} are missing. Stratum variables that only
+the population table has (for example regions, when the deaths are
+national) are summed out of the populations.
 
-Exposures for year t are the mean of the populations on 31 December of
-years t - 1 and t. Stratum variables that only the population table has
-(for example regions, when the deaths are national) are summed out; those
-that only the deaths table has (causes) share the exposure.
+The reader makes no analysis decisions: populations stay populations, and
+the periods are those of the source (the year of the reference date).
+The next steps are usually \code{\link[=mt_as_exposure]{mt_as_exposure()}} with \code{type = "dec31"},
+\code{\link[=mt_regroup]{mt_regroup()}} with \code{age = "deaths"} (single-year populations to the age
+groups of the deaths), \code{\link[=mt_fill_suppressed]{mt_fill_suppressed()}} and \code{\link[=mt_group_levels]{mt_group_levels()}}
+(cause groups, with \code{total = "all"} for a residual group).
 }
 \examples{
 d <- data.frame(time = 2020, `1_variable_code` = "GES", `1_variable_attribute_label` = "weiblich",
@@ -52,5 +53,6 @@ p <- data.frame(time = c("2019-12-31", "2020-12-31"), `1_variable_code` = "GES",
                 `2_variable_attribute_label` = "85 Jahre und mehr", value = c(900, 950),
                 check.names = FALSE)
 x <- mt_read_genesis(d, p)
+x <- mt_as_exposure(x, type = "dec31")
 mt_obs(x, "exposure")
 }

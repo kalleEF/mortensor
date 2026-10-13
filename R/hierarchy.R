@@ -25,7 +25,7 @@
 #'   `"rates"`.
 #' @return An object of class `mt_hierarchy`.
 #' @seealso [mt_aggregate_strata()], [mt_validate()], [mt_reconcile()],
-#'   [mt_reconciled()].
+#'   [reconciled()].
 #' @examples
 #' h <- mt_hierarchy(sex = "both", region = list(total = "DE", groups = list(East = c("BE", "SN"))),
 #'                   quintile = "all")
@@ -339,7 +339,7 @@ reconcile_array <- function(arr, hs, additive, method, shrink, exposure, d) {
   is_agg <- !hs$is_bottom
   agg_rows <- which(is_agg)
   nb <- length(b)
-  E <- expand_exposure(exposure, d)
+  E <- expand_exposure(exposure, d, dimnames(arr))
   if (additive == "deaths") {
     Sx <- hs$Sx %||% S
     for (t in seq_len(d[2])) E[, t, ] <- matrix(E[, t, b], d[1]) %*% t(Sx)
@@ -432,9 +432,53 @@ copula_reorder <- function(arr, D, E) {
   list(arr = out, years = tau)
 }
 
-expand_exposure <- function(exposure, d) {
+# Exposures [age, period, stratum] for the forecast: from an mt_data object
+# or an array, matched to the forecast by the names of ages, periods and
+# strata (dn: dimnames of the forecast rates); a single period is used for
+# every forecast period
+expand_exposure <- function(exposure, d, dn = NULL) {
   E <- exposure
-  if (length(dim(E)) == 2) E <- array(E, c(d[1], 1, d[3]))
+  if (inherits(E, "mt_data")) {
+    if (is.null(E$obs$exposure)) {
+      mt_abort("The `exposure` data have no exposures; convert populations with mt_as_exposure().",
+               class = "argument")
+    }
+    E <- mt_array(E, "exposure")
+  }
+  if (is.data.frame(E)) {
+    mt_abort(paste("Give `exposure` as an mt_data object (for example mt_as_exposure(mt_data(population = df,",
+                   "by = ...))) or as an array from mt_array()."), class = "argument")
+  }
+  if (length(dim(E)) == 2) {
+    E <- array(E, c(dim(E)[1], 1, dim(E)[2]), dimnames = if (!is.null(dimnames(E))) {
+      list(dimnames(E)[[1]], NULL, dimnames(E)[[2]])
+    })
+  }
+  if (length(dim(E)) != 3) mt_abort("`exposure` must be [age, stratum] or [age, period, stratum].", class = "argument")
+  en <- dimnames(E)
+  if (!is.null(dn) && !is.null(en) && !is.null(en[[1]]) && !is.null(en[[3]])) {
+    ia <- match(dn[[1]], en[[1]])
+    is <- match(dn[[3]], en[[3]])
+    if (anyNA(ia) || anyNA(is)) {
+      miss <- c(dn[[1]][is.na(ia)], dn[[3]][is.na(is)])
+      mt_abort(sprintf("`exposure` lacks ages or strata of the forecast: %s.", paste(utils::head(miss, 6),
+                                                                                       collapse = ", ")),
+               class = "argument")
+    }
+    ip <- if (dim(E)[2] == 1) rep(1L, d[2]) else match(dn[[2]], en[[2]])
+    if (anyNA(ip)) {
+      mt_abort(sprintf("`exposure` lacks forecast years: %s.", paste(utils::head(dn[[2]][is.na(ip)], 6),
+                                                                    collapse = ", ")), class = "argument")
+    }
+    E <- E[ia, ip, is, drop = FALSE]
+    dimnames(E) <- dn[1:3]
+    return(E)
+  }
+  if (is.null(en) && !is.null(dn)) {
+    mt_warn(paste("The `exposure` array has no dimnames and is matched to the forecast by position; name its",
+                  "dimensions (age, period and stratum labels, as mt_array() returns) to match by name."),
+            class = "exposure_order")
+  }
   if (dim(E)[2] == 1) E <- E[, rep(1, d[2]), , drop = FALSE]
   if (!all(dim(E) == d[1:3])) mt_abort("`exposure` does not match the draws.", class = "argument")
   E
@@ -491,10 +535,10 @@ shrink_cov <- function(X, shrink = "auto") {
 #' @examples
 #' x <- mt_example_regions(years = 2000:2019, regions = 3)
 #' h <- mt_hierarchy(sex = "both", region = "all", quintile = "all")
-#' fit <- mt_fit(mt_reconciled(lee_carter(), h, method = "wls"), mt_aggregate_strata(x, h))
+#' fit <- mt_fit(reconciled(lee_carter(), h, method = "wls"), mt_aggregate_strata(x, h))
 #' fc <- mt_forecast(fit, h = 5, n_draws = 50, seed = 1)
 #' @export
-mt_reconciled <- function(spec, hierarchy, method = c("wls", "mint", "structural", "ols", "bottom_up"),
+reconciled <- function(spec, hierarchy, method = c("wls", "mint", "structural", "ols", "bottom_up"),
                           shrink = "auto", dependence = c("auto", "empirical", "none")) {
   check_class(spec, "mt_spec", "spec")
   method <- match.arg(method)
@@ -527,9 +571,9 @@ mt_forecast.mt_fit_reconciled <- function(fit, h = 10, to = NULL, n_draws = 500,
   base_fit$spec <- fit$spec$params$base
   rc <- fit$reconcile
   out <- with_seed(seed, {
-    fc <- mt_forecast(base_fit, h = h, to = to, n_draws = n_draws)
+    fc <- mt_forecast(base_fit, h = if (is.null(to)) h else to - max(fit$periods), n_draws = n_draws)
     d <- dim(fc$rates)
-    E <- expand_exposure(exposure %||% fit$exposure_last, d)
+    E <- expand_exposure(exposure %||% fit$exposure_last, d, dimnames(fc$rates))
     arr <- fc$rates
     tau <- NULL
     if (identical(rc$dependence, "empirical")) {
@@ -572,6 +616,7 @@ mt_forecast.mt_fit_reconciled <- function(fit, h = 10, to = NULL, n_draws = 500,
   res$model <- fit$spec$label
   res$predictive <- predictive
   res$reconciliation <- out$info
+  res$hierarchy <- rc$hierarchy
   res
 }
 
@@ -598,7 +643,7 @@ mt_forecast.mt_fit_reconciled <- function(fit, h = 10, to = NULL, n_draws = 500,
 mt_aggregate_draws <- function(draws, hierarchy = NULL, age = NULL, exposure = NULL) {
   check_class(draws, "mt_draws", "draws")
   d <- dim(draws$rates)
-  E <- expand_exposure(exposure %||% draws$exposure_last, d)
+  E <- expand_exposure(exposure %||% draws$exposure_last, d, dimnames(draws$rates))
   st <- draws$strata
   X <- draws$rates * as.vector(E)
   if (!is.null(hierarchy)) {

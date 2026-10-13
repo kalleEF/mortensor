@@ -51,7 +51,7 @@ test_that("expected deaths use future exposures", {
   expect_equal(mu[, 1, , 1], fc$rates[, 1, , 1] * fc$exposure_last[, 1, ])
   E2 <- fc$exposure_last[, 1, ] * 2
   expect_equal(mt_deaths(fc, exposure = E2, noise = FALSE), 2 * mu)
-  expect_error(mt_deaths(fc, exposure = matrix(1, 3, 2)), class = "mt_error_argument")
+  expect_error(suppressWarnings(mt_deaths(fc, exposure = matrix(1, 3, 2))), class = "mt_error_argument")
 })
 
 test_that("HMD tables are converted", {

@@ -203,6 +203,21 @@ apc_shape <- function(md, group_axis, years) {
   list(r = r, group = group)
 }
 
+# Gelman-Rubin potential scale reduction factors (R-hat, point estimates) of
+# the identified quantities, as reported by bamp::checkConvergence()
+apc_psrf <- function(m) {
+  out <- tryCatch(utils::capture.output(bamp::checkConvergence(m, info = TRUE, level = 1)),
+                  error = function(e) character())
+  i <- grep("Identified quantities", out)
+  j <- grep("Raw per-effect", out)
+  if (!length(i)) return(NULL)
+  lines <- out[(i + 1):(if (length(j)) j - 1 else length(out))]
+  m <- regmatches(lines, regexec("^\\s+(\\S+)\\s+([0-9.]+)", lines))
+  m <- m[lengths(m) == 3]
+  if (!length(m)) return(NULL)
+  stats::setNames(as.numeric(vapply(m, `[`, "", 3)), vapply(m, `[`, "", 2))
+}
+
 apc_fit_one <- function(spec, D, E, ppa) {
   p <- spec$params
   cases <- round(t(D))
@@ -228,7 +243,7 @@ apc_fit_one <- function(spec, D, E, ppa) {
   }
   p0 <- bamp::predict_apc(m, periods = 0)
   fitted_groups <- t(apply(p0$samples$pr, c(1, 2), mean))
-  list(model = m, fitted_groups = fitted_groups, rounding = rounding,
+  list(model = m, fitted_groups = fitted_groups, rounding = rounding, psrf = apc_psrf(m),
        message = paste(c(msg, if (rounding > 0.001) sprintf("exposures rounded (max change %.2g)", rounding)),
                        collapse = "; "))
 }
@@ -248,16 +263,8 @@ simulate_model.mt_spec_apc_bayes <- function(spec, fit, h, n_draws, ...) {
   out
 }
 
-#' Age, period and cohort effects of a bamp fit
-#'
-#' Posterior medians and 90% intervals of the effects on the logit scale, as
-#' returned by bamp (identification follows bamp's convention, stated in the
-#' `convention` column).
-#'
-#' @param fit An `mt_fit` from [apc_bayes()].
-#' @return A `data.table` with `stratum`, `effect`, `index`, `q0.05`, `q0.5`,
-#'   `q0.95`, `convention`.
-#' @export
+# Age, period and cohort effects of a bamp fit: posterior medians and 90%
+# intervals on the logit scale (bamp's identification); see mt_parameters()
 apc_effects <- function(fit) {
   check_class(fit, "mt_fit", "fit")
   if (!inherits(fit$spec, "mt_spec_apc_bayes")) mt_abort("Not an apc_bayes() fit.", class = "argument")
@@ -281,7 +288,7 @@ apc_effects <- function(fit) {
 #' random walks for age, period and cohort (and, optionally, with and
 #' without overdispersion) and ranks the variants by the deviance
 #' information criterion (Spiegelhalter et al. 2002) that bamp reports,
-#' summed over strata. This is the prior selection of mortensor 0.1. DIC
+#' summed over strata. DIC
 #' measures in-sample fit; to choose by forecast accuracy, compare the
 #' candidates with [mt_backtest()] instead. Selection on all data followed by
 #' a backtest of the selected model reuses the test years once.

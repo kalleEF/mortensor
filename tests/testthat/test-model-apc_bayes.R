@@ -37,8 +37,11 @@ test_that("apc_bayes fits, converges and forecasts through the common interface"
   truth <- attr(x, "truth")[, "2016", 1]
   med <- apply(fc$rates[, 1, 1, ], 1, median)
   expect_lt(median(abs(log(med / truth))), 0.15)
-  e <- apc_effects(fit)
-  expect_setequal(unique(e$effect), c("age", "period", "cohort"))
+  e <- mt_parameters(fit)
+  expect_setequal(unique(e$parameter), c("age", "period", "cohort", "rhat"))
+  eff <- e[parameter != "rhat"]
+  expect_true(all(eff$lower <= eff$value & eff$value <= eff$upper))
+  expect_true(all(e[parameter == "rhat"]$value < 1.1))
 })
 
 test_that("apc_select ranks random-walk orders by DIC", {

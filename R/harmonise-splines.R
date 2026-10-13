@@ -161,7 +161,7 @@ gam_disaggregate <- function(Ds, Es, g, omega) {
 #'
 #' Maps draws of age groups to finer ages (for example single years), path
 #' by path, when a model was forecast at the resolution of the observed
-#' deaths. The mortensor 0.1 approach:
+#' deaths. Two approaches:
 #'
 #' * `"shape"`: age-specific factors relative to the group rate, estimated
 #'   from fine-resolution rates (`shape_rates`, for example ungrouped training

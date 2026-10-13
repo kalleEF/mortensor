@@ -41,12 +41,12 @@ objects (`as_mt_data()`).
 
 ### I have populations on 31 December, not exposures. What now?
 
-Add them with `mt_add_population()` and convert them with
-`mt_as_exposure()`: `type = "jan1"` takes the mean of the populations at
-the start of two consecutive years (a population on 31 December is the
-population on 1 January of the next year), `type = "midyear"` uses
-mid-year populations as they are. Exposures are the denominator of the
-rates, so this step matters for the level of every forecast.
+Read them as `population` and convert them with `mt_as_exposure()`, whose
+`type` says what the counts are: `"dec31"` for populations on 31 December
+(the exposure of year t is the mean of the populations on 31 December of
+t - 1 and t), `"jan1"` for populations on 1 January, `"midyear"` for
+mid-year estimates. Exposures are the denominator of the rates, so this
+choice matters for the level of every forecast.
 
 ### What does `mt_validate()` check?
 
@@ -92,17 +92,23 @@ exposures carry the age pattern).
 
 ### Which model should I use?
 
-There is no single best model. Rolling-origin backtests on your own data
-(`mt_backtest()`) are the way to choose, ideally with horizons like the
-ones you will report. In the vignettes:
+There is no single best model; a rolling-origin backtest on your own data
+(`mt_backtest()`, horizons like the ones you will report) decides. As a
+starting point:
 
-* Lee-Carter and Li-Lee were the most accurate on the ONS deprivation data
-  over 5 years; Li-Lee keeps the strata from diverging.
-* The random walk with drift is a strong benchmark on noisy or short series.
-* Ensembles of Lee-Carter and the random walk had the best calibrated 95%
-  intervals on real data.
-* Bayesian age-period-cohort models (`apc_bayes()`) suit data with cohort
-  effects and small counts.
+| Situation | Try first | Why |
+|---|---|---|
+| One population, many deaths per cell, single years or 5-year groups | `lee_carter()`, `rwd()` and `ensemble(lc = lee_carter(), rw = rwd())` | Lee-Carter is the standard; single models give too narrow intervals on real data, the ensemble is better calibrated |
+| Several strata that should not diverge (sexes, regions, deprivation groups) | `li_lee(common_by = ...)` | a common trend with bounded deviations; pools information across strata |
+| Small populations, many cells with few deaths | `li_lee(common_by = ...)`, wider age groups (`mt_regroup()`), `step_smooth()`; `rwd(observation_noise = TRUE)` in ensembles | pooling and smoothing reduce noise; the plain random walk accumulates it |
+| Totals and parts must add up | `reconciled(model, hierarchy)` | bottom-up for joint models, WLS for separate models |
+| Causes of death | separate or Li-Lee models per cause, `reconciled(..., method = "bottom_up")` with `cause = list(total = "all", additive = "rates")` | cause rates add up to the all-cause rate |
+| Cohort effects (for example generations born around 1925-1945) | `apc_bayes()`, `stmomo("apc")` | age-period models attribute cohort patterns to period trends |
+| Trend change in the recent past | `step_window(years)` with a backtest of several windows | a shorter fitting period follows the recent trend |
+
+Check every fit with `summary(fit)`, `mt_parameters(fit)` and
+`mt_plot_residuals(fit)`, and every forecast for warnings about
+implausible rates.
 
 ### Why are my 95% intervals too narrow (or too wide)?
 
@@ -115,7 +121,7 @@ because year-to-year changes of observed rates contain observation noise
 twice; that extra width happened to give good 95% coverage on real data.
 `rwd(observation_noise = TRUE)` removes the double counting and is sharper
 (lower CRPS), with intervals that were too narrow on real data. Mixtures of
-models (`mt_ensemble()`) widen the intervals where the models disagree.
+models (`ensemble()`) widen the intervals where the models disagree.
 Check calibration with `mt_backtest()` and `mt_plot_coverage()`.
 
 ### What is the difference between predictive draws and forecast rates?
@@ -131,14 +137,36 @@ of the underlying mortality, use the default draws.
 
 Models that take logs of observed rates (the random walk, the SVD
 version of Lee-Carter, Li-Lee) replace zero deaths by 0.5, which is
-harmless for a few cells and distorting for many; the Poisson Lee-Carter
-handles zeros directly. With many small cells:
+harmless for a few cells and distorting for many. The Poisson Lee-Carter
+gives age groups without any death a constant rate and shrinks the age
+pattern of change where the counts are too sparse, with a warning. With
+many small cells:
 
-* model at a coarser resolution (age groups instead of single years);
+* model at a coarser resolution (age groups instead of single years, or
+  wider groups at young ages, `mt_regroup()`);
 * pool information across strata, for example `li_lee(common_by = "sex")`
   for regions or deprivation groups, or `apc_bayes()` with its smoothing
   priors;
-* combine rare causes of death into larger groups (see `ons_cause_groups`).
+* smooth before fitting with `step_smooth()` (age 0 is left out by
+  default);
+* use `rwd(observation_noise = TRUE)` instead of `rwd()`, alone or in an
+  ensemble: the plain random walk treats the Poisson noise of observed
+  rates as real change, and its paths over 10 or more years can reach
+  impossible rates;
+* combine rare causes of death into larger groups (see `ons_cause_groups`
+  and `mt_group_levels()`).
+
+`mt_forecast()` warns when forecast death rates exceed 1, the clearest sign
+that a model is unstable for the data.
+
+### Which function aggregates what?
+
+| Function | Combines | Example |
+|---|---|---|
+| `mt_regroup()` | ages or periods | single years to 5-year groups, or to the groups of another table |
+| `mt_group_levels()` | levels of one stratum variable, replacing them | deciles to quintiles, causes to cause groups |
+| `mt_aggregate_strata()` | strata along a hierarchy, adding totals and groups as new strata | regions to East, West and Germany, sexes to both sexes |
+| `mt_aggregate_draws()` | forecast draws along a hierarchy or to wider age groups | forecasts for Germany from forecasts by Land |
 
 ### How should I treat the COVID-19 years?
 
@@ -158,7 +186,7 @@ model does not test.
 ### How do I get forecasts that add up over regions, sexes or causes?
 
 Describe the structure with `mt_hierarchy()` and either model the bottom
-strata and sum them (`mt_reconciled(..., method = "bottom_up")`), or model
+strata and sum them (`reconciled(..., method = "bottom_up")`), or model
 every node and reconcile the draws (`method = "wls"`, `"mint"`, ...).
 Totals that are not in the data are added by `mt_aggregate_strata()`.
 Reconciliation of deaths uses exposures of the forecast years; supply
@@ -195,4 +223,5 @@ age groups, 14 years).
 
 The `validation/` directory of the source repository runs benchmarks with
 thresholds on every change (ungrouping accuracy, interval calibration,
-coherence); `dev/calibration.md` documents the interval calibration study.
+coherence). The vignette "Comparison with demography, bamp and StMoMo"
+reports accuracy and interval coverage of the models on four data sets.

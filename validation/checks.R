@@ -66,8 +66,8 @@ checks$coverage_tucker3_coda <- list(
 
 checks$coverage_ensemble <- list(
   suite = "full",
-  description = "As coverage_lee_carter for mt_ensemble(lee_carter(), tucker3(), rwd()).",
-  run = function() coverage_check(mt_ensemble(lee_carter(), tucker3(), rwd()), 10))
+  description = "As coverage_lee_carter for ensemble(lee_carter(), tucker3(), rwd()).",
+  run = function() coverage_check(ensemble(lee_carter(), tucker3(), rwd()), 10))
 
 checks$backtest_ew <- list(
   suite = "quick",
@@ -121,7 +121,7 @@ checks$cause_shares_coherence <- list(
   run = function() {
     x <- mt_example_causes(years = 1995:2017)
     prep <- mt_prep(step_smooth())
-    fit <- mt_fit(cause_shares(total = lee_carter()), mt_window(x, to = 2012), prep = prep)
+    fit <- mt_fit(cause_shares(total = lee_carter()), mt_subset(x, periods = c(NA, 2012)), prep = prep)
     fc <- mt_forecast(fit, h = 5, n_draws = 100, seed = 1)
     st <- fc$strata
     gap <- max(vapply(c("female", "male"), function(sx) {
@@ -150,9 +150,9 @@ checks$regions_coherence <- list(
       b[, lev := lev[stratum]]
       b[, list(crps = mean(crps), cov95 = mean(cov95)), by = lev]
     }
-    a <- score(mt_reconciled(li_lee(common_by = "sex"), h, method = "bottom_up"))
-    w <- score(mt_reconciled(lee_carter(), h, method = "wls"))
-    fc <- mt_forecast(mt_fit(mt_reconciled(lee_carter(), h, method = "wls"), xa), h = 3, n_draws = 50, seed = 1)
+    a <- score(reconciled(li_lee(common_by = "sex"), h, method = "bottom_up"))
+    w <- score(reconciled(lee_carter(), h, method = "wls"))
+    fc <- mt_forecast(mt_fit(reconciled(lee_carter(), h, method = "wls"), xa), h = 3, n_draws = 50, seed = 1)
     E <- mortensor:::expand_exposure(fc$exposure_last, dim(fc$rates))
     D <- fc$rates * as.vector(E)
     gap <- max(vapply(seq_len(dim(D)[4]), function(j) {
@@ -172,7 +172,7 @@ ons_quintiles <- function(causes = FALSE) {
                by = c("sex", "imd_decile", if (causes) "cause"), age = "age_group",
                value = list(deaths = if (causes) c(all = "all_causes", cols) else "all_causes",
                             population = "population"))
-  x <- mt_as_exposure(x)
+  x <- mt_as_exposure(x, type = "midyear")
   x <- mt_group_levels(x, "imd_decile", function(d) paste0("Q", ceiling(as.numeric(d) / 2)), name = "quintile")
   if (!causes) return(x)
   x <- mt_subset(x, ages = c(50, Inf))
@@ -188,10 +188,10 @@ checks$ons_deprivation <- list(
   run = function() {
     x <- ons_quintiles()
     ll <- mt_backtest(li_lee(common_by = "sex"), x, origins = 2008:2014, h = 5, n_draws = 200)
-    en <- mt_backtest(mt_ensemble(lc = lee_carter(), rw = rwd()), x, origins = 2008:2014, h = 5, n_draws = 200)
+    en <- mt_backtest(ensemble(lc = lee_carter(), rw = rwd()), x, origins = 2008:2014, h = 5, n_draws = 200)
     xc <- ons_quintiles(causes = TRUE)
     h <- mt_hierarchy(cause = "all", additive = "rates")
-    sp <- mt_reconciled(lee_carter(), h, method = "bottom_up")
+    sp <- reconciled(lee_carter(), h, method = "bottom_up")
     bc <- mt_backtest(sp, xc, origins = c(2008, 2011, 2014), h = 5, n_draws = 100)
     fc <- mt_forecast(mt_fit(sp, xc), h = 5, n_draws = 50, seed = 1)
     st <- mt_strata(xc)

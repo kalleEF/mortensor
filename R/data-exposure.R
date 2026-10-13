@@ -17,16 +17,22 @@
 #' formulas. The approximation used is recorded in the provenance column.
 #'
 #' @param data An [mt_data] object with a population table.
-#' @param type `"midyear"`, `"jan1"` or `"dec31"`.
+#' @param type The kind of population counts, a required choice: `"midyear"`
+#'   (mid-year estimates, used as exposures), `"jan1"` (1 January) or
+#'   `"dec31"` (31 December); see Details.
 #' @return The `mt_data` object with an exposure table.
 #' @examples
 #' p <- data.frame(year = 2001:2003, age = 70, population = c(1000, 990, 985))
 #' x <- mt_as_exposure(mt_add_population(mt_data(), p), type = "jan1")
 #' mt_obs(x, "exposure")
 #' @export
-mt_as_exposure <- function(data, type = c("midyear", "jan1", "dec31")) {
+mt_as_exposure <- function(data, type) {
   check_class(data, "mt_data", "data")
-  type <- match.arg(type)
+  if (missing(type)) {
+    mt_abort(paste("Give the `type` of the populations: \"midyear\" (mid-year estimates), \"jan1\" (1 January)",
+                   "or \"dec31\" (31 December)."), class = "exposure")
+  }
+  type <- match.arg(type, c("midyear", "jan1", "dec31"))
   P <- data$obs$population
   if (type == "dec31" && !is.null(P)) {
     # the population on 31 December of year t is the population on 1 January of t + 1

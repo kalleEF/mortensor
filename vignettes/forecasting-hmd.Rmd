@@ -51,11 +51,11 @@ death rates.
 | `tucker3()` | Tucker3 tensor decomposition of the age x period x stratum array, fitted jointly for women and men |
 | `arima_series()`, `ets_series()` | ARIMA and exponential smoothing per age (package forecast) |
 | `apc_bayes()` | Bayesian age-period-cohort model (package bamp; see its vignette) |
-| `mt_ensemble()` | Mixture of the draws of several models |
+| `ensemble()` | Mixture of the draws of several models |
 
 ```{r}
 fit_lc <- mt_fit(lee_carter(), fr)
-head(lc_parameters(fit_lc)[parameter == "b"])
+head(mt_parameters(fit_lc)[parameter == "b"])
 fit_t3 <- mt_fit(tucker3(), fr)
 fit_t3$fits$fit_pct
 ```
@@ -96,7 +96,7 @@ weights come from an inner backtest on the last years of the training data,
 so they never use the years being forecast.
 
 ```{r}
-ens <- mt_ensemble(lc = lee_carter(jump_off = "observed"), t3 = tucker3(), rw = rwd(), weights = "crps")
+ens <- ensemble(lc = lee_carter(jump_off = "observed"), t3 = tucker3(), rw = rwd(), weights = "crps")
 bt_ens <- mt_backtest(ens, fr, origins = origins, h = 10, n_draws = 200)
 mt_score(rbind(bt, bt_ens), by = "model")[order(crps)]
 ```

@@ -16,10 +16,10 @@ tucker3(
 \arguments{
 \item{ranks}{Tucker ranks for age, period and stratum, or \code{"bic"} /
 \code{"aic"} to choose them by an information criterion on the training data
-(the rank selection of mortensor 0.1: \verb{n log(RSS / n)} plus the penalty
+(\verb{n log(RSS / n)} plus the penalty
 times the number of parameters of the factor matrices and the core;
 ranks up to 6 for age and period and up to 4 for strata). For selection
-by forecast accuracy use \code{\link[=mt_tuned]{mt_tuned()}}.}
+by forecast accuracy use \code{\link[=tuned]{tuned()}}.}
 
 \item{transform}{\code{"log"} or \code{"coda"}.}
 
@@ -29,9 +29,8 @@ by forecast accuracy use \code{\link[=mt_tuned]{mt_tuned()}}.}
 \item{residual_noise}{Add the in-sample residual variation (per age and
 stratum, normal on the transformed scale) to the draws. It represents
 structure that the low-rank model does not capture. On the calibration
-benchmark of the validation pipeline (independent period trends in 10
-strata) 95\% predictive intervals covered 0.95 on average with it and
-0.87 without it.}
+benchmark with independent period trends in 10 strata, 95\% predictive
+intervals covered 0.95 on average with it and 0.87 without it.}
 
 \item{maxit, tol}{Settings of the HOOI iterations.}
 }
@@ -50,6 +49,11 @@ correlation) or with ARIMA/ETS models per column (\code{ts = "arima"},
 \code{"ets"}, package \pkg{forecast}).
 }
 \details{
+The model is experimental: tensor decompositions have been proposed for
+mortality of several populations, but this specification has no
+published evaluation; compare it with established models such as
+\code{\link[=li_lee]{li_lee()}} in a backtest before using it.
+
 With \code{transform = "coda"}, life-table deaths (from age \code{x0}, the first
 grid age) form a composition over the age cells including the open
 interval; the open interval's death rate is forecast as an auxiliary

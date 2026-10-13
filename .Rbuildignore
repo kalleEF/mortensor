@@ -16,3 +16,4 @@
 ^\.lintr$
 ^codecov\.yml$
 ^vignettes/.*\.Rmd\.orig$
+^vignettes/articles$

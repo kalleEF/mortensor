@@ -6,6 +6,7 @@
 \alias{step_smooth}
 \alias{step_regroup}
 \alias{step_grid}
+\alias{step_window}
 \alias{step_shocks}
 \alias{mt_prep_apply}
 \title{Preprocessing pipelines}
@@ -20,6 +21,8 @@ step_regroup(age = NULL, period = NULL)
 
 step_grid(age = NULL, period = NULL)
 
+step_window(years)
+
 step_shocks(periods, action = c("interpolate", "exclude"))
 
 mt_prep_apply(prep, data)
@@ -28,6 +31,9 @@ mt_prep_apply(prep, data)
 \item{...}{Steps, applied in order.}
 
 \item{age, period}{Axes for \code{step_regroup()} and \code{step_grid()}.}
+
+\item{years}{Number of most recent training years kept by
+\code{step_window()}.}
 
 \item{periods}{Calendar years affected by a shock.}
 
@@ -54,6 +60,10 @@ Steps:
 \item \code{step_smooth(...)}: \code{\link[=mt_smooth]{mt_smooth()}};
 \item \code{step_regroup(age, period)}: \code{\link[=mt_regroup]{mt_regroup()}};
 \item \code{step_grid(age, period)}: \code{\link[=mt_set_grid]{mt_set_grid()}};
+\item \code{step_window(years)}: keeps the last \code{years} years of the training
+data, a fitting period chosen relative to the forecast origin (for
+example after a change of trend; compare windows with \code{\link[=tuned]{tuned()}} or
+\code{\link[=mt_backtest]{mt_backtest()}});
 \item \code{step_shocks(periods, action)}: periods with exceptional mortality (for
 example 2020-2022) are either replaced by log-linear interpolation of
 the rates of the neighbouring periods (\code{"interpolate"}, deaths become

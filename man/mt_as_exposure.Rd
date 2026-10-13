@@ -4,12 +4,14 @@
 \alias{mt_as_exposure}
 \title{Exposures from population counts}
 \usage{
-mt_as_exposure(data, type = c("midyear", "jan1", "dec31"))
+mt_as_exposure(data, type)
 }
 \arguments{
 \item{data}{An \link{mt_data} object with a population table.}
 
-\item{type}{\code{"midyear"}, \code{"jan1"} or \code{"dec31"}.}
+\item{type}{The kind of population counts, a required choice: \code{"midyear"}
+(mid-year estimates, used as exposures), \code{"jan1"} (1 January) or
+\code{"dec31"} (31 December); see Details.}
 }
 \value{
 The \code{mt_data} object with an exposure table.

@@ -633,18 +633,9 @@ mt_array <- function(data, measure = "deaths", coarse = c("error", "na")) {
   arr
 }
 
-#' Restrict data to a window of periods
-#'
-#' Used by backtests to give models and preprocessing steps only the training
-#' data. Cells that are not fully inside the window are dropped.
-#'
-#' @param data An [mt_data] object.
-#' @param from,to First and last calendar year to keep (inclusive).
-#' @return An `mt_data` object.
-#' @examples
-#' x <- mt_window(mt_example(), to = 2010)
-#' mt_grid(x)$period
-#' @export
+# Restrict data to a window of periods (from, to: first and last calendar
+# year, inclusive); cells not fully inside are dropped. Used by backtests and
+# by mt_subset(periods = ).
 mt_window <- function(data, from = -Inf, to = Inf) {
   check_class(data, "mt_data", "data")
   keep <- function(o) o[period_lo >= from - 1e-9 & period_hi <= to + 1 + 1e-9]

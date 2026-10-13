@@ -46,5 +46,5 @@ mt_hierarchy(region = "DE", cause = list(total = "all", additive = "rates"))
 }
 \seealso{
 \code{\link[=mt_aggregate_strata]{mt_aggregate_strata()}}, \code{\link[=mt_validate]{mt_validate()}}, \code{\link[=mt_reconcile]{mt_reconcile()}},
-\code{\link[=mt_reconciled]{mt_reconciled()}}.
+\code{\link[=reconciled]{reconciled()}}.
 }
