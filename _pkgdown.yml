@@ -150,18 +150,27 @@ articles:
       - mortensor
       - own-data
       - articles/function-map
+  - title: Concepts, one at a time
+    desc: Each article explains one step with a simple model and figures.
+    contents:
+      - granularity-hmd
+      - smoothing
+      - jump-off
+      - backtesting
+      - coherence
+      - decomposition
+  - title: Models
+    contents:
+      - models
+      - bayesian-apc
+      - comparison
   - title: Applications
+    desc: Complete analyses from the published tables to the reported results.
     contents:
       - deprivation
       - causes
       - regions
-      - granularity-hmd
       - forecasting-hmd
-      - bayesian-apc
-  - title: Methods and evidence
+  - title: Help
     contents:
-      - models
-      - coherence
-      - decomposition
-      - comparison
       - faq

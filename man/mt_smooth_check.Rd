@@ -7,7 +7,15 @@
 \usage{
 mt_smooth_check(data, smoothed)
 
-mt_plot_smooth(data, smoothed, ages = NULL, strata = NULL, colour = NULL)
+mt_plot_smooth(
+  data,
+  smoothed,
+  ages = NULL,
+  strata = NULL,
+  colour = NULL,
+  along = c("period", "age"),
+  periods = NULL
+)
 }
 \arguments{
 \item{data}{The \link{mt_data} object before smoothing.}
@@ -19,6 +27,11 @@ mt_plot_smooth(data, smoothed, ages = NULL, strata = NULL, colour = NULL)
 \item{strata}{Stratum labels to show (default: all).}
 
 \item{colour}{Stratum variable that gives the colours.}
+
+\item{along}{\code{"period"} (rates over time, one panel per age) or \code{"age"}
+(rates over age, one panel per year in \code{periods}).}
+
+\item{periods}{Years shown with \code{along = "age"} (default: first and last).}
 }
 \value{
 \code{mt_smooth_check()}: a \code{data.table} with the stratum columns and

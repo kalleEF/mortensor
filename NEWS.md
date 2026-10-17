@@ -14,6 +14,18 @@ Clean break: the 0.1.x interface is replaced (see `dev/revamp-plan.md`).
 * `mt_plot_backtest_design()` shows the training and test years of a
   backtest; `mt_plot_tuning()` the scores of a tuning grid.
 * Precomputed vignettes no longer show "plot of chunk" captions.
+* `mt_plot_smooth()` compares several smoothers in one figure (a named
+  list) and shows rates over age (`along = "age"`); `mt_plot_pit()` draws
+  PIT histograms of a backtest.
+* Smoothing over time (`mt_smooth(along = "period")`, `step_smooth()`)
+  scales the weights within each age: one smoothing parameter now gives
+  the same smoothness at every age. Before, the ages with many deaths were
+  barely smoothed (effective degrees of freedom 15 of 19 at ages 80+ on
+  the ONS data) and those with few deaths strongly.
+* New concept vignettes, one topic each: "Smoothing death rates", "Where
+  a forecast starts: the jump-off", "Backtesting and scores" (with the
+  scores explained); the articles are grouped into getting started,
+  concepts, models, applications and help.
 
 ## Tuning and calibration
 

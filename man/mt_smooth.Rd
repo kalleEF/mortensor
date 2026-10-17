@@ -74,7 +74,10 @@ with the deaths as weights (\code{"whittaker"}), or a Gaussian additive
 model of log rates with the deaths as weights (\code{"gam"});
 \item \verb{dims = 1, along = "period"}: each age separately over time, Whittaker
 smoothing of log rates with the deaths as weights and one smoothing
-parameter per stratum (generalised cross-validation pooled over ages);
+parameter per stratum (generalised cross-validation pooled over ages).
+The weights are scaled within each age, so the parameter gives the same
+smoothness at every age; ages with many deaths are not left
+unsmoothed;
 \item \code{dims = 2}: the age-period surface, with a Poisson P-spline surface
 (\code{"pspline"}; Currie, Durban and Eilers 2004) or a quasi-Poisson
 additive model with a tensor-product P-spline \code{te(age, year)} and the

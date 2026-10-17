@@ -17,7 +17,10 @@
 #'   model of log rates with the deaths as weights (`"gam"`);
 #' * `dims = 1, along = "period"`: each age separately over time, Whittaker
 #'   smoothing of log rates with the deaths as weights and one smoothing
-#'   parameter per stratum (generalised cross-validation pooled over ages);
+#'   parameter per stratum (generalised cross-validation pooled over ages).
+#'   The weights are scaled within each age, so the parameter gives the same
+#'   smoothness at every age; ages with many deaths are not left
+#'   unsmoothed;
 #' * `dims = 2`: the age-period surface, with a Poisson P-spline surface
 #'   (`"pspline"`; Currie, Durban and Eilers 2004) or a quasi-Poisson
 #'   additive model with a tensor-product P-spline `te(age, year)` and the
@@ -233,7 +236,11 @@ whittaker_time_obs <- function(data, g, lambda, pord) {
     Y <- log(pmax(D[, , s], 0.5) / E[, , s])
     W <- pmax(D[, , s], 0.5)
     Y <- matrix(Y, na)
+    # deaths as weights, scaled within each age: one smoothing parameter then
+    # gives the same smoothness at every age (unscaled, ages with many deaths
+    # were barely smoothed and ages with few deaths smoothed strongly)
     W <- matrix(W, na)
+    W <- W / rowMeans(W)
     ok <- rowSums(is.na(Y)) == 0
     fit_l <- function(l) {
       rss <- 0
@@ -350,39 +357,80 @@ mt_smooth_check <- function(data, smoothed) {
 }
 
 #' @rdname mt_smooth_check
+#' @param along `"period"` (rates over time, one panel per age) or `"age"`
+#'   (rates over age, one panel per year in `periods`).
+#' @param periods Years shown with `along = "age"` (default: first and last).
 #' @export
-mt_plot_smooth <- function(data, smoothed, ages = NULL, strata = NULL, colour = NULL) {
+mt_plot_smooth <- function(data, smoothed, ages = NULL, strata = NULL, colour = NULL, along = c("period", "age"),
+                           periods = NULL) {
   need_ggplot()
   check_class(data, "mt_data", "data")
-  check_class(smoothed, "mt_data", "smoothed")
-  g <- mt_grid(smoothed)
+  along <- match.arg(along)
+  multi <- is.list(smoothed) && !inherits(smoothed, "mt_data")
+  sms <- if (multi) smoothed else list(smoothed)
+  if (multi && (is.null(names(sms)) || any(!nzchar(names(sms))))) {
+    mt_abort("Give several smoothed data sets as a named list, for example list(age = s1, time = s2).",
+             class = "argument")
+  }
+  for (k in seq_along(sms)) check_class(sms[[k]], "mt_data", "smoothed")
+  s1 <- sms[[1]]
+  g <- mt_grid(s1)
   ages <- ages %||% g$age$labels[unique(round(seq(1, length(g$age), length.out = 4)))]
-  st <- smoothed$strata
-  strata <- check_strata_labels(strata %||% st$label, st$label)
+  periods <- periods %||% range(g$period$lower)
+  st <- s1$strata
+  strata <- check_strata_labels(strata %||% if (multi) st$label[1] else st$label, st$label)
   r <- mt_set_grid(data, age = g$age, period = g$period)
-  E <- mt_array(smoothed, "exposure")
-  raw <- mt_array(r, "deaths") / E
-  sm <- mt_array(smoothed, "deaths") / E
+  E <- mt_array(s1, "exposure")
   dn <- list(g$age$labels, as.character(g$period$lower), st$label)
-  dimnames(raw) <- dimnames(sm) <- dn
-  lay <- plot_layout(st, strata, colour)
-  prep_tab <- function(a) {
-    d <- array_long(a)[age %in% ages & label %in% strata]
-    d <- merge(d, lay$map, by = "label", sort = FALSE)
-    d[, age_f := factor(age, levels = ages)]
+  long <- function(a) {
+    dimnames(a) <- dn
+    d <- array_long(a)[label %in% strata]
+    d[, age_lo := g$age$lower[match(age, g$age$labels)]]
+    if (along == "period") d[age %in% ages][, age_f := factor(age, levels = ages)] else d[period %in% periods]
   }
-  pr <- prep_tab(raw)
-  ps <- prep_tab(sm)
-  p <- ggplot2::ggplot(ps, ggplot2::aes(x = period, y = rate, colour = col, group = label)) +
-    ggplot2::geom_point(data = pr, size = 0.7, alpha = 0.45) +
-    ggplot2::geom_line(linewidth = 0.6)
-  p <- p + if (lay$has_panel) {
-    ggplot2::facet_grid(ggplot2::vars(age_f), ggplot2::vars(panel), scales = "free_y")
+  pr <- long(mt_array(r, "deaths") / E)
+  ps <- rbindlist(lapply(seq_along(sms), function(k) {
+    long(mt_array(sms[[k]], "deaths") / mt_array(sms[[k]], "exposure"))[, method := names(sms)[k] %||% ""]
+  }))
+  xvar <- if (along == "period") "period" else "age_lo"
+  if (multi) {
+    ps[, method := factor(method, levels = names(sms))]
+    p <- ggplot2::ggplot(ps, ggplot2::aes(x = .data[[xvar]], y = rate, colour = method,
+                                          group = interaction(method, label))) +
+      ggplot2::geom_point(data = pr, ggplot2::aes(group = label), colour = "grey35", size = 0.8, alpha = 0.6) +
+      ggplot2::geom_line(linewidth = 0.6) +
+      scale_colour_mortensor(type = "categorical")
+    name <- NULL
   } else {
-    ggplot2::facet_wrap(ggplot2::vars(age_f), scales = "free_y")
+    lay <- plot_layout(st, strata, colour)
+    pr <- merge(pr, lay$map, by = "label", sort = FALSE)
+    ps <- merge(ps, lay$map, by = "label", sort = FALSE)
+    p <- ggplot2::ggplot(ps, ggplot2::aes(x = .data[[xvar]], y = rate, colour = col, group = label)) +
+      ggplot2::geom_point(data = pr, size = 0.7, alpha = 0.45) +
+      ggplot2::geom_line(linewidth = 0.6) +
+      plot_colours(lay)
+    name <- lay$name
   }
-  p + ggplot2::scale_y_log10() + plot_colours(lay) +
-    ggplot2::labs(x = NULL, y = "Death rate (log scale)", colour = lay$name,
-                  title = "Observed and smoothed death rates", subtitle = "Points: observed; lines: smoothed") +
-    theme_mortensor(base_size = if (length(ages) > 2 || lay$has_panel) 9 else 11)
+  several <- length(strata) > 1 && multi
+  if (along == "period") {
+    p <- p + if (several) {
+      ggplot2::facet_grid(ggplot2::vars(age_f), ggplot2::vars(label), scales = "free_y")
+    } else if (!multi && plot_layout(st, strata, colour)$has_panel) {
+      ggplot2::facet_grid(ggplot2::vars(age_f), ggplot2::vars(panel), scales = "free_y")
+    } else {
+      ggplot2::facet_wrap(ggplot2::vars(age_f), scales = "free_y")
+    }
+  } else {
+    p <- p + if (several || (!multi && length(strata) > 1)) {
+      ggplot2::facet_grid(ggplot2::vars(period), ggplot2::vars(label))
+    } else {
+      ggplot2::facet_wrap(ggplot2::vars(period))
+    }
+  }
+  p + ggplot2::scale_y_log10() +
+    ggplot2::labs(x = if (along == "period") NULL else "Age", y = "Death rate (log scale)", colour = name,
+                  title = "Observed and smoothed death rates",
+                  subtitle = if (multi && length(strata) == 1) sprintf("%s; points: observed; lines: smoothed", strata)
+                  else "Points: observed; lines: smoothed") +
+    theme_mortensor(base_size = if (length(ages) > 2) 9 else 11)
 }

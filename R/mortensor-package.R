@@ -64,5 +64,5 @@ utils::globalVariables(c(
   "group_", "new_", "n_", "first_", "members", "n", "s", ".value", "nxt", "u", "g", "n_lev", "sum_all", "var",
   "age_i", "effect", "q0.05", "q0.95", "residual", "p_positive", "ages", "panel", "age_f", "panel2", "col", "row",
   "comparison", "xvar", "fvar", "max_residual", "q0.025", "q0.975", "forecast", "fitted", "prep", "V1",
-  "unit", "loss", "selected", "se", "med", "setting", "score", "part", "from", "to"
+  "unit", "loss", "selected", "se", "med", "method", "setting", "score", "part", "from", "to"
 ))

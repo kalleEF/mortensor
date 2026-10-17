@@ -262,6 +262,11 @@ compare_values <- function(m, age, quantity, at = NULL, ages = NULL) {
 #' * `mt_plot_backtest_design()` shows the training and test years of each
 #'   origin of a rolling-origin backtest: every model is fitted to the
 #'   years up to the origin and scored on the years after it.
+#' * `mt_plot_pit()` shows the histogram of the probability integral
+#'   transform (PIT: the share of forecast draws below the observed value)
+#'   per model. Calibrated forecasts give a flat histogram; a U shape means
+#'   intervals that are too narrow, a hump in the middle intervals that are
+#'   too wide, a slope a bias.
 #' * `mt_plot_tuning()` shows the scores of the settings of [mt_tune()] with
 #'   one standard error, the chosen setting highlighted.
 #'
@@ -269,6 +274,9 @@ compare_values <- function(m, age, quantity, at = NULL, ages = NULL) {
 #' @param origins Forecast origins (last training years).
 #' @param h Horizon.
 #' @param tune The result of [mt_tune()].
+#' @param backtest An [mt_backtest()] result.
+#' @param target `"rate"`, `"life_expectancy"` or `"asr"`.
+#' @param bins Number of histogram bins.
 #' @return A ggplot object.
 #' @examples
 #' if (requireNamespace("ggplot2", quietly = TRUE)) {
@@ -318,5 +326,23 @@ mt_plot_tuning <- function(tune) {
   if ("group" %in% names(s)) p <- p + ggplot2::facet_wrap(ggplot2::vars(group))
   p + ggplot2::labs(x = NULL, y = sprintf("%s in the inner backtest (+/- one standard error)", toupper(metric)),
                     colour = NULL) +
+    theme_mortensor()
+}
+
+#' @rdname mt_plot_design
+#' @export
+mt_plot_pit <- function(backtest, target = c("rate", "life_expectancy", "asr"), bins = 10) {
+  need_ggplot()
+  target <- match.arg(target)
+  bt <- as.data.table(backtest)
+  if ("target" %in% names(bt)) bt <- bt[bt[["target"]] == target]
+  if (!nrow(bt)) mt_abort(sprintf("The backtest holds no scores for target \"%s\".", target), class = "argument")
+  ggplot2::ggplot(bt, ggplot2::aes(x = pit)) +
+    ggplot2::geom_histogram(ggplot2::aes(y = ggplot2::after_stat(density)), breaks = seq(0, 1, length.out = bins + 1),
+                            fill = "#7570B3", colour = "white") +
+    ggplot2::geom_hline(yintercept = 1, linetype = "dashed", colour = "grey40") +
+    ggplot2::facet_wrap(ggplot2::vars(model)) +
+    ggplot2::labs(x = "PIT (share of forecast draws below the observed value)", y = "Density",
+                  subtitle = "Calibrated forecasts give a flat histogram (dashed line)") +
     theme_mortensor()
 }

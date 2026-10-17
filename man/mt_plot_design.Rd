@@ -4,11 +4,14 @@
 \alias{mt_plot_design}
 \alias{mt_plot_backtest_design}
 \alias{mt_plot_tuning}
+\alias{mt_plot_pit}
 \title{Didactic plots of backtests and tuning}
 \usage{
 mt_plot_backtest_design(data, origins, h)
 
 mt_plot_tuning(tune)
+
+mt_plot_pit(backtest, target = c("rate", "life_expectancy", "asr"), bins = 10)
 }
 \arguments{
 \item{data}{An \link{mt_data} object (its years).}
@@ -18,6 +21,12 @@ mt_plot_tuning(tune)
 \item{h}{Horizon.}
 
 \item{tune}{The result of \code{\link[=mt_tune]{mt_tune()}}.}
+
+\item{backtest}{An \code{\link[=mt_backtest]{mt_backtest()}} result.}
+
+\item{target}{\code{"rate"}, \code{"life_expectancy"} or \code{"asr"}.}
+
+\item{bins}{Number of histogram bins.}
 }
 \value{
 A ggplot object.
@@ -27,6 +36,11 @@ A ggplot object.
 \item \code{mt_plot_backtest_design()} shows the training and test years of each
 origin of a rolling-origin backtest: every model is fitted to the
 years up to the origin and scored on the years after it.
+\item \code{mt_plot_pit()} shows the histogram of the probability integral
+transform (PIT: the share of forecast draws below the observed value)
+per model. Calibrated forecasts give a flat histogram; a U shape means
+intervals that are too narrow, a hump in the middle intervals that are
+too wide, a slope a bias.
 \item \code{mt_plot_tuning()} shows the scores of the settings of \code{\link[=mt_tune]{mt_tune()}} with
 one standard error, the chosen setting highlighted.
 }

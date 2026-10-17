@@ -41,3 +41,28 @@ test_that("comparison and design plots are ggplot objects", {
                 n_draws = 20)
   expect_s3_class(mt_plot_tuning(tn), "ggplot")
 })
+
+test_that("mt_plot_smooth() compares smoothers and mt_plot_pit() shows calibration", {
+  skip_if_not_installed("ggplot2")
+  x <- mt_example(deaths = "single", years = 1995:2012)
+  sm <- list(age = mt_smooth(x), time = mt_smooth(x, along = "period", method = "whittaker"))
+  expect_s3_class(mt_plot_smooth(x, sm, strata = "female"), "ggplot")
+  expect_s3_class(mt_plot_smooth(x, sm, along = "age", periods = c(1995, 2012)), "ggplot")
+  expect_s3_class(mt_plot_smooth(x, sm$time, along = "age"), "ggplot")
+  expect_error(mt_plot_smooth(x, unname(sm)), class = "mt_error_argument")
+  bt <- mt_backtest(rwd(), x, origins = 2008, h = 3, n_draws = 30)
+  expect_s3_class(mt_plot_pit(bt), "ggplot")
+})
+
+test_that("smoothing over time gives every age the same smoothness", {
+  x <- mt_example(deaths = "single", years = 1995:2015)
+  s <- mt_smooth(x, along = "period", method = "whittaker")
+  D <- mt_array(x, "deaths")[, , 1]
+  E <- mt_array(x, "exposure")[, , 1]
+  S <- mt_array(s, "deaths")[, , 1]
+  rough <- function(M) apply(log(M / E), 1, function(v) mean(abs(diff(v, differences = 2))))
+  r <- rough(S) / rough(pmax(D, 0.5))
+  # the ages with the most deaths are smoothed about as much as the others
+  many <- order(rowSums(D), decreasing = TRUE)[1:10]
+  expect_lt(mean(r[many]), 2 * mean(r))
+})
