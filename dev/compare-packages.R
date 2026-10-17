@@ -150,7 +150,7 @@ fid_fdm <- local({
   dd <- demography::demogdata(pmax(D, 0.5) / E, pop = E, ages = 0:95, years = 1950:2006, type = "mortality",
                               label = "FR", name = "s")
   nat <- forecast::forecast(demography::fdm(dd, series = "s", order = 6), h = 20, method = "arima", level = 80)
-  fit <- mt_fit(hyndman_ullah(order = 6), mt_subset(fr, periods = c(1950, 2006)))
+  fit <- mt_fit(hyndman_ullah(order = 6, smooth = FALSE), mt_subset(fr, periods = c(1950, 2006)))
   fc <- mt_forecast(fit, h = 20, n_draws = 2000, seed = 1)
   r <- log(fc$rates[, , 2, ])
   q <- apply(r, 1:2, stats::quantile, c(0.1, 0.5, 0.9))

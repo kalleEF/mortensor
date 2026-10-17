@@ -88,9 +88,13 @@ Each age: `log m(x,t) = log m(x,t-1) + mu(x) + e(x,t)`.
 
 ### Functional demographic model: `hyndman_ullah()`
 
-Calls `demography::fdm()` (Hyndman and Ullah 2007): smoothed log rates
+Calls `demography::fdm()` (Hyndman and Ullah 2007): the rates of each
+year are smoothed over age with `demography::smooth.demogdata()`
+(`smooth = TRUE`; settings in `smooth_args`), and the log rates are
 decomposed into a mean function and functional principal components,
-whose scores are forecast with time-series models. Draws are simulated
+whose scores are forecast with time-series models. The number of
+components and the smoothing settings can be chosen by forecast accuracy
+with `tuned()`. Draws are simulated
 from the fitted model. Its intervals are those of the simulated paths,
 which are somewhat narrower at short horizons than demography's analytic
 intervals (see the comparison vignette).

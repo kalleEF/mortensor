@@ -2,6 +2,16 @@
 
 Clean break: the 0.1.x interface is replaced (see `dev/revamp-plan.md`).
 
+## Tuning and calibration
+
+* `hyndman_ullah()` smooths the rates of each year over age with
+  `demography::smooth.demogdata()` before the decomposition (`smooth =
+  TRUE`, settings in `smooth_args`), as in Hyndman and Ullah (2007).
+  Before, it decomposed raw rates, contrary to its documentation, and the
+  model errors that `simulate()` resamples contained the observation noise
+  that predictive draws add a second time. `smooth = FALSE` keeps the old
+  behaviour (label "unsmoothed").
+
 ## Function map
 
 * The diagrams of the function map and the README fit the width of the

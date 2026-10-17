@@ -8,6 +8,24 @@ test_that("wrapped and multi-population models satisfy the contract", {
   for (m in c("apc", "cbd", "lc", "m6")) expect_mt_model(stmomo(m), n_draws = 10)
 })
 
+test_that("hyndman_ullah() smooths over age before the decomposition", {
+  skip_if_not_installed("demography")
+  skip_if_not_installed("forecast")
+  x <- mt_example(deaths = "single", years = 1995:2019)
+  fs <- mt_fit(hyndman_ullah(order = 3), x)
+  fr <- mt_fit(hyndman_ullah(order = 3, smooth = FALSE), x)
+  # smoothing removes year-to-year noise between adjacent ages
+  rough <- function(f) mean(abs(diff(f$fits[[1]]$fit$y$y[, 20], differences = 2)))
+  expect_lt(rough(fs), rough(fr))
+  expect_match(fr$spec$label, "unsmoothed")
+  # age groups keep their grid
+  xg <- mt_regroup(x, age = seq(min(mt_grid(x)$age$lower), 100, 5))
+  fg <- mt_fit(hyndman_ullah(order = 2, smooth_args = list(k = 10)), xg)
+  expect_identical(dim(fg$fits[[1]]$fitted), c(length(fg$age), 25L))
+  expect_true(all(is.finite(fg$fits[[1]]$fitted)))
+  expect_error(hyndman_ullah(smooth_args = 3), class = "mt_error_argument")
+})
+
 test_that("StMoMo cohort models need single years of age", {
   skip_if_not_installed("StMoMo")
   x <- mortensor:::simulate_lc_dgp(n_t = 12)

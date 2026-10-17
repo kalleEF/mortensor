@@ -1,15 +1,31 @@
 #' Functional demographic model of Hyndman and Ullah (demography)
 #'
-#' Wrapper around `demography::fdm()` (Hyndman and Ullah 2007): log death
-#' rates are smoothed over age and decomposed into principal components whose
-#' scores are forecast with ARIMA or ETS models. Draws are simulated with
-#' `demography`'s `simulate()` method for functional forecasts (uncertainty
-#' of the coefficients and model error); predictive draws add the
-#' extra-Poisson and Poisson variation as for other models of smooth rates.
+#' Wrapper around `demography::fdm()` (Hyndman and Ullah 2007): the rates of
+#' each year are smoothed over age with `demography::smooth.demogdata()`
+#' (`smooth = TRUE`, by default monotonic regression splines above age 65,
+#' weighted by the exposures), the log rates are decomposed into a mean
+#' function and principal components, and the scores are forecast with
+#' ARIMA or ETS models. Draws are simulated with `demography`'s `simulate()`
+#' method for functional forecasts (uncertainty of the coefficients and
+#' resampled model errors); predictive draws add the extra-Poisson and
+#' Poisson variation of the raw deaths as for other models of smooth rates.
+#'
+#' Without smoothing, the model errors that `simulate()` resamples contain
+#' the observation noise, which predictive draws then add a second time:
+#' keep `smooth = TRUE` unless the rates were smoothed in a preprocessing
+#' step. `smooth.demogdata()` works on single years of age; for age groups
+#' the smoothed values at the observed ages are used (a weaker smoothing).
+#' The smoothing settings (`smooth_args`, such as `k`, the number of knots)
+#' and the number of components can be chosen by forecast accuracy with
+#' [tuned()].
 #'
 #' @param order Number of principal components.
 #' @param method Forecast method for the coefficients (`"arima"`, `"ets"`,
 #'   `"rwdrift"`, ...), passed to `forecast()`.
+#' @param smooth Smooth the rates of each year over age before the
+#'   decomposition.
+#' @param smooth_args List of arguments of `demography::smooth.demogdata()`
+#'   (for example `list(k = 20)` or `list(method = "spline")`).
 #' @param ... Further arguments of `demography::fdm()`.
 #' @return A model specification.
 #' @references
@@ -22,10 +38,13 @@
 #'   fc <- mt_forecast(mt_fit(hyndman_ullah(order = 2), x), h = 5, n_draws = 50, seed = 1)
 #' }
 #' @export
-hyndman_ullah <- function(order = 6, method = "arima", ...) {
+hyndman_ullah <- function(order = 6, method = "arima", smooth = TRUE, smooth_args = list(), ...) {
   need_pkg("demography", "for hyndman_ullah()")
-  new_mt_spec("fdm", list(order = order, method = method, args = list(...)), min_periods = 8,
-              label = "Functional demographic model")
+  check_flag(smooth, "smooth")
+  if (!is.list(smooth_args)) mt_abort("`smooth_args` must be a list.", class = "argument")
+  new_mt_spec("fdm", list(order = order, method = method, smooth = smooth, smooth_args = smooth_args,
+                          args = list(...)), min_periods = 8,
+              label = paste0("Functional demographic model", if (!smooth) " (unsmoothed)"))
 }
 
 #' @export
@@ -35,11 +54,30 @@ fit_model.mt_spec_fdm <- function(spec, D, E, ages, periods, ...) {
   dimnames(rates) <- dimnames(E) <- list(ages$lower, periods)
   dd <- demography::demogdata(data = rates, pop = E, ages = ages$lower, years = periods, type = "mortality",
                               label = "mortensor", name = "s")
+  if (!isFALSE(p$smooth)) dd <- fdm_smooth(dd, ages$lower, p$smooth_args)
   fit <- suppressWarnings(do.call(demography::fdm, c(list(dd, series = "s", order = min(p$order, nrow(D) - 1)),
                                                      p$args)))
   fv <- fit$fitted$y
   if (is.list(fv)) fv <- fv[[1]]
   list(fit = fit, method = p$method, fitted = exp(as.matrix(fv)))
+}
+
+# Smooth the rates of each year over age with demography::smooth.demogdata()
+# and keep the observed ages (the smoother returns single years of age)
+fdm_smooth <- function(dd, ages, args) {
+  sm <- tryCatch(suppressWarnings(do.call(demography::smooth.demogdata, c(list(dd), args))), error = function(e) {
+    mt_abort(paste("smooth.demogdata() failed:", conditionMessage(e), "Try other `smooth_args` or `smooth = FALSE`."),
+             class = "model", call = NULL)
+  })
+  keep <- match(ages, sm$age)
+  if (anyNA(keep)) {
+    mt_abort("smooth.demogdata() did not return every observed age.", class = "model", call = NULL)
+  }
+  r <- as.matrix(sm$rate[[1]])[keep, , drop = FALSE]
+  r[!is.finite(r) | r <= 0] <- as.matrix(dd$rate[[1]])[!is.finite(r) | r <= 0]
+  dimnames(r) <- dimnames(dd$rate[[1]])
+  dd$rate[[1]] <- r
+  dd
 }
 
 #' @export
