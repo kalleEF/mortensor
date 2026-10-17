@@ -2,6 +2,61 @@
 
 Clean break: the 0.1.x interface is replaced (see `dev/revamp-plan.md`).
 
+## Fixes from a review of the whole package
+
+Data:
+
+* `mt_group_levels()` takes numeric `total`, `other` and `keep` levels as
+  labels, keeps an unlisted level named like a group in that group (as
+  `mt_relabel()` to an existing level does), and refuses a group named
+  like the total.
+* `mt_read_gbe()` reads values with several thousands separators
+  (`"1.023.687"`) and footers in quotes.
+* `mt_fill_suppressed()` no longer fills cells of strata published at
+  another age resolution.
+* `mt_data()` treats `NA` ages as unknown (distributed) and leaves out
+  rows of unknown period with a warning; factor age bounds use their
+  labels. `mt_from_hmd()` recognises open ages written as `"110+"`.
+
+Harmonisation:
+
+* `mt_ungroup()` keeps an observed first year of life out of the fit (its
+  peak spilled into ages 1-6), works with the spline methods on grouped
+  exposures, and warns when `dims = 2` is ignored
+  (`mt_warning_ungroup_dims`). The spline and GAM methods keep the group
+  totals next to a missing group and above a closed top group.
+* `mt_smooth()`: cells with missing deaths no longer break the smooth;
+  they stay missing (only the 2D GAM predicts them). Smoothing over time
+  works with a single age group. `mt_smooth_check()` measures the smoothed
+  cells only.
+* `mt_disaggregate()`: `method = "shape"` with a shape of zeros gives a
+  flat shape instead of `NaN`; missing group rates give missing fine
+  rates.
+* `step_shocks(method = "interpolate")` removes shock years at the start
+  or end of the training data instead of failing.
+
+Evaluation and derived quantities:
+
+* Backtests floor the predictive deaths at half a death after summing them
+  to the observed cells, not per grid cell: with ungrouping inside the fit
+  (`step_ungroup()`), the floor per single year had biased the scores of
+  age groups with few deaths. Predictive draws may now hold zero deaths.
+* Life expectancy and ASR in backtests are computed from the predictive
+  deaths like the observed values, and only for years whose cells cover
+  the whole age range.
+* `mt_backtest()` refuses data whose deaths were ungrouped with
+  `mt_ungroup()` (`mt_error_ungrouped_data`): use `step_ungroup()`.
+  Test data are summed to the age groups of a fit with `step_regroup()`.
+* `mt_compare()` chooses the default origins once for all models;
+  `mt_score_table()` keeps a model that lacks one target and separates
+  preprocessing pipelines for every target.
+* `life_table()`: a rate of 0 in the open interval uses the last positive
+  rate (instead of an infinite life expectancy).
+* `mt_inequality()` leaves the total and groups of a stored hierarchy out
+  of the default `order`.
+* Plots: `mt_plot_compare()` with one year, `mt_plot_contrast()` with
+  other probabilities, `mt_plot_age()` with unsorted `probs`.
+
 ## StanMoMo, recalibration
 
 * `stanmomo()` wraps the Bayesian Lee-Carter, Renshaw-Haberman, APC, CBD
