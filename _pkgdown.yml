@@ -111,10 +111,13 @@ reference:
       - mt_disaggregate
       - mt_shape_rates
       - mt_disaggregate_check
-  - title: 9. Evaluate
+  - title: 9. Evaluate and compare
+    desc: Rolling-origin backtests and scores; several models and forecasts side by side.
     contents:
       - mt_backtest
       - mt_score
+      - mt_compare
+      - mt_plot_design
   - title: 10. Report
     contents:
       - mt_plot

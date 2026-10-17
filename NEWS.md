@@ -2,6 +2,19 @@
 
 Clean break: the 0.1.x interface is replaced (see `dev/revamp-plan.md`).
 
+## Comparing models and forecasts
+
+* `mt_compare()` backtests a named list of models (each with its own
+  preprocessing) on the same origins; `mt_score_table()` shows the scores
+  of rates, life expectancy and ASR side by side.
+* `mt_compare_forecasts()` tabulates one quantity (life expectancy, ASR,
+  deaths, rates) of several forecasts or of observed data as "median
+  (lower-upper)"; `mt_plot_compare()` draws them in one figure, also
+  around the jump-off year.
+* `mt_plot_backtest_design()` shows the training and test years of a
+  backtest; `mt_plot_tuning()` the scores of a tuning grid.
+* Precomputed vignettes no longer show "plot of chunk" captions.
+
 ## Tuning and calibration
 
 * `hyndman_ullah()` smooths the rates of each year over age with
