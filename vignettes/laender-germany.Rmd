@@ -145,28 +145,28 @@ bt <- mt_compare(cand, xh, origins = c(2008, 2011, 2014), h = 5, n_draws = 200, 
                  contrast = c(var = "region", ref = "West"))
 mt_score_table(bt, metrics = c("crps", "cov95"), targets = c("rate", "life_expectancy"), hierarchy = h)
 #>                         model     level   crps cov95 crps_le cov95_le
-#>  1:                Lee-Carter    bottom 0.0914 0.816   0.361    0.983
-#>  2:                Lee-Carter aggregate 0.0664 0.715   0.334    0.794
-#>  3:                Lee-Carter     total 0.0448 0.574   0.320    0.400
-#>  4:                    Li-Lee    bottom 0.0893 0.852   0.392    0.782
-#>  5:                    Li-Lee aggregate 0.0646 0.764   0.361    0.697
-#>  6:                    Li-Lee     total 0.0502 0.589   0.342    0.533
-#>  7:              coherent fdm    bottom 0.0816 0.843   0.279    0.684
-#>  8:              coherent fdm aggregate 0.0591 0.729   0.250    0.550
-#>  9:              coherent fdm     total 0.0459 0.463   0.236    0.333
-#> 10: Lee-Carter + coherent fdm    bottom 0.0815 0.878   0.305    0.998
-#> 11: Lee-Carter + coherent fdm aggregate 0.0585 0.798   0.263    0.928
-#> 12: Lee-Carter + coherent fdm     total 0.0406 0.678   0.241    0.600
+#>  1:                Lee-Carter    bottom 0.0915 0.814   0.374    0.776
+#>  2:                Lee-Carter aggregate 0.0665 0.692   0.361    0.533
+#>  3:                Lee-Carter     total 0.0477 0.437   0.360    0.267
+#>  4:                    Li-Lee    bottom 0.0894 0.851   0.392    0.786
+#>  5:                    Li-Lee aggregate 0.0647 0.764   0.362    0.700
+#>  6:                    Li-Lee     total 0.0502 0.600   0.343    0.533
+#>  7:              coherent fdm    bottom 0.0817 0.839   0.280    0.682
+#>  8:              coherent fdm aggregate 0.0591 0.727   0.250    0.553
+#>  9:              coherent fdm     total 0.0458 0.470   0.236    0.333
+#> 10: Lee-Carter + coherent fdm    bottom 0.0815 0.872   0.300    0.795
+#> 11: Lee-Carter + coherent fdm aggregate 0.0583 0.754   0.281    0.583
+#> 12: Lee-Carter + coherent fdm     total 0.0443 0.481   0.290    0.333
 ```
 
 
 ```r
 mt_score_table(bt[region == "East" & sex != "both"], metrics = c("crps", "cov95"), targets = "life_expectancy_gap")
 #>                        model crps_le_gap cov95_le_gap
-#> 1:                Lee-Carter       0.106          1.0
-#> 2:                    Li-Lee       0.154          0.4
-#> 3:              coherent fdm       0.152          0.5
-#> 4: Lee-Carter + coherent fdm       0.139          1.0
+#> 1:                Lee-Carter      0.0761        1.000
+#> 2:                    Li-Lee      0.1550        0.400
+#> 3:              coherent fdm      0.1520        0.467
+#> 4: Lee-Carter + coherent fdm      0.0754        1.000
 ```
 
 
@@ -183,18 +183,20 @@ East slightly behind again. The backtest decides between these
 assumptions:
 
 * For the Laender, the coherent fdm and the ensemble are the most accurate
-  (CRPS of the rates 0.082, against 0.089 for Li-Lee and 0.091 for
-  Lee-Carter); the intervals of the ensemble cover best (95% coverage of
-  life expectancy 1.00, coherent fdm 0.68).
-* For the totals (East, West and Germany), the ensemble is the most
-  accurate.
-* The East-West gap is forecast best by Lee-Carter (CRPS 0.11), the
-  ensemble second (0.14); the intervals of Li-Lee and the coherent fdm
-  covered the observed gap in only 40% and 50% of the cases.
+  (CRPS of the rates 0.082, against 0.089 for Li-Lee and 0.092 for
+  Lee-Carter); the ensemble's intervals cover the rates best (95%
+  coverage 0.87). The intervals of life expectancy are too narrow for
+  every model (95% coverage 0.68 to 0.80).
+* For the totals (East, West and Germany), the ensemble forecasts the
+  rates most accurately, but all intervals are too narrow there.
+* The East-West gap is forecast best by the ensemble and Lee-Carter (CRPS
+  0.075 and 0.076), whose intervals covered every observed gap; those of
+  Li-Lee and the coherent fdm covered it in only 40% and 47% of the
+  cases.
 
-No single model is best for both questions. The ensemble of Lee-Carter and
-the coherent fdm is close to the best for the Laender and for the gap, so
-the pipeline continues with it: combining models pays here.
+The ensemble of Lee-Carter and the coherent fdm is the most accurate for
+the Laender and, together with Lee-Carter, for the gap, so the pipeline
+continues with it: combining models pays here.
 
 ### Jump-off
 
@@ -210,15 +212,15 @@ bt_anchor <- mt_compare(list("+ anchored" = bu(anchored(ens, years = 3))), xh, o
 bt_steps <- rbind(bt[model == "Lee-Carter + coherent fdm"], bt_anchor)
 mt_score_table(bt_steps[sex != "both"], metrics = c("crps", "cov95"))
 #>                        model   crps cov95 crps_le cov95_le crps_le_gap
-#> 1: Lee-Carter + coherent fdm 0.0764 0.857   0.298    0.971       0.170
-#> 2:                + anchored 0.0756 0.858   0.291    0.973       0.166
+#> 1: Lee-Carter + coherent fdm 0.0766 0.835   0.301    0.730       0.108
+#> 2:                + anchored 0.0759 0.839   0.293    0.738       0.104
 #>    cov95_le_gap
-#> 1:            1
-#> 2:            1
+#> 1:        0.996
+#> 2:        1.000
 ```
 
-Anchoring improved every score slightly (CRPS of the rates 0.0756
-against 0.0764), so the pipeline uses it. Smoothing the rates over age
+Anchoring made every quantity slightly more accurate (CRPS of the rates
+0.0759 against 0.0766), so the pipeline uses it. Smoothing the rates over age
 made the forecasts of this ensemble slightly worse in a separate run and
 is not used.
 
@@ -296,7 +298,7 @@ the contributions are small and uncertain.
 | Suppressed cells | raking to Land and national totals | all totals matched | `mt_fill_suppressed()` | "Your own data" |
 | Hierarchy | Laender, East and West, Germany; sexes | | `mt_hierarchy()`, `mt_aggregate_strata()` | "Coherent forecasts" |
 | Coherence | bottom-up sums of the Laender | | `reconciled(method = "bottom_up")` | "Coherent forecasts" |
-| Model | ensemble of Lee-Carter and coherent fdm | close to the best for the Laender and for the gap | `ensemble()`, `coherent_fdm()`, `mt_compare(contrast = )` | "Choosing and combining models" |
+| Model | ensemble of Lee-Carter and coherent fdm | most accurate for the Laender and for the gap | `ensemble()`, `coherent_fdm()`, `mt_compare(contrast = )` | "Choosing and combining models" |
 | Jump-off | observed level of the last three years | slightly better scores | `anchored()` | "Where a forecast starts" |
 | Gap | East - West, path by path | | `mt_contrast()`, `mt_decompose()` | "Decomposing differences" |
 

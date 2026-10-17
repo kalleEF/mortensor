@@ -144,19 +144,20 @@ East slightly behind again. The backtest decides between these
 assumptions:
 
 * For the Laender, the coherent fdm and the ensemble are the most accurate
-  (CRPS of the rates 0.082, against 0.089 for Li-Lee and 0.091 for
+  (CRPS of the rates 0.082, against 0.089 for Li-Lee and 0.092 for
   Lee-Carter); the ensemble's intervals cover the rates best (95%
-  coverage 0.88), while those of the coherent fdm are too narrow (life
-  expectancy 0.68).
+  coverage 0.87). The intervals of life expectancy are too narrow for
+  every model (95% coverage 0.68 to 0.80).
 * For the totals (East, West and Germany), the ensemble forecasts the
-  rates most accurately.
-* The East-West gap is forecast best by Lee-Carter (CRPS 0.11), the
-  ensemble second (0.14); the intervals of Li-Lee and the coherent fdm
-  covered the observed gap in only 40% and 50% of the cases.
+  rates most accurately, but all intervals are too narrow there.
+* The East-West gap is forecast best by the ensemble and Lee-Carter (CRPS
+  0.075 and 0.076), whose intervals covered every observed gap; those of
+  Li-Lee and the coherent fdm covered it in only 40% and 47% of the
+  cases.
 
-No single model is best for both questions. The ensemble of Lee-Carter and
-the coherent fdm is close to the best for the Laender and for the gap, so
-the pipeline continues with it: combining models pays here.
+The ensemble of Lee-Carter and the coherent fdm is the most accurate for
+the Laender and, together with Lee-Carter, for the gap, so the pipeline
+continues with it: combining models pays here.
 
 ### Jump-off
 
@@ -172,8 +173,8 @@ bt_steps <- rbind(bt[model == "Lee-Carter + coherent fdm"], bt_anchor)
 mt_score_table(bt_steps[sex != "both"], metrics = c("crps", "cov95"))
 ```
 
-Anchoring improved every score slightly (CRPS of the rates 0.0756
-against 0.0764), so the pipeline uses it. Smoothing the rates over age
+Anchoring made every quantity slightly more accurate (CRPS of the rates
+0.0759 against 0.0766), so the pipeline uses it. Smoothing the rates over age
 made the forecasts of this ensemble slightly worse in a separate run and
 is not used.
 
@@ -233,7 +234,7 @@ the contributions are small and uncertain.
 | Suppressed cells | raking to Land and national totals | all totals matched | `mt_fill_suppressed()` | "Your own data" |
 | Hierarchy | Laender, East and West, Germany; sexes | | `mt_hierarchy()`, `mt_aggregate_strata()` | "Coherent forecasts" |
 | Coherence | bottom-up sums of the Laender | | `reconciled(method = "bottom_up")` | "Coherent forecasts" |
-| Model | ensemble of Lee-Carter and coherent fdm | close to the best for the Laender and for the gap | `ensemble()`, `coherent_fdm()`, `mt_compare(contrast = )` | "Choosing and combining models" |
+| Model | ensemble of Lee-Carter and coherent fdm | most accurate for the Laender and for the gap | `ensemble()`, `coherent_fdm()`, `mt_compare(contrast = )` | "Choosing and combining models" |
 | Jump-off | observed level of the last three years | slightly better scores | `anchored()` | "Where a forecast starts" |
 | Gap | East - West, path by path | | `mt_contrast()`, `mt_decompose()` | "Decomposing differences" |
 
