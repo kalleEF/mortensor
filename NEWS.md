@@ -106,6 +106,18 @@ Evaluation and derived quantities:
 * Plots: `mt_plot_compare()` with one year, `mt_plot_contrast()` with
   other probabilities, `mt_plot_age()` with unsorted `probs`.
 
+Vignettes:
+
+* The precomputed vignettes are re-knitted. With observation noise
+  independent across cells, their backtests show that the intervals of
+  life expectancy are too narrow for every model, most for national
+  totals; the texts say so. In the German Laender, the ensemble of
+  Lee-Carter and the coherent fdm now also forecasts the East-West gap
+  best (with Lee-Carter).
+* "Bayesian age-period-cohort models with bamp": the effects plot leaves
+  out the R-hat rows of `mt_parameters()`, which get their own table; the
+  MCMC fits are seeded.
+
 ## StanMoMo, recalibration
 
 * `stanmomo()` wraps the Bayesian Lee-Carter, Renshaw-Haberman, APC, CBD
