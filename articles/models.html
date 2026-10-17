@@ -11,6 +11,12 @@
 <script src="../deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Model reference">
+<style>
+/* Bootstrap's paragraph margin inside the labels makes mermaid size the
+   boxes too small, which clips their last line */
+.mermaid-diagram p { margin: 0; }
+.mermaid-diagram { margin: 1rem 0 1.5rem; }
+</style>
 <script type="module">
 import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.esm.min.mjs";
 mermaid.initialize({ startOnLoad: false, securityLevel: "strict" });
@@ -150,13 +156,13 @@ Eilers 2015) or spline methods</td>
 </tr>
 <tr class="odd">
 <td>Smoothing</td>
-<td>over age (Poisson P-splines, Currie, Durban and Eilers 2004;
-Whittaker; GAM), over time (Whittaker) or the age-period surface
-(P-splines; quasi-Poisson <code>te(age, year)</code> GAM, Wood 2017);
-age 0 is not smoothed; models are fitted to the smoothed rates, their
-observation noise, residuals and backtest scales come from the raw
-rates; smoothing over time narrows the intervals of models with a period
-index (check coverage, <code><a href="../reference/calibrated.html">calibrated()</a></code>)</td>
+<td>over age (Poisson P-splines; Whittaker; GAM), over time (Whittaker)
+or the age-period surface (P-splines, Currie, Durban and Eilers 2004;
+quasi-Poisson <code>te(age, year)</code> GAM, Wood 2017); age 0 is not
+smoothed; models are fitted to the smoothed rates, their observation
+noise, residuals and backtest scales come from the raw rates; smoothing
+over time narrows the intervals of models with a period index (check
+coverage, <code><a href="../reference/recalibrated.html">recalibrated()</a></code>)</td>
 <td>
 <code><a href="../reference/mt_smooth.html">mt_smooth()</a></code>, <code><a href="../reference/mt_prep.html">step_smooth()</a></code>,
 <code><a href="../reference/mt_smooth_check.html">mt_smooth_check()</a></code>
@@ -240,12 +246,17 @@ predictive draws, noise.</li>
 <div class="section level3">
 <h3 id="functional-demographic-model-hyndman_ullah">Functional demographic model: <code>hyndman_ullah()</code><a class="anchor" aria-label="anchor" href="#functional-demographic-model-hyndman_ullah"></a>
 </h3>
-<p>Calls <code><a href="https://pkg.robjhyndman.com/demography/reference/fdm.html" class="external-link">demography::fdm()</a></code> (Hyndman and Ullah 2007):
-smoothed log rates decomposed into a mean function and functional
-principal components, whose scores are forecast with time-series models.
-Draws are simulated from the fitted model. Its intervals are those of
-the simulated paths, which are somewhat narrower at short horizons than
-demography’s analytic intervals (see the comparison vignette).</p>
+<p>Calls <code><a href="https://pkg.robjhyndman.com/demography/reference/fdm.html" class="external-link">demography::fdm()</a></code> (Hyndman and Ullah 2007): the
+rates of each year are smoothed over age with
+<code><a href="https://pkg.robjhyndman.com/demography/reference/smooth.demogdata.html" class="external-link">demography::smooth.demogdata()</a></code> (<code>smooth = TRUE</code>;
+settings in <code>smooth_args</code>), and the log rates are decomposed
+into a mean function and functional principal components, whose scores
+are forecast with time-series models. The number of components and the
+smoothing settings can be chosen by forecast accuracy with
+<code><a href="../reference/mt_tune.html">tuned()</a></code>. Draws are simulated from the fitted model. Its
+intervals are those of the simulated paths, which are somewhat narrower
+at short horizons than demography’s analytic intervals (see the
+comparison vignette).</p>
 </div>
 <div class="section level3">
 <h3 id="time-series-per-age-arima_series-ets_series">Time series per age: <code>arima_series()</code>,
@@ -269,6 +280,27 @@ observed rates, so their draws already contain observation noise.</p>
 RH and M6 families. Draws contain the period and cohort index
 uncertainty that StMoMo simulates; parameter uncertainty is not
 included.</p>
+</div>
+<div class="section level3">
+<h3 id="bayesian-stmomo-models-stanmomo">Bayesian StMoMo models: <code>stanmomo()</code><a class="anchor" aria-label="anchor" href="#bayesian-stmomo-models-stanmomo"></a>
+</h3>
+<p>The same families (Lee-Carter, RH, APC, CBD, M6) fitted with Stan by
+StanMoMo (Barigou et al. 2023), with a Poisson or negative binomial
+likelihood. Period indexes are random walks with drift (CBD and M6:
+correlated), cohort effects AR(2) processes.</p>
+<ul>
+<li>
+<strong>Forecast</strong>: StanMoMo forecasts inside the fit, up to
+<code>h_max</code> years.</li>
+<li>
+<strong>Uncertainty</strong>: posterior draws of all parameters and
+of the future indexes; predictive draws add Poisson and extra-Poisson
+noise.</li>
+<li>
+<strong>Convergence</strong>: the fit warns when the largest R-hat
+exceeds 1.05 or transitions diverged; models with cohort effects need
+longer chains.</li>
+</ul>
 </div>
 <div class="section level3">
 <h3 id="bayesian-age-period-cohort-model-apc_bayes">Bayesian age-period-cohort model: <code>apc_bayes()</code><a class="anchor" aria-label="anchor" href="#bayesian-age-period-cohort-model-apc_bayes"></a>
@@ -315,11 +347,33 @@ across strata). <code>a</code>, <code>b</code>, <code>B</code> and
 </ul>
 </div>
 <div class="section level3">
-<h3 id="product-ratio-product_ratio">Product-ratio: <code>product_ratio()</code><a class="anchor" aria-label="anchor" href="#product-ratio-product_ratio"></a>
+<h3 id="product-ratio-product_ratio-coherent_fdm">Product-ratio: <code>product_ratio()</code>,
+<code>coherent_fdm()</code><a class="anchor" aria-label="anchor" href="#product-ratio-product_ratio-coherent_fdm"></a>
 </h3>
-<p>The same structure on the geometric mean of the strata (common
-factor) and their ratios to it (Hyndman, Booth and Yasmeen 2013), with
-Lee-Carter components in place of functional data models.</p>
+<p>The product-ratio method (Hyndman, Booth and Yasmeen 2013) models the
+geometric mean of the strata (the product, which carries the common
+trend) and the ratio of each stratum to it. <code><a href="../reference/coherent_fdm.html">coherent_fdm()</a></code>
+is the original method with the functional data models of
+demography:</p>
+<ul>
+<li>
+<strong>Estimation</strong>: the rates of each stratum are smoothed
+over age; the product and the ratios are decomposed into principal
+components (<code><a href="https://pkg.robjhyndman.com/demography/reference/fdm.html" class="external-link">demography::fdm()</a></code>). With
+<code>common_by</code>, each group has its own product; in a hierarchy
+only the bottom strata enter the product.</li>
+<li>
+<strong>Forecast</strong>: the scores of the product follow ARIMA
+models, those of the ratios stationary ARFIMA models, so the ratios
+return towards their recent level and the strata do not diverge.</li>
+<li>
+<strong>Uncertainty</strong>: simulated scores and resampled model
+errors of the product and of each ratio; the ratios of each path are
+rescaled to multiply to one, as in
+<code><a href="https://pkg.robjhyndman.com/demography/reference/forecast.fdmpr.html" class="external-link">demography::forecast.fdmpr()</a></code>.</li>
+</ul>
+<p><code><a href="../reference/li_lee.html">product_ratio()</a></code> uses Lee-Carter components in place of
+functional data models.</p>
 </div>
 <div class="section level3">
 <h3 id="tucker3-and-cause-shares-experimental">Tucker3 and cause shares (experimental)<a class="anchor" aria-label="anchor" href="#tucker3-and-cause-shares-experimental"></a>
@@ -361,25 +415,36 @@ backtest, or stacking). The mixture contains the uncertainty of each
 component and the disagreement between them.</p>
 </div>
 <div class="section level3">
+<h3 id="different-models-for-groups-of-strata-stratified">Different models for groups of strata:
+<code>stratified()</code><a class="anchor" aria-label="anchor" href="#different-models-for-groups-of-strata-stratified"></a>
+</h3>
+<p>One model per level of a stratum variable, for example Lee-Carter for
+all-cause mortality and Li-Lee for the causes of death. The groups are
+fitted and forecast separately and their draws combined; inside
+<code><a href="../reference/reconciled.html">reconciled()</a></code> they can be made coherent, for example with
+the causes scaled to the all-cause forecast.</p>
+</div>
+<div class="section level3">
 <h3 id="reconciled-forecasts-reconciled">Reconciled forecasts: <code>reconciled()</code><a class="anchor" aria-label="anchor" href="#reconciled-forecasts-reconciled"></a>
 </h3>
 <p>Forecasts of all nodes of a hierarchy (bottom strata and their
 totals) are made to add up draw by draw: bottom-up sums, or projections
 of the base forecasts with weights from their variances (WLS), the
 shrunk covariance (MinT; Wickramasuriya, Athanasopoulos and Hyndman
-2019), the structure (Hyndman et al. 2011) or equal weights (OLS). Parts
-that a projection would make negative are held at zero and the rest
-projected again, so that <code>fixed</code> nodes (a trusted total) are
-kept; with fixed nodes, <code>"proportional"</code> instead scales their
-parts in proportion to their forecasts (top-down allocation). Deaths add
-up over every hierarchy variable; exposures add up over variables that
-divide the population and are shared by the levels of variables such as
-causes of death (<code>additive = "rates"</code>). The exposures of the
-forecast years are those of the last observed year unless projections
-are given.</p>
+2019), the structure (structural scaling; Athanasopoulos et al. 2017) or
+equal weights (OLS; Hyndman et al. 2011). Parts that a projection would
+make negative are held at zero and the rest projected again, so that
+<code>fixed</code> nodes (a trusted total) are kept; with fixed nodes,
+<code>"proportional"</code> instead scales their parts in proportion to
+their forecasts (top-down allocation). Deaths add up over every
+hierarchy variable; exposures add up over variables that divide the
+population and are shared by the levels of variables such as causes of
+death (<code>additive = "rates"</code>). The exposures of the forecast
+years are those of the last observed year unless projections are
+given.</p>
 </div>
 <div class="section level3">
-<h3 id="calibration-on-recent-years-calibrated">Calibration on recent years: <code>calibrated()</code><a class="anchor" aria-label="anchor" href="#calibration-on-recent-years-calibrated"></a>
+<h3 id="calibration-on-recent-years-recalibrated">Calibration on recent years: <code>recalibrated()</code><a class="anchor" aria-label="anchor" href="#calibration-on-recent-years-recalibrated"></a>
 </h3>
 <p>Refits a model at several origins in the last <code>years</code>
 (default 10) of the training data, compares its forecasts with the
@@ -392,7 +457,13 @@ drift correction is estimated as well. Ranks within each cell are kept,
 so the draws remain paths. Calibration widens models that were
 persistently too narrow (Lee-Carter on England &amp; Wales: 95% coverage
 0.75 to 0.88 in backtests) and can narrow mixtures that were already
-wide.</p>
+wide. <code>ages</code> gives each age band its own factors;
+<code>quantity = "life_expectancy"</code> or <code>"asr"</code>
+calibrates the intervals of these quantities (which also depend on how
+the ages move together); <code>n_boot</code> reports bootstrap intervals
+of the factors. Beyond the longest horizon of the window the factors
+stay constant. Calibration keeps the model and its settings; choosing
+the settings themselves is tuning (below).</p>
 </div>
 <div class="section level3">
 <h3 id="bootstrap-and-tuning-bootstrapped-tuned">Bootstrap and tuning: <code>bootstrapped()</code>,
@@ -400,12 +471,23 @@ wide.</p>
 </h3>
 <p><code><a href="../reference/bootstrapped.html">bootstrapped()</a></code> refits a model to Poisson resamples of
 the deaths (parameter uncertainty, including preprocessing with
-<code>type = "data"</code>). <code><a href="../reference/mt_tune.html">tuned()</a></code> chooses settings (for
-example the rank) by an inner rolling-origin backtest on the training
-data only. The fitting period matters for Lee-Carter forecasts when the
-pace of decline changed (Booth, Maindonald and Smith 2002);
-<code>step_window(years)</code> makes it a preprocessing step that a
-backtest compares across windows.</p>
+<code>type = "data"</code>). <code><a href="../reference/mt_tune.html">tuned()</a></code> chooses settings by
+how well they forecast the last years of the training data only
+(<code><a href="../reference/mt_tune.html">mt_tune()</a></code> shows the scores): model settings such as the
+number of components or the rank, and with <code>spec_fun</code>
+returning <code>list(spec = , prep = )</code> preprocessing settings
+such as the smoothing parameter or the fitting window.
+<code>inner_origins = 1, inner_h = 10</code> is the hold-out of the last
+ten years often used with <code><a href="https://pkg.robjhyndman.com/demography/reference/fdm.html" class="external-link">demography::fdm()</a></code>; several
+origins make the choice depend less on one period. The criterion can be
+the CRPS, the interval score or point accuracy
+(<code>metric = "rmse"</code>) of rates, life expectancy or ASR
+(<code>target</code>); <code>select = "one_se"</code> takes the simplest
+setting within one standard error of the best, and <code>by</code> tunes
+groups of strata separately. The fitting period matters for Lee-Carter
+forecasts when the pace of decline changed (Booth, Maindonald and Smith
+2002); <code>step_window(years)</code> makes it a preprocessing step
+that tuning compares across windows.</p>
 </div>
 </div>
 <div class="section level2">
@@ -475,6 +557,14 @@ backtest compares across windows.</p>
 <td>predictive draws</td>
 </tr>
 <tr class="even">
+<td><code><a href="../reference/coherent_fdm.html">coherent_fdm()</a></code></td>
+<td>yes (product and ratios)</td>
+<td>as fdm (product)</td>
+<td>no</td>
+<td>predictive draws</td>
+<td>predictive draws</td>
+</tr>
+<tr class="odd">
 <td><code><a href="../reference/tucker3.html">tucker3()</a></code></td>
 <td>yes (period factors)</td>
 <td>yes</td>
@@ -482,7 +572,7 @@ backtest compares across windows.</p>
 <td>predictive draws</td>
 <td>residual variation and predictive draws</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code><a href="../reference/cause_shares.html">cause_shares()</a></code></td>
 <td>of the total model and the share factors</td>
 <td>yes</td>
@@ -490,7 +580,7 @@ backtest compares across windows.</p>
 <td>predictive draws</td>
 <td>residual variation and predictive draws</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code><a href="../reference/hyndman_ullah.html">hyndman_ullah()</a></code></td>
 <td>yes</td>
 <td>as fdm</td>
@@ -498,11 +588,19 @@ backtest compares across windows.</p>
 <td>predictive draws</td>
 <td>predictive draws</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code><a href="../reference/stmomo.html">stmomo()</a></code></td>
 <td>yes</td>
 <td>yes</td>
 <td>no</td>
+<td>predictive draws</td>
+<td>predictive draws</td>
+</tr>
+<tr class="odd">
+<td><code><a href="../reference/stanmomo.html">stanmomo()</a></code></td>
+<td>yes</td>
+<td>posterior</td>
+<td>yes (posterior)</td>
 <td>predictive draws</td>
 <td>predictive draws</td>
 </tr>
@@ -523,6 +621,14 @@ backtest compares across windows.</p>
 <td>of the components</td>
 </tr>
 <tr class="even">
+<td><code><a href="../reference/stratified.html">stratified()</a></code></td>
+<td>of the model of each group</td>
+<td>of the model of each group</td>
+<td>of the model of each group</td>
+<td>as the models</td>
+<td>as the models</td>
+</tr>
+<tr class="odd">
 <td><code><a href="../reference/bootstrapped.html">bootstrapped()</a></code></td>
 <td>of the base model</td>
 <td>of the base model</td>
@@ -530,7 +636,7 @@ backtest compares across windows.</p>
 <td>as the base model</td>
 <td>as the base model</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code><a href="../reference/reconciled.html">reconciled()</a></code></td>
 <td>of the base model, projected</td>
 <td></td>
@@ -538,15 +644,15 @@ backtest compares across windows.</p>
 <td>bottom strata, summed</td>
 <td>bottom strata, summed</td>
 </tr>
-<tr class="even">
-<td><code><a href="../reference/calibrated.html">calibrated()</a></code></td>
+<tr class="odd">
+<td><code><a href="../reference/recalibrated.html">recalibrated()</a></code></td>
 <td>of the base model, rescaled</td>
 <td>rescaled (optional correction)</td>
 <td></td>
 <td>as the base model</td>
 <td>as the base model</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code><a href="../reference/anchored.html">anchored()</a></code></td>
 <td>of the base model</td>
 <td>of the base model</td>
@@ -580,6 +686,12 @@ scored unless <code>score_estimated = TRUE</code>.</p>
 <div class="section level2">
 <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a>
 </h2>
+<p>Athanasopoulos G, Hyndman RJ, Kourentzes N, Petropoulos F (2017).
+Forecasting with temporal hierarchies. <em>European Journal of
+Operational Research</em> 262(1): 60-74.</p>
+<p>Barigou K, Goffard P-O, Loisel S, Salhi Y (2023). Bayesian model
+averaging for mortality forecasting using leave-future-out validation.
+<em>International Journal of Forecasting</em> 39(2): 674-690.</p>
 <p>Booth H, Maindonald J, Smith L (2002). Applying Lee-Carter under
 conditions of variable mortality decline. <em>Population Studies</em>
 56(3): 325-336.</p>

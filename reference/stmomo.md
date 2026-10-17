@@ -9,7 +9,8 @@ of age), deaths and central exposures; for the logit-link models initial
 exposures are approximated as central exposures plus half the deaths,
 and forecast death probabilities are converted to central rates
 (`m = -log(1 - q)`). Cohorts observed in fewer than `clip` cells get
-zero weight. Draws come from
+zero weight; their fitted rates use the effect of the nearest estimated
+cohort. Draws come from
 [`simulate()`](https://rdrr.io/r/stats/simulate.html) of the fitted
 model (period and cohort indexes simulated as multivariate random walks
 with drift and ARIMA, respectively).

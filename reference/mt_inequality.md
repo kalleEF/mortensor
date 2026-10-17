@@ -37,8 +37,12 @@ mt_inequality(
 - order:
 
   Levels of `var` from rank 0 to rank 1 (default: their order in the
-  data). For deprivation, list the least deprived level first so that a
-  positive SII means higher values in more deprived groups.
+  data, without the total and the groups of a hierarchy stored in `x` by
+  [`mt_aggregate_strata()`](mt_aggregate_strata.md),
+  [`reconciled()`](reconciled.md) or `mt_group_levels(total = )`). For
+  deprivation, list the least deprived level first so that a positive
+  SII means higher values in more deprived groups. Levels not listed,
+  such as the total of a hierarchy, are left out.
 
 - quantity:
 

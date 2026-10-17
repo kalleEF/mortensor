@@ -7,7 +7,12 @@ including ungrouping and smoothing (they are part of prep)."><meta property="og:
 preprocessing pipeline and the model are fitted on the
 training window only, and predictive draws for the next h years are
 compared with the observations. Nothing after the origin enters the fit,
-including ungrouping and smoothing (they are part of prep)."><script type="module">
+including ungrouping and smoothing (they are part of prep)."><style>
+/* Bootstrap's paragraph margin inside the labels makes mermaid size the
+   boxes too small, which clips their last line */
+.mermaid-diagram p { margin: 0; }
+.mermaid-diagram { margin: 1rem 0 1.5rem; }
+</style><script type="module">
 import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.esm.min.mjs";
 mermaid.initialize({ startOnLoad: false, securityLevel: "strict" });
 window.addEventListener("load", async () => {
@@ -84,7 +89,8 @@ including ungrouping and smoothing (they are part of <code>prep</code>).</p>
 <span>  seed <span class="op">=</span> <span class="fl">1</span>,</span>
 <span>  cores <span class="op">=</span> <span class="fl">1</span>,</span>
 <span>  score_estimated <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>  quantities <span class="op">=</span> <span class="cn">NULL</span></span>
+<span>  quantities <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  contrast <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -123,7 +129,8 @@ equally often.</p></dd>
 
 
 <dt id="arg-seed">seed<a class="anchor" aria-label="anchor" href="#arg-seed"></a></dt>
-<dd><p>Random seed (forecast draws and the randomised PIT).</p></dd>
+<dd><p>Random seed (forecast draws and the randomised PIT); <code>NULL</code>
+for none.</p></dd>
 
 
 <dt id="arg-cores">cores<a class="anchor" aria-label="anchor" href="#arg-cores"></a></dt>
@@ -138,13 +145,27 @@ only observed cells are scored.</p></dd>
 
 <dt id="arg-quantities">quantities<a class="anchor" aria-label="anchor" href="#arg-quantities"></a></dt>
 <dd><p>Derived quantities scored in addition to the rates:
-<code>"life_expectancy"</code> (at the first observed age, in years) and/or
+<code>"life_expectancy"</code> (at the first age of the grid, in years) and/or
 <code>"asr"</code> (age-standardised rate, European Standard Population 2013, on
-the log scale), computed from the predictive draws aggregated to the
-observed age groups of each stratum and test year (years with missing
-or suppressed cells are skipped). They are added as rows with <code>target</code>
+the log scale), computed from the predictive draws of deaths aggregated
+to the observed age groups of each stratum and test year, like the
+observed values. Years whose observed cells do not cover the full age
+range without gaps (missing, suppressed or estimated cells) are
+skipped. A zero ASR (no deaths at any age) is replaced by the smallest
+value that half a death gives. They are added as rows with <code>target</code>
 <code>"life_expectancy"</code> or <code>"asr"</code>; summarise them with
 <code>mt_score(..., target = )</code>.</p></dd>
+
+
+<dt id="arg-contrast">contrast<a class="anchor" aria-label="anchor" href="#arg-contrast"></a></dt>
+<dd><p>Optional <code>c(var = , ref = )</code>: a stratum variable and its
+reference level. With <code>quantities</code>, the differences between every other
+level and the reference level (with the same values of the other
+stratum variables) are scored too, path by path: targets
+<code>"life_expectancy_gap"</code> (difference in years) and <code>"asr_gap"</code>
+(difference of log ASR, the log rate ratio). This checks forecasts of
+inequality, whose uncertainty depends on how the paths of the strata
+move together; the rows carry the stratum of the compared level.</p></dd>
 
 </dl></div>
     <div class="section level2">
@@ -153,11 +174,12 @@ or suppressed cells are skipped). They are added as rows with <code>target</code
 observed cell, origin and horizon: <code>model</code>, <code>prep</code> (the preprocessing
 steps, <code>"none"</code> without), <code>origin</code>, <code>horizon</code>,
 stratum columns, <code>age_lo</code>, <code>age_hi</code>, <code>period</code>, <code>observed</code> (log rate),
-<code>median</code>, <code>mean</code>, quantiles, and the scores <code>crps</code>, <code>wis</code>, <code>ae</code>
-(absolute error of the median), <code>cov50</code>, <code>cov80</code>, <code>cov95</code>, <code>pit</code> and the
-MASE scale <code>scale</code> (mean absolute year-to-year change in the training
-data), and <code>target</code> (<code>"rate"</code>, or the derived quantity). Summarise with
-<code><a href="mt_score.html">mt_score()</a></code>.</p>
+the MASE scale <code>scale</code> (mean absolute year-to-year change in the
+training data), <code>target</code> (<code>"rate"</code>, or the derived quantity), the
+forecast <code>median</code> and <code>mean</code>, and the scores <code>crps</code>, <code>wis</code>, <code>ae</code>
+(absolute error of the median), <code>cov50</code>, <code>cov80</code>, <code>cov95</code> and <code>pit</code>
+(randomised for ties, as with zero deaths). Rows of derived quantities
+have no <code>age_lo</code>, <code>age_hi</code> and <code>scale</code>. Summarise with <code><a href="mt_score.html">mt_score()</a></code>.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
@@ -167,6 +189,15 @@ as known) are summed to each observed cell, so models on single years of
 age can be scored against data in 5-year groups. Exposures of the test
 years are ungrouped if needed (no deaths of the test years are used for
 that).</p>
+<p>Data whose deaths were ungrouped beforehand with <code><a href="mt_ungroup.html">mt_ungroup()</a></code>, and
+data smoothed with <code><a href="mt_smooth.html">mt_smooth()</a></code>, are refused: the forecasts would be scored against
+estimates instead of observations, and an ungrouping or smoothing over
+time has seen the test years. Ungroup or smooth inside each fit instead
+(<code>prep = mt_prep(step_ungroup())</code>, <code><a href="mt_prep.html">step_smooth()</a></code>). With
+<code><a href="mt_prep.html">step_regroup()</a></code>, the test data are summed to the age groups of the fit.</p>
+<p>Observed log rates of cells without deaths use half a death, and so do
+the predictive draws, after their deaths have been summed to the observed
+cell.</p>
     </div>
 
     <div class="section level2">
@@ -174,12 +205,12 @@ that).</p>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">x</span> <span class="op">&lt;-</span> <span class="fu"><a href="mt_example.html">mt_example</a></span><span class="op">(</span>deaths <span class="op">=</span> <span class="st">"single"</span>, years <span class="op">=</span> <span class="fl">1990</span><span class="op">:</span><span class="fl">2012</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">bt</span> <span class="op">&lt;-</span> <span class="fu">mt_backtest</span><span class="op">(</span><span class="fu"><a href="rwd.html">rwd</a></span><span class="op">(</span><span class="op">)</span>, <span class="va">x</span>, origins <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2005</span>, <span class="fl">2007</span><span class="op">)</span>, h <span class="op">=</span> <span class="fl">5</span>, n_draws <span class="op">=</span> <span class="fl">100</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="mt_score.html">mt_score</a></span><span class="op">(</span><span class="va">bt</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>                     model       crps        wis        mae     mase     cov50</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>                    &lt;char&gt;      &lt;num&gt;      &lt;num&gt;      &lt;num&gt;    &lt;num&gt;     &lt;num&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1: Random walk with drift 0.05507087 0.04923878 0.07405228 1.265727 0.6415493</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>       cov80     cov95  pit_mean     n     unit</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>       &lt;num&gt;     &lt;num&gt;     &lt;num&gt; &lt;int&gt;   &lt;char&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1: 0.878169 0.9591549 0.4867606  1420 log rate</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>                     model       crps        wis        mae      rmse     mase</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>                    &lt;char&gt;      &lt;num&gt;      &lt;num&gt;      &lt;num&gt;     &lt;num&gt;    &lt;num&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1: Random walk with drift 0.05507087 0.04923878 0.07405228 0.1188856 1.265727</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        cov50    cov80     cov95  pit_mean     n     unit</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        &lt;num&gt;    &lt;num&gt;     &lt;num&gt;     &lt;num&gt; &lt;int&gt;   &lt;char&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1: 0.6415493 0.878169 0.9591549 0.4867606  1420 log rate</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

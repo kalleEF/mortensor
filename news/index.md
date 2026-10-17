@@ -4,6 +4,324 @@
 
 Clean break: the 0.1.x interface is replaced (see `dev/revamp-plan.md`).
 
+### Fixes from a review of the whole package
+
+Data:
+
+- [`mt_group_levels()`](../reference/mt_group_levels.md) takes numeric
+  `total`, `other` and `keep` levels as labels, keeps an unlisted level
+  named like a group in that group (as
+  [`mt_relabel()`](../reference/mt_relabel.md) to an existing level
+  does), and refuses a group named like the total.
+- [`mt_read_gbe()`](../reference/mt_read_gbe.md) reads values with
+  several thousands separators (`"1.023.687"`) and footers in quotes.
+- [`mt_fill_suppressed()`](../reference/mt_fill_suppressed.md) no longer
+  fills cells of strata published at another age resolution.
+- [`mt_data()`](../reference/mt_data.md) treats `NA` ages as unknown
+  (distributed) and leaves out rows of unknown period with a warning;
+  factor age bounds use their labels.
+  [`mt_from_hmd()`](../reference/mt_from_hmd.md) recognises open ages
+  written as `"110+"`.
+
+Harmonisation:
+
+- [`mt_ungroup()`](../reference/mt_ungroup.md) keeps an observed first
+  year of life out of the fit (its peak spilled into ages 1-6), works
+  with the spline methods on grouped exposures, and warns when
+  `dims = 2` is ignored (`mt_warning_ungroup_dims`). The spline and GAM
+  methods keep the group totals next to a missing group and above a
+  closed top group.
+- [`mt_smooth()`](../reference/mt_smooth.md): cells with missing deaths
+  no longer break the smooth; they stay missing (only the 2D GAM
+  predicts them). Smoothing over time works with a single age group.
+  [`mt_smooth_check()`](../reference/mt_smooth_check.md) measures the
+  smoothed cells only.
+- [`mt_disaggregate()`](../reference/mt_disaggregate.md):
+  `method = "shape"` with a shape of zeros gives a flat shape instead of
+  `NaN`; missing group rates give missing fine rates.
+- `step_shocks(method = "interpolate")` removes shock years at the start
+  or end of the training data instead of failing.
+
+Models:
+
+- Models of observed rates ([`rwd()`](../reference/rwd.md),
+  [`arima_series()`](../reference/arima_series.md),
+  [`ets_series()`](../reference/arima_series.md)) fitted to smoothed
+  rates ([`step_smooth()`](../reference/mt_prep.md)) now add the
+  observation noise of the raw rates to predictive draws; their backtest
+  intervals were too narrow.
+- Each stratum is fitted with its own random number stream started from
+  the current generator: fits that use random numbers follow
+  [`set.seed()`](https://rdrr.io/r/base/Random.html) with any number of
+  `cores` (bootstrap results differ from earlier versions).
+- `rwd(drift_window = )` with `observation_noise = TRUE` no longer
+  fails; `lee_carter(bootstrap = TRUE)` resamples the chosen fitting
+  period; `lee_carter(adjust = "e0")` with age groups without deaths
+  matches life expectancy again (it could silently leave the index
+  unadjusted); [`stmomo()`](../reference/stmomo.md) forecasts one year;
+  [`tucker3()`](../reference/tucker3.md),
+  [`li_lee()`](../reference/li_lee.md) and
+  [`product_ratio()`](../reference/li_lee.md) run with a single age
+  group; [`coherent_fdm()`](../reference/coherent_fdm.md) reports groups
+  with fewer than two strata.
+- [`cause_shares()`](../reference/cause_shares.md): predictive draws are
+  those of the total model, with its deaths split between the causes, so
+  the causes add up to the total in every draw; the extra variation of
+  the shares beyond multinomial sampling is estimated as such.
+
+Wrappers and hierarchies:
+
+- `reconciled(anchored(...))` and `reconciled(recalibrated(...))`
+  reconcile again (the inner wrapper’s fields replaced those of
+  [`reconciled()`](../reference/reconciled.md)); nested wrappers keep
+  their own fields.
+- Observation noise of reconciled predictive draws is independent across
+  cells: the empirical copula reorders the paths only. The noise had
+  been made comonotone across strata, which widened the intervals of the
+  aggregates (validation `de_regions`: 95% coverage of the aggregates
+  0.76, before 0.80).
+- Exposures given for the bottom strata only are summed to the
+  aggregates; a reconciled model backtested on bottom-level data scores
+  the right strata (the draws of other strata had been recycled).
+- Hierarchies of one variable are reconciled on the scale of deaths when
+  the exposures of the parts add up to the total, on the scale of rates
+  when each part has the total’s exposure (causes of death).
+- [`ensemble()`](../reference/ensemble.md): inner backtests are matched
+  cell by cell, components that forecast different strata are refused,
+  and the ensemble fit no longer carries the first component’s
+  calibration or jump-off. Ensembles and
+  [`tuned()`](../reference/mt_tune.md) add observation noise according
+  to their components.
+- [`stratified()`](../reference/stratified.md) with a level named
+  `other`, `recalibrated(seed = NULL)`, `bootstrapped(tuned(...))`,
+  [`mt_coherence()`](../reference/mt_coherence.md) with one year or one
+  draw, and the component of each draw after reordering are fixed.
+- [`mt_hierarchy()`](../reference/mt_hierarchy.md) checks its groups;
+  [`mt_aggregate_strata()`](../reference/mt_aggregate_strata.md) warns
+  about members missing from the data.
+  [`mt_tune()`](../reference/mt_tune.md) refuses ungrouped data with the
+  reason.
+
+Evaluation and derived quantities:
+
+- Backtests floor the predictive deaths at half a death after summing
+  them to the observed cells, not per grid cell: with ungrouping inside
+  the fit ([`step_ungroup()`](../reference/mt_prep.md)), the floor per
+  single year had biased the scores of age groups with few deaths.
+  Predictive draws may now hold zero deaths.
+- Life expectancy and ASR in backtests are computed from the predictive
+  deaths like the observed values, and only for years whose cells cover
+  the whole age range.
+- [`mt_backtest()`](../reference/mt_backtest.md) refuses data whose
+  deaths were ungrouped with
+  [`mt_ungroup()`](../reference/mt_ungroup.md)
+  (`mt_error_ungrouped_data`): use
+  [`step_ungroup()`](../reference/mt_prep.md). Test data are summed to
+  the age groups of a fit with
+  [`step_regroup()`](../reference/mt_prep.md).
+- [`mt_compare()`](../reference/mt_compare.md) chooses the default
+  origins once for all models;
+  [`mt_score_table()`](../reference/mt_compare.md) keeps a model that
+  lacks one target and separates preprocessing pipelines for every
+  target.
+- [`life_table()`](../reference/life_table.md): a rate of 0 in the open
+  interval uses the last positive rate (instead of an infinite life
+  expectancy).
+- [`mt_inequality()`](../reference/mt_inequality.md) leaves the total
+  and groups of a stored hierarchy out of the default `order`.
+- Plots: [`mt_plot_compare()`](../reference/mt_compare.md) with one
+  year, [`mt_plot_contrast()`](../reference/mt_plot_contrast.md) with
+  other probabilities, [`mt_plot_age()`](../reference/mt_plot.md) with
+  unsorted `probs`.
+
+Vignettes:
+
+- The precomputed vignettes are re-knitted. With observation noise
+  independent across cells, their backtests show that the intervals of
+  life expectancy are too narrow for every model, most for national
+  totals; the texts say so. In the German Laender, the ensemble of
+  Lee-Carter and the coherent fdm now also forecasts the East-West gap
+  best (with Lee-Carter).
+- “Bayesian age-period-cohort models with bamp”: the effects plot leaves
+  out the R-hat rows of
+  [`mt_parameters()`](../reference/mt_parameters.md), which get their
+  own table; the MCMC fits are seeded.
+
+### StanMoMo, recalibration
+
+- [`stanmomo()`](../reference/stanmomo.md) wraps the Bayesian
+  Lee-Carter, Renshaw-Haberman, APC, CBD and M6 models of StanMoMo
+  (Barigou et al. 2023), Poisson or negative binomial; draws are
+  posterior draws of the expected rates, fits warn when the chains have
+  not converged. Validation check `stanmomo_ew`.
+- `calibrated()` is renamed
+  [`recalibrated()`](../reference/recalibrated.md), and the vignette
+  “Tuning and calibration” is now “Tuning and recalibration”: in
+  demography, “calibrating” a model often means fitting it, while this
+  wrapper adjusts the forecast distribution of a fitted model
+  afterwards.
+- [`hyndman_ullah()`](../reference/hyndman_ullah.md) keeps smoothing the
+  rates over age by default.
+
+### Vignettes restructured, models and diagnostics added
+
+- The vignettes are reorganised: one concept per vignette with a simple
+  model, a model vignette, and two applied pipelines. New: “Choosing and
+  combining models” (implemented and wrapped models side by side,
+  ensembles of any combination), “Ungrouping age groups: methods and
+  diagnostics” (replaces “Data at different granularities”), “Inequality
+  in England” and “Differences between the German Laender” (replace the
+  deprivation, causes, regions and HMD forecasting vignettes). Every
+  step of the applied pipelines is chosen in a backtest of the quantity
+  the question is about.
+- [`coherent_fdm()`](../reference/coherent_fdm.md): the product-ratio
+  method with functional data models of demography (Hyndman, Booth and
+  Yasmeen 2013), with simulated paths, groups (`common_by`) and
+  hierarchies.
+- [`stratified()`](../reference/stratified.md): different models for
+  groups of strata, for example Lee-Carter for all causes and Li-Lee for
+  the causes of death, inside
+  [`reconciled()`](../reference/reconciled.md) with the causes scaled to
+  the all-cause forecast.
+- Backtests score gaps between strata path by path:
+  `mt_backtest(contrast = c(var = , ref = ))` adds the targets
+  `"life_expectancy_gap"` and `"asr_gap"`.
+  `mt_score_table(hierarchy = )` scores the bottom series, aggregates
+  and total separately.
+- [`mt_plot_ungroup()`](../reference/ungroup-diagnostics.md) compares
+  several ungrouping results (a named list) with three views: age
+  profile against the groups, stability over time, and errors against
+  known single years with the Poisson noise band;
+  [`mt_ungroup_check()`](../reference/ungroup-diagnostics.md) gives the
+  same as a table. `mt_regroup(measures = )` regroups only some tables
+  (for example the deaths, to check ungrouping).
+- Help pages no longer quote benchmark results; the vignettes show them.
+- Fixes: StMoMo cohort models now have fitted rates for clipped cohorts
+  (their fitted life expectancy dropped to zero in the last years); a
+  missing rate gives a missing life expectancy instead of certain death;
+  `mt_smooth(along = "period")` uses Whittaker smoothing by default;
+  errors raised inside
+  [`do.call()`](https://rdrr.io/r/base/do.call.html) no longer print the
+  whole function; [`mt_inequality()`](../reference/mt_inequality.md)
+  leaves out levels not in `order` (such as a hierarchy total); the
+  legend order of [`mt_plot_shares()`](../reference/mt_plot_more.md) is
+  fixed.
+
+### Comparing models and forecasts
+
+- [`mt_compare()`](../reference/mt_compare.md) backtests a named list of
+  models (each with its own preprocessing) on the same origins;
+  [`mt_score_table()`](../reference/mt_compare.md) shows the scores of
+  rates, life expectancy and ASR side by side.
+- [`mt_compare_forecasts()`](../reference/mt_compare.md) tabulates one
+  quantity (life expectancy, ASR, deaths, rates) of several forecasts or
+  of observed data as “median (lower-upper)”;
+  [`mt_plot_compare()`](../reference/mt_compare.md) draws them in one
+  figure, also around the jump-off year.
+- [`mt_plot_backtest_design()`](../reference/mt_plot_design.md) shows
+  the training and test years of a backtest;
+  [`mt_plot_tuning()`](../reference/mt_plot_design.md) the scores of a
+  tuning grid.
+- Precomputed vignettes no longer show “plot of chunk” captions.
+- [`mt_plot_smooth()`](../reference/mt_smooth_check.md) compares several
+  smoothers in one figure (a named list) and shows rates over age
+  (`along = "age"`); [`mt_plot_pit()`](../reference/mt_plot_design.md)
+  draws PIT histograms of a backtest.
+- Smoothing over time (`mt_smooth(along = "period")`,
+  [`step_smooth()`](../reference/mt_prep.md)) scales the weights within
+  each age: one smoothing parameter now gives the same smoothness at
+  every age. Before, the ages with many deaths were barely smoothed
+  (effective degrees of freedom 15 of 19 at ages 80+ on the ONS data)
+  and those with few deaths strongly.
+- New concept vignettes, one topic each: “Smoothing death rates”, “Where
+  a forecast starts: the jump-off”, “Backtesting and scores” (with the
+  scores explained); the articles are grouped into getting started,
+  concepts, models, applications and help.
+- Vignette “Tuning and recalibration”: the fitting window of Lee-Carter
+  chosen by a hold-out, the width of intervals calibrated, both checked
+  in a backtest.
+- [`hyndman_ullah()`](../reference/hyndman_ullah.md): when the monotonic
+  spline of `smooth.demogdata()` cannot be fitted (age ranges starting
+  in middle age), the rates are smoothed without the constraint, noted
+  in the fit diagnostics.
+- [`mt_tune()`](../reference/mt_tune.md): standard errors also for a
+  hold-out of a single stratum (blocks of test years).
+- [`mt_plot_contrast()`](../reference/mt_plot_contrast.md) draws gaps
+  between strata over time (one or several forecasts, with observed
+  gaps); `mt_plot_compare(periods = )` with one year shows medians and
+  intervals per stratum side by side.
+- “Getting started” is one short pass through the main steps; “Coherent
+  forecasts: totals and their parts” (live, no longer precomputed)
+  explains bottom-up, reconciliation and fixed totals with one figure
+  each and a small backtest.
+
+### Tuning and recalibration
+
+- [`hyndman_ullah()`](../reference/hyndman_ullah.md) smooths the rates
+  of each year over age with
+  [`demography::smooth.demogdata()`](https://pkg.robjhyndman.com/demography/reference/smooth.demogdata.html)
+  before the decomposition (`smooth = TRUE`, settings in `smooth_args`),
+  as in Hyndman and Ullah (2007). Before, it decomposed raw rates,
+  contrary to its documentation, and the model errors that
+  [`simulate()`](https://rdrr.io/r/stats/simulate.html) resamples
+  contained the observation noise that predictive draws add a second
+  time. `smooth = FALSE` keeps the old behaviour (label “unsmoothed”).
+- [`mt_tune()`](../reference/mt_tune.md) and
+  [`tuned()`](../reference/mt_tune.md) choose settings by forecast
+  accuracy on the last years of the training data:
+  - `spec_fun` may return `list(spec = , prep = )`, so preprocessing
+    (smoothing parameter, fitting window) is tuned together with the
+    model (for example the number of components of
+    [`hyndman_ullah()`](../reference/hyndman_ullah.md));
+  - `inner_origins = 1` is a single hold-out of the last `inner_h`
+    years; `target = "life_expectancy"` or `"asr"`; `metric = "rmse"`
+    for point accuracy;
+  - `select = "one_se"` takes the simplest setting within one standard
+    error of the best; scores carry standard errors, scores by horizon
+    (`by_horizon`) and the `chosen` setting;
+  - `by` tunes and fits groups of strata separately (for example by
+    sex).
+- [`mt_score()`](../reference/mt_score.md) reports the root mean squared
+  error of the median (`rmse`).
+- [`recalibrated()`](../reference/recalibrated.md),
+  [`anchored()`](../reference/anchored.md) and
+  [`reconciled()`](../reference/reconciled.md) around
+  [`tuned()`](../reference/mt_tune.md) failed when forecasting (“No
+  simulate_model() method for model ‘tuned’”): the wrappers rebuilt the
+  base model from its specification instead of the one the tuning chose.
+  Fits now keep the specifications fitted underneath.
+- [`summary()`](https://rdrr.io/r/base/summary.html) of tuned fits shows
+  the chosen settings.
+- [`recalibrated()`](../reference/recalibrated.md):
+  - `ages` estimates the spread factors (and drift) per age band, for
+    models too narrow at some ages and too wide at others;
+  - `quantity = "life_expectancy"` or `"asr"` calibrates the intervals
+    of these quantities, which also depend on how the ages move
+    together;
+  - `n_boot` gives bootstrap intervals of the factors (forecasts of
+    stratum x origin resampled);
+  - the drift correction of `bias = TRUE` stays constant beyond the
+    longest horizon of the calibration window instead of growing
+    further;
+  - a warning when the factors rest on the forecasts of one origin; the
+    table reports the numbers of inner forecasts and scored values.
+- Benchmark of tuning and calibration (`dev/tuning.md`, validation check
+  `tuning_ew`): tuning the fitting window of Lee-Carter on a 10-year
+  hold-out improved forecasts on England & Wales and France; tuning the
+  components and smoothing of fdm the same way did not; calibration
+  brought the 95% coverage of all models close to nominal.
+
+### Function map
+
+- The diagrams of the function map and the README fit the width of the
+  website, and their labels are no longer clipped (Bootstrap’s paragraph
+  margin inside mermaid labels made the boxes too small). Map 1 lists
+  the preparation steps in their usual order and leaves smoothing to
+  [`step_smooth()`](../reference/mt_prep.md) inside fits;
+  [`mt_prep()`](../reference/mt_prep.md) feeds
+  [`mt_fit()`](../reference/mt_fit.md); the function table lists every
+  exported function.
+
 ### Changes after the third and fourth applied reviews
 
 Two further reviews (`dev/review-applied-3.md`, `-4.md`; an
@@ -41,7 +359,7 @@ own questions).
   their parts in proportion to their forecasts, draw by draw (top-down,
   Athanasopoulos, Ahmed and Hyndman 2009). Non-negative projections warn
   when more than 5% of the draws hold strata at zero or fixed nodes
-  move; `info$share_draws_with_zeros`.
+  move; `$reconciliation$share_draws_with_zeros`.
   [`mt_plot_coherence()`](../reference/mt_coherence.md) shows the range
   of the paths.
 - [`anchored()`](../reference/anchored.md): the empirical Bayes
@@ -129,11 +447,11 @@ own questions).
   refer to the data before smoothing. Before, noise was estimated from
   the smoothed rates, which made intervals too narrow.
 - Smoothing over time narrows the intervals of models with a period
-  index; combined with [`calibrated()`](../reference/calibrated.md) it
-  gave the best calibrated forecasts for England & Wales men (Lee-Carter
-  on the GAM surface, calibrated: CRPS 0.0646, 95% coverage 0.91 against
-  0.0687 and 0.75). On the ONS quintiles, whose noise is close to
-  Poisson, smoothing did not help.
+  index; combined with [`recalibrated()`](../reference/recalibrated.md)
+  it gave the best calibrated forecasts for England & Wales men
+  (Lee-Carter on the GAM surface, calibrated: CRPS 0.0646, 95% coverage
+  0.91 against 0.0687 and 0.75). On the ONS quintiles smoothing over
+  time made the forecasts worse.
 - [`anchored()`](../reference/anchored.md) moves the start of any
   model’s forecast towards the observed level of the last `years`
   (default 3) per age and stratum, with empirical Bayes shrinkage of
@@ -163,10 +481,9 @@ own questions).
   keeps the best components of the inner backtest;
   `mt_tune(strategy = "two_stage")` searches a coarse grid first.
 - Disaggregation: `tail` (`"kannisto"` or `"gompertz"`) and `tail_width`
-  for the open interval in [`mt_ungroup()`](../reference/mt_ungroup.md)
-  and [`mt_disaggregate()`](../reference/mt_disaggregate.md),
-  year-specific shapes from
-  [`mt_shape_rates()`](../reference/mt_shape_rates.md),
+  for the open interval in `mt_ungroup(method = "gam")`; in
+  [`mt_disaggregate()`](../reference/mt_disaggregate.md), year-specific
+  shapes from [`mt_shape_rates()`](../reference/mt_shape_rates.md),
   [`mt_disaggregate_check()`](../reference/mt_disaggregate_check.md) and
   [`mt_plot_disaggregation()`](../reference/mt_disaggregate_check.md).
 - Vignettes: “Forecasting and backtesting with HMD data” (chosen period,
@@ -179,7 +496,7 @@ own questions).
 
 ### Calibration, deprivation and coherence vignettes
 
-- [`calibrated()`](../reference/calibrated.md) wraps any model
+- [`recalibrated()`](../reference/recalibrated.md) wraps any model
   specification (including [`ensemble()`](../reference/ensemble.md),
   [`reconciled()`](../reference/reconciled.md) and
   [`bootstrapped()`](../reference/bootstrapped.md)) and recalibrates the

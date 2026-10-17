@@ -89,8 +89,12 @@ table where age 0 is in the data.
 The period index follows a random walk with drift. Draws include the
 innovations and the uncertainty of the drift. With `bootstrap = TRUE`
 the parameters are re-estimated on `n_boot` Poisson resamples of the
-fitted deaths (semi-parametric bootstrap of Brouhns et al. 2005), which
-adds the uncertainty of `a` and `b`.
+fitted deaths of the fitting period (semi-parametric bootstrap of
+Brouhns et al. 2005), which adds the uncertainty of `a` and `b`.
+
+Age groups without deaths in the fitting period get a constant rate (0.5
+deaths over the period) and no trend; with `adjust = "e0"` they enter
+the life tables at that rate.
 
 ## References
 

@@ -13,7 +13,12 @@ information criterion (Spiegelhalter et al. 2002) that bamp reports,
 summed over strata. DIC
 measures in-sample fit; to choose by forecast accuracy, compare the
 candidates with mt_backtest() instead. Selection on all data followed by
-a backtest of the selected model reuses the test years once."><script type="module">
+a backtest of the selected model reuses the test years once."><style>
+/* Bootstrap's paragraph margin inside the labels makes mermaid size the
+   boxes too small, which clips their last line */
+.mermaid-diagram p { margin: 0; }
+.mermaid-diagram { margin: 1rem 0 1.5rem; }
+</style><script type="module">
 import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.esm.min.mjs";
 mermaid.initialize({ startOnLoad: false, securityLevel: "strict" });
 window.addEventListener("load", async () => {

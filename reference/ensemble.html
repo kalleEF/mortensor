@@ -7,7 +7,12 @@ from the ensemble draws."><meta property="og:description" content="A mixture of 
 the ensemble is a draw of one component, chosen in proportion to the
 weights. Mixing draws (rather than averaging quantiles) keeps the paths
 coherent, so derived quantities such as life expectancy can be computed
-from the ensemble draws."><script type="module">
+from the ensemble draws."><style>
+/* Bootstrap's paragraph margin inside the labels makes mermaid size the
+   boxes too small, which clips their last line */
+.mermaid-diagram p { margin: 0; }
+.mermaid-diagram { margin: 1rem 0 1.5rem; }
+</style><script type="module">
 import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.esm.min.mjs";
 mermaid.initialize({ startOnLoad: false, securityLevel: "strict" });
 window.addEventListener("load", async () => {
@@ -119,15 +124,17 @@ components (<code><a href="reconciled.html">reconciled()</a></code>). A componen
 replaced there by the other components in proportion to their weights;
 this is recorded in the diagnostics. Any model specification can be a
 component, including joint models, Bayesian models, tuned, bootstrapped
-and reconciled models, and other ensembles.</p>
-<p>A mixture is wider than its components when they disagree. In backtests
-on HMD data (England &amp; Wales, France) and on the ONS deprivation data,
-Lee-Carter alone was too narrow (95% coverage 0.79 to 0.81), while an
-equal-weight mixture of <code><a href="lee_carter.html">lee_carter()</a></code> and <code><a href="rwd.html">rwd()</a></code> had 95% coverage of
-0.92 to 0.98; its CRPS ranked second (France), third (England &amp; Wales)
-and fifth of eight (ONS), close to the best model in each case (see the
-vignette "Comparison with demography, bamp and StMoMo"). In populations with few
-deaths per cell, use <code>rwd(observation_noise = TRUE)</code> as the random-walk
+and reconciled models, and other ensembles. The components must forecast
+the same strata: with <code><a href="reconciled.html">reconciled()</a></code> components, add the aggregates of the
+hierarchy to the data first (<code><a href="mt_aggregate_strata.html">mt_aggregate_strata()</a></code>). Weights from the
+inner backtest (<code>"crps"</code>, <code>"stack"</code>, <code>top_k</code>) compare the components on
+the cells that all of them forecast.</p>
+<p>A mixture is wider than its components when they disagree, which often
+corrects the too narrow intervals of single models, and its CRPS is never
+larger than the weighted mean of the CRPS of its components (the CRPS is
+convex in the forecast distribution). The vignette "Choosing and
+combining models" compares ensembles and single models in a backtest.
+In populations with few deaths per cell, use <code>rwd(observation_noise = TRUE)</code> as the random-walk
 component: the plain random walk accumulates the Poisson noise of
 observed rates and its long-horizon paths become implausible.</p>
     </div>

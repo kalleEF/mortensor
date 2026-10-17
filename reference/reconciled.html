@@ -3,15 +3,32 @@
 hierarchy every time it is forecast, also inside mt_backtest(). If the
 training data contain only the bottom strata, the aggregate strata are
 added with mt_aggregate_strata() before fitting, so that the base model
-forecasts every node. Predictive draws (used by backtests) are coherent
-as well: Poisson and extra-Poisson variation are drawn for the bottom
-strata only and the aggregates are their sums."><meta property="og:description" content="Wraps a model specification so that its forecasts are reconciled over a
+forecasts every node; exposures for the forecast (exposure of
+mt_forecast()) can then be given for the bottom strata only, and those
+of the aggregates are their sums. Predictive draws (used by backtests)
+are coherent as well: the observation noise of the base model (Poisson
+and extra-Poisson variation for models of smooth rates, none for models
+of observed rates such as rwd(); for ensemble() and stratified()
+models that of the component or group each draw comes from) is drawn for
+the bottom strata only, independently per cell, and the aggregates are
+their sums."><meta property="og:description" content="Wraps a model specification so that its forecasts are reconciled over a
 hierarchy every time it is forecast, also inside mt_backtest(). If the
 training data contain only the bottom strata, the aggregate strata are
 added with mt_aggregate_strata() before fitting, so that the base model
-forecasts every node. Predictive draws (used by backtests) are coherent
-as well: Poisson and extra-Poisson variation are drawn for the bottom
-strata only and the aggregates are their sums."><script type="module">
+forecasts every node; exposures for the forecast (exposure of
+mt_forecast()) can then be given for the bottom strata only, and those
+of the aggregates are their sums. Predictive draws (used by backtests)
+are coherent as well: the observation noise of the base model (Poisson
+and extra-Poisson variation for models of smooth rates, none for models
+of observed rates such as rwd(); for ensemble() and stratified()
+models that of the component or group each draw comes from) is drawn for
+the bottom strata only, independently per cell, and the aggregates are
+their sums."><style>
+/* Bootstrap's paragraph margin inside the labels makes mermaid size the
+   boxes too small, which clips their last line */
+.mermaid-diagram p { margin: 0; }
+.mermaid-diagram { margin: 1rem 0 1.5rem; }
+</style><script type="module">
 import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.esm.min.mjs";
 mermaid.initialize({ startOnLoad: false, securityLevel: "strict" });
 window.addEventListener("load", async () => {
@@ -72,9 +89,15 @@ window.addEventListener("load", async () => {
 hierarchy every time it is forecast, also inside <code><a href="mt_backtest.html">mt_backtest()</a></code>. If the
 training data contain only the bottom strata, the aggregate strata are
 added with <code><a href="mt_aggregate_strata.html">mt_aggregate_strata()</a></code> before fitting, so that the base model
-forecasts every node. Predictive draws (used by backtests) are coherent
-as well: Poisson and extra-Poisson variation are drawn for the bottom
-strata only and the aggregates are their sums.</p>
+forecasts every node; exposures for the forecast (<code>exposure</code> of
+<code><a href="mt_forecast.html">mt_forecast()</a></code>) can then be given for the bottom strata only, and those
+of the aggregates are their sums. Predictive draws (used by backtests)
+are coherent as well: the observation noise of the base model (Poisson
+and extra-Poisson variation for models of smooth rates, none for models
+of observed rates such as <code><a href="rwd.html">rwd()</a></code>; for <code><a href="ensemble.html">ensemble()</a></code> and <code><a href="stratified.html">stratified()</a></code>
+models that of the component or group each draw comes from) is drawn for
+the bottom strata only, independently per cell, and the aggregates are
+their sums.</p>
     </div>
 
     <div class="section level2">
@@ -109,10 +132,11 @@ strata only and the aggregates are their sums.</p>
 <dd><p><code>"auto"</code> (default: <code>"none"</code> for models fitted jointly
 across strata, whose draws already carry their dependence, such as
 <code><a href="li_lee.html">li_lee()</a></code> and <code><a href="tucker3.html">tucker3()</a></code>; <code>"empirical"</code> for models fitted per stratum),
-<code>"empirical"</code> or <code>"none"</code>. With <code>"empirical"</code> the same training years
-order the paths before reconciliation and the predictive noise of the
-bottom strata, so aggregates of predictive draws keep the observed
-co-movement.</p></dd>
+<code>"empirical"</code> or <code>"none"</code>. With <code>"empirical"</code> the paths of the strata
+are reordered before reconciliation (see <code><a href="mt_reconcile.html">mt_reconcile()</a></code>), so that
+aggregates keep the observed co-movement of the strata; the observation
+noise of predictive draws is independent across cells, as for models
+without a hierarchy.</p></dd>
 
 
 <dt id="arg-fixed">fixed<a class="anchor" aria-label="anchor" href="#arg-fixed"></a></dt>
@@ -125,14 +149,10 @@ co-movement.</p></dd>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
-    <p>On <code><a href="mt_example_regions.html">mt_example_regions()</a></code> (4 regions, 90 strata, origins 2005 and 2008,
-h = 10), <code>li_lee(common_by = "sex")</code> with <code>method = "bottom_up"</code> was the
-most accurate coherent forecast (CRPS 0.0425 bottom, 0.0269 aggregates;
-95% coverage 0.95), and Lee-Carter per stratum with <code>"wls"</code> reconciliation
-was calibrated (0.95-0.97) but less accurate (0.0477, 0.0292). On the ONS
-and German regional data, reconciliation changed the accuracy of the
-bottom strata little and lowered the coverage of the totals (see the
-vignette "Coherent forecasts: what reconciliation changes").</p>
+    <p>Whether coherence costs accuracy, and which method and base model work
+best, depends on the data: compare them in a backtest at every level of
+the hierarchy (<code>mt_score_table(..., hierarchy = )</code>), as in the vignette
+"Coherent forecasts: totals and their parts".</p>
     </div>
 
     <div class="section level2">

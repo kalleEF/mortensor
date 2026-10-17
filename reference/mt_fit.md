@@ -28,6 +28,11 @@ mt_fit(spec, data, prep = NULL, cores = 1, ...)
 - cores:
 
   Number of cores for per-stratum fits (forked processes; 1 on Windows).
+  Each stratum is fitted with its own random number stream, started from
+  the current generator, so fits that use random numbers (such as
+  `lee_carter(bootstrap = TRUE)`) are reproduced by
+  [`set.seed()`](https://rdrr.io/r/base/Random.html) with any number of
+  cores.
 
 - ...:
 

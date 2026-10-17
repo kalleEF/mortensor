@@ -3,7 +3,12 @@
 by path, when a model was forecast at the resolution of the observed
 deaths. Two approaches:"><meta property="og:description" content="Maps draws of age groups to finer ages (for example single years), path
 by path, when a model was forecast at the resolution of the observed
-deaths. Two approaches:"><script type="module">
+deaths. Two approaches:"><style>
+/* Bootstrap's paragraph margin inside the labels makes mermaid size the
+   boxes too small, which clips their last line */
+.mermaid-diagram p { margin: 0; }
+.mermaid-diagram { margin: 1rem 0 1.5rem; }
+</style><script type="module">
 import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.esm.min.mjs";
 mermaid.initialize({ startOnLoad: false, securityLevel: "strict" });
 window.addEventListener("load", async () => {
@@ -119,12 +124,15 @@ or <code>[age, period, stratum]</code> for the forecast periods (see
 from fine-resolution rates (<code>shape_rates</code>), exposure-weighted to 1
 within each group. <code><a href="mt_shape_rates.html">mt_shape_rates()</a></code> estimates them from training data
 at the finer resolution, constant (mean of the last years) or changing
-over the forecast years (an age-period GAM extrapolated in time);</p></li>
+over the forecast years (an age-period GAM extrapolated in time); a
+group whose shape rates are all 0 gets a flat shape;</p></li>
 <li><p><code>"hyman_kannisto"</code> or <code>"natural_gompertz"</code>: a spline through the group
 rates of each draw (monotone Hyman spline with a Kannisto tail, or a
 natural spline with a log-linear tail), corrected so that the
 exposure-weighted mean of the fine rates equals each group rate.</p></li>
-</ul></div>
+</ul><p>Missing group rates (for example of a stratum whose fit failed) give
+missing rates at the finer ages of that group.</p>
+    </div>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>

@@ -2,18 +2,28 @@
 
 Wrapper around
 [`demography::fdm()`](https://pkg.robjhyndman.com/demography/reference/fdm.html)
-(Hyndman and Ullah 2007): log death rates are smoothed over age and
-decomposed into principal components whose scores are forecast with
+(Hyndman and Ullah 2007): the rates of each year are smoothed over age
+with
+[`demography::smooth.demogdata()`](https://pkg.robjhyndman.com/demography/reference/smooth.demogdata.html)
+(`smooth = TRUE`, by default monotonic regression splines above age 65,
+weighted by the exposures), the log rates are decomposed into a mean
+function and principal components, and the scores are forecast with
 ARIMA or ETS models. Draws are simulated with `demography`'s
 [`simulate()`](https://rdrr.io/r/stats/simulate.html) method for
-functional forecasts (uncertainty of the coefficients and model error);
-predictive draws add the extra-Poisson and Poisson variation as for
-other models of smooth rates.
+functional forecasts (uncertainty of the coefficients and resampled
+model errors); predictive draws add the extra-Poisson and Poisson
+variation of the raw deaths as for other models of smooth rates.
 
 ## Usage
 
 ``` r
-hyndman_ullah(order = 6, method = "arima", ...)
+hyndman_ullah(
+  order = 6,
+  method = "arima",
+  smooth = TRUE,
+  smooth_args = list(),
+  ...
+)
 ```
 
 ## Arguments
@@ -27,6 +37,16 @@ hyndman_ullah(order = 6, method = "arima", ...)
   Forecast method for the coefficients (`"arima"`, `"ets"`, `"rwdrift"`,
   ...), passed to `forecast()`.
 
+- smooth:
+
+  Smooth the rates of each year over age before the decomposition.
+
+- smooth_args:
+
+  List of arguments of
+  [`demography::smooth.demogdata()`](https://pkg.robjhyndman.com/demography/reference/smooth.demogdata.html)
+  (for example `list(k = 20)` or `list(method = "spline")`).
+
 - ...:
 
   Further arguments of
@@ -35,6 +55,21 @@ hyndman_ullah(order = 6, method = "arima", ...)
 ## Value
 
 A model specification.
+
+## Details
+
+Without smoothing, the model errors that
+[`simulate()`](https://rdrr.io/r/stats/simulate.html) resamples contain
+the observation noise, which predictive draws then add a second time:
+keep `smooth = TRUE` unless the rates were smoothed in a preprocessing
+step. `smooth.demogdata()` works on single years of age; for age groups
+the smoothed values at the observed ages are used (a weaker smoothing).
+The smoothing settings (`smooth_args`, such as `k`, the number of knots)
+and the number of components can be chosen by forecast accuracy with
+[`tuned()`](mt_tune.md). When the default monotonic spline cannot be
+fitted (for example for age ranges that start in middle age), the rates
+are smoothed without the monotonicity constraint and the fit diagnostics
+say so.
 
 ## References
 

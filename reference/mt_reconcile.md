@@ -42,11 +42,8 @@ mt_reconcile(
 - method:
 
   `"wls"` (default), `"mint"`, `"structural"`, `"ols"`, `"bottom_up"` or
-  `"proportional"` (with `fixed`). In a backtest on
-  [`mt_example_regions()`](mt_example_regions.md) (Lee-Carter per
-  stratum, 90 strata) WLS and structural scaling kept 95% coverage of
-  bottom and aggregate strata at 0.95-0.98 and improved the bottom-level
-  CRPS; MinT with the draw covariance under-covered aggregates (0.88).
+  `"proportional"` (with `fixed`). The vignette "Coherent forecasts:
+  totals and their parts" compares them.
 
 - shrink:
 
@@ -57,7 +54,7 @@ mt_reconcile(
 
   Exposures `[age, period, stratum]` or `[age, stratum]` for the
   forecast years (default: last training year). Only bottom strata are
-  used; aggregates are summed.
+  used, and they are enough; aggregates are summed.
 
 - dependence:
 
@@ -132,7 +129,11 @@ training year, and the stratum whose average year-to-year change of log
 rates was relatively large in that year receives a relatively high path.
 The marginal distribution of each stratum is unchanged.
 
-The one-variable interface with `var` and `total` is still accepted.
+The one-variable interface with `var` and `total` is still accepted. It
+reconciles deaths when the exposures of the parts add up to that of the
+total (sexes, regions) and rates when each part has the exposure of the
+total (causes of death) or there are no exposures; give a hierarchy with
+`additive` to choose.
 
 ## References
 
@@ -174,7 +175,7 @@ rc$reconciliation
 #> [1] "wls"
 #> 
 #> $max_relative_gap_before
-#> [1] 0.2521229
+#> [1] 0.3081628
 #> 
 #> $share_set_to_zero
 #> [1] 0

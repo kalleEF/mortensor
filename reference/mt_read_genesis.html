@@ -7,7 +7,12 @@ format of GENESIS-Online and the regional database (columns time,
 format of GENESIS-Online and the regional database (columns time,
 1_variable_code, 1_variable_attribute_label, ..., value): deaths
 (for example table 23211-0002) and populations (for example table
-12411-0013, on 31 December).'><script type="module">
+12411-0013, on 31 December).'><style>
+/* Bootstrap's paragraph margin inside the labels makes mermaid size the
+   boxes too small, which clips their last line */
+.mermaid-diagram p { margin: 0; }
+.mermaid-diagram { margin: 1rem 0 1.5rem; }
+</style><script type="module">
 import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.esm.min.mjs";
 mermaid.initialize({ startOnLoad: false, securityLevel: "strict" });
 window.addEventListener("load", async () => {

@@ -2,7 +2,8 @@
 
 Gives levels of a stratum variable new labels, for example sex codes
 `"1"` and `"2"` as `"male"` and `"female"`. Levels mapped to the same
-new label are combined (see [`mt_group_levels()`](mt_group_levels.md)).
+new label, or to the label of a level that is kept, are combined (see
+[`mt_group_levels()`](mt_group_levels.md)).
 
 ## Usage
 

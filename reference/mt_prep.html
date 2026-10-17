@@ -5,7 +5,12 @@ backtest (mt_backtest()) re-runs them on every training window, so that
 ungrouping or smoothing never sees data after the forecast origin."><meta property="og:description" content="mt_prep() bundles preprocessing steps that are applied to the data
 before a model is fitted. Because the steps are part of the fit, a
 backtest (mt_backtest()) re-runs them on every training window, so that
-ungrouping or smoothing never sees data after the forecast origin."><script type="module">
+ungrouping or smoothing never sees data after the forecast origin."><style>
+/* Bootstrap's paragraph margin inside the labels makes mermaid size the
+   boxes too small, which clips their last line */
+.mermaid-diagram p { margin: 0; }
+.mermaid-diagram { margin: 1rem 0 1.5rem; }
+</style><script type="module">
 import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.esm.min.mjs";
 mermaid.initialize({ startOnLoad: false, securityLevel: "strict" });
 window.addEventListener("load", async () => {
@@ -132,7 +137,7 @@ processed <a href="mt_data.html">mt_data</a> object.</p>
 smoothed rates; residuals and observation noise refer to the raw
 deaths. Smoothing over time (<code>along = "period"</code>, or <code>dims = 2</code>)
 narrows the forecast intervals of models with a period index, so check
-coverage in a backtest and consider <code><a href="calibrated.html">calibrated()</a></code>;</p></li>
+coverage in a backtest and consider <code><a href="recalibrated.html">recalibrated()</a></code>;</p></li>
 <li><p><code>step_regroup(age, period)</code>: <code><a href="mt_regroup.html">mt_regroup()</a></code>;</p></li>
 <li><p><code>step_grid(age, period)</code>: <code><a href="mt_set_grid.html">mt_set_grid()</a></code>;</p></li>
 <li><p><code>step_window(years)</code>: keeps the last <code>years</code> years of the training
@@ -143,7 +148,9 @@ example after a change of trend; compare windows with <code><a href="mt_tune.htm
 example 2020-2022) are either replaced by log-linear interpolation of
 the rates of the neighbouring periods (<code>"interpolate"</code>, deaths become
 exposure times the interpolated rate) or removed (<code>"exclude"</code>, only at
-the start or end of the data).</p></li>
+the start or end of the data). With <code>"interpolate"</code>, shock periods at
+the start or end of the data, which have no neighbour on one side, are
+removed, as in a backtest whose training window ends inside the shock.</p></li>
 </ul></div>
 
     <div class="section level2">

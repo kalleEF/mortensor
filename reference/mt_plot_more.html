@@ -25,7 +25,12 @@ mt_plot_scores(): mean score of each model by horizon or age from a
 backtest, or one bar per model (by = "model"); target selects
 rates or a derived quantity scored by the backtest.
 
-'><script type="module">
+'><style>
+/* Bootstrap's paragraph margin inside the labels makes mermaid size the
+   boxes too small, which clips their last line */
+.mermaid-diagram p { margin: 0; }
+.mermaid-diagram { margin: 1rem 0 1.5rem; }
+</style><script type="module">
 import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.esm.min.mjs";
 mermaid.initialize({ startOnLoad: false, securityLevel: "strict" });
 window.addEventListener("load", async () => {
@@ -112,7 +117,7 @@ rates or a derived quantity scored by the backtest.</p></li>
 <span>  <span class="va">backtest</span>,</span>
 <span>  metric <span class="op">=</span> <span class="st">"crps"</span>,</span>
 <span>  by <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"horizon"</span>, <span class="st">"age"</span>, <span class="st">"model"</span><span class="op">)</span>,</span>
-<span>  target <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"rate"</span>, <span class="st">"life_expectancy"</span>, <span class="st">"asr"</span><span class="op">)</span></span>
+<span>  target <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"rate"</span>, <span class="st">"life_expectancy"</span>, <span class="st">"asr"</span>, <span class="st">"life_expectancy_gap"</span>, <span class="st">"asr_gap"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 

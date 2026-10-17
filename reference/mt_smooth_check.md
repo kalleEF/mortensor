@@ -7,7 +7,15 @@
 ``` r
 mt_smooth_check(data, smoothed)
 
-mt_plot_smooth(data, smoothed, ages = NULL, strata = NULL, colour = NULL)
+mt_plot_smooth(
+  data,
+  smoothed,
+  ages = NULL,
+  strata = NULL,
+  colour = NULL,
+  along = c("period", "age"),
+  periods = NULL
+)
 ```
 
 ## Arguments
@@ -33,6 +41,15 @@ mt_plot_smooth(data, smoothed, ages = NULL, strata = NULL, colour = NULL)
 
   Stratum variable that gives the colours.
 
+- along:
+
+  `"period"` (rates over time, one panel per age) or `"age"` (rates over
+  age, one panel per year in `periods`).
+
+- periods:
+
+  Years shown with `along = "age"` (default: first and last).
+
 ## Value
 
 `mt_smooth_check()`: a `data.table` with the stratum columns and the
@@ -53,6 +70,10 @@ measures above. `mt_plot_smooth()`: a ggplot object.
 
 - `correlation`: correlation of raw and smoothed log rates.
 
+The measures use the smoothed cells only (provenance `"smoothed"`), so
+ages left out of the smoothing (see `ages` in
+[`mt_smooth()`](mt_smooth.md)) do not dilute them.
+
 `mt_plot_smooth()` shows raw rates as points and smoothed rates as lines
 over time, one panel per age.
 
@@ -64,7 +85,7 @@ s <- mt_smooth(x, along = "period", method = "whittaker")
 mt_smooth_check(x, s)
 #>    stratum    sex  label    mad_log dispersion  trend_ratio correlation
 #>      <int> <char> <char>      <num>      <num>        <num>       <num>
-#> 1:       1 female female 0.02210234  0.9265103 0.0003089649   0.9994547
-#> 2:       2   male   male 0.02110521  0.8958134 0.0005426953   0.9996224
+#> 1:       1 female female 0.02113118  0.8846054 0.0013826242   0.9994987
+#> 2:       2   male   male 0.02072276  0.8750107 0.0009253008   0.9996417
 if (requireNamespace("ggplot2", quietly = TRUE)) mt_plot_smooth(x, s)
 ```

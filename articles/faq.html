@@ -11,6 +11,12 @@
 <script src="../deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Frequently asked questions">
+<style>
+/* Bootstrap's paragraph margin inside the labels makes mermaid size the
+   boxes too small, which clips their last line */
+.mermaid-diagram p { margin: 0; }
+.mermaid-diagram { margin: 1rem 0 1.5rem; }
+</style>
 <script type="module">
 import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.esm.min.mjs";
 mermaid.initialize({ startOnLoad: false, securityLevel: "strict" });
@@ -174,13 +180,14 @@ count against the model, and <code><a href="../reference/mt_backtest.html">mt_ba
 </h3>
 <p>The penalized composite link model (<code><a href="../reference/mt_ungroup.html">mt_ungroup()</a></code>,
 default) ungroups deaths as rates with the exposures as offset and keeps
-group totals exactly. On England &amp; Wales (HMD) data grouped into
-5-year groups its median absolute error of single-year log rates was
-0.015 at ages 30-89 and 0.024 at 90-100, close to the Poisson noise of
-the observed rates. The spline methods (<code>"hyman_kannisto"</code>,
-<code>"natural_gompertz"</code>, <code>"gam"</code>) were as accurate
-below 90, less accurate in the open interval, and 5 to 10 times faster.
-See “Data at different granularities: ungrouping HMD data”.</p>
+group totals exactly. On England &amp; Wales data grouped into 5-year
+groups, it and the spline methods (<code>"hyman_kannisto"</code>,
+<code>"natural_gompertz"</code>, <code>"gam"</code>) were almost as
+close to the known single years as the Poisson noise allows; they
+differed in the last, wide age group, where the PCLM was closest. Check
+your own result with <code><a href="../reference/ungroup-diagnostics.html">mt_plot_ungroup()</a></code> and
+<code><a href="../reference/ungroup-diagnostics.html">mt_ungroup_check()</a></code>; see “Ungrouping age groups: methods and
+diagnostics”.</p>
 </div>
 <div class="section level3">
 <h3 id="can-i-split-the-open-interval-90-into-single-years">Can I split the open interval 90+ into single years?<a class="anchor" aria-label="anchor" href="#can-i-split-the-open-interval-90-into-single-years"></a>
@@ -286,29 +293,53 @@ coverage on real data. <code>rwd(observation_noise = TRUE)</code>
 removes the double counting and is sharper (lower CRPS), with intervals
 that were too narrow on real data. Mixtures of models
 (<code><a href="../reference/ensemble.html">ensemble()</a></code>) widen the intervals where the models disagree.
-<code><a href="../reference/calibrated.html">calibrated()</a></code> rescales the spread of any model’s draws to
+<code><a href="../reference/recalibrated.html">recalibrated()</a></code> rescales the spread of any model’s draws to
 its forecast errors in the last years of the training data (by default
 ten); on England &amp; Wales men it raised the 95% coverage of
 Lee-Carter from 0.75 to 0.88. Check calibration with
 <code><a href="../reference/mt_backtest.html">mt_backtest()</a></code> and <code><a href="../reference/mt_plot.html">mt_plot_coverage()</a></code>.</p>
 </div>
 <div class="section level3">
+<h3 id="how-do-i-choose-smoothing-and-model-parameters-by-forecast-accuracy">How do I choose smoothing and model parameters by forecast
+accuracy?<a class="anchor" aria-label="anchor" href="#how-do-i-choose-smoothing-and-model-parameters-by-forecast-accuracy"></a>
+</h3>
+<p>This is tuning: fit each candidate setting to the years up to
+<code>T - h</code>, forecast the last <code>h</code> years, and keep the
+setting that forecast them best, then refit it to all years.
+<code><a href="../reference/mt_tune.html">mt_tune()</a></code> does this for any grid of settings, including
+preprocessing, and <code><a href="../reference/mt_tune.html">tuned()</a></code> makes it part of a model, so
+that an outer backtest repeats the choice at each origin without seeing
+the test years:</p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">grid</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/expand.grid.html" class="external-link">expand.grid</a></span><span class="op">(</span>k <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">10</span>, <span class="fl">30</span><span class="op">)</span>, order <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">6</span><span class="op">)</span></span>
+<span><span class="va">spec</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_tune.html">tuned</a></span><span class="op">(</span><span class="kw">function</span><span class="op">(</span><span class="va">order</span>, <span class="va">k</span><span class="op">)</span> <span class="fu"><a href="../reference/hyndman_ullah.html">hyndman_ullah</a></span><span class="op">(</span>order <span class="op">=</span> <span class="va">order</span>, smooth_args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>k <span class="op">=</span> <span class="va">k</span><span class="op">)</span><span class="op">)</span>, <span class="va">grid</span>,</span>
+<span>              inner_origins <span class="op">=</span> <span class="fl">1</span>, inner_h <span class="op">=</span> <span class="fl">10</span>, metric <span class="op">=</span> <span class="st">"rmse"</span><span class="op">)</span></span></code></pre></div>
+<p><code>inner_origins = 1</code> is a single hold-out of the last ten
+years; several origins (<code>inner_origins = 3, inner_h = 5</code>)
+average over more periods. <code>metric = "rmse"</code> chooses by point
+accuracy, <code>"crps"</code> by the whole forecast distribution, and
+<code>target = "life_expectancy"</code> by the quantity of interest.
+<code><a href="../reference/recalibrated.html">recalibrated()</a></code> answers a different question: it keeps the
+model and rescales the width of its intervals to the recent forecast
+errors. The two combine as <code>recalibrated(tuned(...))</code>.</p>
+</div>
+<div class="section level3">
 <h3 id="should-i-smooth-the-data-before-forecasting">Should I smooth the data before forecasting?<a class="anchor" aria-label="anchor" href="#should-i-smooth-the-data-before-forecasting"></a>
 </h3>
-<p>Smoothing over age helps where cells hold few deaths (rare causes,
-small regions): on the German cause-specific data it improved the CRPS
-of the Laender. Smoothing over time removes the year-to-year noise from
-the fitted trends and from the start of the forecast, but also the
-variation from which models such as Lee-Carter estimate the uncertainty
-of their period index: alone, it made intervals too narrow in backtests
-(95% coverage of Lee-Carter 0.59 instead of 0.75 on England &amp; Wales
-men). Most of the gain there comes from <code><a href="../reference/calibrated.html">calibrated()</a></code>, which
-re-estimates the spread against the raw observations: calibration alone
-gave a CRPS of 0.0657 and a coverage of 0.88 (against 0.0687 and 0.75);
-Whittaker smoothing over time added nothing to it, the age-period GAM a
-little (0.0646, coverage 0.91). On the ONS quintiles, whose noise is
-close to Poisson, smoothing over time did not help. Treat it as optional
-and check it in a backtest. Use smoothing as a preprocessing step
+<p>Smoothing over age can help where cells hold few deaths (rare causes,
+small regions); check it in a backtest, as the applied vignettes do.
+Smoothing over time removes the year-to-year noise from the fitted
+trends and from the start of the forecast, but also the variation from
+which models such as Lee-Carter estimate the uncertainty of their period
+index: alone, it made intervals too narrow in backtests (95% coverage of
+Lee-Carter 0.59 instead of 0.75 on England &amp; Wales men). Most of the
+gain there comes from <code><a href="../reference/recalibrated.html">recalibrated()</a></code>, which re-estimates
+the spread against the raw observations: calibration alone gave a CRPS
+of 0.0657 and a coverage of 0.88 (against 0.0687 and 0.75); Whittaker
+smoothing over time added nothing to it, the age-period GAM a little
+(0.0646, coverage 0.91). On the ONS quintiles smoothing over time made
+the forecasts worse (“Smoothing death rates”). Treat it as optional and
+check it in a backtest. Use smoothing as a preprocessing step
 (<code>mt_prep(step_smooth(...))</code>), never on the data before
 fitting (<code><a href="../reference/mt_backtest.html">mt_backtest()</a></code> stops, <code><a href="../reference/mt_fit.html">mt_fit()</a></code> warns),
 so that backtests refit it on each training window and models take their
@@ -426,7 +457,7 @@ strata</td>
 <p>Either end the training data in 2019 (as in the ONS vignettes), or
 mark the years as shocks so that the trend is estimated without
 them:</p>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">prep</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_prep.html">mt_prep</a></span><span class="op">(</span><span class="fu"><a href="../reference/mt_prep.html">step_shocks</a></span><span class="op">(</span><span class="fl">2020</span><span class="op">:</span><span class="fl">2022</span>, action <span class="op">=</span> <span class="st">"interpolate"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_fit.html">mt_fit</a></span><span class="op">(</span><span class="fu"><a href="../reference/lee_carter.html">lee_carter</a></span><span class="op">(</span><span class="op">)</span>, <span class="va">data</span>, prep <span class="op">=</span> <span class="va">prep</span><span class="op">)</span></span></code></pre></div>
 <p>Whether mortality returns to the pre-pandemic trend is an assumption
@@ -454,9 +485,9 @@ sums of cause forecasts tend to be more pessimistic than forecasts of
 all causes (Wilmoth 1995), so compare the two before choosing.
 Reconciliation of deaths uses exposures of the forecast years; supply
 population projections as <code>exposure</code> when they are available.
-See “Coherent forecasts: what reconciliation changes”, “Coherent
-forecasts by sex, region and cause” and “Causes of death by
-deprivation”.</p>
+See “Coherent forecasts: totals and their parts” and the applied
+vignettes “Inequality in England” and “Differences between the German
+Laender”.</p>
 </div>
 <div class="section level3">
 <h3 id="will-the-gap-between-regions-or-deprivation-groups-keep-growing">Will the gap between regions or deprivation groups keep
@@ -480,10 +511,13 @@ between strata in one year (<code>var</code>, <code>ref</code>), between
 years (<code>periods</code>, which may combine an observed and a
 forecast year), or between two forecasts (<code>y</code>). With
 <code>groups</code>, it also separates the composition of a population
-of subgroups (for example deprivation quintiles or education groups)
-from the change of their mortality, as in Riffe, Tursun-zade and Trias
-Llimós (2024). Forecasts are decomposed draw by draw, so contributions
-have intervals; see “Decomposing differences in life expectancy”.</p>
+of subgroups from the change of their mortality: for groups defined at
+birth or for life, such as sex or education, as in Riffe, Tursun-zade
+and Trias Llimós (2024) (<code>composition = "radix"</code>); for areas
+such as deprivation quintiles, whose populations move between groups,
+with <code>composition = "pooled"</code>. Forecasts are decomposed draw
+by draw, so contributions have intervals; see “Decomposing differences
+in life expectancy”.</p>
 </div>
 </div>
 <div class="section level2">
@@ -495,11 +529,12 @@ have intervals; see “Decomposing differences in life expectancy”.</p>
 <p>Yes, with a <code>seed</code>
 (<code>mt_forecast(..., seed = 1)</code>,
 <code>mt_backtest(..., seed = 1)</code>). Backtests and
-<code><a href="../reference/calibrated.html">calibrated()</a></code> seed every origin separately, so their results
-do not depend on <code>cores</code>. Fits of several strata in parallel
-(<code>mt_fit(..., cores = )</code>) run in forked processes; for models
-with random steps in the fit, set <code>RNGkind("L'Ecuyer-CMRG")</code>
-and a seed before the call to make them reproducible.</p>
+<code><a href="../reference/recalibrated.html">recalibrated()</a></code> seed every origin separately, so their
+results do not depend on <code>cores</code>. Fits of several strata in
+parallel (<code>mt_fit(..., cores = )</code>) run in forked processes;
+for models with random steps in the fit, set
+<code>RNGkind("L'Ecuyer-CMRG")</code> and a seed before the call to make
+them reproducible.</p>
 </div>
 <div class="section level3">
 <h3 id="how-long-does-it-take">How long does it take?<a class="anchor" aria-label="anchor" href="#how-long-does-it-take"></a>

@@ -11,6 +11,12 @@
 <script src="../deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Decomposing differences in life expectancy">
+<style>
+/* Bootstrap's paragraph margin inside the labels makes mermaid size the
+   boxes too small, which clips their last line */
+.mermaid-diagram p { margin: 0; }
+.mermaid-diagram { margin: 1rem 0 1.5rem; }
+</style>
 <script type="module">
 import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.esm.min.mjs";
 mermaid.initialize({ startOnLoad: false, securityLevel: "strict" });
@@ -253,8 +259,7 @@ causes. <code>cause</code> names it. The total level
 <code>mt_group_levels(total = "all")</code> records it in the data;
 without such a record (or a <code>hierarchy</code>),
 <code><a href="../reference/mt_decompose.html">mt_decompose()</a></code> stops rather than count all causes as one
-more cause. At ages 50 and over (as in “Causes of death by
-deprivation”):</p>
+more cause. At ages 50 and over (as in “Inequality in England”):</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">causes</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">ons_data</span><span class="op">)</span><span class="op">[</span><span class="op">-</span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="fl">7</span><span class="op">)</span><span class="op">]</span></span>
 <span><span class="va">xc</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_data.html">mt_data</a></span><span class="op">(</span>deaths <span class="op">=</span> <span class="va">ons_data</span>, population <span class="op">=</span> <span class="va">ons_data</span>, by <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"sex"</span>, <span class="st">"imd_decile"</span>, <span class="st">"cause"</span><span class="op">)</span>,</span>
@@ -285,11 +290,11 @@ deprivation”):</p>
 <p><img src="decomposition_files/figure-html/unnamed-chunk-7-1.png" class="r-plt" alt="" width="672"></p>
 <p>Each age contribution is split over the causes in proportion to their
 rate differences (Riffe et al. 2024, eqs. 12-13). Of the gap in life
-expectancy at 50, respiratory diseases, lung cancer and ischaemic heart
-disease contribute most among the named causes, for both sexes, and the
-remaining causes together (<code>rest</code>) contribute a large share.
-Causes with higher rates in Q5 than in Q1 would have negative
-contributions.</p>
+expectancy at 50, chronic lower respiratory diseases, lung cancer and
+ischaemic heart disease contribute most among the named causes, for both
+sexes, and the remaining causes together (<code>rest</code>) contribute
+a large share. Causes with higher rates in Q5 than in Q1 would have
+negative contributions.</p>
 </div>
 <div class="section level2">
 <h2 id="change-over-time-and-the-composition-of-england">Change over time and the composition of England<a class="anchor" aria-label="anchor" href="#change-over-time-and-the-composition-of-england"></a>
@@ -361,8 +366,8 @@ areas: people move between them, and areas change quintile with each IMD
 version. The condition of the radix version does not hold. The pooled
 version decomposes the life expectancy of the pooled rates of England
 (the quintiles weighted by their population at each age, as in published
-life tables; “current rates” in Vaupel’s terms, which Riffe et al. use,
-against “current conditions” for the radix version). The rates of every
+life tables; “current rates” in Vaupel’s terms, while the radix version
+of Riffe et al. describes “current conditions”). The rates of every
 quintile and age and the shares at every age are the parameters of a
 line-integral decomposition:</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
@@ -521,26 +526,17 @@ decompositions draw by draw:</p>
 <span><span class="co">#&gt;    difference_q0.975</span></span>
 <span><span class="co">#&gt;                &lt;num&gt;</span></span>
 <span><span class="co">#&gt; 1:       -0.02980065</span></span>
-<span><span class="co">#&gt; 2:       -0.36737929</span></span>
-<span><span class="va">ch</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">g_fit</span>, by <span class="op">=</span> <span class="st">"age"</span>, change <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2019</span>, <span class="fl">2035</span><span class="op">)</span><span class="op">)</span><span class="op">[</span><span class="va">to</span> <span class="op">==</span> <span class="st">"Q5"</span> <span class="op">&amp;</span> <span class="va">sex</span> <span class="op">==</span> <span class="st">"female"</span><span class="op">]</span></span>
-<span><span class="va">ch</span><span class="op">[</span>, <span class="va">band</span> <span class="op">:=</span> <span class="fu"><a href="https://rdrr.io/r/base/cut.html" class="external-link">cut</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">sub</a></span><span class="op">(</span><span class="st">"[-+].*"</span>, <span class="st">""</span>, <span class="va">age</span><span class="op">)</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">-</span><span class="fl">1</span>, <span class="fl">39</span>, <span class="fl">59</span>, <span class="fl">84</span>, <span class="cn">Inf</span><span class="op">)</span>,</span>
-<span>                 labels <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"0-39"</span>, <span class="st">"40-59"</span>, <span class="st">"60-84"</span>, <span class="st">"85+"</span><span class="op">)</span><span class="op">)</span><span class="op">]</span></span>
-<span><span class="va">ch</span><span class="op">[</span>, <span class="fu">.</span><span class="op">(</span>change <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">mean</span><span class="op">)</span>, <span class="fl">2</span><span class="op">)</span><span class="op">)</span>, by <span class="op">=</span> <span class="va">band</span><span class="op">]</span></span>
-<span><span class="co">#&gt;      band change</span></span>
-<span><span class="co">#&gt;    &lt;fctr&gt;  &lt;num&gt;</span></span>
-<span><span class="co">#&gt; 1:   0-39  -0.13</span></span>
-<span><span class="co">#&gt; 2:  40-59  -0.21</span></span>
-<span><span class="co">#&gt; 3:  60-84  -0.78</span></span>
-<span><span class="co">#&gt; 4:    85+   0.00</span></span></code></pre></div>
+<span><span class="co">#&gt; 2:       -0.36737929</span></span></code></pre></div>
 <p>Li-Lee forecasts a female gap of 4.6 years in 2035, against 6.5
 observed in 2019. Of this narrowing of 1.9 years, 0.8 years is the
 jump-off: the Li-Lee fit of 2019 already puts the gap at 5.7 years. The
 model’s own narrowing, from the fitted 2019 gap, is 1.1 years (95%
-interval 0.03 to 2.0), 0.8 of it at ages 60 to 84, where the deviations
-of Q1 from the common trend return towards their average (see
-“Forecasting mortality by deprivation quintile”).
-<code><a href="../reference/anchored.html">anchored()</a></code> moves the start towards the observed level but
-fades out within ten years, so it does not change the gap in 2035.</p>
+interval 0.03 to 2.0): the deviations of Q1 from the common trend return
+towards their average. The vignette “Inequality in England” shows that
+in 2010-2019 the gap did not behave like this, and that Li-Lee forecast
+it poorly. <code><a href="../reference/anchored.html">anchored()</a></code> moves the start towards the observed
+level but fades out within ten years, so it does not change the gap in
+2035.</p>
 <p>Two forecasts of the same year are compared by giving the second as
 <code>y</code>. Their draws are independent, so they are shuffled before
 they are paired (<code>pairing = "independent"</code>). Lee-Carter per

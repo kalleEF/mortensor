@@ -3,7 +3,12 @@
 Interval widths come from the age axis, so abridged and single-year
 schedules are handled by the same code."><meta property="og:description" content="Period life table for single or grouped ages with an open last interval.
 Interval widths come from the age axis, so abridged and single-year
-schedules are handled by the same code."><script type="module">
+schedules are handled by the same code."><style>
+/* Bootstrap's paragraph margin inside the labels makes mermaid size the
+   boxes too small, which clips their last line */
+.mermaid-diagram p { margin: 0; }
+.mermaid-diagram { margin: 1rem 0 1.5rem; }
+</style><script type="module">
 import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.esm.min.mjs";
 mermaid.initialize({ startOnLoad: false, securityLevel: "strict" });
 window.addEventListener("load", async () => {
@@ -126,7 +131,12 @@ Gompertz line to the log rates of the last <code>k</code> closed single-year age
 integrates it from the start of the open interval to age 130;
 <code>"kannisto"</code> does the same with the Kannisto model, a line for the logit
 of the rates, whose hazard levels off at old ages (Thatcher, Kannisto and
-Vaupel 1998).</p></li>
+Vaupel 1998);</p></li>
+<li><p>a rate of 0 in the open interval (no deaths, as in small populations)
+would give an infinite life expectancy: the last positive rate of the
+closed intervals is used for the open interval instead (column <code>mx</code>
+keeps the given rate). Only a schedule without any positive rate gives
+an infinite value.</p></li>
 </ul></div>
     <div class="section level2">
     <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a></h2>

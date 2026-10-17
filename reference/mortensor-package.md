@@ -40,7 +40,7 @@ The package is organised in layers:
   [`mt_order_strata()`](mt_order_strata.md) imposes orderings.
 
 - **Wrappers for any model**: [`ensemble()`](ensemble.md),
-  [`reconciled()`](reconciled.md), [`calibrated()`](calibrated.md)
+  [`reconciled()`](reconciled.md), [`recalibrated()`](recalibrated.md)
   (spread fitted to recent forecast errors), [`anchored()`](anchored.md)
   (jump-off at the observed level), [`bootstrapped()`](bootstrapped.md)
   and [`tuned()`](mt_tune.md).

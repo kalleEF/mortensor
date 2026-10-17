@@ -86,13 +86,14 @@ your data.
 The penalized composite link model
 ([`mt_ungroup()`](../reference/mt_ungroup.md), default) ungroups deaths
 as rates with the exposures as offset and keeps group totals exactly. On
-England & Wales (HMD) data grouped into 5-year groups its median
-absolute error of single-year log rates was 0.015 at ages 30-89 and
-0.024 at 90-100, close to the Poisson noise of the observed rates. The
-spline methods (`"hyman_kannisto"`, `"natural_gompertz"`, `"gam"`) were
-as accurate below 90, less accurate in the open interval, and 5 to 10
-times faster. See “Data at different granularities: ungrouping HMD
-data”.
+England & Wales data grouped into 5-year groups, it and the spline
+methods (`"hyman_kannisto"`, `"natural_gompertz"`, `"gam"`) were almost
+as close to the known single years as the Poisson noise allows; they
+differed in the last, wide age group, where the PCLM was closest. Check
+your own result with
+[`mt_plot_ungroup()`](../reference/ungroup-diagnostics.md) and
+[`mt_ungroup_check()`](../reference/ungroup-diagnostics.md); see
+“Ungrouping age groups: methods and diagnostics”.
 
 ### Can I split the open interval 90+ into single years?
 
@@ -137,31 +138,56 @@ coverage on real data. `rwd(observation_noise = TRUE)` removes the
 double counting and is sharper (lower CRPS), with intervals that were
 too narrow on real data. Mixtures of models
 ([`ensemble()`](../reference/ensemble.md)) widen the intervals where the
-models disagree. [`calibrated()`](../reference/calibrated.md) rescales
-the spread of any model’s draws to its forecast errors in the last years
-of the training data (by default ten); on England & Wales men it raised
-the 95% coverage of Lee-Carter from 0.75 to 0.88. Check calibration with
-[`mt_backtest()`](../reference/mt_backtest.md) and
+models disagree. [`recalibrated()`](../reference/recalibrated.md)
+rescales the spread of any model’s draws to its forecast errors in the
+last years of the training data (by default ten); on England & Wales men
+it raised the 95% coverage of Lee-Carter from 0.75 to 0.88. Check
+calibration with [`mt_backtest()`](../reference/mt_backtest.md) and
 [`mt_plot_coverage()`](../reference/mt_plot.md).
+
+### How do I choose smoothing and model parameters by forecast accuracy?
+
+This is tuning: fit each candidate setting to the years up to `T - h`,
+forecast the last `h` years, and keep the setting that forecast them
+best, then refit it to all years. [`mt_tune()`](../reference/mt_tune.md)
+does this for any grid of settings, including preprocessing, and
+[`tuned()`](../reference/mt_tune.md) makes it part of a model, so that
+an outer backtest repeats the choice at each origin without seeing the
+test years:
+
+``` r
+
+grid <- expand.grid(k = c(10, 30), order = 1:6)
+spec <- tuned(function(order, k) hyndman_ullah(order = order, smooth_args = list(k = k)), grid,
+              inner_origins = 1, inner_h = 10, metric = "rmse")
+```
+
+`inner_origins = 1` is a single hold-out of the last ten years; several
+origins (`inner_origins = 3, inner_h = 5`) average over more periods.
+`metric = "rmse"` chooses by point accuracy, `"crps"` by the whole
+forecast distribution, and `target = "life_expectancy"` by the quantity
+of interest. [`recalibrated()`](../reference/recalibrated.md) answers a
+different question: it keeps the model and rescales the width of its
+intervals to the recent forecast errors. The two combine as
+`recalibrated(tuned(...))`.
 
 ### Should I smooth the data before forecasting?
 
-Smoothing over age helps where cells hold few deaths (rare causes, small
-regions): on the German cause-specific data it improved the CRPS of the
-Laender. Smoothing over time removes the year-to-year noise from the
-fitted trends and from the start of the forecast, but also the variation
-from which models such as Lee-Carter estimate the uncertainty of their
-period index: alone, it made intervals too narrow in backtests (95%
-coverage of Lee-Carter 0.59 instead of 0.75 on England & Wales men).
-Most of the gain there comes from
-[`calibrated()`](../reference/calibrated.md), which re-estimates the
-spread against the raw observations: calibration alone gave a CRPS of
-0.0657 and a coverage of 0.88 (against 0.0687 and 0.75); Whittaker
-smoothing over time added nothing to it, the age-period GAM a little
-(0.0646, coverage 0.91). On the ONS quintiles, whose noise is close to
-Poisson, smoothing over time did not help. Treat it as optional and
-check it in a backtest. Use smoothing as a preprocessing step
-(`mt_prep(step_smooth(...))`), never on the data before fitting
+Smoothing over age can help where cells hold few deaths (rare causes,
+small regions); check it in a backtest, as the applied vignettes do.
+Smoothing over time removes the year-to-year noise from the fitted
+trends and from the start of the forecast, but also the variation from
+which models such as Lee-Carter estimate the uncertainty of their period
+index: alone, it made intervals too narrow in backtests (95% coverage of
+Lee-Carter 0.59 instead of 0.75 on England & Wales men). Most of the
+gain there comes from [`recalibrated()`](../reference/recalibrated.md),
+which re-estimates the spread against the raw observations: calibration
+alone gave a CRPS of 0.0657 and a coverage of 0.88 (against 0.0687 and
+0.75); Whittaker smoothing over time added nothing to it, the age-period
+GAM a little (0.0646, coverage 0.91). On the ONS quintiles smoothing
+over time made the forecasts worse (“Smoothing death rates”). Treat it
+as optional and check it in a backtest. Use smoothing as a preprocessing
+step (`mt_prep(step_smooth(...))`), never on the data before fitting
 ([`mt_backtest()`](../reference/mt_backtest.md) stops,
 [`mt_fit()`](../reference/mt_fit.md) warns), so that backtests refit it
 on each training window and models take their observation noise from the
@@ -275,8 +301,8 @@ cause forecasts tend to be more pessimistic than forecasts of all causes
 (Wilmoth 1995), so compare the two before choosing. Reconciliation of
 deaths uses exposures of the forecast years; supply population
 projections as `exposure` when they are available. See “Coherent
-forecasts: what reconciliation changes”, “Coherent forecasts by sex,
-region and cause” and “Causes of death by deprivation”.
+forecasts: totals and their parts” and the applied vignettes “Inequality
+in England” and “Differences between the German Laender”.
 
 ### Will the gap between regions or deprivation groups keep growing?
 
@@ -296,11 +322,13 @@ crude rate, or any function of the rates) into contributions of ages and
 causes: between strata in one year (`var`, `ref`), between years
 (`periods`, which may combine an observed and a forecast year), or
 between two forecasts (`y`). With `groups`, it also separates the
-composition of a population of subgroups (for example deprivation
-quintiles or education groups) from the change of their mortality, as in
-Riffe, Tursun-zade and Trias Llimós (2024). Forecasts are decomposed
-draw by draw, so contributions have intervals; see “Decomposing
-differences in life expectancy”.
+composition of a population of subgroups from the change of their
+mortality: for groups defined at birth or for life, such as sex or
+education, as in Riffe, Tursun-zade and Trias Llimós (2024)
+(`composition = "radix"`); for areas such as deprivation quintiles,
+whose populations move between groups, with `composition = "pooled"`.
+Forecasts are decomposed draw by draw, so contributions have intervals;
+see “Decomposing differences in life expectancy”.
 
 ## Practicalities
 
@@ -308,7 +336,7 @@ differences in life expectancy”.
 
 Yes, with a `seed` (`mt_forecast(..., seed = 1)`,
 `mt_backtest(..., seed = 1)`). Backtests and
-[`calibrated()`](../reference/calibrated.md) seed every origin
+[`recalibrated()`](../reference/recalibrated.md) seed every origin
 separately, so their results do not depend on `cores`. Fits of several
 strata in parallel (`mt_fit(..., cores = )`) run in forked processes;
 for models with random steps in the fit, set `RNGkind("L'Ecuyer-CMRG")`

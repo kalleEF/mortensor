@@ -15,7 +15,12 @@ constraints (each aggregate equals the sum of its bottom series). With
 additive = &quot;deaths&quot; in the hierarchy, the projection works on expected
 deaths (rates times exposures; exposures of aggregates are the sums of
 their bottom series), and reconciled rates are reconciled deaths divided
-by exposures. Methods choose W:"><script type="module">
+by exposures. Methods choose W:"><style>
+/* Bootstrap's paragraph margin inside the labels makes mermaid size the
+   boxes too small, which clips their last line */
+.mermaid-diagram p { margin: 0; }
+.mermaid-diagram { margin: 1rem 0 1.5rem; }
+</style><script type="module">
 import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.esm.min.mjs";
 mermaid.initialize({ startOnLoad: false, securityLevel: "strict" });
 window.addEventListener("load", async () => {
@@ -115,10 +120,8 @@ by exposures. Methods choose <code>W</code>:</p>
 
 <dt id="arg-method">method<a class="anchor" aria-label="anchor" href="#arg-method"></a></dt>
 <dd><p><code>"wls"</code> (default), <code>"mint"</code>, <code>"structural"</code>, <code>"ols"</code>,
-<code>"bottom_up"</code> or <code>"proportional"</code> (with <code>fixed</code>). In a backtest on <code><a href="mt_example_regions.html">mt_example_regions()</a></code> (Lee-Carter per
-stratum, 90 strata) WLS and structural scaling kept 95% coverage of
-bottom and aggregate strata at 0.95-0.98 and improved the bottom-level
-CRPS; MinT with the draw covariance under-covered aggregates (0.88).</p></dd>
+<code>"bottom_up"</code> or <code>"proportional"</code> (with <code>fixed</code>). The vignette
+"Coherent forecasts: totals and their parts" compares them.</p></dd>
 
 
 <dt id="arg-shrink">shrink<a class="anchor" aria-label="anchor" href="#arg-shrink"></a></dt>
@@ -129,7 +132,7 @@ or <code>"auto"</code>.</p></dd>
 <dt id="arg-exposure">exposure<a class="anchor" aria-label="anchor" href="#arg-exposure"></a></dt>
 <dd><p>Exposures <code>[age, period, stratum]</code> or <code>[age, stratum]</code> for
 the forecast years (default: last training year). Only bottom strata are
-used; aggregates are summed.</p></dd>
+used, and they are enough; aggregates are summed.</p></dd>
 
 
 <dt id="arg-dependence">dependence<a class="anchor" aria-label="anchor" href="#arg-dependence"></a></dt>
@@ -197,7 +200,11 @@ co-movement of the strata in the training data (an empirical copula, the
 training year, and the stratum whose average year-to-year change of log
 rates was relatively large in that year receives a relatively high path.
 The marginal distribution of each stratum is unchanged.</p>
-<p>The one-variable interface with <code>var</code> and <code>total</code> is still accepted.</p>
+<p>The one-variable interface with <code>var</code> and <code>total</code> is still accepted. It
+reconciles deaths when the exposures of the parts add up to that of the
+total (sexes, regions) and rates when each part has the exposure of the
+total (causes of death) or there are no exposures; give a hierarchy with
+<code>additive</code> to choose.</p>
     </div>
     <div class="section level2">
     <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a></h2>
@@ -233,7 +240,7 @@ Article 32. <a href="https://doi.org/10.2202/1544-6115.1175" class="external-lin
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] "wls"</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $max_relative_gap_before</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 0.2521229</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 0.3081628</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $share_set_to_zero</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] 0</span>

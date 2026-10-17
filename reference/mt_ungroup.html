@@ -3,7 +3,12 @@
 exposures observed in coarser age groups, using the penalized composite
 link model (PCLM; Eilers 2007, Rizzi et al. 2015)."><meta property="og:description" content="Fills the modelling grid (single years of age by default) from deaths and
 exposures observed in coarser age groups, using the penalized composite
-link model (PCLM; Eilers 2007, Rizzi et al. 2015)."><script type="module">
+link model (PCLM; Eilers 2007, Rizzi et al. 2015)."><style>
+/* Bootstrap's paragraph margin inside the labels makes mermaid size the
+   boxes too small, which clips their last line */
+.mermaid-diagram p { margin: 0; }
+.mermaid-diagram { margin: 1rem 0 1.5rem; }
+</style><script type="module">
 import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.esm.min.mjs";
 mermaid.initialize({ startOnLoad: false, securityLevel: "strict" });
 window.addEventListener("load", async () => {
@@ -101,7 +106,8 @@ open interval.</p></dd>
 
 
 <dt id="arg-dims">dims<a class="anchor" aria-label="anchor" href="#arg-dims"></a></dt>
-<dd><p>1 or 2.</p></dd>
+<dd><p>1 or 2 (for <code>method = "pclm"</code>; <code>"gam"</code> is always 2D, the
+other methods 1D).</p></dd>
 
 
 <dt id="arg-method">method<a class="anchor" aria-label="anchor" href="#arg-method"></a></dt>
@@ -113,13 +119,9 @@ group rates with a Kannisto tail for the open interval),
 <code>"natural_gompertz"</code> (natural spline with a log-linear tail) and <code>"gam"</code>
 (2D tensor-product GAM of log group rates over age and year with a
 Kannisto tail, package mgcv). All three preserve the exposure-weighted
-group rates exactly. Median absolute log errors against single-year
-rates (England &amp; Wales men 1980-2011, 5-year groups to 90-100; and the
-simulated <code><a href="mt_example.html">mt_example()</a></code> with deaths to 90+): PCLM 0.015/0.024 and
-0.012/0.006 (ages 30-89/90+), <code>"hyman_kannisto"</code> 0.015/0.029 and
-0.013/0.028, <code>"natural_gompertz"</code> 0.015/0.027 and 0.013/0.030, <code>"gam"</code>
-0.015/0.031 and 0.012/0.031. PCLM is the most accurate in the open
-interval; the spline methods are 5 to 10 times faster.</p></dd>
+group rates exactly. The vignette "Ungrouping age groups: methods and
+diagnostics" compares the methods on data with known single years;
+<code><a href="ungroup-diagnostics.html">mt_plot_ungroup()</a></code> and <code><a href="ungroup-diagnostics.html">mt_ungroup_check()</a></code> check a result.</p></dd>
 
 
 <dt id="arg-exposure-method">exposure_method<a class="anchor" aria-label="anchor" href="#arg-exposure-method"></a></dt>
@@ -187,7 +189,11 @@ stationary-population weights implied by the fitted rates.</p></li>
 smooth age-period surface per stratum (two smoothing parameters).</p></li>
 </ul><p>With <code>preserve_totals = TRUE</code>, the estimated deaths within each observed
 group are rescaled to the observed total, so aggregation reproduces the
-data exactly. Cells already observed at grid resolution are kept.</p>
+data exactly. Cells already observed at grid resolution are kept. When
+deaths are ungrouped as rates and the grid starts with age 0 as its own
+interval, an observed first year of life is kept and left out of the fit,
+as in <code><a href="mt_smooth.html">mt_smooth()</a></code>: infant mortality does not follow the age pattern of
+the following ages, and its peak would spill into ages 1-6.</p>
 <p>In backtests use <code><a href="mt_prep.html">step_ungroup()</a></code> so that ungrouping, in particular in 2D,
 sees only the training window.</p>
     </div>
@@ -198,6 +204,10 @@ and penalized likelihood. <em>Statistical Modelling</em> 7(3): 239-254.</p>
 <p>Rizzi S, Gampe J, Eilers PHC (2015). Efficient estimation of smooth
 distributions from coarsely grouped data. <em>American Journal of
 Epidemiology</em> 182(2): 138-147. <a href="https://doi.org/10.1093/aje/kwv020" class="external-link">doi:10.1093/aje/kwv020</a></p>
+    </div>
+    <div class="section level2">
+    <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
+    <div class="dont-index"><p><code><a href="ungroup-diagnostics.html">mt_plot_ungroup()</a></code> and <code><a href="ungroup-diagnostics.html">mt_ungroup_check()</a></code> for diagnostics.</p></div>
     </div>
 
     <div class="section level2">

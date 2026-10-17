@@ -184,9 +184,9 @@ Lee-Carter and random walks that are robust to small counts.
 
 ``` r
 
-specs <- list(lee_carter(), li_lee(common_by = "Geschlecht"),
-              ensemble(lc = lee_carter(), rw = rwd(observation_noise = TRUE)))
-bt <- rbindlist(lapply(specs, function(sp) mt_backtest(sp, x, origins = 2012:2014, h = 5, n_draws = 200)))
+cand <- list("Lee-Carter" = lee_carter(), "Li-Lee" = li_lee(common_by = "Geschlecht"),
+             "Lee-Carter + random walk" = ensemble(lc = lee_carter(), rw = rwd(observation_noise = TRUE)))
+bt <- mt_compare(cand, x, origins = 2012:2014, h = 5, n_draws = 200)
 #> Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label):
 #> Lee-Carter: forecast death rates above 1 in 22.0% of the draws (strata
 #> female.Q3; ages 10-14). The model is unstable here, often because of sparse
@@ -211,22 +211,22 @@ bt <- rbindlist(lapply(specs, function(sp) mt_backtest(sp, x, origins = 2012:201
 #> counts or a steep trend extrapolated far ahead; consider wider age groups
 #> (mt_regroup()), pooling (li_lee(common_by = )), smoothing (step_smooth()) or an
 #> ensemble.
-scores <- mt_score(bt)
-scores[, .(model, crps, cov95)]
-#>                            model      crps     cov95
-#>                           <char>     <num>     <num>
-#> 1:                    Lee-Carter 0.1468536 0.9210618
-#> 2: Li-Lee (common by Geschlecht) 0.1666150 0.8976598
-#> 3:             Ensemble (lc, rw) 0.1499292 0.9364303
+scores <- mt_score_table(bt, metrics = c("crps", "cov95"))
+scores
+#>                       model  crps cov95
+#>                      <fctr> <num> <num>
+#> 1:               Lee-Carter 0.147 0.921
+#> 2:                   Li-Lee 0.167 0.898
+#> 3: Lee-Carter + random walk 0.150 0.936
 ```
 
 Warnings about implausible rates in some backtest fits point to young
-age groups with few deaths. The model with the lowest CRPS is used for
-the forecast:
+age groups with few deaths. The model with the lowest CRPS (the rows
+follow the order of the list) is used for the forecast:
 
 ``` r
 
-best <- specs[[which.min(scores$crps[match(vapply(specs, `[[`, "", "label"), scores$model)])]]
+best <- cand[[which.min(scores$crps)]]
 best$label
 #> [1] "Lee-Carter"
 ```

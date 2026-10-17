@@ -100,12 +100,13 @@ Age labels of many sources are recognised (see
 of years or financial years (`"2001/02"`). Rows whose age or period is
 labelled as a total (`"All ages"`, `"Total"`, `"Insgesamt"`) are left
 out with a warning. Values of unknown age (`"Unknown"`, `"not stated"`,
-`"unbekannt"`) are distributed over the age groups of the same stratum
-and period in proportion to the known values, the usual practice of the
-Human Mortality Database, with a warning. Leading and trailing spaces in
-stratum labels are removed; rows without a stratum label are left out. A
-warning lists levels of a stratum variable that occur in one table only
-(for example `"F"` in one table and `"female"` in another).
+`"unbekannt"`, `NA`) are distributed over the age groups of the same
+stratum and period in proportion to the known values, the usual practice
+of the Human Mortality Database, with a warning. Rows of unknown period
+are left out with a warning. Leading and trailing spaces in stratum
+labels are removed; rows without a stratum label are left out. A warning
+lists levels of a stratum variable that occur in one table only (for
+example `"F"` in one table and `"female"` in another).
 
 A table may leave out stratum columns over which its values are shared.
 For example, deaths by region, sex and cause of death and populations by

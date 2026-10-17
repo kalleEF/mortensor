@@ -9,7 +9,12 @@ file is Latin-1 encoded with ; as separator."><meta property="og:description" co
 few title lines, two header lines (for example years and causes of
 death) and data rows whose first columns hold the row variables (for
 example region, age and sex), each written only where it changes. The
-file is Latin-1 encoded with ; as separator."><script type="module">
+file is Latin-1 encoded with ; as separator."><style>
+/* Bootstrap's paragraph margin inside the labels makes mermaid size the
+   boxes too small, which clips their last line */
+.mermaid-diagram p { margin: 0; }
+.mermaid-diagram { margin: 1rem 0 1.5rem; }
+</style><script type="module">
 import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.esm.min.mjs";
 mermaid.initialize({ startOnLoad: false, securityLevel: "strict" });
 window.addEventListener("load", async () => {

@@ -9,7 +9,12 @@ of the English Index of Multiple Deprivation (IMD), with deaths by
 underlying cause (ICD-10), from an ONS ad hoc release. Years 2001 to 2019
 (before the COVID-19 pandemic) of the first workbook; the column of deaths
 involving COVID-19 is dropped (zero in these years). Built by
-data-raw/ons_data.R."><script type="module">
+data-raw/ons_data.R."><style>
+/* Bootstrap's paragraph margin inside the labels makes mermaid size the
+   boxes too small, which clips their last line */
+.mermaid-diagram p { margin: 0; }
+.mermaid-diagram { margin: 1rem 0 1.5rem; }
+</style><script type="module">
 import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.esm.min.mjs";
 mermaid.initialize({ startOnLoad: false, securityLevel: "strict" });
 window.addEventListener("load", async () => {

@@ -49,7 +49,9 @@ cause_shares(
 
 - residual_noise:
 
-  Add in-sample residual variation of the ILR coordinates to the draws.
+  Add in-sample residual variation of the ILR coordinates to the draws
+  (in predictive draws split multinomially, the part beyond the
+  multinomial variation).
 
 ## Value
 
@@ -71,9 +73,18 @@ A model specification.
 4.  inverse ILR gives share draws, which multiply the all-cause draws.
 
 Shares of rare causes are noisy; smoothing the rates first
-(`prep = mt_prep(step_smooth())`) helps. In backtests on simulated cause
-data ([`mt_example_causes()`](mt_example_causes.md)), the 95% coverage
-was 0.99 without smoothing and 0.94 to 0.97 with it.
+(`prep = mt_prep(step_smooth())`) can help.
+
+Predictive draws (`mt_forecast(predictive = TRUE)`) are the predictive
+draws of the total model; for models of smooth rates (such as
+[`lee_carter()`](lee_carter.md)) these are Poisson deaths, which are
+split between the causes (and the residual cause) multinomially by the
+share draws, so that the deaths of the causes add up to the all-cause
+deaths also in predictive draws. The residual variation of the shares
+added to these draws is then only the part beyond the multinomial
+variation. For total models of observed rates ([`rwd()`](rwd.md),
+[`arima_series()`](arima_series.md), [`ets_series()`](arima_series.md)),
+predictive draws are the draws.
 
 The data need a stratum variable `var` with the all-cause level
 `total_level` and the cause levels; other stratum variables (for example

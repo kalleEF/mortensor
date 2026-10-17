@@ -11,6 +11,12 @@
 <script src="../deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Comparison with demography, bamp and StMoMo">
+<style>
+/* Bootstrap's paragraph margin inside the labels makes mermaid size the
+   boxes too small, which clips their last line */
+.mermaid-diagram p { margin: 0; }
+.mermaid-diagram { margin: 1rem 0 1.5rem; }
+</style>
 <script type="module">
 import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.esm.min.mjs";
 mermaid.initialize({ startOnLoad: false, securityLevel: "strict" });
@@ -140,10 +146,11 @@ walk with drift.</p>
 </h3>
 <p><code><a href="../reference/hyndman_ullah.html">hyndman_ullah()</a></code> calls <code><a href="https://pkg.robjhyndman.com/demography/reference/fdm.html" class="external-link">demography::fdm()</a></code> and
 draws paths with <code><a href="https://rdrr.io/r/stats/simulate.html" class="external-link">simulate()</a></code> from the forecast. With the
-same input (French men 0-95, 1950-2006, 6 components, ARIMA), the median
-of 2,000 mortensor draws is compared with demography’s point forecast,
-and the width of the central 80% interval of the draws with demography’s
-80% interval:</p>
+same input (French men 0-95, 1950-2006, 6 components, ARIMA, without the
+smoothing over age that <code><a href="../reference/hyndman_ullah.html">hyndman_ullah()</a></code> applies by
+default), the median of 2,000 mortensor draws is compared with
+demography’s point forecast, and the width of the central 80% interval
+of the draws with demography’s 80% interval:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">res</span><span class="op">$</span><span class="va">fidelity</span><span class="op">$</span><span class="va">fdm</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span><span class="va">.SD</span>, <span class="va">signif</span>, <span class="fl">3</span><span class="op">)</span><span class="op">]</span></span>
 <span><span class="co">#&gt;    horizon median_abs_log_diff_point max_abs_log_diff_point</span></span>
@@ -176,12 +183,12 @@ are in units of the posterior standard deviation:</p>
 <code class="sourceCode R"><span><span class="va">res</span><span class="op">$</span><span class="va">fidelity</span><span class="op">$</span><span class="va">bamp</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span><span class="va">.SD</span>, <span class="kw">function</span><span class="op">(</span><span class="va">v</span><span class="op">)</span> <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">is.numeric</a></span><span class="op">(</span><span class="va">v</span><span class="op">)</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">signif</a></span><span class="op">(</span><span class="va">v</span>, <span class="fl">2</span><span class="op">)</span> <span class="kw">else</span> <span class="va">v</span><span class="op">)</span><span class="op">]</span></span>
 <span><span class="co">#&gt;                        comparison max_abs_diff_median_in_sd</span></span>
 <span><span class="co">#&gt;                            &lt;char&gt;                     &lt;num&gt;</span></span>
-<span><span class="co">#&gt; 1:   apc_bayes() vs bamp (seed 1)                     0.069</span></span>
-<span><span class="co">#&gt; 2: bamp (seed 2) vs bamp (seed 1)                     0.079</span></span>
+<span><span class="co">#&gt; 1:   apc_bayes() vs bamp (seed 1)                     0.055</span></span>
+<span><span class="co">#&gt; 2: bamp (seed 2) vs bamp (seed 1)                     0.061</span></span>
 <span><span class="co">#&gt;    max_abs_diff_90_bounds_in_sd</span></span>
 <span><span class="co">#&gt;                           &lt;num&gt;</span></span>
-<span><span class="co">#&gt; 1:                         0.14</span></span>
-<span><span class="co">#&gt; 2:                         0.15</span></span></code></pre></div>
+<span><span class="co">#&gt; 1:                         0.11</span></span>
+<span><span class="co">#&gt; 2:                         0.11</span></span></code></pre></div>
 </div>
 </div>
 <div class="section level2">
@@ -242,22 +249,22 @@ data.</p>
 <span><span class="co">#&gt; ONS England, sex x IMD quintile, 5-year groups</span></span>
 <span><span class="co">#&gt;                         model   crps  cov50  cov80  cov95 seconds</span></span>
 <span><span class="co">#&gt;                        &lt;char&gt; &lt;char&gt; &lt;char&gt; &lt;char&gt; &lt;char&gt;   &lt;num&gt;</span></span>
-<span><span class="co">#&gt;           Bayesian APC (bamp) 0.0617   0.48   0.76   0.92    2588</span></span>
-<span><span class="co">#&gt;                 bamp (native) 0.0668   0.37   0.62   0.79    2436</span></span>
-<span><span class="co">#&gt;                    Lee-Carter 0.0670   0.35   0.62   0.81       1</span></span>
+<span><span class="co">#&gt;           Bayesian APC (bamp) 0.0619   0.48   0.76   0.92    2463</span></span>
+<span><span class="co">#&gt;                 bamp (native) 0.0666   0.37   0.62   0.79    2083</span></span>
+<span><span class="co">#&gt;                    Lee-Carter 0.0670   0.35   0.62   0.81       2</span></span>
 <span><span class="co">#&gt;        Li-Lee (common by sex) 0.0676   0.36   0.63   0.82       1</span></span>
-<span><span class="co">#&gt;             Ensemble (lc, rw) 0.0687   0.44   0.75   0.92       3</span></span>
-<span><span class="co">#&gt;  Functional demographic model 0.0703   0.40   0.66   0.84      24</span></span>
+<span><span class="co">#&gt;             Ensemble (lc, rw) 0.0688   0.44   0.75   0.92       3</span></span>
 <span><span class="co">#&gt;       demography fdm (native) 0.0719   0.33   0.57   0.76       8</span></span>
+<span><span class="co">#&gt;  Functional demographic model 0.0722   0.34   0.63   0.82      30</span></span>
 <span><span class="co">#&gt;       demography lca (native) 0.0841   0.21   0.39   0.56       1</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; France (HMD via demography), single ages 0-95</span></span>
 <span><span class="co">#&gt;                         model   crps  cov50  cov80  cov95 seconds</span></span>
 <span><span class="co">#&gt;                        &lt;char&gt; &lt;char&gt; &lt;char&gt; &lt;char&gt; &lt;char&gt;   &lt;num&gt;</span></span>
 <span><span class="co">#&gt;        Random walk with drift 0.0765   0.65   0.91   0.98       2</span></span>
-<span><span class="co">#&gt;             Ensemble (lc, rw) 0.0789   0.51   0.84   0.98       3</span></span>
-<span><span class="co">#&gt;  Functional demographic model 0.0843   0.33   0.57   0.75      10</span></span>
-<span><span class="co">#&gt;       demography fdm (native) 0.0941   0.24   0.43   0.59      11</span></span>
+<span><span class="co">#&gt;             Ensemble (lc, rw) 0.0790   0.51   0.84   0.98       2</span></span>
+<span><span class="co">#&gt;  Functional demographic model 0.0899   0.30   0.52   0.70      19</span></span>
+<span><span class="co">#&gt;       demography fdm (native) 0.0941   0.24   0.43   0.59      13</span></span>
 <span><span class="co">#&gt;                    Lee-Carter 0.0977   0.33   0.57   0.79       2</span></span>
 <span><span class="co">#&gt;       demography lca (native) 0.0982   0.31   0.54   0.74       2</span></span>
 <span><span class="co">#&gt; </span></span>
@@ -270,14 +277,14 @@ data.</p>
 <span><span class="co">#&gt;  demography lca (native) 0.0583   0.31   0.60   0.79       0</span></span>
 <span><span class="co">#&gt;               Lee-Carter 0.0619   0.31   0.58   0.79       0</span></span>
 <span><span class="co">#&gt;               StMoMo CBD 0.0625   0.35   0.60   0.82       1</span></span>
-<span><span class="co">#&gt;                StMoMo LC 0.0646   0.27   0.52   0.75       2</span></span>
+<span><span class="co">#&gt;                StMoMo LC 0.0646   0.27   0.52   0.75       1</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; bamp example data (8 age groups, 10 years)</span></span>
 <span><span class="co">#&gt;                   model   crps  cov50  cov80  cov95 seconds</span></span>
 <span><span class="co">#&gt;                  &lt;char&gt; &lt;char&gt; &lt;char&gt; &lt;char&gt; &lt;char&gt;   &lt;num&gt;</span></span>
-<span><span class="co">#&gt;     Bayesian APC (bamp) 0.2629   0.38   0.56   0.69      30</span></span>
-<span><span class="co">#&gt;           bamp (native) 0.2720   0.27   0.44   0.62      26</span></span>
-<span><span class="co">#&gt;              Lee-Carter 0.2804   0.40   0.65   0.88       0</span></span>
+<span><span class="co">#&gt;     Bayesian APC (bamp) 0.2602   0.46   0.58   0.75      31</span></span>
+<span><span class="co">#&gt;           bamp (native) 0.2738   0.23   0.42   0.60      26</span></span>
+<span><span class="co">#&gt;              Lee-Carter 0.2804   0.40   0.65   0.88       1</span></span>
 <span><span class="co">#&gt;  Random walk with drift 0.3460   0.54   0.81   0.85       0</span></span></code></pre></div>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ggplot2.tidyverse.org" class="external-link">ggplot2</a></span><span class="op">)</span></span>
@@ -301,22 +308,24 @@ agree with demography’s point forecasts to within 0.3% (median absolute
 log difference); the simulated 80% intervals are 19% narrower than
 demography’s analytic intervals at horizon 1 and nearly as wide at 20
 years. The Bayesian APC forecasts of <code><a href="../reference/apc_bayes.html">apc_bayes()</a></code> differ
-from native bamp by less than two independent bamp runs differ from each
-other, so the wrapper adds no difference beyond Monte Carlo error.</p>
+from native bamp by about as much as two independent bamp runs differ
+from each other, so the wrapper adds no difference beyond Monte Carlo
+error.</p>
 <p><strong>Accuracy.</strong> Four observations hold across the data
 sets:</p>
 <ul>
 <li>The same model used through mortensor scores better than the native
-package in 6 of 7 comparisons, mainly because mortensor’s predictive
+package in 5 of 7 comparisons, mainly because mortensor’s predictive
 draws include the variation of observed rates around the smooth
 forecast, which the native intervals omit. This improves coverage most:
 bamp on the ONS data covers 0.79 of observed rates at 95% natively and
 0.92 through <code><a href="../reference/apc_bayes.html">apc_bayes()</a></code>; the functional demographic model
-0.76 against 0.84 (ONS) and 0.59 against 0.75 (France). The exception is
-<code><a href="https://pkg.robjhyndman.com/demography/reference/lca.html" class="external-link">demography::lca()</a></code> on England &amp; Wales men, whose
-least-squares fit with k adjusted to the observed deaths is more
-accurate there than the Poisson Lee-Carter of <code><a href="../reference/lee_carter.html">lee_carter()</a></code>
-and of StMoMo.</li>
+0.76 against 0.82 (ONS) and 0.59 against 0.70 (France). The exceptions
+are the functional demographic model on the ONS data, where both have
+the same CRPS (0.072), and <code><a href="https://pkg.robjhyndman.com/demography/reference/lca.html" class="external-link">demography::lca()</a></code> on England
+&amp; Wales men, whose least-squares fit with k adjusted to the observed
+deaths is more accurate there than the Poisson Lee-Carter of
+<code><a href="../reference/lee_carter.html">lee_carter()</a></code> and of StMoMo.</li>
 <li>No single model is best everywhere. The Bayesian APC model is the
 most accurate on the ONS data and on bamp’s example, the StMoMo APC
 model on England &amp; Wales men 55-89 (cohort effects), and the random
@@ -325,10 +334,10 @@ changed over the period and Lee-Carter extrapolates the old
 pattern.</li>
 <li>Single structured models (Lee-Carter, <code>lca()</code>, functional
 demographic model, StMoMo LC and CBD) have 95% intervals that cover 56%
-to 84% of the observed rates, so they understate the uncertainty of real
-forecasts. On the three larger data sets the random walk and the
-ensemble of Lee-Carter and random walk cover 92% to 98% (bamp’s example
-has only 48 scored cells).</li>
+to 82% of the observed rates on the three larger data sets, so they
+understate the uncertainty of real forecasts. On the three larger data
+sets the random walk and the ensemble of Lee-Carter and random walk
+cover 92% to 98% (bamp’s example has only 48 scored cells).</li>
 <li>The ensemble is never the most accurate but always close to the best
 (CRPS within 11% of the best model on the ONS data, 3% on France, 30% on
 England &amp; Wales men) with near-nominal coverage, at the cost of

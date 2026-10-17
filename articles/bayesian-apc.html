@@ -11,6 +11,12 @@
 <script src="../deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Bayesian age-period-cohort models with bamp">
+<style>
+/* Bootstrap's paragraph margin inside the labels makes mermaid size the
+   boxes too small, which clips their last line */
+.mermaid-diagram p { margin: 0; }
+.mermaid-diagram { margin: 1rem 0 1.5rem; }
+</style>
 <script type="module">
 import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.esm.min.mjs";
 mermaid.initialize({ startOnLoad: false, securityLevel: "strict" });
@@ -137,16 +143,19 @@ first-order random walks for period and cohort (see “Choice of priors”
 below).</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">prep</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_prep.html">mt_prep</a></span><span class="op">(</span><span class="fu"><a href="../reference/mt_prep.html">step_ungroup</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span>
 <span><span class="va">t0</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/proc.time.html" class="external-link">proc.time</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_fit.html">mt_fit</a></span><span class="op">(</span><span class="fu"><a href="../reference/apc_bayes.html">apc_bayes</a></span><span class="op">(</span>mcmc <span class="op">=</span> <span class="fu"><a href="../reference/mcmc_control.html">mcmc_control</a></span><span class="op">(</span><span class="st">"fast"</span><span class="op">)</span><span class="op">)</span>, <span class="va">x</span>, prep <span class="op">=</span> <span class="va">prep</span><span class="op">)</span></span>
 <span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/proc.time.html" class="external-link">proc.time</a></span><span class="op">(</span><span class="op">)</span> <span class="op">-</span> <span class="va">t0</span><span class="op">)</span><span class="op">[[</span><span class="st">"elapsed"</span><span class="op">]</span><span class="op">]</span></span>
-<span><span class="co">#&gt; [1] 189.704</span></span>
+<span><span class="co">#&gt; [1] 187.857</span></span>
 <span><span class="va">fit</span><span class="op">$</span><span class="va">diagnostics</span></span>
 <span><span class="co">#&gt;    stratum status                              message seconds</span></span>
-<span><span class="co">#&gt; 1:  female     ok                                       95.539</span></span>
-<span><span class="co">#&gt; 2:    male     ok exposures rounded (max change 0.002)  90.889</span></span></code></pre></div>
+<span><span class="co">#&gt; 1:  female     ok                                       91.724</span></span>
+<span><span class="co">#&gt; 2:    male     ok exposures rounded (max change 0.002)  92.123</span></span></code></pre></div>
 <p>Posterior medians and 90% credible intervals of the effects (logit
-scale, identified with bamp’s convention):</p>
+scale, identified with bamp’s convention), and the Gelman-Rubin
+statistics of the chains (<code>rhat</code>, below 1.1 when they have
+converged):</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">eff</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_parameters.html">mt_parameters</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span></span>
 <span><span class="va">eff</span><span class="op">[</span>, <span class="va">.N</span>, by <span class="op">=</span> <span class="fu">.</span><span class="op">(</span><span class="va">stratum</span>, <span class="va">parameter</span><span class="op">)</span><span class="op">]</span></span>
@@ -156,16 +165,29 @@ scale, identified with bamp’s convention):</p>
 <span><span class="co">#&gt; 3:  female    cohort 97</span></span>
 <span><span class="co">#&gt; 4:    male       age 13</span></span>
 <span><span class="co">#&gt; 5:    male    period 37</span></span>
-<span><span class="co">#&gt; 6:    male    cohort 97</span></span></code></pre></div>
+<span><span class="co">#&gt; 6:    male    cohort 97</span></span>
+<span><span class="co">#&gt; 7:  female      rhat  4</span></span>
+<span><span class="co">#&gt; 8:    male      rhat  4</span></span>
+<span><span class="va">eff</span><span class="op">[</span><span class="va">parameter</span> <span class="op">==</span> <span class="st">"rhat"</span>, <span class="fu">.</span><span class="op">(</span><span class="va">stratum</span>, <span class="va">index</span>, rhat <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">value</span>, <span class="fl">3</span><span class="op">)</span><span class="op">)</span><span class="op">]</span></span>
+<span><span class="co">#&gt;    stratum       index  rhat</span></span>
+<span><span class="co">#&gt; 1:  female    age_prec 1.000</span></span>
+<span><span class="co">#&gt; 2:  female period_prec 1.001</span></span>
+<span><span class="co">#&gt; 3:  female cohort_prec 1.000</span></span>
+<span><span class="co">#&gt; 4:  female      fitted 1.003</span></span>
+<span><span class="co">#&gt; 5:    male    age_prec 1.000</span></span>
+<span><span class="co">#&gt; 6:    male period_prec 1.000</span></span>
+<span><span class="co">#&gt; 7:    male cohort_prec 1.001</span></span>
+<span><span class="co">#&gt; 8:    male      fitted 1.004</span></span></code></pre></div>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu">ggplot2</span><span class="fu">::</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">eff</span>, <span class="fu">ggplot2</span><span class="fu">::</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">index</span><span class="op">)</span>, <span class="va">value</span>, colour <span class="op">=</span> <span class="va">stratum</span>, fill <span class="op">=</span> <span class="va">stratum</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<code class="sourceCode R"><span><span class="fu">ggplot2</span><span class="fu">::</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">eff</span><span class="op">[</span><span class="va">parameter</span> <span class="op">!=</span> <span class="st">"rhat"</span><span class="op">]</span>, <span class="fu">ggplot2</span><span class="fu">::</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">index</span><span class="op">)</span>, <span class="va">value</span>, colour <span class="op">=</span> <span class="va">stratum</span>, fill <span class="op">=</span> <span class="va">stratum</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu">ggplot2</span><span class="fu">::</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_ribbon.html" class="external-link">geom_ribbon</a></span><span class="op">(</span><span class="fu">ggplot2</span><span class="fu">::</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>ymin <span class="op">=</span> <span class="va">lower</span>, ymax <span class="op">=</span> <span class="va">upper</span><span class="op">)</span>, alpha <span class="op">=</span> <span class="fl">0.2</span>, colour <span class="op">=</span> <span class="cn">NA</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu">ggplot2</span><span class="fu">::</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_path.html" class="external-link">geom_line</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu">ggplot2</span><span class="fu">::</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/facet_wrap.html" class="external-link">facet_wrap</a></span><span class="op">(</span><span class="op">~</span><span class="va">parameter</span>, scales <span class="op">=</span> <span class="st">"free"</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu">ggplot2</span><span class="fu">::</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span>x <span class="op">=</span> <span class="st">"Index (age group, period or cohort)"</span>, y <span class="op">=</span> <span class="st">"Effect (logit scale)"</span>, colour <span class="op">=</span> <span class="cn">NULL</span>, fill <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
-<div class="float">
-<img src="apc-effects-1.png" alt="plot of chunk effects"><div class="figcaption">plot of chunk effects</div>
-</div>
+<span>  <span class="fu">ggplot2</span><span class="fu">::</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span>x <span class="op">=</span> <span class="st">"Index (age group, period or cohort)"</span>, y <span class="op">=</span> <span class="st">"Effect (logit scale)"</span>, colour <span class="op">=</span> <span class="cn">NULL</span>, fill <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="../reference/mt_plot_style.html">scale_colour_mortensor</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"categorical"</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="../reference/mt_plot_style.html">scale_fill_mortensor</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"categorical"</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="../reference/mt_plot_style.html">theme_mortensor</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+<p><img src="apc-effects-1.png"></p>
 </div>
 <div class="section level2">
 <h2 id="forecast">Forecast<a class="anchor" aria-label="anchor" href="#forecast"></a>
@@ -174,31 +196,27 @@ scale, identified with bamp’s convention):</p>
 <code class="sourceCode R"><span><span class="va">fc</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_forecast.html">mt_forecast</a></span><span class="op">(</span><span class="va">fit</span>, h <span class="op">=</span> <span class="fl">15</span>, n_draws <span class="op">=</span> <span class="fl">1000</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
 <span><span class="va">fc</span></span>
 <span><span class="co">#&gt; &lt;mt_draws&gt; Bayesian APC (bamp); origin 2006; 61 ages x 15 periods (2007-2021) x 2 strata x 1000 draws</span></span>
-<span><span class="fu"><a href="../reference/mt_draws.html">mt_summarise</a></span><span class="op">(</span><span class="va">fc</span><span class="op">)</span><span class="op">[</span><span class="va">age</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"50"</span>, <span class="st">"70"</span>, <span class="st">"90"</span><span class="op">)</span> <span class="op">&amp;</span> <span class="va">period</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2007</span>, <span class="fl">2021</span><span class="op">)</span>,</span>
-<span>                 <span class="fu">.</span><span class="op">(</span><span class="va">label</span>, <span class="va">age</span>, <span class="va">period</span>, q0.05 <span class="op">=</span> <span class="va">q0.1</span>, <span class="va">q0.5</span>, q0.95 <span class="op">=</span> <span class="va">q0.9</span><span class="op">)</span><span class="op">]</span></span>
+<span><span class="fu"><a href="../reference/mt_draws.html">mt_summarise</a></span><span class="op">(</span><span class="va">fc</span>, probs <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.05</span>, <span class="fl">0.5</span>, <span class="fl">0.95</span><span class="op">)</span><span class="op">)</span><span class="op">[</span><span class="va">age</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"50"</span>, <span class="st">"70"</span>, <span class="st">"90"</span><span class="op">)</span> <span class="op">&amp;</span> <span class="va">period</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2007</span>, <span class="fl">2021</span><span class="op">)</span>,</span>
+<span>                                             <span class="fu">.</span><span class="op">(</span><span class="va">label</span>, <span class="va">age</span>, <span class="va">period</span>, <span class="va">q0.05</span>, <span class="va">q0.5</span>, <span class="va">q0.95</span><span class="op">)</span><span class="op">]</span></span>
 <span><span class="co">#&gt;      label age period       q0.05        q0.5       q0.95</span></span>
-<span><span class="co">#&gt;  1: female  50   2007 0.002287373 0.002389613 0.002496107</span></span>
-<span><span class="co">#&gt;  2: female  70   2007 0.009821812 0.010253221 0.010687771</span></span>
-<span><span class="co">#&gt;  3: female  90   2007 0.121700248 0.126300946 0.130740514</span></span>
-<span><span class="co">#&gt;  4: female  50   2021 0.001852783 0.002225066 0.002682572</span></span>
-<span><span class="co">#&gt;  5: female  70   2021 0.008535630 0.010081974 0.012049372</span></span>
-<span><span class="co">#&gt;  6: female  90   2021 0.092991036 0.107860226 0.125603062</span></span>
-<span><span class="co">#&gt;  7:   male  50   2007 0.005189661 0.005367916 0.005546749</span></span>
-<span><span class="co">#&gt;  8:   male  70   2007 0.022274796 0.023040041 0.023780584</span></span>
-<span><span class="co">#&gt;  9:   male  90   2007 0.169589385 0.174374077 0.178819370</span></span>
-<span><span class="co">#&gt; 10:   male  50   2021 0.004040175 0.004661139 0.005392975</span></span>
-<span><span class="co">#&gt; 11:   male  70   2021 0.019559979 0.022288084 0.025348748</span></span>
-<span><span class="co">#&gt; 12:   male  90   2021 0.144170119 0.160650372 0.178952473</span></span></code></pre></div>
+<span><span class="co">#&gt;  1: female  50   2007 0.002259593 0.002392918 0.002534141</span></span>
+<span><span class="co">#&gt;  2: female  70   2007 0.009709563 0.010248314 0.010866396</span></span>
+<span><span class="co">#&gt;  3: female  90   2007 0.120659174 0.126195457 0.132688883</span></span>
+<span><span class="co">#&gt;  4: female  50   2021 0.001735352 0.002205172 0.002854203</span></span>
+<span><span class="co">#&gt;  5: female  70   2021 0.008137643 0.010039733 0.012774818</span></span>
+<span><span class="co">#&gt;  6: female  90   2021 0.089261774 0.107535427 0.132488865</span></span>
+<span><span class="co">#&gt;  7:   male  50   2007 0.005132545 0.005369951 0.005633194</span></span>
+<span><span class="co">#&gt;  8:   male  70   2007 0.022085599 0.023028383 0.024085731</span></span>
+<span><span class="co">#&gt;  9:   male  90   2007 0.168368010 0.174313201 0.180540241</span></span>
+<span><span class="co">#&gt; 10:   male  50   2021 0.003889091 0.004642916 0.005562774</span></span>
+<span><span class="co">#&gt; 11:   male  70   2021 0.018678210 0.022076199 0.026065872</span></span>
+<span><span class="co">#&gt; 12:   male  90   2021 0.138688300 0.159432212 0.182343753</span></span></code></pre></div>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/mt_plot.html">mt_plot_forecast</a></span><span class="op">(</span><span class="va">fc</span>, ages <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"45"</span>, <span class="st">"65"</span>, <span class="st">"80"</span>, <span class="st">"95"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<div class="float">
-<img src="apc-forecast-1.png" alt="plot of chunk forecast"><div class="figcaption">plot of chunk forecast</div>
-</div>
+<p><img src="apc-forecast-1.png"></p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/mt_plot.html">mt_plot_life_expectancy</a></span><span class="op">(</span><span class="va">fc</span>, at <span class="op">=</span> <span class="fl">65</span><span class="op">)</span></span></code></pre></div>
-<div class="float">
-<img src="apc-e65-1.png" alt="plot of chunk e65"><div class="figcaption">plot of chunk e65</div>
-</div>
+<p><img src="apc-e65-1.png"></p>
 </div>
 <div class="section level2">
 <h2 id="backtest-against-lee-carter">Backtest against Lee-Carter<a class="anchor" aria-label="anchor" href="#backtest-against-lee-carter"></a>
@@ -211,19 +229,17 @@ the observed deaths in 5-year age groups:</p>
 <span>  <span class="fu"><a href="../reference/mt_backtest.html">mt_backtest</a></span><span class="op">(</span><span class="fu"><a href="../reference/apc_bayes.html">apc_bayes</a></span><span class="op">(</span>mcmc <span class="op">=</span> <span class="fu"><a href="../reference/mcmc_control.html">mcmc_control</a></span><span class="op">(</span><span class="st">"fast"</span><span class="op">)</span><span class="op">)</span>, <span class="va">x</span>, origins <span class="op">=</span> <span class="fl">1996</span>, h <span class="op">=</span> <span class="fl">10</span>, prep <span class="op">=</span> <span class="va">prep</span>, n_draws <span class="op">=</span> <span class="fl">500</span><span class="op">)</span>,</span>
 <span>  <span class="fu"><a href="../reference/mt_backtest.html">mt_backtest</a></span><span class="op">(</span><span class="fu"><a href="../reference/lee_carter.html">lee_carter</a></span><span class="op">(</span><span class="op">)</span>, <span class="va">x</span>, origins <span class="op">=</span> <span class="fl">1996</span>, h <span class="op">=</span> <span class="fl">10</span>, prep <span class="op">=</span> <span class="va">prep</span>, n_draws <span class="op">=</span> <span class="fl">500</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/proc.time.html" class="external-link">proc.time</a></span><span class="op">(</span><span class="op">)</span> <span class="op">-</span> <span class="va">t0</span><span class="op">)</span><span class="op">[[</span><span class="st">"elapsed"</span><span class="op">]</span><span class="op">]</span></span>
-<span><span class="co">#&gt; [1] 135.635</span></span>
+<span><span class="co">#&gt; [1] 139.528</span></span>
 <span><span class="fu"><a href="../reference/mt_score.html">mt_score</a></span><span class="op">(</span><span class="va">bt</span>, by <span class="op">=</span> <span class="st">"model"</span><span class="op">)</span></span>
-<span><span class="co">#&gt;                  model       crps        wis        mae     mase     cov50</span></span>
-<span><span class="co">#&gt; 1: Bayesian APC (bamp) 0.06680902 0.06070748 0.08879238 3.767262 0.2269231</span></span>
-<span><span class="co">#&gt; 2:          Lee-Carter 0.03656689 0.03295069 0.04982160 2.026045 0.4000000</span></span>
-<span><span class="co">#&gt;        cov80     cov95  pit_mean   n</span></span>
-<span><span class="co">#&gt; 1: 0.4461538 0.6653846 0.2279085 260</span></span>
-<span><span class="co">#&gt; 2: 0.6653846 0.8384615 0.5139384 260</span></span></code></pre></div>
+<span><span class="co">#&gt;                  model       crps        wis        mae       rmse     mase</span></span>
+<span><span class="co">#&gt; 1: Bayesian APC (bamp) 0.06653799 0.06054837 0.08837594 0.11378047 3.757348</span></span>
+<span><span class="co">#&gt; 2:          Lee-Carter 0.03656689 0.03295069 0.04982160 0.06588784 2.026045</span></span>
+<span><span class="co">#&gt;        cov50     cov80     cov95  pit_mean   n     unit</span></span>
+<span><span class="co">#&gt; 1: 0.2384615 0.4961538 0.6769231 0.2348099 260 log rate</span></span>
+<span><span class="co">#&gt; 2: 0.4000000 0.6653846 0.8384615 0.5140147 260 log rate</span></span></code></pre></div>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/mt_plot.html">mt_plot_coverage</a></span><span class="op">(</span><span class="va">bt</span><span class="op">)</span></span></code></pre></div>
-<div class="float">
-<img src="apc-coverage-1.png" alt="plot of chunk coverage"><div class="figcaption">plot of chunk coverage</div>
-</div>
+<p><img src="apc-coverage-1.png"></p>
 <p>In this backtest the APC forecasts are less accurate than Lee-Carter
 and too high: the mean PIT is well below 0.5 and the 95% intervals cover
 only about two thirds of the observations. A first-order random walk
@@ -235,8 +251,8 @@ of mortality after the origin is missed.</p>
 </h2>
 <p>Second-order random walks for period and cohort extrapolate the most
 recent trends, and their uncertainty grows quickly with the horizon. For
-French women the 90% forecast interval of the death rate at ages 90-94
-in 2021 (15 years ahead) is compared below for both choices:</p>
+French women the 90% forecast interval of the death rate at age 92 in
+2021 (15 years ahead) is compared below for both choices:</p>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">xf</span> <span class="op">&lt;-</span> <span class="va">x</span></span>
 <span><span class="va">xf</span><span class="op">$</span><span class="va">obs</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span><span class="va">xf</span><span class="op">$</span><span class="va">obs</span>, <span class="kw">function</span><span class="op">(</span><span class="va">o</span><span class="op">)</span> <span class="va">o</span><span class="op">[</span><span class="va">o</span><span class="op">$</span><span class="va">stratum</span> <span class="op">==</span> <span class="fl">1</span><span class="op">]</span><span class="op">)</span></span>
@@ -249,25 +265,32 @@ in 2021 (15 years ahead) is compared below for both choices:</p>
 <span>  <span class="va">r</span> <span class="op">&lt;-</span> <span class="va">f</span><span class="op">$</span><span class="va">rates</span><span class="op">[</span><span class="va">f</span><span class="op">$</span><span class="va">age</span><span class="op">$</span><span class="va">labels</span> <span class="op">==</span> <span class="st">"92"</span>, <span class="st">"2021"</span>, <span class="st">"female"</span>, <span class="op">]</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/pkg/data.table/man/data.table.html" class="external-link">data.table</a></span><span class="op">(</span>priors <span class="op">=</span> <span class="va">n</span>, q0.05 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/quantile.html" class="external-link">quantile</a></span><span class="op">(</span><span class="va">r</span>, <span class="fl">0.05</span><span class="op">)</span>, q0.5 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/median.html" class="external-link">median</a></span><span class="op">(</span><span class="va">r</span><span class="op">)</span>, q0.95 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/quantile.html" class="external-link">quantile</a></span><span class="op">(</span><span class="va">r</span>, <span class="fl">0.95</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="op">}</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label):</span></span>
+<span><span class="co">#&gt; Bayesian APC (bamp): forecast death rates above 1 in 4.1% of the draws (strata</span></span>
+<span><span class="co">#&gt; female; ages 84, 88, 89, 93). The model is unstable here, often because of</span></span>
+<span><span class="co">#&gt; sparse counts or a steep trend extrapolated far ahead; consider wider age</span></span>
+<span><span class="co">#&gt; groups (mt_regroup()), pooling (li_lee(common_by = )), smoothing</span></span>
+<span><span class="co">#&gt; (step_smooth()) or an ensemble.</span></span>
 <span><span class="co">#&gt;                       priors       q0.05       q0.5     q0.95</span></span>
-<span><span class="co">#&gt; 1: rw2 / rw1 / rw1 (default) 0.114059840 0.13758837 0.1673836</span></span>
-<span><span class="co">#&gt; 2:           rw2 / rw2 / rw2 0.004079141 0.07074083 0.5877700</span></span></code></pre></div>
+<span><span class="co">#&gt; 1: rw2 / rw1 / rw1 (default) 0.114750599 0.13814363 0.1692327</span></span>
+<span><span class="co">#&gt; 2:           rw2 / rw2 / rw2 0.003622912 0.08328112 0.6477676</span></span></code></pre></div>
 <p>With second-order random walks the interval spans two orders of
-magnitude, which is not useful for planning; with first-order random
-walks it is narrow but, as the backtest shows, biased when mortality
-keeps declining. Neither choice is right for every dataset.
-Rolling-origin backtests are the way to choose priors and the
-overdispersion term, and an ensemble with models that carry a drift
-(<code><a href="../reference/ensemble.html">ensemble()</a></code>) is a way to combine the strengths.</p>
+magnitude, and a few paths reach death rates above 1 (the warning),
+which is not useful for planning; with first-order random walks it is
+narrow but, as the backtest shows, biased when mortality keeps
+declining. Neither choice is right for every dataset. Rolling-origin
+backtests are the way to choose priors and the overdispersion term, and
+an ensemble with models that carry a drift (<code><a href="../reference/ensemble.html">ensemble()</a></code>) is
+a way to combine the strengths.</p>
 </div>
 <div class="section level2">
 <h2 id="practical-notes">Practical notes<a class="anchor" aria-label="anchor" href="#practical-notes"></a>
 </h2>
 <ul>
-<li>Runtime: about 1.5 minutes per stratum with
-<code>mcmc_control("fast")</code> for 13 age groups and 37 years on one
-machine; <code>"final"</code> lets bamp choose the chain length and is
-several times slower.</li>
+<li>Runtime: about 1.5 to 3 minutes per stratum with
+<code>mcmc_control("fast")</code> for 13 age groups and 37 years,
+depending on the machine; <code>"final"</code> lets bamp choose the
+chain length and is several times slower.</li>
 <li>Heterogeneity terms (<code>"rw1+het"</code>, <code>"rw2+het"</code>)
 are not offered, because bamp 3.0.0 cannot forecast them.</li>
 <li>bamp needs whole numbers: deaths and exposures are rounded, and the

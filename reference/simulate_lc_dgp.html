@@ -5,7 +5,12 @@ noise e (sd 0.03), 5-year age groups 30-34 ... 90-94 and 10 strata
 (2 sexes x 5 deprivation quintiles). Deaths are Poisson."><meta property="og:description" content="The generator of the 0.1 review: log m = a_x + b_x k_t + shift_g + e,
 with k_t a random walk with drift (-0.015, sd 0.02) per stratum, iid
 noise e (sd 0.03), 5-year age groups 30-34 ... 90-94 and 10 strata
-(2 sexes x 5 deprivation quintiles). Deaths are Poisson."><script type="module">
+(2 sexes x 5 deprivation quintiles). Deaths are Poisson."><style>
+/* Bootstrap's paragraph margin inside the labels makes mermaid size the
+   boxes too small, which clips their last line */
+.mermaid-diagram p { margin: 0; }
+.mermaid-diagram { margin: 1rem 0 1.5rem; }
+</style><script type="module">
 import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.esm.min.mjs";
 mermaid.initialize({ startOnLoad: false, securityLevel: "strict" });
 window.addEventListener("load", async () => {

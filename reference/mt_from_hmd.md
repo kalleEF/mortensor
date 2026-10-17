@@ -3,9 +3,11 @@
 `mt_from_hmd()` converts HMD tables in the layout returned by
 [`HMDHFDplus::readHMDweb()`](https://rdrr.io/pkg/HMDHFDplus/man/readHMDweb.html)
 (columns `Year`, `Age`, `Female`, `Male`, `Total`, and `OpenInterval`)
-into an [mt_data](mt_data.md) object with strata `sex`. `mt_read_hmd()`
-downloads `Deaths_1x1` and `Exposures_1x1` for one country with
-HMDHFDplus; an HMD account is needed (<https://www.mortality.org>).
+into an [mt_data](mt_data.md) object with strata `sex`. Without column
+`OpenInterval`, an age written with `+` (`"110+"`) is the open interval.
+`mt_read_hmd()` downloads `Deaths_1x1` and `Exposures_1x1` for one
+country with HMDHFDplus; an HMD account is needed
+(<https://www.mortality.org>).
 
 ## Usage
 

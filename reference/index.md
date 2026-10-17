@@ -67,6 +67,9 @@ pipelines refitted in backtests.
   period intervals
 - [`mt_ungroup()`](mt_ungroup.md) : Estimate grid-resolution data from
   grouped observations
+- [`mt_plot_ungroup()`](ungroup-diagnostics.md)
+  [`mt_ungroup_check()`](ungroup-diagnostics.md) : Diagnostics of
+  ungrouped data
 - [`mt_smooth()`](mt_smooth.md) : Smooth death rates on the grid
 - [`mt_smooth_check()`](mt_smooth_check.md)
   [`mt_plot_smooth()`](mt_smooth_check.md) : Check and plot the result
@@ -93,6 +96,8 @@ inequality indices and decompositions (which also work on forecasts).
   observed data
 - [`mt_contrast()`](mt_contrast.md) : Differences and ratios between
   strata, path by path
+- [`mt_plot_contrast()`](mt_plot_contrast.md) : Plot gaps between strata
+  over time
 - [`mt_inequality()`](mt_inequality.md) : Slope and relative index of
   inequality, path by path
 - [`mt_decompose()`](mt_decompose.md)
@@ -115,6 +120,8 @@ Models for one population
   of Hyndman and Ullah (demography)
 - [`stmomo()`](stmomo.md) : Generalised age-period-cohort models
   (StMoMo)
+- [`stanmomo()`](stanmomo.md) : Bayesian stochastic mortality models in
+  Stan (StanMoMo)
 - [`arima_series()`](arima_series.md) [`ets_series()`](arima_series.md)
   : Per-age ARIMA and ETS models
 - [`apc_bayes()`](apc_bayes.md) : Bayesian age-period-cohort model
@@ -129,6 +136,8 @@ Models for several populations and causes
 
 - [`li_lee()`](li_lee.md) [`product_ratio()`](li_lee.md) : Coherent
   multi-population models
+- [`coherent_fdm()`](coherent_fdm.md) : Coherent functional demographic
+  model (product-ratio, demography)
 - [`tucker3()`](tucker3.md) : Tucker3 tensor model across strata
 - [`cause_shares()`](cause_shares.md) : Coherent multi-cause forecasts
   with cause shares
@@ -137,18 +146,21 @@ Models for several populations and causes
 
 Combine models and make forecasts coherent
 
-Model wrappers (ensembles, reconciliation, calibration, jump-off,
-bootstrap, tuning) and hierarchies of strata.
+Model wrappers (ensembles, different models for groups of strata,
+reconciliation, calibration, jump-off, bootstrap, tuning) and
+hierarchies of strata.
 
 - [`ensemble()`](ensemble.md) : Ensembles of models
+- [`stratified()`](stratified.md) : Different models for different
+  groups of strata
 - [`reconciled()`](reconciled.md) : Models with reconciled forecasts
-- [`calibrated()`](calibrated.md) : Calibrate forecast distributions on
-  recent years
+- [`recalibrated()`](recalibrated.md) : Recalibrate forecast
+  distributions on recent years
 - [`anchored()`](anchored.md) : Control the jump-off of any model
 - [`bootstrapped()`](bootstrapped.md) : Bootstrap uncertainty of
   preprocessing and parameters
-- [`mt_tune()`](mt_tune.md) [`tuned()`](mt_tune.md) : Tune model
-  parameters on training data
+- [`mt_tune()`](mt_tune.md) [`tuned()`](mt_tune.md) : Tune model and
+  preprocessing settings by forecast accuracy
 - [`mt_hierarchy()`](mt_hierarchy.md) : Hierarchies of strata
 - [`mt_aggregate_strata()`](mt_aggregate_strata.md) : Add aggregate
   strata to data
@@ -191,10 +203,20 @@ Fit, inspect and forecast
 
 ## 
 
-Evaluate
+Evaluate and compare
+
+Rolling-origin backtests and scores; several models and forecasts side
+by side.
 
 - [`mt_backtest()`](mt_backtest.md) : Rolling-origin backtest
 - [`mt_score()`](mt_score.md) : Summarise backtest scores
+- [`mt_compare()`](mt_compare.md) [`mt_score_table()`](mt_compare.md)
+  [`mt_compare_forecasts()`](mt_compare.md)
+  [`mt_plot_compare()`](mt_compare.md) : Compare models and forecasts
+- [`mt_plot_backtest_design()`](mt_plot_design.md)
+  [`mt_plot_tuning()`](mt_plot_design.md)
+  [`mt_plot_pit()`](mt_plot_design.md) : Didactic plots of backtests and
+  tuning
 
 ## 
 
@@ -202,8 +224,8 @@ Report
 
 - [`mt_plot_forecast()`](mt_plot.md) [`mt_plot_age()`](mt_plot.md)
   [`mt_plot_life_expectancy()`](mt_plot.md)
-  [`mt_plot_rates()`](mt_plot.md) [`mt_plot_ungroup()`](mt_plot.md)
-  [`mt_plot_coverage()`](mt_plot.md) : Plots
+  [`mt_plot_rates()`](mt_plot.md) [`mt_plot_coverage()`](mt_plot.md) :
+  Plots
 - [`mt_plot_tucker()`](mt_plot_more.md)
   [`mt_plot_shares()`](mt_plot_more.md)
   [`mt_plot_scores()`](mt_plot_more.md) : Further plots: Tucker factors,

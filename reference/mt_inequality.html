@@ -17,7 +17,12 @@ population, the relative index of inequality (RII) their ratio. The
 relative rank of a level is the midpoint of its cumulative population
 share, with the levels ordered as in order. Computed path by path, with
 the population shares of the exposures of each year for observed rates
-and of the last observed year for forecasts."><script type="module">
+and of the last observed year for forecasts."><style>
+/* Bootstrap's paragraph margin inside the labels makes mermaid size the
+   boxes too small, which clips their last line */
+.mermaid-diagram p { margin: 0; }
+.mermaid-diagram { margin: 1rem 0 1.5rem; }
+</style><script type="module">
 import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.esm.min.mjs";
 mermaid.initialize({ startOnLoad: false, securityLevel: "strict" });
 window.addEventListener("load", async () => {
@@ -112,8 +117,12 @@ and of the last observed year for forecasts.</p>
 
 <dt id="arg-order">order<a class="anchor" aria-label="anchor" href="#arg-order"></a></dt>
 <dd><p>Levels of <code>var</code> from rank 0 to rank 1 (default: their order
-in the data). For deprivation, list the least deprived level first so
-that a positive SII means higher values in more deprived groups.</p></dd>
+in the data, without the total and the groups of a hierarchy stored in
+<code>x</code> by <code><a href="mt_aggregate_strata.html">mt_aggregate_strata()</a></code>, <code><a href="reconciled.html">reconciled()</a></code> or
+<code>mt_group_levels(total = )</code>). For deprivation, list the least deprived
+level first so that a positive SII means higher values in more deprived
+groups. Levels not listed, such as the total of a hierarchy, are left
+out.</p></dd>
 
 
 <dt id="arg-quantity">quantity<a class="anchor" aria-label="anchor" href="#arg-quantity"></a></dt>

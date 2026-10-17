@@ -44,7 +44,9 @@ life_expectancy(
 
 - ...:
 
-  Passed to the life-table calculation (`ax`, `open`, `k`).
+  Passed to the life-table calculation (`ax`, `open`, `k`). A rate of 0
+  in the open interval is replaced as in
+  [`life_table()`](life_table.md).
 
 ## Value
 

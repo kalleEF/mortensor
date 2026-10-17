@@ -7,7 +7,12 @@ the model, the grid and the forecast origin unless file is given.'><meta propert
 or all draws in long format, what = "draws") or of any result table,
 such as those of life_expectancy(), asr(), mt_contrast(),
 mt_inequality() or mt_score(). The file name of a forecast records
-the model, the grid and the forecast origin unless file is given.'><script type="module">
+the model, the grid and the forecast origin unless file is given.'><style>
+/* Bootstrap's paragraph margin inside the labels makes mermaid size the
+   boxes too small, which clips their last line */
+.mermaid-diagram p { margin: 0; }
+.mermaid-diagram { margin: 1rem 0 1.5rem; }
+</style><script type="module">
 import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.esm.min.mjs";
 mermaid.initialize({ startOnLoad: false, securityLevel: "strict" });
 window.addEventListener("load", async () => {

@@ -36,7 +36,7 @@ stratum `i` (deaths divided by exposure), `D` deaths, `E` exposures.
 | Suppressed cells | raking (iterative proportional fitting; Deming and Stephan 1940) of the missing counts to published totals, within optional bounds | [`mt_fill_suppressed()`](../reference/mt_fill_suppressed.md) |
 | Unknown ages | distributed over the age groups of the same stratum and year in proportion to the known deaths | [`mt_data()`](../reference/mt_data.md) |
 | Ungrouping | penalised composite link model with exposures (Rizzi, Gampe and Eilers 2015) or spline methods | [`mt_ungroup()`](../reference/mt_ungroup.md), [`step_ungroup()`](../reference/mt_prep.md) |
-| Smoothing | over age (Poisson P-splines, Currie, Durban and Eilers 2004; Whittaker; GAM), over time (Whittaker) or the age-period surface (P-splines; quasi-Poisson `te(age, year)` GAM, Wood 2017); age 0 is not smoothed; models are fitted to the smoothed rates, their observation noise, residuals and backtest scales come from the raw rates; smoothing over time narrows the intervals of models with a period index (check coverage, [`calibrated()`](../reference/calibrated.md)) | [`mt_smooth()`](../reference/mt_smooth.md), [`step_smooth()`](../reference/mt_prep.md), [`mt_smooth_check()`](../reference/mt_smooth_check.md) |
+| Smoothing | over age (Poisson P-splines; Whittaker; GAM), over time (Whittaker) or the age-period surface (P-splines, Currie, Durban and Eilers 2004; quasi-Poisson `te(age, year)` GAM, Wood 2017); age 0 is not smoothed; models are fitted to the smoothed rates, their observation noise, residuals and backtest scales come from the raw rates; smoothing over time narrows the intervals of models with a period index (check coverage, [`recalibrated()`](../reference/recalibrated.md)) | [`mt_smooth()`](../reference/mt_smooth.md), [`step_smooth()`](../reference/mt_prep.md), [`mt_smooth_check()`](../reference/mt_smooth_check.md) |
 | Zero deaths | models on log rates use 0.5 deaths in a cell without deaths |  |
 
 All preprocessing steps given as `prep` are refitted on every training
@@ -94,12 +94,17 @@ Each age: `log m(x,t) = log m(x,t-1) + mu(x) + e(x,t)`.
 
 Calls
 [`demography::fdm()`](https://pkg.robjhyndman.com/demography/reference/fdm.html)
-(Hyndman and Ullah 2007): smoothed log rates decomposed into a mean
-function and functional principal components, whose scores are forecast
-with time-series models. Draws are simulated from the fitted model. Its
-intervals are those of the simulated paths, which are somewhat narrower
-at short horizons than demography’s analytic intervals (see the
-comparison vignette).
+(Hyndman and Ullah 2007): the rates of each year are smoothed over age
+with
+[`demography::smooth.demogdata()`](https://pkg.robjhyndman.com/demography/reference/smooth.demogdata.html)
+(`smooth = TRUE`; settings in `smooth_args`), and the log rates are
+decomposed into a mean function and functional principal components,
+whose scores are forecast with time-series models. The number of
+components and the smoothing settings can be chosen by forecast accuracy
+with [`tuned()`](../reference/mt_tune.md). Draws are simulated from the
+fitted model. Its intervals are those of the simulated paths, which are
+somewhat narrower at short horizons than demography’s analytic intervals
+(see the comparison vignette).
 
 ### Time series per age: `arima_series()`, `ets_series()`
 
@@ -122,6 +127,19 @@ Calls [`StMoMo::fit()`](https://rdrr.io/pkg/StMoMo/man/fit.html) and
 and Millossovich 2018) for the Lee-Carter, CBD, APC, RH and M6 families.
 Draws contain the period and cohort index uncertainty that StMoMo
 simulates; parameter uncertainty is not included.
+
+### Bayesian StMoMo models: `stanmomo()`
+
+The same families (Lee-Carter, RH, APC, CBD, M6) fitted with Stan by
+StanMoMo (Barigou et al. 2023), with a Poisson or negative binomial
+likelihood. Period indexes are random walks with drift (CBD and M6:
+correlated), cohort effects AR(2) processes.
+
+- **Forecast**: StanMoMo forecasts inside the fit, up to `h_max` years.
+- **Uncertainty**: posterior draws of all parameters and of the future
+  indexes; predictive draws add Poisson and extra-Poisson noise.
+- **Convergence**: the fit warns when the largest R-hat exceeds 1.05 or
+  transitions diverged; models with cohort effects need longer chains.
 
 ### Bayesian age-period-cohort model: `apc_bayes()`
 
@@ -158,11 +176,29 @@ by DIC.
   AR(1) processes (independent across strata). `a`, `b`, `B` and `phi`
   are fixed.
 
-### Product-ratio: `product_ratio()`
+### Product-ratio: `product_ratio()`, `coherent_fdm()`
 
-The same structure on the geometric mean of the strata (common factor)
-and their ratios to it (Hyndman, Booth and Yasmeen 2013), with
-Lee-Carter components in place of functional data models.
+The product-ratio method (Hyndman, Booth and Yasmeen 2013) models the
+geometric mean of the strata (the product, which carries the common
+trend) and the ratio of each stratum to it.
+[`coherent_fdm()`](../reference/coherent_fdm.md) is the original method
+with the functional data models of demography:
+
+- **Estimation**: the rates of each stratum are smoothed over age; the
+  product and the ratios are decomposed into principal components
+  ([`demography::fdm()`](https://pkg.robjhyndman.com/demography/reference/fdm.html)).
+  With `common_by`, each group has its own product; in a hierarchy only
+  the bottom strata enter the product.
+- **Forecast**: the scores of the product follow ARIMA models, those of
+  the ratios stationary ARFIMA models, so the ratios return towards
+  their recent level and the strata do not diverge.
+- **Uncertainty**: simulated scores and resampled model errors of the
+  product and of each ratio; the ratios of each path are rescaled to
+  multiply to one, as in
+  [`demography::forecast.fdmpr()`](https://pkg.robjhyndman.com/demography/reference/forecast.fdmpr.html).
+
+[`product_ratio()`](../reference/li_lee.md) uses Lee-Carter components
+in place of functional data models.
 
 ### Tucker3 and cause shares (experimental)
 
@@ -198,23 +234,32 @@ probabilities equal to the weights (equal, inverse CRPS of an inner
 backtest, or stacking). The mixture contains the uncertainty of each
 component and the disagreement between them.
 
+### Different models for groups of strata: `stratified()`
+
+One model per level of a stratum variable, for example Lee-Carter for
+all-cause mortality and Li-Lee for the causes of death. The groups are
+fitted and forecast separately and their draws combined; inside
+[`reconciled()`](../reference/reconciled.md) they can be made coherent,
+for example with the causes scaled to the all-cause forecast.
+
 ### Reconciled forecasts: `reconciled()`
 
 Forecasts of all nodes of a hierarchy (bottom strata and their totals)
 are made to add up draw by draw: bottom-up sums, or projections of the
 base forecasts with weights from their variances (WLS), the shrunk
 covariance (MinT; Wickramasuriya, Athanasopoulos and Hyndman 2019), the
-structure (Hyndman et al. 2011) or equal weights (OLS). Parts that a
-projection would make negative are held at zero and the rest projected
-again, so that `fixed` nodes (a trusted total) are kept; with fixed
-nodes, `"proportional"` instead scales their parts in proportion to
-their forecasts (top-down allocation). Deaths add up over every
-hierarchy variable; exposures add up over variables that divide the
-population and are shared by the levels of variables such as causes of
-death (`additive = "rates"`). The exposures of the forecast years are
-those of the last observed year unless projections are given.
+structure (structural scaling; Athanasopoulos et al. 2017) or equal
+weights (OLS; Hyndman et al. 2011). Parts that a projection would make
+negative are held at zero and the rest projected again, so that `fixed`
+nodes (a trusted total) are kept; with fixed nodes, `"proportional"`
+instead scales their parts in proportion to their forecasts (top-down
+allocation). Deaths add up over every hierarchy variable; exposures add
+up over variables that divide the population and are shared by the
+levels of variables such as causes of death (`additive = "rates"`). The
+exposures of the forecast years are those of the last observed year
+unless projections are given.
 
-### Calibration on recent years: `calibrated()`
+### Calibration on recent years: `recalibrated()`
 
 Refits a model at several origins in the last `years` (default 10) of
 the training data, compares its forecasts with the observed rates of
@@ -226,18 +271,36 @@ Gneiting et al. 2005). Optionally a drift correction is estimated as
 well. Ranks within each cell are kept, so the draws remain paths.
 Calibration widens models that were persistently too narrow (Lee-Carter
 on England & Wales: 95% coverage 0.75 to 0.88 in backtests) and can
-narrow mixtures that were already wide.
+narrow mixtures that were already wide. `ages` gives each age band its
+own factors; `quantity = "life_expectancy"` or `"asr"` calibrates the
+intervals of these quantities (which also depend on how the ages move
+together); `n_boot` reports bootstrap intervals of the factors. Beyond
+the longest horizon of the window the factors stay constant. Calibration
+keeps the model and its settings; choosing the settings themselves is
+tuning (below).
 
 ### Bootstrap and tuning: `bootstrapped()`, `tuned()`
 
 [`bootstrapped()`](../reference/bootstrapped.md) refits a model to
 Poisson resamples of the deaths (parameter uncertainty, including
 preprocessing with `type = "data"`).
-[`tuned()`](../reference/mt_tune.md) chooses settings (for example the
-rank) by an inner rolling-origin backtest on the training data only. The
-fitting period matters for Lee-Carter forecasts when the pace of decline
-changed (Booth, Maindonald and Smith 2002); `step_window(years)` makes
-it a preprocessing step that a backtest compares across windows.
+[`tuned()`](../reference/mt_tune.md) chooses settings by how well they
+forecast the last years of the training data only
+([`mt_tune()`](../reference/mt_tune.md) shows the scores): model
+settings such as the number of components or the rank, and with
+`spec_fun` returning `list(spec = , prep = )` preprocessing settings
+such as the smoothing parameter or the fitting window.
+`inner_origins = 1, inner_h = 10` is the hold-out of the last ten years
+often used with
+[`demography::fdm()`](https://pkg.robjhyndman.com/demography/reference/fdm.html);
+several origins make the choice depend less on one period. The criterion
+can be the CRPS, the interval score or point accuracy
+(`metric = "rmse"`) of rates, life expectancy or ASR (`target`);
+`select = "one_se"` takes the simplest setting within one standard error
+of the best, and `by` tunes groups of strata separately. The fitting
+period matters for Lee-Carter forecasts when the pace of decline changed
+(Booth, Maindonald and Smith 2002); `step_window(years)` makes it a
+preprocessing step that tuning compares across windows.
 
 ## Sources of uncertainty at a glance
 
@@ -248,15 +311,18 @@ it a preprocessing step that a backtest compares across windows.
 | `rwd(observation_noise = TRUE)` | yes (level) | yes | no | predictive draws | predictive draws |
 | [`arima_series()`](../reference/arima_series.md), [`ets_series()`](../reference/arima_series.md) | yes | as the fitted model | no | contained in the series | contained in the series |
 | [`li_lee()`](../reference/li_lee.md), [`product_ratio()`](../reference/li_lee.md) | yes (common and stratum) | common factor | no | predictive draws | predictive draws |
+| [`coherent_fdm()`](../reference/coherent_fdm.md) | yes (product and ratios) | as fdm (product) | no | predictive draws | predictive draws |
 | [`tucker3()`](../reference/tucker3.md) | yes (period factors) | yes | no | predictive draws | residual variation and predictive draws |
 | [`cause_shares()`](../reference/cause_shares.md) | of the total model and the share factors | yes | no | predictive draws | residual variation and predictive draws |
 | [`hyndman_ullah()`](../reference/hyndman_ullah.md) | yes | as fdm | no | predictive draws | predictive draws |
 | [`stmomo()`](../reference/stmomo.md) | yes | yes | no | predictive draws | predictive draws |
+| [`stanmomo()`](../reference/stanmomo.md) | yes | posterior | yes (posterior) | predictive draws | predictive draws |
 | [`apc_bayes()`](../reference/apc_bayes.md) | yes | posterior | yes (posterior) | predictive draws | predictive draws |
 | [`ensemble()`](../reference/ensemble.md) | of the components | of the components | of the components, plus model choice | of the components | of the components |
+| [`stratified()`](../reference/stratified.md) | of the model of each group | of the model of each group | of the model of each group | as the models | as the models |
 | [`bootstrapped()`](../reference/bootstrapped.md) | of the base model | of the base model | yes | as the base model | as the base model |
 | [`reconciled()`](../reference/reconciled.md) | of the base model, projected |  |  | bottom strata, summed | bottom strata, summed |
-| [`calibrated()`](../reference/calibrated.md) | of the base model, rescaled | rescaled (optional correction) |  | as the base model | as the base model |
+| [`recalibrated()`](../reference/recalibrated.md) | of the base model, rescaled | rescaled (optional correction) |  | as the base model | as the base model |
 | [`anchored()`](../reference/anchored.md) | of the base model | of the base model |  | as the base model | as the base model |
 
 Predictive draws (`predictive = TRUE`, always used in backtests)
@@ -280,6 +346,14 @@ the absolute error of the median. Cells with estimated (suppressed)
 deaths are not scored unless `score_estimated = TRUE`.
 
 ## References
+
+Athanasopoulos G, Hyndman RJ, Kourentzes N, Petropoulos F (2017).
+Forecasting with temporal hierarchies. *European Journal of Operational
+Research* 262(1): 60-74.
+
+Barigou K, Goffard P-O, Loisel S, Salhi Y (2023). Bayesian model
+averaging for mortality forecasting using leave-future-out validation.
+*International Journal of Forecasting* 39(2): 674-690.
 
 Booth H, Maindonald J, Smith L (2002). Applying Lee-Carter under
 conditions of variable mortality decline. *Population Studies* 56(3):

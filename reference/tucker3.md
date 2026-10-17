@@ -46,9 +46,13 @@ tucker3(
 
   Add the in-sample residual variation (per age and stratum, normal on
   the transformed scale) to the draws. It represents structure that the
-  low-rank model does not capture. On the calibration benchmark with
-  independent period trends in 10 strata, 95% predictive intervals
-  covered 0.95 on average with it and 0.87 without it.
+  low-rank model does not capture. The residuals also contain the
+  observation noise of the training years, so predictive draws, which
+  add observation noise, are wider than the residual variation alone
+  implies. On simulated data with period trends that the ranks do not
+  capture, this widening brought predictive intervals close to their
+  nominal coverage; for data that the low-rank model describes well, the
+  intervals are too wide, and `residual_noise = FALSE` fits better.
 
 - maxit, tol:
 
@@ -71,7 +75,7 @@ interval; the open interval's death rate is forecast as an auxiliary
 random walk with drift on its log, so the open age group is kept.
 
 Ranks are reduced to the array dimensions where needed, so the model
-also runs with one stratum.
+also runs with one stratum or one age group.
 
 ## References
 

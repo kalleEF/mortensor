@@ -3,7 +3,12 @@
 contains it (mode = "within") or that equals it (mode = "exact"), and
 NA otherwise.'><meta property="og:description" content='For each interval [lo, hi), returns the index of the axis cell that
 contains it (mode = "within") or that equals it (mode = "exact"), and
-NA otherwise.'><script type="module">
+NA otherwise.'><style>
+/* Bootstrap's paragraph margin inside the labels makes mermaid size the
+   boxes too small, which clips their last line */
+.mermaid-diagram p { margin: 0; }
+.mermaid-diagram { margin: 1rem 0 1.5rem; }
+</style><script type="module">
 import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.esm.min.mjs";
 mermaid.initialize({ startOnLoad: false, securityLevel: "strict" });
 window.addEventListener("load", async () => {

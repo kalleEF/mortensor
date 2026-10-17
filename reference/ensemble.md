@@ -60,18 +60,22 @@ a stratum is replaced there by the other components in proportion to
 their weights; this is recorded in the diagnostics. Any model
 specification can be a component, including joint models, Bayesian
 models, tuned, bootstrapped and reconciled models, and other ensembles.
+The components must forecast the same strata: with
+[`reconciled()`](reconciled.md) components, add the aggregates of the
+hierarchy to the data first
+([`mt_aggregate_strata()`](mt_aggregate_strata.md)). Weights from the
+inner backtest (`"crps"`, `"stack"`, `top_k`) compare the components on
+the cells that all of them forecast.
 
-A mixture is wider than its components when they disagree. In backtests
-on HMD data (England & Wales, France) and on the ONS deprivation data,
-Lee-Carter alone was too narrow (95% coverage 0.79 to 0.81), while an
-equal-weight mixture of [`lee_carter()`](lee_carter.md) and
-[`rwd()`](rwd.md) had 95% coverage of 0.92 to 0.98; its CRPS ranked
-second (France), third (England & Wales) and fifth of eight (ONS), close
-to the best model in each case (see the vignette "Comparison with
-demography, bamp and StMoMo"). In populations with few deaths per cell,
-use `rwd(observation_noise = TRUE)` as the random-walk component: the
-plain random walk accumulates the Poisson noise of observed rates and
-its long-horizon paths become implausible.
+A mixture is wider than its components when they disagree, which often
+corrects the too narrow intervals of single models, and its CRPS is
+never larger than the weighted mean of the CRPS of its components (the
+CRPS is convex in the forecast distribution). The vignette "Choosing and
+combining models" compares ensembles and single models in a backtest. In
+populations with few deaths per cell, use
+`rwd(observation_noise = TRUE)` as the random-walk component: the plain
+random walk accumulates the Poisson noise of observed rates and its
+long-horizon paths become implausible.
 
 ## Examples
 

@@ -11,7 +11,7 @@ the range of the data.
 ## Usage
 
 ``` r
-mt_regroup(data, age = NULL, period = NULL)
+mt_regroup(data, age = NULL, period = NULL, measures = NULL)
 ```
 
 ## Arguments
@@ -35,6 +35,14 @@ mt_regroup(data, age = NULL, period = NULL)
   Target period axis, numeric lower bounds or the name of a table;
   `NULL` keeps the periods.
 
+- measures:
+
+  Tables to regroup (default: all). Regrouping only some tables, for
+  example `measures = "deaths"`, keeps the other tables and the grid as
+  they are: deaths in age groups with single-year exposures, as in many
+  official tables, for example to check ungrouping against known single
+  years.
+
 ## Value
 
 An `mt_data` object.
@@ -54,5 +62,12 @@ mt_regroup(x, age = "deaths")
 #>   deaths     5-year groups 30-89, 90+; periods 1990-2019 (width 1); 780 cells
 #>   exposure   5-year groups 30-89, 90+; periods 1990-2019 (width 1); 780 cells
 #>   grid       <mt_axis: age, 13 intervals> 30-34 35-39 40-44 45-49 ... 80-84 85-89 90+
+#>              <mt_axis: period, 30 intervals> 1990 1991 1992 1993 ... 2017 2018 2019
+xs <- mt_example(deaths = "single")
+mt_regroup(xs, age = c(30, seq(40, 90, 10)), measures = "deaths")
+#> <mt_data> 2 strata by sex, omega = 110
+#>   deaths     10-year groups 30-89, 90+; periods 1990-2019 (width 1); 420 cells
+#>   exposure   single years 30-99, 100+; periods 1990-2019 (width 1); 4260 cells
+#>   grid       <mt_axis: age, 71 intervals> 30 31 32 33 ... 98 99 100+
 #>              <mt_axis: period, 30 intervals> 1990 1991 1992 1993 ... 2017 2018 2019
 ```

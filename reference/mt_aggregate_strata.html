@@ -5,13 +5,20 @@ the hierarchy variables). Cells are aggregated where all member strata
 observe the same age and period interval; other cells are dropped with a
 warning. Aggregate strata that are already in the data are kept as
 observed unless replace = TRUE; use mt_validate() with the hierarchy
-to check that they agree with the sums."><meta property="og:description" content="Sums deaths, exposures and populations of the bottom strata into every
+to check that they agree with the sums. Members of groups that are not
+levels of the data give a warning; a group without any is an error."><meta property="og:description" content="Sums deaths, exposures and populations of the bottom strata into every
 node of the hierarchy (all combinations of levels, groups and totals of
 the hierarchy variables). Cells are aggregated where all member strata
 observe the same age and period interval; other cells are dropped with a
 warning. Aggregate strata that are already in the data are kept as
 observed unless replace = TRUE; use mt_validate() with the hierarchy
-to check that they agree with the sums."><script type="module">
+to check that they agree with the sums. Members of groups that are not
+levels of the data give a warning; a group without any is an error."><style>
+/* Bootstrap's paragraph margin inside the labels makes mermaid size the
+   boxes too small, which clips their last line */
+.mermaid-diagram p { margin: 0; }
+.mermaid-diagram { margin: 1rem 0 1.5rem; }
+</style><script type="module">
 import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.esm.min.mjs";
 mermaid.initialize({ startOnLoad: false, securityLevel: "strict" });
 window.addEventListener("load", async () => {
@@ -74,7 +81,8 @@ the hierarchy variables). Cells are aggregated where all member strata
 observe the same age and period interval; other cells are dropped with a
 warning. Aggregate strata that are already in the data are kept as
 observed unless <code>replace = TRUE</code>; use <code><a href="mt_validate.html">mt_validate()</a></code> with the hierarchy
-to check that they agree with the sums.</p>
+to check that they agree with the sums. Members of <code>groups</code> that are not
+levels of the data give a warning; a group without any is an error.</p>
     </div>
 
     <div class="section level2">

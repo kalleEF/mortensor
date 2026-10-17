@@ -9,7 +9,12 @@ example "." in tables of the German Federal Statistical Office, "&amp;lt;3"
 or "&amp;lt;5" elsewhere) while publishing totals: deaths of a region over all
 causes, deaths of the whole country by cause. mt_fill_suppressed()
 estimates the missing death counts of the bottom strata from two sources
-of information:'><script type="module">
+of information:'><style>
+/* Bootstrap's paragraph margin inside the labels makes mermaid size the
+   boxes too small, which clips their last line */
+.mermaid-diagram p { margin: 0; }
+.mermaid-diagram { margin: 1rem 0 1.5rem; }
+</style><script type="module">
 import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.esm.min.mjs";
 mermaid.initialize({ startOnLoad: false, securityLevel: "strict" });
 window.addEventListener("load", async () => {
@@ -92,8 +97,9 @@ of information:</p>
 
 <dl><dt id="arg-data">data<a class="anchor" aria-label="anchor" href="#arg-data"></a></dt>
 <dd><p>An <a href="mt_data.html">mt_data</a> object in which some death cells are missing
-(cells that other strata have; suppressed values are left out when the
-data are read).</p></dd>
+(cells that other strata have and that no observed cell of the stratum
+overlaps, so a stratum reported in other age groups is not filled;
+suppressed values are left out when the data are read).</p></dd>
 
 
 <dt id="arg-hierarchy">hierarchy<a class="anchor" aria-label="anchor" href="#arg-hierarchy"></a></dt>

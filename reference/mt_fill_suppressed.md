@@ -25,8 +25,9 @@ mt_fill_suppressed(
 - data:
 
   An [mt_data](mt_data.md) object in which some death cells are missing
-  (cells that other strata have; suppressed values are left out when the
-  data are read).
+  (cells that other strata have and that no observed cell of the stratum
+  overlaps, so a stratum reported in other age groups is not filled;
+  suppressed values are left out when the data are read).
 
 - hierarchy:
 

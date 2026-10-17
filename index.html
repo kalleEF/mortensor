@@ -11,8 +11,14 @@
 <script src="deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="Flexible Mortality Forecasting Across Data Granularities">
-<meta name="description" content='Tools to combine mortality and population data observed at different granularities (age groups, open age intervals, periods, population strata and causes) and to build probabilistic mortality forecasts from interchangeable parts: harmonisation and ungrouping with the penalized composite link model, Lee-Carter, random walk with drift and tensor (Tucker3) models, Bayesian age-period-cohort models through the bamp package, ensembles, honest rolling-origin backtests with proper scoring rules, and life tables computed from simulated paths. Experimental software written largely with AI coding assistants ("vibe-coded"); use at your own risk and check results independently.'>
-<meta property="og:description" content='Tools to combine mortality and population data observed at different granularities (age groups, open age intervals, periods, population strata and causes) and to build probabilistic mortality forecasts from interchangeable parts: harmonisation and ungrouping with the penalized composite link model, Lee-Carter, random walk with drift and tensor (Tucker3) models, Bayesian age-period-cohort models through the bamp package, ensembles, honest rolling-origin backtests with proper scoring rules, and life tables computed from simulated paths. Experimental software written largely with AI coding assistants ("vibe-coded"); use at your own risk and check results independently.'>
+<meta name="description" content='Tools to combine mortality and population data observed at different granularities (age groups, open age intervals, periods, population strata and causes) and to build probabilistic mortality forecasts from interchangeable parts: harmonisation and ungrouping with the penalized composite link model; models implemented directly (random walk with drift, Lee-Carter, Li-Lee, Tucker3) or wrapped from demography, StMoMo, StanMoMo, bamp and forecast behind one interface; ensembles of any combination of them; coherent forecasts of totals and their parts; honest rolling-origin backtests with proper scoring rules; and life tables computed from simulated paths. Experimental software written largely with AI coding assistants ("vibe-coded"); use at your own risk and check results independently.'>
+<meta property="og:description" content='Tools to combine mortality and population data observed at different granularities (age groups, open age intervals, periods, population strata and causes) and to build probabilistic mortality forecasts from interchangeable parts: harmonisation and ungrouping with the penalized composite link model; models implemented directly (random walk with drift, Lee-Carter, Li-Lee, Tucker3) or wrapped from demography, StMoMo, StanMoMo, bamp and forecast behind one interface; ensembles of any combination of them; coherent forecasts of totals and their parts; honest rolling-origin backtests with proper scoring rules; and life tables computed from simulated paths. Experimental software written largely with AI coding assistants ("vibe-coded"); use at your own risk and check results independently.'>
+<style>
+/* Bootstrap's paragraph margin inside the labels makes mermaid size the
+   boxes too small, which clips their last line */
+.mermaid-diagram p { margin: 0; }
+.mermaid-diagram { margin: 1rem 0 1.5rem; }
+</style>
 <script type="module">
 import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.esm.min.mjs";
 mermaid.initialize({ startOnLoad: false, securityLevel: "strict" });
@@ -77,6 +83,7 @@ window.addEventListener("load", async () => {
 <!-- badges: start -->
 
 <p>Flexible probabilistic mortality forecasting from data observed at different granularities: age groups and open age intervals, single or grouped periods, population strata and causes.</p>
+<p>mortensor has no preferred model. It implements common mortality models and wraps others from demography, StMoMo, StanMoMo, bamp and forecast behind one interface: every model is fitted with <code><a href="reference/mt_fit.html">mt_fit()</a></code>, forecast with <code><a href="reference/mt_forecast.html">mt_forecast()</a></code> and returns simulated paths of the same form. Models can therefore be compared in the same backtest and combined into ensembles of any composition, and the same steps (smoothing, jump-off, recalibration, coherent totals) apply to all of them.</p>
 <blockquote>
 <p><strong>Caution: experimental, vibe-coded software. Use at your own risk.</strong> mortensor is written largely with AI coding assistants (“vibe-coded”). It has unit tests and a validation pipeline with thresholds (see <code>validation/</code>), but it has not been peer reviewed, its interfaces still change, and its results can be wrong in ways the tests do not catch. Check results independently before you use them in publications, reports or decisions.</p>
 </blockquote>
@@ -87,7 +94,7 @@ window.addEventListener("load", async () => {
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># install.packages("remotes")</span></span>
 <span><span class="fu">remotes</span><span class="fu">::</span><span class="fu">install_github</span><span class="op">(</span><span class="st">"kalleEF/mortensor"</span><span class="op">)</span></span></code></pre></div>
-<p>Requires R &gt;= 4.3.0. Hard dependencies are data.table and Matrix; models and data adapters that build on other packages (forecast, bamp, StMoMo, demography, ggplot2) use them when installed.</p>
+<p>Requires R &gt;= 4.3.0. Hard dependencies are data.table and Matrix; models and data adapters that build on other packages (forecast, bamp, StMoMo, StanMoMo, demography, ggplot2) use them when installed.</p>
 </div>
 <div class="section level2">
 <h2 id="what-it-does">What it does<a class="anchor" aria-label="anchor" href="#what-it-does"></a>
@@ -117,7 +124,7 @@ window.addEventListener("load", async () => {
 <tr>
 <td>Harmonisation</td>
 <td>
-<code><a href="reference/mt_regroup.html">mt_regroup()</a></code>, <code><a href="reference/mt_ungroup.html">mt_ungroup()</a></code> (penalized composite link model with exposure offset, 1D/2D; spline and GAM methods), <code><a href="reference/mt_smooth.html">mt_smooth()</a></code> (over age, over time or both; P-splines, Whittaker, GAM), <code><a href="reference/mt_smooth_check.html">mt_smooth_check()</a></code>, <code><a href="reference/mt_smooth_check.html">mt_plot_smooth()</a></code>
+<code><a href="reference/mt_regroup.html">mt_regroup()</a></code>, <code><a href="reference/mt_ungroup.html">mt_ungroup()</a></code> (penalized composite link model with exposure offset, 1D/2D; spline and GAM methods), <code><a href="reference/ungroup-diagnostics.html">mt_plot_ungroup()</a></code> and <code><a href="reference/ungroup-diagnostics.html">mt_ungroup_check()</a></code> (diagnostics), <code><a href="reference/mt_smooth.html">mt_smooth()</a></code> (over age, over time or both; P-splines, Whittaker, GAM), <code><a href="reference/mt_smooth_check.html">mt_smooth_check()</a></code>, <code><a href="reference/mt_smooth_check.html">mt_plot_smooth()</a></code>
 </td>
 </tr>
 <tr>
@@ -134,13 +141,13 @@ window.addEventListener("load", async () => {
 <tr>
 <td>Models</td>
 <td>
-<code><a href="reference/rwd.html">rwd()</a></code>, <code><a href="reference/lee_carter.html">lee_carter()</a></code> (Poisson or SVD with the adjustments and period choice of demography), <code><a href="reference/tucker3.html">tucker3()</a></code>, <code><a href="reference/arima_series.html">arima_series()</a></code>, <code><a href="reference/arima_series.html">ets_series()</a></code>, <code><a href="reference/hyndman_ullah.html">hyndman_ullah()</a></code> (demography), <code><a href="reference/stmomo.html">stmomo()</a></code> (APC, CBD, RH, M6, LC), <code><a href="reference/li_lee.html">li_lee()</a></code>, <code><a href="reference/li_lee.html">product_ratio()</a></code>, <code><a href="reference/apc_bayes.html">apc_bayes()</a></code> and <code><a href="reference/apc_select.html">apc_select()</a></code> (bamp), <code><a href="reference/cause_shares.html">cause_shares()</a></code>
+<code><a href="reference/rwd.html">rwd()</a></code>, <code><a href="reference/lee_carter.html">lee_carter()</a></code> (Poisson or SVD with the adjustments and period choice of demography), <code><a href="reference/tucker3.html">tucker3()</a></code>, <code><a href="reference/arima_series.html">arima_series()</a></code>, <code><a href="reference/arima_series.html">ets_series()</a></code>, <code><a href="reference/hyndman_ullah.html">hyndman_ullah()</a></code> (demography), <code><a href="reference/stmomo.html">stmomo()</a></code> (APC, CBD, RH, M6, LC), <code><a href="reference/stanmomo.html">stanmomo()</a></code> (the same models, Bayesian, in Stan), <code><a href="reference/li_lee.html">li_lee()</a></code>, <code><a href="reference/li_lee.html">product_ratio()</a></code>, <code><a href="reference/coherent_fdm.html">coherent_fdm()</a></code> (demography), <code><a href="reference/apc_bayes.html">apc_bayes()</a></code> and <code><a href="reference/apc_select.html">apc_select()</a></code> (bamp), <code><a href="reference/cause_shares.html">cause_shares()</a></code>
 </td>
 </tr>
 <tr>
 <td>Wrappers for any model</td>
 <td>
-<code><a href="reference/ensemble.html">ensemble()</a></code> (weights from inner backtests, <code>top_k</code>), <code><a href="reference/reconciled.html">reconciled()</a></code>, <code><a href="reference/calibrated.html">calibrated()</a></code> (spread fitted to the errors of the last 10 years), <code><a href="reference/anchored.html">anchored()</a></code> (jump-off at the observed level), <code><a href="reference/bootstrapped.html">bootstrapped()</a></code>, <code><a href="reference/mt_tune.html">tuned()</a></code> and <code><a href="reference/mt_tune.html">mt_tune()</a></code> (full or two-stage grids)</td>
+<code><a href="reference/ensemble.html">ensemble()</a></code> (weights from inner backtests, <code>top_k</code>), <code><a href="reference/stratified.html">stratified()</a></code> (different models for groups of strata), <code><a href="reference/reconciled.html">reconciled()</a></code>, <code><a href="reference/recalibrated.html">recalibrated()</a></code> (spread fitted to the errors of the last 10 years, optionally by age band or for life expectancy), <code><a href="reference/anchored.html">anchored()</a></code> (jump-off at the observed level), <code><a href="reference/bootstrapped.html">bootstrapped()</a></code>, <code><a href="reference/mt_tune.html">tuned()</a></code> and <code><a href="reference/mt_tune.html">mt_tune()</a></code> (model and preprocessing settings chosen by forecast accuracy on the last years: hold-out or rolling origins, full or two-stage grids)</td>
 </tr>
 <tr>
 <td>Coherence</td>
@@ -155,9 +162,10 @@ window.addEventListener("load", async () => {
 </td>
 </tr>
 <tr>
-<td>Evaluation</td>
+<td>Evaluation and comparison</td>
 <td>
-<code><a href="reference/mt_backtest.html">mt_backtest()</a></code> (rolling origin, no leakage; rates, life expectancy, ASR), <code><a href="reference/mt_score.html">mt_score()</a></code> (CRPS, WIS, coverage, PIT, MASE)</td>
+<code><a href="reference/mt_backtest.html">mt_backtest()</a></code> (rolling origin, no leakage; rates, life expectancy, ASR), <code><a href="reference/mt_score.html">mt_score()</a></code> (CRPS, WIS, coverage, PIT, MAE, RMSE, MASE; also of gaps between strata), <code><a href="reference/mt_compare.html">mt_compare()</a></code> and <code><a href="reference/mt_compare.html">mt_score_table()</a></code> (several models in one backtest, by level of a hierarchy), <code><a href="reference/mt_compare.html">mt_compare_forecasts()</a></code>, <code><a href="reference/mt_compare.html">mt_plot_compare()</a></code>, <code><a href="reference/mt_plot_design.html">mt_plot_backtest_design()</a></code>, <code><a href="reference/mt_plot_design.html">mt_plot_tuning()</a></code>, <code><a href="reference/mt_plot_design.html">mt_plot_pit()</a></code>
+</td>
 </tr>
 <tr>
 <td>Decomposition</td>
@@ -168,7 +176,7 @@ window.addEventListener("load", async () => {
 <tr>
 <td>Results and plots</td>
 <td>
-<code><a href="reference/life_table.html">life_table()</a></code>, <code><a href="reference/life_expectancy.html">life_expectancy()</a></code>, <code><a href="reference/derived.html">prob_dying()</a></code>, <code><a href="reference/derived.html">asr()</a></code>, <code><a href="reference/derived.html">yll()</a></code>, <code><a href="reference/mt_contrast.html">mt_contrast()</a></code>, <code><a href="reference/mt_inequality.html">mt_inequality()</a></code>, <code><a href="reference/mt_plot.html">mt_plot_forecast()</a></code>, <code><a href="reference/mt_plot.html">mt_plot_life_expectancy()</a></code>, <code><a href="reference/mt_plot_more.html">mt_plot_scores()</a></code>, <code><a href="reference/mt_plot_more.html">mt_plot_shares()</a></code>, <code><a href="reference/mt_plot_style.html">theme_mortensor()</a></code>, <code><a href="reference/mt_export.html">mt_export()</a></code>, <code><a href="reference/as_demogdata.html">as_demogdata()</a></code>, <code><a href="reference/as_demogdata.html">as_stmomodata()</a></code>
+<code><a href="reference/life_table.html">life_table()</a></code>, <code><a href="reference/life_expectancy.html">life_expectancy()</a></code>, <code><a href="reference/derived.html">prob_dying()</a></code>, <code><a href="reference/derived.html">asr()</a></code>, <code><a href="reference/derived.html">yll()</a></code>, <code><a href="reference/mt_contrast.html">mt_contrast()</a></code>, <code><a href="reference/mt_inequality.html">mt_inequality()</a></code>, <code><a href="reference/mt_plot.html">mt_plot_forecast()</a></code>, <code><a href="reference/mt_plot.html">mt_plot_life_expectancy()</a></code>, <code><a href="reference/mt_plot_contrast.html">mt_plot_contrast()</a></code>, <code><a href="reference/mt_plot_more.html">mt_plot_scores()</a></code>, <code><a href="reference/mt_plot_more.html">mt_plot_shares()</a></code>, <code><a href="reference/mt_plot_style.html">theme_mortensor()</a></code>, <code><a href="reference/mt_export.html">mt_export()</a></code>, <code><a href="reference/as_demogdata.html">as_demogdata()</a></code>, <code><a href="reference/as_demogdata.html">as_stmomodata()</a></code>
 </td>
 </tr>
 </tbody>
@@ -178,31 +186,27 @@ window.addEventListener("load", async () => {
 <h2 id="function-map">Function map<a class="anchor" aria-label="anchor" href="#function-map"></a>
 </h2>
 <p>The objects of an analysis and the functions that connect them. The <a href="vignettes/articles/function-map.Rmd">function map</a> (on the website: Articles, Function map) shows every function with its purpose, the possible workflows and what the package does not cover.</p>
-<pre class="mermaid"><code>flowchart LR
+<pre class="mermaid"><code>flowchart TD
   T["`**your tables**
   deaths, populations`"]
   D["`**mt_data**
-  any resolution, strata`"]
+  any resolution, strata; prepared with mt_as_exposure(), mt_subset(), mt_regroup(), mt_validate(), ...`"]
   S["`**model specification**
-  lee_carter(), li_lee(), rwd(),
-  ensemble(), reconciled(), calibrated()`"]
+  lee_carter(), li_lee(), rwd(), ensemble(), reconciled(), recalibrated(), ...`"]
   F["`**mt_fit**`"]
   P["`**mt_draws**
   simulated future rates`"]
+  B["`**backtest scores**
+  mt_score()`"]
   R["`**results**
-  life expectancy, ASR, deaths,
-  gaps, plots, CSV`"]
-  B["`**backtest scores**`"]
+  life_expectancy(), asr(), mt_contrast(), mt_decompose(), plots, CSV`"]
   T -- "mt_data()" --&gt; D
-  D -- "mt_as_exposure(), mt_subset(), mt_group_levels(),
-  mt_fill_suppressed(), mt_regroup(), mt_validate()" --&gt; D
-  S --&gt; F
   D -- "mt_fit()" --&gt; F
+  S --&gt; F
   F -- "mt_forecast()" --&gt; P
-  P -- "life_expectancy(), asr(), mt_contrast(),
-  mt_decompose(), mt_plot_*(), mt_export()" --&gt; R
-  D -- "mt_backtest(), mt_score()" --&gt; B
-  D -- "mt_observed()" --&gt; R</code></pre>
+  D -- "mt_backtest()" --&gt; B
+  P --&gt; R
+  D -- "observed data" --&gt; R</code></pre>
 </div>
 <div class="section level2">
 <h2 id="example">Example<a class="anchor" aria-label="anchor" href="#example"></a>
@@ -226,7 +230,19 @@ window.addEventListener("load", async () => {
 <span></span>
 <span><span class="va">bt</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/mt_backtest.html">mt_backtest</a></span><span class="op">(</span><span class="fu"><a href="reference/li_lee.html">li_lee</a></span><span class="op">(</span>common_by <span class="op">=</span> <span class="st">"sex"</span><span class="op">)</span>, <span class="va">x</span>, origins <span class="op">=</span> <span class="fl">2008</span><span class="op">:</span><span class="fl">2014</span>, h <span class="op">=</span> <span class="fl">5</span><span class="op">)</span></span>
 <span><span class="fu"><a href="reference/mt_score.html">mt_score</a></span><span class="op">(</span><span class="va">bt</span><span class="op">)</span></span></code></pre></div>
-<p>Vignettes: <em>Getting started</em> (ONS deprivation data), <em>Your own data, from CSV to report</em>, <em>Forecasting mortality by deprivation quintile</em>, <em>Causes of death by deprivation</em>, <em>Coherent forecasts by sex, region and cause</em> (German Laender), <em>Coherent forecasts: what reconciliation changes</em>, <em>Decomposing differences in life expectancy</em>, <em>Model reference</em>, <em>Data at different granularities</em> and <em>Forecasting and backtesting</em> (HMD data), <em>Bayesian age-period-cohort models with bamp</em>, <em>Comparison with demography, bamp and StMoMo</em>, <em>Frequently asked questions</em>.</p>
+<p>Vignettes:</p>
+<ul>
+<li>
+<strong>Start</strong>: <em>Getting started</em>, <em>Your own data, from CSV to report</em>.</li>
+<li>
+<strong>Concepts, one at a time</strong>: <em>Ungrouping age groups: methods and diagnostics</em>, <em>Smoothing death rates</em>, <em>Where a forecast starts: the jump-off</em>, <em>Backtesting and scores</em>, <em>Tuning and recalibration</em>, <em>Coherent forecasts: totals and their parts</em>, <em>Decomposing differences in life expectancy</em>.</li>
+<li>
+<strong>Models</strong>: <em>Choosing and combining models</em> (implemented and wrapped models side by side, ensembles of any combination), <em>Model reference</em>, <em>Bayesian age-period-cohort models with bamp</em>, <em>Comparison with demography, bamp and StMoMo</em>.</li>
+<li>
+<strong>Applications</strong>: <em>Inequality in England: life expectancy and causes of death by deprivation</em> (ONS), <em>Differences between the German Laender</em> (Destatis).</li>
+<li>
+<strong>Help</strong>: <em>Frequently asked questions</em>, <em>Function map</em>.</li>
+</ul>
 </div>
 <div class="section level2">
 <h2 id="development">Development<a class="anchor" aria-label="anchor" href="#development"></a>

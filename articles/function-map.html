@@ -11,6 +11,12 @@
 <script src="../deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Function map">
+<style>
+/* Bootstrap's paragraph margin inside the labels makes mermaid size the
+   boxes too small, which clips their last line */
+.mermaid-diagram p { margin: 0; }
+.mermaid-diagram { margin: 1rem 0 1.5rem; }
+</style>
 <script type="module">
 import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.esm.min.mjs";
 mermaid.initialize({ startOnLoad: false, securityLevel: "strict" });
@@ -92,16 +98,16 @@ tools.</p>
 <div class="section level2">
 <h2 id="the-main-path">The main path<a class="anchor" aria-label="anchor" href="#the-main-path"></a>
 </h2>
-<p>Every analysis passes the same objects from left to right. Functions
-in the boxes create the objects; the labels on the arrows are the
-functions that connect them.</p>
+<p>Every analysis passes the same objects from top to bottom. The boxes
+are objects; the labels on the arrows are the functions that connect
+them.</p>
 <pre class="mermaid"><code>flowchart TD
   T["`**your tables**
   deaths, populations or exposures (CSV, Excel, official exports)`"]
-  D["`**mt_data object**
-  observations at any age and period resolution, strata`"]
+  D["`**mt_data**
+  observations at any age and period resolution, by strata`"]
   S["`**model specification**
-  lee_carter(), li_lee(), rwd(), ... and wrappers ensemble(), reconciled()`"]
+  lee_carter(), li_lee(), rwd(), ..., optionally inside ensemble(), reconciled(), recalibrated(), anchored()`"]
   F["`**mt_fit**
   estimates per stratum or joint`"]
   P["`**mt_draws**
@@ -109,153 +115,96 @@ functions that connect them.</p>
   B["`**mt_backtest**
   scores of past forecasts`"]
   R["`**tables and plots**
-  life expectancy, rates, deaths, gaps, inequality indices`"]
+  life expectancy, rates, deaths, gaps, decompositions`"]
   T -- "mt_data()" --&gt; D
   D -- "prepare and check (map 1)" --&gt; D
-  D -- "mt_fit(spec, data, prep)" --&gt; F
+  D -- "mt_fit()" --&gt; F
   S --&gt; F
+  S --&gt; B
+  D -- "mt_backtest()" --&gt; B
   F -- "mt_forecast()" --&gt; P
   P -- "map 3" --&gt; R
-  D -- "mt_backtest(spec, data, prep)" --&gt; B
   B -- "mt_score()" --&gt; R
-  D -- "mt_observed(): the past" --&gt; R</code></pre>
+  D -- "the past (map 3)" --&gt; R</code></pre>
 </div>
 <div class="section level2">
 <h2 id="map-1-from-tables-to-analysis-ready-data">Map 1: from tables to analysis-ready data<a class="anchor" aria-label="anchor" href="#map-1-from-tables-to-analysis-ready-data"></a>
 </h2>
-<p>Each step is an analysis decision. Most data sets need only some of
+<p>The steps in their usual order. Each is a decision about the data;
+skip those a data set does not need. Every step returns an
+<code>mt_data</code> object.</p>
+<pre class="mermaid"><code>%%{init: {"flowchart": {"wrappingWidth": 360}}}%%
+flowchart TD
+  A["`**read**
+  mt_data(): long or wide tables, age labels such as 85+ or '85 Jahre und mehr', suppression symbols
+  mt_read_genesis(), mt_read_gbe(): German official exports
+  mt_from_hmd(), mt_read_hmd(), as_mt_data(): HMD, StMoMo, demography`"]
+  E["`**mt_as_exposure(type)**
+  person-years from mid-year, 1 January or 31 December populations`"]
+  S["`**mt_subset()**
+  ages, years and strata to analyse`"]
+  G["`**mt_regroup()**
+  common age groups or years, for example those of the deaths`"]
+  F["`**mt_fill_suppressed()**
+  suppressed counts estimated from published totals or bounds`"]
+  L["`**mt_group_levels(), mt_relabel()**
+  aggregation layers such as cause groups, quintiles or regions; labels`"]
+  U["`**mt_ungroup()**
+  single years of age from age groups (penalised composite link)`"]
+  V["`**mt_validate()**
+  impossible values, missing cells, totals among levels, sums of a hierarchy`"]
+  M["model-ready mt_data"]
+  A --&gt; E --&gt; S --&gt; G --&gt; F --&gt; L --&gt; U --&gt; V --&gt; M</code></pre>
+<p>Smoothing is not a step of this map. <code><a href="../reference/mt_smooth.html">mt_smooth()</a></code> with
+<code><a href="../reference/mt_smooth_check.html">mt_smooth_check()</a></code> and <code><a href="../reference/mt_smooth_check.html">mt_plot_smooth()</a></code> shows
+what a smoother would do to the data; for forecasts, smooth inside the
+fit with <code><a href="../reference/mt_prep.html">step_smooth()</a></code> (map 2), so that observation noise
+and backtests refer to the raw deaths. <code><a href="../reference/mt_fit.html">mt_fit()</a></code> warns about
+data smoothed beforehand and <code><a href="../reference/mt_backtest.html">mt_backtest()</a></code> refuses
 them.</p>
-<pre class="mermaid"><code>flowchart TD
-  subgraph READ["Read"]
-    A1["`**mt_data()**
-    deaths, exposures, populations in long
-    or wide tables; age labels such as 85+,
-    '85 years and over', '85 Jahre und mehr';
-    suppression symbols; totals and unknown
-    ages handled with warnings`"]
-    A2["`**mt_read_genesis(), mt_read_gbe()**
-    German official exports`"]
-    A3["`**mt_from_hmd(), as_mt_data()**
-    Human Mortality Database, StMoMo,
-    demography objects`"]
-  end
-  subgraph PREP["Prepare (decisions)"]
-    B1["`**mt_as_exposure(type)**
-    person-years from mid-year,
-    1 January or 31 December populations`"]
-    B2["`**mt_subset()**
-    ages, years, strata to analyse`"]
-    B3["`**mt_group_levels(), mt_relabel()**
-    aggregation layers: cause groups,
-    quintiles, regions; recode labels`"]
-    B4["`**mt_fill_suppressed()**
-    estimate suppressed counts from
-    published totals or known bounds`"]
-  end
-  subgraph CHECK["Check"]
-    C1["`**mt_validate()**
-    impossible values, missing cells,
-    totals among levels, sums of a hierarchy`"]
-  end
-  subgraph HARM["Harmonise resolution"]
-    H1["`**mt_regroup()**
-    common age groups or years
-    ('deaths', 'common')`"]
-    H2["`**mt_ungroup()**
-    single years from age groups
-    (penalised composite link)`"]
-    H3["`**mt_smooth()**
-    smooth rates over age, time or both
-    (P-splines, Whittaker, GAM);
-    mt_smooth_check(), mt_plot_smooth()`"]
-    H4["`**mt_prep() with step_*()**
-    the same steps inside fits
-    and backtests, without leakage`"]
-  end
-  A1 --&gt; B1
-  A2 --&gt; B1
-  A3 --&gt; B2
-  B1 --&gt; B2 --&gt; B3 --&gt; B4 --&gt; C1
-  C1 --&gt; H1
-  C1 --&gt; H2
-  H2 --&gt; H3
-  H1 --&gt; M["model-ready mt_data"]
-  H3 --&gt; M
-  H4 -.-&gt; M</code></pre>
 </div>
 <div class="section level2">
 <h2 id="map-2-models-coherence-and-evaluation">Map 2: models, coherence and evaluation<a class="anchor" aria-label="anchor" href="#map-2-models-coherence-and-evaluation"></a>
 </h2>
+<p>A model specification is one model, optionally inside wrappers.
+Preprocessing steps given as <code>prep</code> are repeated in every
+fit, so that backtests do not see the test years.</p>
 <pre class="mermaid"><code>flowchart TD
+  ONE["`**one population per stratum**
+  lee_carter(), rwd(), hyndman_ullah(), stmomo(), stanmomo(), arima_series(), ets_series(), apc_bayes()`"]
+  MANY["`**several strata jointly**
+  li_lee(common_by), product_ratio(), coherent_fdm(), tucker3(), cause_shares()`"]
+  H["`**mt_hierarchy()**
+  totals and groups of strata; fixed nodes such as a trusted total`"]
+  WRAP["`**wrappers around any model**
+  ensemble(), stratified(), reconciled(), recalibrated(), anchored(), bootstrapped(), tuned()`"]
+  SPEC["model specification"]
   M["model-ready mt_data"]
-  subgraph ONE["Models for one population per stratum"]
-    direction LR
-    S1["`**lee_carter()**
-    age pattern of a common trend`"]
-    S2["`**rwd()**
-    random walk per age; benchmark;
-    observation_noise for small counts`"]
-    S3["`**hyndman_ullah(), stmomo(),
-    arima_series()**
-    demography, StMoMo, forecast`"]
-    S4["`**apc_bayes(), apc_select()**
-    Bayesian age-period-cohort`"]
-  end
-  subgraph MANY["Models for several strata jointly"]
-    direction LR
-    J1["`**li_lee(common_by)**
-    common trend, bounded deviations`"]
-    J2["`**product_ratio(), tucker3(),
-    cause_shares()**
-    other joint and cause models`"]
-  end
-  subgraph WRAP["Wrappers around any model"]
-    direction LR
-    W1["`**ensemble()**
-    mixture of models,
-    better calibrated`"]
-    W2["`**reconciled(model, hierarchy)**
-    totals and parts add up
-    draw by draw`"]
-    W3["`**bootstrapped(), tuned()**
-    parameter uncertainty,
-    inner tuning`"]
-    W4["`**calibrated(model, years = 10)**
-    spread of the draws fitted to
-    the errors of the last years`"]
-    W5["`**anchored(model, years = 3)**
-    start of the forecast moved to
-    the observed level`"]
-  end
-  H["`**mt_hierarchy(), mt_aggregate_strata()**
-  totals and groups of strata; causes share exposures;
-  fixed nodes (a trusted total) in reconciliation`"]
-  FIT["`**mt_fit()**`"]
-  INS["`**summary(), mt_parameters(), residuals(), mt_plot_residuals()**
-  inspect the model, its assumptions and the fit`"]
+  PREP["`**mt_prep()**
+  step_smooth(), step_ungroup(), step_window(), ...`"]
+  FIT["`**mt_fit(spec, data, prep)**`"]
+  INS["`**inspect**
+  summary(), mt_parameters(), residuals(), mt_plot_residuals()`"]
   FC["`**mt_forecast()**
-  draws; warns about implausible rates;
-  mt_jump_off() reports the first-year step`"]
+  draws; warns about implausible rates; mt_jump_off()`"]
+  ONE --&gt; SPEC
+  MANY --&gt; SPEC
+  H --&gt; WRAP
+  WRAP -. "optional" .-&gt; SPEC
+  SPEC --&gt; FIT
   M --&gt; FIT
-  H --&gt; W2
-  ONE --&gt; WRAP
-  MANY --&gt; WRAP
-  ONE --&gt; FIT
-  MANY --&gt; FIT
-  WRAP --&gt; FIT
+  PREP -. "optional" .-&gt; FIT
   FIT --&gt; INS
   FIT --&gt; FC</code></pre>
 <p>Choosing between specifications:</p>
 <pre class="mermaid"><code>flowchart TD
   M["model-ready mt_data"]
   SP["`**candidate specifications**
-  with their preprocessing (mt_prep)`"]
+  each with its preprocessing (prep)`"]
   BT["`**mt_backtest()**
-  rolling origins; preprocessing and model refitted
-  on each training window; suppressed cells not scored`"]
+  rolling origins; preprocessing and model refitted on each training window; suppressed cells not scored`"]
   SC["`**mt_score()**
-  CRPS, interval score, coverage, PIT, MASE;
-  for rates, life expectancy or ASR`"]
+  CRPS, interval score, coverage, PIT, MASE; for rates, life expectancy or ASR`"]
   PL["`**mt_plot_scores(), mt_plot_coverage()**
   by horizon, age or model`"]
   CH["chosen specification"]
@@ -263,64 +212,41 @@ them.</p>
   SP --&gt; BT
   BT --&gt; SC --&gt; CH
   BT --&gt; PL --&gt; CH</code></pre>
+<p><code><a href="../reference/mt_tune.html">tuned()</a></code> and <code><a href="../reference/mt_tune.html">mt_tune()</a></code> run the same
+comparison inside a fit, over a grid of model and preprocessing settings
+(for example the number of components and the smoothing of
+<code><a href="../reference/hyndman_ullah.html">hyndman_ullah()</a></code>, or the fitting window), with rolling
+origins or a single hold-out of the last years.
+<code><a href="../reference/recalibrated.html">recalibrated()</a></code> keeps the chosen model and rescales the
+width of its intervals.</p>
 </div>
 <div class="section level2">
 <h2 id="map-3-from-draws-to-results">Map 3: from draws to results<a class="anchor" aria-label="anchor" href="#map-3-from-draws-to-results"></a>
 </h2>
+<p>Indicators and comparisons are computed path by path, so their
+intervals include the joint uncertainty of all strata. The same
+functions describe observed data.</p>
 <pre class="mermaid"><code>flowchart TD
   P["`**mt_draws**
   forecast paths`"]
-  O["`**mt_observed(data)**
-  observed rates with Poisson draws`"]
-  subgraph IND["Indicators, path by path"]
-    direction LR
-    I1["`**life_expectancy()**`"]
-    I2["`**asr()**
-    standards esp2013, esp1976,
-    who2000 or your own`"]
-    I3["`**prob_dying()**`"]
-    I4["`**mt_deaths(), yll()**
-    deaths with projected
-    populations`"]
-  end
-  subgraph COMP["Comparisons, path by path"]
-    direction LR
-    C1["`**mt_contrast()**
-    differences and ratios
-    between strata`"]
-    C2["`**mt_inequality()**
-    slope and relative index
-    of inequality`"]
-    C3["`**mt_decompose()**
-    differences by age, cause
-    and subgroup composition`"]
-  end
-  subgraph AGG["Aggregation"]
-    direction LR
-    G1["`**mt_aggregate_draws()**
-    totals, wider age groups;
-    mt_coherence() checks sums`"]
-    G2["`**mt_disaggregate()**
-    finer ages (mt_shape_rates(),
-    mt_disaggregate_check())`"]
-  end
-  subgraph OUT["Output"]
-    direction LR
-    X1["`**mt_summarise()**
-    quantiles of rates`"]
-    X2["`**mt_plot_forecast(), mt_plot_age(),
-    mt_plot_life_expectancy(), mt_plot_shares()**`"]
-    X3["`**mt_export()**
-    CSV of draws or any table`"]
-  end
-  P --&gt; AGG
+  O["`**mt_data**
+  observed data; mt_observed() adds Poisson draws`"]
+  AGG["`**aggregate or refine**
+  mt_aggregate_draws(), mt_disaggregate(); mt_coherence() checks sums`"]
+  IND["`**indicators**
+  life_expectancy(), asr(), prob_dying(), yll(), mt_deaths()`"]
+  COMP["`**comparisons**
+  mt_contrast(), mt_inequality(), mt_decompose()`"]
+  OUT["`**output**
+  mt_summarise(), mt_plot_forecast(), mt_plot_life_expectancy(), mt_plot_shares(), mt_plot_decomposition(), mt_export()`"]
+  P &lt;--&gt; AGG
   P --&gt; IND
   O --&gt; IND
   P --&gt; COMP
   O --&gt; COMP
+  P --&gt; OUT
   IND --&gt; OUT
-  COMP --&gt; OUT
-  P --&gt; OUT</code></pre>
+  COMP --&gt; OUT</code></pre>
 </div>
 <div class="section level2">
 <h2 id="functions-by-purpose">Functions by purpose<a class="anchor" aria-label="anchor" href="#functions-by-purpose"></a>
@@ -351,7 +277,10 @@ symbols, shared populations)</td>
 </tr>
 <tr class="even">
 <td>Read</td>
-<td><code><a href="../reference/mt_add.html">mt_add()</a></code></td>
+<td>
+<code><a href="../reference/mt_add.html">mt_add()</a></code>, <code><a href="../reference/mt_add.html">mt_add_deaths()</a></code>,
+<code><a href="../reference/mt_add.html">mt_add_exposure()</a></code>, <code><a href="../reference/mt_add.html">mt_add_population()</a></code>
+</td>
 <td>add or replace one table</td>
 <td>
 <code>mt_data</code>, data frame</td>
@@ -381,36 +310,58 @@ symbols, shared populations)</td>
 <td>Read</td>
 <td>
 <code><a href="../reference/parse_age_labels.html">parse_age_labels()</a></code>, <code><a href="../reference/mt_axis.html">age_groups()</a></code>,
-<code><a href="../reference/mt_axis.html">single_ages()</a></code>, <code><a href="../reference/mt_axis.html">single_years()</a></code>
+<code><a href="../reference/mt_axis.html">single_ages()</a></code>, <code><a href="../reference/mt_axis.html">single_years()</a></code>,
+<code><a href="../reference/mt_axis.html">period_groups()</a></code>
 </td>
 <td>age and period axes from labels or bounds</td>
 <td>labels</td>
 <td><code>mt_axis</code></td>
 </tr>
 <tr class="even">
+<td>Read</td>
+<td>
+<code><a href="../reference/axis_widths.html">axis_widths()</a></code>, <code><a href="../reference/axis_widths.html">axis_midpoints()</a></code>,
+<code><a href="../reference/axis_widths.html">is_open()</a></code>
+</td>
+<td>interval widths, midpoints and the open interval of an axis</td>
+<td><code>mt_axis</code></td>
+<td>vector</td>
+</tr>
+<tr class="odd">
 <td>Prepare</td>
 <td><code><a href="../reference/mt_as_exposure.html">mt_as_exposure()</a></code></td>
 <td>exposures from populations (<code>type</code> required)</td>
 <td><code>mt_data</code></td>
 <td><code>mt_data</code></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>Prepare</td>
 <td><code><a href="../reference/mt_subset.html">mt_subset()</a></code></td>
 <td>restrict ages, years, strata</td>
 <td><code>mt_data</code></td>
 <td><code>mt_data</code></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>Prepare</td>
 <td>
 <code><a href="../reference/mt_strata.html">mt_strata()</a></code>, <code><a href="../reference/mt_strata.html">mt_obs()</a></code>,
-<code><a href="../reference/mt_strata.html">mt_grid()</a></code>, <code><a href="../reference/mt_set_grid.html">mt_set_grid()</a></code>
+<code><a href="../reference/mt_strata.html">mt_grid()</a></code>, <code><a href="../reference/mt_set_grid.html">mt_set_grid()</a></code>,
+<code><a href="../reference/mt_granularity.html">mt_granularity()</a></code>
 </td>
-<td>look at strata (with their level in a hierarchy), tables and the
-modelling grid</td>
+<td>look at strata (with their level in a hierarchy), tables, their
+resolution and the modelling grid</td>
 <td><code>mt_data</code></td>
 <td>table, grid</td>
+</tr>
+<tr class="even">
+<td>Prepare</td>
+<td>
+<code><a href="../reference/mt_array.html">mt_array()</a></code>, <code><a href="../reference/mt_operator.html">mt_operator()</a></code>
+</td>
+<td>data as arrays on the grid; the matrix that sums grid cells to
+observed cells (for your own models)</td>
+<td><code>mt_data</code></td>
+<td>array, matrix</td>
 </tr>
 <tr class="odd">
 <td>Prepare</td>
@@ -450,31 +401,44 @@ both</td>
 <tr class="odd">
 <td>Harmonise</td>
 <td>
-<code><a href="../reference/mt_smooth_check.html">mt_smooth_check()</a></code>, <code><a href="../reference/mt_smooth_check.html">mt_plot_smooth()</a></code>
+<code><a href="../reference/ungroup-diagnostics.html">mt_plot_ungroup()</a></code>, <code><a href="../reference/ungroup-diagnostics.html">mt_ungroup_check()</a></code>
 </td>
-<td>how much smoothing removed (dispersion, trend ratio)</td>
+<td>ungrouped against grouped rates, stability over time, errors against
+known single years; several methods side by side</td>
 <td>
-<code>mt_data</code> pair</td>
-<td>table, ggplot</td>
+<code>mt_data</code> and ungrouped data (or a list)</td>
+<td>ggplot, table</td>
 </tr>
 <tr class="even">
 <td>Harmonise</td>
 <td>
-<code><a href="../reference/mt_prep.html">mt_prep()</a></code> with <code><a href="../reference/mt_prep.html">step_ungroup()</a></code>,
-<code><a href="../reference/mt_prep.html">step_smooth()</a></code>, <code><a href="../reference/mt_prep.html">step_regroup()</a></code>,
-<code><a href="../reference/mt_prep.html">step_grid()</a></code>, <code><a href="../reference/mt_prep.html">step_shocks()</a></code>,
-<code><a href="../reference/mt_prep.html">step_window()</a></code>
+<code><a href="../reference/mt_smooth_check.html">mt_smooth_check()</a></code>, <code><a href="../reference/mt_smooth_check.html">mt_plot_smooth()</a></code>
+</td>
+<td>how much smoothing removed (dispersion, trend ratio); several
+smoothers in one figure</td>
+<td>
+<code>mt_data</code> pair or list</td>
+<td>table, ggplot</td>
+</tr>
+<tr class="odd">
+<td>Harmonise</td>
+<td>
+<code><a href="../reference/mt_prep.html">mt_prep()</a></code>, <code><a href="../reference/mt_prep.html">mt_prep_apply()</a></code> with
+<code><a href="../reference/mt_prep.html">step_ungroup()</a></code>, <code><a href="../reference/mt_prep.html">step_smooth()</a></code>,
+<code><a href="../reference/mt_prep.html">step_regroup()</a></code>, <code><a href="../reference/mt_prep.html">step_grid()</a></code>,
+<code><a href="../reference/mt_prep.html">step_shocks()</a></code>, <code><a href="../reference/mt_prep.html">step_window()</a></code>
 </td>
 <td>preprocessing inside fits and backtests</td>
 <td>steps</td>
 <td>pipeline</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>Model</td>
 <td>
 <code><a href="../reference/lee_carter.html">lee_carter()</a></code>, <code><a href="../reference/rwd.html">rwd()</a></code>,
 <code><a href="../reference/li_lee.html">li_lee()</a></code>, <code><a href="../reference/li_lee.html">product_ratio()</a></code>,
-<code><a href="../reference/hyndman_ullah.html">hyndman_ullah()</a></code>, <code><a href="../reference/stmomo.html">stmomo()</a></code>,
+<code><a href="../reference/hyndman_ullah.html">hyndman_ullah()</a></code>, <code><a href="../reference/coherent_fdm.html">coherent_fdm()</a></code>,
+<code><a href="../reference/stmomo.html">stmomo()</a></code>, <code><a href="../reference/stanmomo.html">stanmomo()</a></code>,
 <code><a href="../reference/arima_series.html">arima_series()</a></code>, <code><a href="../reference/arima_series.html">ets_series()</a></code>,
 <code><a href="../reference/apc_bayes.html">apc_bayes()</a></code>, <code><a href="../reference/tucker3.html">tucker3()</a></code>,
 <code><a href="../reference/cause_shares.html">cause_shares()</a></code>
@@ -483,31 +447,33 @@ both</td>
 <td>settings</td>
 <td><code>mt_spec</code></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>Model</td>
 <td>
 <code><a href="../reference/apc_select.html">apc_select()</a></code>, <code><a href="../reference/mcmc_control.html">mcmc_control()</a></code>,
 <code><a href="../reference/mt_tune.html">mt_tune()</a></code>
 </td>
-<td>choose random-walk orders, MCMC settings, settings by inner
-backtest</td>
+<td>choose random-walk orders, MCMC settings; model and preprocessing
+settings by forecast accuracy on the last years (hold-out or rolling
+origins; rates, life expectancy or ASR)</td>
 <td>data, grid</td>
 <td>table, <code>mt_spec</code>
 </td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>Combine</td>
 <td>
 <code><a href="../reference/ensemble.html">ensemble()</a></code> (optionally <code>top_k</code>),
-<code><a href="../reference/reconciled.html">reconciled()</a></code>, <code><a href="../reference/bootstrapped.html">bootstrapped()</a></code>,
-<code><a href="../reference/mt_tune.html">tuned()</a></code>
+<code><a href="../reference/stratified.html">stratified()</a></code>, <code><a href="../reference/reconciled.html">reconciled()</a></code>,
+<code><a href="../reference/bootstrapped.html">bootstrapped()</a></code>, <code><a href="../reference/mt_tune.html">tuned()</a></code>
 </td>
-<td>mixtures, coherence, parameter uncertainty (and of smoothing,
-<code>type = "data"</code>), tuning</td>
+<td>mixtures, different models for groups of strata, coherence,
+parameter uncertainty (and of smoothing, <code>type = "data"</code>),
+tuning</td>
 <td><code>mt_spec</code></td>
 <td><code>mt_spec</code></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>Combine</td>
 <td><code><a href="../reference/mt_order_strata.html">mt_order_strata()</a></code></td>
 <td>keep an ordering between strata (for example women below men) path
@@ -515,15 +481,16 @@ by path</td>
 <td><code>mt_draws</code></td>
 <td><code>mt_draws</code></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>Calibrate</td>
-<td><code><a href="../reference/calibrated.html">calibrated()</a></code></td>
+<td><code><a href="../reference/recalibrated.html">recalibrated()</a></code></td>
 <td>rescale the spread (optionally the drift) of any model’s draws to
-its forecast errors in the last years</td>
+its forecast errors in the last years, overall or by age band, for
+rates, life expectancy or ASR</td>
 <td><code>mt_spec</code></td>
 <td><code>mt_spec</code></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>Jump-off</td>
 <td>
 <code><a href="../reference/anchored.html">anchored()</a></code>, <code><a href="../reference/mt_jump_off.html">mt_jump_off()</a></code>
@@ -536,7 +503,7 @@ first-year step</td>
 <td>
 <code>mt_spec</code>, table</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>Coherence</td>
 <td>
 <code><a href="../reference/mt_hierarchy.html">mt_hierarchy()</a></code>, <code><a href="../reference/mt_aggregate_strata.html">mt_aggregate_strata()</a></code>,
@@ -550,7 +517,7 @@ first-year step</td>
 <code>mt_data</code>, <code>mt_draws</code>
 </td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>Coherence</td>
 <td>
 <code><a href="../reference/mt_coherence.html">mt_coherence()</a></code>, <code><a href="../reference/mt_coherence.html">mt_plot_coherence()</a></code>
@@ -560,7 +527,7 @@ first-year step</td>
 <code>mt_draws</code>, hierarchy</td>
 <td>table, ggplot</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>Fit</td>
 <td><code><a href="../reference/mt_fit.html">mt_fit()</a></code></td>
 <td>estimate</td>
@@ -569,7 +536,7 @@ first-year step</td>
 </td>
 <td><code>mt_fit</code></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>Inspect</td>
 <td>
 <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code>, <code><a href="../reference/mt_parameters.html">mt_parameters()</a></code>,
@@ -580,7 +547,7 @@ first-year step</td>
 <td><code>mt_fit</code></td>
 <td>text, table, plot</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>Forecast</td>
 <td>
 <code><a href="../reference/mt_forecast.html">mt_forecast()</a></code>, <code><a href="../reference/mt_draws.html">mt_summarise()</a></code>
@@ -590,25 +557,49 @@ first-year step</td>
 <td>
 <code>mt_draws</code>, table</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>Evaluate</td>
 <td>
 <code><a href="../reference/mt_backtest.html">mt_backtest()</a></code>, <code><a href="../reference/mt_score.html">mt_score()</a></code>
 </td>
-<td>rolling-origin scores of rates, life expectancy or ASR</td>
+<td>rolling-origin scores of rates, life expectancy or ASR, and of gaps
+between strata (<code>contrast</code>)</td>
 <td>
 <code>mt_spec</code>, <code>mt_data</code>
 </td>
 <td>table</td>
 </tr>
+<tr class="even">
+<td>Evaluate</td>
+<td>
+<code><a href="../reference/mt_compare.html">mt_compare()</a></code>, <code><a href="../reference/mt_compare.html">mt_score_table()</a></code>
+</td>
+<td>backtests of several models on the same origins; scores of rates,
+life expectancy and gaps side by side, by level of a hierarchy</td>
+<td>named list of <code>mt_spec</code>, <code>mt_data</code>
+</td>
+<td>table</td>
+</tr>
 <tr class="odd">
+<td>Evaluate</td>
+<td>
+<code><a href="../reference/mt_plot_more.html">mt_plot_scores()</a></code>, <code><a href="../reference/mt_plot.html">mt_plot_coverage()</a></code>,
+<code><a href="../reference/mt_plot_design.html">mt_plot_pit()</a></code>, <code><a href="../reference/mt_plot_design.html">mt_plot_backtest_design()</a></code>,
+<code><a href="../reference/mt_plot_design.html">mt_plot_tuning()</a></code>
+</td>
+<td>scores by horizon or model, interval coverage, PIT histograms, the
+design of a backtest, tuning scores</td>
+<td>backtest, tuning</td>
+<td>ggplot</td>
+</tr>
+<tr class="even">
 <td>Describe</td>
 <td><code><a href="../reference/mt_observed.html">mt_observed()</a></code></td>
 <td>observed rates as draws</td>
 <td><code>mt_data</code></td>
 <td><code>mt_draws</code></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>Report</td>
 <td>
 <code><a href="../reference/life_expectancy.html">life_expectancy()</a></code>, <code><a href="../reference/derived.html">asr()</a></code>,
@@ -620,7 +611,7 @@ first-year step</td>
 </td>
 <td>table</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>Report</td>
 <td>
 <code><a href="../reference/derived.html">yll()</a></code>, <code><a href="../reference/mt_deaths.html">mt_deaths()</a></code>
@@ -629,7 +620,7 @@ first-year step</td>
 <td><code>mt_draws</code></td>
 <td>table, array</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>Report</td>
 <td>
 <code><a href="../reference/life_table.html">life_table()</a></code>, <code><a href="../reference/standard_population.html">standard_population()</a></code>
@@ -639,16 +630,29 @@ who2000</td>
 <td>rates, name</td>
 <td>table</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>Report</td>
 <td>
-<code><a href="../reference/mt_contrast.html">mt_contrast()</a></code>, <code><a href="../reference/mt_inequality.html">mt_inequality()</a></code>
+<code><a href="../reference/mt_contrast.html">mt_contrast()</a></code>, <code><a href="../reference/mt_inequality.html">mt_inequality()</a></code>,
+<code><a href="../reference/mt_plot_contrast.html">mt_plot_contrast()</a></code>
 </td>
-<td>gaps, ratios, SII, RII</td>
+<td>gaps, ratios, SII, RII; gaps over time</td>
 <td>
 <code>mt_draws</code> or <code>mt_data</code>
 </td>
-<td>table</td>
+<td>table, ggplot</td>
+</tr>
+<tr class="odd">
+<td>Report</td>
+<td>
+<code><a href="../reference/mt_compare.html">mt_compare_forecasts()</a></code>,
+<code><a href="../reference/mt_compare.html">mt_plot_compare()</a></code>
+</td>
+<td>one quantity of several forecasts (models, jump-off choices,
+reconciliation methods) side by side</td>
+<td>named list of <code>mt_draws</code> or <code>mt_data</code>
+</td>
+<td>table, ggplot</td>
 </tr>
 <tr class="even">
 <td>Report</td>
@@ -671,8 +675,8 @@ years with gaps)</td>
 <td>
 <code><a href="../reference/mt_plot.html">mt_plot_forecast()</a></code>, <code><a href="../reference/mt_plot.html">mt_plot_age()</a></code>,
 <code><a href="../reference/mt_plot.html">mt_plot_life_expectancy()</a></code>, <code><a href="../reference/mt_plot_more.html">mt_plot_shares()</a></code>,
-<code><a href="../reference/mt_plot.html">mt_plot_rates()</a></code>, <code><a href="../reference/mt_plot.html">mt_plot_ungroup()</a></code>,
-<code><a href="../reference/mt_plot_more.html">mt_plot_tucker()</a></code>, <code><a href="../reference/mt_export.html">mt_export()</a></code>
+<code><a href="../reference/mt_plot.html">mt_plot_rates()</a></code>, <code><a href="../reference/mt_plot_more.html">mt_plot_tucker()</a></code>,
+<code><a href="../reference/mt_export.html">mt_export()</a></code>
 </td>
 <td>figures and CSV files</td>
 <td>draws, data, tables</td>
@@ -695,7 +699,8 @@ years with gaps)</td>
 <td>Report</td>
 <td>
 <code><a href="../reference/mt_plot_style.html">theme_mortensor()</a></code>,
-<code><a href="../reference/mt_plot_style.html">scale_colour_mortensor()</a></code>, <code><a href="../reference/mt_plot_style.html">mt_palette()</a></code>
+<code><a href="../reference/mt_plot_style.html">scale_colour_mortensor()</a></code>,
+<code><a href="../reference/mt_plot_style.html">scale_fill_mortensor()</a></code>, <code><a href="../reference/mt_plot_style.html">mt_palette()</a></code>
 </td>
 <td>the package’s plot style for your own figures</td>
 <td></td>
@@ -723,6 +728,15 @@ years with gaps)</td>
 <td>
 <code>demogdata</code>, <code>StMoMoData</code>
 </td>
+</tr>
+<tr class="even">
+<td>Extend</td>
+<td><code><a href="../reference/new_mt_spec.html">new_mt_spec()</a></code></td>
+<td>constructor for developers adding a model (methods for the internal
+generics <code>fit_model()</code> and
+<code>simulate_model()</code>)</td>
+<td>model name, parameters</td>
+<td><code>mt_spec</code></td>
 </tr>
 </tbody>
 </table>

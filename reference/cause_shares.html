@@ -9,7 +9,12 @@ the causes in all-cause mortality with a compositional tensor model, so
 that cause-specific forecasts add up to the all-cause forecast in every
 draw (a Tucker4 decomposition of isometric log-ratio coordinates; an
 experimental method without a published application to mortality, so
-compare it with reconciled() separate models in a backtest):"><script type="module">
+compare it with reconciled() separate models in a backtest):"><style>
+/* Bootstrap's paragraph margin inside the labels makes mermaid size the
+   boxes too small, which clips their last line */
+.mermaid-diagram p { margin: 0; }
+.mermaid-diagram { margin: 1rem 0 1.5rem; }
+</style><script type="module">
 import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.esm.min.mjs";
 mermaid.initialize({ startOnLoad: false, securityLevel: "strict" });
 window.addEventListener("load", async () => {
@@ -116,7 +121,8 @@ degenerate coordinate).</p></dd>
 
 <dt id="arg-residual-noise">residual_noise<a class="anchor" aria-label="anchor" href="#arg-residual-noise"></a></dt>
 <dd><p>Add in-sample residual variation of the ILR
-coordinates to the draws.</p></dd>
+coordinates to the draws (in predictive draws split multinomially, the
+part beyond the multinomial variation).</p></dd>
 
 </dl></div>
     <div class="section level2">
@@ -136,9 +142,16 @@ multivariate random walk with drift (bootstrap of joint changes) and
 the in-sample residual variation is added to the draws;</p></li>
 <li><p>inverse ILR gives share draws, which multiply the all-cause draws.</p></li>
 </ol><p>Shares of rare causes are noisy; smoothing the rates first
-(<code>prep = mt_prep(step_smooth())</code>) helps. In backtests on simulated cause
-data (<code><a href="mt_example_causes.html">mt_example_causes()</a></code>), the 95% coverage was 0.99 without smoothing
-and 0.94 to 0.97 with it.</p>
+(<code>prep = mt_prep(step_smooth())</code>) can help.</p>
+<p>Predictive draws (<code>mt_forecast(predictive = TRUE)</code>) are the predictive
+draws of the total model; for models of smooth rates (such as
+<code><a href="lee_carter.html">lee_carter()</a></code>) these are Poisson deaths, which are split between the
+causes (and the residual cause) multinomially by the share draws, so that
+the deaths of the causes add up to the all-cause deaths also in predictive
+draws. The residual variation of the shares added to these draws is then
+only the part beyond the multinomial variation. For total models of
+observed rates (<code><a href="rwd.html">rwd()</a></code>, <code><a href="arima_series.html">arima_series()</a></code>, <code><a href="arima_series.html">ets_series()</a></code>), predictive
+draws are the draws.</p>
 <p>The data need a stratum variable <code>var</code> with the all-cause level
 <code>total_level</code> and the cause levels; other stratum variables (for example
 sex) define the groups.</p>

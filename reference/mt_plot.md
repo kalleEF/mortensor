@@ -37,8 +37,6 @@ mt_plot_life_expectancy(
 
 mt_plot_rates(data, strata = NULL)
 
-mt_plot_ungroup(data, ungrouped, period = NULL, strata = NULL)
-
 mt_plot_coverage(backtest)
 ```
 
@@ -88,14 +86,6 @@ mt_plot_coverage(backtest)
   Stratum variable whose levels get one panel each (for example
   `"sex"`), or `NULL`.
 
-- ungrouped:
-
-  The [`mt_ungroup()`](mt_ungroup.md) result for `data`.
-
-- period:
-
-  Year shown.
-
 - backtest:
 
   An [`mt_backtest()`](mt_backtest.md) result.
@@ -130,9 +120,6 @@ default the one with the most levels among the shown strata, or
 
 - `mt_plot_rates()`: Lexis surface (age by period) of observed log
   rates;
-
-- `mt_plot_ungroup()`: grouped rates as steps and ungrouped single-year
-  rates for one period;
 
 - `mt_plot_coverage()`: empirical interval coverage by horizon from a
   backtest, with the nominal levels.

@@ -3,7 +3,12 @@
 for backtests), &quot;final&quot; (bamp's automatic choice of chain length), and
 &quot;test&quot; (1,000 iterations, for examples and unit tests only)."><meta property="og:description" content="Presets: &quot;fast&quot; (5,000 iterations, burn-in 1,000, thinning 5; suitable
 for backtests), &quot;final&quot; (bamp's automatic choice of chain length), and
-&quot;test&quot; (1,000 iterations, for examples and unit tests only)."><script type="module">
+&quot;test&quot; (1,000 iterations, for examples and unit tests only)."><style>
+/* Bootstrap's paragraph margin inside the labels makes mermaid size the
+   boxes too small, which clips their last line */
+.mermaid-diagram p { margin: 0; }
+.mermaid-diagram { margin: 1rem 0 1.5rem; }
+</style><script type="module">
 import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.esm.min.mjs";
 mermaid.initialize({ startOnLoad: false, securityLevel: "strict" });
 window.addEventListener("load", async () => {

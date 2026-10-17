@@ -71,7 +71,8 @@ Steps:
   to the smoothed rates; residuals and observation noise refer to the
   raw deaths. Smoothing over time (`along = "period"`, or `dims = 2`)
   narrows the forecast intervals of models with a period index, so check
-  coverage in a backtest and consider [`calibrated()`](calibrated.md);
+  coverage in a backtest and consider
+  [`recalibrated()`](recalibrated.md);
 
 - `step_regroup(age, period)`: [`mt_regroup()`](mt_regroup.md);
 
@@ -86,7 +87,10 @@ Steps:
   (for example 2020-2022) are either replaced by log-linear
   interpolation of the rates of the neighbouring periods
   (`"interpolate"`, deaths become exposure times the interpolated rate)
-  or removed (`"exclude"`, only at the start or end of the data).
+  or removed (`"exclude"`, only at the start or end of the data). With
+  `"interpolate"`, shock periods at the start or end of the data, which
+  have no neighbour on one side, are removed, as in a backtest whose
+  training window ends inside the shock.
 
 ## Examples
 

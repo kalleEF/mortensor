@@ -2,18 +2,21 @@ pandoc: 3.8.3
 pkgdown: 2.2.1
 pkgdown_sha: ~
 articles:
+  backtesting: backtesting.html
   bayesian-apc: bayesian-apc.html
-  causes: causes.html
   coherence: coherence.html
   comparison: comparison.html
   decomposition: decomposition.html
-  deprivation: deprivation.html
   faq: faq.html
-  forecasting-hmd: forecasting-hmd.html
   articles/function-map: function-map.html
-  granularity-hmd: granularity-hmd.html
+  inequality-england: inequality-england.html
+  jump-off: jump-off.html
+  laender-germany: laender-germany.html
+  model-choice: model-choice.html
   models: models.html
   mortensor: mortensor.html
   own-data: own-data.html
-  regions: regions.html
-last_built: 2026-10-17T12:39Z
+  smoothing: smoothing.html
+  tuning-recalibration: tuning-recalibration.html
+  ungrouping: ungrouping.html
+last_built: 2026-10-17T21:36Z

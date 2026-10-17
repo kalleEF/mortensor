@@ -3,7 +3,12 @@
 (draws), so that uncertainty propagates correctly to derived quantities
 such as life expectancy."><meta property="og:description" content="Simulates future death rates on the grid. The result holds simulated paths
 (draws), so that uncertainty propagates correctly to derived quantities
-such as life expectancy."><script type="module">
+such as life expectancy."><style>
+/* Bootstrap's paragraph margin inside the labels makes mermaid size the
+   boxes too small, which clips their last line */
+.mermaid-diagram p { margin: 0; }
+.mermaid-diagram { margin: 1rem 0 1.5rem; }
+</style><script type="module">
 import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.esm.min.mjs";
 mermaid.initialize({ startOnLoad: false, securityLevel: "strict" });
 window.addEventListener("load", async () => {
@@ -106,10 +111,12 @@ is).</p></dd>
 
 <dt id="arg-predictive">predictive<a class="anchor" aria-label="anchor" href="#arg-predictive"></a></dt>
 <dd><p>If <code>TRUE</code>, draws describe observable rates: for
-models of smooth rates, extra-Poisson noise (estimated from in-sample
-residuals) and Poisson variation of deaths given <code>exposure</code> are added,
-and zero counts are replaced by 0.5 as in the training data. Used by
-<code><a href="mt_backtest.html">mt_backtest()</a></code>.</p></dd>
+models of smooth rates, and for any model fitted to smoothed rates
+(<code><a href="mt_prep.html">step_smooth()</a></code>), extra-Poisson noise (estimated from in-sample
+residuals of the raw rates) and Poisson variation of deaths given
+<code>exposure</code> are added;
+cells can have zero deaths (rate 0). Used by <code><a href="mt_backtest.html">mt_backtest()</a></code>, which
+sums the deaths to the observed cells before taking logarithms.</p></dd>
 
 
 <dt id="arg-exposure">exposure<a class="anchor" aria-label="anchor" href="#arg-exposure"></a></dt>

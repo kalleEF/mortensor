@@ -11,6 +11,12 @@
 <script src="../deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Your own data, from CSV to report">
+<style>
+/* Bootstrap's paragraph margin inside the labels makes mermaid size the
+   boxes too small, which clips their last line */
+.mermaid-diagram p { margin: 0; }
+.mermaid-diagram { margin: 1rem 0 1.5rem; }
+</style>
 <script type="module">
 import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.esm.min.mjs";
 mermaid.initialize({ startOnLoad: false, securityLevel: "strict" });
@@ -243,9 +249,9 @@ common trend per sex, which keeps the quintiles from diverging; and an
 ensemble of Lee-Carter and random walks that are robust to small
 counts.</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">specs</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="fu"><a href="../reference/lee_carter.html">lee_carter</a></span><span class="op">(</span><span class="op">)</span>, <span class="fu"><a href="../reference/li_lee.html">li_lee</a></span><span class="op">(</span>common_by <span class="op">=</span> <span class="st">"Geschlecht"</span><span class="op">)</span>,</span>
-<span>              <span class="fu"><a href="../reference/ensemble.html">ensemble</a></span><span class="op">(</span>lc <span class="op">=</span> <span class="fu"><a href="../reference/lee_carter.html">lee_carter</a></span><span class="op">(</span><span class="op">)</span>, rw <span class="op">=</span> <span class="fu"><a href="../reference/rwd.html">rwd</a></span><span class="op">(</span>observation_noise <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="va">bt</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/data.table/man/rbindlist.html" class="external-link">rbindlist</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span><span class="va">specs</span>, <span class="kw">function</span><span class="op">(</span><span class="va">sp</span><span class="op">)</span> <span class="fu"><a href="../reference/mt_backtest.html">mt_backtest</a></span><span class="op">(</span><span class="va">sp</span>, <span class="va">x</span>, origins <span class="op">=</span> <span class="fl">2012</span><span class="op">:</span><span class="fl">2014</span>, h <span class="op">=</span> <span class="fl">5</span>, n_draws <span class="op">=</span> <span class="fl">200</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">cand</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="st">"Lee-Carter"</span> <span class="op">=</span> <span class="fu"><a href="../reference/lee_carter.html">lee_carter</a></span><span class="op">(</span><span class="op">)</span>, <span class="st">"Li-Lee"</span> <span class="op">=</span> <span class="fu"><a href="../reference/li_lee.html">li_lee</a></span><span class="op">(</span>common_by <span class="op">=</span> <span class="st">"Geschlecht"</span><span class="op">)</span>,</span>
+<span>             <span class="st">"Lee-Carter + random walk"</span> <span class="op">=</span> <span class="fu"><a href="../reference/ensemble.html">ensemble</a></span><span class="op">(</span>lc <span class="op">=</span> <span class="fu"><a href="../reference/lee_carter.html">lee_carter</a></span><span class="op">(</span><span class="op">)</span>, rw <span class="op">=</span> <span class="fu"><a href="../reference/rwd.html">rwd</a></span><span class="op">(</span>observation_noise <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">bt</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_compare.html">mt_compare</a></span><span class="op">(</span><span class="va">cand</span>, <span class="va">x</span>, origins <span class="op">=</span> <span class="fl">2012</span><span class="op">:</span><span class="fl">2014</span>, h <span class="op">=</span> <span class="fl">5</span>, n_draws <span class="op">=</span> <span class="fl">200</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label):</span></span>
 <span><span class="co">#&gt; Lee-Carter: forecast death rates above 1 in 22.0% of the draws (strata</span></span>
 <span><span class="co">#&gt; female.Q3; ages 10-14). The model is unstable here, often because of sparse</span></span>
@@ -270,18 +276,18 @@ counts.</p>
 <span><span class="co">#&gt; counts or a steep trend extrapolated far ahead; consider wider age groups</span></span>
 <span><span class="co">#&gt; (mt_regroup()), pooling (li_lee(common_by = )), smoothing (step_smooth()) or an</span></span>
 <span><span class="co">#&gt; ensemble.</span></span>
-<span><span class="va">scores</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_score.html">mt_score</a></span><span class="op">(</span><span class="va">bt</span><span class="op">)</span></span>
-<span><span class="va">scores</span><span class="op">[</span>, <span class="fu">.</span><span class="op">(</span><span class="va">model</span>, <span class="va">crps</span>, <span class="va">cov95</span><span class="op">)</span><span class="op">]</span></span>
-<span><span class="co">#&gt;                            model      crps     cov95</span></span>
-<span><span class="co">#&gt;                           &lt;char&gt;     &lt;num&gt;     &lt;num&gt;</span></span>
-<span><span class="co">#&gt; 1:                    Lee-Carter 0.1468536 0.9210618</span></span>
-<span><span class="co">#&gt; 2: Li-Lee (common by Geschlecht) 0.1666150 0.8976598</span></span>
-<span><span class="co">#&gt; 3:             Ensemble (lc, rw) 0.1499292 0.9364303</span></span></code></pre></div>
+<span><span class="va">scores</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_compare.html">mt_score_table</a></span><span class="op">(</span><span class="va">bt</span>, metrics <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"crps"</span>, <span class="st">"cov95"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">scores</span></span>
+<span><span class="co">#&gt;                       model  crps cov95</span></span>
+<span><span class="co">#&gt;                      &lt;fctr&gt; &lt;num&gt; &lt;num&gt;</span></span>
+<span><span class="co">#&gt; 1:               Lee-Carter 0.147 0.921</span></span>
+<span><span class="co">#&gt; 2:                   Li-Lee 0.167 0.898</span></span>
+<span><span class="co">#&gt; 3: Lee-Carter + random walk 0.150 0.936</span></span></code></pre></div>
 <p>Warnings about implausible rates in some backtest fits point to young
-age groups with few deaths. The model with the lowest CRPS is used for
-the forecast:</p>
+age groups with few deaths. The model with the lowest CRPS (the rows
+follow the order of the list) is used for the forecast:</p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">best</span> <span class="op">&lt;-</span> <span class="va">specs</span><span class="op">[[</span><span class="fu"><a href="https://rdrr.io/r/base/which.min.html" class="external-link">which.min</a></span><span class="op">(</span><span class="va">scores</span><span class="op">$</span><span class="va">crps</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/match.html" class="external-link">match</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">vapply</a></span><span class="op">(</span><span class="va">specs</span>, <span class="va">`[[`</span>, <span class="st">""</span>, <span class="st">"label"</span><span class="op">)</span>, <span class="va">scores</span><span class="op">$</span><span class="va">model</span><span class="op">)</span><span class="op">]</span><span class="op">)</span><span class="op">]</span><span class="op">]</span></span>
+<code class="sourceCode R"><span><span class="va">best</span> <span class="op">&lt;-</span> <span class="va">cand</span><span class="op">[[</span><span class="fu"><a href="https://rdrr.io/r/base/which.min.html" class="external-link">which.min</a></span><span class="op">(</span><span class="va">scores</span><span class="op">$</span><span class="va">crps</span><span class="op">)</span><span class="op">]</span><span class="op">]</span></span>
 <span><span class="va">best</span><span class="op">$</span><span class="va">label</span></span>
 <span><span class="co">#&gt; [1] "Lee-Carter"</span></span></code></pre></div>
 </div>

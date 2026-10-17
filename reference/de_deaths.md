@@ -2,12 +2,11 @@
 
 Deaths by year (1998-2024), Land, sex, age group and ICD-10 chapter, and
 populations on 31 December (1997-2024) by Land, sex and single year of
-age. The vignette "Coherent forecasts by sex, region and cause" reads
-them with [`mt_data()`](mt_data.md) and prepares them with
+age. The vignette "Differences between the German Laender" reads them
+with [`mt_data()`](mt_data.md) and prepares them with
 [`mt_as_exposure()`](mt_as_exposure.md),
-[`mt_regroup()`](mt_regroup.md), [`mt_subset()`](mt_subset.md),
-[`mt_fill_suppressed()`](mt_fill_suppressed.md) and
-[`mt_group_levels()`](mt_group_levels.md).
+[`mt_regroup()`](mt_regroup.md), [`mt_subset()`](mt_subset.md) and
+[`mt_fill_suppressed()`](mt_fill_suppressed.md).
 
 ## Usage
 
@@ -58,9 +57,9 @@ Germany wherever all cells are published; 2025 is left out because its
 chapters did not add up. Injuries and poisonings (S00-T98) are the
 chapter of external causes.
 
-`de_cause_groups` lists the cause groups of the regional vignette for
-ages 50 and over: neoplasms, diseases of the circulatory, respiratory
-and digestive systems, mental and nervous system disorders combined
+`de_cause_groups` lists cause groups for cause-specific analyses at ages
+50 and over: neoplasms, diseases of the circulatory, respiratory and
+digestive systems, mental and nervous system disorders combined
 (dementia is coded in both chapters), endocrine diseases and external
 causes; the remaining chapters form `"rest"` with
 [`mt_group_levels()`](mt_group_levels.md).

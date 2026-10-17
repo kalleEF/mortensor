@@ -60,7 +60,9 @@ walk with drift.
 [`demography::fdm()`](https://pkg.robjhyndman.com/demography/reference/fdm.html)
 and draws paths with
 [`simulate()`](https://rdrr.io/r/stats/simulate.html) from the forecast.
-With the same input (French men 0-95, 1950-2006, 6 components, ARIMA),
+With the same input (French men 0-95, 1950-2006, 6 components, ARIMA,
+without the smoothing over age that
+[`hyndman_ullah()`](../reference/hyndman_ullah.md) applies by default),
 the median of 2,000 mortensor draws is compared with demography’s point
 forecast, and the width of the central 80% interval of the draws with
 demography’s 80% interval:
@@ -104,12 +106,12 @@ Differences are in units of the posterior standard deviation:
 res$fidelity$bamp[, lapply(.SD, function(v) if (is.numeric(v)) signif(v, 2) else v)]
 #>                        comparison max_abs_diff_median_in_sd
 #>                            <char>                     <num>
-#> 1:   apc_bayes() vs bamp (seed 1)                     0.069
-#> 2: bamp (seed 2) vs bamp (seed 1)                     0.079
+#> 1:   apc_bayes() vs bamp (seed 1)                     0.055
+#> 2: bamp (seed 2) vs bamp (seed 1)                     0.061
 #>    max_abs_diff_90_bounds_in_sd
 #>                           <num>
-#> 1:                         0.14
-#> 2:                         0.15
+#> 1:                         0.11
+#> 2:                         0.11
 ```
 
 ## Accuracy
@@ -175,22 +177,22 @@ for (d in unique(acc$data)) {
 #> ONS England, sex x IMD quintile, 5-year groups
 #>                         model   crps  cov50  cov80  cov95 seconds
 #>                        <char> <char> <char> <char> <char>   <num>
-#>           Bayesian APC (bamp) 0.0617   0.48   0.76   0.92    2588
-#>                 bamp (native) 0.0668   0.37   0.62   0.79    2436
-#>                    Lee-Carter 0.0670   0.35   0.62   0.81       1
+#>           Bayesian APC (bamp) 0.0619   0.48   0.76   0.92    2463
+#>                 bamp (native) 0.0666   0.37   0.62   0.79    2083
+#>                    Lee-Carter 0.0670   0.35   0.62   0.81       2
 #>        Li-Lee (common by sex) 0.0676   0.36   0.63   0.82       1
-#>             Ensemble (lc, rw) 0.0687   0.44   0.75   0.92       3
-#>  Functional demographic model 0.0703   0.40   0.66   0.84      24
+#>             Ensemble (lc, rw) 0.0688   0.44   0.75   0.92       3
 #>       demography fdm (native) 0.0719   0.33   0.57   0.76       8
+#>  Functional demographic model 0.0722   0.34   0.63   0.82      30
 #>       demography lca (native) 0.0841   0.21   0.39   0.56       1
 #> 
 #> France (HMD via demography), single ages 0-95
 #>                         model   crps  cov50  cov80  cov95 seconds
 #>                        <char> <char> <char> <char> <char>   <num>
 #>        Random walk with drift 0.0765   0.65   0.91   0.98       2
-#>             Ensemble (lc, rw) 0.0789   0.51   0.84   0.98       3
-#>  Functional demographic model 0.0843   0.33   0.57   0.75      10
-#>       demography fdm (native) 0.0941   0.24   0.43   0.59      11
+#>             Ensemble (lc, rw) 0.0790   0.51   0.84   0.98       2
+#>  Functional demographic model 0.0899   0.30   0.52   0.70      19
+#>       demography fdm (native) 0.0941   0.24   0.43   0.59      13
 #>                    Lee-Carter 0.0977   0.33   0.57   0.79       2
 #>       demography lca (native) 0.0982   0.31   0.54   0.74       2
 #> 
@@ -203,14 +205,14 @@ for (d in unique(acc$data)) {
 #>  demography lca (native) 0.0583   0.31   0.60   0.79       0
 #>               Lee-Carter 0.0619   0.31   0.58   0.79       0
 #>               StMoMo CBD 0.0625   0.35   0.60   0.82       1
-#>                StMoMo LC 0.0646   0.27   0.52   0.75       2
+#>                StMoMo LC 0.0646   0.27   0.52   0.75       1
 #> 
 #> bamp example data (8 age groups, 10 years)
 #>                   model   crps  cov50  cov80  cov95 seconds
 #>                  <char> <char> <char> <char> <char>   <num>
-#>     Bayesian APC (bamp) 0.2629   0.38   0.56   0.69      30
-#>           bamp (native) 0.2720   0.27   0.44   0.62      26
-#>              Lee-Carter 0.2804   0.40   0.65   0.88       0
+#>     Bayesian APC (bamp) 0.2602   0.46   0.58   0.75      31
+#>           bamp (native) 0.2738   0.23   0.42   0.60      26
+#>              Lee-Carter 0.2804   0.40   0.65   0.88       1
 #>  Random walk with drift 0.3460   0.54   0.81   0.85       0
 ```
 
@@ -239,19 +241,20 @@ difference); the simulated 80% intervals are 19% narrower than
 demography’s analytic intervals at horizon 1 and nearly as wide at 20
 years. The Bayesian APC forecasts of
 [`apc_bayes()`](../reference/apc_bayes.md) differ from native bamp by
-less than two independent bamp runs differ from each other, so the
-wrapper adds no difference beyond Monte Carlo error.
+about as much as two independent bamp runs differ from each other, so
+the wrapper adds no difference beyond Monte Carlo error.
 
 **Accuracy.** Four observations hold across the data sets:
 
 - The same model used through mortensor scores better than the native
-  package in 6 of 7 comparisons, mainly because mortensor’s predictive
+  package in 5 of 7 comparisons, mainly because mortensor’s predictive
   draws include the variation of observed rates around the smooth
   forecast, which the native intervals omit. This improves coverage
   most: bamp on the ONS data covers 0.79 of observed rates at 95%
   natively and 0.92 through [`apc_bayes()`](../reference/apc_bayes.md);
-  the functional demographic model 0.76 against 0.84 (ONS) and 0.59
-  against 0.75 (France). The exception is
+  the functional demographic model 0.76 against 0.82 (ONS) and 0.59
+  against 0.70 (France). The exceptions are the functional demographic
+  model on the ONS data, where both have the same CRPS (0.072), and
   [`demography::lca()`](https://pkg.robjhyndman.com/demography/reference/lca.html)
   on England & Wales men, whose least-squares fit with k adjusted to the
   observed deaths is more accurate there than the Poisson Lee-Carter of
@@ -262,11 +265,11 @@ wrapper adds no difference beyond Monte Carlo error.
   with drift on France, where the age pattern of mortality decline
   changed over the period and Lee-Carter extrapolates the old pattern.
 - Single structured models (Lee-Carter, `lca()`, functional demographic
-  model, StMoMo LC and CBD) have 95% intervals that cover 56% to 84% of
-  the observed rates, so they understate the uncertainty of real
-  forecasts. On the three larger data sets the random walk and the
-  ensemble of Lee-Carter and random walk cover 92% to 98% (bamp’s
-  example has only 48 scored cells).
+  model, StMoMo LC and CBD) have 95% intervals that cover 56% to 82% of
+  the observed rates on the three larger data sets, so they understate
+  the uncertainty of real forecasts. On the three larger data sets the
+  random walk and the ensemble of Lee-Carter and random walk cover 92%
+  to 98% (bamp’s example has only 48 scored cells).
 - The ensemble is never the most accurate but always close to the best
   (CRPS within 11% of the best model on the ONS data, 3% on France, 30%
   on England & Wales men) with near-nominal coverage, at the cost of

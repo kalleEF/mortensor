@@ -8,7 +8,8 @@ age), deaths and central exposures; for the logit-link models
 initial exposures are approximated as central exposures plus half the
 deaths, and forecast death probabilities are converted to central rates
 (m = -log(1 - q)). Cohorts observed in fewer than clip cells get zero
-weight. Draws come from simulate() of the fitted model (period and
+weight; their fitted rates use the effect of the nearest estimated cohort.
+Draws come from simulate() of the fitted model (period and
 cohort indexes simulated as multivariate random walks with drift and
 ARIMA, respectively).'><meta property="og:description" content='Wrapper around StMoMo (Villegas, Kaishev and Millossovich 2018):
 age-period-cohort ("apc"), Cairns-Blake-Dowd ("cbd", logit link),
@@ -19,9 +20,15 @@ age), deaths and central exposures; for the logit-link models
 initial exposures are approximated as central exposures plus half the
 deaths, and forecast death probabilities are converted to central rates
 (m = -log(1 - q)). Cohorts observed in fewer than clip cells get zero
-weight. Draws come from simulate() of the fitted model (period and
+weight; their fitted rates use the effect of the nearest estimated cohort.
+Draws come from simulate() of the fitted model (period and
 cohort indexes simulated as multivariate random walks with drift and
-ARIMA, respectively).'><script type="module">
+ARIMA, respectively).'><style>
+/* Bootstrap's paragraph margin inside the labels makes mermaid size the
+   boxes too small, which clips their last line */
+.mermaid-diagram p { margin: 0; }
+.mermaid-diagram { margin: 1rem 0 1.5rem; }
+</style><script type="module">
 import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.esm.min.mjs";
 mermaid.initialize({ startOnLoad: false, securityLevel: "strict" });
 window.addEventListener("load", async () => {
@@ -87,7 +94,8 @@ age), deaths and central exposures; for the logit-link models
 initial exposures are approximated as central exposures plus half the
 deaths, and forecast death probabilities are converted to central rates
 (<code>m = -log(1 - q)</code>). Cohorts observed in fewer than <code>clip</code> cells get zero
-weight. Draws come from <code><a href="https://rdrr.io/r/stats/simulate.html" class="external-link">simulate()</a></code> of the fitted model (period and
+weight; their fitted rates use the effect of the nearest estimated cohort.
+Draws come from <code><a href="https://rdrr.io/r/stats/simulate.html" class="external-link">simulate()</a></code> of the fitted model (period and
 cohort indexes simulated as multivariate random walks with drift and
 ARIMA, respectively).</p>
     </div>

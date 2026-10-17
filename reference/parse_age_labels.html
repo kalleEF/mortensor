@@ -9,7 +9,12 @@ written as "68-Jaehrige" with an umlaut).'><meta property="og:description" conte
 "1 and under 5", "90+", "85 and over", "85 years and older",
 "90 &amp;amp; over", "Age 85+", "0", "110+", and the German labels of
 the Federal Statistical Office ("unter 1 Jahr", "15 bis unter 20 Jahre", "1 bis 4 Jahre", "85 Jahre und mehr", and single years
-written as "68-Jaehrige" with an umlaut).'><script type="module">
+written as "68-Jaehrige" with an umlaut).'><style>
+/* Bootstrap's paragraph margin inside the labels makes mermaid size the
+   boxes too small, which clips their last line */
+.mermaid-diagram p { margin: 0; }
+.mermaid-diagram { margin: 1rem 0 1.5rem; }
+</style><script type="module">
 import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.esm.min.mjs";
 mermaid.initialize({ startOnLoad: false, securityLevel: "strict" });
 window.addEventListener("load", async () => {

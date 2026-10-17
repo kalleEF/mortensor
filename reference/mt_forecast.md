@@ -44,10 +44,12 @@ mt_forecast(
 - predictive:
 
   If `TRUE`, draws describe observable rates: for models of smooth
-  rates, extra-Poisson noise (estimated from in-sample residuals) and
-  Poisson variation of deaths given `exposure` are added, and zero
-  counts are replaced by 0.5 as in the training data. Used by
-  [`mt_backtest()`](mt_backtest.md).
+  rates, and for any model fitted to smoothed rates
+  ([`step_smooth()`](mt_prep.md)), extra-Poisson noise (estimated from
+  in-sample residuals of the raw rates) and Poisson variation of deaths
+  given `exposure` are added; cells can have zero deaths (rate 0). Used
+  by [`mt_backtest()`](mt_backtest.md), which sums the deaths to the
+  observed cells before taking logarithms.
 
 - exposure:
 

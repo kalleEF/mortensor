@@ -9,7 +9,12 @@ populations for one or more strata. Each table may use its own age and
 period resolution, for example deaths in 5-year age groups with an open
 90+ interval and exposures in single years of age. The container keeps
 the observations as they were supplied; harmonisation onto a common grid
-happens explicitly with mt_regroup() and mt_ungroup()."><script type="module">
+happens explicitly with mt_regroup() and mt_ungroup()."><style>
+/* Bootstrap's paragraph margin inside the labels makes mermaid size the
+   boxes too small, which clips their last line */
+.mermaid-diagram p { margin: 0; }
+.mermaid-diagram { margin: 1rem 0 1.5rem; }
+</style><script type="module">
 import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.esm.min.mjs";
 mermaid.initialize({ startOnLoad: false, securityLevel: "strict" });
 window.addEventListener("load", async () => {
@@ -165,10 +170,11 @@ European exports: <code>"1.234,5"</code>).</p></dd>
 <code><a href="parse_age_labels.html">parse_age_labels()</a></code>); periods are years, ranges of years or financial
 years (<code>"2001/02"</code>). Rows whose age or period is labelled as a total
 (<code>"All ages"</code>, <code>"Total"</code>, <code>"Insgesamt"</code>) are left out with a warning.
-Values of unknown age (<code>"Unknown"</code>, <code>"not stated"</code>, <code>"unbekannt"</code>) are
-distributed over the age groups of the same stratum and period in
+Values of unknown age (<code>"Unknown"</code>, <code>"not stated"</code>, <code>"unbekannt"</code>, <code>NA</code>)
+are distributed over the age groups of the same stratum and period in
 proportion to the known values, the usual practice of the Human
-Mortality Database, with a warning. Leading and trailing spaces in
+Mortality Database, with a warning. Rows of unknown period are left out
+with a warning. Leading and trailing spaces in
 stratum labels are removed; rows without a stratum label are left out.
 A warning lists levels of a stratum variable that occur in one table
 only (for example <code>"F"</code> in one table and <code>"female"</code> in another).</p>

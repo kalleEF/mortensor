@@ -6,7 +6,9 @@ the hierarchy variables). Cells are aggregated where all member strata
 observe the same age and period interval; other cells are dropped with a
 warning. Aggregate strata that are already in the data are kept as
 observed unless `replace = TRUE`; use [`mt_validate()`](mt_validate.md)
-with the hierarchy to check that they agree with the sums.
+with the hierarchy to check that they agree with the sums. Members of
+`groups` that are not levels of the data give a warning; a group without
+any is an error.
 
 ## Usage
 
