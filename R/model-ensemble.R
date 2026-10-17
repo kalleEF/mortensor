@@ -23,7 +23,11 @@
 #' replaced there by the other components in proportion to their weights;
 #' this is recorded in the diagnostics. Any model specification can be a
 #' component, including joint models, Bayesian models, tuned, bootstrapped
-#' and reconciled models, and other ensembles.
+#' and reconciled models, and other ensembles. The components must forecast
+#' the same strata: with [reconciled()] components, add the aggregates of the
+#' hierarchy to the data first ([mt_aggregate_strata()]). Weights from the
+#' inner backtest (`"crps"`, `"stack"`, `top_k`) compare the components on
+#' the cells that all of them forecast.
 #'
 #' A mixture is wider than its components when they disagree, which often
 #' corrects the too narrow intervals of single models, and its CRPS is never

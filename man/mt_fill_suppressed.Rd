@@ -15,8 +15,9 @@ mt_fill_suppressed(
 }
 \arguments{
 \item{data}{An \link{mt_data} object in which some death cells are missing
-(cells that other strata have; suppressed values are left out when the
-data are read).}
+(cells that other strata have and that no observed cell of the stratum
+overlaps, so a stratum reported in other age groups is not filled;
+suppressed values are left out when the data are read).}
 
 \item{hierarchy}{An \code{\link[=mt_hierarchy]{mt_hierarchy()}} that describes the published totals
 in the data, or \code{NULL} when there are none.}

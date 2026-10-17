@@ -72,7 +72,9 @@ example after a change of trend; compare windows with \code{\link[=tuned]{tuned(
 example 2020-2022) are either replaced by log-linear interpolation of
 the rates of the neighbouring periods (\code{"interpolate"}, deaths become
 exposure times the interpolated rate) or removed (\code{"exclude"}, only at
-the start or end of the data).
+the start or end of the data). With \code{"interpolate"}, shock periods at
+the start or end of the data, which have no neighbour on one side, are
+removed, as in a backtest whose training window ends inside the shock.
 }
 }
 \examples{

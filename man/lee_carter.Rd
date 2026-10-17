@@ -70,8 +70,12 @@ demography's life table where age 0 is in the data.
 The period index follows a random walk with drift. Draws include the
 innovations and the uncertainty of the drift. With \code{bootstrap = TRUE} the
 parameters are re-estimated on \code{n_boot} Poisson resamples of the fitted
-deaths (semi-parametric bootstrap of Brouhns et al. 2005), which adds the
-uncertainty of \code{a} and \code{b}.
+deaths of the fitting period (semi-parametric bootstrap of Brouhns et al.
+2005), which adds the uncertainty of \code{a} and \code{b}.
+
+Age groups without deaths in the fitting period get a constant rate (0.5
+deaths over the period) and no trend; with \code{adjust = "e0"} they enter the
+life tables at that rate.
 }
 \examples{
 x <- mt_example(deaths = "single")

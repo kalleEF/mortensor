@@ -86,13 +86,7 @@ mt_backtest <- function(spec, data, origins = NULL, h = 10, prep = NULL, n_draws
                    "and the smoother has seen the test years. Pass the raw data and smooth inside each fit:",
                    "prep = mt_prep(step_smooth(...))."), class = "smoothed_data")
   }
-  # inner backtests of a fit (tuned(), ensemble()) see the data the fit was given
-  if (!isTRUE(.mt_state$fitting) && ungrouped_deaths(data)) {
-    mt_abort(paste("The deaths in `data` were ungrouped with mt_ungroup(): the forecasts would be scored against",
-                   "estimated cells instead of the observed age groups, and an ungrouping over time has seen the",
-                   "test years. Pass the grouped data and ungroup inside each fit: prep = mt_prep(step_ungroup())."),
-             class = "ungrouped_data")
-  }
+  check_not_ungrouped(data)
   last <- max(mt_grid(data)$period$lower)
   origins <- origins %||% backtest_origins(data, h, n_origins, spec$min_periods)
   origins <- origins[origins < last]
@@ -132,6 +126,18 @@ backtest_origins <- function(data, h, n_origins, min_periods) {
   origins
 }
 
+# Backtests score observed cells: refuse data whose deaths were ungrouped
+# beforehand. Inner backtests of a fit (tuned(), ensemble()) see the data the
+# fit was given
+check_not_ungrouped <- function(data, call = sys.call(-1)) {
+  if (!isTRUE(.mt_state$fitting) && ungrouped_deaths(data)) {
+    mt_abort(paste("The deaths in `data` were ungrouped with mt_ungroup(): the forecasts would be scored against",
+                   "estimated cells instead of the observed age groups, and an ungrouping over time has seen the",
+                   "test years. Pass the grouped data and ungroup inside each fit: prep = mt_prep(step_ungroup())."),
+             class = "ungrouped_data", call = call)
+  }
+}
+
 # Were the deaths of `data` ungrouped with mt_ungroup()?
 ungrouped_deaths <- function(data) {
   ug <- attr(data, "ungroup")
@@ -148,7 +154,11 @@ backtest_origin <- function(spec, data, origin, h, prep, n_draws, seed, score_es
   test <- test_on_age_axis(test, fit$age)
   E_grid <- test_exposures(test, fit)
   fc <- mt_forecast(fit, to = to, n_draws = n_draws, seed = seed, predictive = TRUE, exposure = E_grid)
-  D_draws <- fc$rates * as.vector(E_grid)
+  # the strata of the data, in their order (a reconciled fit of bottom-level
+  # data also forecasts the aggregates)
+  sf <- match(test$strata$label, fc$strata$label)
+  if (anyNA(sf)) mt_abort("The forecast lacks strata of the data.", class = "backtest")
+  D_draws <- fc$rates[, , sf, , drop = FALSE] * as.vector(E_grid)
   obs <- test$obs$deaths
   obs <- obs[period_lo > origin]
   if (!score_estimated) obs <- obs[provenance != "estimated"]
@@ -179,7 +189,7 @@ backtest_origin <- function(spec, data, origin, h, prep, n_draws, seed, score_es
     o <- obs[sel]
     y <- log(pmax(o$value, 0.5) / Ecell)
     sc <- score_samples(X, y, probs)
-    scale <- mase_scale(fit, s, o)
+    scale <- mase_scale(fit, match(test$strata$label[s], fit$strata$label), o)
     rows[[length(rows) + 1L]] <- cbind(
       data.table(model = spec$label, prep = prep_label(prep), origin = origin, horizon = o$period_lo - origin,
                  stratum = s, age_lo = o$age_lo, age_hi = o$age_hi, period = o$period_lo, observed = y,

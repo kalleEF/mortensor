@@ -183,7 +183,8 @@ hierarchy_nodes <- function(bottom, h, by) {
 #' observe the same age and period interval; other cells are dropped with a
 #' warning. Aggregate strata that are already in the data are kept as
 #' observed unless `replace = TRUE`; use [mt_validate()] with the hierarchy
-#' to check that they agree with the sums.
+#' to check that they agree with the sums. Members of `groups` that are not
+#' levels of the data give a warning; a group without any is an error.
 #'
 #' @param data An [mt_data] object with (at least) the bottom strata.
 #' @param hierarchy An [mt_hierarchy()].
@@ -302,7 +303,11 @@ mt_aggregate_strata <- function(data, hierarchy, replace = FALSE) {
 #' rates was relatively large in that year receives a relatively high path.
 #' The marginal distribution of each stratum is unchanged.
 #'
-#' The one-variable interface with `var` and `total` is still accepted.
+#' The one-variable interface with `var` and `total` is still accepted. It
+#' reconciles deaths when the exposures of the parts add up to that of the
+#' total (sexes, regions) and rates when each part has the exposure of the
+#' total (causes of death) or there are no exposures; give a hierarchy with
+#' `additive` to choose.
 #'
 #' @param draws An [mt_draws] object with the strata of the hierarchy.
 #' @param hierarchy An [mt_hierarchy()] (or, for one variable, `var` and
@@ -314,7 +319,7 @@ mt_aggregate_strata <- function(data, hierarchy, replace = FALSE) {
 #'   or `"auto"`.
 #' @param exposure Exposures `[age, period, stratum]` or `[age, stratum]` for
 #'   the forecast years (default: last training year). Only bottom strata are
-#'   used; aggregates are summed.
+#'   used, and they are enough; aggregates are summed.
 #' @param dependence `"empirical"` or `"none"` (keep the draws as they are).
 #' @param seed Random seed for the reordering.
 #' @param fixed Strata whose forecasts are kept unchanged (labels, or
@@ -919,6 +924,8 @@ mt_aggregate_draws <- function(draws, hierarchy = NULL, age = NULL, exposure = N
   out$exposure_last <- E[, 1, , drop = FALSE]
   out$observed <- NULL
   out$fitted <- NULL
+  # components per stratum and draw (reordered ensembles) do not describe sums of strata
+  if (is.matrix(out$component)) out$component <- NULL
   out
 }
 

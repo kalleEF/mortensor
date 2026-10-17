@@ -28,7 +28,9 @@ mt_plot_pit(
 
 \item{backtest}{An \code{\link[=mt_backtest]{mt_backtest()}} result.}
 
-\item{target}{\code{"rate"}, \code{"life_expectancy"} or \code{"asr"}.}
+\item{target}{\code{"rate"}, \code{"life_expectancy"}, \code{"asr"},
+\code{"life_expectancy_gap"} or \code{"asr_gap"} (see \code{quantities} and \code{contrast}
+in \code{\link[=mt_backtest]{mt_backtest()}}).}
 
 \item{bins}{Number of histogram bins.}
 }

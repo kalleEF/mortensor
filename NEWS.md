@@ -57,6 +57,33 @@ Models:
   in every draw; the extra variation of the shares beyond multinomial
   sampling is estimated as such.
 
+Wrappers and hierarchies:
+
+* `reconciled(anchored(...))` and `reconciled(recalibrated(...))`
+  reconcile again (the inner wrapper's fields replaced those of
+  `reconciled()`); nested wrappers keep their own fields.
+* Observation noise of reconciled predictive draws is independent across
+  cells: the empirical copula reorders the paths only. The noise had been
+  made comonotone across strata, which widened the intervals of the
+  aggregates (validation `de_regions`: 95% coverage of the aggregates
+  0.76, before 0.80).
+* Exposures given for the bottom strata only are summed to the
+  aggregates; a reconciled model backtested on bottom-level data scores
+  the right strata (the draws of other strata had been recycled).
+* Hierarchies of one variable are reconciled on the scale of deaths when
+  the exposures of the parts add up to the total, on the scale of rates
+  when each part has the total's exposure (causes of death).
+* `ensemble()`: inner backtests are matched cell by cell, components that
+  forecast different strata are refused, and the ensemble fit no longer
+  carries the first component's calibration or jump-off. Ensembles and
+  `tuned()` add observation noise according to their components.
+* `stratified()` with a level named `other`, `recalibrated(seed = NULL)`,
+  `bootstrapped(tuned(...))`, `mt_coherence()` with one year or one draw,
+  and the component of each draw after reordering are fixed.
+* `mt_hierarchy()` checks its groups; `mt_aggregate_strata()` warns about
+  members missing from the data. `mt_tune()` refuses ungrouped data with
+  the reason.
+
 Evaluation and derived quantities:
 
 * Backtests floor the predictive deaths at half a death after summing them

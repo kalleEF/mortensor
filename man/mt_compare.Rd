@@ -117,15 +117,19 @@ forecasts (models, scenarios, jump-off choices) as a table or a figure.
 list on the same data and origins and returns one backtest whose
 \code{model} column holds the names (in the order given). An element can be
 a model specification or \code{list(spec = , prep = )} with its own
-preprocessing.
+preprocessing. Without \code{origins}, the default origins of
+\code{\link[=mt_backtest]{mt_backtest()}} are chosen once for all models, with enough training
+years for the model that needs the most.
 \item \code{mt_score_table()} gives the mean scores of a backtest for every
 target it holds side by side: log death rates without suffix, life
 expectancy with \verb{_le} (years), the age-standardised rate with \verb{_asr},
 and differences between strata (\code{contrast} in \code{\link[=mt_backtest]{mt_backtest()}}) with
-\verb{_le_gap} and \verb{_asr_gap}.
+\verb{_le_gap} and \verb{_asr_gap}. The same model with different preprocessing
+gets one row per pipeline (column \code{prep}, as in \code{\link[=mt_score]{mt_score()}}).
 \item \code{mt_compare_forecasts()} gives one quantity of several forecasts
 (\code{mt_draws}) or observed data (\code{mt_data}, with Poisson intervals) as
-"median (lower-upper)", one column per forecast.
+"median (lower-upper)", one column per forecast (empty where a
+forecast has no value for the periods shown).
 \item \code{mt_plot_compare()} draws the same quantity of several forecasts in
 one figure, one colour per forecast: medians (dashed), intervals,
 fitted values (solid) and the observed values (points). With \code{periods}

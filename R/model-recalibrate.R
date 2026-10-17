@@ -220,7 +220,8 @@ spec_adds_noise <- function(spec) {
 # the spec the wrapper was given)
 fit_adds_noise <- function(fit) {
   specs <- c(list(fit$spec), fit$inner_specs)
-  spec_adds_noise(specs[[length(specs)]])
+  # any model fitted to smoothed rates (step_smooth()) forecasts smooth rates
+  spec_adds_noise(specs[[length(specs)]]) || isTRUE(fit$smoothed_input)
 }
 
 # Observation noise of each draw: whether Poisson noise is added

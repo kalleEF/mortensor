@@ -75,10 +75,11 @@ Age labels of many sources are recognised (see
 \code{\link[=parse_age_labels]{parse_age_labels()}}); periods are years, ranges of years or financial
 years (\code{"2001/02"}). Rows whose age or period is labelled as a total
 (\code{"All ages"}, \code{"Total"}, \code{"Insgesamt"}) are left out with a warning.
-Values of unknown age (\code{"Unknown"}, \code{"not stated"}, \code{"unbekannt"}) are
-distributed over the age groups of the same stratum and period in
+Values of unknown age (\code{"Unknown"}, \code{"not stated"}, \code{"unbekannt"}, \code{NA})
+are distributed over the age groups of the same stratum and period in
 proportion to the known values, the usual practice of the Human
-Mortality Database, with a warning. Leading and trailing spaces in
+Mortality Database, with a warning. Rows of unknown period are left out
+with a warning. Leading and trailing spaces in
 stratum labels are removed; rows without a stratum label are left out.
 A warning lists levels of a stratum variable that occur in one table
 only (for example \code{"F"} in one table and \code{"female"} in another).

@@ -66,7 +66,8 @@ With \code{common_by} (for example \code{"sex"}), each level of that stratum
 variable forms its own group with its own product (for example the
 quintiles of each sex). If the data carry a hierarchy (see
 \code{\link[=mt_aggregate_strata]{mt_aggregate_strata()}}), the product is computed from the bottom strata;
-aggregates get their own ratio to it.
+aggregates get their own ratio to it. Every group needs at least two
+strata (\code{\link[=hyndman_ullah]{hyndman_ullah()}} models a single stratum).
 }
 \examples{
 if (requireNamespace("demography", quietly = TRUE)) {

@@ -28,7 +28,8 @@ interval; default the first age).}
 \item{paths}{For draws, return the values of every path, an array
 \verb{[period, stratum, draw]}.}
 
-\item{...}{Passed to the life-table calculation (\code{ax}, \code{open}, \code{k}).}
+\item{...}{Passed to the life-table calculation (\code{ax}, \code{open}, \code{k}). A
+rate of 0 in the open interval is replaced as in \code{\link[=life_table]{life_table()}}.}
 }
 \value{
 For arrays, an array without the age dimension. For draws, a

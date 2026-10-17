@@ -14,7 +14,10 @@ mt_fit(spec, data, prep = NULL, cores = 1, ...)
 \item{prep}{An \link{mt_prep} pipeline or \code{NULL}.}
 
 \item{cores}{Number of cores for per-stratum fits (forked processes; 1 on
-Windows).}
+Windows). Each stratum is fitted with its own random number stream,
+started from the current generator, so fits that use random numbers
+(such as \code{lee_carter(bootstrap = TRUE)}) are reproduced by \code{set.seed()}
+with any number of cores.}
 
 \item{...}{Passed to methods.}
 }

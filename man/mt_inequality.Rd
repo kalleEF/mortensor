@@ -19,9 +19,12 @@ mt_inequality(
 \item{var}{Ordered stratum variable (for example \code{"quintile"}).}
 
 \item{order}{Levels of \code{var} from rank 0 to rank 1 (default: their order
-in the data). For deprivation, list the least deprived level first so
-that a positive SII means higher values in more deprived groups. Levels
-not listed, such as the total of a hierarchy, are left out.}
+in the data, without the total and the groups of a hierarchy stored in
+\code{x} by \code{\link[=mt_aggregate_strata]{mt_aggregate_strata()}}, \code{\link[=reconciled]{reconciled()}} or
+\code{mt_group_levels(total = )}). For deprivation, list the least deprived
+level first so that a positive SII means higher values in more deprived
+groups. Levels not listed, such as the total of a hierarchy, are left
+out.}
 
 \item{quantity}{\code{"life_expectancy"}, \code{"asr"}, \code{"prob_dying"} or
 \code{"rate"}.}

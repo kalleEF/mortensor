@@ -186,3 +186,23 @@ test_that("a zero rate in the open interval gives a finite life expectancy", {
   M <- cbind(m, m2)
   expect_equal(as.vector(life_expectancy(M, single_ages(0, 100))), rep(life_table(m2)$ex[1], 2))
 })
+
+test_that("a reconciled model is backtested on bottom-level data like on aggregated data", {
+  x <- mt_subset(mt_example_regions(years = 2000:2019, regions = 2), quintile %in% c("Q1", "Q5"), sex == "female")
+  h <- mt_hierarchy(region = "national")
+  spec <- reconciled(lee_carter(), h, method = "wls")
+  b1 <- suppressWarnings(mt_backtest(spec, x, origins = 2014, h = 3, n_draws = 30, seed = 1))
+  b2 <- suppressWarnings(mt_backtest(spec, mt_aggregate_strata(x, h), origins = 2014, h = 3, n_draws = 30, seed = 1))
+  m <- merge(b1[, .(label = mt_strata(x)$label[stratum], age_lo, period, crps)],
+             b2[, .(label = mt_strata(mt_aggregate_strata(x, h))$label[stratum], age_lo, period, crps)],
+             by = c("label", "age_lo", "period"))
+  expect_equal(nrow(m), nrow(b1))
+  expect_equal(m$crps.x, m$crps.y)
+})
+
+test_that("mt_tune() refuses ungrouped data with the reason", {
+  x <- mt_example(deaths = "grouped", years = 1995:2012)
+  u <- suppressWarnings(mt_ungroup(x))
+  expect_error(mt_tune(function(w) rwd(drift_window = w), data.frame(w = c(5, 10)), u),
+               class = "mt_error_ungrouped_data")
+})

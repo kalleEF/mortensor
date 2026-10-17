@@ -22,7 +22,8 @@ The \code{mt_data} object with the new labels.
 \description{
 Gives levels of a stratum variable new labels, for example sex codes
 \code{"1"} and \code{"2"} as \code{"male"} and \code{"female"}. Levels mapped to the same new
-label are combined (see \code{\link[=mt_group_levels]{mt_group_levels()}}).
+label, or to the label of a level that is kept, are combined (see
+\code{\link[=mt_group_levels]{mt_group_levels()}}).
 }
 \examples{
 d <- data.frame(Sex = rep(1:2, each = 2), year = 2020:2021, age = "90+", deaths = 5:8,

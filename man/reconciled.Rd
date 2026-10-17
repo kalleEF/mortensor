@@ -23,10 +23,11 @@ reconciled(
 \item{dependence}{\code{"auto"} (default: \code{"none"} for models fitted jointly
 across strata, whose draws already carry their dependence, such as
 \code{\link[=li_lee]{li_lee()}} and \code{\link[=tucker3]{tucker3()}}; \code{"empirical"} for models fitted per stratum),
-\code{"empirical"} or \code{"none"}. With \code{"empirical"} the same training years
-order the paths before reconciliation and the predictive noise of the
-bottom strata, so aggregates of predictive draws keep the observed
-co-movement.}
+\code{"empirical"} or \code{"none"}. With \code{"empirical"} the paths of the strata
+are reordered before reconciliation (see \code{\link[=mt_reconcile]{mt_reconcile()}}), so that
+aggregates keep the observed co-movement of the strata; the observation
+noise of predictive draws is independent across cells, as for models
+without a hierarchy.}
 
 \item{fixed}{Strata whose forecasts are kept (see \code{\link[=mt_reconcile]{mt_reconcile()}}).}
 }
@@ -38,9 +39,15 @@ Wraps a model specification so that its forecasts are reconciled over a
 hierarchy every time it is forecast, also inside \code{\link[=mt_backtest]{mt_backtest()}}. If the
 training data contain only the bottom strata, the aggregate strata are
 added with \code{\link[=mt_aggregate_strata]{mt_aggregate_strata()}} before fitting, so that the base model
-forecasts every node. Predictive draws (used by backtests) are coherent
-as well: Poisson and extra-Poisson variation are drawn for the bottom
-strata only and the aggregates are their sums.
+forecasts every node; exposures for the forecast (\code{exposure} of
+\code{\link[=mt_forecast]{mt_forecast()}}) can then be given for the bottom strata only, and those
+of the aggregates are their sums. Predictive draws (used by backtests)
+are coherent as well: the observation noise of the base model (Poisson
+and extra-Poisson variation for models of smooth rates, none for models
+of observed rates such as \code{\link[=rwd]{rwd()}}; for \code{\link[=ensemble]{ensemble()}} and \code{\link[=stratified]{stratified()}}
+models that of the component or group each draw comes from) is drawn for
+the bottom strata only, independently per cell, and the aggregates are
+their sums.
 }
 \details{
 Whether coherence costs accuracy, and which method and base model work

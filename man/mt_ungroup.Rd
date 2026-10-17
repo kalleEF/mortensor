@@ -29,7 +29,8 @@ set (with \code{\link[=mt_set_grid]{mt_set_grid()}} or \code{step_grid()}) and i
 otherwise single years of age from the lowest age to the start of the
 open interval.}
 
-\item{dims}{1 or 2.}
+\item{dims}{1 or 2 (for \code{method = "pclm"}; \code{"gam"} is always 2D, the
+other methods 1D).}
 
 \item{method}{Method for deaths: \code{"pclm"} (default); \code{"monotone"}
 (cumulative deaths interpolated by a monotone Hyman spline, counts only,
@@ -97,7 +98,11 @@ smooth age-period surface per stratum (two smoothing parameters).
 
 With \code{preserve_totals = TRUE}, the estimated deaths within each observed
 group are rescaled to the observed total, so aggregation reproduces the
-data exactly. Cells already observed at grid resolution are kept.
+data exactly. Cells already observed at grid resolution are kept. When
+deaths are ungrouped as rates and the grid starts with age 0 as its own
+interval, an observed first year of life is kept and left out of the fit,
+as in \code{\link[=mt_smooth]{mt_smooth()}}: infant mortality does not follow the age pattern of
+the following ages, and its peak would spill into ages 1-6.
 
 In backtests use \code{step_ungroup()} so that ungrouping, in particular in 2D,
 sees only the training window.

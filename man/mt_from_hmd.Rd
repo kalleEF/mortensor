@@ -33,6 +33,8 @@ An \link{mt_data} object.
 \code{mt_from_hmd()} converts HMD tables in the layout returned by
 \code{HMDHFDplus::readHMDweb()} (columns \code{Year}, \code{Age}, \code{Female}, \code{Male},
 \code{Total}, and \code{OpenInterval}) into an \link{mt_data} object with strata \code{sex}.
+Without column \code{OpenInterval}, an age written with \code{+} (\code{"110+"}) is the
+open interval.
 \code{mt_read_hmd()} downloads \code{Deaths_1x1} and \code{Exposures_1x1} for one country
 with \pkg{HMDHFDplus}; an HMD account is needed (\url{https://www.mortality.org}).
 }

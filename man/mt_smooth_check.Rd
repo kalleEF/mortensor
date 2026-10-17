@@ -53,6 +53,10 @@ values mean that smoothing removed most of the annual variation;
 \item \code{correlation}: correlation of raw and smoothed log rates.
 }
 
+The measures use the smoothed cells only (provenance \code{"smoothed"}), so
+ages left out of the smoothing (see \code{ages} in \code{\link[=mt_smooth]{mt_smooth()}}) do not
+dilute them.
+
 \code{mt_plot_smooth()} shows raw rates as points and smoothed rates as lines
 over time, one panel per age.
 }

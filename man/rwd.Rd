@@ -51,7 +51,9 @@ level is Kalman filtered, and the forecast draws are paths of the level;
 predictive draws add the observation noise. The variant is more accurate
 than the plain random walk where deaths are few, but over 5 to 10 years
 its intervals can be too narrow, because changes of trend exceed the
-uncertainty of a constant drift; the plain random walk is wider.
+uncertainty of a constant drift; the plain random walk is wider. With a
+\code{drift_window}, the model is fitted to the years of the window and fitted
+rates of earlier years are missing.
 }
 \examples{
 x <- mt_example(deaths = "single")

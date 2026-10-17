@@ -102,6 +102,7 @@ mt_tune <- function(spec_fun, grid, data, prep = NULL, inner_origins = 3, inner_
                     select = c("min", "one_se"), by = NULL) {
   if (!is.function(spec_fun)) mt_abort("`spec_fun` must be a function.", class = "argument")
   check_class(data, "mt_data", "data")
+  check_not_ungrouped(data)
   strategy <- match.arg(strategy)
   target <- match.arg(target)
   select <- match.arg(select)
