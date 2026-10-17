@@ -134,7 +134,11 @@ flowchart TD
 ```
 
 `tuned()` and `mt_tune()` run the same comparison inside a fit, over a
-grid of settings.
+grid of model and preprocessing settings (for example the number of
+components and the smoothing of `hyndman_ullah()`, or the fitting
+window), with rolling origins or a single hold-out of the last years.
+`calibrated()` keeps the chosen model and rescales the width of its
+intervals.
 
 ## Map 3: from draws to results
 
@@ -187,10 +191,10 @@ flowchart TD
 | Harmonise | `mt_smooth_check()`, `mt_plot_smooth()` | how much smoothing removed (dispersion, trend ratio) | `mt_data` pair | table, ggplot |
 | Harmonise | `mt_prep()`, `mt_prep_apply()` with `step_ungroup()`, `step_smooth()`, `step_regroup()`, `step_grid()`, `step_shocks()`, `step_window()` | preprocessing inside fits and backtests | steps | pipeline |
 | Model | `lee_carter()`, `rwd()`, `li_lee()`, `product_ratio()`, `hyndman_ullah()`, `stmomo()`, `arima_series()`, `ets_series()`, `apc_bayes()`, `tucker3()`, `cause_shares()` | model specifications | settings | `mt_spec` |
-| Model | `apc_select()`, `mcmc_control()`, `mt_tune()` | choose random-walk orders, MCMC settings, settings by inner backtest | data, grid | table, `mt_spec` |
+| Model | `apc_select()`, `mcmc_control()`, `mt_tune()` | choose random-walk orders, MCMC settings; model and preprocessing settings by forecast accuracy on the last years (hold-out or rolling origins; rates, life expectancy or ASR) | data, grid | table, `mt_spec` |
 | Combine | `ensemble()` (optionally `top_k`), `reconciled()`, `bootstrapped()`, `tuned()` | mixtures, coherence, parameter uncertainty (and of smoothing, `type = "data"`), tuning | `mt_spec` | `mt_spec` |
 | Combine | `mt_order_strata()` | keep an ordering between strata (for example women below men) path by path | `mt_draws` | `mt_draws` |
-| Calibrate | `calibrated()` | rescale the spread (optionally the drift) of any model's draws to its forecast errors in the last years | `mt_spec` | `mt_spec` |
+| Calibrate | `calibrated()` | rescale the spread (optionally the drift) of any model's draws to its forecast errors in the last years, overall or by age band, for rates, life expectancy or ASR | `mt_spec` | `mt_spec` |
 | Jump-off | `anchored()`, `mt_jump_off()` | start forecasts at the observed level of the last years; report the first-year step | `mt_spec`, `mt_draws` | `mt_spec`, table |
 | Coherence | `mt_hierarchy()`, `mt_aggregate_strata()`, `mt_reconcile()` (with `fixed` nodes; `"proportional"` scales the parts of fixed nodes), `mt_aggregate_draws()` | define and apply totals of strata | hierarchy | `mt_data`, `mt_draws` |
 | Coherence | `mt_coherence()`, `mt_plot_coherence()` | sum of parts over aggregate, per year | `mt_draws`, hierarchy | table, ggplot |

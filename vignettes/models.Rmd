@@ -214,17 +214,31 @@ al. 2005). Optionally a drift correction is estimated as well. Ranks
 within each cell are kept, so the draws remain paths. Calibration widens
 models that were persistently too narrow (Lee-Carter on England & Wales:
 95% coverage 0.75 to 0.88 in backtests) and can narrow mixtures that were
-already wide.
+already wide. `ages` gives each age band its own factors; `quantity =
+"life_expectancy"` or `"asr"` calibrates the intervals of these quantities
+(which also depend on how the ages move together); `n_boot` reports
+bootstrap intervals of the factors. Beyond the longest horizon of the
+window the factors stay constant. Calibration keeps the model and its
+settings; choosing the settings themselves is tuning (below).
 
 ### Bootstrap and tuning: `bootstrapped()`, `tuned()`
 
 `bootstrapped()` refits a model to Poisson resamples of the deaths
 (parameter uncertainty, including preprocessing with `type = "data"`).
-`tuned()` chooses settings (for example the rank) by an inner
-rolling-origin backtest on the training data only. The fitting period
-matters for Lee-Carter forecasts when the pace of decline changed (Booth,
-Maindonald and Smith 2002); `step_window(years)` makes it a preprocessing
-step that a backtest compares across windows.
+`tuned()` chooses settings by how well they forecast the last years of
+the training data only (`mt_tune()` shows the scores): model settings
+such as the number of components or the rank, and with `spec_fun`
+returning `list(spec = , prep = )` preprocessing settings such as the
+smoothing parameter or the fitting window. `inner_origins = 1, inner_h =
+10` is the hold-out of the last ten years often used with
+`demography::fdm()`; several origins make the choice depend less on one
+period. The criterion can be the CRPS, the interval score or point
+accuracy (`metric = "rmse"`) of rates, life expectancy or ASR (`target`);
+`select = "one_se"` takes the simplest setting within one standard error
+of the best, and `by` tunes groups of strata separately. The fitting
+period matters for Lee-Carter forecasts when the pace of decline changed
+(Booth, Maindonald and Smith 2002); `step_window(years)` makes it a
+preprocessing step that tuning compares across windows.
 
 ## Sources of uncertainty at a glance
 

@@ -103,6 +103,31 @@ checks$calibration_ew <- list(
                          mean(cl$crps) / mean(lc$crps)))
   })
 
+checks$tuning_ew <- list(
+  suite = "full",
+  description = paste("Tuning and calibration on England & Wales men (as backtest_ew: origins 1996-2001, h = 10):",
+                      "hyndman_ullah() with 6 components against the number of components and the knots of the",
+                      "smoother chosen at each origin by a hold-out of the last 10 training years (RMSE, tuned()),",
+                      "and the tuned model calibrated (calibrated(tuned())); CRPS, RMSE of the median and 95%",
+                      "coverage of the log rates."),
+  run = function() {
+    ew <- as_mt_data(mortensor:::pkg_data("EWMaleData", "StMoMo"))
+    ew <- mt_set_grid(ew, age = single_ages(30, 100, open = FALSE))
+    ew <- mt_regroup(ew, age = single_ages(30, 100, open = FALSE))
+    o <- 1996:2001
+    g <- expand.grid(k = c(10, 30), order = c(1, 2, 3, 6))[, c("order", "k")]
+    tu <- tuned(function(order, k) hyndman_ullah(order = order, smooth_args = list(k = k)), g, inner_origins = 1,
+                inner_h = 10, metric = "rmse", label = "tuned (hold-out)")
+    b0 <- mt_backtest(hyndman_ullah(), ew, origins = o, h = 10, n_draws = 200)
+    b1 <- mt_backtest(tu, ew, origins = o, h = 10, n_draws = 200)
+    b2 <- mt_backtest(calibrated(tu), ew, origins = o, h = 10, n_draws = 200)
+    rmse <- function(b) sqrt(mean(b$ae^2))
+    data.frame(metric = c("fdm_crps", "fdm_rmse", "fdm_cov95", "tuned_crps", "tuned_rmse", "tuned_cov95",
+                          "tuned_cal_crps", "tuned_cal_cov95", "rmse_ratio_tuned_fdm"),
+               value = c(mean(b0$crps), rmse(b0), mean(b0$cov95), mean(b1$crps), rmse(b1), mean(b1$cov95),
+                         mean(b2$crps), mean(b2$cov95), rmse(b1) / rmse(b0)))
+  })
+
 checks$smoothing_jumpoff <- list(
   suite = "quick",
   description = paste("Smoothing over time and jump-off control. England & Wales men (as backtest_ew, origins",

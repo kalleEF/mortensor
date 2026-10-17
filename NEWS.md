@@ -40,6 +40,11 @@ Clean break: the 0.1.x interface is replaced (see `dev/revamp-plan.md`).
     horizon of the calibration window instead of growing further;
   * a warning when the factors rest on the forecasts of one origin; the
     table reports the numbers of inner forecasts and scored values.
+* Benchmark of tuning and calibration (`dev/tuning.md`, validation check
+  `tuning_ew`): tuning the fitting window of Lee-Carter on a 10-year
+  hold-out improved forecasts on England & Wales and France; tuning the
+  components and smoothing of fdm the same way did not; calibration
+  brought the 95% coverage of all models close to nominal.
 
 ## Function map
 

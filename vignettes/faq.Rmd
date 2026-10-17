@@ -130,6 +130,29 @@ errors in the last years of the training data (by default ten); on England
 & Wales men it raised the 95% coverage of Lee-Carter from 0.75 to 0.88.
 Check calibration with `mt_backtest()` and `mt_plot_coverage()`.
 
+### How do I choose smoothing and model parameters by forecast accuracy?
+
+This is tuning: fit each candidate setting to the years up to `T - h`,
+forecast the last `h` years, and keep the setting that forecast them best,
+then refit it to all years. `mt_tune()` does this for any grid of
+settings, including preprocessing, and `tuned()` makes it part of a model,
+so that an outer backtest repeats the choice at each origin without seeing
+the test years:
+
+```r
+grid <- expand.grid(k = c(10, 30), order = 1:6)
+spec <- tuned(function(order, k) hyndman_ullah(order = order, smooth_args = list(k = k)), grid,
+              inner_origins = 1, inner_h = 10, metric = "rmse")
+```
+
+`inner_origins = 1` is a single hold-out of the last ten years; several
+origins (`inner_origins = 3, inner_h = 5`) average over more periods.
+`metric = "rmse"` chooses by point accuracy, `"crps"` by the whole
+forecast distribution, and `target = "life_expectancy"` by the quantity of
+interest. `calibrated()` answers a different question: it keeps the model
+and rescales the width of its intervals to the recent forecast errors. The
+two combine as `calibrated(tuned(...))`.
+
 ### Should I smooth the data before forecasting?
 
 Smoothing over age helps where cells hold few deaths (rare causes, small

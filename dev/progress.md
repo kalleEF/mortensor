@@ -48,6 +48,7 @@ work: `claude/vigilant-albattani-2ssw1x` (plays the role of `dev-0.2`).
 | U0 | done | this branch | Review of the owner's earlier UK analysis (`uk_analysis.R`, methodology document, plots) and integration plan `dev/integration-plan-uk-analysis.md`: plot layout as standard, jump-off control, reconciliation with a fixed total, diagnostics; list of elements not to port. Package labelled experimental and vibe-coded (README, DESCRIPTION, package help, startup message); documentation rule in `CLAUDE.md` |
 | Q1 | done | this branch | Decomposition as post-processing (`dev/decomposition-plan.md`): `mt_decompose()` for observed data, forecast draws or both (comparisons between strata, years or objects); symmetric Arriaga with cause split, Horiuchi line integral, stepwise replacement, Kitagawa (crude rate), subgroup composition at the radix (Riffe, Tursun-zade and Trias Llimós 2024) or pooled; `summary()`, `mt_plot_decomposition()`; tests against DemoDecomp, LEdecomp and Table 1 of Riffe et al.; validation check `decomposition`; article on ONS data |
 | Q2 | done | this branch | Applied reviews 3 and 4 (`dev/review-applied-3.md`, `-4.md`) implemented: totals among causes and groups refused in `mt_decompose()`, `composition` required for `groups`, `observed = "fitted"`/`"poisson"`, `jump_off`, `pairing`, `summary(change = )`, export; life table `q` capped by `1 - exp(-n m)`; `mt_reconcile(method = "proportional")` and warnings of non-negative projections; corrected shrinkage in `anchored()`; smoothed data warned in `mt_fit()` and refused in `mt_backtest()`; `prep` and `unit` in scores; period axes with gaps; vignettes on all-cause forecasts implied by causes, forecast decompositions and calibration without smoothing |
+| Q3 | done | this branch | Tuning and calibration review (`dev/tuning.md`): `hyndman_ullah(smooth = TRUE)` (smooth.demogdata); `mt_tune()`/`tuned()` with preprocessing in the grid, hold-out, life expectancy and ASR targets, RMSE, standard errors, one-SE rule, `by` groups (`mt_fit_split`); wrappers around `tuned()` fixed (spec stack); `calibrated()` by age band, on life expectancy or ASR, bootstrap intervals, drift held beyond the window; validation check `tuning_ew`; CI lint fix for lintr 3.4 |
 | U1 | done | this branch | Methods of the earlier UK analysis (plan 4.2-4.8): `mt_smooth(along = "period")` (Whittaker over time, GCV pooled per stratum), `mt_smooth(dims = 2, method = "gam")` (quasi-Poisson `te(age, year)`), `mt_smooth_check()`, `mt_plot_smooth()`; models fitted to smoothed rates take residuals, observation noise, MASE scale and copula from the raw deaths (`fit$raw_D`); `anchored()` and `mt_jump_off()`; `fixed` nodes in `mt_reconcile()`/`reconciled()` with non-negative projection, `mt_coherence()`, `mt_plot_coherence()`; `mt_backtest(quantities = )` and `mt_score(target = )` for life expectancy and ASR, `mt_plot_scores(by = "model")`; `lee_carter(adjust = , choose_period = )` (demography's `lca` adjustments and BMS period); `ensemble(top_k = )`; `mt_tune(strategy = "two_stage")`; tail options and diagnostics of disaggregation (`mt_shape_rates()`, `mt_disaggregate_check()`, `mt_plot_disaggregation()`); validation check `smoothing_jumpoff`; vignettes updated (HMD, deprivation, coherence, causes) |
 | V3 | done | this branch | Comparison vignette (fidelity and accuracy vs demography, bamp, StMoMo; stored results of `dev/compare-packages.R`, full run 2026-10-13); regional vignette on German Laender (precomputed); validation check `de_regions` |
 | D1.12 (HMD) | done | this branch | `mt_from_hmd()`, `mt_read_hmd()` (HMDHFDplus, credentials from `HMD_USER`/`HMD_PASSWORD`) |
@@ -210,6 +211,15 @@ work: `claude/vigilant-albattani-2ssw1x` (plays the role of `dev-0.2`).
   CSS reset in `_pkgdown.yml`; map 1 no longer sends `mt_smooth()` output
   to models, `mt_prep()` points to `mt_fit()`. Checked by rendering the
   built pages in Chromium with mermaid 10.9.1.
+
+- 2026-10-17: Tuning benchmark (`dev/tuning-benchmark.R`, `dev/tuning.md`).
+  Lee-Carter with its fitting window tuned by a 10-year hold-out: E&W CRPS
+  0.0573 against 0.0687, e30 0.29 against 0.47 years (window 15 at every
+  origin). fdm tuned over components and knots by the same hold-out: no
+  gain (E&W 0.0657 against 0.0641; France 0.104 against 0.096), choices
+  alternate between origins. Smoothing fdm narrows its intervals (95%
+  coverage 0.63 against 0.70). Tuned and calibrated fdm: 95% coverage
+  0.90/0.91 (rates), 0.87/0.80 (life expectancy).
 
 ## Open questions
 
