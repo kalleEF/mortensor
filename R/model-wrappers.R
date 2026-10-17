@@ -17,7 +17,9 @@
 #' the smoothed values at the observed ages are used (a weaker smoothing).
 #' The smoothing settings (`smooth_args`, such as `k`, the number of knots)
 #' and the number of components can be chosen by forecast accuracy with
-#' [tuned()].
+#' [tuned()]. When the default monotonic spline cannot be fitted (for
+#' example for age ranges that start in middle age), the rates are smoothed
+#' without the monotonicity constraint and the fit diagnostics say so.
 #'
 #' @param order Number of principal components.
 #' @param method Forecast method for the coefficients (`"arima"`, `"ets"`,
@@ -65,10 +67,24 @@ fit_model.mt_spec_fdm <- function(spec, D, E, ages, periods, ...) {
 # Smooth the rates of each year over age with demography::smooth.demogdata()
 # and keep the observed ages (the smoother returns single years of age)
 fdm_smooth <- function(dd, ages, args) {
-  sm <- tryCatch(suppressWarnings(do.call(demography::smooth.demogdata, c(list(dd), args))), error = function(e) {
-    mt_abort(paste("smooth.demogdata() failed:", conditionMessage(e), "Try other `smooth_args` or `smooth = FALSE`."),
+  try_smooth <- function(a) {
+    tryCatch(suppressWarnings(do.call(demography::smooth.demogdata, c(list(dd), a))), error = function(e) e)
+  }
+  sm <- try_smooth(args)
+  if (inherits(sm, "error") && is.null(args$b) && is.null(args$method)) {
+    # the monotonic spline above age b can fail to start; smooth without
+    # the constraint (a penalised regression spline)
+    first <- conditionMessage(sm)
+    sm <- try_smooth(c(args, list(b = 1e3)))
+    if (!inherits(sm, "error")) {
+      warning(sprintf("smooth.demogdata() failed (%s); smoothed without the monotonicity constraint.", first),
+              call. = FALSE)
+    }
+  }
+  if (inherits(sm, "error")) {
+    mt_abort(paste("smooth.demogdata() failed:", conditionMessage(sm), "Try other `smooth_args` or `smooth = FALSE`."),
              class = "model", call = NULL)
-  })
+  }
   keep <- match(ages, sm$age)
   if (anyNA(keep)) {
     mt_abort("smooth.demogdata() did not return every observed age.", class = "model", call = NULL)

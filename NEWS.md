@@ -26,6 +26,14 @@ Clean break: the 0.1.x interface is replaced (see `dev/revamp-plan.md`).
   a forecast starts: the jump-off", "Backtesting and scores" (with the
   scores explained); the articles are grouped into getting started,
   concepts, models, applications and help.
+* Vignette "Tuning and calibration": the fitting window of Lee-Carter
+  chosen by a hold-out, the width of intervals calibrated, both checked in
+  a backtest.
+* `hyndman_ullah()`: when the monotonic spline of `smooth.demogdata()`
+  cannot be fitted (age ranges starting in middle age), the rates are
+  smoothed without the constraint, noted in the fit diagnostics.
+* `mt_tune()`: standard errors also for a hold-out of a single stratum
+  (blocks of test years).
 
 ## Tuning and calibration
 

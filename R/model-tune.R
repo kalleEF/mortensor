@@ -37,8 +37,9 @@
 #' standard error of the lowest (the one-standard-error rule of Hastie,
 #' Tibshirani and Friedman 2009, Section 7.10), so order `grid` from the
 #' simplest to the most complex setting. The standard error comes from the
-#' mean scores per origin and stratum; strata of the same origin are
-#' correlated, so it is approximate and tends to be too small. With few
+#' mean scores per origin and stratum (per test year for a hold-out of a
+#' single stratum); these blocks are correlated, so it is approximate and
+#' tends to be too small. With few
 #' test years, differences between settings are often within this error:
 #' the selection is then uncertain, and `scores` shows it.
 #'
@@ -161,6 +162,9 @@ tune_score <- function(bt, tgt, metric) {
   agg <- function(v) if (metric == "rmse") sqrt(mean(v)) else mean(v)
   val <- agg(lv)
   blocks <- tapply(lv, paste(b$origin, b$stratum), mean)
+  # one origin and one stratum (a hold-out of one population): blocks of
+  # test years, whose errors are correlated, so the error is a rough guide
+  if (length(blocks) < 2) blocks <- tapply(lv, paste(b$origin, b$stratum, b$period), mean)
   se <- if (length(blocks) > 1) stats::sd(blocks) / sqrt(length(blocks)) else NA_real_
   if (metric == "rmse") se <- se / (2 * val)
   by_h <- data.table(horizon = b$horizon, loss = lv)[, list(value = agg(loss)), keyby = horizon]
