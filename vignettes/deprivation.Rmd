@@ -96,7 +96,7 @@ ggplot(e0, aes(period, q0.5, colour = quintile)) +
   theme_mortensor()
 ```
 
-![plot of chunk plot-e0-observed](deprivation-plot-e0-observed-1.png)
+![](deprivation-plot-e0-observed-1.png)
 
 Until 2011, life expectancy rose in every quintile. From 2011 to 2019 it
 rose by about one year in the least deprived quintile and stayed almost
@@ -350,7 +350,7 @@ is what narrows the intervals of models with a period index (below).
 mt_plot_smooth(x, xs, ages = c("45-49", "65-69", "85-89"), strata = c("female.Q1", "female.Q5"))
 ```
 
-![plot of chunk plot-smooth](deprivation-plot-smooth-1.png)
+![](deprivation-plot-smooth-1.png)
 
 Li-Lee starts its forecasts from the fitted rates of 2019, which differ
 from the observed ones, and its deviations from the common trend begin to
@@ -473,7 +473,7 @@ dcast(e0_fc[period == 2035, .(model, sex, quintile, e0 = round(q0.5, 1))], model
 mt_plot_life_expectancy(fcs[["Li-Lee, anchored and calibrated"]], facet = "sex", data = x)
 ```
 
-![plot of chunk plot-e0-forecast](deprivation-plot-e0-forecast-1.png)
+![](deprivation-plot-e0-forecast-1.png)
 
 The gap between Q5 and Q1 and the SII, with 95% intervals:
 
@@ -523,7 +523,7 @@ ggplot(gaps[measure == "gap Q5 - Q1"], aes(period)) +
   theme(legend.direction = "vertical")
 ```
 
-![plot of chunk plot-gap-forecast](deprivation-plot-gap-forecast-1.png)
+![](deprivation-plot-gap-forecast-1.png)
 
 Lee-Carter extrapolates the quintile-specific trends of 2001-2019, so the
 female gap keeps widening, with wide intervals (and in 0.1% of its draws the rates

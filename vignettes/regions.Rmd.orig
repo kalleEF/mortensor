@@ -8,7 +8,7 @@ vignette: >
 ---
 
 ```{r setup, include = FALSE}
-knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width = 7, fig.height = 4.5, message = FALSE,
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.cap = "", fig.width = 7, fig.height = 4.5, message = FALSE,
                       fig.path = "regions-")
 ```
 

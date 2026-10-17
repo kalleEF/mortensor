@@ -120,7 +120,7 @@ medians agree within 2%; single paths disagree far more (table above), and
 mt_plot_coherence(fc_base, h)
 ```
 
-![plot of chunk plot-coherence](coherence-plot-coherence-1.png)
+![](coherence-plot-coherence-1.png)
 
 ## The methods
 
@@ -200,7 +200,7 @@ ggplot(e0[label %in% show], aes(q0.5, factor(label, rev(show)), colour = method)
   theme_mortensor(legend = "right")
 ```
 
-![plot of chunk plot-e0-methods](coherence-plot-e0-methods-1.png)
+![](coherence-plot-e0-methods-1.png)
 
 How far each method moves the median and how it changes the width of the
 95% interval, on average over the nodes of each type:

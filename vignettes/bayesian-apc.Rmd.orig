@@ -11,7 +11,7 @@ vignette: >
      Edit bayesian-apc.Rmd.orig and run dev/precompute-vignettes.R. -->
 
 ```{r setup, include = FALSE}
-knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width = 7, fig.height = 4.5,
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.cap = "", fig.width = 7, fig.height = 4.5,
                       fig.path = "apc-", dpi = 96, message = FALSE)
 ```
 

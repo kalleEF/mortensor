@@ -288,7 +288,7 @@ gap[level == "East" & period %in% c(2020, 2035),
 mt_plot_forecast(fc, ages = c("60-64", "80-84"), strata = c("East.both", "West.both"))
 ```
 
-![plot of chunk plot-e0](regions-plot-e0-1.png)
+![](regions-plot-e0-1.png)
 
 ### Forecasts for every Land
 
@@ -338,7 +338,7 @@ ggplot(pl, aes(q0.5, factor(region, ord), colour = part)) +
   theme_mortensor()
 ```
 
-![plot of chunk plot-e0-laender](regions-plot-e0-laender-1.png)
+![](regions-plot-e0-laender-1.png)
 
 The intervals of the Laender are wider than those of East, West and
 Germany, and widest for the small Laender (Bremen, Saarland). They are
@@ -424,7 +424,7 @@ ggplot(wd, aes(population / 1e6, width, colour = method)) +
   theme_mortensor(legend = "right")
 ```
 
-![plot of chunk plot-width](regions-plot-width-1.png)
+![](regions-plot-width-1.png)
 
 * **OLS** distributes the adjustment equally over all strata in deaths. An
   adjustment of a few hundred deaths is small for Nordrhein-Westfalen and
@@ -753,7 +753,7 @@ mt_plot_shares(fcc, groups = c("West.female", "East.female", "West.male", "East.
                causes = names(de_cause_groups))
 ```
 
-![plot of chunk plot-shares](regions-plot-shares-1.png)
+![](regions-plot-shares-1.png)
 
 The intervals of Bremen are wider than those of Germany, as they should
 be: pooling borrows strength for the trend, but the variation of deaths in

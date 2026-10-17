@@ -102,7 +102,7 @@ ggplot2::ggplot(eff, ggplot2::aes(as.numeric(index), value, colour = stratum, fi
   ggplot2::labs(x = "Index (age group, period or cohort)", y = "Effect (logit scale)", colour = NULL, fill = NULL)
 ```
 
-![plot of chunk effects](apc-effects-1.png)
+![](apc-effects-1.png)
 
 ## Forecast
 
@@ -133,14 +133,14 @@ mt_summarise(fc)[age %in% c("50", "70", "90") & period %in% c(2007, 2021),
 mt_plot_forecast(fc, ages = c("45", "65", "80", "95"))
 ```
 
-![plot of chunk forecast](apc-forecast-1.png)
+![](apc-forecast-1.png)
 
 
 ```r
 mt_plot_life_expectancy(fc, at = 65)
 ```
 
-![plot of chunk e65](apc-e65-1.png)
+![](apc-e65-1.png)
 
 ## Backtest against Lee-Carter
 
@@ -169,7 +169,7 @@ mt_score(bt, by = "model")
 mt_plot_coverage(bt)
 ```
 
-![plot of chunk coverage](apc-coverage-1.png)
+![](apc-coverage-1.png)
 
 In this backtest the APC forecasts are less accurate than Lee-Carter and
 too high: the mean PIT is well below 0.5 and the 95% intervals cover only
