@@ -243,10 +243,20 @@ tuned <- function(spec_fun, grid, inner_origins = 3, inner_h = 5, metric = "crps
                   target = c("rate", "life_expectancy", "asr"), select = c("min", "one_se"), by = NULL) {
   if (!is.function(spec_fun)) mt_abort("`spec_fun` must be a function.", class = "argument")
   check_choice(metric, c("crps", "wis", "mae", "rmse", "mase"), "metric")
-  new_mt_spec("tuned", list(spec_fun = spec_fun, grid = as.data.frame(grid), inner_origins = inner_origins,
+  grid <- as.data.frame(grid)
+  new_mt_spec("tuned", list(spec_fun = spec_fun, grid = grid, inner_origins = inner_origins,
                             inner_h = inner_h, metric = metric, n_draws = n_draws, strategy = match.arg(strategy),
                             target = match.arg(target), select = match.arg(select), by = by),
-              min_periods = inner_origins + inner_h + 5, label = label)
+              min_periods = inner_origins + inner_h + 5, label = label, smooth = tuned_smooth(spec_fun, grid))
+}
+
+# Whether every candidate of a tuned() spec describes smooth rates (TRUE, the
+# default of new_mt_spec(), when the candidates cannot be created here; the
+# fit carries the chosen spec, from which predictive draws take their noise)
+tuned_smooth <- function(spec_fun, grid) {
+  tryCatch(all(vapply(seq_len(nrow(grid)), function(i) {
+    isTRUE(tune_candidate(spec_fun, as.list(grid[i, , drop = FALSE]), NULL)$spec$smooth)
+  }, logical(1))), error = function(e) TRUE)
 }
 
 #' @export
@@ -299,9 +309,12 @@ combine_group_fits <- function(fits, groups, data, spec) {
     out
   }
   any_raw <- any(vapply(fits, function(f) !is.null(f$raw_D), logical(1)))
-  diag <- rbindlist(lapply(fits, `[[`, "diagnostics"))
+  # diagnostics of all groups in the order of the strata (an ensemble has one
+  # row per component and stratum, a bootstrap one more for all strata)
+  diag <- rbindlist(lapply(fits, `[[`, "diagnostics"), fill = TRUE)
+  diag <- diag[order(match(diag$stratum, st$label))]
   structure(list(spec = spec, prep = NULL, fits = NULL, group_fits = fits, groups = groups,
-                 diagnostics = diag[match(st$label, diag$stratum)], age = f1$age, periods = f1$periods,
+                 diagnostics = diag, age = f1$age, periods = f1$periods,
                  strata = st, omega = data$omega, observed = bind("observed"), train_D = bind("train_D"),
                  raw_D = if (any_raw) bind("raw_D", "train_D"), train_E = bind("train_E"),
                  exposure_last = bind("exposure_last"), level_totals = data$level_totals,

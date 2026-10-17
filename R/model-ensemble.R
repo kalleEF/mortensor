@@ -61,9 +61,12 @@ ensemble <- function(..., weights = "equal", inner_origins = 3, inner_h = 5, top
     check_choice(weights, c("equal", "crps", "stack"), "weights")
   }
   if (!is.null(top_k)) check_number(top_k, "top_k", lower = 1, upper = length(comps), integerish = TRUE)
+  # draws describe smooth rates only when those of every component do (the
+  # noise of predictive draws follows the component of each draw)
   sp <- new_mt_spec("ensemble", list(components = comps, weights = weights, inner_origins = inner_origins,
                                      inner_h = inner_h, top_k = top_k),
                     min_periods = max(vapply(comps, `[[`, 0, "min_periods")),
+                    smooth = all(vapply(comps, function(s) isTRUE(s$smooth), TRUE)),
                     label = sprintf("Ensemble (%s)", paste(names(comps), collapse = ", ")))
   sp
 }
@@ -76,6 +79,13 @@ mt_fit.mt_spec_ensemble <- function(spec, data, prep = NULL, cores = 1, ...) {
   })
   ok <- !vapply(fits, inherits, logical(1), what = "error")
   if (!any(ok)) mt_abort("Every ensemble component failed.", class = "model_fit")
+  ref <- fits[[which(ok)[1]]]
+  same <- vapply(fits[ok], function(f) identical(f$strata$label, ref$strata$label), logical(1))
+  if (!all(same)) {
+    mt_abort(paste("The ensemble components forecast different strata. reconciled() adds the aggregates of its",
+                   "hierarchy to data with bottom strata only; add them to the data for every component with",
+                   "mt_aggregate_strata()."), class = "model_fit")
+  }
   inner <- NULL
   if (!is.numeric(p$weights) && p$weights != "equal" || !is.null(p$top_k)) {
     inner <- ensemble_inner_backtests(p, data, prep)
@@ -88,13 +98,16 @@ mt_fit.mt_spec_ensemble <- function(spec, data, prep = NULL, cores = 1, ...) {
     ensemble_inner_weights(p, inner)
   }
   if (!is.null(p$top_k) && !is.null(inner)) {
-    crps <- vapply(inner, function(b) if (is.null(b)) Inf else mean(b$crps), 0)
+    # components compared on the cells that all of them forecast
+    common <- ensemble_inner_common(inner)
+    crps <- vapply(seq_along(inner), function(i) {
+      if (is.null(common) || is.null(inner[[i]])) Inf else mean(common[[paste0("crps", i)]])
+    }, 0)
     w[rank(crps, ties.method = "first") > p$top_k] <- 0
   }
   w[!ok] <- 0
   if (sum(w) == 0) w[ok] <- 1
   w <- w / sum(w)
-  ref <- fits[[which(ok)[1]]]
   diag <- rbindlist(lapply(names(fits), function(n) {
     f <- fits[[n]]
     if (inherits(f, "error")) {
@@ -104,14 +117,27 @@ mt_fit.mt_spec_ensemble <- function(spec, data, prep = NULL, cores = 1, ...) {
       cbind(data.table(component = n), f$diagnostics)
     }
   }), fill = TRUE)
-  out <- ref
-  out$spec <- spec
-  out$prep <- prep
-  out$components <- fits[ok]
-  out$weights <- stats::setNames(w[ok], names(fits)[ok])
-  out$diagnostics <- diag
+  # the data of the first component, without fields of wrappers around it
+  # (calibration, anchor, tuning, ...): they do not describe the ensemble
+  fields <- c("age", "periods", "strata", "omega", "observed", "train_D", "raw_D", "train_E", "exposure_last",
+              "level_totals", "noise_sd")
+  out <- c(list(spec = spec, prep = prep), ref[intersect(fields, names(ref))],
+           list(components = fits[ok], weights = stats::setNames(w[ok], names(fits)[ok]), diagnostics = diag,
+                reconcile = common_reconcile(fits[ok])))
   class(out) <- c("mt_fit_ensemble", "mt_fit")
   out
+}
+
+# The hierarchy of the components when all of them are reconciled over the
+# same one: their draws, and so those of the ensemble, are then coherent, and
+# wrappers around the ensemble (anchored(), recalibrated()) keep them so
+common_reconcile <- function(fits) {
+  rc <- lapply(fits, `[[`, "reconcile")
+  if (any(vapply(rc, is.null, logical(1)))) return(NULL)
+  same <- vapply(rc, function(r) {
+    identical(r$hierarchy, rc[[1]]$hierarchy) && identical(r$structure$S, rc[[1]]$structure$S)
+  }, logical(1))
+  if (all(same)) rc[[1]] else NULL
 }
 
 ensemble_inner_backtests <- function(p, data, prep) {
@@ -123,17 +149,34 @@ ensemble_inner_backtests <- function(p, data, prep) {
   })
 }
 
+# Scores of the inner backtests on the cells (origin, stratum, age, year) that
+# every successful one forecast, matched by these keys: columns crps<i> and
+# median<i> for component i, and the observed value (NULL if there are none)
+ensemble_inner_common <- function(bts) {
+  keys <- c("origin", "stratum", "age_lo", "age_hi", "period", "target")
+  ok <- which(!vapply(bts, is.null, logical(1)))
+  if (!length(ok)) return(NULL)
+  tabs <- lapply(ok, function(i) {
+    b <- as.data.table(bts[[i]])[, c(keys, "observed", "crps", "median"), with = FALSE]
+    setnames(b, c("crps", "median"), paste0(c("crps", "median"), i))
+    if (i != ok[1]) b[, observed := NULL]
+    b
+  })
+  common <- Reduce(function(a, b) merge(a, b, by = keys), tabs)
+  if (!nrow(common)) NULL else common
+}
+
 ensemble_inner_weights <- function(p, bts) {
   ok <- !vapply(bts, is.null, logical(1))
-  if (!any(ok)) return(rep(1, length(bts)))
+  common <- ensemble_inner_common(bts)
+  if (is.null(common)) return(rep(1, length(bts)))
+  w <- numeric(length(bts))
   if (p$weights == "crps") {
-    w <- vapply(bts, function(b) if (is.null(b)) 0 else 1 / mean(b$crps), 0)
+    w[ok] <- vapply(which(ok), function(i) 1 / mean(common[[paste0("crps", i)]]), 0)
     return(if (all(w == 0)) rep(1, length(w)) else w)
   }
-  M <- do.call(cbind, lapply(bts[ok], `[[`, "median"))
-  y <- bts[[which(ok)[1]]]$observed
-  w <- numeric(length(bts))
-  w[ok] <- simplex_least_squares(M, y)
+  M <- as.matrix(common[, paste0("median", which(ok)), with = FALSE])
+  w[ok] <- simplex_least_squares(M, common$observed)
   w
 }
 

@@ -69,8 +69,9 @@ mt_fit.mt_spec_stratified <- function(spec, data, prep = NULL, cores = 1, ...) {
       mt_abort(sprintf("No model for %s = %s; name it or give `.default`.", p$var,
                        paste(unique(lev[rest]), collapse = ", ")), class = "argument")
     }
-    groups$other <- rest
-    specs$other <- p$default
+    # a key that cannot be a level named in `...` (where `.default` is the argument)
+    groups[[".default"]] <- rest
+    specs[[".default"]] <- p$default
   }
   fits <- lapply(names(groups), function(g) {
     mt_fit(specs[[g]], strata_subset(data, groups[[g]]), prep = prep, cores = cores)

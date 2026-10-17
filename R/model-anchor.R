@@ -72,9 +72,8 @@ mt_fit.mt_spec_anchored <- function(spec, data, prep = NULL, cores = 1, ...) {
   fit <- mt_fit(p$base, data, prep = prep, cores = cores, ...)
   D <- if (p$to == "observed") fit$raw_D %||% fit$train_D else fit$train_D
   offset_of <- function(f) anchor_offsets(f, D, fit$train_E, p$years, p$shrink)
-  fit$anchor <- list(offset = offset_of(fit),
-                     components = if (!is.null(fit$components)) lapply(fit$components, offset_of))
-  wrap_fit(fit, spec, "mt_fit_anchored")
+  wrap_fit(fit, spec, "mt_fit_anchored", list(anchor = list(
+    offset = offset_of(fit), components = if (!is.null(fit$components)) lapply(fit$components, offset_of))))
 }
 
 # Log ratio of observed to fitted deaths over the last `years` years per age
@@ -116,8 +115,10 @@ mt_forecast.mt_fit_anchored <- function(fit, h = 10, to = NULL, n_draws = 500, s
     offs <- fit$anchor$components
     for (s in targets) {
       if (!is.null(offs) && !is.null(comp)) {
-        for (k in unique(comp)) {
-          j <- which(comp == k)
+        # one component per draw, or per stratum and draw after reordering (reconciled())
+        cs <- if (is.matrix(comp)) comp[s, ] else comp
+        for (k in unique(cs)) {
+          j <- which(cs == k)
           arr[, , s, j] <- arr[, , s, j] * as.vector(exp(outer(offs[[k]][, s], w)))
         }
       } else {

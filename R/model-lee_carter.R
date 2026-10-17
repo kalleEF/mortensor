@@ -227,11 +227,33 @@ lc_svd <- function(D, E, adjust = "dt", ages = NULL, fixed = NULL) {
       function(kt) life_expectancy(all_ages(matrix(exp(a + b * kt))), ages)[1, 1] - e_obs[t]
     }
     rng <- k[t] + c(-1, 1) * (10 + 10 * abs(k[t]))
-    k[t] <- tryCatch(stats::uniroot(f, rng, extendInt = "yes", tol = 1e-10)$root, error = function(e) k[t])
+    k[t] <- tryCatch(stats::uniroot(f, rng, extendInt = "yes", tol = 1e-10)$root,
+                     error = function(e) nearest_root(f, k[t], 0.1 * (1 + abs(k[t]))))
   }
   out <- lc_finish(a, b, k)
   out$method <- "svd"
   out
+}
+
+# Root of f nearest to x0, for f that is not monotone (life expectancy or
+# total deaths as a function of k when b has both signs, with sparse
+# counts): steps of growing size in both directions until the sign changes;
+# x0 if there is none
+nearest_root <- function(f, x0, step) {
+  f0 <- f(x0)
+  if (!is.finite(f0) || f0 == 0) return(x0)
+  prev <- c(x0, x0)
+  for (d in step * 2^(-4:12)) {
+    for (i in 1:2) {
+      x <- x0 + c(-1, 1)[i] * d
+      fx <- f(x)
+      if (is.finite(fx) && sign(fx) != sign(f0)) {
+        return(tryCatch(stats::uniroot(f, sort(c(prev[i], x)), tol = 1e-10)$root, error = function(e) x0))
+      }
+      prev[i] <- x
+    }
+  }
+  x0
 }
 
 lc_poisson <- function(D, E, init = NULL, maxit = 500, tol = 1e-8, ridge = 0) {

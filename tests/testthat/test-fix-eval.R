@@ -171,7 +171,7 @@ test_that("comparison, contrast and age plots handle one year, other quantiles a
   expect_equal(sort(med$y), sort(log10(s$q0.5)))
   expect_equal(sort(ba$data[[1]]$ymin), sort(log10(s$q0.025)))
   expect_equal(sort(ba$data[[2]]$ymin), sort(log10(s$q0.1)))
-  expect_length(pa$labels$subtitle, 1)
+  expect_length(ba$plot$labels$subtitle, 1)
 })
 
 test_that("a zero rate in the open interval gives a finite life expectancy", {
@@ -184,5 +184,5 @@ test_that("a zero rate in the open interval gives a finite life expectancy", {
   expect_equal(lt$ex, life_table(m2)$ex)
   expect_equal(lt$mx[101], 0)
   M <- cbind(m, m2)
-  expect_equal(life_expectancy(M, single_ages(0, 100)), rep(life_table(m2)$ex[1], 2))
+  expect_equal(as.vector(life_expectancy(M, single_ages(0, 100))), rep(life_table(m2)$ex[1], 2))
 })

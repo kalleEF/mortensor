@@ -2,8 +2,10 @@
 #'
 #' Smooths death rates over age, over time or over both, with the exposures
 #' as weights or offset. Deaths are replaced by exposure times the smoothed
-#' rate; exposures are unchanged. Deaths and exposures must be available on
-#' the grid (use [mt_ungroup()] first for grouped data). In a forecasting
+#' rate; exposures are unchanged. Cells with missing deaths do not enter the
+#' fit and stay missing (only the 2D GAM predicts them). Deaths and
+#' exposures must be available on the grid (use [mt_ungroup()] first for
+#' grouped data). In a forecasting
 #' pipeline, use it as a preprocessing step (`mt_prep(step_smooth(...))`):
 #' models are then fitted to the smoothed rates, while the observation noise
 #' of their predictive draws, residuals and backtest scales come from the
@@ -218,7 +220,6 @@ gam_smooth_obs <- function(data, g) {
   need_pkg("mgcv", "for method = \"gam\"")
   D <- mt_array(data, "deaths")
   E <- mt_array(data, "exposure")
-  na <- dim(D)[1]
   age <- axis_midpoints(g$age, data$omega)
   out <- D
   sm <- array(FALSE, dim(D))

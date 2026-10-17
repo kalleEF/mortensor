@@ -176,8 +176,8 @@ mt_fit.mt_spec_recalibrated <- function(spec, data, prep = NULL, cores = 1, ...)
   fit <- mt_fit(p$base, data, prep = prep, cores = cores, ...)
   bottom <- calibration_targets(fit)
   pieces <- par_lapply(origins, function(o) {
-    tryCatch(calibration_origin(p$base, data, o, last, prep, p$n_draws, p$seed + o, fit$strata$label[bottom],
-                                p$quantity %||% "rate"), error = function(e) e)
+    tryCatch(calibration_origin(p$base, data, o, last, prep, p$n_draws, if (!is.null(p$seed)) p$seed + o,
+                                fit$strata$label[bottom], p$quantity %||% "rate"), error = function(e) e)
   }, cores)
   bad <- vapply(pieces, inherits, logical(1), what = "error")
   if (any(bad)) {
@@ -191,11 +191,9 @@ mt_fit.mt_spec_recalibrated <- function(spec, data, prep = NULL, cores = 1, ...)
                   "factors are uncertain. Give a longer `years` or more `n_origins`."), class = "calibration")
   }
   est <- estimate_calibration(pieces, fit$strata, p)
-  fit$calibration <- est$table
-  fit$calibration_theta <- est$theta
-  fit$calibration_origins <- origins[!bad]
-  fit$calibration_hmax <- last - min(origins[!bad])
-  wrap_fit(fit, spec, "mt_fit_recalibrated")
+  wrap_fit(fit, spec, "mt_fit_recalibrated", list(calibration = est$table, calibration_theta = est$theta,
+                                                  calibration_origins = origins[!bad],
+                                                  calibration_hmax = last - min(origins[!bad])))
 }
 
 calibration_origins <- function(last, years, n_origins) {
@@ -217,35 +215,57 @@ spec_adds_noise <- function(spec) {
   isTRUE(spec$smooth)
 }
 
+# The same for a fit of a wrapper or a single model: the innermost of the
+# fitted specs decides (tuned() fits the spec it chose, which can differ from
+# the spec the wrapper was given)
+fit_adds_noise <- function(fit) {
+  specs <- c(list(fit$spec), fit$inner_specs)
+  spec_adds_noise(specs[[length(specs)]])
+}
+
 # Observation noise of each draw: whether Poisson noise is added
 # (`noise(s)`: one flag per draw for stratum s) and the extra-Poisson sd by
 # age (`sd(s)`: ages x draws). Draws of an ensemble follow the component
-# they come from; strata of a fit split into groups (tuned(by = )) follow
-# the spec chosen for their group.
+# they come from (`fc$component`: one per draw, or [stratum, draw] after
+# reordering; without it, draws are allocated to the components in
+# proportion to the weights); strata of a fit split into groups
+# (stratified(), tuned(by = )) follow the fit of their group.
 draw_noise <- function(fit, fc, n_draws) {
   na <- length(fit$age)
   comps <- fit$components
-  if (!is.null(comps) && !is.null(fc$component)) {
-    flags <- vapply(comps, function(f) spec_adds_noise(f$spec), TRUE)
+  if (!is.null(comps)) {
+    parts <- lapply(comps, draw_noise, fc = NULL, n_draws = n_draws)
     k <- fc$component
-    return(list(noise = function(s) flags[k], sd = function(s) {
-      matrix(vapply(k, function(j) {
-        if (!flags[j] || is.null(comps[[j]]$noise_sd)) rep(0, na) else comps[[j]]$noise_sd[, s]
-      }, numeric(na)), na)
+    if (is.null(k)) {
+      w <- fit$weights %||% rep(1, length(comps))
+      k <- findInterval((seq_len(n_draws) - 0.5) / n_draws, cumsum(w) / sum(w)) + 1L
+    }
+    of <- function(s) if (is.matrix(k)) k[s, ] else k
+    return(list(noise = function(s) {
+      ks <- of(s)
+      out <- logical(n_draws)
+      for (j in unique(ks)) out[ks == j] <- parts[[j]]$noise(s)[ks == j]
+      out
+    }, sd = function(s) {
+      ks <- of(s)
+      out <- matrix(0, na, n_draws)
+      for (j in unique(ks)) out[, ks == j] <- parts[[j]]$sd(s)[, ks == j, drop = FALSE]
+      out
     }))
   }
-  flag_of <- if (!is.null(fit$group_fits)) {
-    gflags <- vapply(fit$group_fits, function(f) spec_adds_noise(f$spec), TRUE)
-    grp <- integer(nrow(fit$strata))
-    for (g in seq_along(fit$groups)) grp[fit$groups[[g]]] <- g
-    function(s) gflags[grp[s]]
-  } else {
-    flag <- spec_adds_noise(fit$spec)
-    function(s) flag
+  if (!is.null(fit$group_fits)) {
+    grp <- pos <- integer(nrow(fit$strata))
+    for (g in seq_along(fit$groups)) {
+      grp[fit$groups[[g]]] <- g
+      pos[fit$groups[[g]]] <- seq_along(fit$groups[[g]])
+    }
+    parts <- lapply(fit$group_fits, draw_noise, fc = NULL, n_draws = n_draws)
+    return(list(noise = function(s) parts[[grp[s]]]$noise(pos[s]), sd = function(s) parts[[grp[s]]]$sd(pos[s])))
   }
+  flag <- fit_adds_noise(fit)
   sd <- fit$noise_sd
-  list(noise = function(s) rep(flag_of(s), n_draws), sd = function(s) {
-    matrix(if (flag_of(s) && !is.null(sd)) sd[, s] else 0, na, n_draws)
+  list(noise = function(s) rep(flag, n_draws), sd = function(s) {
+    matrix(if (flag && !is.null(sd)) sd[, s] else 0, na, n_draws)
   })
 }
 
@@ -280,7 +300,9 @@ calibration_origin <- function(spec, data, origin, last, prep, n_draws, seed, ta
     C <- build_operator(idx[sel], na, np)
     used <- which(Matrix::colSums(C) > 0)
     C <- C[, used, drop = FALSE]
-    Eg <- as.vector(E_grid[, , sf])[used]
+    # exposures of the test data (strata of `data`; a reconciled fit of
+    # bottom strata also forecasts the aggregates)
+    Eg <- as.vector(E_grid[, , s])[used]
     Ecell <- as.numeric(C %*% Eg)
     o <- obs[sel]
     L <- log(pmax(R[used, , drop = FALSE], 1e-12))
@@ -553,9 +575,9 @@ wrapped_forecast <- function(fit, cls, h, to, n_draws, seed, predictive, exposur
     d <- dim(arr)
     targets <- calibration_targets(fit)
     arr <- transform(arr, targets, fc)
-    E <- expand_exposure(exposure %||% fit$exposure_last, d, dimnames(arr))
-    if (predictive) arr <- add_observation_noise(arr, base_fit, fc, targets, E)
     hs <- fit$reconcile$structure
+    E <- expand_exposure(exposure %||% fit$exposure_last, d, dimnames(arr), hs)
+    if (predictive) arr <- add_observation_noise(arr, base_fit, fc, targets, E)
     if (!is.null(hs)) arr <- aggregate_bottom(arr, E, hs, fit$reconcile$hierarchy$additive)
     list(fc = fc, rates = arr)
   })
@@ -570,10 +592,17 @@ wrapped_forecast <- function(fit, cls, h, to, n_draws, seed, predictive, exposur
 }
 
 # A wrapper's fit is the fit of its base model under the wrapper's spec and
-# class. The specs fitted underneath are kept as a stack: the fitted base
-# spec can differ from spec$params$base (tuned() fits the spec it chose)
-wrap_fit <- function(fit, spec, cls) {
+# class, with the wrapper's own `fields` (such as `reconcile` or `anchor`).
+# The specs fitted underneath are kept as a stack: the fitted base spec can
+# differ from spec$params$base (tuned() fits the spec it chose). So are the
+# values that the wrapper's fields had in the base fit, which unwrap_fit()
+# restores: an inner wrapper must not see the fields of an outer one (the
+# hierarchy of reconciled(anchored(...)) would make the anchored draws
+# coherent before they are reconciled)
+wrap_fit <- function(fit, spec, cls, fields = list()) {
   fit$inner_specs <- c(list(fit$spec), fit$inner_specs)
+  fit$inner_fields <- c(list(lapply(stats::setNames(nm = names(fields)), function(n) fit[[n]])), fit$inner_fields)
+  for (n in names(fields)) fit[[n]] <- fields[[n]]
   fit$spec <- spec
   class(fit) <- c(cls, class(fit))
   fit
@@ -581,13 +610,19 @@ wrap_fit <- function(fit, spec, cls) {
 
 unwrap_fit <- function(fit, cls) {
   base <- fit
-  class(base) <- setdiff(class(fit), cls)
+  class(base) <- class(fit)[-match(cls, class(fit))]
   base$spec <- if (length(fit$inner_specs)) fit$inner_specs[[1]] else fit$spec$params$base
   base$inner_specs <- fit$inner_specs[-1]
+  if (length(fit$inner_fields)) {
+    prev <- fit$inner_fields[[1]]
+    for (n in names(prev)) base[[n]] <- prev[[n]]
+    base$inner_fields <- fit$inner_fields[-1]
+  }
   base
 }
 
-# Poisson and extra-Poisson noise of the base model added to rate draws
+# Poisson and extra-Poisson noise of the base model added to rate draws.
+# Cells can have zero deaths (rate 0), as in predictive_rates()
 add_observation_noise <- function(arr, base_fit, fc, targets, E) {
   d <- dim(arr)
   nz <- draw_noise(base_fit, fc, d[4])
@@ -597,7 +632,7 @@ add_observation_noise <- function(arr, base_fit, fc, targets, E) {
     Es <- as.vector(E[, , s])
     sd <- array(nz$sd(s)[rep(seq_len(d[1]), d[2]), ], d[c(1, 2, 4)])
     mu <- R * exp(stats::rnorm(length(R), 0, sd)) * Es
-    D <- pmax(stats::rpois(length(mu), mu), 0.5) / Es
+    D <- stats::rpois(length(mu), mu) / pmax(Es, 1e-12)
     k <- rep(nz$noise(s), each = d[1] * d[2])
     R[k] <- D[k]
     arr[, , s, ] <- R

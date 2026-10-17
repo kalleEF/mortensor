@@ -190,11 +190,15 @@ gam_disaggregate <- function(Ds, Es, g, omega, tail = "kannisto", tail_width = 2
 #'   from fine-resolution rates (`shape_rates`), exposure-weighted to 1
 #'   within each group. [mt_shape_rates()] estimates them from training data
 #'   at the finer resolution, constant (mean of the last years) or changing
-#'   over the forecast years (an age-period GAM extrapolated in time);
+#'   over the forecast years (an age-period GAM extrapolated in time); a
+#'   group whose shape rates are all 0 gets a flat shape;
 #' * `"hyman_kannisto"` or `"natural_gompertz"`: a spline through the group
 #'   rates of each draw (monotone Hyman spline with a Kannisto tail, or a
 #'   natural spline with a log-linear tail), corrected so that the
 #'   exposure-weighted mean of the fine rates equals each group rate.
+#'
+#' Missing group rates (for example of a stratum whose fit failed) give
+#' missing rates at the finer ages of that group.
 #'
 #' @param draws An [mt_draws] object on age groups.
 #' @param age The finer [mt_axis]; its cells must nest in the groups.

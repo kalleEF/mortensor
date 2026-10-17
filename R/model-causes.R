@@ -192,9 +192,12 @@ mt_forecast.mt_fit_cause_shares <- function(fit, h = 10, to = NULL, n_draws = 50
                          list(fit$age$labels, as.character(last + seq_len(h)), fit$strata$label))
   }
   arr <- with_seed(seed, {
-    # predictive draws: those of the total model, whose deaths are split by the shares
-    tot <- mt_forecast(f$total, h = h, n_draws = n_draws, predictive = predictive,
-                       exposure = if (predictive) E[, , f$tot_id, drop = FALSE])$rates
+    # predictive draws: those of the total model, whose deaths are split by
+    # the shares; implausible rates are reported below for all strata
+    tot <- withCallingHandlers(
+      mt_forecast(f$total, h = h, n_draws = n_draws, predictive = predictive,
+                  exposure = if (predictive) E[, , f$tot_id, drop = FALSE])$rates,
+      mt_warning_implausible = function(w) invokeRestart("muffleWarning"))
     U <- sf$dec$U
     na <- nrow(U[[1]])
     ng <- nrow(U[[3]])
