@@ -234,8 +234,9 @@ lc_svd <- function(D, E, adjust = "dt", ages = NULL, fixed = NULL) {
     # without a root in reach, total deaths keep the SVD index (with `b` of
     # both signs the nearest root of total deaths can lie far off and makes
     # the index erratic); life expectancy searches for the nearest root
-    k[t] <- tryCatch(stats::uniroot(f, rng, extendInt = "yes", tol = 1e-10)$root,
-                     error = function(e) if (adjust == "e0") nearest_root(f, k[t], 0.1 * (1 + abs(k[t]))) else k[t])
+    k[t] <- tryCatch(stats::uniroot(f, rng, extendInt = "yes", tol = 1e-10)$root, error = function(e) {
+      if (adjust == "e0") nearest_root(f, k[t], 0.1 * (1 + abs(k[t]))) else k[t]
+    })
   }
   out <- lc_finish(a, b, k)
   out$method <- "svd"
@@ -243,8 +244,8 @@ lc_svd <- function(D, E, adjust = "dt", ages = NULL, fixed = NULL) {
 }
 
 # Root of f nearest to x0, for f that is not monotone (life expectancy as a
-# function of k when b has both signs, with sparse counts): steps of growing size in both directions until the sign changes;
-# x0 if there is none
+# function of k when b has both signs, with sparse counts): steps of growing
+# size in both directions until the sign changes; x0 if there is none
 nearest_root <- function(f, x0, step) {
   f0 <- f(x0)
   if (!is.finite(f0) || f0 == 0) return(x0)
