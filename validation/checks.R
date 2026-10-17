@@ -243,7 +243,7 @@ checks$decomposition <- list(
     h <- mt_hierarchy(cause = "all", additive = "rates")
     dc <- mt_decompose(xc, var = "quintile", ref = "Q1", periods = 2019, cause = "cause", hierarchy = h)
     da <- mt_decompose(mt_subset(xc, strata = cause == "all"), var = "quintile", ref = "Q1", periods = 2019)
-    dr <- mt_decompose(x, periods = c(2001, 2019), groups = "quintile")
+    dr <- mt_decompose(x, periods = c(2001, 2019), groups = "quintile", composition = "radix")
     dp <- mt_decompose(x, periods = c(2001, 2019), groups = "quintile", composition = "pooled")
     fc <- mt_forecast(mt_fit(li_lee(common_by = "sex"), x), to = 2035, n_draws = 200, seed = 1)
     df <- mt_decompose(fc, periods = c(2019, 2035))

@@ -55,8 +55,9 @@
 #' 0.84 to 0.89) at unchanged CRPS, and `bias = TRUE` made the CRPS worse
 #' (0.069 to 0.082). An equal-weight [ensemble()] of Lee-Carter and [rwd()]
 #' was already calibrated; calibration then narrowed it (95% coverage 0.93
-#' to 0.85 on ONS, 0.95 to 0.90 on England & Wales) at the same CRPS
-#' (see the vignette "Forecasting mortality by deprivation quintile").
+#' to 0.85 on ONS, 0.95 to 0.90 on England & Wales) at the same CRPS. In
+#' the vignette "Forecasting mortality by deprivation quintile" it changed a
+#' mixture of Li-Lee and random walks little (0.86 to 0.85).
 #'
 #' `target = "crps"` (default) balances calibration and sharpness;
 #' `target = "interval"` minimises the interval score of the central `level`

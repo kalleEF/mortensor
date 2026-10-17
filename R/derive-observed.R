@@ -18,7 +18,7 @@
 #' @export
 mt_observed <- function(data, n_draws = 500, seed = 1) {
   check_class(data, "mt_data", "data")
-  md <- model_inputs(data, list(min_periods = 1, label = "Observed rates"))
+  md <- model_inputs(data, list(min_periods = 1, label = "Observed rates", consecutive = FALSE))
   D <- md$D
   E <- md$E
   arr <- with_seed(seed, array(stats::rpois(length(D) * n_draws, rep(as.vector(D), n_draws)),

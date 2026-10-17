@@ -204,7 +204,8 @@ yll <- function(draws, exposure = NULL, reference_ex = NULL, probs = c(0.025, 0.
 #' [mt_inequality()] or [mt_score()]. The file name of a forecast records
 #' the model, the grid and the forecast origin unless `file` is given.
 #'
-#' @param x An [mt_draws] object or a data frame.
+#' @param x An [mt_draws] object, an [mt_decompose()] result (its summary is
+#'   written) or a data frame.
 #' @param dir Output directory.
 #' @param what For draws: `"summary"` or `"draws"`.
 #' @param file Optional file name (required for tables other than draws
@@ -223,7 +224,10 @@ mt_export <- function(x, dir, what = c("summary", "draws"), file = NULL,
                       probs = c(0.025, 0.1, 0.5, 0.9, 0.975), digits = NULL) {
   what <- match.arg(what)
   if (!dir.exists(dir)) mt_abort("`dir` does not exist.", class = "argument")
-  if (is.data.frame(x)) {
+  if (inherits(x, "mt_decomposition")) {
+    out <- summary(x, probs = probs)
+    path <- file.path(dir, file %||% sprintf("decomposition_%s.csv", x$quantity))
+  } else if (is.data.frame(x)) {
     out <- as.data.table(x)
     path <- file.path(dir, file %||% "mortensor_table.csv")
   } else {

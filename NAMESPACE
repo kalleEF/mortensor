@@ -3,6 +3,7 @@
 S3method(as.data.frame,mt_axis)
 S3method(as.data.frame,mt_data)
 S3method(as.data.table,mt_data)
+S3method(as.data.table,mt_decomposition)
 S3method(as.data.table,mt_draws)
 S3method(as_mt_data,StMoMoData)
 S3method(as_mt_data,data.frame)

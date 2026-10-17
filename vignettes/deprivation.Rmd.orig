@@ -224,11 +224,13 @@ rnd(mt_smooth_check(x, xs)[, .(label, mad_log, dispersion, trend_ratio)])
 ```
 
 The smoothed rates differ from the observed ones by a median of 1-2%
-(`mad_log`). The mean squared Pearson residual (`dispersion`) is below 1 in
-every stratum: the variation around the smoothed trend is no larger than
-Poisson noise, so the smoother removes noise and no visible signal. The
-year-to-year changes of the smoothed rates have 12-29% of the variance of
-the observed changes (`trend_ratio`).
+(`mad_log`). The mean squared Pearson residual of the observed deaths
+around the smoothed ones (`dispersion`) would be about 1 if the smoother
+removed exactly the Poisson noise; it is 0.4 to 1.0, so the smoother
+follows part of the noise and removes no visible signal: the smoothing is
+mild. Even so, the year-to-year changes of the smoothed rates have only 12%
+to 29% of the variance of the observed changes (`trend_ratio`), and that
+is what narrows the intervals of models with a period index (below).
 
 ```{r plot-smooth, fig.height = 5}
 mt_plot_smooth(x, xs, ages = c("45-49", "65-69", "85-89"), strata = c("female.Q1", "female.Q5"))
@@ -251,7 +253,7 @@ rnd(merge(mt_jump_off(fc_ll)[, .(label, observed, fitted, li_lee = forecast)],
 For women in Q1, life expectancy in the first forecast year (2020) lies
 1.1 years above the observed value of 2019 under Li-Lee: 0.4 years come
 from the fit of 2019, the rest from one year of forecast. Anchored, the
-step is 0.5 years; in the other strata it is 0.1 to 0.3 years, about one
+step is 0.6 years; in the other strata it is 0.1 to 0.3 years, about one
 year of improvement.
 
 Backtests from the origins 2008 to 2014 compare the options for the rates
@@ -347,7 +349,8 @@ ggplot(gaps[measure == "gap Q5 - Q1"], aes(period)) +
 ```
 
 Lee-Carter extrapolates the quintile-specific trends of 2001-2019, so the
-female gap keeps widening, with wide intervals. Li-Lee forecasts a female
+female gap keeps widening, with wide intervals (and in 0.1% of its draws the rates
+of women in Q1 at 90+ exceed 1 by 2035, as `mt_forecast()` warns). Li-Lee forecasts a female
 gap below the observed gap of 2019: its deviations from the common trend
 return towards zero, and its forecasts start from the fitted rates of 2019,
 which for women give a life expectancy 0.4 years above the observed one

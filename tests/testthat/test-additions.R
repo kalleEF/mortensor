@@ -77,13 +77,27 @@ test_that("fixed nodes are kept by reconciliation", {
   low <- fc
   low$rates[, , tot, ] <- 0.3 * low$rates[, , tot, ]
   for (m in c("wls", "mint", "ols")) {
-    rl <- mt_reconcile(low, h, method = m, fixed = "total", dependence = "none")
+    expect_warning(rl <- mt_reconcile(low, h, method = m, fixed = "total", dependence = "none"),
+                   class = "mt_warning_reconcile")
     expect_lt(rl$reconciliation$max_relative_change_fixed, 1e-6)
     expect_gt(rl$reconciliation$share_set_to_zero, 0)
     # rates are floored at 1e-12, which matters only for aggregates of zeros
     expect_lt(coherence_gap(rl, h), 1e-4)
     expect_true(all(rl$rates >= 0))
   }
+  # proportional allocation keeps the total and never sets a part to zero
+  rp <- mt_reconcile(low, h, method = "proportional", fixed = "total", dependence = "none")
+  expect_lt(rp$reconciliation$max_relative_change_fixed, 1e-8)
+  expect_equal(rp$reconciliation$share_set_to_zero, 0)
+  expect_lt(coherence_gap(rp, h), 1e-8)
+  bot <- which(fc$strata$region != "all" & fc$strata$sex != "both" & fc$strata$quintile != "all")
+  ratio <- rp$rates[, , bot, ] / low$rates[, , bot, ]
+  expect_lt(max(apply(ratio, c(1, 2, 4), function(v) diff(range(v)))), 1e-8)
+  expect_error(mt_reconcile(low, h, method = "proportional"), class = "mt_error_argument")
+  # fixed nodes that do not add up cannot all be kept
+  agg <- fc$strata$label[fc$strata$sex == "both" & fc$strata$quintile == "all"]
+  expect_warning(mt_reconcile(fc, h, method = "wls", fixed = agg, dependence = "none"),
+                 class = "mt_warning_reconcile")
   skip_if_not_installed("ggplot2")
   expect_s3_class(mt_plot_coherence(fc, h), "ggplot")
 })
@@ -153,4 +167,38 @@ test_that("disaggregation options, shapes and checks", {
   skip_if_not_installed("ggplot2")
   expect_s3_class(mt_plot_disaggregation(fc, fs), "ggplot")
   expect_s3_class(mt_plot_disaggregation(fc, fs, type = "smoothness"), "ggplot")
+})
+
+test_that("review fixes: anchoring by age, pre-smoothed data, labels of preprocessing, gaps", {
+  x <- mt_example(deaths = "single", years = 1995:2015)
+  # offsets vary by age in large strata of real data
+  xo <- mt_data(deaths = mortensor::ons_data, population = mortensor::ons_data, by = c("sex", "imd_decile"),
+                age = "age_group", value = c(deaths = "all_causes", population = "population"))
+  xo <- mt_as_exposure(xo, type = "midyear")
+  xo <- mt_group_levels(xo, "imd_decile", function(d) paste0("Q", ceiling(as.numeric(d) / 2)), name = "quintile")
+  fa <- mt_fit(anchored(lee_carter(), years = 3), xo)
+  expect_gt(min(apply(fa$anchor$offset, 2, stats::sd)), 1e-3)
+  expect_output(print(summary(fa)), "jump-off offsets")
+  # pre-smoothed data
+  xs <- mt_smooth(x, along = "period", method = "whittaker")
+  expect_error(mt_backtest(lee_carter(), xs, origins = 2010, h = 3, n_draws = 20), class = "mt_error_smoothed_data")
+  expect_warning(mt_fit(anchored(lee_carter()), xs), class = "mt_warning_smoothed_data")
+  # preprocessing is part of the label of backtest rows
+  sm <- mt_prep(step_smooth(along = "period", method = "whittaker"))
+  b1 <- mt_backtest(lee_carter(), x, origins = 2010, h = 3, n_draws = 20, quantities = "life_expectancy")
+  b2 <- mt_backtest(lee_carter(), x, origins = 2010, h = 3, n_draws = 20, prep = sm)
+  sc <- mt_score(rbind(b1, b2, fill = TRUE))
+  expect_equal(nrow(sc), 2)
+  expect_setequal(sc$prep, c("none", "smooth(period, whittaker)"))
+  expect_equal(unique(mt_score(b1, target = "life_expectancy")$unit), "years")
+  expect_output(print(b1[target == "life_expectancy"]), "mt_backtest")
+  # census years: description and decomposition work, models need consecutive years
+  xg <- mt_subset(x, periods = c(1995, 1995))
+  xg$obs <- lapply(x$obs, function(o) o[period_lo %in% c(1995, 2005, 2015)])
+  expect_equal(mt_grid(xg)$period$labels, c("1995", "2005", "2015"))
+  expect_s3_class(mt_decompose(xg, periods = c(1995, 2015), at = 30), "mt_decomposition")
+  expect_error(mt_fit(lee_carter(), xg), class = "mt_error_model_data")
+  # life tables keep survivors above zero at extreme rates
+  lt <- life_table(c(0.01, 3, 0.5), age_groups(c(0, 5, 10)))
+  expect_true(all(lt$lx > 0) && all(is.finite(lt$ex)))
 })

@@ -34,7 +34,8 @@ test_that("decompositions of life expectancy add up and agree with their definit
   m2 <- matrix(m[rows, "2015", 1])
   f <- function(M) mortensor:::lt_columns(M, ag)$ex[1, ]
   sw <- mortensor:::stepwise_core(f, m1, m2, rev(seq_along(rows)), symmetric = FALSE)
-  expect_equal(mortensor:::arriaga_dir(m1, m2, ag), sw, tolerance = 1e-12)
+  lt <- function(M) mortensor:::lt_columns(M, ag)
+  expect_equal(mortensor:::arriaga_dir(m1, m2, lt), sw, tolerance = 1e-12)
   # ages below `at` are not part of the decomposition
   d <- mt_decompose(x, periods = c(2000, 2015), at = 30)
   expect_setequal(unique(d$table$age), age$labels[rows])
@@ -92,7 +93,8 @@ test_that("causes add up to the all-cause decomposition", {
 
 test_that("subgroups: radix (Arriaga-Kitagawa) and pooled composition", {
   x <- ons_small()
-  dr <- mt_decompose(x, periods = c(2001, 2019), groups = "quintile")
+  expect_error(mt_decompose(x, periods = c(2001, 2019), groups = "quintile"), class = "mt_error_argument")
+  dr <- mt_decompose(x, periods = c(2001, 2019), groups = "quintile", composition = "radix")
   tot <- summary(dr, by = NULL)
   expect_lt(max(tot$max_residual), 1e-10)
   # total = radix-weighted mean of the quintiles' life expectancy
@@ -112,7 +114,8 @@ test_that("subgroups: radix (Arriaga-Kitagawa) and pooled composition", {
   expect_lt(max(summary(dp, by = NULL)$max_residual), 1e-3)
   expect_error(mt_decompose(x, groups = "quintile", composition = "pooled", method = "arriaga"),
                class = "mt_error_argument")
-  expect_error(mt_decompose(x, groups = "quintile", quantity = "asr"), class = "mt_error_argument")
+  expect_error(mt_decompose(x, groups = "quintile", quantity = "asr", composition = "radix"),
+               class = "mt_error_argument")
 })
 
 test_that("other quantities, Kitagawa and custom functions", {
@@ -164,7 +167,99 @@ test_that("forecasts are decomposed draw by draw, alone or with observed years",
                      hierarchy = mt_hierarchy(cause = "all", additive = "rates"))
   expect_s3_class(mt_plot_decomposition(dc, by = "age", fill = "cause", comparisons = 4), "ggplot")
   expect_s3_class(mt_plot_decomposition(dc, by = "cause", comparisons = 4), "ggplot")
-  dr <- mt_decompose(ons_small(), periods = c(2001, 2019), groups = "quintile")
+  dr <- mt_decompose(ons_small(), periods = c(2001, 2019), groups = "quintile", composition = "radix")
   expect_s3_class(mt_plot_decomposition(dr, by = "group"), "ggplot")
+  expect_s3_class(mt_plot_decomposition(dc, by = "cause", comparisons = list(to = "Q5", sex = "female")),
+                  "ggplot")
+  expect_error(mt_plot_decomposition(dc, comparisons = 99), class = "mt_error_argument")
   expect_error(mt_plot_decomposition(d, by = "cause"), class = "mt_error_argument")
+})
+
+test_that("totals among causes and groups are not counted as parts", {
+  xc <- ons_small(by_cause = TRUE)
+  h <- mt_hierarchy(cause = "all", additive = "rates")
+  ref <- mt_decompose(xc, var = "quintile", ref = "Q1", periods = 2019, cause = "cause", hierarchy = h)
+  # mt_group_levels(total = ) records the total in the data
+  expect_equal(xc$level_totals$cause$total, "all")
+  d <- mt_decompose(xc, var = "quintile", ref = "Q1", periods = 2019, cause = "cause")
+  expect_equal(summary(d, by = NULL)$difference, summary(ref, by = NULL)$difference, tolerance = 1e-12)
+  # without a declared total the decomposition stops
+  xn <- xc
+  xn$level_totals <- NULL
+  expect_error(mt_decompose(xn, var = "quintile", ref = "Q1", periods = 2019, cause = "cause"),
+               class = "mt_error_hierarchy")
+  # life expectancy of single causes is flagged
+  expect_warning(mt_decompose(mt_subset(xc, strata = sex == "female"), var = "quintile", ref = "Q1",
+                              periods = 2019), class = "mt_warning_decompose")
+  # aggregate strata as groups
+  x <- ons_small()
+  ha <- mt_hierarchy(sex = "both", quintile = list(total = "England"))
+  xa <- mt_aggregate_strata(x, ha)
+  r1 <- mt_decompose(x, periods = c(2001, 2019), groups = "quintile", composition = "radix")
+  r2 <- mt_decompose(xa, periods = c(2001, 2019), groups = "quintile", composition = "radix")
+  expect_equal(summary(r2, by = NULL)[sex == "female"]$difference,
+               summary(r1, by = NULL)[sex == "female"]$difference, tolerance = 1e-12)
+  xa$hierarchy <- NULL
+  expect_error(mt_decompose(xa, periods = c(2001, 2019), groups = "quintile", composition = "radix"),
+               class = "mt_error_hierarchy")
+})
+
+test_that("observed years of draws: jump-off, fitted rates and Poisson draws", {
+  x <- mt_example(deaths = "single", years = 2000:2015)
+  fc <- mt_forecast(mt_fit(lee_carter(), x), h = 10, n_draws = 50, seed = 1)
+  d <- mt_decompose(fc, periods = c(2015, 2025), at = 30)
+  tot <- summary(d, by = NULL)
+  df <- mt_decompose(fc, periods = c(2015, 2025), at = 30, observed = "fitted")
+  totf <- summary(df, by = NULL)
+  # difference = model change (from fitted rates) + jump-off
+  expect_equal(tot$difference, totf$difference + tot$jump_off, tolerance = 1e-10)
+  ef <- life_expectancy(fc$fitted, fc$age, at = 30)
+  expect_equal(totf$from_value, unname(ef["2015", ]), tolerance = 1e-10)
+  dp <- mt_decompose(fc, periods = c(2015, 2025), at = 30, observed = "poisson")
+  # Poisson draws of the observed year vary across draws, the observed rates do not
+  expect_true(all(apply(dp$from, 1, stats::sd) > 0))
+  expect_true(all(apply(d$from, 1, stats::sd) == 0))
+  expect_error(mt_decompose(mt_forecast(mt_fit(rwd(), x), h = 3, n_draws = 10, seed = 1), periods = c(2015, 2018),
+                            observed = "fitted"), class = "mt_error_argument")
+  # change of a gap between two periods, path by path
+  g <- mt_decompose(fc, var = "sex", ref = "male", periods = c(2016, 2025), at = 30)
+  sg <- summary(g, by = "age")
+  ch <- summary(g, by = "age", change = c(2016, 2025))
+  expect_equal(ch$mean, sg[period == 2025]$mean - sg[period == 2016]$mean, tolerance = 1e-10)
+  tc <- summary(g, by = NULL, change = c(2016, 2025))
+  tg <- summary(g, by = NULL)
+  expect_equal(tc$difference, tg$difference[2] - tg$difference[1], tolerance = 1e-10)
+  expect_error(summary(g, by = "cause"), class = "mt_error_argument")
+})
+
+test_that("two objects are paired independently by default", {
+  x <- mt_example(deaths = "single", years = 2000:2015)
+  f1 <- mt_forecast(mt_fit(lee_carter(), x), h = 10, n_draws = 100, seed = 1)
+  f2 <- mt_forecast(mt_fit(lee_carter(method = "svd"), x), h = 10, n_draws = 100, seed = 1)
+  di <- summary(mt_decompose(f1, f2, periods = 2025, at = 30), by = NULL)
+  dd <- summary(mt_decompose(f1, f2, periods = 2025, at = 30, pairing = "draw"), by = NULL)
+  expect_equal(di$difference, dd$difference, tolerance = 1e-10)
+  expect_true(all(di$difference_q0.975 - di$difference_q0.025 > dd$difference_q0.975 - dd$difference_q0.025))
+})
+
+test_that("draws with extreme rates stay valid or are left out with a warning", {
+  x <- mt_example(deaths = "single", years = 2000:2015)
+  fc <- mt_forecast(mt_fit(lee_carter(), x), h = 5, n_draws = 20, seed = 1)
+  fc$rates["85", "2020", "female", 3] <- 2.5
+  d <- mt_decompose(fc, periods = c(2016, 2020), at = 30)
+  expect_true(all(is.finite(d$paths)))
+  expect_lt(max(summary(d, by = NULL)$max_residual), 1e-8)
+  fc$rates["85", "2020", "female", 4] <- NA
+  expect_warning(d2 <- mt_decompose(fc, periods = c(2016, 2020), at = 30), class = "mt_warning_decompose")
+  expect_equal(ncol(d2$paths), 19)
+})
+
+test_that("decompositions export and print", {
+  x <- ons_small()
+  d <- mt_decompose(x, periods = c(2001, 2019), groups = "quintile", composition = "radix")
+  expect_output(print(d), "radix")
+  dir <- withr::local_tempdir()
+  f <- mt_export(d, dir)
+  expect_true(file.exists(f))
+  expect_equal(length(unique(mt_palette(12, type = "categorical"))), 12)
 })

@@ -525,7 +525,12 @@ default_grid <- function(data) {
     mt_axis(fin[-length(fin)], fin[-1], kind = "age")
   }
   pb <- sort(unique(c(all$period_lo, all$period_hi)))
-  list(age = age, period = mt_axis(pb[-length(pb)], pb[-1], kind = "period"))
+  lo <- pb[-length(pb)]
+  hi <- pb[-1]
+  # periods that no table covers (years between census years) are gaps
+  covered <- vapply(seq_along(lo), function(i) any(all$period_lo <= lo[i] + 1e-9 & all$period_hi >= hi[i] - 1e-9),
+                    logical(1))
+  list(age = age, period = mt_axis(lo[covered], hi[covered], kind = "period"))
 }
 
 # Single years of age from the lowest age to the start of the open interval

@@ -2,6 +2,67 @@
 
 Clean break: the 0.1.x interface is replaced (see `dev/revamp-plan.md`).
 
+## Changes after the third and fourth applied reviews
+
+Two further reviews (`dev/review-applied-3.md`, `-4.md`; an epidemiologist
+and a demographer working through the vignettes on their own questions).
+
+* `mt_decompose()`:
+  * Strata that are totals of others (`mt_group_levels(total = )`, a
+    hierarchy) are no longer added to their parts: such a cause or group is
+    refused with a message naming it. Causes passed as `groups` (levels
+    sharing one population) give a warning.
+  * `groups` needs `composition = "radix"` or `"pooled"`; the
+    documentation states when each applies (radix only for membership fixed
+    from the start age, such as sex or education).
+  * `observed = "fitted"` uses the fitted rates for observed years, so that
+    a forecast is compared with its own model; `"poisson"` adds the
+    sampling noise of observed years. Decompositions of an observed against
+    a forecast year report `jump_off`, the part due to the observed instead
+    of the fitted rates.
+  * `pairing = "draw"` pairs the draws of two objects (default: independent
+    shuffling). `summary(change = )` gives the change of a gap between two
+    years path by path, with intervals.
+  * Non-finite draws are dropped with a warning; residuals above the
+    tolerance give a warning. `print()` explains the components;
+    `as.data.table()` and `mt_export()` work on decompositions.
+  * `mt_plot_decomposition(comparisons = )` selects comparisons; titles and
+    axes name the quantity, the unit and the method.
+* Life tables: where `n m / (1 + (n - a) m)` exceeds 1 (extreme forecast
+  rates), `q` is `1 - exp(-n m)` instead of 1.
+* Reconciliation: `method = "proportional"` keeps fixed nodes and scales
+  their parts in proportion to their forecasts, draw by draw (top-down,
+  Athanasopoulos, Ahmed and Hyndman 2009). Non-negative projections warn
+  when more than 5% of the draws hold strata at zero or fixed nodes move;
+  `info$share_draws_with_zeros`. `mt_plot_coherence()` shows the range of
+  the paths.
+* `anchored()`: the empirical Bayes shrinkage subtracted the sampling
+  variance from the wrong term, so offsets of noisy cells were shrunk too
+  little. ONS Li-Lee anchored: CRPS 0.0654 (before 0.0658) against 0.0666;
+  life expectancy at birth 0.315 against 0.336. `summary()` of anchored fits
+  shows the offsets.
+* `mt_fit()` warns when data were smoothed before the fit (raw deaths are
+  then missing and intervals too narrow); `mt_backtest()` refuses such data
+  (the smoother has seen the test years). Smooth inside the fit with
+  `prep = mt_prep(step_smooth(...))`.
+* Backtests carry a `prep` column; `mt_score()` scores the same model with
+  different preprocessing separately and reports the `unit` of the scores.
+  `print()` of backtests with life expectancy or ASR names the other
+  targets.
+* Period axes may have gaps (census years 2001, 2011, 2021): observed
+  indicators and decompositions work on such data; models ask for
+  consecutive years.
+* `mt_group_levels(total = )` records totals, which fits and forecast
+  draws carry, so `mt_decompose()` recognises them.
+* The plausibility warning of forecasts covers the open age interval.
+* The categorical palette has 12 colours (more are interpolated).
+* Vignettes: all-cause forecasts implied by the causes against all-cause
+  models (Wilmoth 1995) in the causes and regional vignettes; proportional
+  reconciliation; decomposition of forecasts (jump-off, the model's own
+  change, change of the gap, comparison of two models); calibrated
+  Lee-Carter without smoothing in "Forecasting and backtesting"; corrected
+  interpretations and numbers in the deprivation vignette and the FAQ.
+
 ## Decomposition
 
 * `mt_decompose()` splits the difference in a mortality summary between

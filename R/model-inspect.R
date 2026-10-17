@@ -193,7 +193,8 @@ summary.mt_fit <- function(object, ...) {
                  deviance = if (!is.null(res) && nrow(res)) sum(res$residual^2) else NA_real_,
                  cells = if (!is.null(res)) nrow(res) else NA_integer_,
                  large_residuals = if (!is.null(res) && nrow(res)) mean(abs(res$residual) > 2) else NA_real_,
-                 calibration = object$calibration),
+                 calibration = object$calibration,
+                 anchor = if (!is.null(object$anchor)) stats::quantile(object$anchor$offset, c(0, 0.5, 1))),
             class = "summary.mt_fit")
 }
 
@@ -205,12 +206,22 @@ print.summary.mt_fit <- function(x, ...) {
   if (!is.null(x$prep)) {
     cat(sprintf("  preprocessing: %s\n", paste(vapply(x$prep$steps, function(s) paste0("step_", s$type), ""),
                                                collapse = ", ")))
+    over_time <- vapply(x$prep$steps, function(s) {
+      identical(s$type, "smooth") && (identical(s$args$along, "period") || identical(s$args$dims, 2))
+    }, logical(1))
+    if (any(over_time)) {
+      cat("    smoothing over time narrows forecast intervals; check coverage in a backtest (calibrated())\n")
+    }
   }
   cat("  model and uncertainty:\n")
   cat(paste0("    ", strwrap(x$assumptions, 76), collapse = "\n"), "\n", sep = "")
   if (is.finite(x$deviance)) {
     cat(sprintf(paste("  fit: Poisson deviance %.1f on %d cells (%.2f per cell); %.1f%% of deviance residuals",
                       "beyond +/-2\n"), x$deviance, x$cells, x$deviance / x$cells, 100 * x$large_residuals))
+  }
+  if (!is.null(x$anchor)) {
+    cat(sprintf("  jump-off offsets (log ratio observed / fitted): min %.3f, median %.3f, max %.3f\n", x$anchor[1],
+                x$anchor[2], x$anchor[3]))
   }
   if (!is.null(x$calibration)) {
     cal <- x$calibration
@@ -268,6 +279,10 @@ model_assumptions <- function(spec) {
            "the last %d training years."), if (p$bias) " and drift" else "",
            if (identical(p$target, "interval")) sprintf("%g%% interval score", 100 * p$level) else "CRPS",
            p$n_origins, p$years)),
+         mt_spec_anchored = paste(model_assumptions(p$base), sprintf(paste(
+           "Anchored: forecasts start at the observed level of the last %d training year(s), with offsets per",
+           "age and stratum%s fading out over %s years."), p$years,
+           if (isTRUE(p$shrink)) " (shrunk where deaths are few)" else "", format(p$decay))),
          paste(spec$label, "- see the help page of its constructor for the model and its uncertainty."))
 }
 

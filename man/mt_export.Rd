@@ -14,7 +14,8 @@ mt_export(
 )
 }
 \arguments{
-\item{x}{An \link{mt_draws} object or a data frame.}
+\item{x}{An \link{mt_draws} object, an \code{\link[=mt_decompose]{mt_decompose()}} result (its summary is
+written) or a data frame.}
 
 \item{dir}{Output directory.}
 

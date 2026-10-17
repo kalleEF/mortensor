@@ -7,7 +7,7 @@
 reconciled(
   spec,
   hierarchy,
-  method = c("wls", "mint", "structural", "ols", "bottom_up"),
+  method = c("wls", "mint", "structural", "ols", "bottom_up", "proportional"),
   shrink = "auto",
   dependence = c("auto", "empirical", "none"),
   fixed = NULL

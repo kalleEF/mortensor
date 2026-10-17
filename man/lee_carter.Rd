@@ -61,6 +61,12 @@ Maindonald and Smith 2002): the longest recent period over which the
 decline was close to linear (\code{demography::lca(chooseperiod = TRUE, breakmethod = "bms")} gives the same period). Fitted rates of earlier
 years are missing.
 
+Compared with \code{demography::lca()}, \code{k[t]} is centred again after the
+second stage (a constant shift of \code{k} and \code{a}, with identical fitted
+rates), and life tables use \code{a_x = n/2} at age 0 (as \code{\link[=life_table]{life_table()}}), so
+\code{adjust = "e0"} matches a slightly different life expectancy than
+demography's life table where age 0 is in the data.
+
 The period index follows a random walk with drift. Draws include the
 innovations and the uncertainty of the drift. With \code{bootstrap = TRUE} the
 parameters are re-estimated on \code{n_boot} Poisson resamples of the fitted

@@ -47,6 +47,7 @@ work: `claude/vigilant-albattani-2ssw1x` (plays the role of `dev-0.2`).
 | V4 | done | this branch | Vignettes on deprivation quintiles (ONS) and on the effect of reconciliation methods (ONS sex x quintile with totals), precomputed; regional vignette extended with forecasts for every Land by reconciliation method |
 | U0 | done | this branch | Review of the owner's earlier UK analysis (`uk_analysis.R`, methodology document, plots) and integration plan `dev/integration-plan-uk-analysis.md`: plot layout as standard, jump-off control, reconciliation with a fixed total, diagnostics; list of elements not to port. Package labelled experimental and vibe-coded (README, DESCRIPTION, package help, startup message); documentation rule in `CLAUDE.md` |
 | Q1 | done | this branch | Decomposition as post-processing (`dev/decomposition-plan.md`): `mt_decompose()` for observed data, forecast draws or both (comparisons between strata, years or objects); symmetric Arriaga with cause split, Horiuchi line integral, stepwise replacement, Kitagawa (crude rate), subgroup composition at the radix (Riffe, Tursun-zade and Trias Llimós 2024) or pooled; `summary()`, `mt_plot_decomposition()`; tests against DemoDecomp, LEdecomp and Table 1 of Riffe et al.; validation check `decomposition`; article on ONS data |
+| Q2 | done | this branch | Applied reviews 3 and 4 (`dev/review-applied-3.md`, `-4.md`) implemented: totals among causes and groups refused in `mt_decompose()`, `composition` required for `groups`, `observed = "fitted"`/`"poisson"`, `jump_off`, `pairing`, `summary(change = )`, export; life table `q` capped by `1 - exp(-n m)`; `mt_reconcile(method = "proportional")` and warnings of non-negative projections; corrected shrinkage in `anchored()`; smoothed data warned in `mt_fit()` and refused in `mt_backtest()`; `prep` and `unit` in scores; period axes with gaps; vignettes on all-cause forecasts implied by causes, forecast decompositions and calibration without smoothing |
 | U1 | done | this branch | Methods of the earlier UK analysis (plan 4.2-4.8): `mt_smooth(along = "period")` (Whittaker over time, GCV pooled per stratum), `mt_smooth(dims = 2, method = "gam")` (quasi-Poisson `te(age, year)`), `mt_smooth_check()`, `mt_plot_smooth()`; models fitted to smoothed rates take residuals, observation noise, MASE scale and copula from the raw deaths (`fit$raw_D`); `anchored()` and `mt_jump_off()`; `fixed` nodes in `mt_reconcile()`/`reconciled()` with non-negative projection, `mt_coherence()`, `mt_plot_coherence()`; `mt_backtest(quantities = )` and `mt_score(target = )` for life expectancy and ASR, `mt_plot_scores(by = "model")`; `lee_carter(adjust = , choose_period = )` (demography's `lca` adjustments and BMS period); `ensemble(top_k = )`; `mt_tune(strategy = "two_stage")`; tail options and diagnostics of disaggregation (`mt_shape_rates()`, `mt_disaggregate_check()`, `mt_plot_disaggregation()`); validation check `smoothing_jumpoff`; vignettes updated (HMD, deprivation, coherence, causes) |
 | V3 | done | this branch | Comparison vignette (fidelity and accuracy vs demography, bamp, StMoMo; stored results of `dev/compare-packages.R`, full run 2026-10-13); regional vignette on German Laender (precomputed); validation check `de_regions` |
 | D1.12 (HMD) | done | this branch | `mt_from_hmd()`, `mt_read_hmd()` (HMDHFDplus, credentials from `HMD_USER`/`HMD_PASSWORD`) |
@@ -189,6 +190,18 @@ work: `claude/vigilant-albattani-2ssw1x` (plays the role of `dev-0.2`).
   -0.10), men +3.74 (-0.13); pooled rates: +2.98 (+0.10) and +3.95 (+0.03).
   The signs differ because the share of Q5 fell at birth and rose at ages
   75-84.
+
+- 2026-10-17: Reviews 3 and 4. Corrected `anchored()` shrinkage (between-year
+  variance minus the mean sampling variance): ONS anchored Li-Lee 0.0654
+  against 0.0666 (e0 0.315 against 0.336, Q1 0.506 against 0.584); England
+  & Wales men h 1-2 0.032 (before 0.040), overall 0.0639. Decomposition of
+  forecasts, women Q5 - Q1 at birth: observed 2019 6.46 years, fitted 5.69,
+  2035 4.58; the model narrows the gap by 1.11 years (0.03-2.04), 0.78 at
+  ages 60-84; of the forecast gain of women in Q1 2019-2035 (3.5 years),
+  the jump-off from observed to fitted rates is 0.4. Causes summed
+  bottom-up give female Q1 e50 30.8 in 2034 against 31.7 observed in 2019;
+  all-cause Lee-Carter 32.9 and Li-Lee 34.3 (cause forecasts more
+  pessimistic, as in Wilmoth 1995).
 
 ## Open questions
 

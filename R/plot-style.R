@@ -6,7 +6,7 @@
 #' line between the last observed and the first forecast year. Strata with
 #' ordered levels (such as deprivation quintiles `Q1` to `Q5`) are coloured
 #' on a red-yellow-green scale, other strata (causes, regions, models) with
-#' distinct colours.
+#' distinct colours (12 distinct colours; more are interpolated).
 #'
 #' * `theme_mortensor()`: the theme ([ggplot2::theme_minimal()] with the
 #'   legend at the bottom);
@@ -60,6 +60,7 @@ mt_palette <- function(n, type = c("ordered", "categorical"), reverse = FALSE) {
   } else {
     c("#1B9E77", "#D95F02", "#7570B3", "#E7298A", "#66A61E", "#E6AB02", "#A6761D", "#666666")
   }
+  if (type == "categorical") anchors <- c(anchors, "#1F78B4", "#E31A1C", "#A6CEE3", "#CAB2D6")
   cols <- if (type == "categorical" && n <= length(anchors)) anchors[seq_len(n)] else colour_ramp(anchors, n)
   if (reverse) rev(cols) else cols
 }

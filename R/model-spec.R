@@ -68,12 +68,29 @@ simulate_model.default <- function(spec, fit, h, n_draws, ...) {
 #'   Windows).
 #' @param ... Passed to methods.
 #' @return An object of class `mt_fit`.
+#' @details Smooth inside the fit (`prep = mt_prep(step_smooth(...))`), not
+#'   before it: data returned by [mt_smooth()] carry no raw deaths, so
+#'   residuals and observation noise would refer to the smoothed rates and
+#'   the intervals would be too narrow. Such data give a warning.
 #' @examples
 #' x <- mt_example(deaths = "single")
 #' fit <- mt_fit(lee_carter(), x)
 #' fit
 #' @export
-mt_fit <- function(spec, data, prep = NULL, cores = 1, ...) UseMethod("mt_fit")
+mt_fit <- function(spec, data, prep = NULL, cores = 1, ...) {
+  if (!isTRUE(.mt_state$fitting) && inherits(data, "mt_data") && !is.null(attr(data, "smooth"))) {
+    mt_warn(paste("`data` were smoothed with mt_smooth(): residuals and observation noise then refer to the",
+                  "smoothed rates and the forecast intervals are too narrow. Pass the raw data and smooth inside",
+                  "the fit: prep = mt_prep(step_smooth(...))."), class = "smoothed_data")
+  }
+  old <- .mt_state$fitting
+  .mt_state$fitting <- TRUE
+  on.exit(.mt_state$fitting <- old)
+  UseMethod("mt_fit")
+}
+
+# State shared by nested calls (a warning about the data is given once per fit)
+.mt_state <- new.env(parent = emptyenv())
 
 #' @export
 mt_fit.mt_spec <- function(spec, data, prep = NULL, cores = 1, ...) {
@@ -121,7 +138,7 @@ mt_fit.mt_spec <- function(spec, data, prep = NULL, cores = 1, ...) {
   structure(list(spec = spec, prep = prep, fits = fits, diagnostics = diagnostics, age = md$age,
                  periods = md$periods, strata = st, omega = d$omega,
                  observed = D_obs / md$E, train_D = md$D, raw_D = raw_D, train_E = md$E,
-                 exposure_last = md$E[, length(md$periods), , drop = FALSE],
+                 exposure_last = md$E[, length(md$periods), , drop = FALSE], level_totals = data$level_totals,
                  noise_sd = extra_noise_sd(spec, fits, D_obs, md$E)),
             class = "mt_fit")
 }
@@ -191,7 +208,8 @@ model_inputs <- function(d, spec) {
   if (any(E <= 0)) {
     i <- which(E <= 0, arr.ind = TRUE)[1, ]
     mt_abort(sprintf(paste("Exposures must be positive on the grid; %d cell(s) are zero or negative, for example %s,",
-                           "age %s, %s."), sum(E <= 0), d$strata$label[i[3]], g$age$labels[i[1]],
+                           "age %s, %s. At the highest ages, close the age range with an open interval, for example",
+                           "mt_regroup(x, age = 0:100)."), sum(E <= 0), d$strata$label[i[3]], g$age$labels[i[1]],
                      g$period$labels[i[2]]),
              class = "model_data", call = NULL)
   }
@@ -206,6 +224,13 @@ model_inputs <- function(d, spec) {
   }
   if (any(g$period$upper - g$period$lower != 1)) {
     mt_abort("Models need single calendar years as periods.", class = "model_data")
+  }
+  np <- length(g$period)
+  if (!isFALSE(spec$consecutive) && np > 1 && any(abs(g$period$lower[-1] - g$period$upper[-np]) > 1e-9)) {
+    mt_abort(sprintf(paste("Models need consecutive years; the data have gaps (periods %s). Describe and decompose",
+                           "such data with life_expectancy(), mt_decompose() and the other functions for observed",
+                           "data, or keep a consecutive span with mt_subset(periods = )."),
+                     paste(utils::head(g$period$labels, 6), collapse = ", ")), class = "model_data")
   }
   if (length(g$period) < spec$min_periods) {
     mt_abort(sprintf("%s needs at least %d periods.", spec$label, spec$min_periods), class = "model_data")
@@ -329,19 +354,18 @@ mt_forecast.mt_fit <- function(fit, h = 10, to = NULL, n_draws = 500, seed = NUL
   out
 }
 
-# Warn when forecast death rates exceed 1 below the open age interval: the
-# model is then unstable, usually because of sparse counts
+# Warn when forecast death rates exceed 1 at any age, the open interval
+# included (most of the population would die within a year): the model is
+# then unstable, usually because of sparse counts or a steep trend
 check_draws_plausible <- function(arr, age, strata, label) {
-  closed <- which(is.finite(age$upper))
-  if (!length(closed)) return(invisible())
-  a <- arr[closed, , , , drop = FALSE]
-  bad <- !is.na(a) & a > 1
+  bad <- !is.na(arr) & arr > 1
   if (!any(bad)) return(invisible())
   share <- mean(apply(bad, 4, any))
   by_s <- apply(bad, 3, any)
-  ages <- closed[apply(bad, 1, any)]
+  ages <- which(apply(bad, 1, any))
   mt_warn(sprintf(paste("%s: forecast death rates above 1 in %.1f%% of the draws (strata %s; ages %s).",
-                        "The model is unstable here, often because of sparse counts; consider wider age groups",
+                        "The model is unstable here, often because of sparse counts or a steep trend extrapolated",
+                        "far ahead; consider wider age groups",
                         "(mt_regroup()), pooling (li_lee(common_by = )), smoothing (step_smooth()) or an ensemble."),
                   label, 100 * share, paste(utils::head(strata$label[by_s], 3), collapse = ", "),
                   paste(utils::head(age$labels[ages], 4), collapse = ", ")), class = "implausible")
