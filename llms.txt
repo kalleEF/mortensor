@@ -61,29 +61,12 @@ The objects of an analysis and the functions that connect them. The
 Articles, Function map) shows every function with its purpose, the
 possible workflows and what the package does not cover.
 
-``` mermaid
-flowchart TD
-  T["`**your tables**
-  deaths, populations`"]
-  D["`**mt_data**
-  any resolution, strata; prepared with mt_as_exposure(), mt_subset(), mt_regroup(), mt_validate(), ...`"]
-  S["`**model specification**
-  lee_carter(), li_lee(), rwd(), ensemble(), reconciled(), recalibrated(), ...`"]
-  F["`**mt_fit**`"]
-  P["`**mt_draws**
-  simulated future rates`"]
-  B["`**backtest scores**
-  mt_score()`"]
-  R["`**results**
-  life_expectancy(), asr(), mt_contrast(), mt_decompose(), plots, CSV`"]
-  T -- "mt_data()" --> D
-  D -- "mt_fit()" --> F
-  S --> F
-  F -- "mt_forecast()" --> P
-  D -- "mt_backtest()" --> B
-  P --> R
-  D -- "observed data" --> R
-```
+![Function map: your tables become an mt_data object with mt_data();
+mt_fit() fits a model specification to it; mt_forecast() gives mt_draws,
+simulated future rates; mt_backtest() gives backtest scores
+(mt_score()); results such as life_expectancy(), asr(), mt_contrast(),
+mt_decompose(), plots and CSV files come from the draws or from the
+observed data.](reference/figures/README-function-map.png)
 
 ## Example
 

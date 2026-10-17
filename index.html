@@ -186,32 +186,15 @@ window.addEventListener("load", async () => {
 <h2 id="function-map">Function map<a class="anchor" aria-label="anchor" href="#function-map"></a>
 </h2>
 <p>The objects of an analysis and the functions that connect them. The <a href="vignettes/articles/function-map.Rmd">function map</a> (on the website: Articles, Function map) shows every function with its purpose, the possible workflows and what the package does not cover.</p>
-<pre class="mermaid"><code>flowchart TD
-  T["`**your tables**
-  deaths, populations`"]
-  D["`**mt_data**
-  any resolution, strata; prepared with mt_as_exposure(), mt_subset(), mt_regroup(), mt_validate(), ...`"]
-  S["`**model specification**
-  lee_carter(), li_lee(), rwd(), ensemble(), reconciled(), recalibrated(), ...`"]
-  F["`**mt_fit**`"]
-  P["`**mt_draws**
-  simulated future rates`"]
-  B["`**backtest scores**
-  mt_score()`"]
-  R["`**results**
-  life_expectancy(), asr(), mt_contrast(), mt_decompose(), plots, CSV`"]
-  T -- "mt_data()" --&gt; D
-  D -- "mt_fit()" --&gt; F
-  S --&gt; F
-  F -- "mt_forecast()" --&gt; P
-  D -- "mt_backtest()" --&gt; B
-  P --&gt; R
-  D -- "observed data" --&gt; R</code></pre>
+<!-- Drawn from dev/readme-diagram/function-map.mmd by dev/readme-diagram/render.js (an image, because
+the GitHub mobile app does not draw Mermaid diagrams) -->
+<p align="center">
+<img src="reference/figures/README-function-map.png" width="538" alt="Function map: your tables become an mt_data object with mt_data(); mt_fit() fits a model specification to it; mt_forecast() gives mt_draws, simulated future rates; mt_backtest() gives backtest scores (mt_score()); results such as life_expectancy(), asr(), mt_contrast(), mt_decompose(), plots and CSV files come from the draws or from the observed data."></p>
 </div>
 <div class="section level2">
 <h2 id="example">Example<a class="anchor" aria-label="anchor" href="#example"></a>
 </h2>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/kalleEF/mortensor" class="external-link">mortensor</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># deaths and populations by sex, age group and deprivation decile, England</span></span>
