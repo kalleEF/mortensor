@@ -62,6 +62,7 @@ random walks for period and cohort (see "Choice of priors" below).
 
 ```{r}
 prep <- mt_prep(step_ungroup())
+set.seed(1)
 t0 <- proc.time()
 fit <- mt_fit(apc_bayes(mcmc = mcmc_control("fast")), x, prep = prep)
 (proc.time() - t0)[["elapsed"]]
@@ -69,15 +70,17 @@ fit$diagnostics
 ```
 
 Posterior medians and 90% credible intervals of the effects (logit scale,
-identified with bamp's convention):
+identified with bamp's convention), and the Gelman-Rubin statistics of the
+chains (`rhat`, below 1.1 when they have converged):
 
 ```{r}
 eff <- mt_parameters(fit)
 eff[, .N, by = .(stratum, parameter)]
+eff[parameter == "rhat", .(stratum, index, rhat = round(value, 3))]
 ```
 
 ```{r effects, fig.height = 5}
-ggplot2::ggplot(eff, ggplot2::aes(as.numeric(index), value, colour = stratum, fill = stratum)) +
+ggplot2::ggplot(eff[parameter != "rhat"], ggplot2::aes(as.numeric(index), value, colour = stratum, fill = stratum)) +
   ggplot2::geom_ribbon(ggplot2::aes(ymin = lower, ymax = upper), alpha = 0.2, colour = NA) +
   ggplot2::geom_line() +
   ggplot2::facet_wrap(~parameter, scales = "free") +
@@ -150,7 +153,8 @@ rbindlist(lapply(names(fits), function(n) {
 ```
 
 With second-order random walks the interval spans two orders of magnitude,
-which is not useful for planning; with first-order random walks it is narrow
+and a few paths reach death rates above 1 (the warning), which is not
+useful for planning; with first-order random walks it is narrow
 but, as the backtest shows, biased when mortality keeps declining. Neither
 choice is right for every dataset. Rolling-origin backtests are the way to
 choose priors and the overdispersion term, and an ensemble with models that
@@ -158,8 +162,8 @@ carry a drift (`ensemble()`) is a way to combine the strengths.
 
 ## Practical notes
 
-* Runtime: about 1.5 minutes per stratum with `mcmc_control("fast")` for
-  13 age groups and 37 years on one machine; `"final"` lets bamp choose the
+* Runtime: about 1.5 to 3 minutes per stratum with `mcmc_control("fast")`
+  for 13 age groups and 37 years, depending on the machine; `"final"` lets bamp choose the
   chain length and is several times slower.
 * Heterogeneity terms (`"rw1+het"`, `"rw2+het"`) are not offered, because
   bamp 3.0.0 cannot forecast them.
