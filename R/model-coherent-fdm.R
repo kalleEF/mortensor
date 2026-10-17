@@ -89,8 +89,9 @@ fit_model.mt_spec_coherent_fdm <- function(spec, D, E, ages, periods, strata = N
   }
   pool <- rep(TRUE, ns)
   if (!is.null(hierarchy) && !is.null(strata)) pool <- hierarchy_structure(strata, hierarchy)$is_bottom
-  pool_size <- vapply(seq_len(max(group)), function(g) if (any(group == g & pool)) sum(group == g & pool) else
-    sum(group == g), 1L)
+  pool_size <- vapply(seq_len(max(group)), function(g) {
+    if (any(group == g & pool)) sum(group == g & pool) else sum(group == g)
+  }, 1L)
   if (any(pool_size < 2)) {
     mt_abort(paste("coherent_fdm() needs at least two strata in every group: the product is their geometric mean,",
                    "and the ratio of a single stratum to it is always one. Use hyndman_ullah() for a single",

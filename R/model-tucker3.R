@@ -21,7 +21,7 @@
 #' random walk with drift on its log, so the open age group is kept.
 #'
 #' Ranks are reduced to the array dimensions where needed, so the model also
-#' runs with one stratum.
+#' runs with one stratum or one age group.
 #'
 #' @param ranks Tucker ranks for age, period and stratum, or `"bic"` /
 #'   `"aic"` to choose them by an information criterion on the training data

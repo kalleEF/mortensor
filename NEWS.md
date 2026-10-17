@@ -35,6 +35,28 @@ Harmonisation:
 * `step_shocks(method = "interpolate")` removes shock years at the start
   or end of the training data instead of failing.
 
+Models:
+
+* Models of observed rates (`rwd()`, `arima_series()`, `ets_series()`)
+  fitted to smoothed rates (`step_smooth()`) now add the observation noise
+  of the raw rates to predictive draws; their backtest intervals were too
+  narrow.
+* Each stratum is fitted with its own random number stream started from
+  the current generator: fits that use random numbers follow `set.seed()`
+  with any number of `cores` (bootstrap results differ from earlier
+  versions).
+* `rwd(drift_window = )` with `observation_noise = TRUE` no longer fails;
+  `lee_carter(bootstrap = TRUE)` resamples the chosen fitting period;
+  `lee_carter(adjust = "e0")` with age groups without deaths matches life
+  expectancy again (it could silently leave the index unadjusted);
+  `stmomo()` forecasts one year; `tucker3()`, `li_lee()` and
+  `product_ratio()` run with a single age group; `coherent_fdm()` reports
+  groups with fewer than two strata.
+* `cause_shares()`: predictive draws are those of the total model, with
+  its deaths split between the causes, so the causes add up to the total
+  in every draw; the extra variation of the shares beyond multinomial
+  sampling is estimated as such.
+
 Evaluation and derived quantities:
 
 * Backtests floor the predictive deaths at half a death after summing them

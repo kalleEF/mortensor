@@ -111,3 +111,18 @@ test_that("coherent_fdm() needs two strata per group", {
   x <- mt_subset(mt_example(deaths = "single", years = 2000:2019), sex == "female")
   expect_error(mt_fit(coherent_fdm(order1 = 2, order2 = 1), x), class = "mt_error_model_fit", regexp = "two strata")
 })
+
+test_that("models of observed rates fitted to smoothed rates add observation noise", {
+  x <- mt_regroup(mt_example(deaths = "grouped", years = 1995:2019), age = "deaths")
+  raw <- mt_fit(rwd(), x)
+  expect_false(raw$smoothed_input)
+  expect_true(all(raw$noise_sd == 0))
+  fit <- mt_fit(rwd(), x, prep = mt_prep(step_smooth(along = "period", method = "whittaker")))
+  expect_true(fit$smoothed_input)
+  expect_true(any(fit$noise_sd > 0))
+  d <- mt_forecast(fit, h = 3, n_draws = 200, seed = 1)
+  p <- mt_forecast(fit, h = 3, n_draws = 200, seed = 1, predictive = TRUE)
+  # predictive draws are deaths given the exposures: wider than the draws of the smoothed rates
+  sd_log <- function(a) mean(apply(log(pmax(a, 1e-12)), 1:3, stats::sd))
+  expect_gt(sd_log(p$rates), sd_log(d$rates))
+})

@@ -65,7 +65,10 @@ simulate_model.default <- function(spec, fit, h, n_draws, ...) {
 #' @param data An [mt_data] object.
 #' @param prep An [mt_prep] pipeline or `NULL`.
 #' @param cores Number of cores for per-stratum fits (forked processes; 1 on
-#'   Windows).
+#'   Windows). Each stratum is fitted with its own random number stream,
+#'   started from the current generator, so fits that use random numbers
+#'   (such as `lee_carter(bootstrap = TRUE)`) are reproduced by `set.seed()`
+#'   with any number of cores.
 #' @param ... Passed to methods.
 #' @return An object of class `mt_fit`.
 #' @details Smooth inside the fit (`prep = mt_prep(step_smooth(...))`), not
@@ -134,13 +137,17 @@ mt_fit.mt_spec <- function(spec, data, prep = NULL, cores = 1, ...) {
   }
   report_fit_problems(diagnostics, spec$label)
   # observation noise, observed rates and residuals refer to the raw rates
-  # (before smoothing); the model is fitted to the preprocessed rates
+  # (before smoothing); the model is fitted to the preprocessed rates. A model
+  # of observed rates (rwd(), arima_series()) fitted to smoothed rates
+  # forecasts smoothed rates: its predictive draws add the noise of the raw
+  # rates around the smoothed ones
   D_obs <- raw_D %||% md$D
   structure(list(spec = spec, prep = prep, fits = fits, diagnostics = diagnostics, age = md$age,
                  periods = md$periods, strata = st, omega = d$omega,
                  observed = D_obs / md$E, train_D = md$D, raw_D = raw_D, train_E = md$E,
                  exposure_last = md$E[, length(md$periods), , drop = FALSE], level_totals = data$level_totals,
-                 noise_sd = extra_noise_sd(spec, fits, D_obs, md$E)),
+                 noise_sd = extra_noise_sd(spec, fits, D_obs, md$E, smoothed = if (!is.null(raw_D)) md$D / md$E),
+                 smoothed_input = !is.null(raw_D)),
             class = "mt_fit")
 }
 
@@ -170,14 +177,17 @@ report_fit_problems <- function(diagnostics, label) {
   }
 }
 
-# Extra-Poisson noise on the log scale per age and stratum, from in-sample fitted rates
-extra_noise_sd <- function(spec, fits, D, E) {
+# Extra-Poisson noise on the log scale per age and stratum, from in-sample
+# fitted rates; for models of observed rates fitted to smoothed rates
+# (`smoothed`, [age, period, stratum]), around the smoothed rates
+extra_noise_sd <- function(spec, fits, D, E, smoothed = NULL) {
   out <- matrix(0, dim(D)[1], dim(D)[3])
-  if (!isTRUE(spec$smooth)) return(out)
-  fitted <- if (spec$joint) fits$fitted else NULL
+  smooth <- isTRUE(spec$smooth)
+  if (!smooth && is.null(smoothed)) return(out)
+  fitted <- if (smooth && spec$joint) fits$fitted else NULL
   na <- dim(D)[1]
   for (s in seq_len(dim(D)[3])) {
-    f <- if (spec$joint) fitted[, , s] else fits[[s]]$fitted
+    f <- if (!smooth) smoothed[, , s] else if (spec$joint) fitted[, , s] else fits[[s]]$fitted
     if (is.null(f)) next
     # matrices [age, period] also with a single age group
     f <- matrix(f, na)
@@ -345,8 +355,10 @@ print.mt_fit <- function(x, ...) {
 #' @param seed Random seed (`NULL` leaves the random number generator as
 #'   is).
 #' @param predictive If `TRUE`, draws describe observable rates: for
-#'   models of smooth rates, extra-Poisson noise (estimated from in-sample
-#'   residuals) and Poisson variation of deaths given `exposure` are added;
+#'   models of smooth rates, and for any model fitted to smoothed rates
+#'   (`step_smooth()`), extra-Poisson noise (estimated from in-sample
+#'   residuals of the raw rates) and Poisson variation of deaths given
+#'   `exposure` are added;
 #'   cells can have zero deaths (rate 0). Used by [mt_backtest()], which
 #'   sums the deaths to the observed cells before taking logarithms.
 #' @param exposure Exposures for predictive draws: array `[age, period,
@@ -414,13 +426,14 @@ check_draws_plausible <- function(arr, age, strata, label) {
   invisible()
 }
 
-# Observed-rate draws: extra-Poisson noise (smooth models) and Poisson deaths given exposures.
+# Observed-rate draws: extra-Poisson noise (models of smooth rates, or fitted to smoothed rates) and
+# Poisson deaths given exposures.
 # Cells may have zero deaths (rate 0); scores that take logarithms floor the
 # deaths after summing them to the observed cells, not per grid cell
 predictive_rates <- function(arr, fit, exposure, spec) {
   d <- dim(arr)
   E <- expand_exposure(exposure %||% fit$exposure_last, d, dimnames(arr))
-  if (isTRUE(spec$smooth)) {
+  if (isTRUE(spec$smooth) || isTRUE(fit$smoothed_input)) {
     sd <- array(fit$noise_sd[, rep(seq_len(d[3]), each = d[2])], d[1:3])
     arr <- arr * exp(stats::rnorm(length(arr), 0, as.vector(sd)))
     mu <- arr * as.vector(E)
