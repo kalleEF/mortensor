@@ -57,7 +57,11 @@ ungrouping or smoothing never sees data after the forecast origin.
 Steps:
 \itemize{
 \item \code{step_ungroup(...)}: \code{\link[=mt_ungroup]{mt_ungroup()}};
-\item \code{step_smooth(...)}: \code{\link[=mt_smooth]{mt_smooth()}};
+\item \code{step_smooth(...)}: \code{\link[=mt_smooth]{mt_smooth()}}. The model is fitted to the
+smoothed rates; residuals and observation noise refer to the raw
+deaths. Smoothing over time (\code{along = "period"}, or \code{dims = 2})
+narrows the forecast intervals of models with a period index, so check
+coverage in a backtest and consider \code{\link[=calibrated]{calibrated()}};
 \item \code{step_regroup(age, period)}: \code{\link[=mt_regroup]{mt_regroup()}};
 \item \code{step_grid(age, period)}: \code{\link[=mt_set_grid]{mt_set_grid()}};
 \item \code{step_window(years)}: keeps the last \code{years} years of the training

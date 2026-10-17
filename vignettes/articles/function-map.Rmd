@@ -273,7 +273,7 @@ flowchart TD
 | Combine | `mt_order_strata()` | keep an ordering between strata (for example women below men) path by path | `mt_draws` | `mt_draws` |
 | Calibrate | `calibrated()` | rescale the spread (optionally the drift) of any model's draws to its forecast errors in the last years | `mt_spec` | `mt_spec` |
 | Jump-off | `anchored()`, `mt_jump_off()` | start forecasts at the observed level of the last years; report the first-year step | `mt_spec`, `mt_draws` | `mt_spec`, table |
-| Coherence | `mt_hierarchy()`, `mt_aggregate_strata()`, `mt_reconcile()` (with `fixed` nodes), `mt_aggregate_draws()` | define and apply totals of strata | hierarchy | `mt_data`, `mt_draws` |
+| Coherence | `mt_hierarchy()`, `mt_aggregate_strata()`, `mt_reconcile()` (with `fixed` nodes; `"proportional"` scales the parts of fixed nodes), `mt_aggregate_draws()` | define and apply totals of strata | hierarchy | `mt_data`, `mt_draws` |
 | Coherence | `mt_coherence()`, `mt_plot_coherence()` | sum of parts over aggregate, per year | `mt_draws`, hierarchy | table, ggplot |
 | Fit | `mt_fit()` | estimate | `mt_spec`, `mt_data` | `mt_fit` |
 | Inspect | `summary()`, `mt_parameters()`, `fitted()`, `residuals()`, `mt_plot_residuals()` | model, assumptions, estimates, fit | `mt_fit` | text, table, plot |
@@ -284,7 +284,7 @@ flowchart TD
 | Report | `yll()`, `mt_deaths()` | years of life lost, deaths with projected populations | `mt_draws` | table, array |
 | Report | `life_table()`, `standard_population()` | life tables from rates; standard populations esp2013, esp1976, who2000 | rates, name | table |
 | Report | `mt_contrast()`, `mt_inequality()` | gaps, ratios, SII, RII | `mt_draws` or `mt_data` | table |
-| Report | `mt_decompose()`, `mt_plot_decomposition()` | differences in life expectancy (or other summaries) by age, cause and subgroup composition: Arriaga, Horiuchi, stepwise replacement, Kitagawa, Arriaga meets Kitagawa | `mt_draws` or `mt_data` (or both) | `mt_decomposition`, table, ggplot |
+| Report | `mt_decompose()`, `mt_plot_decomposition()` | differences in life expectancy (or other summaries) by age, cause and subgroup composition: Arriaga, Horiuchi, stepwise replacement, Kitagawa, Arriaga meets Kitagawa; jump-off share and changes of gaps | `mt_draws` or `mt_data` (or both; also census years with gaps) | `mt_decomposition`, table, ggplot |
 | Report | `mt_plot_forecast()`, `mt_plot_age()`, `mt_plot_life_expectancy()`, `mt_plot_shares()`, `mt_plot_rates()`, `mt_plot_ungroup()`, `mt_plot_tucker()`, `mt_export()` | figures and CSV files | draws, data, tables | ggplot, file |
 | Data | `ons_data`, `ons_cause_groups`, `de_deaths`, `de_population`, `de_cause_groups`, `mt_example()`, `mt_example_causes()`, `mt_example_regions()` | example data (published and simulated) | | tables, `mt_data` |
 | Report | `theme_mortensor()`, `scale_colour_mortensor()`, `mt_palette()` | the package's plot style for your own figures | | theme, scales |
@@ -303,9 +303,12 @@ development points:
   smoothing between neighbouring regions (such as BYM models); pooling
   works through common trends (`li_lee()`); Bayesian APC models smooth over
   age, period and cohort within each stratum.
-* **Backtest targets other than death rates.** Backtests score log death
-  rates per cell; life expectancy or age-standardised rates as targets are
-  not yet available.
+* **Uncertainty of score differences.** `mt_score()` reports mean scores;
+  standard errors over origins and strata or paired tests of two models
+  are not computed.
+* **Lifespan variation.** Lifespan variation (e-dagger, Gini) is not a
+  built-in quantity; `mt_decompose()` accepts it as a function of the
+  rates.
 * **Multiple imputation of suppressed cells.** `mt_fill_suppressed()`
   returns one estimate; the uncertainty of suppressed counts is not carried
   into forecasts.

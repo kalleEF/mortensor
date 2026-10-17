@@ -248,7 +248,17 @@ mt_aggregate_strata <- function(data, hierarchy, replace = FALSE) {
 #' strata of the draw are projected again, until none is negative (a simple
 #' form of the non-negative reconciliation of Wickramasuriya et al. 2020);
 #' the aggregates are recomputed from the bottom series, so the result is
-#' coherent and non-negative, and fixed nodes are kept.
+#' coherent and non-negative, and fixed nodes are kept. A warning reports
+#' when more than 5% of the draws needed this, because the distributions of
+#' the affected strata (often small causes) are then truncated at zero.
+#'
+#' `"proportional"` keeps the `fixed` nodes and scales the bottom strata
+#' below each of them in proportion to their own forecasts, draw by draw
+#' (top-down allocation with forecast proportions, Athanasopoulos, Ahmed
+#' and Hyndman 2009). It never sets a part to zero and keeps the shape of
+#' the parts' distributions; it is the usual choice when causes of death
+#' must add up to a trusted all-cause forecast. Fixed nodes must not share
+#' parts.
 #'
 #' Draws of strata forecast by separate models are independent, so their sums
 #' would be too narrow. With `dependence = "empirical"` (default), the paths
@@ -264,8 +274,8 @@ mt_aggregate_strata <- function(data, hierarchy, replace = FALSE) {
 #' @param draws An [mt_draws] object with the strata of the hierarchy.
 #' @param hierarchy An [mt_hierarchy()] (or, for one variable, `var` and
 #'   `total`).
-#' @param method `"wls"` (default), `"mint"`, `"structural"`, `"ols"` or
-#'   `"bottom_up"`. In a backtest on [mt_example_regions()] (Lee-Carter per
+#' @param method `"wls"` (default), `"mint"`, `"structural"`, `"ols"`,
+#'   `"bottom_up"` or `"proportional"` (with `fixed`). In a backtest on [mt_example_regions()] (Lee-Carter per
 #'   stratum, 90 strata) WLS and structural scaling kept 95% coverage of
 #'   bottom and aggregate strata at 0.95-0.98 and improved the bottom-level
 #'   CRPS; MinT with the draw covariance under-covered aggregates (0.88).
@@ -281,8 +291,10 @@ mt_aggregate_strata <- function(data, hierarchy, replace = FALSE) {
 #'   all-cause forecast that the causes must add up to. The projection gives
 #'   these nodes zero variance, so the other strata absorb the whole gap;
 #'   `$reconciliation$max_relative_change_fixed` reports how closely they
-#'   were kept (they move only when every bottom stratum below them would
-#'   have to be negative). Needs a projection method.
+#'   were kept; they move, with a warning, when their own forecasts do not
+#'   add up (a node fixed together with all its parts) or when every bottom
+#'   stratum below them would have to be negative. Needs a projection
+#'   method or `"proportional"`.
 #' @param var,total,parts One-variable form: stratum variable and its total
 #'   level (`parts` is ignored: all other levels are parts).
 #' @return The reconciled `mt_draws`, with diagnostics in `$reconciliation`
@@ -293,6 +305,10 @@ mt_aggregate_strata <- function(data, hierarchy, replace = FALSE) {
 #' reconciliation for hierarchical and grouped time series through trace
 #' minimization. *Journal of the American Statistical Association*
 #' 114(526): 804-819. \doi{10.1080/01621459.2018.1448825}
+#'
+#' Athanasopoulos G, Ahmed RA, Hyndman RJ (2009). Hierarchical forecasts for
+#' Australian domestic tourism. *International Journal of Forecasting*
+#' 25: 146-166.
 #'
 #' Wickramasuriya SL, Turlach BA, Hyndman RJ (2020). Optimal non-negative
 #' forecast reconciliation. *Statistics and Computing* 30: 1167-1182.
@@ -315,7 +331,8 @@ mt_aggregate_strata <- function(data, hierarchy, replace = FALSE) {
 #' rc <- mt_reconcile(fc, h, method = "wls")
 #' rc$reconciliation
 #' @export
-mt_reconcile <- function(draws, hierarchy = NULL, method = c("wls", "mint", "structural", "ols", "bottom_up"),
+mt_reconcile <- function(draws, hierarchy = NULL,
+                         method = c("wls", "mint", "structural", "ols", "bottom_up", "proportional"),
                          shrink = "auto", exposure = NULL, dependence = c("empirical", "none"), seed = NULL,
                          fixed = NULL, var = NULL, total = NULL, parts = NULL) {
   check_class(draws, "mt_draws", "draws")
@@ -352,9 +369,12 @@ mt_reconcile <- function(draws, hierarchy = NULL, method = c("wls", "mint", "str
 # Indices of the strata whose forecasts are kept in reconciliation: labels,
 # or "total" for the grand total of the hierarchy
 fixed_nodes <- function(fixed, strata, h, hs, method) {
+  if (method == "proportional" && !length(fixed)) {
+    mt_abort("`method = \"proportional\"` scales the parts of fixed nodes: give `fixed`.", class = "argument")
+  }
   if (is.null(fixed) || !length(fixed)) return(integer())
   if (method == "bottom_up") {
-    mt_abort("`fixed` needs a projection method (\"wls\", \"mint\", \"structural\" or \"ols\").",
+    mt_abort("`fixed` needs a projection method (\"wls\", \"mint\", \"structural\", \"ols\") or \"proportional\".",
              class = "argument")
   }
   idx <- integer()
@@ -370,6 +390,14 @@ fixed_nodes <- function(fixed, strata, h, hs, method) {
   idx <- union(idx, match(lab, strata$label))
   if (all(hs$is_bottom[idx]) && length(idx) == sum(hs$is_bottom)) {
     mt_abort("`fixed` cannot hold every bottom stratum.", class = "argument")
+  }
+  if (method == "proportional") {
+    agg <- idx[!hs$is_bottom[idx]]
+    if (!length(agg)) mt_abort("`method = \"proportional\"` needs an aggregate among `fixed`.", class = "argument")
+    if (any(colSums(hs$S[agg, , drop = FALSE] > 0) > 1)) {
+      mt_abort(paste("`method = \"proportional\"` needs fixed nodes without common parts (for example all",
+                     "causes of every region, but not also the national total)."), class = "argument")
+    }
   }
   idx
 }
@@ -398,6 +426,7 @@ reconcile_array <- function(arr, hs, additive, method, shrink, exposure, d, fixe
   gap_before <- 0
   fixed_change <- 0
   zero_share <- 0
+  draw_zero <- logical(d[4])
   shrink_used <- numeric(0)
   out <- Y
   for (a in seq_len(d[1])) {
@@ -409,6 +438,15 @@ reconcile_array <- function(arr, hs, additive, method, shrink, exposure, d, fixe
       }
       Yb <- if (method == "bottom_up" || !length(agg_rows)) {
         Yc[, b, drop = FALSE]
+      } else if (method == "proportional") {
+        # parts of each fixed node scaled in proportion to their forecasts
+        Ypb <- Yc[, b, drop = FALSE]
+        for (fi in fixed[!hs$is_bottom[fixed]]) {
+          mem <- which(S[fi, ] > 0)
+          tot <- Ypb[, mem, drop = FALSE] %*% S[fi, mem]
+          Ypb[, mem] <- Ypb[, mem, drop = FALSE] * as.vector(Yc[, fi] / pmax(tot, 1e-300))
+        }
+        Ypb
       } else {
         # diagonal weights as vectors, MinT as a matrix
         W <- switch(method,
@@ -442,6 +480,7 @@ reconcile_array <- function(arr, hs, additive, method, shrink, exposure, d, fixe
           active <- active[rowSums(Yp[active, , drop = FALSE] < 0) > 0]
         }
         zero_share <- zero_share + sum(held)
+        draw_zero <- draw_zero | rowSums(held) > 0
         Yp
       }
       zero_share <- zero_share + sum(Yb < 0)
@@ -454,11 +493,23 @@ reconcile_array <- function(arr, hs, additive, method, shrink, exposure, d, fixe
     }
   }
   zero_share <- zero_share / (d[1] * d[2] * d[4] * nb)
+  if (length(fixed) && fixed_change > 1e-6) {
+    mt_warn(sprintf(paste("Fixed nodes moved by up to %.1f%%: they cannot all be kept when their forecasts do not",
+                          "add up (a node fixed together with all its parts) or when the parts below them would",
+                          "have to be negative."), 100 * fixed_change), class = "reconcile")
+  }
+  if (mean(draw_zero) > 0.05) {
+    mt_warn(sprintf(paste("In %.0f%% of the draws some bottom forecasts were set to zero to keep the aggregates%s;",
+                          "their distributions are truncated. Check the base forecasts (mt_coherence()) or use",
+                          "method = \"proportional\" with fixed nodes."), 100 * mean(draw_zero),
+                    if (length(fixed)) " and fixed nodes" else ""), class = "reconcile")
+  }
   rates <- if (additive == "deaths") out / as.vector(E) else out
   rates <- pmax(rates, 1e-12)
   list(rates = rates, exposure = E,
        info = list(method = method, max_relative_gap_before = gap_before, share_set_to_zero = zero_share,
                    mean_shrinkage = if (length(shrink_used)) mean(shrink_used) else NA_real_,
+                   share_draws_with_zeros = mean(draw_zero),
                    max_relative_change_fixed = if (length(fixed)) fixed_change else NA_real_))
 }
 
@@ -634,15 +685,18 @@ shrink_cov <- function(X, shrink = "auto") {
 #' fit <- mt_fit(reconciled(lee_carter(), h, method = "wls"), mt_aggregate_strata(x, h))
 #' fc <- mt_forecast(fit, h = 5, n_draws = 50, seed = 1)
 #' @export
-reconciled <- function(spec, hierarchy, method = c("wls", "mint", "structural", "ols", "bottom_up"),
+reconciled <- function(spec, hierarchy, method = c("wls", "mint", "structural", "ols", "bottom_up", "proportional"),
                           shrink = "auto", dependence = c("auto", "empirical", "none"), fixed = NULL) {
   check_class(spec, "mt_spec", "spec")
   method <- match.arg(method)
   dependence <- match.arg(dependence)
   if (dependence == "auto") dependence <- if (isTRUE(spec$joint)) "none" else "empirical"
   if (length(fixed) && method == "bottom_up") {
-    mt_abort("`fixed` needs a projection method (\"wls\", \"mint\", \"structural\" or \"ols\").",
+    mt_abort("`fixed` needs a projection method (\"wls\", \"mint\", \"structural\", \"ols\") or \"proportional\".",
              class = "argument")
+  }
+  if (method == "proportional" && !length(fixed)) {
+    mt_abort("`method = \"proportional\"` scales the parts of fixed nodes: give `fixed`.", class = "argument")
   }
   sp <- new_mt_spec("reconciled", list(base = spec, hierarchy = as_hierarchy(hierarchy), method = method,
                                        shrink = shrink, dependence = dependence, fixed = fixed),
@@ -811,7 +865,8 @@ mt_aggregate_draws <- function(draws, hierarchy = NULL, age = NULL, exposure = N
 #' @return `mt_coherence()`: a `data.table` with the aggregate strata,
 #'   `period`, and the median and the 2.5% and 97.5% quantiles of the ratio
 #'   over ages and draws. `mt_plot_coherence()`: a ggplot object with the
-#'   distribution of the ratios per year.
+#'   distribution of the median ratios of the aggregates per year and the
+#'   range of the ratios of single paths.
 #' @examples
 #' x <- mt_example_regions(years = 2005:2019, regions = 2)
 #' h <- mt_hierarchy(sex = "both", region = "all", quintile = "all")
@@ -847,11 +902,15 @@ mt_coherence <- function(draws, hierarchy, exposure = NULL) {
 mt_plot_coherence <- function(draws, hierarchy, exposure = NULL) {
   need_ggplot()
   tab <- mt_coherence(draws, hierarchy, exposure)
+  rng <- tab[, list(lo = min(q0.025), hi = max(q0.975)), by = period]
   ggplot2::ggplot(tab, ggplot2::aes(x = factor(period), y = q0.5)) +
+    ggplot2::geom_linerange(data = rng, ggplot2::aes(y = NULL, ymin = lo, ymax = hi), colour = "grey60",
+                            linewidth = 2, alpha = 0.5) +
     ggplot2::geom_hline(yintercept = 1, linetype = "dashed", colour = "#D7191C") +
     ggplot2::geom_boxplot(fill = "#66C2A5", alpha = 0.6, outlier.size = 0.6) +
     ggplot2::labs(x = NULL, y = "Sum of parts / aggregate", title = "Coherence of the forecast",
-                  subtitle = sprintf("%s; median over ages and draws per aggregate stratum; 1 = coherent",
+                  subtitle = sprintf(paste("%s; boxes: medians over ages and draws per aggregate stratum; grey: range",
+                                           "of the 2.5%%-97.5%% quantiles of single paths; 1 = coherent"),
                                      draws$model)) +
     theme_mortensor()
 }

@@ -42,7 +42,7 @@ demography, ggplot2) use them when installed.
 | Describing the past | `mt_observed()`, `life_expectancy()`, `asr()`, `prob_dying()` on data, `mt_contrast()` (gaps, ratios), `mt_inequality()` (SII, RII), `standard_population()` |
 | Models | `rwd()`, `lee_carter()` (Poisson or SVD with the adjustments and period choice of demography), `tucker3()`, `arima_series()`, `ets_series()`, `hyndman_ullah()` (demography), `stmomo()` (APC, CBD, RH, M6, LC), `li_lee()`, `product_ratio()`, `apc_bayes()` and `apc_select()` (bamp), `cause_shares()` |
 | Wrappers for any model | `ensemble()` (weights from inner backtests, `top_k`), `reconciled()`, `calibrated()` (spread fitted to the errors of the last 10 years), `anchored()` (jump-off at the observed level), `bootstrapped()`, `tuned()` and `mt_tune()` (full or two-stage grids) |
-| Coherence | `mt_hierarchy()`, `mt_aggregate_strata()`, `mt_reconcile()` and `reconciled()` (bottom-up, WLS, MinT, structural, OLS; draw by draw; `fixed` nodes such as a trusted total), `mt_coherence()`, `mt_plot_coherence()`, `mt_aggregate_draws()`, `mt_order_strata()` |
+| Coherence | `mt_hierarchy()`, `mt_aggregate_strata()`, `mt_reconcile()` and `reconciled()` (bottom-up, WLS, MinT, structural, OLS, proportional; draw by draw; non-negative; `fixed` nodes such as a trusted all-cause total), `mt_coherence()`, `mt_plot_coherence()`, `mt_aggregate_draws()`, `mt_order_strata()` |
 | Forecasts | `mt_fit()`, `summary()`, `mt_parameters()`, `residuals()`, `mt_forecast()` (simulated paths), `mt_jump_off()`, `mt_summarise()`, `mt_deaths()`, `mt_disaggregate()` with `mt_shape_rates()` and `mt_disaggregate_check()` |
 | Evaluation | `mt_backtest()` (rolling origin, no leakage; rates, life expectancy, ASR), `mt_score()` (CRPS, WIS, coverage, PIT, MASE) |
 | Decomposition | `mt_decompose()` (differences by age, cause and subgroup: Arriaga, Horiuchi, stepwise replacement, Kitagawa, and Arriaga meets Kitagawa for subgroup composition; on observed data, forecast draws or both), `mt_plot_decomposition()` |
@@ -109,8 +109,8 @@ mt_score(bt)
 Vignettes: *Getting started* (ONS deprivation data), *Your own data, from
 CSV to report*, *Forecasting mortality by deprivation quintile*, *Causes of
 death by deprivation*, *Coherent forecasts by sex, region and cause* (German
-Laender), *Coherent forecasts: what reconciliation changes*, *Model
-reference*, *Data at
+Laender), *Coherent forecasts: what reconciliation changes*, *Decomposing
+differences in life expectancy*, *Model reference*, *Data at
 different granularities* and *Forecasting and backtesting* (HMD data),
 *Bayesian age-period-cohort models with bamp*, *Comparison with demography,
 bamp and StMoMo*, *Frequently asked questions*.

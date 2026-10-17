@@ -7,7 +7,7 @@
 mt_reconcile(
   draws,
   hierarchy = NULL,
-  method = c("wls", "mint", "structural", "ols", "bottom_up"),
+  method = c("wls", "mint", "structural", "ols", "bottom_up", "proportional"),
   shrink = "auto",
   exposure = NULL,
   dependence = c("empirical", "none"),
@@ -24,8 +24,8 @@ mt_reconcile(
 \item{hierarchy}{An \code{\link[=mt_hierarchy]{mt_hierarchy()}} (or, for one variable, \code{var} and
 \code{total}).}
 
-\item{method}{\code{"wls"} (default), \code{"mint"}, \code{"structural"}, \code{"ols"} or
-\code{"bottom_up"}. In a backtest on \code{\link[=mt_example_regions]{mt_example_regions()}} (Lee-Carter per
+\item{method}{\code{"wls"} (default), \code{"mint"}, \code{"structural"}, \code{"ols"},
+\code{"bottom_up"} or \code{"proportional"} (with \code{fixed}). In a backtest on \code{\link[=mt_example_regions]{mt_example_regions()}} (Lee-Carter per
 stratum, 90 strata) WLS and structural scaling kept 95\% coverage of
 bottom and aggregate strata at 0.95-0.98 and improved the bottom-level
 CRPS; MinT with the draw covariance under-covered aggregates (0.88).}
@@ -46,8 +46,10 @@ used; aggregates are summed.}
 all-cause forecast that the causes must add up to. The projection gives
 these nodes zero variance, so the other strata absorb the whole gap;
 \verb{$reconciliation$max_relative_change_fixed} reports how closely they
-were kept (they move only when every bottom stratum below them would
-have to be negative). Needs a projection method.}
+were kept; they move, with a warning, when their own forecasts do not
+add up (a node fixed together with all its parts) or when every bottom
+stratum below them would have to be negative. Needs a projection
+method or \code{"proportional"}.}
 
 \item{var, total, parts}{One-variable form: stratum variable and its total
 level (\code{parts} is ignored: all other levels are parts).}
@@ -85,7 +87,17 @@ disagree strongly. Such values are held at zero and the remaining bottom
 strata of the draw are projected again, until none is negative (a simple
 form of the non-negative reconciliation of Wickramasuriya et al. 2020);
 the aggregates are recomputed from the bottom series, so the result is
-coherent and non-negative, and fixed nodes are kept.
+coherent and non-negative, and fixed nodes are kept. A warning reports
+when more than 5\% of the draws needed this, because the distributions of
+the affected strata (often small causes) are then truncated at zero.
+
+\code{"proportional"} keeps the \code{fixed} nodes and scales the bottom strata
+below each of them in proportion to their own forecasts, draw by draw
+(top-down allocation with forecast proportions, Athanasopoulos, Ahmed
+and Hyndman 2009). It never sets a part to zero and keeps the shape of
+the parts' distributions; it is the usual choice when causes of death
+must add up to a trusted all-cause forecast. Fixed nodes must not share
+parts.
 
 Draws of strata forecast by separate models are independent, so their sums
 would be too narrow. With \code{dependence = "empirical"} (default), the paths
@@ -111,6 +123,10 @@ Wickramasuriya SL, Athanasopoulos G, Hyndman RJ (2019). Optimal forecast
 reconciliation for hierarchical and grouped time series through trace
 minimization. \emph{Journal of the American Statistical Association}
 114(526): 804-819. \doi{10.1080/01621459.2018.1448825}
+
+Athanasopoulos G, Ahmed RA, Hyndman RJ (2009). Hierarchical forecasts for
+Australian domestic tourism. \emph{International Journal of Forecasting}
+25: 146-166.
 
 Wickramasuriya SL, Turlach BA, Hyndman RJ (2020). Optimal non-negative
 forecast reconciliation. \emph{Statistics and Computing} 30: 1167-1182.

@@ -142,7 +142,7 @@ mt_fit.mt_spec_apc_bayes <- function(spec, data, prep = NULL, cores = 1, ...) {
   structure(list(spec = spec, prep = prep, fits = fits, diagnostics = diagnostics, age = md$age,
                  periods = md$periods, strata = st, omega = d$omega, observed = D_obs / md$E,
                  train_D = md$D, raw_D = raw_deaths(pr$raw, md), train_E = md$E,
-                 exposure_last = md$E[, length(md$periods), , drop = FALSE],
+                 exposure_last = md$E[, length(md$periods), , drop = FALSE], level_totals = data$level_totals,
                  noise_sd = extra_noise_sd(spec, fits, D_obs, md$E), apc_age = cells$age),
             class = "mt_fit")
 }

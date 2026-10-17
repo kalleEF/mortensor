@@ -171,9 +171,11 @@ age group and year (lower is better); `cov95` is the share of observed
 rates inside the 95% intervals (target 0.95). Pooling the Laender of one
 sex into a common trend (Li-Lee) is more accurate than separate models,
 and the ensemble with random walks is the most accurate and the best
-calibrated. All models are too narrow for the aggregates, as single models
-usually are on real data, where trends change; the ensemble comes
-closest to nominal coverage.
+calibrated. Differences of a few thousandths in CRPS are small against
+the variation between origins and strata; the ensemble is preferred
+mainly for its coverage. All models are too narrow for the aggregates, as
+single models usually are on real data, where trends change; the ensemble
+comes closest to nominal coverage.
 
 ### Forecasts
 
@@ -284,15 +286,20 @@ ggplot(wd, aes(population / 1e6, width, colour = method)) +
 
 * **OLS** distributes the adjustment equally over all strata in deaths. An
   adjustment of a few hundred deaths is small for Nordrhein-Westfalen and
-  large for Bremen, so the intervals of the small Laender widen most.
-* **Structural** weights widen the small Laender less than OLS.
+  large for Bremen, so the intervals of the small Laender widen most. In
+  89% of the draws it would make the deaths of some strata negative; they
+  are held at zero (the warnings above), which truncates their
+  distributions.
+* **Structural** weights widen the small Laender less than OLS (strata
+  held at zero in 60% of the draws).
 * **WLS** (weights from the variance of each stratum's draws) keeps the
   intervals of the Laender close to those of their own models and narrows
   the aggregates towards the sums of the Laender.
 * **Bottom-up** keeps the Laender of each sex as forecast and replaces all
   aggregates by sums.
 * **MinT** uses the covariance between the strata and gives the narrowest
-  intervals at every level.
+  intervals at every level (strata held at zero in 8% of the draws, WLS
+  4%).
 
 Narrower intervals are better only if they still cover the observations.
 The backtest of all methods with the same base model (origins 2008, 2011,
@@ -441,10 +448,60 @@ for 2035 are very wide, and they widen the all-cause intervals of the
 bottom-up sums. Deaths in this group rose steeply between 1998 and 2019,
 partly because dementia was increasingly coded as the underlying cause.
 Extrapolating that trend over 16 years is uncertain, and the forecast says
-so. For such causes, a shorter horizon or a fitting period that starts
-after the coding changes (`step_window()`, compared in a backtest) is more
+so. The random walk component of the ensemble extrapolates the rise in
+each Land, and 43% of its draws reach death rates above 1 at ages 85 and
+over by 2035 (the warning above): the upper ends of these intervals are
+not plausible. For such causes, a shorter horizon or a fitting period
+that starts after the coding changes (`step_window()`, compared in a backtest) is more
 defensible than a long extrapolation; the gaps between East and West
 Germany by cause are better determined than the levels.
+
+### What the causes imply for all causes
+
+Summed bottom-up, the cause forecasts also forecast all causes. Over 16
+years their sum is dominated by the causes that fall slowest or rise, so
+forecasts by cause tend to be more pessimistic than forecasts of all
+causes (Wilmoth 1995). The remedy is to keep the all-cause forecast of
+each Land and scale its causes to it, draw by draw, in proportion to the
+cause forecasts (`method = "proportional"` with the all-cause strata of
+the Laender as `fixed` nodes); the national figures remain sums of the
+Laender. The all-cause forecasts come from the same ensemble, fitted to
+the all-cause strata:
+
+```{r forecast-causes-fixed}
+fixed_all <- mt_strata(xcc)[cause == "all" & region %in% laender, label]
+spc_fx <- reconciled(ensemble(ll = li_lee(common_by = c("sex", "cause")), rw = rwd(observation_noise = TRUE)),
+                     hc, method = "proportional", fixed = fixed_all)
+fcx <- mt_forecast(mt_fit(spc_fx, xcc, prep = smooth), to = 2035, n_draws = 500, seed = 2)
+show <- function(f, approach) {
+  a <- asr(f)[region == "Deutschland" & cause %in% c("all", "mental_nervous") & period == 2035]
+  e <- life_expectancy(f, at = 50)[region == "Deutschland" & cause == "all" & period == 2035]
+  rbind(a[, .(sex, quantity = paste("ASR", cause), approach, value = sprintf("%.0f (%.0f-%.0f)", q0.5, q0.025,
+                                                                                q0.975))],
+        e[, .(sex, quantity = "e50 all", approach, value = sprintf("%.1f (%.1f-%.1f)", q0.5, q0.025, q0.975))])
+}
+obs <- rbind(asr(xcc)[region == "Deutschland" & cause %in% c("all", "mental_nervous") & period == 2019,
+                      .(sex, quantity = paste("ASR", cause), observed_2019 = sprintf("%.0f", q0.5))],
+             life_expectancy(xcc, at = 50)[region == "Deutschland" & cause == "all" & period == 2019,
+                                           .(sex, quantity = "e50 all", observed_2019 = sprintf("%.1f", q0.5))])
+merge(obs, dcast(rbind(show(fcc, "causes summed"), show(fcx, "causes scaled to all causes")),
+                 sex + quantity ~ approach, value.var = "value"), by = c("sex", "quantity"))
+```
+
+Summed bottom-up, the cause forecasts raise the national all-cause rate
+of women at 50+ from 2037 per 100,000 in 2019 to 2424 in 2035, and their
+life expectancy at 50 falls from 34.7 to 34.2 years; for men the rate
+stays at its level of 2019 and life expectancy at 50 rises by 0.8 years.
+The rise of the mental and nervous group (from 222 to 793 for women),
+partly a coding shift, is larger than the whole all-cause rise. Scaled to
+the all-cause forecasts of the Laender, the all-cause rate falls (women
+1722, men 2405) and life expectancy at 50 rises to 36.2 and 32.9 years.
+The causes keep their forecast composition, so the mental and nervous
+group still more than doubles (505). For a horizon of 16 years the scaled
+forecasts are the more defensible choice; the level of each cause remains
+conditional on the extrapolated composition, and a five-year backtest says
+little about which approach is closer over 16 years. Report which one is
+used.
 
 ## Summary of the decisions
 
@@ -457,5 +514,11 @@ Germany by cause are better determined than the levels.
 | Aggregation layers | East and West; cause groups and rest | `mt_hierarchy(region = list(total = , groups = ))`, `mt_group_levels()` |
 | Shared exposures | causes share the population of their Land | `mt_hierarchy(cause = list(total = "all", additive = "rates"))` |
 | Sparse cells | pooling and Whittaker smoothing | `li_lee(common_by = )`, `step_smooth()` |
-| Coherence | bottom-up sums of a joint model | `reconciled()` |
+| Coherence | bottom-up sums of a joint model; causes scaled to the all-cause forecast of each Land | `reconciled()`, `reconciled(method = "proportional", fixed = )` |
 | Calibration | ensemble with noise-robust random walks | `ensemble()`, `rwd(observation_noise = TRUE)` |
+
+## References
+
+Wilmoth JR (1995). Are mortality projections always more pessimistic when
+disaggregated by cause of death? *Mathematical Population Studies* 5(4):
+293-319. doi:10.1080/08898489509525409.

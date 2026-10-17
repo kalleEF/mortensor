@@ -38,7 +38,9 @@ schedules are handled by the same code.
 }
 \details{
 \itemize{
-\item \verb{q_x = n m / (1 + (n - a) m)}, capped at 1;
+\item \verb{q_x = n m / (1 + (n - a) m)}; where this exceeds 1 (rates above
+about \code{2 / n}, far beyond observed values), the constant-hazard value
+\verb{1 - exp(-n m)} is used, so that survivors stay positive;
 \item \code{a_x} defaults to \code{n / 2} for every closed interval (supply \code{ax} to
 override, for example for age 0, where \code{n / 2} overstates the average
 time lived by infants who die; the effect on e0 at low infant mortality

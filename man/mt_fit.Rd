@@ -26,6 +26,12 @@ Applies the preprocessing pipeline, takes deaths and exposures on the grid
 and fits the model per stratum (or jointly). A failure in one stratum is
 recorded in the diagnostics and does not stop the other strata.
 }
+\details{
+Smooth inside the fit (\code{prep = mt_prep(step_smooth(...))}), not
+before it: data returned by \code{\link[=mt_smooth]{mt_smooth()}} carry no raw deaths, so
+residuals and observation noise would refer to the smoothed rates and
+the intervals would be too narrow. Such data give a warning.
+}
 \examples{
 x <- mt_example(deaths = "single")
 fit <- mt_fit(lee_carter(), x)

@@ -41,7 +41,9 @@ An object of class \code{mt_axis}.
 An axis is an ordered set of contiguous half-open intervals
 \verb{[lower, upper)}. Only the last interval may be open (\code{upper = Inf}), as
 for an age group such as 90+. Axes describe the resolution of observed data
-and of the modelling grid.
+and of the modelling grid. Period axes may have gaps (for example the
+census years 2001, 2011 and 2021), which describe observed data; models
+need consecutive years.
 }
 \examples{
 single_ages(30, 100)

@@ -126,6 +126,7 @@ large weights move most):
 | `"structural"` | number of bottom series in each node | the aggregates, in proportion to their size in series |
 | `"wls"` | variance of each stratum's draws | the most uncertain strata |
 | `"mint"` | covariance of the draws, shrunk to its diagonal | uncertain strata, using their correlation |
+| `"proportional"` | (none; needs `fixed` nodes) | the parts of each fixed node, in proportion to their forecasts |
 
 MinT follows Wickramasuriya et al. (2019), with the covariance of the
 forecast draws in place of in-sample residuals.
@@ -223,6 +224,27 @@ so its scores differ from those of its own model (CRPS 0.0452 against
 and become less accurate than with plain WLS (bottom series 0.0694 against
 0.0677): here the total was not better informed than its parts.
 
+`method = "proportional"` keeps the fixed nodes too, but scales the
+parts below each of them in proportion to their own forecasts, draw by
+draw (top-down allocation, Athanasopoulos et al. 2009), instead of moving
+the most uncertain strata. It never sets a part to zero and is the usual
+choice for causes of death that must add up to an all-cause forecast (see
+"Causes of death by deprivation"); here the parts of England are the ten
+sex-by-quintile strata:
+
+```{r}
+rec_prop <- mt_reconcile(fc_base, h, method = "proportional", fixed = "total", seed = 1)
+e0_prop <- life_expectancy(rec_prop)[period == 2035][, method := "proportional, England fixed"]
+dcast(rbind(e0_fixed, e0_prop, fill = TRUE)[
+  label %in% c("both.England", "female.England", "male.England", "female.Q1", "male.Q5"),
+  .(label, method, e0 = round(q0.5, 2))], label ~ method, value.var = "e0")
+```
+
+Here the two give almost the same life expectancies (differences of
+at most 0.03 years). WLS moves each stratum in proportion to the
+variance of its draws, which grows with the level of its rates, so both
+methods move the strata with high rates most.
+
 ## What reconciliation changes in accuracy
 
 The same comparison in a rolling-origin backtest, with the reconciliation
@@ -302,7 +324,10 @@ for the bottom series.
 * **MinT** gives the narrowest intervals; check that they still cover the
   observations (here they covered least).
 * `fixed` keeps a node that is trusted more than the others (an official
-  total, an all-cause forecast) and lets the rest of the hierarchy adapt.
+  total, an all-cause forecast) and lets the rest of the hierarchy adapt;
+  `"proportional"` scales the parts of fixed nodes without changing their
+  composition. Fixed nodes whose forecasts do not add up (a node fixed
+  together with all its parts) cannot all be kept; `mt_reconcile()` warns.
 * Check the choice in a backtest at every level of the hierarchy, as above.
   When the totals are well estimated by their own models, report how much
   coherence changes them. The vignette "Coherent forecasts by sex, region
@@ -310,6 +335,10 @@ for the bottom series.
   Laender make the differences larger.
 
 ## References
+
+Athanasopoulos G, Ahmed RA, Hyndman RJ (2009). Hierarchical forecasts for
+Australian domestic tourism. *International Journal of Forecasting* 25:
+146-166.
 
 Wickramasuriya SL, Athanasopoulos G, Hyndman RJ (2019). Optimal forecast
 reconciliation for hierarchical and grouped time series through trace

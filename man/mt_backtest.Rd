@@ -54,7 +54,8 @@ or suppressed cells are skipped). They are added as rows with \code{target}
 }
 \value{
 An object of class \code{mt_backtest}: a \code{data.table} with one row per
-observed cell, origin and horizon: \code{model}, \code{origin}, \code{horizon},
+observed cell, origin and horizon: \code{model}, \code{prep} (the preprocessing
+steps, \code{"none"} without), \code{origin}, \code{horizon},
 stratum columns, \code{age_lo}, \code{age_hi}, \code{period}, \code{observed} (log rate),
 \code{median}, \code{mean}, quantiles, and the scores \code{crps}, \code{wis}, \code{ae}
 (absolute error of the median), \code{cov50}, \code{cov80}, \code{cov95}, \code{pit} and the

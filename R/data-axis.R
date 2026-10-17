@@ -3,7 +3,9 @@
 #' An axis is an ordered set of contiguous half-open intervals
 #' `[lower, upper)`. Only the last interval may be open (`upper = Inf`), as
 #' for an age group such as 90+. Axes describe the resolution of observed data
-#' and of the modelling grid.
+#' and of the modelling grid. Period axes may have gaps (for example the
+#' census years 2001, 2011 and 2021), which describe observed data; models
+#' need consecutive years.
 #'
 #' @param lower,upper Numeric vectors of interval bounds. `upper` may end with
 #'   `Inf` for an open last interval.
@@ -25,8 +27,12 @@ mt_axis <- function(lower, upper, labels = NULL, kind = c("age", "period")) {
   if (anyNA(lower) || anyNA(upper)) mt_abort("Axis bounds must not be missing.", class = "axis")
   if (any(upper <= lower)) mt_abort("Every interval needs `upper > lower`.", class = "axis")
   n <- length(lower)
-  if (n > 1L && any(abs(upper[-n] - lower[-1]) > 1e-9)) {
-    mt_abort("Axis intervals must be contiguous and increasing (upper[i] == lower[i + 1]).",
+  if (n > 1L && kind == "age" && any(abs(upper[-n] - lower[-1]) > 1e-9)) {
+    mt_abort("Age intervals must be contiguous and increasing (upper[i] == lower[i + 1]).",
+             class = "axis")
+  }
+  if (n > 1L && kind == "period" && any(upper[-n] > lower[-1] + 1e-9)) {
+    mt_abort("Period intervals must be increasing and must not overlap (upper[i] <= lower[i + 1]).",
              class = "axis")
   }
   if (any(is.infinite(upper[-n]))) mt_abort("Only the last interval may be open.", class = "axis")

@@ -18,55 +18,99 @@
 #' interval, and sums over ages, causes or subgroups ([summary()]) are formed
 #' path by path. Observed data give the decomposition of the observed rates
 #' (`n_draws = 1`) or, with `n_draws > 1`, Poisson draws of the deaths as in
-#' [mt_observed()]. Observed years inside forecast draws are the same in
-#' every draw.
+#' [mt_observed()]. Totals and contributions are means over draws;
+#' `summary()` adds quantiles.
+#'
+#' @section Observed and forecast years:
+#' Forecast draws hold the observed rates of their training years. A change
+#' from an observed year to a forecast year then contains the step from the
+#' observed to the model's fitted rates of that year (the jump-off, see
+#' [mt_jump_off()]) and the sampling noise of the observed year, besides
+#' the forecast change itself. The totals report the jump-off share
+#' (`jump_off`). `observed = "fitted"` uses the fitted rates of observed
+#' years, so that the decomposition describes the model's change alone;
+#' `observed = "poisson"` uses Poisson draws of the observed deaths, so that
+#' their sampling uncertainty enters the intervals.
+#'
+#' Two objects (`y`) are compared draw by draw. Draws of different models
+#' are independent, so by default (`pairing = "independent"`) the draws of
+#' `y` are shuffled before pairing; draws of models with the same seed would
+#' otherwise share their random numbers and give intervals that are too
+#' narrow. Use `pairing = "draw"` when `y` is derived from the draws of `x`
+#' (for example a reconciliation of the same draws).
 #'
 #' @section Methods:
 #' * `"arriaga"` (life expectancy): the symmetric Arriaga decomposition, the
 #'   average of the decompositions from 1 to 2 and (with the sign reversed)
-#'   from 2 to 1, computed on the package's life table. Causes get the
-#'   age-specific contribution in proportion to their rate differences
-#'   (an implied sensitivity, Riffe et al. 2024, eqs. 12-13); where the
-#'   all-cause difference is close to zero, the sensitivity is a numerical
-#'   derivative at the average rates. Exact.
+#'   from 2 to 1, computed on the package's life table (`...` passes `ax`
+#'   and `open` to it). Causes get the age-specific contribution in
+#'   proportion to their rate differences (an implied sensitivity, Riffe et
+#'   al. 2024, eqs. 12-13 of the working paper); where the all-cause
+#'   difference is close to zero, the sensitivity is a numerical derivative
+#'   at the average rates. Exact.
 #' * `"horiuchi"` (any quantity): the line-integral method of Horiuchi,
 #'   Wilmoth and Pletcher (2008) with `n_steps` steps; exact up to a small
 #'   discretisation error, reported in the totals.
 #' * `"stepwise"` (any quantity): stepwise replacement (Andreev, Shkolnikov
 #'   and Begun 2002) from the youngest to the oldest age, averaged over
-#'   both directions of the comparison. Exact; results depend on the order.
-#'   Arriaga's decomposition from 1 to 2 is stepwise replacement from the
-#'   oldest to the youngest age, so for life expectancy without causes the
-#'   two symmetric versions give identical results.
+#'   both directions of the comparison; with causes, all causes of an age
+#'   are replaced before the next age (DemoDecomp and LEdecomp replace cause
+#'   by cause, which changes the split between causes slightly). Exact;
+#'   results depend on the order. Arriaga's decomposition from 1 to 2 is
+#'   stepwise replacement from the oldest to the youngest age, so for life
+#'   expectancy without causes the two symmetric versions are identical.
 #' * `"kitagawa"` (crude death rate): the rate effect (age-specific rates at
 #'   the average age structure) and the composition effect (age structure
 #'   at the average rates) of Kitagawa (1955). Exact.
 #'
+#' Draws whose rates give no valid life table (for example rates far above
+#' any observed value, see the warning of [mt_forecast()]) are left out with
+#' a warning, and a warning reports contributions that do not add up to
+#' the difference.
+#'
 #' @section Subgroups:
 #' With `groups`, the populations being compared consist of the levels of a
-#' stratum variable (for example deprivation quintiles or education
-#' groups), and the decomposition separates the effect of their
-#' composition:
+#' stratum variable, and the decomposition separates the effect of their
+#' composition. `composition` must be chosen, because the two options
+#' describe different quantities:
 #'
-#' * `composition = "radix"` (Riffe, Tursun-zade and Trias Llimós 2024,
-#'   "Arriaga meets Kitagawa"): life expectancy (or the probability of
-#'   dying) of the population is the mean of the subgroups' values, weighted
-#'   by their population shares at the starting age (`at`), as when
-#'   subgroup life tables are blended at the radix. A Kitagawa
-#'   decomposition of that mean gives one composition effect and, for each
-#'   subgroup, its difference times its average share, which is split by
-#'   age (and cause) with `method`.
-#' * `composition = "pooled"`: the quantity of the pooled rates, which
-#'   weight the subgroup rates by their population shares at each age (the
-#'   rates of the aggregate strata; Vaupel 2002, "current rates"). The rates
-#'   of every subgroup, age and cause and the shares at every age are the
-#'   parameters of a `"horiuchi"` or `"stepwise"` decomposition; the
-#'   composition effects are reported by age, summed over subgroups, whose
-#'   separate composition terms are not identified.
+#' * `"radix"` (Riffe, Tursun-zade and Trias Llimós 2024, "Arriaga meets
+#'   Kitagawa"): life expectancy (or the probability of dying) of the
+#'   population is the mean of the subgroups' values, weighted by their
+#'   population shares at the starting age (`at`), as when subgroup life
+#'   tables are blended at the radix ("current conditions" in the terms of
+#'   Vaupel 2002, which the authors use). A Kitagawa decomposition of that
+#'   mean gives one composition effect and, for each subgroup, its
+#'   difference times its average share, which is split by age (and cause)
+#'   with `method`. The authors state that this holds when membership is
+#'   fixed from the starting age on and later shares change only through
+#'   mortality: education from age 30 or 35, sex, country of birth. It does
+#'   not hold for areas such as deprivation quintiles or regions, between
+#'   which people move and which are reclassified.
+#' * `"pooled"`: the quantity of the pooled rates, which weight the
+#'   subgroup rates by their population shares at each age (the rates of the
+#'   aggregate strata, as published for whole populations; "current
+#'   rates"). The rates of every subgroup, age and cause and the shares at
+#'   every age are the parameters of a `"horiuchi"` (default) or
+#'   `"stepwise"` decomposition; the composition effects are reported by
+#'   age, summed over subgroups, whose separate composition terms are not
+#'   identified. With many subgroups, causes and draws this takes minutes;
+#'   lower `n_steps` or the number of draws for a first look.
 #'
 #' Shares come from the exposures: of each observed year, and for forecast
 #' years from `exposure` (default: the last observed year, so composition
-#' does not change in the forecast unless exposures are given).
+#' does not change in the forecast unless exposures, for example a
+#' population projection, are given).
+#'
+#' @section Totals among causes and groups:
+#' Levels of `cause` and `groups` that are totals of the others (for example
+#' the cause `"all"` or the region `"Germany"`) must not be counted as
+#' parts. They are left out when the hierarchy declares them: `hierarchy`,
+#' or what the object records, the total of [mt_group_levels()] (`total`,
+#' also in fits and draws of such data) and the hierarchy of
+#' [mt_aggregate_strata()] or [reconciled()]. A level that equals the sum
+#' of the others in the observed deaths without being declared stops the
+#' decomposition.
 #'
 #' @param x An [mt_data] object (observed) or an [mt_draws] object
 #'   (forecast).
@@ -88,9 +132,16 @@
 #' @param cause Stratum variable holding causes of death, whose rates add
 #'   up to all causes.
 #' @param groups Stratum variable holding population subgroups.
-#' @param hierarchy Optional [mt_hierarchy()]: total and group levels of
-#'   `cause` and `groups` are left out (they are sums of the others).
-#' @param composition `"radix"` or `"pooled"` (see Subgroups).
+#' @param hierarchy An [mt_hierarchy()] that declares total and group levels
+#'   of `cause` and `groups` (default: the hierarchy stored in `x` or `y`).
+#' @param composition `"radix"` or `"pooled"`; required with `groups` (see
+#'   Subgroups).
+#' @param observed How observed years held in forecast draws enter:
+#'   `"data"` (observed rates), `"fitted"` (the model's fitted rates) or
+#'   `"poisson"` (Poisson draws of the observed deaths). See Observed and
+#'   forecast years.
+#' @param pairing `"independent"` or `"draw"`: how the draws of `x` and `y`
+#'   are paired.
 #' @param at Starting age (life expectancy at `at`; lower bound of
 #'   `prob_dying`); default the first grid age.
 #' @param to Upper age for `"prob_dying"`.
@@ -102,14 +153,19 @@
 #' @param n_draws For [mt_data]: 1 (the observed rates) or the number of
 #'   Poisson draws.
 #' @param probs Quantile levels of the summaries.
-#' @param seed Seed of the Poisson draws.
+#' @param seed Seed of Poisson draws and of the shuffling of `y`.
+#' @param ... Passed to the life table (`ax`, `open`, `k`, see
+#'   [life_table()]) for life expectancy.
 #' @return An `mt_decomposition` object. `summary()` returns contributions
 #'   summed (path by path) over the variables not in `by`, with mean and
 #'   quantiles; `summary(by = NULL)` returns one row per comparison (its
 #'   number in `comparison`) with the values in the two populations, their
-#'   difference (mean and quantiles), the sum of the contributions and the
-#'   largest difference between the two over draws (`max_residual`).
-#'   `print()` shows the totals.
+#'   difference (mean and quantiles), the jump-off share where it applies,
+#'   the sum of the contributions and the largest difference between the
+#'   two over draws (`max_residual`). `summary(change = c(p1, p2))`
+#'   decomposes the change between two periods of comparisons between
+#'   strata or objects (for example of a gap), path by path. `print()`
+#'   shows the totals.
 #' @references
 #' Arriaga EE (1984). Measuring and explaining the change in life
 #' expectancies. *Demography* 21(1): 83-96. \doi{10.2307/2061029}
@@ -129,7 +185,8 @@
 #'
 #' Riffe T, Tursun-zade R, Trias Llimós S (2024). Arriaga meets Kitagawa.
 #' Life expectancy decomposition with population subgroups. MPIDR Working
-#' Paper WP-2024-029. \doi{10.4054/MPIDR-WP-2024-029}
+#' Paper WP-2024-029. \doi{10.4054/MPIDR-WP-2024-029}. Published in
+#' *Geographical Analysis* (2026), \doi{10.1111/gean.70033}.
 #'
 #' Vaupel JW (2002). Life expectancy at current rates vs. current
 #' conditions: a reflexion stimulated by Bongaarts and Feeney's "How long
@@ -140,21 +197,32 @@
 #' d <- mt_decompose(x, periods = c(2000, 2015), at = 30)
 #' d
 #' summary(d, by = "age")[1:5]
-#' # the sex gap in a forecast year, with intervals
+#' # the sex gap in forecast years, with intervals, and its change
 #' fc <- mt_forecast(mt_fit(lee_carter(), x), h = 10, n_draws = 100, seed = 1)
-#' summary(mt_decompose(fc, var = "sex", ref = "male", at = 30), by = NULL)
-#' # observed 2015 against the forecast of 2025
+#' g <- mt_decompose(fc, var = "sex", ref = "male", periods = c(2016, 2025), at = 30)
+#' summary(g, by = NULL)
+#' summary(g, by = "age", change = c(2016, 2025))[1:5]
+#' # observed 2015 against the forecast of 2025, with the jump-off share
 #' mt_decompose(fc, periods = c(2015, 2025), at = 30)
 #' @export
 mt_decompose <- function(x, y = NULL, var = NULL, ref = NULL, periods = NULL,
                          quantity = c("life_expectancy", "prob_dying", "asr", "crude_rate"), method = NULL,
-                         cause = NULL, groups = NULL, hierarchy = NULL, composition = c("radix", "pooled"),
+                         cause = NULL, groups = NULL, hierarchy = NULL, composition = NULL,
+                         observed = c("data", "fitted", "poisson"), pairing = c("independent", "draw"),
                          at = NULL, to = NULL, standard = "esp2013", per = 1e5, exposure = NULL, n_steps = 20,
-                         n_draws = 1, probs = c(0.025, 0.5, 0.975), seed = 1) {
-  composition <- match.arg(composition)
+                         n_draws = 1, probs = c(0.025, 0.5, 0.975), seed = 1, ...) {
+  observed <- match.arg(observed)
+  pairing <- match.arg(pairing)
   custom <- is.function(quantity)
   qname <- if (custom) "custom" else match.arg(quantity)
-  pooled <- !is.null(groups) && composition == "pooled"
+  grouped <- !is.null(groups) && qname != "crude_rate"
+  if (grouped && is.null(composition)) {
+    mt_abort(paste("With `groups`, choose `composition`: \"pooled\" for the quantity of the pooled rates (areas,",
+                   "regions, deprivation groups), or \"radix\" for subgroups blended at the starting age",
+                   "(membership fixed from `at` on, as education or sex; Riffe et al. 2024)."), class = "argument")
+  }
+  composition <- if (grouped) match.arg(composition, c("radix", "pooled"))
+  pooled <- identical(composition, "pooled")
   method <- method %||% switch(qname, life_expectancy = if (pooled) "horiuchi" else "arriaga",
                                crude_rate = "kitagawa", "horiuchi")
   check_choice(method, c("arriaga", "horiuchi", "stepwise", "kitagawa"), "method")
@@ -166,12 +234,12 @@ mt_decompose <- function(x, y = NULL, var = NULL, ref = NULL, periods = NULL,
     mt_abort("The crude death rate is decomposed with `method = \"kitagawa\"`, which applies to it only.",
              class = "argument")
   }
-  if (!is.null(groups) && qname != "crude_rate") {
+  if (grouped) {
     if (composition == "radix" && !qname %in% c("life_expectancy", "prob_dying")) {
       mt_abort("`composition = \"radix\"` applies to life expectancy and prob_dying; use \"pooled\".",
                class = "argument")
     }
-    if (composition == "pooled" && method == "arriaga") {
+    if (pooled && method == "arriaga") {
       mt_abort("`composition = \"pooled\"` needs `method = \"horiuchi\"` or \"stepwise\".", class = "argument")
     }
   }
@@ -184,10 +252,14 @@ mt_decompose <- function(x, y = NULL, var = NULL, ref = NULL, periods = NULL,
   if (!is.null(sy) && !identical(sy$age$labels, sx$age$labels)) {
     mt_abort("`x` and `y` must have the same age grid.", class = "argument")
   }
-  q <- decomp_quantity(qname, quantity, sx$age, at, to, standard, per)
+  if (!is.null(sy) && pairing == "independent" && dim(sy$rates)[4] > 1) {
+    sy$rates <- sy$rates[, , , with_seed(seed + 2, sample.int(dim(sy$rates)[4])), drop = FALSE]
+  }
+  q <- decomp_quantity(qname, quantity, sx$age, at, to, standard, per, ...)
+  hierarchy <- hierarchy %||% object_hierarchy(x) %||% if (!is.null(y)) object_hierarchy(y)
 
-  px <- decomp_populations(sx$strata, var, cause, groups, hierarchy)
-  py <- if (!is.null(sy)) decomp_populations(sy$strata, var, cause, groups, hierarchy)
+  px <- decomp_populations(sx, var, cause, groups, hierarchy, qname)
+  py <- if (!is.null(sy)) decomp_populations(sy, var, cause, groups, hierarchy, qname)
   if (!is.null(py) && (!identical(px$cause_levels, py$cause_levels) ||
                        !identical(px$group_levels, py$group_levels))) {
     mt_abort("`x` and `y` must have the same causes and groups.", class = "argument")
@@ -195,43 +267,105 @@ mt_decompose <- function(x, y = NULL, var = NULL, ref = NULL, periods = NULL,
   comps <- decomp_comparisons(sx, sy, px, py, var, ref, periods)
 
   cache <- list()
-  side <- function(src, tag, p, idx) {
-    key <- paste(tag, p)
-    if (is.null(cache[[key]])) cache[[key]] <<- decomp_period(src, p)
-    a <- cache[[key]]
+  get_period <- function(src, tag, p, how) {
+    key <- paste(tag, p, how)
+    if (is.null(cache[[key]])) cache[[key]] <<- decomp_period(src, p, how, seed)
+    cache[[key]]
+  }
+  side <- function(a, idx) {
     nc <- nrow(idx)
     ng <- ncol(idx)
     R <- a$R[, as.vector(idx), , drop = FALSE]
-    list(R = array(R, c(dim(R)[1], nc, ng, dim(R)[3])), E = a$E[, idx[1, ], drop = FALSE])
+    list(R = array(R, c(dim(R)[1], nc, ng, dim(R)[3])), E = a$E[, idx[1, ], drop = FALSE], observed = a$observed,
+         forecast = a$forecast)
   }
   tables <- list()
   paths <- list()
   totals <- list()
+  frozen <- FALSE
   for (k in seq_along(comps$list)) {
     cmp <- comps$list[[k]]
-    s1 <- side(cmp$src1, cmp$tag1, cmp$p1, cmp$idx1)
-    s2 <- side(cmp$src2, cmp$tag2, cmp$p2, cmp$idx2)
+    a1 <- get_period(cmp$src1, cmp$tag1, cmp$p1, observed)
+    a2 <- get_period(cmp$src2, cmp$tag2, cmp$p2, observed)
+    s1 <- side(a1, cmp$idx1)
+    s2 <- side(a2, cmp$idx2)
     n <- max(dim(s1$R)[4], dim(s2$R)[4])
     s1$R <- recycle_draws(s1$R, n)
     s2$R <- recycle_draws(s2$R, n)
-    res <- decomp_core(s1, s2, q, method, composition, grouped = !is.null(groups), n_steps)
+    res <- decomp_core(s1, s2, q, method, composition, grouped, n_steps)
+    # share of the difference due to observed instead of fitted rates
+    jump <- NA_real_
+    if (observed == "data" && (isTRUE(s1$observed) || isTRUE(s2$observed))) {
+      jump <- 0
+      for (sd in 1:2) {
+        a <- if (sd == 1) a1 else a2
+        if (!isTRUE(a$observed)) next
+        src <- if (sd == 1) cmp$src1 else cmp$src2
+        if (is.null(src$fitted)) {
+          jump <- NA_real_
+          break
+        }
+        f <- side(get_period(src, if (sd == 1) cmp$tag1 else cmp$tag2, if (sd == 1) cmp$p1 else cmp$p2, "fitted"),
+                  if (sd == 1) cmp$idx1 else cmp$idx2)
+        o <- if (sd == 1) s1 else s2
+        o$R <- o$R[, , , 1, drop = FALSE]
+        step <- decomp_value(f, q, method, composition, grouped) - decomp_value(o, q, method, composition, grouped)
+        jump <- jump + if (sd == 1) step else -step
+      }
+    }
+    if (grouped && is.null(exposure) && (isTRUE(s1$forecast) || isTRUE(s2$forecast))) frozen <- TRUE
     tab <- data.table(comparison = k, component = res$rows$component,
-                      group = if (is.null(groups)) NA_character_ else px$group_levels[res$rows$group_i],
+                      group = if (!grouped && is.null(groups)) NA_character_ else
+                        px$group_levels[res$rows$group_i],
                       age = sx$age$labels[q$rows][res$rows$age_i],
                       cause = if (is.null(cause)) NA_character_ else px$cause_levels[res$rows$cause_i])
     tables[[k]] <- tab
     paths[[k]] <- res$paths
-    totals[[k]] <- list(v1 = res$v1, v2 = res$v2)
+    totals[[k]] <- list(v1 = res$v1, v2 = res$v2, jump = jump)
   }
   n_max <- max(vapply(paths, ncol, integer(1)))
   P <- do.call(rbind, lapply(paths, recycle_cols, n_max))
-  structure(list(table = rbindlist(tables), paths = P, meta = comps$meta,
-                 from = do.call(rbind, lapply(totals, function(t) recycle_cols(matrix(t$v1, 1), n_max))),
-                 to = do.call(rbind, lapply(totals, function(t) recycle_cols(matrix(t$v2, 1), n_max))),
-                 quantity = qname, method = method, composition = if (!is.null(groups)) composition,
+  from <- do.call(rbind, lapply(totals, function(t) recycle_cols(matrix(t$v1, 1), n_max)))
+  to <- do.call(rbind, lapply(totals, function(t) recycle_cols(matrix(t$v2, 1), n_max)))
+  table <- rbindlist(tables)
+  # draws without a valid life table are left out
+  bad <- apply(!is.finite(P), 2, any) | apply(!is.finite(from) | !is.finite(to), 2, any)
+  if (all(bad)) mt_abort("No draw gives a valid decomposition; check the rates for implausible values.",
+                         class = "decompose")
+  if (any(bad)) {
+    mt_warn(sprintf(paste("%d of %d draws left out: their rates give no valid life table (rates far above",
+                          "plausible values; see the warning of mt_forecast())."), sum(bad), length(bad)),
+            class = "decompose")
+    P <- P[, !bad, drop = FALSE]
+    from <- from[, !bad, drop = FALSE]
+    to <- to[, !bad, drop = FALSE]
+  }
+  dif <- to - from
+  resid <- apply(abs(dif - rowsum(P, table$comparison, reorder = TRUE)), 1, max) / pmax(1, abs(rowMeans(dif)))
+  tol <- if (method == "horiuchi") 1e-3 else 1e-6
+  if (any(resid > tol)) {
+    mt_warn(sprintf(paste("The contributions differ from the difference by up to %.3g (relative) in comparison",
+                          "%d.%s"), max(resid), which.max(resid),
+                    if (method == "horiuchi") " Increase `n_steps`." else
+                      " Check the draws for implausible rates (see mt_forecast())."), class = "decompose")
+  }
+  structure(list(table = table, paths = P, meta = comps$meta, from = from, to = to,
+                 jump_off = vapply(totals, function(t) t$jump, numeric(1)),
+                 quantity = qname, method = method, composition = composition, frozen = frozen,
                  at = q$at, probs = probs, age_labels = sx$age$labels[q$rows],
                  cause_levels = px$cause_levels, group_levels = px$group_levels),
             class = "mt_decomposition")
+}
+
+# Hierarchy stored in data or draws: from mt_aggregate_strata() or
+# reconciled() (`$hierarchy`) and from mt_group_levels(total = )
+# (`$level_totals`)
+object_hierarchy <- function(obj) {
+  vars <- if (!is.null(obj$hierarchy)) as_hierarchy(obj$hierarchy)$vars else list()
+  for (v in names(obj$level_totals)) if (is.null(vars[[v]])) vars[[v]] <- obj$level_totals[[v]]
+  if (!length(vars)) return(NULL)
+  add <- vapply(vars, `[[`, "", "additive")
+  structure(list(vars = vars, additive = if (all(add == "rates")) "rates" else "deaths"), class = "mt_hierarchy")
 }
 
 # Rates and exposures of a source: observed data (Poisson draws) or draws
@@ -239,7 +373,7 @@ decomp_source <- function(obj, n_draws, seed, exposure, name) {
   if (inherits(obj, "mt_data")) {
     d <- mt_observed(obj, n_draws = n_draws, seed = seed)
     return(list(age = d$age, strata = d$strata, periods = d$periods, rates = d$rates, exposure = d$exposure,
-                obs_periods = NULL, label = "observed"))
+                obs_periods = NULL, train_D = d$train_D, train_E = d$train_E, label = "observed", data = TRUE))
   }
   check_class(obj, "mt_draws", name)
   E <- if (!is.null(exposure)) {
@@ -251,19 +385,38 @@ decomp_source <- function(obj, n_draws, seed, exposure, name) {
   }
   list(age = obj$age, strata = obj$strata, periods = obj$periods, rates = obj$rates, exposure = E,
        obs_periods = obj$observed_periods, observed = obj$observed, obs_exposure = obj$train_E,
-       label = obj$model)
+       fitted = obj$fitted, train_D = obj$train_D, train_E = obj$train_E, label = obj$model,
+       data = identical(obj$model, "Observed rates"))
 }
 
-# Rates [age, stratum, draw] and exposures [age, stratum] of one period
-decomp_period <- function(src, p) {
+# Rates [age, stratum, draw] and exposures [age, stratum] of one period; for
+# observed years of draws the observed rates, the fitted rates or Poisson
+# draws of the observed deaths
+decomp_period <- function(src, p, how = "data", seed = 1) {
   d <- dim(src$rates)
   k <- match(p, src$periods)
   if (!is.na(k)) {
-    return(list(R = array(src$rates[, k, , ], c(d[1], d[3], d[4])), E = matrix(src$exposure[, k, ], d[1])))
+    return(list(R = array(src$rates[, k, , ], c(d[1], d[3], d[4])), E = matrix(src$exposure[, k, ], d[1]),
+                observed = isTRUE(src$data), forecast = !isTRUE(src$data)))
   }
   k <- match(p, src$obs_periods)
   if (!is.na(k) && !is.null(src$observed)) {
-    return(list(R = array(src$observed[, k, ], c(d[1], d[3], 1)), E = matrix(src$obs_exposure[, k, ], d[1])))
+    E <- matrix(src$obs_exposure[, k, ], d[1])
+    R <- switch(how,
+                data = array(src$observed[, k, ], c(d[1], d[3], 1)),
+                fitted = {
+                  if (is.null(src$fitted)) {
+                    mt_abort(sprintf("`observed = \"fitted\"`: the draws of %s hold no fitted rates.", src$label),
+                             class = "argument")
+                  }
+                  array(src$fitted[, k, ], c(d[1], d[3], 1))
+                },
+                poisson = {
+                  D <- src$train_D[, k, ]
+                  dd <- with_seed(seed, stats::rpois(length(D) * d[4], rep(as.vector(D), d[4])))
+                  array(dd, c(d[1], d[3], d[4])) / as.vector(pmax(E, 1e-12))
+                })
+    return(list(R = R, E = E, observed = TRUE, forecast = FALSE))
   }
   mt_abort(sprintf("Year %s is not in the data or draws.", p), class = "argument")
 }
@@ -277,16 +430,20 @@ recycle_draws <- function(R, n) {
 recycle_cols <- function(M, n) if (ncol(M) == n) M else M[, rep(1L, n), drop = FALSE]
 
 # Quantity: function of rates [ages used, n] and the ages it uses
-decomp_quantity <- function(qname, quantity, age, at, to, standard, per) {
+decomp_quantity <- function(qname, quantity, age, at, to, standard, per, ...) {
   na <- length(age)
   i0 <- if (is.null(at)) 1L else match(at, age$lower)
   if (is.na(i0)) mt_abort("`at` must be the start of an age interval.", class = "argument")
   sub_age <- function(rows) list(lower = age$lower[rows], upper = age$upper[rows])
+  lt_args <- list(...)
   switch(qname,
          life_expectancy = {
            rows <- seq(i0, na)
            ag <- sub_age(rows)
-           list(rows = rows, at = age$lower[i0], fun = function(M) lt_columns(M, ag)$ex[1, ], le = TRUE, ag = ag)
+           if (!is.null(lt_args$ax) && length(lt_args$ax) == na) lt_args$ax <- lt_args$ax[rows]
+           if (!identical(lt_args$open %||% "reciprocal", "reciprocal")) ag <- age_subset(age, rows)
+           lt <- function(M) do.call(lt_columns, c(list(M, ag), lt_args))
+           list(rows = rows, at = age$lower[i0], fun = function(M) lt(M)$ex[1, ], lt = lt)
          },
          prob_dying = {
            j <- if (is.null(to)) NA else match(to, age$lower)
@@ -297,7 +454,7 @@ decomp_quantity <- function(qname, quantity, age, at, to, standard, per) {
            rows <- seq(i0, j - 1)
            nn <- age$upper[rows] - age$lower[rows]
            list(rows = rows, at = age$lower[i0], fun = function(M) {
-             Q <- pmin(nn * M / (1 + nn / 2 * M), 1)
+             Q <- lt_qx(M, matrix(nn, nrow(M), ncol(M)), matrix(nn / 2, nrow(M), ncol(M)))
              1 - apply(1 - Q, 2, prod)
            })
          },
@@ -319,8 +476,17 @@ decomp_quantity <- function(qname, quantity, age, at, to, standard, per) {
          })
 }
 
+# An mt_axis-like list of selected intervals (for the Gompertz and Kannisto
+# closures of the life table, which need the axis)
+age_subset <- function(age, rows) {
+  out <- age
+  for (nm in intersect(names(age), c("lower", "upper", "labels"))) out[[nm]] <- age[[nm]][rows]
+  out
+}
+
 # Populations: strata grouped by everything except causes and groups
-decomp_populations <- function(st, var, cause, groups, hierarchy) {
+decomp_populations <- function(src, var, cause, groups, hierarchy, qname = "life_expectancy") {
+  st <- src$strata
   vars <- setdiff(names(st), c("stratum", "label"))
   given <- c(var, cause, groups)
   bad <- setdiff(given, vars)
@@ -336,6 +502,26 @@ decomp_populations <- function(st, var, cause, groups, hierarchy) {
   }
   keep <- rep(TRUE, nrow(st))
   for (v in c(cause, groups)) keep <- keep & !st[[v]] %in% aggregate_levels(v)
+  # totals that are not declared would be counted twice
+  if (!is.null(src$train_D) && length(c(cause, groups))) {
+    tl <- total_levels_array(src$train_D, st[keep], c(cause, groups))
+    if (nrow(tl)) {
+      mt_abort(sprintf(paste("Level \"%s\" of `%s` equals the sum of the other levels and would be counted as a",
+                             "part. Declare it, for example hierarchy = mt_hierarchy(%s = \"%s\"%s), or remove",
+                             "it with mt_subset()."), tl$level[1], tl$var[1], tl$var[1], tl$level[1],
+                       if (identical(tl$var[1], cause)) ", additive = \"rates\"" else ""), class = "hierarchy")
+    }
+  }
+  # life expectancy of single causes is not meaningful
+  if (qname %in% c("life_expectancy", "prob_dying") && !is.null(src$train_D)) {
+    for (v in setdiff(vars, c(var, cause, groups))) {
+      if (nrow(total_levels_array(src$train_D, st, v)) && shares_exposure(src$train_E, st, v)) {
+        mt_warn(sprintf(paste("The levels of `%s` share one exposure and one of them is their sum, as causes of",
+                              "death do: life expectancy of a single level is not meaningful. Give cause = \"%s\"",
+                              "to decompose by cause."), v, v), class = "decompose")
+      }
+    }
+  }
   s <- st[keep]
   cl <- if (!is.null(cause)) unique(s[[cause]]) else NA_character_
   gl <- if (!is.null(groups)) unique(s[[groups]]) else NA_character_
@@ -356,6 +542,50 @@ decomp_populations <- function(st, var, cause, groups, hierarchy) {
   })
   list(pops = pops, idx = idx, pop_vars = pop_vars, cause_levels = if (!is.null(cause)) cl,
        group_levels = if (!is.null(groups)) gl)
+}
+
+# Levels of `vars` whose deaths equal the sum of the other levels (as in
+# mt_validate()); D [age, period, stratum] with strata `st` (rows of
+# st$stratum index the third dimension)
+total_levels_array <- function(D, st, vars) {
+  out <- list()
+  for (v in vars) {
+    levs <- unique(st[[v]])
+    if (length(levs) < 3) next
+    others <- setdiff(names(st), c("stratum", "label", v))
+    key <- if (length(others)) do.call(paste, c(lapply(others, function(o) st[[o]]), sep = "\r")) else
+      rep("", nrow(st))
+    for (l in levs) {
+      hit <- 0
+      n <- 0
+      for (k in unique(key[st[[v]] == l])) {
+        i <- st$stratum[key == k & st[[v]] == l]
+        j <- st$stratum[key == k & st[[v]] != l]
+        if (length(i) != 1 || length(j) != length(levs) - 1) next
+        a <- D[, , i]
+        b <- apply(D[, , j, drop = FALSE], c(1, 2), sum)
+        ok <- is.finite(a) & is.finite(b) & a > 0
+        hit <- hit + sum(abs(a[ok] - b[ok]) <= pmax(0.005 * a[ok], 0.5))
+        n <- n + sum(ok)
+      }
+      if (n >= 5 && hit / n >= 0.9) out[[length(out) + 1L]] <- data.table(var = v, level = l)
+    }
+  }
+  if (length(out)) rbindlist(out) else data.table(var = character(), level = character())
+}
+
+# Do the levels of `v` share one exposure (as causes of death do)?
+shares_exposure <- function(E, st, v) {
+  if (is.null(E)) return(FALSE)
+  others <- setdiff(names(st), c("stratum", "label", v))
+  key <- if (length(others)) do.call(paste, c(lapply(others, function(o) st[[o]]), sep = "\r")) else
+    rep("", nrow(st))
+  all(vapply(unique(key), function(k) {
+    i <- st$stratum[key == k]
+    if (length(i) < 2) return(TRUE)
+    ref <- E[, , i[1]]
+    all(vapply(i[-1], function(j) isTRUE(all.equal(E[, , j], ref, tolerance = 1e-8)), logical(1)))
+  }, logical(1)))
 }
 
 decomp_comparisons <- function(sx, sy, px, py, var, ref, periods) {
@@ -434,6 +664,8 @@ decomp_core <- function(s1, s2, q, method, composition, grouped, n_steps) {
   label_rows <- function(component, age_i, cause_i, group_i) {
     data.table(component = component, age_i = age_i, cause_i = cause_i, group_i = group_i)
   }
+  v1 <- decomp_value(s1, q, method, composition, grouped)
+  v2 <- decomp_value(s2, q, method, composition, grouped)
   if (method == "kitagawa") {
     c1 <- s1$E / sum(s1$E)
     c2 <- s2$E / sum(s2$E)
@@ -446,8 +678,6 @@ decomp_core <- function(s1, s2, q, method, composition, grouped, n_steps) {
       rate[, c, g, ] <- (R2[, c, g, ] - R1[, c, g, ]) * cb[, g] * per
       compo[, c, ] <- compo[, c, ] + (R1[, c, g, ] + R2[, c, g, ]) / 2 * dc[, g] * per
     }
-    v1 <- colSums(matrix(M1 * as.vector(c1), nr * ng)) * per
-    v2 <- colSums(matrix(M2 * as.vector(c2), nr * ng)) * per
     tab <- rbind(label_rows("rate", rep(seq_len(nr), nc * ng), rep(rep(seq_len(nc), each = nr), ng),
                             rep(seq_len(ng), each = nr * nc)),
                  label_rows("composition", rep(seq_len(nr), nc), rep(seq_len(nc), each = nr), NA_integer_))
@@ -456,7 +686,7 @@ decomp_core <- function(s1, s2, q, method, composition, grouped, n_steps) {
   # decomposition of one homogeneous population: [age, cause, draw]
   by_age <- function(Ra, Rb, Ma, Mb) {
     if (method == "arriaga") {
-      dl <- (arriaga_dir(Ma, Mb, q$ag) - arriaga_dir(Mb, Ma, q$ag)) / 2
+      dl <- (arriaga_dir(Ma, Mb, q$lt) - arriaga_dir(Mb, Ma, q$lt)) / 2
       if (nc == 1) return(array(dl, c(nr, 1, n)))
       return(cause_split(dl, Ra, Rb, Ma, Mb, q$fun))
     }
@@ -475,8 +705,7 @@ decomp_core <- function(s1, s2, q, method, composition, grouped, n_steps) {
     cont <- by_age(array(R1[, , 1, ], c(nr, nc, n)), array(R2[, , 1, ], c(nr, nc, n)),
                    matrix(M1[, 1, ], nr), matrix(M2[, 1, ], nr))
     tab <- label_rows("rate", rep(seq_len(nr), nc), rep(seq_len(nc), each = nr), NA_integer_)
-    return(list(rows = tab, paths = matrix(cont, ncol = n), v1 = q$fun(matrix(M1[, 1, ], nr)),
-                v2 = q$fun(matrix(M2[, 1, ], nr))))
+    return(list(rows = tab, paths = matrix(cont, ncol = n), v1 = v1, v2 = v2))
   }
   if (composition == "radix") {
     w1 <- s1$E[rows[1], ] / sum(s1$E[rows[1], ])
@@ -495,8 +724,7 @@ decomp_core <- function(s1, s2, q, method, composition, grouped, n_steps) {
     tab <- rbind(label_rows("rate", rep(seq_len(nr), nc * ng), rep(rep(seq_len(nc), each = nr), ng),
                             rep(seq_len(ng), each = nr * nc)),
                  label_rows("composition", NA_integer_, NA_integer_, NA_integer_))
-    return(list(rows = tab, paths = rbind(do.call(rbind, paths), matrix(kt$composition, 1)),
-                v1 = colSums(q1 * w1), v2 = colSums(q2 * w2)))
+    return(list(rows = tab, paths = rbind(do.call(rbind, paths), matrix(kt$composition, 1)), v1 = v1, v2 = v2))
   }
   # pooled: rates of every group and the shares by age are the parameters
   sh1 <- s1$E[rows, , drop = FALSE] / rowSums(s1$E[rows, , drop = FALSE])
@@ -521,7 +749,32 @@ decomp_core <- function(s1, s2, q, method, composition, grouped, n_steps) {
   tab <- rbind(label_rows("rate", rep(seq_len(nr), nc * ng), rep(rep(seq_len(nc), each = nr), ng),
                           rep(seq_len(ng), each = nr * nc)),
                label_rows("composition", seq_len(nr), NA_integer_, NA_integer_))
-  list(rows = tab, paths = rbind(out[seq_len(nrate), , drop = FALSE], compo), v1 = f(P1), v2 = f(P2))
+  list(rows = tab, paths = rbind(out[seq_len(nrate), , drop = FALSE], compo), v1 = v1, v2 = v2)
+}
+
+# Value of the quantity for one side (R [age, cause, group, draw], E [age,
+# group]): the population of the comparison, with subgroups blended at the
+# radix or pooled
+decomp_value <- function(s, q, method, composition, grouped) {
+  rows <- q$rows
+  R <- s$R[rows, , , , drop = FALSE]
+  d <- dim(R)
+  M <- R[, 1, , , drop = FALSE]
+  if (d[2] > 1) for (c in 2:d[2]) M <- M + R[, c, , , drop = FALSE]
+  M <- array(M, c(d[1], d[3], d[4]))
+  if (method == "kitagawa") {
+    cc <- s$E / sum(s$E)
+    return(colSums(matrix(M * as.vector(cc), d[1] * d[3])) * q$per)
+  }
+  if (!grouped) return(q$fun(matrix(M[, 1, ], d[1])))
+  if (identical(composition, "radix")) {
+    w <- s$E[rows[1], ] / sum(s$E[rows[1], ])
+    return(colSums(do.call(rbind, lapply(seq_len(d[3]), function(g) q$fun(matrix(M[, g, ], d[1])))) * w))
+  }
+  sh <- s$E[rows, , drop = FALSE] / rowSums(s$E[rows, , drop = FALSE])
+  Mp <- matrix(0, d[1], d[4])
+  for (g in seq_len(d[3])) Mp <- Mp + matrix(M[, g, ], d[1]) * sh[, g]
+  q$fun(Mp)
 }
 
 # Kitagawa decomposition of a difference of weighted means sum(w * v):
@@ -534,9 +787,9 @@ kitagawa_mean <- function(w1, w2, v1, v2) {
 
 # Arriaga's decomposition from M1 to M2 (columns are schedules), ages from the
 # start of the life table; sums to e(M2) - e(M1) at the first age
-arriaga_dir <- function(M1, M2, ag) {
-  a <- lt_columns(M1, ag)
-  b <- lt_columns(M2, ag)
+arriaga_dir <- function(M1, M2, lt) {
+  a <- lt(M1)
+  b <- lt(M2)
   na <- nrow(M1)
   out <- matrix(0, na, ncol(M1))
   if (na > 1) {
@@ -549,11 +802,12 @@ arriaga_dir <- function(M1, M2, ag) {
 }
 
 # Age contributions split by cause with the implied sensitivity
-# dl / (Mb - Ma); a numerical derivative where the all-cause rates hardly differ
+# dl / (Mb - Ma); a numerical derivative where the all-cause rates hardly
+# differ (contributions that are not finite stay so and the draw is dropped)
 cause_split <- function(dl, Ra, Rb, Ma, Mb, fun) {
   dM <- Mb - Ma
   s <- dl / dM
-  bad <- !is.finite(s) | abs(dM) <= 1e-8 * (Ma + Mb)
+  bad <- is.finite(dl) & (abs(dM) <= 1e-8 * (Ma + Mb) | !is.finite(s))
   if (any(bad)) {
     Mbar <- (Ma + Mb) / 2
     for (i in which(rowSums(bad) > 0)) {
@@ -626,14 +880,62 @@ stepwise_core <- function(f, P1, P2, ord, symmetric = TRUE) {
 #' @param by Variables of the contributions to keep (`"component"`,
 #'   `"group"`, `"age"`, `"cause"`); the others are summed path by path.
 #'   `NULL` gives the totals.
-#' @param ... Unused.
+#' @param change Two periods: the change of each comparison between them
+#'   (for comparisons between strata or objects in several periods), formed
+#'   path by path.
 #' @export
 summary.mt_decomposition <- function(object, by = c("component", "group", "age", "cause"), probs = object$probs,
-                                     ...) {
+                                     change = NULL, ...) {
+  if (!missing(by) && !is.null(by)) {
+    absent <- setdiff(by, c("component", "group", "age", "cause"))
+    absent <- c(absent, intersect(by, c("group", "age", "cause"))[vapply(intersect(by, c("group", "age", "cause")),
+                                                                         function(b) all(is.na(object$table[[b]])),
+                                                                         logical(1))])
+    if (length(absent)) {
+      mt_abort(sprintf("The decomposition has no `%s`.", paste(absent, collapse = "`, `")), class = "argument")
+    }
+  }
+  if (!is.null(change)) object <- decomp_change(object, change)
   if (is.null(by)) return(decomp_totals(object, probs)[])
   out <- decomp_summary(object, by, probs)
   out[, comparison := NULL]
   out[]
+}
+
+# Change between two periods of the same comparisons, path by path, as a
+# decomposition object
+decomp_change <- function(object, change) {
+  meta <- object$meta
+  if (!"period" %in% names(meta) || length(change) != 2) {
+    mt_abort("`change` needs two periods of comparisons between strata or objects.", class = "argument")
+  }
+  keys <- setdiff(names(meta), c("comparison", "period"))
+  kk <- do.call(paste, c(lapply(keys, function(k) meta[[k]]), sep = "\r"))
+  c1 <- meta$comparison[meta$period == change[1]]
+  c2 <- meta$comparison[meta$period == change[2]]
+  if (!length(c1) || !length(c2)) mt_abort("Both `change` periods must be in the decomposition.", class = "argument")
+  pairs <- data.table(c2 = c2, c1 = c1[match(kk[c2], kk[c1])])[!is.na(c1)]
+  tab <- object$table
+  paths <- list()
+  tables <- list()
+  for (i in seq_len(nrow(pairs))) {
+    r1 <- which(tab$comparison == pairs$c1[i])
+    r2 <- which(tab$comparison == pairs$c2[i])
+    paths[[i]] <- object$paths[r2, , drop = FALSE] - object$paths[r1, , drop = FALSE]
+    tables[[i]] <- copy(tab[r2])[, comparison := i]
+  }
+  m <- meta[pairs$c2]
+  m$period <- rep(paste(change[1], "to", change[2]), nrow(m))
+  m$comparison <- seq_len(nrow(m))
+  d1 <- object$to[pairs$c1, , drop = FALSE] - object$from[pairs$c1, , drop = FALSE]
+  d2 <- object$to[pairs$c2, , drop = FALSE] - object$from[pairs$c2, , drop = FALSE]
+  object$table <- rbindlist(tables)
+  object$paths <- do.call(rbind, paths)
+  object$meta <- m
+  object$from <- d1
+  object$to <- d2
+  object$jump_off <- rep(NA_real_, nrow(m))
+  object
 }
 
 # Contributions summed path by path over the variables not in `by`
@@ -659,6 +961,7 @@ decomp_totals <- function(object, probs = object$probs) {
   out <- cbind(object$meta, from_value = rowMeans(object$from), to_value = rowMeans(object$to),
                difference = rowMeans(dif))
   for (k in seq_along(probs)) set(out, j = paste0("difference_", qnames(probs)[k]), value = Q[, k])
+  if (any(!is.na(object$jump_off))) set(out, j = "jump_off", value = object$jump_off)
   out[, `:=`(sum_contributions = rowMeans(tot), max_residual = apply(abs(dif - tot), 1, max))]
   setcolorder(out, "comparison")
   out
@@ -667,9 +970,15 @@ decomp_totals <- function(object, probs = object$probs) {
 #' @export
 print.mt_decomposition <- function(x, ...) {
   what <- if (x$quantity == "life_expectancy") sprintf("life expectancy at %s", x$at) else x$quantity
-  cat(sprintf("<mt_decomposition> %s, method %s%s; %d comparison(s), %d draw(s)\n", what, x$method,
+  cat(sprintf("<mt_decomposition> %s, method %s%s; %d comparison(s), %s\n", what, x$method,
               if (!is.null(x$composition)) sprintf(", %s composition", x$composition) else "",
-              nrow(x$meta), ncol(x$paths)))
+              nrow(x$meta), if (ncol(x$paths) > 1) sprintf("means over %d draws", ncol(x$paths)) else "1 draw"))
+  if (identical(x$composition, "radix")) {
+    cat(sprintf(paste0("Values: means of the subgroups' values weighted by their shares at age %s (subgroups ",
+                       "blended at the radix),\nnot the values of the pooled rates.\n"), x$at))
+  } else if (identical(x$composition, "pooled")) {
+    cat("Values: of the pooled rates (subgroups weighted by their shares at each age).\n")
+  }
   tot <- summary(x, by = NULL)
   num <- setdiff(names(tot)[vapply(tot, is.numeric, logical(1))], c("comparison", "period", "max_residual"))
   if (ncol(x$paths) == 1) tot[, (grep("^difference_q", names(tot), value = TRUE)) := NULL]
@@ -677,8 +986,19 @@ print.mt_decomposition <- function(x, ...) {
   tot[, (num) := lapply(.SD, round, 3), .SDcols = num]
   tot[, max_residual := signif(max_residual, 2)]
   print(tot)
+  if (any(!is.na(x$jump_off))) {
+    cat(paste("jump_off: part of the difference due to observed instead of fitted rates in observed years of the",
+              "draws\n(see mt_jump_off()); observed = \"fitted\" decomposes the model's change alone.\n"))
+  }
+  if (isTRUE(x$frozen)) {
+    cat(paste("Shares in forecast years are those of the last observed year; give `exposure` (a population",
+              "projection)\nfor composition effects in the forecast.\n"))
+  }
   invisible(x)
 }
+
+#' @export
+as.data.table.mt_decomposition <- function(x, keep.rownames = FALSE, ...) summary(x)
 
 #' Plot a decomposition
 #'
@@ -691,25 +1011,29 @@ print.mt_decomposition <- function(x, ...) {
 #' @param by Variable on the axis: `"age"`, `"cause"` or `"group"`.
 #' @param fill Variable that stacks the bars (`"cause"`, `"group"`), or
 #'   `NULL`.
-#' @param comparisons Numbers of the comparisons to show (rows of
-#'   `summary(decomposition, by = NULL)`; default: all, as panels).
+#' @param comparisons Comparisons to show: numbers (column `comparison` of
+#'   `summary(decomposition, by = NULL)`) or a named list of values of its
+#'   columns, for example `list(to = "Q5")`; default: all, as panels.
+#' @param change Two periods: plot the change between them (see
+#'   [summary.mt_decomposition()]).
 #' @return A ggplot object.
 #' @examples
 #' x <- mt_example(deaths = "single", years = 2000:2015)
 #' mt_plot_decomposition(mt_decompose(x, periods = c(2000, 2015), at = 30))
 #' @export
 mt_plot_decomposition <- function(decomposition, by = c("age", "cause", "group"), fill = NULL,
-                                  comparisons = NULL) {
+                                  comparisons = NULL, change = NULL) {
   need_ggplot()
   check_class(decomposition, "mt_decomposition", "decomposition")
   by <- match.arg(by)
+  if (!is.null(change)) decomposition <- decomp_change(decomposition, change)
   tab <- decomposition$table
   if (all(is.na(tab[[by]]))) mt_abort(sprintf("The decomposition has no `%s`.", by), class = "argument")
   if (!is.null(fill) && (identical(fill, by) || !fill %in% c("cause", "group") || all(is.na(tab[[fill]])))) {
     mt_abort("`fill` must be another variable of the decomposition (\"cause\" or \"group\").", class = "argument")
   }
   meta <- copy(decomposition$meta)
-  keep <- comparisons %||% meta$comparison
+  keep <- select_comparisons(meta, comparisons)
   strata_cols <- setdiff(names(meta), c("comparison", "from", "to", "period"))
   vs <- paste(meta$to, "vs", meta$from)
   if ("period" %in% names(meta)) vs <- paste0(vs, ", ", meta$period)
@@ -742,13 +1066,14 @@ mt_plot_decomposition <- function(decomposition, by = c("age", "cause", "group")
     p <- p + ggplot2::geom_errorbar(data = tot, ggplot2::aes(ymin = q0.025, ymax = q0.975), width = 0.3,
                                     colour = "grey30")
   }
+  unit <- if (decomposition$quantity == "life_expectancy") " (years)" else ""
   p <- p + ggplot2::geom_hline(yintercept = 0, colour = "grey50") +
-    ggplot2::facet_wrap(ggplot2::vars(panel)) +
-    ggplot2::labs(x = NULL, y = sprintf("Contribution to the difference in %s", decomp_label(decomposition)),
-                  fill = NULL,
-                  subtitle = sprintf("Method: %s%s", decomposition$method,
-                                     if (ncol(decomposition$paths) > 1) "; bars: means; lines: 95% intervals"
-                                     else "")) +
+    ggplot2::facet_wrap(ggplot2::vars(panel), labeller = ggplot2::label_wrap_gen(width = 40)) +
+    ggplot2::labs(x = NULL, y = paste0("Contribution", unit), fill = NULL,
+                  subtitle = sprintf("Difference in %s", decomp_label(decomposition)),
+                  caption = sprintf("Method: %s%s", decomposition$method,
+                                    if (ncol(decomposition$paths) > 1) "; bars: means; lines: 95% intervals"
+                                    else "")) +
     theme_mortensor()
   p <- p + if (by == "age") {
     ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 90, hjust = 1, vjust = 0.5))
@@ -758,8 +1083,26 @@ mt_plot_decomposition <- function(decomposition, by = c("age", "cause", "group")
   p
 }
 
+# Comparisons selected by number or by a named list of meta values
+select_comparisons <- function(meta, comparisons) {
+  if (is.null(comparisons)) return(meta$comparison)
+  if (is.list(comparisons)) {
+    bad <- setdiff(names(comparisons), names(meta))
+    if (is.null(names(comparisons)) || length(bad)) {
+      mt_abort(sprintf("`comparisons` must name columns of the totals (%s).",
+                       paste(setdiff(names(meta), "comparison"), collapse = ", ")), class = "argument")
+    }
+    ok <- Reduce(`&`, lapply(names(comparisons), function(v) meta[[v]] %in% comparisons[[v]]))
+    keep <- meta$comparison[ok]
+  } else {
+    keep <- intersect(comparisons, meta$comparison)
+  }
+  if (!length(keep)) mt_abort("No comparison matches `comparisons`.", class = "argument")
+  keep
+}
+
 decomp_label <- function(d) {
-  switch(d$quantity, life_expectancy = sprintf("life expectancy at %s (years)", d$at),
+  switch(d$quantity, life_expectancy = sprintf("life expectancy at %s", d$at),
          prob_dying = "the probability of dying", asr = "the age-standardised rate",
          crude_rate = "the crude death rate", "the quantity")
 }

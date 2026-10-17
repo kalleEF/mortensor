@@ -159,10 +159,11 @@ too:
   Smith 2002);
 * `anchored()` starts the forecast at the observed level of the last three
   years instead of the fitted rates;
+* `calibrated()`, which fits the spread of the draws to the forecast
+  errors of the last ten training years;
 * smoothing over time before fitting (`step_smooth(along = "period")`)
-  with `calibrated()`, which fits the spread of the draws to the forecast
-  errors of the last ten training years (smoothing alone would make the
-  intervals narrower still, because the smoothed period index varies less).
+  together with `calibrated()` (smoothing alone makes the intervals
+  narrower still, because the smoothed period index varies less).
 
 The backtest also scores life expectancy at age 30 (`quantities`), the
 quantity most reports are about:
@@ -171,6 +172,7 @@ quantity most reports are about:
 smooth_t <- mt_prep(step_smooth(along = "period", method = "whittaker"))
 variants <- list(list(lee_carter(choose_period = TRUE), NULL),
                  list(anchored(lee_carter(), years = 3), NULL),
+                 list(calibrated(lee_carter()), NULL),
                  list(calibrated(lee_carter()), smooth_t))
 bt_v <- rbindlist(c(list(mt_backtest(lee_carter(), ew, origins = 1996:2001, h = 10, n_draws = 200,
                                      quantities = "life_expectancy")),
@@ -178,27 +180,32 @@ bt_v <- rbindlist(c(list(mt_backtest(lee_carter(), ew, origins = 1996:2001, h = 
                       mt_backtest(v[[1]], ew, origins = 1996:2001, h = 10, n_draws = 200, prep = v[[2]],
                                   quantities = "life_expectancy")
                     })))
-bt_v[, model := c("Lee-Carter", "chosen period", "anchored", "smoothed + calibrated")[match(model, unique(model))]]
+bt_v[, model := paste(model, prep)]
+bt_v[, model := c("Lee-Carter", "chosen period", "anchored", "calibrated",
+                  "smoothed + calibrated")[match(model, unique(model))]]
 merge(mt_score(bt_v)[, .(model, crps, cov95)],
       mt_score(bt_v, target = "life_expectancy")[, .(model, crps_e30 = crps, cov95_e30 = cov95)], by = "model")
 ```
 
-`crps_e30` is in years of life expectancy. For the rates, all three
+`crps_e30` is in years of life expectancy. For the rates, all four
 modifications are more accurate than Lee-Carter fitted to all years (CRPS
-0.061 to 0.066 against 0.069), and only the calibration brings the 95%
-coverage close to nominal (0.87 against 0.75). For life expectancy at 30
-the chosen period gives the largest gain (0.32 against 0.47 years),
-anchoring changes nothing, and smoothing with calibration helps a little.
-The coverage of life expectancy is at or above 95% for all four: the rates
-fall outside their intervals mostly through deviations of single ages,
-which largely cancel in life expectancy. With six origins of one
-population these differences are indicative only.
+0.061 to 0.066 against 0.069), and only calibration brings the 95%
+coverage close to nominal (0.88 against 0.75); smoothing over time adds
+nothing to calibration here. For life expectancy at 30 the chosen period
+gives the largest gain (0.32 against 0.47 years), calibration a small one
+(0.44), and anchoring none. The coverage of life expectancy is 0.90 to
+1.00: the rates fall outside their intervals mostly through deviations of
+single ages, which largely cancel in life expectancy. With six origins of
+one population these differences are indicative only.
 
 ## References
 
 Brouhns N, Denuit M, Vermunt JK (2002). A Poisson log-bilinear regression
 approach to the construction of projected lifetables. *Insurance: Mathematics
 and Economics* 31(3): 373-393.
+
+Booth H, Maindonald J, Smith L (2002). Applying Lee-Carter under conditions
+of variable mortality decline. *Population Studies* 56(3): 325-336.
 
 Lee RD, Carter LR (1992). Modeling and forecasting U.S. mortality. *Journal of
 the American Statistical Association* 87(419): 659-671.

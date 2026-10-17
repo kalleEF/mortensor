@@ -36,7 +36,8 @@
 #'   `"life_expectancy"` or `"asr"`; summarise them with
 #'   `mt_score(..., target = )`.
 #' @return An object of class `mt_backtest`: a `data.table` with one row per
-#'   observed cell, origin and horizon: `model`, `origin`, `horizon`,
+#'   observed cell, origin and horizon: `model`, `prep` (the preprocessing
+#'   steps, `"none"` without), `origin`, `horizon`,
 #'   stratum columns, `age_lo`, `age_hi`, `period`, `observed` (log rate),
 #'   `median`, `mean`, quantiles, and the scores `crps`, `wis`, `ae`
 #'   (absolute error of the median), `cov50`, `cov80`, `cov95`, `pit` and the
@@ -55,6 +56,11 @@ mt_backtest <- function(spec, data, origins = NULL, h = 10, prep = NULL, n_draws
     if (length(bad)) mt_abort("`quantities` can be \"life_expectancy\" and \"asr\".", class = "argument")
   }
   check_class(data, "mt_data", "data")
+  if (!is.null(attr(data, "smooth"))) {
+    mt_abort(paste("`data` were smoothed with mt_smooth(): the forecasts would be scored against smoothed values,",
+                   "and the smoother has seen the test years. Pass the raw data and smooth inside each fit:",
+                   "prep = mt_prep(step_smooth(...))."), class = "smoothed_data")
+  }
   g <- mt_grid(data)
   last <- max(g$period$lower)
   if (is.null(origins)) {
@@ -126,14 +132,14 @@ backtest_origin <- function(spec, data, origin, h, prep, n_draws, seed, score_es
     sc <- score_samples(X, y, probs)
     scale <- mase_scale(fit, s, o)
     rows[[length(rows) + 1L]] <- cbind(
-      data.table(model = spec$label, origin = origin, horizon = o$period_lo - origin, stratum = s,
-                 age_lo = o$age_lo, age_hi = o$age_hi, period = o$period_lo, observed = y, scale = scale,
-                 target = "rate"),
+      data.table(model = spec$label, prep = prep_label(prep), origin = origin, horizon = o$period_lo - origin,
+                 stratum = s, age_lo = o$age_lo, age_hi = o$age_hi, period = o$period_lo, observed = y,
+                 scale = scale, target = "rate"),
       sc)
     if (length(quantities)) {
       qr <- quantity_scores(X, o, Ecell, quantities, probs)
       if (!is.null(qr)) {
-        rows[[length(rows) + 1L]] <- cbind(data.table(model = spec$label, origin = origin,
+        rows[[length(rows) + 1L]] <- cbind(data.table(model = spec$label, prep = prep_label(prep), origin = origin,
                                                       horizon = qr$period - origin, stratum = s, age_lo = NA_real_,
                                                       age_hi = NA_real_, period = qr$period, observed = qr$observed,
                                                       scale = NA_real_, target = qr$target),
@@ -277,8 +283,10 @@ wis_from_quantiles <- function(Q, y, probs) {
 #'   quantities, see `quantities` in [mt_backtest()]).
 #' @return A `data.table` with the mean CRPS, WIS and absolute error, MASE
 #'   (mean of absolute error over the scale; rates only), empirical coverage
-#'   of the 50%, 80% and 95% intervals, mean PIT and the number of scored
-#'   cells.
+#'   of the 50%, 80% and 95% intervals, mean PIT, the number of scored
+#'   cells and the `unit` of CRPS, WIS and absolute error (log rates, or
+#'   years for life expectancy). Backtests of the same model with different
+#'   preprocessing (column `prep`) are scored separately.
 #' @examples
 #' x <- mt_example(deaths = "single", years = 1990:2012)
 #' bt <- mt_backtest(rwd(), x, origins = 2007, h = 5, n_draws = 100)
@@ -296,10 +304,27 @@ mt_score <- function(backtest, by = "model", target = c("rate", "life_expectancy
   }
   if (!nrow(bt)) mt_abort(sprintf("The backtest holds no scores for target \"%s\".", target), class = "argument")
   rates_only <- identical(target, "rate")
-  bt[, list(crps = mean(crps), wis = mean(wis), mae = mean(ae),
-            mase = if (rates_only) mean(ae / scale, na.rm = TRUE) else NA_real_,
-            cov50 = mean(cov50), cov80 = mean(cov80), cov95 = mean(cov95), pit_mean = mean(pit), n = .N),
-     by = by]
+  # the same model with different preprocessing is scored separately
+  if ("model" %in% by && "prep" %in% names(bt) && !"prep" %in% by &&
+      bt[, data.table::uniqueN(prep), by = model][, any(V1 > 1)]) {
+    by <- c(by, "prep")
+  }
+  out <- bt[, list(crps = mean(crps), wis = mean(wis), mae = mean(ae),
+                   mase = if (rates_only) mean(ae / scale, na.rm = TRUE) else NA_real_,
+                   cov50 = mean(cov50), cov80 = mean(cov80), cov95 = mean(cov95), pit_mean = mean(pit), n = .N),
+            by = by]
+  out[, unit := switch(target, rate = "log rate", life_expectancy = "years", asr = "log rate (ASR)")]
+  out[]
+}
+
+# Short description of a preprocessing pipeline for backtest tables
+prep_label <- function(prep) {
+  if (is.null(prep) || !length(prep$steps)) return("none")
+  paste(vapply(prep$steps, function(st) {
+    a <- st$args
+    det <- c(a$along, a$method, if (!is.null(a$dims) && a$dims == 2) "2D")
+    if (length(det)) sprintf("%s(%s)", st$type, paste(det, collapse = ", ")) else st$type
+  }, ""), collapse = " + ")
 }
 
 #' @export
@@ -311,7 +336,11 @@ print.mt_backtest <- function(x, ...) {
   }
   cat(sprintf("<mt_backtest> %s; origins %s; %d scored cells\n", paste(unique(x$model), collapse = ", "),
               paste(unique(x$origin), collapse = ", "), nrow(x)))
-  print(mt_score(x))
+  targets <- if ("target" %in% names(x)) unique(x$target) else "rate"
+  print(mt_score(x, target = if ("rate" %in% targets) "rate" else targets[1]))
+  if (length(targets) > 1) {
+    cat(sprintf("Other targets: %s (mt_score(target = ))\n", paste(setdiff(targets, "rate"), collapse = ", ")))
+  }
   invisible(x)
 }
 

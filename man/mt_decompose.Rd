@@ -16,7 +16,9 @@ mt_decompose(
   cause = NULL,
   groups = NULL,
   hierarchy = NULL,
-  composition = c("radix", "pooled"),
+  composition = NULL,
+  observed = c("data", "fitted", "poisson"),
+  pairing = c("independent", "draw"),
   at = NULL,
   to = NULL,
   standard = "esp2013",
@@ -25,13 +27,15 @@ mt_decompose(
   n_steps = 20,
   n_draws = 1,
   probs = c(0.025, 0.5, 0.975),
-  seed = 1
+  seed = 1,
+  ...
 )
 
 \method{summary}{mt_decomposition}(
   object,
   by = c("component", "group", "age", "cause"),
   probs = object$probs,
+  change = NULL,
   ...
 )
 }
@@ -64,10 +68,19 @@ up to all causes.}
 
 \item{groups}{Stratum variable holding population subgroups.}
 
-\item{hierarchy}{Optional \code{\link[=mt_hierarchy]{mt_hierarchy()}}: total and group levels of
-\code{cause} and \code{groups} are left out (they are sums of the others).}
+\item{hierarchy}{An \code{\link[=mt_hierarchy]{mt_hierarchy()}} that declares total and group levels
+of \code{cause} and \code{groups} (default: the hierarchy stored in \code{x} or \code{y}).}
 
-\item{composition}{\code{"radix"} or \code{"pooled"} (see Subgroups).}
+\item{composition}{\code{"radix"} or \code{"pooled"}; required with \code{groups} (see
+Subgroups).}
+
+\item{observed}{How observed years held in forecast draws enter:
+\code{"data"} (observed rates), \code{"fitted"} (the model's fitted rates) or
+\code{"poisson"} (Poisson draws of the observed deaths). See Observed and
+forecast years.}
+
+\item{pairing}{\code{"independent"} or \code{"draw"}: how the draws of \code{x} and \code{y}
+are paired.}
 
 \item{at}{Starting age (life expectancy at \code{at}; lower bound of
 \code{prob_dying}); default the first grid age.}
@@ -87,7 +100,10 @@ Poisson draws.}
 
 \item{probs}{Quantile levels of the summaries.}
 
-\item{seed}{Seed of the Poisson draws.}
+\item{seed}{Seed of Poisson draws and of the shuffling of \code{y}.}
+
+\item{...}{Passed to the life table (\code{ax}, \code{open}, \code{k}, see
+\code{\link[=life_table]{life_table()}}) for life expectancy.}
 
 \item{object}{An \code{mt_decomposition} object.}
 
@@ -95,16 +111,21 @@ Poisson draws.}
 \code{"group"}, \code{"age"}, \code{"cause"}); the others are summed path by path.
 \code{NULL} gives the totals.}
 
-\item{...}{Unused.}
+\item{change}{Two periods: the change of each comparison between them
+(for comparisons between strata or objects in several periods), formed
+path by path.}
 }
 \value{
 An \code{mt_decomposition} object. \code{summary()} returns contributions
 summed (path by path) over the variables not in \code{by}, with mean and
 quantiles; \code{summary(by = NULL)} returns one row per comparison (its
 number in \code{comparison}) with the values in the two populations, their
-difference (mean and quantiles), the sum of the contributions and the
-largest difference between the two over draws (\code{max_residual}).
-\code{print()} shows the totals.
+difference (mean and quantiles), the jump-off share where it applies,
+the sum of the contributions and the largest difference between the
+two over draws (\code{max_residual}). \code{summary(change = c(p1, p2))}
+decomposes the change between two periods of comparisons between
+strata or objects (for example of a gap), path by path. \code{print()}
+shows the totals.
 }
 \description{
 Splits the difference in a mortality summary between two sets of rates
@@ -128,61 +149,109 @@ Forecasts are decomposed draw by draw, so every contribution has an
 interval, and sums over ages, causes or subgroups (\code{\link[=summary]{summary()}}) are formed
 path by path. Observed data give the decomposition of the observed rates
 (\code{n_draws = 1}) or, with \code{n_draws > 1}, Poisson draws of the deaths as in
-\code{\link[=mt_observed]{mt_observed()}}. Observed years inside forecast draws are the same in
-every draw.
+\code{\link[=mt_observed]{mt_observed()}}. Totals and contributions are means over draws;
+\code{summary()} adds quantiles.
 }
+\section{Observed and forecast years}{
+
+Forecast draws hold the observed rates of their training years. A change
+from an observed year to a forecast year then contains the step from the
+observed to the model's fitted rates of that year (the jump-off, see
+\code{\link[=mt_jump_off]{mt_jump_off()}}) and the sampling noise of the observed year, besides
+the forecast change itself. The totals report the jump-off share
+(\code{jump_off}). \code{observed = "fitted"} uses the fitted rates of observed
+years, so that the decomposition describes the model's change alone;
+\code{observed = "poisson"} uses Poisson draws of the observed deaths, so that
+their sampling uncertainty enters the intervals.
+
+Two objects (\code{y}) are compared draw by draw. Draws of different models
+are independent, so by default (\code{pairing = "independent"}) the draws of
+\code{y} are shuffled before pairing; draws of models with the same seed would
+otherwise share their random numbers and give intervals that are too
+narrow. Use \code{pairing = "draw"} when \code{y} is derived from the draws of \code{x}
+(for example a reconciliation of the same draws).
+}
+
 \section{Methods}{
 
 \itemize{
 \item \code{"arriaga"} (life expectancy): the symmetric Arriaga decomposition, the
 average of the decompositions from 1 to 2 and (with the sign reversed)
-from 2 to 1, computed on the package's life table. Causes get the
-age-specific contribution in proportion to their rate differences
-(an implied sensitivity, Riffe et al. 2024, eqs. 12-13); where the
-all-cause difference is close to zero, the sensitivity is a numerical
-derivative at the average rates. Exact.
+from 2 to 1, computed on the package's life table (\code{...} passes \code{ax}
+and \code{open} to it). Causes get the age-specific contribution in
+proportion to their rate differences (an implied sensitivity, Riffe et
+al. 2024, eqs. 12-13 of the working paper); where the all-cause
+difference is close to zero, the sensitivity is a numerical derivative
+at the average rates. Exact.
 \item \code{"horiuchi"} (any quantity): the line-integral method of Horiuchi,
 Wilmoth and Pletcher (2008) with \code{n_steps} steps; exact up to a small
 discretisation error, reported in the totals.
 \item \code{"stepwise"} (any quantity): stepwise replacement (Andreev, Shkolnikov
 and Begun 2002) from the youngest to the oldest age, averaged over
-both directions of the comparison. Exact; results depend on the order.
-Arriaga's decomposition from 1 to 2 is stepwise replacement from the
-oldest to the youngest age, so for life expectancy without causes the
-two symmetric versions give identical results.
+both directions of the comparison; with causes, all causes of an age
+are replaced before the next age (DemoDecomp and LEdecomp replace cause
+by cause, which changes the split between causes slightly). Exact;
+results depend on the order. Arriaga's decomposition from 1 to 2 is
+stepwise replacement from the oldest to the youngest age, so for life
+expectancy without causes the two symmetric versions are identical.
 \item \code{"kitagawa"} (crude death rate): the rate effect (age-specific rates at
 the average age structure) and the composition effect (age structure
 at the average rates) of Kitagawa (1955). Exact.
 }
+
+Draws whose rates give no valid life table (for example rates far above
+any observed value, see the warning of \code{\link[=mt_forecast]{mt_forecast()}}) are left out with
+a warning, and a warning reports contributions that do not add up to
+the difference.
 }
 
 \section{Subgroups}{
 
 With \code{groups}, the populations being compared consist of the levels of a
-stratum variable (for example deprivation quintiles or education
-groups), and the decomposition separates the effect of their
-composition:
+stratum variable, and the decomposition separates the effect of their
+composition. \code{composition} must be chosen, because the two options
+describe different quantities:
 \itemize{
-\item \code{composition = "radix"} (Riffe, Tursun-zade and Trias Llimós 2024,
-"Arriaga meets Kitagawa"): life expectancy (or the probability of
-dying) of the population is the mean of the subgroups' values, weighted
-by their population shares at the starting age (\code{at}), as when
-subgroup life tables are blended at the radix. A Kitagawa
-decomposition of that mean gives one composition effect and, for each
-subgroup, its difference times its average share, which is split by
-age (and cause) with \code{method}.
-\item \code{composition = "pooled"}: the quantity of the pooled rates, which
-weight the subgroup rates by their population shares at each age (the
-rates of the aggregate strata; Vaupel 2002, "current rates"). The rates
-of every subgroup, age and cause and the shares at every age are the
-parameters of a \code{"horiuchi"} or \code{"stepwise"} decomposition; the
-composition effects are reported by age, summed over subgroups, whose
-separate composition terms are not identified.
+\item \code{"radix"} (Riffe, Tursun-zade and Trias Llimós 2024, "Arriaga meets
+Kitagawa"): life expectancy (or the probability of dying) of the
+population is the mean of the subgroups' values, weighted by their
+population shares at the starting age (\code{at}), as when subgroup life
+tables are blended at the radix ("current conditions" in the terms of
+Vaupel 2002, which the authors use). A Kitagawa decomposition of that
+mean gives one composition effect and, for each subgroup, its
+difference times its average share, which is split by age (and cause)
+with \code{method}. The authors state that this holds when membership is
+fixed from the starting age on and later shares change only through
+mortality: education from age 30 or 35, sex, country of birth. It does
+not hold for areas such as deprivation quintiles or regions, between
+which people move and which are reclassified.
+\item \code{"pooled"}: the quantity of the pooled rates, which weight the
+subgroup rates by their population shares at each age (the rates of the
+aggregate strata, as published for whole populations; "current
+rates"). The rates of every subgroup, age and cause and the shares at
+every age are the parameters of a \code{"horiuchi"} (default) or
+\code{"stepwise"} decomposition; the composition effects are reported by
+age, summed over subgroups, whose separate composition terms are not
+identified. With many subgroups, causes and draws this takes minutes;
+lower \code{n_steps} or the number of draws for a first look.
 }
 
 Shares come from the exposures: of each observed year, and for forecast
 years from \code{exposure} (default: the last observed year, so composition
-does not change in the forecast unless exposures are given).
+does not change in the forecast unless exposures, for example a
+population projection, are given).
+}
+
+\section{Totals among causes and groups}{
+
+Levels of \code{cause} and \code{groups} that are totals of the others (for example
+the cause \code{"all"} or the region \code{"Germany"}) must not be counted as
+parts. They are left out when the hierarchy declares them: \code{hierarchy},
+or what the object records, the total of \code{\link[=mt_group_levels]{mt_group_levels()}} (\code{total},
+also in fits and draws of such data) and the hierarchy of
+\code{\link[=mt_aggregate_strata]{mt_aggregate_strata()}} or \code{\link[=reconciled]{reconciled()}}. A level that equals the sum
+of the others in the observed deaths without being declared stops the
+decomposition.
 }
 
 \examples{
@@ -191,10 +260,12 @@ x <- mt_example(deaths = "single", years = 2000:2015)
 d <- mt_decompose(x, periods = c(2000, 2015), at = 30)
 d
 summary(d, by = "age")[1:5]
-# the sex gap in a forecast year, with intervals
+# the sex gap in forecast years, with intervals, and its change
 fc <- mt_forecast(mt_fit(lee_carter(), x), h = 10, n_draws = 100, seed = 1)
-summary(mt_decompose(fc, var = "sex", ref = "male", at = 30), by = NULL)
-# observed 2015 against the forecast of 2025
+g <- mt_decompose(fc, var = "sex", ref = "male", periods = c(2016, 2025), at = 30)
+summary(g, by = NULL)
+summary(g, by = "age", change = c(2016, 2025))[1:5]
+# observed 2015 against the forecast of 2025, with the jump-off share
 mt_decompose(fc, periods = c(2015, 2025), at = 30)
 }
 \references{
@@ -216,7 +287,8 @@ on a model of continuous change. \emph{Demography} 45(4): 785-801.
 
 Riffe T, Tursun-zade R, Trias Llimós S (2024). Arriaga meets Kitagawa.
 Life expectancy decomposition with population subgroups. MPIDR Working
-Paper WP-2024-029. \doi{10.4054/MPIDR-WP-2024-029}
+Paper WP-2024-029. \doi{10.4054/MPIDR-WP-2024-029}. Published in
+\emph{Geographical Analysis} (2026), \doi{10.1111/gean.70033}.
 
 Vaupel JW (2002). Life expectancy at current rates vs. current
 conditions: a reflexion stimulated by Bongaarts and Feeney's "How long

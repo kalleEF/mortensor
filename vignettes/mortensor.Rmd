@@ -92,10 +92,13 @@ mt_validate(x)
 Observed life expectancy at birth shows the deprivation gradient:
 
 ```{r}
-m <- mt_array(x, "deaths") / mt_array(x, "exposure")
-e0 <- life_expectancy(m, mt_grid(x)$age)
-round(e0[c("2001", "2010", "2019"), ], 1)
+e0 <- life_expectancy(x)
+dcast(e0[period %in% c(2001, 2010, 2019)], sex + quintile ~ period, value.var = "q0.5")[
+  , lapply(.SD, function(v) if (is.numeric(v)) round(v, 1) else v)]
 ```
+
+On data, `life_expectancy()` describes the observed rates with Poisson
+intervals (columns `q0.025` and `q0.975`); the table shows the medians.
 
 ## Harmonisation
 

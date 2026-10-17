@@ -19,8 +19,10 @@ quantities, see \code{quantities} in \code{\link[=mt_backtest]{mt_backtest()}}).
 \value{
 A \code{data.table} with the mean CRPS, WIS and absolute error, MASE
 (mean of absolute error over the scale; rates only), empirical coverage
-of the 50\%, 80\% and 95\% intervals, mean PIT and the number of scored
-cells.
+of the 50\%, 80\% and 95\% intervals, mean PIT, the number of scored
+cells and the \code{unit} of CRPS, WIS and absolute error (log rates, or
+years for life expectancy). Backtests of the same model with different
+preprocessing (column \code{prep}) are scored separately.
 }
 \description{
 Summarise backtest scores

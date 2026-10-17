@@ -22,6 +22,12 @@
 #' breakmethod = "bms")` gives the same period). Fitted rates of earlier
 #' years are missing.
 #'
+#' Compared with `demography::lca()`, `k[t]` is centred again after the
+#' second stage (a constant shift of `k` and `a`, with identical fitted
+#' rates), and life tables use `a_x = n/2` at age 0 (as [life_table()]), so
+#' `adjust = "e0"` matches a slightly different life expectancy than
+#' demography's life table where age 0 is in the data.
+#'
 #' The period index follows a random walk with drift. Draws include the
 #' innovations and the uncertainty of the drift. With `bootstrap = TRUE` the
 #' parameters are re-estimated on `n_boot` Poisson resamples of the fitted

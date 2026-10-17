@@ -8,7 +8,8 @@ mt_plot_decomposition(
   decomposition,
   by = c("age", "cause", "group"),
   fill = NULL,
-  comparisons = NULL
+  comparisons = NULL,
+  change = NULL
 )
 }
 \arguments{
@@ -19,8 +20,12 @@ mt_plot_decomposition(
 \item{fill}{Variable that stacks the bars (\code{"cause"}, \code{"group"}), or
 \code{NULL}.}
 
-\item{comparisons}{Numbers of the comparisons to show (rows of
-\code{summary(decomposition, by = NULL)}; default: all, as panels).}
+\item{comparisons}{Comparisons to show: numbers (column \code{comparison} of
+\code{summary(decomposition, by = NULL)}) or a named list of values of its
+columns, for example \code{list(to = "Q5")}; default: all, as panels.}
+
+\item{change}{Two periods: plot the change between them (see
+\code{\link[=summary.mt_decomposition]{summary.mt_decomposition()}}).}
 }
 \value{
 A ggplot object.

@@ -4,7 +4,9 @@
 #' Interval widths come from the age axis, so abridged and single-year
 #' schedules are handled by the same code.
 #'
-#' * `q_x = n m / (1 + (n - a) m)`, capped at 1;
+#' * `q_x = n m / (1 + (n - a) m)`; where this exceeds 1 (rates above
+#'   about `2 / n`, far beyond observed values), the constant-hazard value
+#'   `1 - exp(-n m)` is used, so that survivors stay positive;
 #' * `a_x` defaults to `n / 2` for every closed interval (supply `ax` to
 #'   override, for example for age 0, where `n / 2` overstates the average
 #'   time lived by infants who die; the effect on e0 at low infant mortality
@@ -53,8 +55,7 @@ lt_columns <- function(M, age, ax = NULL, open = "reciprocal", k = 10) {
   is_open <- is.infinite(n[na])
   nn <- matrix(n, na, ncol(M))
   A <- if (is.null(ax)) nn / 2 else matrix(ax, na, ncol(M))
-  Q <- nn * M / (1 + (nn - A) * M)
-  Q[Q > 1 | !is.finite(Q)] <- 1
+  Q <- lt_qx(M, nn, A)
   if (is_open) {
     Q[na, ] <- 1
     A[na, ] <- 1 / M[na, ]
@@ -69,6 +70,16 @@ lt_columns <- function(M, age, ax = NULL, open = "reciprocal", k = 10) {
   Tx <- apply(Lx, 2, function(z) rev(cumsum(rev(z))))
   if (is.null(dim(Tx))) Tx <- matrix(Tx, nrow = na)
   list(ax = A, qx = Q, lx = L, dx = Dx, Lx = Lx, Tx = Tx, ex = Tx / L)
+}
+
+# Probabilities of dying in closed intervals from rates; where the linear
+# formula exceeds 1, the constant-hazard value 1 - exp(-n m)
+lt_qx <- function(M, nn, A) {
+  Q <- nn * M / (1 + (nn - A) * M)
+  hi <- is.finite(Q) & Q > 1 | is.finite(M) & M > 0 & !is.finite(Q)
+  Q[hi] <- 1 - exp(-nn[hi] * M[hi])
+  Q[!is.finite(Q)] <- 1
+  Q
 }
 
 # Life expectancy at the start of the open interval under a Gompertz extension

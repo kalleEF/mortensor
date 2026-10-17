@@ -8,7 +8,11 @@
 #' Steps:
 #'
 #' * `step_ungroup(...)`: [mt_ungroup()];
-#' * `step_smooth(...)`: [mt_smooth()];
+#' * `step_smooth(...)`: [mt_smooth()]. The model is fitted to the
+#'   smoothed rates; residuals and observation noise refer to the raw
+#'   deaths. Smoothing over time (`along = "period"`, or `dims = 2`)
+#'   narrows the forecast intervals of models with a period index, so check
+#'   coverage in a backtest and consider [calibrated()];
 #' * `step_regroup(age, period)`: [mt_regroup()];
 #' * `step_grid(age, period)`: [mt_set_grid()];
 #' * `step_window(years)`: keeps the last `years` years of the training

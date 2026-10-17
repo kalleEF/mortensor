@@ -1,6 +1,6 @@
 # Decomposition as post-processing: plan
 
-Status: implemented in 0.2 (work package Q1, see `dev/progress.md`).
+Status: implemented in 0.2 (work package Q1); revised after applied reviews 3 and 4 (work package Q2: totals refused, `composition` required for subgroups, `observed = "fitted"`, jump-off, change of a gap; see `dev/progress.md`).
 
 ## Aim
 

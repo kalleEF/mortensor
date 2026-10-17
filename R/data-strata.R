@@ -94,6 +94,11 @@ mt_group_levels <- function(data, var, groups, other = NULL, total = NULL, keep 
     setnames(out$strata, var, name)
     out$by[out$by == var] <- name
   }
+  if (!is.null(total)) {
+    # record the total level (used by mt_decompose() to leave it out of the parts)
+    out$level_totals <- data$level_totals %||% list()
+    out$level_totals[[name %||% var]] <- list(total = total, groups = list(), additive = additive)
+  }
   out
 }
 
