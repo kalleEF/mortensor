@@ -118,12 +118,16 @@ mt_plot_scores(bt[quintile == "Q5" & sex != "both"], by = "model", target = "lif
 ```
 
 The models forecast the rates of the quintiles within about 10% of each
-other, the ensemble best. The gap separates them clearly: Li-Lee and the
-coherent fdm forecast it worst, and their intervals covered the observed
-gap in only 12% and 18% of the cases, because in 2010-2019 the female gap
-did not return to its past level. Lee-Carter forecast the gap best, the
-ensemble of Lee-Carter and fdm second. The pipeline continues with
-Lee-Carter, chosen for the quantity of the question.
+other, the ensemble best. The intervals of life expectancy are too narrow
+for every model, most for the totals (95% coverage of Lee-Carter 0.81 for
+the quintiles and 0.32 for England): five years ahead, the forecasts
+underestimate how far life expectancy can move. The gap separates the
+models clearly: Li-Lee and the coherent fdm forecast it worst, and their
+intervals covered the observed gap in only 14% and 18% of the cases,
+because in 2010-2019 the female gap did not return to its past level.
+Lee-Carter forecast the gap best, with intervals that covered it in 98% of
+the cases, the ensemble of Lee-Carter and fdm second. The pipeline
+continues with Lee-Carter, chosen for the quantity of the question.
 
 ### Smoothing and jump-off
 
@@ -142,10 +146,11 @@ mt_score_table(bt_steps[sex != "both" & quintile != "England"], metrics = c("crp
 ```
 
 Smoothing over time made the forecasts of the rates and of life
-expectancy much worse (95% coverage of the rates 0.64 against 0.83): the
-year-to-year variation of these rates is information about the
-uncertainty, and removing it made the intervals too narrow. The gaps were
-forecast slightly better, but with too narrow intervals as well.
+expectancy much worse (95% coverage of the rates 0.64 against 0.83, of
+life expectancy 0.20 against 0.81): the year-to-year variation of these
+rates is information about the uncertainty, and removing it made the
+intervals too narrow. The gaps were forecast slightly worse as well, with
+too narrow intervals (95% coverage 0.57 against 0.98).
 Anchoring changed almost nothing, because the fitted rates of Lee-Carter
 in the last year are close to the observed ones. The pipeline uses
 neither.
@@ -254,8 +259,9 @@ mt_score_table(bt_c[cause == "all"], metrics = c("crps", "cov95"), targets = c("
 
 For the causes the three are close: the summed forecasts are slightly
 the most accurate for the age-standardised rates but the least accurate
-for their gaps, and those scaled to Lee-Carter cover best (95% coverage
-0.95). For all causes the difference is large: the summed causes and the
+for their gaps, and those scaled to Lee-Carter forecast the gaps best
+(95% coverage 0.997). The intervals of the age-standardised rates are too
+narrow for all three (95% coverage 0.81-0.88). For all causes the difference is large: the summed causes and the
 Li-Lee total both pull the gap back to its past level, and only the
 Lee-Carter total forecast it well (CRPS of the gap 0.13 against 0.33 and
 0.49).
@@ -315,7 +321,7 @@ This is the least reliable part of the result.
 | Data | deciles to quintiles | | `mt_data()`, `mt_group_levels()` | "Getting started" |
 | Totals | England and both sexes as sums | | `mt_hierarchy()`, `reconciled(method = "bottom_up")` | "Coherent forecasts" |
 | Model | Lee-Carter per quintile | best backtest of the gap | `mt_compare(contrast = )` | "Choosing and combining models" |
-| Smoothing | none | made the rates and life expectancy worse | `step_smooth()` | "Smoothing death rates" |
+| Smoothing | none | made every score worse | `step_smooth()` | "Smoothing death rates" |
 | Jump-off | the model's own | anchoring changed nothing | `anchored()` | "Where a forecast starts" |
 | Inequality | gap Q5 - Q1 and SII, path by path | | `mt_contrast()`, `mt_inequality()` | |
 | Causes | Li-Lee, scaled to a Lee-Carter all-cause forecast | best backtest of the all-cause gap | `stratified()`, `reconciled(method = "proportional", fixed = )` | "Coherent forecasts" |
