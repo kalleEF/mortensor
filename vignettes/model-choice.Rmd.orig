@@ -82,7 +82,7 @@ mt_plot_compare(fc[c("random walk", "Lee-Carter", "fdm", "APC", "Bayesian APC")]
 ```
 
 All models forecast a further rise, at different paces and with
-different uncertainty. By 2031 the medians range from 26.7 to 29.2 years:
+different uncertainty. By 2031 the medians range from 26.6 to 29.2 years:
 
 * **fdm** gives the highest forecast and the narrowest interval.
 * The period models (**random walk**, **Lee-Carter**, **CBD**) agree
@@ -117,7 +117,7 @@ mt_plot_scores(bt, by = "model", target = "life_expectancy")
 * **M6** and **APC** forecast best, both the rates and life expectancy,
   and their intervals covered the observed values.
 * The **Bayesian RH** comes third, and its intervals covered well (95%
-  coverage 0.90 for the rates).
+  coverage 0.89 for the rates).
 * The period models and the random walk lie close together; the random
   walk forecast the single rates slightly better than Lee-Carter.
 * **fdm** forecast life expectancy fairly accurately, but its intervals
@@ -166,7 +166,7 @@ mt_score_table(rbind(bt, bt_ens), metrics = c("crps", "cov95"))
 ```
 
 * The **equal-weight ensemble** is more accurate than the average of its
-  components (CRPS of the rates 0.045 against 0.049), and its intervals
+  components (CRPS of the rates 0.042 against 0.050), and its intervals
   cover. This always holds: the CRPS is a convex function of the forecast
   distribution, so the CRPS of a mixture is never larger than the weighted
   mean of the CRPS of its components. It includes the weak Bayesian APC,
