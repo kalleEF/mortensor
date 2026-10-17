@@ -281,7 +281,8 @@ wis_from_quantiles <- function(Q, y, probs) {
 #' @param target `"rate"` (log death rates per cell, default),
 #'   `"life_expectancy"` or `"asr"` (when the backtest scored these
 #'   quantities, see `quantities` in [mt_backtest()]).
-#' @return A `data.table` with the mean CRPS, WIS and absolute error, MASE
+#' @return A `data.table` with the mean CRPS, WIS and absolute error, the
+#'   root mean squared error of the median (`rmse`), MASE
 #'   (mean of absolute error over the scale; rates only), empirical coverage
 #'   of the 50%, 80% and 95% intervals, mean PIT, the number of scored
 #'   cells and the `unit` of CRPS, WIS and absolute error (log rates, or
@@ -309,7 +310,7 @@ mt_score <- function(backtest, by = "model", target = c("rate", "life_expectancy
       bt[, data.table::uniqueN(prep), by = model][, any(V1 > 1)]) {
     by <- c(by, "prep")
   }
-  out <- bt[, list(crps = mean(crps), wis = mean(wis), mae = mean(ae),
+  out <- bt[, list(crps = mean(crps), wis = mean(wis), mae = mean(ae), rmse = sqrt(mean(ae^2)),
                    mase = if (rates_only) mean(ae / scale, na.rm = TRUE) else NA_real_,
                    cov50 = mean(cov50), cov80 = mean(cov80), cov95 = mean(cov95), pit_mean = mean(pit), n = .N),
             by = by]

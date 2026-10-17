@@ -76,9 +76,7 @@ mt_fit.mt_spec_anchored <- function(spec, data, prep = NULL, cores = 1, ...) {
   offset_of <- function(f) anchor_offsets(f, D, fit$train_E, p$years, p$shrink)
   fit$anchor <- list(offset = offset_of(fit),
                      components = if (!is.null(fit$components)) lapply(fit$components, offset_of))
-  fit$spec <- spec
-  class(fit) <- c("mt_fit_anchored", class(fit))
-  fit
+  wrap_fit(fit, spec, "mt_fit_anchored")
 }
 
 # Log ratio of observed to fitted deaths over the last `years` years per age

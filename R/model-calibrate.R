@@ -148,9 +148,7 @@ mt_fit.mt_spec_calibrated <- function(spec, data, prep = NULL, cores = 1, ...) {
   fit$calibration_theta <- est$theta
   fit$calibration_origins <- origins[!bad]
   fit$calibration_hmax <- last - min(origins[!bad])
-  fit$spec <- spec
-  class(fit) <- c("mt_fit_calibrated", class(fit))
-  fit
+  wrap_fit(fit, spec, "mt_fit_calibrated")
 }
 
 calibration_origins <- function(last, years, n_origins) {
@@ -172,25 +170,35 @@ spec_adds_noise <- function(spec) {
   isTRUE(spec$smooth)
 }
 
-# Observation noise of each draw: whether Poisson noise is added (`noise`, one
-# per draw) and the extra-Poisson sd by age (`sd(s)`: ages x draws for stratum
-# s). Draws of an ensemble follow the component they come from.
+# Observation noise of each draw: whether Poisson noise is added
+# (`noise(s)`: one flag per draw for stratum s) and the extra-Poisson sd by
+# age (`sd(s)`: ages x draws). Draws of an ensemble follow the component
+# they come from; strata of a fit split into groups (tuned(by = )) follow
+# the spec chosen for their group.
 draw_noise <- function(fit, fc, n_draws) {
   na <- length(fit$age)
   comps <- fit$components
   if (!is.null(comps) && !is.null(fc$component)) {
     flags <- vapply(comps, function(f) spec_adds_noise(f$spec), TRUE)
     k <- fc$component
-    return(list(noise = flags[k], sd = function(s) {
+    return(list(noise = function(s) flags[k], sd = function(s) {
       matrix(vapply(k, function(j) {
         if (!flags[j] || is.null(comps[[j]]$noise_sd)) rep(0, na) else comps[[j]]$noise_sd[, s]
       }, numeric(na)), na)
     }))
   }
-  flag <- spec_adds_noise(fit$spec)
+  flag_of <- if (!is.null(fit$group_fits)) {
+    gflags <- vapply(fit$group_fits, function(f) spec_adds_noise(f$spec), TRUE)
+    grp <- integer(nrow(fit$strata))
+    for (g in seq_along(fit$groups)) grp[fit$groups[[g]]] <- g
+    function(s) gflags[grp[s]]
+  } else {
+    flag <- spec_adds_noise(fit$spec)
+    function(s) flag
+  }
   sd <- fit$noise_sd
-  list(noise = rep(flag, n_draws), sd = function(s) {
-    matrix(if (flag && !is.null(sd)) sd[, s] else 0, na, n_draws)
+  list(noise = function(s) rep(flag_of(s), n_draws), sd = function(s) {
+    matrix(if (flag_of(s) && !is.null(sd)) sd[, s] else 0, na, n_draws)
   })
 }
 
@@ -231,7 +239,7 @@ calibration_origin <- function(spec, data, origin, last, prep, n_draws, seed, ta
     L <- log(pmax(R[used, , drop = FALSE], 1e-12))
     out[[length(out) + 1L]] <- list(
       label = lab, L = L, m = row_quantiles(L, 0.5)[, 1], h = rep(fc$periods - origin, each = na)[used],
-      E = Eg, C = C, Ecell = Ecell, y = log(pmax(o$value, 0.5) / Ecell), noise = nz$noise,
+      E = Eg, C = C, Ecell = Ecell, y = log(pmax(o$value, 0.5) / Ecell), noise = nz$noise(sf),
       sd = nz$sd(sf)[rep(seq_len(na), np)[used], , drop = FALSE])
   }
   out
@@ -367,9 +375,7 @@ mt_forecast.mt_fit_calibrated <- function(fit, h = 10, to = NULL, n_draws = 500,
 # draws (per draw of an ensemble from its component), and the aggregates of
 # reconciled models are recomputed from the bottom strata
 wrapped_forecast <- function(fit, cls, h, to, n_draws, seed, predictive, exposure, transform, h_missing = TRUE) {
-  base_fit <- fit
-  class(base_fit) <- setdiff(class(fit), cls)
-  base_fit$spec <- fit$spec$params$base
+  base_fit <- unwrap_fit(fit, cls)
   if (!is.null(to)) {
     if (!h_missing) mt_warn("Both `h` and `to` are given; `to` is used.", class = "argument")
     h <- to - max(fit$periods)
@@ -396,19 +402,36 @@ wrapped_forecast <- function(fit, cls, h, to, n_draws, seed, predictive, exposur
   res
 }
 
+# A wrapper's fit is the fit of its base model under the wrapper's spec and
+# class. The specs fitted underneath are kept as a stack: the fitted base
+# spec can differ from spec$params$base (tuned() fits the spec it chose)
+wrap_fit <- function(fit, spec, cls) {
+  fit$inner_specs <- c(list(fit$spec), fit$inner_specs)
+  fit$spec <- spec
+  class(fit) <- c(cls, class(fit))
+  fit
+}
+
+unwrap_fit <- function(fit, cls) {
+  base <- fit
+  class(base) <- setdiff(class(fit), cls)
+  base$spec <- if (length(fit$inner_specs)) fit$inner_specs[[1]] else fit$spec$params$base
+  base$inner_specs <- fit$inner_specs[-1]
+  base
+}
+
 # Poisson and extra-Poisson noise of the base model added to rate draws
 add_observation_noise <- function(arr, base_fit, fc, targets, E) {
   d <- dim(arr)
   nz <- draw_noise(base_fit, fc, d[4])
-  if (!any(nz$noise)) return(arr)
   for (s in targets) {
     R <- arr[, , s, ]
-    if (anyNA(R)) next
+    if (anyNA(R) || !any(nz$noise(s))) next
     Es <- as.vector(E[, , s])
     sd <- array(nz$sd(s)[rep(seq_len(d[1]), d[2]), ], d[c(1, 2, 4)])
     mu <- R * exp(stats::rnorm(length(R), 0, sd)) * Es
     D <- pmax(stats::rpois(length(mu), mu), 0.5) / Es
-    k <- rep(nz$noise, each = d[1] * d[2])
+    k <- rep(nz$noise(s), each = d[1] * d[2])
     R[k] <- D[k]
     arr[, , s, ] <- R
   }

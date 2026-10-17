@@ -11,6 +11,24 @@ Clean break: the 0.1.x interface is replaced (see `dev/revamp-plan.md`).
   model errors that `simulate()` resamples contained the observation noise
   that predictive draws add a second time. `smooth = FALSE` keeps the old
   behaviour (label "unsmoothed").
+* `mt_tune()` and `tuned()` choose settings by forecast accuracy on the
+  last years of the training data:
+  * `spec_fun` may return `list(spec = , prep = )`, so preprocessing
+    (smoothing parameter, fitting window) is tuned together with the model
+    (for example the number of components of `hyndman_ullah()`);
+  * `inner_origins = 1` is a single hold-out of the last `inner_h` years;
+    `target = "life_expectancy"` or `"asr"`; `metric = "rmse"` for point
+    accuracy;
+  * `select = "one_se"` takes the simplest setting within one standard
+    error of the best; scores carry standard errors, scores by horizon
+    (`by_horizon`) and the `chosen` setting;
+  * `by` tunes and fits groups of strata separately (for example by sex).
+* `mt_score()` reports the root mean squared error of the median (`rmse`).
+* `calibrated()`, `anchored()` and `reconciled()` around `tuned()` failed
+  when forecasting ("No simulate_model() method for model 'tuned'"): the
+  wrappers rebuilt the base model from its specification instead of the
+  one the tuning chose. Fits now keep the specifications fitted underneath.
+* `summary()` of tuned fits shows the chosen settings.
 
 ## Function map
 

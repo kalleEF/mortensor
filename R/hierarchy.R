@@ -713,17 +713,13 @@ mt_fit.mt_spec_reconciled <- function(spec, data, prep = NULL, cores = 1, ...) {
   hs <- hierarchy_structure(fit$strata, p$hierarchy)
   fit$reconcile <- list(hierarchy = p$hierarchy, method = p$method, shrink = p$shrink, dependence = p$dependence,
                         structure = hs, fixed = fixed_nodes(p$fixed, fit$strata, p$hierarchy, hs, p$method))
-  fit$spec <- spec
-  class(fit) <- c("mt_fit_reconciled", class(fit))
-  fit
+  wrap_fit(fit, spec, "mt_fit_reconciled")
 }
 
 #' @export
 mt_forecast.mt_fit_reconciled <- function(fit, h = 10, to = NULL, n_draws = 500, seed = NULL, predictive = FALSE,
                                           exposure = NULL, ...) {
-  base_fit <- fit
-  class(base_fit) <- setdiff(class(fit), "mt_fit_reconciled")
-  base_fit$spec <- fit$spec$params$base
+  base_fit <- unwrap_fit(fit, "mt_fit_reconciled")
   rc <- fit$reconcile
   out <- with_seed(seed, {
     fc <- mt_forecast(base_fit, h = if (is.null(to)) h else to - max(fit$periods), n_draws = n_draws)
@@ -744,7 +740,7 @@ mt_forecast.mt_fit_reconciled <- function(fit, h = 10, to = NULL, n_draws = 500,
       b <- hs$bottom
       Eb <- rec$exposure[, , b, drop = FALSE]
       mb <- rates[, , b, , drop = FALSE]
-      if (isTRUE(fit$spec$params$base$smooth)) {
+      if (isTRUE(base_fit$spec$smooth)) {
         sd <- array(fit$noise_sd[, b, drop = FALSE][, rep(seq_along(b), each = d[2])], c(d[1], d[2], length(b)))
         mb <- mb * exp(stats::rnorm(length(mb), 0, as.vector(sd)))
         mu <- mb * as.vector(Eb)

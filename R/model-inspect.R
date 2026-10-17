@@ -30,8 +30,13 @@
 mt_parameters <- function(fit) {
   check_class(fit, "mt_fit", "fit")
   sp <- fit$spec
-  # wrappers that keep the fit of their base model
-  while (inherits(sp, c("mt_spec_calibrated", "mt_spec_reconciled", "mt_spec_bootstrap"))) sp <- sp$params$base
+  # wrappers that keep the fit of their base model (the fitted base specs are
+  # stacked in inner_specs; tuned() fits the spec it chose)
+  inner <- fit$inner_specs
+  while (inherits(sp, c("mt_spec_calibrated", "mt_spec_reconciled", "mt_spec_bootstrap", "mt_spec_anchored"))) {
+    sp <- if (length(inner)) inner[[1]] else sp$params$base
+    inner <- inner[-1]
+  }
   out <- base_parameters(fit, sp)
   cal <- fit$calibration
   if (!is.null(cal)) {
@@ -193,7 +198,7 @@ summary.mt_fit <- function(object, ...) {
                  deviance = if (!is.null(res) && nrow(res)) sum(res$residual^2) else NA_real_,
                  cells = if (!is.null(res)) nrow(res) else NA_integer_,
                  large_residuals = if (!is.null(res) && nrow(res)) mean(abs(res$residual) > 2) else NA_real_,
-                 calibration = object$calibration,
+                 calibration = object$calibration, tuning = object$tuning_choice,
                  anchor = if (!is.null(object$anchor)) stats::quantile(object$anchor$offset, c(0, 0.5, 1))),
             class = "summary.mt_fit")
 }
@@ -222,6 +227,12 @@ print.summary.mt_fit <- function(x, ...) {
   if (!is.null(x$anchor)) {
     cat(sprintf("  jump-off offsets (log ratio observed / fitted): min %.3f, median %.3f, max %.3f\n", x$anchor[1],
                 x$anchor[2], x$anchor[3]))
+  }
+  if (!is.null(x$tuning)) {
+    tu <- as.data.frame(x$tuning)
+    cat("  tuning (chosen settings and inner score):\n")
+    cat(paste0("    ", utils::capture.output(print(tu, row.names = FALSE, digits = 4)), collapse = "\n"), "\n",
+        sep = "")
   }
   if (!is.null(x$calibration)) {
     cal <- x$calibration
@@ -252,10 +263,10 @@ model_assumptions <- function(spec) {
                  "Noise variance from Poisson counts plus a common extra part; level variance partly pooled over",
                  "ages. Draws include level and drift uncertainty; predictive draws add the noise.")
          } else {
-           paste("Each age: log rate a random walk with drift, estimated from the year-to-year changes",
-                 if (!is.null(p$drift_window)) sprintf("of the last %d years", p$drift_window) else "",
-                 "; draws resample the observed changes (", p$innovations, ") and the drift. Noise of observed",
-                 "rates accumulates, so intervals are wide where deaths are few.")
+           paste0("Each age: log rate a random walk with drift, estimated from the year-to-year changes",
+                  if (!is.null(p$drift_window)) sprintf(" of the last %d years", p$drift_window) else "",
+                  "; draws resample the observed changes (", p$innovations, ") and the drift. Noise of observed ",
+                  "rates accumulates, so intervals are wide where deaths are few.")
          },
          mt_spec_multipop = paste(
            if (p$type == "li_lee") "Li-Lee: log m(x,t,i) = a(x,i) + B(x) K(t) + b(x,i) k(t,i)" else
