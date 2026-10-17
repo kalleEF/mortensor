@@ -1,0 +1,25 @@
+flowchart TD
+  T["`**your tables**
+  deaths, populations or exposures (CSV, Excel, official exports)`"]
+  D["`**mt_data**
+  observations at any age and period resolution, by strata`"]
+  S["`**model specification**
+  lee_carter(), li_lee(), rwd(), ..., optionally inside ensemble(), reconciled(), recalibrated(), anchored()`"]
+  F["`**mt_fit**
+  estimates per stratum or joint`"]
+  P["`**mt_draws**
+  simulated paths of future rates`"]
+  B["`**mt_backtest**
+  scores of past forecasts`"]
+  R["`**tables and plots**
+  life expectancy, rates, deaths, gaps, decompositions`"]
+  T -- "mt_data()" --> D
+  D -- "prepare and check (map 1)" --> D
+  D -- "mt_fit()" --> F
+  S --> F
+  S --> B
+  D -- "mt_backtest()" --> B
+  F -- "mt_forecast()" --> P
+  P -- "map 3" --> R
+  B -- "mt_score()" --> R
+  D -- "the past (map 3)" --> R

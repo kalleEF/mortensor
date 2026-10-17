@@ -178,7 +178,7 @@ mt_fit.mt_spec_recalibrated <- function(spec, data, prep = NULL, cores = 1, ...)
   pieces <- par_lapply(origins, function(o) {
     tryCatch(calibration_origin(p$base, data, o, last, prep, p$n_draws, if (!is.null(p$seed)) p$seed + o,
                                 fit$strata$label[bottom], p$quantity %||% "rate"), error = function(e) e)
-  }, cores)
+  }, cores, streams = TRUE)
   bad <- vapply(pieces, inherits, logical(1), what = "error")
   if (any(bad)) {
     mt_warn(sprintf("Calibration origin(s) %s failed: %s", paste(origins[bad], collapse = ", "),

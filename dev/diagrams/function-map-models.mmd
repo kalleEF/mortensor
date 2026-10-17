@@ -1,0 +1,27 @@
+flowchart TD
+  ONE["`**one population per stratum**
+  lee_carter(), rwd(), hyndman_ullah(), stmomo(), stanmomo(), arima_series(), ets_series(), apc_bayes()`"]
+  MANY["`**several strata jointly**
+  li_lee(common_by), product_ratio(), coherent_fdm(), tucker3(), cause_shares()`"]
+  H["`**mt_hierarchy()**
+  totals and groups of strata; fixed nodes such as a trusted total`"]
+  WRAP["`**wrappers around any model**
+  ensemble(), stratified(), reconciled(), recalibrated(), anchored(), bootstrapped(), tuned()`"]
+  SPEC["model specification"]
+  M["model-ready mt_data"]
+  PREP["`**mt_prep()**
+  step_smooth(), step_ungroup(), step_window(), ...`"]
+  FIT["`**mt_fit(spec, data, prep)**`"]
+  INS["`**inspect**
+  summary(), mt_parameters(), residuals(), mt_plot_residuals()`"]
+  FC["`**mt_forecast()**
+  draws; warns about implausible rates; mt_jump_off()`"]
+  ONE --> SPEC
+  MANY --> SPEC
+  H --> WRAP
+  WRAP -. "optional" .-> SPEC
+  SPEC --> FIT
+  M --> FIT
+  PREP -. "optional" .-> FIT
+  FIT --> INS
+  FIT --> FC

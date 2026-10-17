@@ -1,0 +1,15 @@
+flowchart TD
+  M["model-ready mt_data"]
+  SP["`**candidate specifications**
+  each with its preprocessing (prep)`"]
+  BT["`**mt_backtest()**
+  rolling origins; preprocessing and model refitted on each training window; suppressed cells not scored`"]
+  SC["`**mt_score()**
+  CRPS, interval score, coverage, PIT, MASE; for rates, life expectancy or ASR`"]
+  PL["`**mt_plot_scores(), mt_plot_coverage()**
+  by horizon, age or model`"]
+  CH["chosen specification"]
+  M --> BT
+  SP --> BT
+  BT --> SC --> CH
+  BT --> PL --> CH

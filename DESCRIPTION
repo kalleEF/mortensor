@@ -32,6 +32,7 @@ Suggests:
     DemoDecomp,
     demography,
     forecast,
+    fracdiff,
     ggplot2,
     HMDHFDplus,
     knitr,

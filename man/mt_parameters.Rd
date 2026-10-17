@@ -11,7 +11,8 @@ mt_parameters(fit)
 }
 \value{
 A \code{data.table} with \code{stratum}, \code{parameter}, \code{index} (age label,
-year or position), \code{value} and, for Bayesian fits, \code{lower} and \code{upper}.
+year or position), \code{value} and, for Bayesian fits, \code{lower} and \code{upper};
+for ensembles also \code{component}, for fits by groups also \code{group}.
 }
 \description{
 Returns the estimated parameters of a fit in one long table, for every
@@ -34,6 +35,13 @@ of the identified quantities.
 
 Fits of wrapped packages (StMoMo, demography) keep the original fitted
 object in \code{fit$fits[[i]]}, where the methods of those packages apply.
+
+Wrappers return the parameters of the model they wrap (\code{\link[=recalibrated]{recalibrated()}}
+adds its factors). For an \code{\link[=ensemble]{ensemble()}}, the rows of each component carry
+its name in column \code{component}, and rows with \code{parameter = "weight"} give
+the weights; components without interpretable parameters (wrapped
+packages) contribute their weight only. For \code{\link[=stratified]{stratified()}} and
+\code{tuned(by = )}, the rows of each group carry its name in column \code{group}.
 }
 \examples{
 x <- mt_example(deaths = "single")

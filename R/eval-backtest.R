@@ -100,7 +100,9 @@ mt_backtest <- function(spec, data, origins = NULL, h = 10, prep = NULL, n_draws
     }
     res
   }
-  out <- rbindlist(par_lapply(origins, one, cores), fill = TRUE)
+  # one random number stream per origin: fits that use random numbers give the
+  # same results with any number of cores
+  out <- rbindlist(par_lapply(origins, one, cores, streams = TRUE), fill = TRUE)
   if (!nrow(out)) mt_abort("All origins failed.", class = "backtest")
   setattr(out, "class", c("mt_backtest", class(out)))
   out

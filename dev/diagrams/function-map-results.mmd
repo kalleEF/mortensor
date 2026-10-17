@@ -1,0 +1,21 @@
+flowchart TD
+  P["`**mt_draws**
+  forecast paths`"]
+  O["`**mt_data**
+  observed data; mt_observed() adds Poisson draws`"]
+  AGG["`**aggregate or refine**
+  mt_aggregate_draws(), mt_disaggregate(); mt_coherence() checks sums`"]
+  IND["`**indicators**
+  life_expectancy(), asr(), prob_dying(), yll(), mt_deaths()`"]
+  COMP["`**comparisons**
+  mt_contrast(), mt_inequality(), mt_decompose()`"]
+  OUT["`**output**
+  mt_summarise(), mt_plot_forecast(), mt_plot_life_expectancy(), mt_plot_shares(), mt_plot_decomposition(), mt_export()`"]
+  P <--> AGG
+  P --> IND
+  O --> IND
+  P --> COMP
+  O --> COMP
+  P --> OUT
+  IND --> OUT
+  COMP --> OUT
