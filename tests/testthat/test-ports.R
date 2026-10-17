@@ -59,6 +59,29 @@ test_that("StMoMo cohort models have fitted rates for clipped cohorts", {
   expect_gt(min(e), 15)
 })
 
+test_that("stanmomo() satisfies the contract and reports convergence", {
+  skip_on_cran()
+  skip_if_not_installed("StanMoMo")
+  skip_if_not_installed("rstan")
+  x <- mt_example(deaths = "single", years = 2000:2019)
+  x <- mt_regroup(mt_set_grid(x, age = single_ages(60, 90, open = FALSE)), age = single_ages(60, 90, open = FALSE))
+  set.seed(1)
+  res <- suppressWarnings(expect_mt_model(stanmomo("lc", chains = 1, iter = 300, h_max = 5), data = x))
+  f <- res$fit$fits[[1]]
+  expect_true(is.finite(f$rhat))
+  # fitted rates are close to the observed rates
+  obs <- mt_array(x, "deaths")[, , 1] / mt_array(x, "exposure")[, , 1]
+  expect_lt(stats::median(abs(log(stats::fitted(res$fit)[, , 1] / obs))), 0.15)
+  expect_error(mt_forecast(res$fit, h = 6, n_draws = 10), class = "mt_error_argument")
+  # the cohort index of an APC fit reproduces the observed rates as well
+  set.seed(1)
+  fa <- suppressWarnings(mt_fit(stanmomo("apc", chains = 1, iter = 300, h_max = 3), mt_subset(x, sex == "female")))
+  expect_lt(stats::median(abs(log(stats::fitted(fa)[, , 1] / obs))), 0.15)
+  xg <- mt_example(years = 2000:2019)
+  fg <- tryCatch(mt_fit(stanmomo("apc", chains = 1, iter = 100), xg), error = function(e) e)
+  expect_true(inherits(fg, "mt_error_model_fit") || all(fg$diagnostics$status == "failed"))
+})
+
 test_that("StMoMo cohort models need single years of age", {
   skip_if_not_installed("StMoMo")
   x <- mortensor:::simulate_lc_dgp(n_t = 12)

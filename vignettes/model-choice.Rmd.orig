@@ -31,6 +31,7 @@ smoothing and the jump-off aside (see their own vignettes).
 | Lee-Carter | `lee_carter()` | mortensor | one time index, with an age pattern of change (Lee and Carter 1992) |
 | Functional demographic model | `hyndman_ullah()` | demography | rates smoothed over age, several components (Hyndman and Ullah 2007) |
 | Lee-Carter, CBD, APC, Renshaw-Haberman, M6 | `stmomo("lc")`, `"cbd"`, `"apc"`, `"rh"`, `"m6"` | StMoMo | generalised age-period-cohort models (Villegas et al. 2018) |
+| Bayesian Lee-Carter, RH, APC, CBD, M6 | `stanmomo("lc")`, `"rh"`, ... | StanMoMo | the StMoMo models fitted with Stan, with posterior uncertainty of all parameters (Barigou et al. 2023) |
 | Bayesian APC | `apc_bayes()` | bamp | age, period and cohort effects with random-walk priors (Schmid and Held 2007) |
 | Time series per age | `arima_series()`, `ets_series()` | forecast | a separate ARIMA or exponential smoothing model for each age |
 | Tensor decomposition | `tucker3()` | mortensor | age, period and stratum factors |
@@ -58,7 +59,9 @@ models <- list("random walk" = rwd(),
                "CBD" = stmomo("cbd"),
                "APC" = stmomo("apc"),
                "M6" = stmomo("m6"),
-               "Bayesian APC" = apc_bayes(mcmc = mcmc_control("fast")))
+               "Bayesian APC" = apc_bayes(mcmc = mcmc_control("fast")),
+               "Bayesian RH" = stanmomo("rh", h_max = 20, cores = 4))
+set.seed(1)  # the MCMC samplers of bamp and Stan draw their seeds from R
 fc <- lapply(models, function(m) mt_forecast(mt_fit(m, ew), h = 20, n_draws = 500, seed = 1))
 ```
 
@@ -84,7 +87,9 @@ different uncertainty. By 2031 the medians range from 26.7 to 29.2 years:
 * **fdm** gives the highest forecast and the narrowest interval.
 * The period models (**random walk**, **Lee-Carter**, **CBD**) agree
   closely, at about 28.7 years.
-* The cohort models **APC** and **M6** are lower (28.4 and 28.1 years).
+* The cohort models **APC** and **M6** are lower (28.4 and 28.1 years);
+  the **Bayesian RH** (StanMoMo: Lee-Carter with a cohort effect, fitted
+  with Stan) lies between them and the period models (28.5 years).
 * The **Bayesian APC** barely moves. Its default priors are first-order
   random walks for period and cohort (`period = "rw1"`), which carry the
   last period effect forward without a trend; only the cohorts entering
@@ -111,6 +116,8 @@ mt_plot_scores(bt, by = "model", target = "life_expectancy")
 
 * **M6** and **APC** forecast best, both the rates and life expectancy,
   and their intervals covered the observed values.
+* The **Bayesian RH** comes third, and its intervals covered well (95%
+  coverage 0.90 for the rates).
 * The period models and the random walk lie close together; the random
   walk forecast the single rates slightly better than Lee-Carter.
 * **fdm** forecast life expectancy fairly accurately, but its intervals
@@ -159,7 +166,7 @@ mt_score_table(rbind(bt, bt_ens), metrics = c("crps", "cov95"))
 ```
 
 * The **equal-weight ensemble** is more accurate than the average of its
-  components (CRPS of the rates 0.041 against 0.050), and its intervals
+  components (CRPS of the rates 0.045 against 0.049), and its intervals
   cover. This always holds: the CRPS is a convex function of the forecast
   distribution, so the CRPS of a mixture is never larger than the weighted
   mean of the CRPS of its components. It includes the weak Bayesian APC,
@@ -192,6 +199,10 @@ mt_plot_compare(c(fc[c("Lee-Carter", "APC", "Bayesian APC")], list("equal ensemb
   (`reconciled()`); see the applied vignettes.
 
 ## References
+
+Barigou K, Goffard P-O, Loisel S, Salhi Y (2023). Bayesian model averaging
+for mortality forecasting using leave-future-out validation. *International
+Journal of Forecasting* 39(2): 674-690.
 
 Hyndman RJ, Booth H, Yasmeen F (2013). Coherent mortality forecasting: the
 product-ratio method with functional time series models. *Demography*

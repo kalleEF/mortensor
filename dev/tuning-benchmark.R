@@ -1,6 +1,6 @@
 # Benchmark of tuning and calibration (2026-10-17): what choosing settings by
 # forecast accuracy (tuned(), the hold-out workflow of demography::fdm()
-# users) and recalibrating the spread (calibrated()) change in outer
+# users) and recalibrating the spread (recalibrated()) change in outer
 # rolling-origin backtests. Every tuning and calibration uses only the
 # training data of its outer origin.
 #
@@ -39,14 +39,14 @@ holdout <- function(f, g, metric = "rmse") {
 }
 specs <- list(
   "Lee-Carter" = lee_carter(),
-  "Lee-Carter, calibrated" = calibrated(lee_carter()),
+  "Lee-Carter, calibrated" = recalibrated(lee_carter()),
   "Lee-Carter, window tuned (hold-out 10, RMSE)" = holdout(win_fun, win_grid),
   "fdm (6 components, smoothed)" = hyndman_ullah(),
   "fdm (6 components, unsmoothed)" = hyndman_ullah(smooth = FALSE),
   "fdm tuned (hold-out 10, RMSE)" = holdout(fdm_fun, fdm_grid),
   "fdm tuned (3 origins, CRPS, one-SE)" = tuned(fdm_fun, fdm_grid, inner_origins = 3, inner_h = 5,
                                                 select = "one_se", n_draws = 100, label = "tuned (rolling)"),
-  "fdm tuned (hold-out 10, RMSE), calibrated" = calibrated(holdout(fdm_fun, fdm_grid))
+  "fdm tuned (hold-out 10, RMSE), calibrated" = recalibrated(holdout(fdm_fun, fdm_grid))
 )
 
 data_sets <- list(

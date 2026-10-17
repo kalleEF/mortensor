@@ -48,8 +48,8 @@ demography, ggplot2) use them when installed.
 | Harmonisation | `mt_regroup()`, `mt_ungroup()` (penalized composite link model with exposure offset, 1D/2D; spline and GAM methods), `mt_plot_ungroup()` and `mt_ungroup_check()` (diagnostics), `mt_smooth()` (over age, over time or both; P-splines, Whittaker, GAM), `mt_smooth_check()`, `mt_plot_smooth()` |
 | Preprocessing pipelines | `mt_prep()` with `step_ungroup()`, `step_smooth()`, `step_regroup()`, `step_grid()`, `step_shocks()`, `step_window()`; models fitted to smoothed rates take their observation noise from the raw rates |
 | Describing the past | `mt_observed()`, `life_expectancy()`, `asr()`, `prob_dying()` on data, `mt_contrast()` (gaps, ratios), `mt_inequality()` (SII, RII), `standard_population()` |
-| Models | `rwd()`, `lee_carter()` (Poisson or SVD with the adjustments and period choice of demography), `tucker3()`, `arima_series()`, `ets_series()`, `hyndman_ullah()` (demography), `stmomo()` (APC, CBD, RH, M6, LC), `li_lee()`, `product_ratio()`, `coherent_fdm()` (demography), `apc_bayes()` and `apc_select()` (bamp), `cause_shares()` |
-| Wrappers for any model | `ensemble()` (weights from inner backtests, `top_k`), `stratified()` (different models for groups of strata), `reconciled()`, `calibrated()` (spread fitted to the errors of the last 10 years, optionally by age band or for life expectancy), `anchored()` (jump-off at the observed level), `bootstrapped()`, `tuned()` and `mt_tune()` (model and preprocessing settings chosen by forecast accuracy on the last years: hold-out or rolling origins, full or two-stage grids) |
+| Models | `rwd()`, `lee_carter()` (Poisson or SVD with the adjustments and period choice of demography), `tucker3()`, `arima_series()`, `ets_series()`, `hyndman_ullah()` (demography), `stmomo()` (APC, CBD, RH, M6, LC), `stanmomo()` (the same models, Bayesian, in Stan), `li_lee()`, `product_ratio()`, `coherent_fdm()` (demography), `apc_bayes()` and `apc_select()` (bamp), `cause_shares()` |
+| Wrappers for any model | `ensemble()` (weights from inner backtests, `top_k`), `stratified()` (different models for groups of strata), `reconciled()`, `recalibrated()` (spread fitted to the errors of the last 10 years, optionally by age band or for life expectancy), `anchored()` (jump-off at the observed level), `bootstrapped()`, `tuned()` and `mt_tune()` (model and preprocessing settings chosen by forecast accuracy on the last years: hold-out or rolling origins, full or two-stage grids) |
 | Coherence | `mt_hierarchy()`, `mt_aggregate_strata()`, `mt_reconcile()` and `reconciled()` (bottom-up, WLS, MinT, structural, OLS, proportional; draw by draw; non-negative; `fixed` nodes such as a trusted all-cause total), `mt_coherence()`, `mt_plot_coherence()`, `mt_aggregate_draws()`, `mt_order_strata()` |
 | Forecasts | `mt_fit()`, `summary()`, `mt_parameters()`, `residuals()`, `mt_forecast()` (simulated paths), `mt_jump_off()`, `mt_summarise()`, `mt_deaths()`, `mt_disaggregate()` with `mt_shape_rates()` and `mt_disaggregate_check()` |
 | Evaluation and comparison | `mt_backtest()` (rolling origin, no leakage; rates, life expectancy, ASR), `mt_score()` (CRPS, WIS, coverage, PIT, MAE, RMSE, MASE; also of gaps between strata), `mt_compare()` and `mt_score_table()` (several models in one backtest, by level of a hierarchy), `mt_compare_forecasts()`, `mt_plot_compare()`, `mt_plot_backtest_design()`, `mt_plot_tuning()`, `mt_plot_pit()` |
@@ -70,7 +70,7 @@ flowchart TD
   D["`**mt_data**
   any resolution, strata; prepared with mt_as_exposure(), mt_subset(), mt_regroup(), mt_validate(), ...`"]
   S["`**model specification**
-  lee_carter(), li_lee(), rwd(), ensemble(), reconciled(), calibrated(), ...`"]
+  lee_carter(), li_lee(), rwd(), ensemble(), reconciled(), recalibrated(), ...`"]
   F["`**mt_fit**`"]
   P["`**mt_draws**
   simulated future rates`"]
@@ -115,7 +115,7 @@ Vignettes:
 * **Start**: *Getting started*, *Your own data, from CSV to report*.
 * **Concepts, one at a time**: *Ungrouping age groups: methods and diagnostics*,
   *Smoothing death rates*, *Where a forecast starts: the jump-off*,
-  *Backtesting and scores*, *Tuning and calibration*, *Coherent forecasts:
+  *Backtesting and scores*, *Tuning and recalibration*, *Coherent forecasts:
   totals and their parts*, *Decomposing differences in life expectancy*.
 * **Models**: *Choosing and combining models* (implemented and wrapped
   models side by side, ensembles of any combination), *Model reference*,

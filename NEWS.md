@@ -2,6 +2,18 @@
 
 Clean break: the 0.1.x interface is replaced (see `dev/revamp-plan.md`).
 
+## StanMoMo, recalibration
+
+* `stanmomo()` wraps the Bayesian Lee-Carter, Renshaw-Haberman, APC, CBD
+  and M6 models of StanMoMo (Barigou et al. 2023), Poisson or negative
+  binomial; draws are posterior draws of the expected rates, fits warn when
+  the chains have not converged. Validation check `stanmomo_ew`.
+* `calibrated()` is renamed `recalibrated()`, and the vignette "Tuning and
+  calibration" is now "Tuning and recalibration": in demography,
+  "calibrating" a model often means fitting it, while this wrapper adjusts
+  the forecast distribution of a fitted model afterwards.
+* `hyndman_ullah()` keeps smoothing the rates over age by default.
+
 ## Vignettes restructured, models and diagnostics added
 
 * The vignettes are reorganised: one concept per vignette with a simple
@@ -61,7 +73,7 @@ Clean break: the 0.1.x interface is replaced (see `dev/revamp-plan.md`).
   a forecast starts: the jump-off", "Backtesting and scores" (with the
   scores explained); the articles are grouped into getting started,
   concepts, models, applications and help.
-* Vignette "Tuning and calibration": the fitting window of Lee-Carter
+* Vignette "Tuning and recalibration": the fitting window of Lee-Carter
   chosen by a hold-out, the width of intervals calibrated, both checked in
   a backtest.
 * `hyndman_ullah()`: when the monotonic spline of `smooth.demogdata()`
@@ -77,7 +89,7 @@ Clean break: the 0.1.x interface is replaced (see `dev/revamp-plan.md`).
   precomputed) explains bottom-up, reconciliation and fixed totals with
   one figure each and a small backtest.
 
-## Tuning and calibration
+## Tuning and recalibration
 
 * `hyndman_ullah()` smooths the rates of each year over age with
   `demography::smooth.demogdata()` before the decomposition (`smooth =
@@ -99,12 +111,12 @@ Clean break: the 0.1.x interface is replaced (see `dev/revamp-plan.md`).
     (`by_horizon`) and the `chosen` setting;
   * `by` tunes and fits groups of strata separately (for example by sex).
 * `mt_score()` reports the root mean squared error of the median (`rmse`).
-* `calibrated()`, `anchored()` and `reconciled()` around `tuned()` failed
+* `recalibrated()`, `anchored()` and `reconciled()` around `tuned()` failed
   when forecasting ("No simulate_model() method for model 'tuned'"): the
   wrappers rebuilt the base model from its specification instead of the
   one the tuning chose. Fits now keep the specifications fitted underneath.
 * `summary()` of tuned fits shows the chosen settings.
-* `calibrated()`:
+* `recalibrated()`:
   * `ages` estimates the spread factors (and drift) per age band, for
     models too narrow at some ages and too wide at others;
   * `quantity = "life_expectancy"` or `"asr"` calibrates the intervals of
@@ -236,7 +248,7 @@ and a demographer working through the vignettes on their own questions).
   to the data before smoothing. Before, noise was estimated from the
   smoothed rates, which made intervals too narrow.
 * Smoothing over time narrows the intervals of models with a period index;
-  combined with `calibrated()` it gave the best calibrated forecasts for
+  combined with `recalibrated()` it gave the best calibrated forecasts for
   England & Wales men (Lee-Carter on the GAM surface, calibrated: CRPS
   0.0646, 95% coverage 0.91 against 0.0687 and 0.75). On the ONS quintiles,
   whose noise is close to Poisson, smoothing did not help.
@@ -277,7 +289,7 @@ and a demographer working through the vignettes on their own questions).
 
 ## Calibration, deprivation and coherence vignettes
 
-* `calibrated()` wraps any model specification (including `ensemble()`,
+* `recalibrated()` wraps any model specification (including `ensemble()`,
   `reconciled()` and `bootstrapped()`) and recalibrates the spread of its
   forecast draws, optionally also the drift, on the last `years` (default
   10) of the training data. The base model is refitted at several origins

@@ -107,7 +107,7 @@ mt_plot_smooth(x, lam, ages = c("65-69", "85-89"), strata = "female.Q1")
 A small value follows the noise, a large one approaches a straight line.
 When the choice matters for the forecast, it can be made by forecast
 accuracy: try several values and keep the one that forecast the last
-years best (`mt_tune()`, see "Tuning and calibration").
+years best (`mt_tune()`, see "Tuning and recalibration").
 
 ## What smoothing does to a forecast
 
@@ -151,7 +151,7 @@ whole forecast distribution (lower is better), is also worse with
 smoothing (0.075 against 0.067). On these data, where the year-to-year
 variation is close to Poisson noise, smoothing over time does not help
 the forecast. It helps where counts are small (causes of death, small
-areas), and then together with `calibrated()`, which widens the
+areas), and then together with `recalibrated()`, which widens the
 intervals to the errors of recent forecasts (see "Tuning and
 calibration").
 

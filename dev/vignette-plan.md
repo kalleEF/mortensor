@@ -29,7 +29,7 @@ need clearer explanations.
 | Concepts | Smoothing | methods over age, time and both; how much each smooths (figures); choice of the smoothing parameter; effect on one forecast; smoothing inside the fit | new |
 | Concepts | Jump-off | fitted, observed and anchored start; the step in the first forecast year; effect on a forecast | new |
 | Concepts | Backtesting and scores | rolling origins (figure), CRPS, interval score, coverage, PIT, MASE explained with figures; comparing models | new, from `forecasting-hmd.Rmd` |
-| Concepts | Tuning and calibration | choosing settings by forecast accuracy (hold-out, rolling origins); calibrating the width of intervals; benchmark results | new |
+| Concepts | Tuning and recalibration | choosing settings by forecast accuracy (hold-out, rolling origins); calibrating the width of intervals; benchmark results | new |
 | Concepts | Coherent forecasts | why totals and parts disagree; bottom-up, WLS, MinT, fixed totals, proportional; one figure per idea | `coherence.Rmd`, simplified |
 | Concepts | Decomposition | age, cause and composition contributions; observed and forecast | `decomposition.Rmd`, shortened |
 | Models | Choosing and combining models | the implemented and wrapped models side by side on one data set (forecasts and backtest), ensembles of any combination, weights | new |
@@ -72,8 +72,17 @@ smoothing, jump-off, calibration only where they helped).
 `mt_plot_jump_off()` was not needed: `mt_plot_compare(periods = )` shows
 the jump-off.
 
-## Open decisions for the owner
+## Decisions of the owner (2026-10-17)
+
+* StanMoMo is wrapped (`stanmomo()`).
+* `calibrated()` is renamed `recalibrated()`; the vignette is "Tuning and
+  recalibration".
+* `hyndman_ullah()` keeps `smooth = TRUE` as the default.
+* `cause_shares()`: no decision yet (it forecast the ONS causes poorly;
+  experimental).
+
+## Earlier open decisions for the owner
 
 * StanMoMo (Bayesian mortality models in Stan, with stacking of model
   forecasts) as a further wrapped model, or StMoMo only (wrapped).
-* Renaming `calibrated()` to `recalibrated()`.
+* Renaming `recalibrated()` to `recalibrated()`.

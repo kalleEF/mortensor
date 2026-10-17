@@ -168,7 +168,7 @@ random walk has wide intervals: its 95% coverage is close to nominal
 (0.92), and it over-covers at 50% and 80%. The 95% intervals of
 Lee-Carter and Li-Lee cover 0.83 and 0.85 of the observed rates, fewer
 with every year of horizon: they describe the uncertainty of a fixed
-trend, while the trend of English mortality changed after 2011. "Tuning and calibration" shows how to widen
+trend, while the trend of English mortality changed after 2011. "Tuning and recalibration" shows how to widen
 intervals to the errors of recent forecasts, and "Choosing and combining
 models" how mixtures of models do.
 

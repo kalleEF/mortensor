@@ -23,7 +23,7 @@
 #'   [reconciled()] make forecasts add up draw by draw, [mt_order_strata()]
 #'   imposes orderings.
 #' * **Wrappers for any model**: [ensemble()], [reconciled()],
-#'   [calibrated()] (spread fitted to recent forecast errors), [anchored()]
+#'   [recalibrated()] (spread fitted to recent forecast errors), [anchored()]
 #'   (jump-off at the observed level), [bootstrapped()] and [tuned()].
 #' * **Evaluation**: [mt_backtest()] and [mt_score()], for rates, life
 #'   expectancy and age-standardised rates.

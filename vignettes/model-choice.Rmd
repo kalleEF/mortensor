@@ -28,6 +28,7 @@ smoothing and the jump-off aside (see their own vignettes).
 | Lee-Carter | `lee_carter()` | mortensor | one time index, with an age pattern of change (Lee and Carter 1992) |
 | Functional demographic model | `hyndman_ullah()` | demography | rates smoothed over age, several components (Hyndman and Ullah 2007) |
 | Lee-Carter, CBD, APC, Renshaw-Haberman, M6 | `stmomo("lc")`, `"cbd"`, `"apc"`, `"rh"`, `"m6"` | StMoMo | generalised age-period-cohort models (Villegas et al. 2018) |
+| Bayesian Lee-Carter, RH, APC, CBD, M6 | `stanmomo("lc")`, `"rh"`, ... | StanMoMo | the StMoMo models fitted with Stan, with posterior uncertainty of all parameters (Barigou et al. 2023) |
 | Bayesian APC | `apc_bayes()` | bamp | age, period and cohort effects with random-walk priors (Schmid and Held 2007) |
 | Time series per age | `arima_series()`, `ets_series()` | forecast | a separate ARIMA or exponential smoothing model for each age |
 | Tensor decomposition | `tucker3()` | mortensor | age, period and stratum factors |
@@ -56,7 +57,9 @@ models <- list("random walk" = rwd(),
                "CBD" = stmomo("cbd"),
                "APC" = stmomo("apc"),
                "M6" = stmomo("m6"),
-               "Bayesian APC" = apc_bayes(mcmc = mcmc_control("fast")))
+               "Bayesian APC" = apc_bayes(mcmc = mcmc_control("fast")),
+               "Bayesian RH" = stanmomo("rh", h_max = 20, cores = 4))
+set.seed(1)  # the MCMC samplers of bamp and Stan draw their seeds from R
 fc <- lapply(models, function(m) mt_forecast(mt_fit(m, ew), h = 20, n_draws = 500, seed = 1))
 #> Warning in report_fit_problems(diagnostics, spec$label): Functional demographic
 #> model: warnings in 1 stratum/strata, for example male: smooth.demogdata()
@@ -79,8 +82,11 @@ mt_compare_forecasts(fc, periods = c(2021, 2031))
 #> 1:  male   2021 27.4 (26.4-28.2) 27.5 (26.5-28.3) 27.7 (27.4-28.0)
 #> 2:  male   2031 28.6 (27.2-29.7) 28.7 (27.5-29.8) 29.2 (28.5-29.8)
 #>                 CBD              APC               M6     Bayesian APC
-#> 1: 27.5 (26.6-28.3) 27.4 (26.6-28.1) 27.2 (26.3-28.0) 26.5 (25.5-27.6)
-#> 2: 28.7 (27.6-29.7) 28.4 (27.4-29.5) 28.1 (26.8-29.0) 26.7 (25.1-28.3)
+#> 1: 27.5 (26.6-28.3) 27.4 (26.6-28.1) 27.2 (26.3-28.0) 26.6 (25.3-27.6)
+#> 2: 28.7 (27.6-29.7) 28.4 (27.4-29.5) 28.1 (26.8-29.0) 26.7 (24.9-28.1)
+#>         Bayesian RH
+#> 1: 27.4 (26.5-28.4)
+#> 2: 28.5 (27.1-29.8)
 ```
 
 
@@ -96,7 +102,9 @@ different uncertainty. By 2031 the medians range from 26.7 to 29.2 years:
 * **fdm** gives the highest forecast and the narrowest interval.
 * The period models (**random walk**, **Lee-Carter**, **CBD**) agree
   closely, at about 28.7 years.
-* The cohort models **APC** and **M6** are lower (28.4 and 28.1 years).
+* The cohort models **APC** and **M6** are lower (28.4 and 28.1 years);
+  the **Bayesian RH** (StanMoMo: Lee-Carter with a cohort effect, fitted
+  with Stan) lies between them and the period models (28.5 years).
 * The **Bayesian APC** barely moves. Its default priors are first-order
   random walks for period and cohort (`period = "rw1"`), which carry the
   last period effect forward without a trend; only the cohorts entering
@@ -123,7 +131,8 @@ mt_score_table(bt, metrics = c("crps", "cov95"))
 #> 4:          CBD 0.0554 0.782   0.371    0.833
 #> 5:          APC 0.0392 0.959   0.261    1.000
 #> 6:           M6 0.0316 0.981   0.184    1.000
-#> 7: Bayesian APC 0.0709 0.719   0.563    0.700
+#> 7: Bayesian APC 0.0682 0.757   0.540    0.667
+#> 8:  Bayesian RH 0.0454 0.897   0.274    1.000
 ```
 
 
@@ -135,6 +144,8 @@ mt_plot_scores(bt, by = "model", target = "life_expectancy")
 
 * **M6** and **APC** forecast best, both the rates and life expectancy,
   and their intervals covered the observed values.
+* The **Bayesian RH** comes third, and its intervals covered well (95%
+  coverage 0.90 for the rates).
 * The period models and the random walk lie close together; the random
   walk forecast the single rates slightly better than Lee-Carter.
 * **fdm** forecast life expectancy fairly accurately, but its intervals
@@ -184,20 +195,21 @@ single models:
 ```r
 bt_ens <- mt_compare(ens, ew, origins = c(1991, 1996, 2001), h = 10, n_draws = 200, quantities = "life_expectancy")
 mt_score_table(rbind(bt, bt_ens), metrics = c("crps", "cov95"))
-#>                                            model   crps cov95 crps_le cov95_le
-#> 1:                                   random walk 0.0514 0.973   0.388    0.767
-#> 2:                                    Lee-Carter 0.0564 0.751   0.366    0.933
-#> 3:                                           fdm 0.0516 0.557   0.320    0.333
-#> 4:                                           CBD 0.0554 0.782   0.371    0.833
-#> 5:                                           APC 0.0392 0.959   0.261    1.000
-#> 6:                                            M6 0.0316 0.981   0.184    1.000
-#> 7:                                  Bayesian APC 0.0709 0.719   0.563    0.700
-#> 8: equal: Lee-Carter, fdm, APC, M6, Bayesian APC 0.0409 0.984   0.288    1.000
-#> 9:                     CRPS weights, best 3 of 6 0.0342 0.988   0.225    1.000
+#>                                             model   crps cov95 crps_le cov95_le
+#>  1:                                   random walk 0.0514 0.973   0.388    0.767
+#>  2:                                    Lee-Carter 0.0564 0.751   0.366    0.933
+#>  3:                                           fdm 0.0516 0.557   0.320    0.333
+#>  4:                                           CBD 0.0554 0.782   0.371    0.833
+#>  5:                                           APC 0.0392 0.959   0.261    1.000
+#>  6:                                            M6 0.0316 0.981   0.184    1.000
+#>  7:                                  Bayesian APC 0.0682 0.757   0.540    0.667
+#>  8:                                   Bayesian RH 0.0454 0.897   0.274    1.000
+#>  9: equal: Lee-Carter, fdm, APC, M6, Bayesian APC 0.0447 0.936   0.317    0.933
+#> 10:                     CRPS weights, best 3 of 6 0.0342 0.988   0.225    1.000
 ```
 
 * The **equal-weight ensemble** is more accurate than the average of its
-  components (CRPS of the rates 0.041 against 0.050), and its intervals
+  components (CRPS of the rates 0.045 against 0.049), and its intervals
   cover. This always holds: the CRPS is a convex function of the forecast
   distribution, so the CRPS of a mixture is never larger than the weighted
   mean of the CRPS of its components. It includes the weak Bayesian APC,
@@ -233,6 +245,10 @@ mt_plot_compare(c(fc[c("Lee-Carter", "APC", "Bayesian APC")], list("equal ensemb
   (`reconciled()`); see the applied vignettes.
 
 ## References
+
+Barigou K, Goffard P-O, Loisel S, Salhi Y (2023). Bayesian model averaging
+for mortality forecasting using leave-future-out validation. *International
+Journal of Forecasting* 39(2): 674-690.
 
 Hyndman RJ, Booth H, Yasmeen F (2013). Coherent mortality forecasting: the
 product-ratio method with functional time series models. *Demography*

@@ -33,7 +33,7 @@ mt_parameters <- function(fit) {
   # wrappers that keep the fit of their base model (the fitted base specs are
   # stacked in inner_specs; tuned() fits the spec it chose)
   inner <- fit$inner_specs
-  while (inherits(sp, c("mt_spec_calibrated", "mt_spec_reconciled", "mt_spec_bootstrap", "mt_spec_anchored"))) {
+  while (inherits(sp, c("mt_spec_recalibrated", "mt_spec_reconciled", "mt_spec_bootstrap", "mt_spec_anchored"))) {
     sp <- if (length(inner)) inner[[1]] else sp$params$base
     inner <- inner[-1]
   }
@@ -216,7 +216,7 @@ print.summary.mt_fit <- function(x, ...) {
       identical(s$type, "smooth") && (identical(s$args$along, "period") || identical(s$args$dims, 2))
     }, logical(1))
     if (any(over_time)) {
-      cat("    smoothing over time narrows forecast intervals; check coverage in a backtest (calibrated())\n")
+      cat("    smoothing over time narrows forecast intervals; check coverage in a backtest (recalibrated())\n")
     }
   }
   cat("  model and uncertainty:\n")
@@ -286,6 +286,11 @@ model_assumptions <- function(spec) {
            "models, the ratios' scores stationary ARFIMA models, so deviations from the product stay bounded.",
            "Draws simulate the scores and resample the model errors; predictive draws add Poisson and",
            "extra-Poisson noise."),
+         mt_spec_stanmomo = paste(
+           "Bayesian stochastic mortality model fitted with Stan (StanMoMo; Barigou et al. 2023):", p$model,
+           "with", p$family, "likelihood and log link; period indexes random walks with drift, cohort effects",
+           "AR(2). Draws are posterior draws of the expected rates (parameters and future indexes);",
+           "predictive draws add Poisson and extra-Poisson noise."),
          mt_spec_apc_bayes = paste(
            "Bayesian age-period-cohort model (bamp; Schmid and Held 2007): logit rate = age + period + cohort",
            "effects with random-walk priors, binomial likelihood, each stratum fitted separately. Draws are",
@@ -295,7 +300,7 @@ model_assumptions <- function(spec) {
                                   "proportion to the weights; uncertainty of the components and their spread."),
          mt_spec_reconciled = paste("Base model reconciled draw by draw over the hierarchy;", spec$params$method,
                                     "projection on the deaths (or rates) scale."),
-         mt_spec_calibrated = paste(model_assumptions(p$base), sprintf(paste(
+         mt_spec_recalibrated = paste(model_assumptions(p$base), sprintf(paste(
            "Calibrated: the spread%s of the draws%s is rescaled to minimise the %s of %s in forecasts from %d",
            "origins in the last %d training years."), if (p$bias) " and drift" else "",
            if (length(p$ages)) " (per age band)" else "",

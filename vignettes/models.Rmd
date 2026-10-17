@@ -35,7 +35,7 @@ stratum `i` (deaths divided by exposure), `D` deaths, `E` exposures.
 | Suppressed cells | raking (iterative proportional fitting; Deming and Stephan 1940) of the missing counts to published totals, within optional bounds | `mt_fill_suppressed()` |
 | Unknown ages | distributed over the age groups of the same stratum and year in proportion to the known deaths | `mt_data()` |
 | Ungrouping | penalised composite link model with exposures (Rizzi, Gampe and Eilers 2015) or spline methods | `mt_ungroup()`, `step_ungroup()` |
-| Smoothing | over age (Poisson P-splines, Currie, Durban and Eilers 2004; Whittaker; GAM), over time (Whittaker) or the age-period surface (P-splines; quasi-Poisson `te(age, year)` GAM, Wood 2017); age 0 is not smoothed; models are fitted to the smoothed rates, their observation noise, residuals and backtest scales come from the raw rates; smoothing over time narrows the intervals of models with a period index (check coverage, `calibrated()`) | `mt_smooth()`, `step_smooth()`, `mt_smooth_check()` |
+| Smoothing | over age (Poisson P-splines, Currie, Durban and Eilers 2004; Whittaker; GAM), over time (Whittaker) or the age-period surface (P-splines; quasi-Poisson `te(age, year)` GAM, Wood 2017); age 0 is not smoothed; models are fitted to the smoothed rates, their observation noise, residuals and backtest scales come from the raw rates; smoothing over time narrows the intervals of models with a period index (check coverage, `recalibrated()`) | `mt_smooth()`, `step_smooth()`, `mt_smooth_check()` |
 | Zero deaths | models on log rates use 0.5 deaths in a cell without deaths | |
 
 All preprocessing steps given as `prep` are refitted on every training
@@ -116,6 +116,19 @@ Calls `StMoMo::fit()` and `simulate()` (Villegas, Kaishev and
 Millossovich 2018) for the Lee-Carter, CBD, APC, RH and M6 families. Draws
 contain the period and cohort index uncertainty that StMoMo simulates;
 parameter uncertainty is not included.
+
+### Bayesian StMoMo models: `stanmomo()`
+
+The same families (Lee-Carter, RH, APC, CBD, M6) fitted with Stan by
+StanMoMo (Barigou et al. 2023), with a Poisson or negative binomial
+likelihood. Period indexes are random walks with drift (CBD and M6:
+correlated), cohort effects AR(2) processes.
+
+* **Forecast**: StanMoMo forecasts inside the fit, up to `h_max` years.
+* **Uncertainty**: posterior draws of all parameters and of the future
+  indexes; predictive draws add Poisson and extra-Poisson noise.
+* **Convergence**: the fit warns when the largest R-hat exceeds 1.05 or
+  transitions diverged; models with cohort effects need longer chains.
 
 ### Bayesian age-period-cohort model: `apc_bayes()`
 
@@ -225,7 +238,7 @@ population and are shared by the levels of variables such as causes of
 death (`additive = "rates"`). The exposures of the forecast years are
 those of the last observed year unless projections are given.
 
-### Calibration on recent years: `calibrated()`
+### Calibration on recent years: `recalibrated()`
 
 Refits a model at several origins in the last `years` (default 10) of
 the training data, compares its forecasts with the observed rates of that
@@ -277,12 +290,13 @@ preprocessing step that tuning compares across windows.
 | `cause_shares()` | of the total model and the share factors | yes | no | predictive draws | residual variation and predictive draws |
 | `hyndman_ullah()` | yes | as fdm | no | predictive draws | predictive draws |
 | `stmomo()` | yes | yes | no | predictive draws | predictive draws |
+| `stanmomo()` | yes | posterior | yes (posterior) | predictive draws | predictive draws |
 | `apc_bayes()` | yes | posterior | yes (posterior) | predictive draws | predictive draws |
 | `ensemble()` | of the components | of the components | of the components, plus model choice | of the components | of the components |
 | `stratified()` | of the model of each group | of the model of each group | of the model of each group | as the models | as the models |
 | `bootstrapped()` | of the base model | of the base model | yes | as the base model | as the base model |
 | `reconciled()` | of the base model, projected | | | bottom strata, summed | bottom strata, summed |
-| `calibrated()` | of the base model, rescaled | rescaled (optional correction) | | as the base model | as the base model |
+| `recalibrated()` | of the base model, rescaled | rescaled (optional correction) | | as the base model | as the base model |
 | `anchored()` | of the base model | of the base model | | as the base model | as the base model |
 
 Predictive draws (`predictive = TRUE`, always used in backtests) describe
@@ -304,6 +318,10 @@ with estimated (suppressed) deaths are not scored unless
 `score_estimated = TRUE`.
 
 ## References
+
+Barigou K, Goffard P-O, Loisel S, Salhi Y (2023). Bayesian model averaging
+for mortality forecasting using leave-future-out validation. *International
+Journal of Forecasting* 39(2): 674-690.
 
 Booth H, Maindonald J, Smith L (2002). Applying Lee-Carter under
 conditions of variable mortality decline. *Population Studies* 56(3):

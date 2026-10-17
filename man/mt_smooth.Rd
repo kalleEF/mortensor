@@ -92,7 +92,7 @@ trends and from the starting level of forecasts; the last years are
 estimated from one side only. It also removes the year-to-year variation
 from which models such as Lee-Carter estimate the uncertainty of their
 period index, so their intervals become too narrow unless the spread is
-re-estimated against the raw observations (\code{\link[=calibrated]{calibrated()}}). Smoothing
+re-estimated against the raw observations (\code{\link[=recalibrated]{recalibrated()}}). Smoothing
 over age alone changes little for large populations and helps for sparse
 data such as cause-specific rates of small regions. Whether smoothing
 improves a forecast is a question for a backtest; the vignette

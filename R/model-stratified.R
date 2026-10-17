@@ -13,7 +13,7 @@
 #' the draws of different groups are independent (inside [reconciled()] the
 #' empirical reordering then restores the co-movement of the training years).
 #' Each group is fitted and forecast as if it were the whole data, so
-#' backtests, [anchored()], [calibrated()] and [reconciled()] work as for
+#' backtests, [anchored()], [recalibrated()] and [reconciled()] work as for
 #' any model.
 #'
 #' @param var Stratum variable that defines the groups.

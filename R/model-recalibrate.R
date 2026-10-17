@@ -1,4 +1,4 @@
-#' Calibrate forecast distributions on recent years
+#' Recalibrate forecast distributions on recent years
 #'
 #' Wraps any model specification so that the spread (and optionally the
 #' trend) of its forecast draws is recalibrated on the last `years` observed
@@ -66,17 +66,17 @@
 #' per test year and stratum (fewer scored values, so the factors are less
 #' certain).
 #'
-#' **Tuning and calibration.** `calibrated()` keeps the model and its
+#' **Tuning and recalibration.** `recalibrated()` keeps the model and its
 #' settings and rescales the width of its forecast distribution. Choosing
 #' settings (smoothing, number of components, fitting window) by forecast
 #' accuracy is tuning, done by [tuned()] and [mt_tune()]; the two combine
-#' as `calibrated(tuned(...))`.
+#' as `recalibrated(tuned(...))`.
 #'
 #' Calibration widens the intervals of models that were too narrow in the
 #' recent past and narrows those that were too wide, for example of
 #' ensembles whose intervals already covered. With few training years it
 #' rests on few forecasts and can make intervals worse; check it in a
-#' backtest, as in the vignette "Tuning and calibration".
+#' backtest, as in the vignette "Tuning and recalibration".
 #'
 #' `target = "crps"` (default) balances calibration and sharpness;
 #' `target = "interval"` minimises the interval score of the central `level`
@@ -119,11 +119,11 @@
 #' 102(477): 359-378. \doi{10.1198/016214506000001437}
 #' @examples
 #' x <- mt_example(deaths = "single", years = 1990:2019)
-#' fit <- mt_fit(calibrated(lee_carter(), years = 8, n_origins = 3, n_draws = 50), x)
+#' fit <- mt_fit(recalibrated(lee_carter(), years = 8, n_origins = 3, n_draws = 50), x)
 #' fit$calibration
 #' fc <- mt_forecast(fit, h = 5, n_draws = 100, seed = 1)
 #' @export
-calibrated <- function(spec, years = 10, n_origins = 5, scale = c("horizon", "constant"), bias = FALSE,
+recalibrated <- function(spec, years = 10, n_origins = 5, scale = c("horizon", "constant"), bias = FALSE,
                        target = c("crps", "interval"), level = 0.95, by = NULL, n_draws = 100, seed = 1,
                        ages = NULL, quantity = c("rate", "life_expectancy", "asr"), n_boot = 0) {
   check_class(spec, "mt_spec", "spec")
@@ -147,18 +147,18 @@ calibrated <- function(spec, years = 10, n_origins = 5, scale = c("horizon", "co
     }
   }
   if (n_origins > years - 1) n_origins <- years - 1
-  new_mt_spec("calibrated", list(base = spec, years = years, n_origins = n_origins, scale = scale, bias = bias,
+  new_mt_spec("recalibrated", list(base = spec, years = years, n_origins = n_origins, scale = scale, bias = bias,
                                  target = target, level = level, by = by, n_draws = n_draws, seed = seed,
                                  ages = ages, quantity = quantity, n_boot = n_boot),
               joint = spec$joint, min_periods = spec$min_periods + years, smooth = spec$smooth,
-              label = paste0(spec$label, ", calibrated", if (length(by)) paste0(" by ", paste(by, collapse = " x ")),
+              label = paste0(spec$label, ", recalibrated", if (length(by)) paste0(" by ", paste(by, collapse = " x ")),
                              if (length(ages)) " by age band",
                              if (quantity != "rate") sprintf(" on %s", gsub("_", " ", quantity)),
                              if (target == "interval") sprintf(" (%g%% interval)", 100 * level)))
 }
 
 #' @export
-mt_fit.mt_spec_calibrated <- function(spec, data, prep = NULL, cores = 1, ...) {
+mt_fit.mt_spec_recalibrated <- function(spec, data, prep = NULL, cores = 1, ...) {
   p <- spec$params
   g <- mt_grid(data)
   last <- max(g$period$lower)
@@ -195,7 +195,7 @@ mt_fit.mt_spec_calibrated <- function(spec, data, prep = NULL, cores = 1, ...) {
   fit$calibration_theta <- est$theta
   fit$calibration_origins <- origins[!bad]
   fit$calibration_hmax <- last - min(origins[!bad])
-  wrap_fit(fit, spec, "mt_fit_calibrated")
+  wrap_fit(fit, spec, "mt_fit_recalibrated")
 }
 
 calibration_origins <- function(last, years, n_origins) {
@@ -503,7 +503,7 @@ calibration_theta_of <- function(theta, key) {
 }
 
 #' @export
-mt_forecast.mt_fit_calibrated <- function(fit, h = 10, to = NULL, n_draws = 500, seed = NULL, predictive = FALSE,
+mt_forecast.mt_fit_recalibrated <- function(fit, h = 10, to = NULL, n_draws = 500, seed = NULL, predictive = FALSE,
                                           exposure = NULL, ...) {
   p <- fit$spec$params
   key <- if (is.null(p$by)) rep("all", nrow(fit$strata)) else
@@ -530,7 +530,7 @@ mt_forecast.mt_fit_calibrated <- function(fit, h = 10, to = NULL, n_draws = 500,
     }
     arr
   }
-  res <- wrapped_forecast(fit, "mt_fit_calibrated", h, to, n_draws, seed, predictive, exposure, transform,
+  res <- wrapped_forecast(fit, "mt_fit_recalibrated", h, to, n_draws, seed, predictive, exposure, transform,
                           h_missing = missing(h))
   res$calibration <- fit$calibration
   res

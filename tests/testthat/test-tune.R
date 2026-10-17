@@ -86,7 +86,7 @@ test_that("wrappers around tuned() forecast with the chosen model", {
   x <- mt_example(deaths = "single", years = 1985:2012)
   tu <- tuned(function(drift_window) rwd(drift_window = drift_window), data.frame(drift_window = c(5, 10)),
               inner_origins = 2, inner_h = 3, n_draws = 30)
-  fit <- mt_fit(calibrated(anchored(tu), years = 6, n_origins = 2, n_draws = 30), x)
+  fit <- mt_fit(recalibrated(anchored(tu), years = 6, n_origins = 2, n_draws = 30), x)
   fc <- mt_forecast(fit, h = 3, n_draws = 20, seed = 1)
   expect_s3_class(fc, "mt_draws")
   expect_true(all(is.finite(fc$rates)))

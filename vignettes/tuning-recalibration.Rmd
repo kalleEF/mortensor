@@ -1,8 +1,8 @@
 ---
-title: "Tuning and calibration"
+title: "Tuning and recalibration"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Tuning and calibration}
+  %\VignetteIndexEntry{Tuning and recalibration}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -20,11 +20,11 @@ Two questions are easily confused:
   number of years the model is fitted to, the number of components, or
   the smoothing parameter. Tuning tries several settings and keeps the
   one that forecast the last observed years best.
-* **Calibration**: how wide should the intervals be? A model's intervals
-  describe the uncertainty of its own assumptions. Calibration rescales
+* **Recalibration**: how wide should the intervals be? A model's intervals
+  describe the uncertainty of its own assumptions. Recalibration rescales
   them so that they match the errors the model made in recent years.
 
-Tuning changes the forecast itself; calibration keeps the model and its
+Tuning changes the forecast itself; recalibration keeps the model and its
 central forecast and changes the width of the intervals. Both use only
 the training data, so they can be checked in a backtest (see
 "Backtesting and scores"). The examples use Lee-Carter on England & Wales
@@ -81,35 +81,35 @@ smoothing of `hyndman_ullah()` the same way did not: the chosen setting
 changed from one year to the next, a sign that the differences between
 the settings were mostly noise of the held-out years.
 
-## Calibration: the width of the intervals
+## Recalibration: the width of the intervals
 
-`calibrated()` refits the model at several origins within the last ten
+`recalibrated()` refits the model at several origins within the last ten
 training years, compares the forecasts with what was observed, and
 rescales the spread of the draws around their median by a factor that
 can grow with the horizon. The factor minimises the CRPS of these recent
 forecasts:
 
 ```{r}
-fit_cal <- mt_fit(calibrated(lee_carter()), ew)
+fit_cal <- mt_fit(recalibrated(lee_carter()), ew)
 fit_cal$calibration[, .(scale_h1, slope, crps_before, crps_after, cov95_before, cov95_after)]
 ```
 
 The factor at horizon 1 (`scale_h1`) is about 2.7: Lee-Carter's
 intervals were far too narrow in the last decade. The factor changes
 little with the horizon (`slope` near 0, the factor is `scale_h1 * h^slope`).
-Within the window, calibration raised the 95% coverage from 0.67 to 0.93.
+Within the window, recalibration raised the 95% coverage from 0.67 to 0.93.
 
 ## Both together, checked in a backtest
 
 The four versions in a backtest from the origins 1996-2001, forecasting
-ten years each; tuning and calibration are repeated at every origin from
+ten years each; tuning and recalibration are repeated at every origin from
 its own training data:
 
 ```{r}
 tuned_lc <- tuned(window_model, data.frame(window = c(15, 20, 30, 51)), inner_origins = 1, inner_h = 10,
                   metric = "rmse", label = "Lee-Carter, window tuned")
 bt <- mt_compare(list("Lee-Carter" = lee_carter(), "window tuned" = tuned_lc,
-                      "calibrated" = calibrated(lee_carter()), "window tuned, calibrated" = calibrated(tuned_lc)),
+                      "recalibrated" = recalibrated(lee_carter()), "window tuned, recalibrated" = recalibrated(tuned_lc)),
                  ew, origins = 1996:2001, h = 10, n_draws = 200, quantities = "life_expectancy")
 mt_score_table(bt, metrics = c("crps", "cov95"))
 ```
@@ -120,22 +120,22 @@ mt_plot_coverage(bt)
 
 The tuned window makes the forecasts more accurate: CRPS 0.057 against
 0.069 for the rates, 0.29 against 0.47 years for life expectancy at 30
-(`_le`). Calibration widens the intervals: the 95% coverage of the rates
+(`_le`). Recalibration widens the intervals: the 95% coverage of the rates
 rises from 0.75 to 0.88, and from 0.73 to 0.83 for the tuned model,
 whose recent errors were smaller, so its intervals widen less. The
 coverage of life expectancy is high for all versions: errors of single
-ages partly cancel in life expectancy. Tuning and calibration answer
-different questions and combine: the tuned and calibrated version has the
+ages partly cancel in life expectancy. Tuning and recalibration answer
+different questions and combine: the tuned and recalibrated version has the
 lowest CRPS of the rates (0.056).
 
 ## Options
 
-* `calibrated(by = "sex")`: separate factors for groups of strata (with
+* `recalibrated(by = "sex")`: separate factors for groups of strata (with
   joint models, contrasts between the groups then get wider intervals);
-* `calibrated(ages = c(50, 75))`: separate factors for age bands;
-* `calibrated(quantity = "life_expectancy")`: calibrate the intervals of
+* `recalibrated(ages = c(50, 75))`: separate factors for age bands;
+* `recalibrated(quantity = "life_expectancy")`: recalibrate the intervals of
   life expectancy instead of single rates;
-* `calibrated(n_boot = 50)`: bootstrap intervals of the factors, which
+* `recalibrated(n_boot = 50)`: bootstrap intervals of the factors, which
   rest on few forecasts;
 * `tuned(..., by = "sex")`: tune and fit groups of strata separately.
 
@@ -144,5 +144,5 @@ lowest CRPS of the rates (0.056).
 | Question | Function | Changes |
 |---|---|---|
 | Which settings forecast best? | `mt_tune()`, `tuned()` | the forecast |
-| How wide should the intervals be? | `calibrated()` | the width of the intervals |
+| How wide should the intervals be? | `recalibrated()` | the width of the intervals |
 | Did it help? | `mt_compare()`, `mt_score_table()` | nothing; it checks |

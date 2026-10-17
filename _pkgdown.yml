@@ -76,6 +76,7 @@ reference:
       - rwd
       - hyndman_ullah
       - stmomo
+      - stanmomo
       - arima_series
       - apc_bayes
       - apc_select
@@ -92,7 +93,7 @@ reference:
       - ensemble
       - stratified
       - reconciled
-      - calibrated
+      - recalibrated
       - anchored
       - bootstrapped
       - mt_tune
@@ -161,7 +162,7 @@ articles:
       - smoothing
       - jump-off
       - backtesting
-      - tuning-calibration
+      - tuning-recalibration
       - coherence
       - decomposition
   - title: Models

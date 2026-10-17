@@ -32,7 +32,7 @@ Joint models (for example \code{\link[=li_lee]{li_lee()}}) are joint within thei
 the draws of different groups are independent (inside \code{\link[=reconciled]{reconciled()}} the
 empirical reordering then restores the co-movement of the training years).
 Each group is fitted and forecast as if it were the whole data, so
-backtests, \code{\link[=anchored]{anchored()}}, \code{\link[=calibrated]{calibrated()}} and \code{\link[=reconciled]{reconciled()}} work as for
+backtests, \code{\link[=anchored]{anchored()}}, \code{\link[=recalibrated]{recalibrated()}} and \code{\link[=reconciled]{reconciled()}} work as for
 any model.
 }
 \examples{

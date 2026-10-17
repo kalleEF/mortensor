@@ -125,7 +125,7 @@ twice; that extra width happened to give good 95% coverage on real data.
 `rwd(observation_noise = TRUE)` removes the double counting and is sharper
 (lower CRPS), with intervals that were too narrow on real data. Mixtures of
 models (`ensemble()`) widen the intervals where the models disagree.
-`calibrated()` rescales the spread of any model's draws to its forecast
+`recalibrated()` rescales the spread of any model's draws to its forecast
 errors in the last years of the training data (by default ten); on England
 & Wales men it raised the 95% coverage of Lee-Carter from 0.75 to 0.88.
 Check calibration with `mt_backtest()` and `mt_plot_coverage()`.
@@ -149,9 +149,9 @@ spec <- tuned(function(order, k) hyndman_ullah(order = order, smooth_args = list
 origins (`inner_origins = 3, inner_h = 5`) average over more periods.
 `metric = "rmse"` chooses by point accuracy, `"crps"` by the whole
 forecast distribution, and `target = "life_expectancy"` by the quantity of
-interest. `calibrated()` answers a different question: it keeps the model
+interest. `recalibrated()` answers a different question: it keeps the model
 and rescales the width of its intervals to the recent forecast errors. The
-two combine as `calibrated(tuned(...))`.
+two combine as `recalibrated(tuned(...))`.
 
 ### Should I smooth the data before forecasting?
 
@@ -162,7 +162,7 @@ trends and from the start of the forecast, but also the variation from
 which models such as Lee-Carter estimate the uncertainty of their period
 index: alone, it made intervals too narrow in backtests (95% coverage of
 Lee-Carter 0.59 instead of 0.75 on England & Wales men). Most of the gain
-there comes from `calibrated()`, which re-estimates the spread against the
+there comes from `recalibrated()`, which re-estimates the spread against the
 raw observations: calibration alone gave a CRPS of 0.0657 and a coverage
 of 0.88 (against 0.0687 and 0.75); Whittaker smoothing over time added
 nothing to it, the age-period GAM a little (0.0646, coverage 0.91). On the
@@ -299,7 +299,7 @@ see "Decomposing differences in life expectancy".
 ### Are forecasts reproducible?
 
 Yes, with a `seed` (`mt_forecast(..., seed = 1)`, `mt_backtest(..., seed =
-1)`). Backtests and `calibrated()` seed every origin separately, so their
+1)`). Backtests and `recalibrated()` seed every origin separately, so their
 results do not depend on `cores`. Fits of several strata in parallel
 (`mt_fit(..., cores = )`) run in forked processes; for models with random
 steps in the fit, set `RNGkind("L'Ecuyer-CMRG")` and a seed before the call

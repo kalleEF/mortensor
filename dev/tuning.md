@@ -1,16 +1,16 @@
-# Tuning and calibration (2026-10-17)
+# Tuning and recalibration (2026-10-17)
 
 Question: does choosing settings by forecast accuracy on the last years of
 the training data (the hold-out workflow often used with
 `demography::fdm()`) improve forecasts out of sample, and what does
-`calibrated()` add? Script: `dev/tuning-benchmark.R` (about 25 minutes),
+`recalibrated()` add? Script: `dev/tuning-benchmark.R` (about 25 minutes),
 results in `dev/tuning-benchmark.rds`.
 
 Design: rolling-origin backtests, h = 10. England & Wales men (HMD via
 StMoMo), single ages 30-100, origins 1996-2001; France men (HMD via
 demography), single ages 0-95, 1950-2006, origins 1986, 1991, 1996. Every
 tuning and calibration uses only the training data of its outer origin
-(`tuned()` and `calibrated()` inside `mt_backtest()`).
+(`tuned()` and `recalibrated()` inside `mt_backtest()`).
 
 * fdm: `hyndman_ullah()` with 6 components, smoothed over age (default) or
   unsmoothed; tuned over the number of components (1, 2, 3, 6) and the

@@ -31,7 +31,7 @@ with \code{\link[=tuned]{tuned()}}) and forecast with \code{\link[=mt_forecast]{
 \code{\link[=reconciled]{reconciled()}} make forecasts add up draw by draw, \code{\link[=mt_order_strata]{mt_order_strata()}}
 imposes orderings.
 \item \strong{Wrappers for any model}: \code{\link[=ensemble]{ensemble()}}, \code{\link[=reconciled]{reconciled()}},
-\code{\link[=calibrated]{calibrated()}} (spread fitted to recent forecast errors), \code{\link[=anchored]{anchored()}}
+\code{\link[=recalibrated]{recalibrated()}} (spread fitted to recent forecast errors), \code{\link[=anchored]{anchored()}}
 (jump-off at the observed level), \code{\link[=bootstrapped]{bootstrapped()}} and \code{\link[=tuned]{tuned()}}.
 \item \strong{Evaluation}: \code{\link[=mt_backtest]{mt_backtest()}} and \code{\link[=mt_score]{mt_score()}}, for rates, life
 expectancy and age-standardised rates.
