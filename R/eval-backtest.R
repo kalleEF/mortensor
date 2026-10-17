@@ -177,7 +177,7 @@ backtest_origin <- function(spec, data, origin, h, prep, n_draws, seed, score_es
   qdraws <- list()
   # the randomised PIT draws uniforms: seeded like the forecast
   old_seed <- if (exists(".Random.seed", envir = globalenv())) get(".Random.seed", envir = globalenv()) else NULL
-  if (!is.null(seed)) set.seed(seed + 1L)
+  if (!is.null(seed)) seed_default(seed + 1L)
   on.exit(if (!is.null(old_seed)) assign(".Random.seed", old_seed, envir = globalenv()), add = TRUE)
   for (s in unique(obs$stratum)) {
     if (anyNA(D_draws[, , s, ])) next

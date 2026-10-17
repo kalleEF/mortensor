@@ -72,3 +72,11 @@ test_that("the prepared ARFIMA models of coherent_fdm() give the draws of foreca
   b <- withr::with_seed(5, stats::simulate(prepared, nsim = 6))
   expect_identical(b, a)
 })
+
+test_that("a seed gives the same draws inside random number streams", {
+  x <- mt_example(deaths = "single", years = 2000:2015)
+  fit <- mt_fit(rwd(), x)
+  a <- mt_forecast(fit, h = 2, n_draws = 5, seed = 1)$rates
+  b <- par_lapply(1, function(i) mt_forecast(fit, h = 2, n_draws = 5, seed = 1)$rates, streams = TRUE)[[1]]
+  expect_identical(b, a)
+})
