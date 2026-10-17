@@ -153,13 +153,19 @@ fitted trends and from the start of the forecast, but also the variation
 from which models such as Lee-Carter estimate the uncertainty of their
 period index: alone, it made intervals too narrow in backtests (95%
 coverage of Lee-Carter 0.59 instead of 0.75 on England & Wales men).
-Together with [`calibrated()`](../reference/calibrated.md), which
-re-estimates the spread against the raw observations, it gave the best
-Lee-Carter forecasts there (CRPS 0.0646 against 0.0687, coverage 0.91).
-Use smoothing as a preprocessing step (`mt_prep(step_smooth(...))`), so
-that backtests refit it on each training window; models fitted to
-smoothed rates take their observation noise from the raw rates.
-[`mt_smooth_check()`](../reference/mt_smooth_check.md) and
+Most of the gain there comes from
+[`calibrated()`](../reference/calibrated.md), which re-estimates the
+spread against the raw observations: calibration alone gave a CRPS of
+0.0657 and a coverage of 0.88 (against 0.0687 and 0.75); Whittaker
+smoothing over time added nothing to it, the age-period GAM a little
+(0.0646, coverage 0.91). On the ONS quintiles, whose noise is close to
+Poisson, smoothing over time did not help. Treat it as optional and
+check it in a backtest. Use smoothing as a preprocessing step
+(`mt_prep(step_smooth(...))`), never on the data before fitting
+([`mt_backtest()`](../reference/mt_backtest.md) stops,
+[`mt_fit()`](../reference/mt_fit.md) warns), so that backtests refit it
+on each training window and models take their observation noise from the
+raw rates. [`mt_smooth_check()`](../reference/mt_smooth_check.md) and
 [`mt_plot_smooth()`](../reference/mt_smooth_check.md) show what the
 smoothing removed.
 
@@ -171,10 +177,18 @@ jumps away from the observations;
 [`mt_jump_off()`](../reference/mt_jump_off.md) reports the step, and the
 forecast plots show it as a gap between the solid (fitted) and the
 dashed (forecast) line. `anchored(model, years = 3)` moves the start to
-the observed level of the last three years, fading out over ten years;
-it improved short-term accuracy on England & Wales men and on the ONS
-data. Starting from the last observed year alone (`years = 1`) carries
-its noise into every forecast year and was worse on the ONS data.
+the observed level of the last three years, fading out over ten years
+(so forecasts more than ten years ahead are those of the model); it
+improved short-term accuracy on England & Wales men and on the ONS data.
+Starting from the observed rates of the last year alone
+(`lee_carter(jump_off = "observed")`, or
+`anchored(years = 1, decay = Inf, shrink = FALSE)`) was best on England
+& Wales men (CRPS 0.0583 against 0.0639 anchored to three years), whose
+counts are large, and worse on the ONS quintiles, whose last year is
+noisier. Decompositions of a change from an observed to a forecast year
+include the step; [`mt_decompose()`](../reference/mt_decompose.md)
+reports it (`jump_off`) and can start from the fitted rates
+(`observed = "fitted"`).
 
 ### What is the difference between predictive draws and forecast rates?
 
@@ -252,11 +266,17 @@ Describe the structure with
 bottom strata and sum them (`reconciled(..., method = "bottom_up")`), or
 model every node and reconcile the draws (`method = "wls"`, `"mint"`,
 …). Totals that are not in the data are added by
-[`mt_aggregate_strata()`](../reference/mt_aggregate_strata.md).
-Reconciliation of deaths uses exposures of the forecast years; supply
-population projections as `exposure` when they are available. See
-“Coherent forecasts: what reconciliation changes”, “Coherent forecasts
-by sex, region and cause” and “Causes of death by deprivation”.
+[`mt_aggregate_strata()`](../reference/mt_aggregate_strata.md). To keep
+a trusted total, such as an all-cause forecast that the causes must add
+up to, give it as `fixed` and use `method = "proportional"` (its parts
+are scaled in proportion to their forecasts) or `"wls"` (the most
+uncertain parts absorb the difference). Over long horizons, sums of
+cause forecasts tend to be more pessimistic than forecasts of all causes
+(Wilmoth 1995), so compare the two before choosing. Reconciliation of
+deaths uses exposures of the forecast years; supply population
+projections as `exposure` when they are available. See “Coherent
+forecasts: what reconciliation changes”, “Coherent forecasts by sex,
+region and cause” and “Causes of death by deprivation”.
 
 ### Will the gap between regions or deprivation groups keep growing?
 
@@ -310,3 +330,9 @@ with thresholds on every change (ungrouping accuracy, interval
 calibration, coherence). The vignette “Comparison with demography, bamp
 and StMoMo” reports accuracy and interval coverage of the models on four
 data sets.
+
+## References
+
+Wilmoth JR (1995). Are mortality projections always more pessimistic
+when disaggregated by cause of death? *Mathematical Population Studies*
+5(4): 293-319. <doi:10.1080/08898489509525409>.

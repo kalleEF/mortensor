@@ -15,7 +15,7 @@ drawn for the bottom strata only and the aggregates are their sums.
 reconciled(
   spec,
   hierarchy,
-  method = c("wls", "mint", "structural", "ols", "bottom_up"),
+  method = c("wls", "mint", "structural", "ols", "bottom_up", "proportional"),
   shrink = "auto",
   dependence = c("auto", "empirical", "none"),
   fixed = NULL

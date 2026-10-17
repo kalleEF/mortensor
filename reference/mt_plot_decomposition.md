@@ -12,7 +12,8 @@ mt_plot_decomposition(
   decomposition,
   by = c("age", "cause", "group"),
   fill = NULL,
-  comparisons = NULL
+  comparisons = NULL,
+  change = NULL
 )
 ```
 
@@ -32,8 +33,14 @@ mt_plot_decomposition(
 
 - comparisons:
 
-  Numbers of the comparisons to show (rows of
-  `summary(decomposition, by = NULL)`; default: all, as panels).
+  Comparisons to show: numbers (column `comparison` of
+  `summary(decomposition, by = NULL)`) or a named list of values of its
+  columns, for example `list(to = "Q5")`; default: all, as panels.
+
+- change:
+
+  Two periods: plot the change between them (see
+  [`summary.mt_decomposition()`](mt_decompose.md)).
 
 ## Value
 

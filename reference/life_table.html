@@ -114,7 +114,9 @@ interval).</p></dd>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
 
-<ul><li><p><code>q_x = n m / (1 + (n - a) m)</code>, capped at 1;</p></li>
+<ul><li><p><code>q_x = n m / (1 + (n - a) m)</code>; where this exceeds 1 (rates above
+about <code>2 / n</code>, far beyond observed values), the constant-hazard value
+<code>1 - exp(-n m)</code> is used, so that survivors stay positive;</p></li>
 <li><p><code>a_x</code> defaults to <code>n / 2</code> for every closed interval (supply <code>ax</code> to
 override, for example for age 0, where <code>n / 2</code> overstates the average
 time lived by infants who die; the effect on e0 at low infant mortality

@@ -88,7 +88,7 @@ by exposures. Methods choose <code>W</code>:</p>
     <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">mt_reconcile</span><span class="op">(</span></span>
 <span>  <span class="va">draws</span>,</span>
 <span>  hierarchy <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  method <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"wls"</span>, <span class="st">"mint"</span>, <span class="st">"structural"</span>, <span class="st">"ols"</span>, <span class="st">"bottom_up"</span><span class="op">)</span>,</span>
+<span>  method <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"wls"</span>, <span class="st">"mint"</span>, <span class="st">"structural"</span>, <span class="st">"ols"</span>, <span class="st">"bottom_up"</span>, <span class="st">"proportional"</span><span class="op">)</span>,</span>
 <span>  shrink <span class="op">=</span> <span class="st">"auto"</span>,</span>
 <span>  exposure <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  dependence <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"empirical"</span>, <span class="st">"none"</span><span class="op">)</span>,</span>
@@ -114,8 +114,8 @@ by exposures. Methods choose <code>W</code>:</p>
 
 
 <dt id="arg-method">method<a class="anchor" aria-label="anchor" href="#arg-method"></a></dt>
-<dd><p><code>"wls"</code> (default), <code>"mint"</code>, <code>"structural"</code>, <code>"ols"</code> or
-<code>"bottom_up"</code>. In a backtest on <code><a href="mt_example_regions.html">mt_example_regions()</a></code> (Lee-Carter per
+<dd><p><code>"wls"</code> (default), <code>"mint"</code>, <code>"structural"</code>, <code>"ols"</code>,
+<code>"bottom_up"</code> or <code>"proportional"</code> (with <code>fixed</code>). In a backtest on <code><a href="mt_example_regions.html">mt_example_regions()</a></code> (Lee-Carter per
 stratum, 90 strata) WLS and structural scaling kept 95% coverage of
 bottom and aggregate strata at 0.95-0.98 and improved the bottom-level
 CRPS; MinT with the draw covariance under-covered aggregates (0.88).</p></dd>
@@ -146,8 +146,10 @@ used; aggregates are summed.</p></dd>
 all-cause forecast that the causes must add up to. The projection gives
 these nodes zero variance, so the other strata absorb the whole gap;
 <code>$reconciliation$max_relative_change_fixed</code> reports how closely they
-were kept (they move only when every bottom stratum below them would
-have to be negative). Needs a projection method.</p></dd>
+were kept; they move, with a warning, when their own forecasts do not
+add up (a node fixed together with all its parts) or when every bottom
+stratum below them would have to be negative. Needs a projection
+method or <code>"proportional"</code>.</p></dd>
 
 
 <dt id="arg-var-total-parts">var, total, parts<a class="anchor" aria-label="anchor" href="#arg-var-total-parts"></a></dt>
@@ -177,7 +179,16 @@ disagree strongly. Such values are held at zero and the remaining bottom
 strata of the draw are projected again, until none is negative (a simple
 form of the non-negative reconciliation of Wickramasuriya et al. 2020);
 the aggregates are recomputed from the bottom series, so the result is
-coherent and non-negative, and fixed nodes are kept.</p>
+coherent and non-negative, and fixed nodes are kept. A warning reports
+when more than 5% of the draws needed this, because the distributions of
+the affected strata (often small causes) are then truncated at zero.</p>
+<p><code>"proportional"</code> keeps the <code>fixed</code> nodes and scales the bottom strata
+below each of them in proportion to their own forecasts, draw by draw
+(top-down allocation with forecast proportions, Athanasopoulos, Ahmed
+and Hyndman 2009). It never sets a part to zero and keeps the shape of
+the parts' distributions; it is the usual choice when causes of death
+must add up to a trusted all-cause forecast. Fixed nodes must not share
+parts.</p>
 <p>Draws of strata forecast by separate models are independent, so their sums
 would be too narrow. With <code>dependence = "empirical"</code> (default), the paths
 of each stratum are first reordered so that their ranks follow the
@@ -194,6 +205,9 @@ The marginal distribution of each stratum is unchanged.</p>
 reconciliation for hierarchical and grouped time series through trace
 minimization. <em>Journal of the American Statistical Association</em>
 114(526): 804-819. <a href="https://doi.org/10.1080/01621459.2018.1448825" class="external-link">doi:10.1080/01621459.2018.1448825</a></p>
+<p>Athanasopoulos G, Ahmed RA, Hyndman RJ (2009). Hierarchical forecasts for
+Australian domestic tourism. <em>International Journal of Forecasting</em>
+25: 146-166.</p>
 <p>Wickramasuriya SL, Turlach BA, Hyndman RJ (2020). Optimal non-negative
 forecast reconciliation. <em>Statistics and Computing</em> 30: 1167-1182.
 <a href="https://doi.org/10.1007/s11222-020-09930-0" class="external-link">doi:10.1007/s11222-020-09930-0</a></p>
@@ -226,6 +240,9 @@ Article 32. <a href="https://doi.org/10.2202/1544-6115.1175" class="external-lin
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $mean_shrinkage</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] NA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $share_draws_with_zeros</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 0</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $max_relative_change_fixed</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] NA</span>

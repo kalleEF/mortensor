@@ -100,7 +100,7 @@ group are scaled to the observed group total.
 t0 <- proc.time()
 u1 <- mt_ungroup(x)
 (proc.time() - t0)[["elapsed"]]
-#> [1] 0.568
+#> [1] 0.826
 head(attr(u1, "ungroup"), 3)
 #>    measure stratum period       method lambda_age lambda_period        ed
 #>     <char>   <int> <char>       <char>      <num>         <num>     <num>

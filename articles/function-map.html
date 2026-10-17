@@ -540,7 +540,8 @@ first-year step</td>
 <td>Coherence</td>
 <td>
 <code><a href="../reference/mt_hierarchy.html">mt_hierarchy()</a></code>, <code><a href="../reference/mt_aggregate_strata.html">mt_aggregate_strata()</a></code>,
-<code><a href="../reference/mt_reconcile.html">mt_reconcile()</a></code> (with <code>fixed</code> nodes),
+<code><a href="../reference/mt_reconcile.html">mt_reconcile()</a></code> (with <code>fixed</code> nodes;
+<code>"proportional"</code> scales the parts of fixed nodes),
 <code><a href="../reference/mt_aggregate_draws.html">mt_aggregate_draws()</a></code>
 </td>
 <td>define and apply totals of strata</td>
@@ -657,9 +658,11 @@ who2000</td>
 </td>
 <td>differences in life expectancy (or other summaries) by age, cause
 and subgroup composition: Arriaga, Horiuchi, stepwise replacement,
-Kitagawa, Arriaga meets Kitagawa</td>
+Kitagawa, Arriaga meets Kitagawa; jump-off share and changes of
+gaps</td>
 <td>
-<code>mt_draws</code> or <code>mt_data</code> (or both)</td>
+<code>mt_draws</code> or <code>mt_data</code> (or both; also census
+years with gaps)</td>
 <td>
 <code>mt_decomposition</code>, table, ggplot</td>
 </tr>
@@ -742,9 +745,13 @@ models); pooling works through common trends (<code><a href="../reference/li_lee
 Bayesian APC models smooth over age, period and cohort within each
 stratum.</li>
 <li>
-<strong>Backtest targets other than death rates.</strong> Backtests
-score log death rates per cell; life expectancy or age-standardised
-rates as targets are not yet available.</li>
+<strong>Uncertainty of score differences.</strong>
+<code><a href="../reference/mt_score.html">mt_score()</a></code> reports mean scores; standard errors over
+origins and strata or paired tests of two models are not computed.</li>
+<li>
+<strong>Lifespan variation.</strong> Lifespan variation (e-dagger,
+Gini) is not a built-in quantity; <code><a href="../reference/mt_decompose.html">mt_decompose()</a></code> accepts it
+as a function of the rates.</li>
 <li>
 <strong>Multiple imputation of suppressed cells.</strong>
 <code><a href="../reference/mt_fill_suppressed.html">mt_fill_suppressed()</a></code> returns one estimate; the uncertainty

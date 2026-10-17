@@ -130,8 +130,8 @@ draw, so every contribution has an interval.</p>
 <td>
 <code>groups</code> with <code>composition = "radix"</code>
 </td>
-<td>life expectancy of a population of subgroups: subgroup rates and
-composition</td>
+<td>life expectancy of a population of subgroups fixed from the start
+(sex, education): subgroup rates and composition</td>
 <td>Riffe, Tursun-zade and Trias Llimós (2024), “Arriaga meets
 Kitagawa”</td>
 </tr>
@@ -139,8 +139,8 @@ Kitagawa”</td>
 <td>
 <code>groups</code> with <code>composition = "pooled"</code>
 </td>
-<td>life expectancy of the pooled rates: subgroup rates and age-specific
-composition</td>
+<td>life expectancy of the pooled rates (areas, regions): subgroup rates
+and age-specific composition</td>
 <td>Horiuchi et al. (2008)</td>
 </tr>
 </tbody>
@@ -164,7 +164,7 @@ deaths for the intervals:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">gap</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_decompose.html">mt_decompose</a></span><span class="op">(</span><span class="va">x</span>, var <span class="op">=</span> <span class="st">"quintile"</span>, ref <span class="op">=</span> <span class="st">"Q1"</span>, periods <span class="op">=</span> <span class="fl">2019</span>, n_draws <span class="op">=</span> <span class="fl">200</span><span class="op">)</span></span>
 <span><span class="va">gap</span></span>
-<span><span class="co">#&gt; &lt;mt_decomposition&gt; life expectancy at 0, method arriaga; 8 comparison(s), 200 draw(s)</span></span>
+<span><span class="co">#&gt; &lt;mt_decomposition&gt; life expectancy at 0, method arriaga; 8 comparison(s), means over 200 draws</span></span>
 <span><span class="co">#&gt;    comparison    sex   from     to period from_value to_value difference</span></span>
 <span><span class="co">#&gt;         &lt;int&gt; &lt;char&gt; &lt;char&gt; &lt;char&gt;  &lt;num&gt;      &lt;num&gt;    &lt;num&gt;      &lt;num&gt;</span></span>
 <span><span class="co">#&gt; 1:          1 female     Q1     Q2   2019     79.825   82.501      2.676</span></span>
@@ -200,10 +200,12 @@ reference (<code>from_value</code>) and of the level
 (<code>to_value</code>), their difference with its interval, and the sum
 of the age contributions, which equals the difference
 (<code>max_residual</code> is the largest discrepancy over draws).
+Values are means over the draws; quantiles are in the columns
+<code>difference_q*</code> and in <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code>.
 <code>summary(gap, by = "age")</code> gives the contributions; the plot
-shows them for the gap between Q5 and Q1 (comparisons 4 and 8):</p>
+shows them for the gap between Q5 and Q1:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/mt_plot_decomposition.html">mt_plot_decomposition</a></span><span class="op">(</span><span class="va">gap</span>, by <span class="op">=</span> <span class="st">"age"</span>, comparisons <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">4</span>, <span class="fl">8</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/mt_plot_decomposition.html">mt_plot_decomposition</a></span><span class="op">(</span><span class="va">gap</span>, by <span class="op">=</span> <span class="st">"age"</span>, comparisons <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>to <span class="op">=</span> <span class="st">"Q5"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <p><img src="decomposition_files/figure-html/unnamed-chunk-3-1.png" class="r-plt" alt="" width="672"></p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">s</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">gap</span>, by <span class="op">=</span> <span class="st">"age"</span><span class="op">)</span><span class="op">[</span><span class="va">to</span> <span class="op">==</span> <span class="st">"Q5"</span><span class="op">]</span></span>
@@ -246,9 +248,13 @@ differently:</p>
 <h2 id="causes-behind-the-gap">Causes behind the gap<a class="anchor" aria-label="anchor" href="#causes-behind-the-gap"></a>
 </h2>
 <p>Causes of death are a stratum variable whose rates add up to all
-causes. <code>cause</code> names it, and the hierarchy tells
-<code><a href="../reference/mt_decompose.html">mt_decompose()</a></code> which level is the total. At ages 50 and
-over (as in “Causes of death by deprivation”):</p>
+causes. <code>cause</code> names it. The total level
+(<code>"all"</code>) is left out because
+<code>mt_group_levels(total = "all")</code> records it in the data;
+without such a record (or a <code>hierarchy</code>),
+<code><a href="../reference/mt_decompose.html">mt_decompose()</a></code> stops rather than count all causes as one
+more cause. At ages 50 and over (as in “Causes of death by
+deprivation”):</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">causes</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">ons_data</span><span class="op">)</span><span class="op">[</span><span class="op">-</span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="fl">7</span><span class="op">)</span><span class="op">]</span></span>
 <span><span class="va">xc</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_data.html">mt_data</a></span><span class="op">(</span>deaths <span class="op">=</span> <span class="va">ons_data</span>, population <span class="op">=</span> <span class="va">ons_data</span>, by <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"sex"</span>, <span class="st">"imd_decile"</span>, <span class="st">"cause"</span><span class="op">)</span>,</span>
@@ -257,8 +263,7 @@ over (as in “Causes of death by deprivation”):</p>
 <span><span class="va">xc</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_subset.html">mt_subset</a></span><span class="op">(</span><span class="va">xc</span>, ages <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">50</span>, <span class="cn">Inf</span><span class="op">)</span>, periods <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2019</span>, <span class="fl">2019</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">xc</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_group_levels.html">mt_group_levels</a></span><span class="op">(</span><span class="va">xc</span>, <span class="st">"imd_decile"</span>, <span class="kw">function</span><span class="op">(</span><span class="va">d</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"Q"</span>, <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">ceiling</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">d</span><span class="op">)</span> <span class="op">/</span> <span class="fl">2</span><span class="op">)</span><span class="op">)</span>, name <span class="op">=</span> <span class="st">"quintile"</span><span class="op">)</span></span>
 <span><span class="va">xc</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_group_levels.html">mt_group_levels</a></span><span class="op">(</span><span class="va">xc</span>, <span class="st">"cause"</span>, <span class="va">ons_cause_groups</span>, other <span class="op">=</span> <span class="st">"rest"</span>, total <span class="op">=</span> <span class="st">"all"</span>, additive <span class="op">=</span> <span class="st">"rates"</span><span class="op">)</span></span>
-<span><span class="va">gc</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_decompose.html">mt_decompose</a></span><span class="op">(</span><span class="va">xc</span>, var <span class="op">=</span> <span class="st">"quintile"</span>, ref <span class="op">=</span> <span class="st">"Q1"</span>, cause <span class="op">=</span> <span class="st">"cause"</span>,</span>
-<span>                   hierarchy <span class="op">=</span> <span class="fu"><a href="../reference/mt_hierarchy.html">mt_hierarchy</a></span><span class="op">(</span>cause <span class="op">=</span> <span class="st">"all"</span>, additive <span class="op">=</span> <span class="st">"rates"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">gc</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_decompose.html">mt_decompose</a></span><span class="op">(</span><span class="va">xc</span>, var <span class="op">=</span> <span class="st">"quintile"</span>, ref <span class="op">=</span> <span class="st">"Q1"</span>, cause <span class="op">=</span> <span class="st">"cause"</span><span class="op">)</span></span>
 <span><span class="va">sc</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">gc</span>, by <span class="op">=</span> <span class="st">"cause"</span><span class="op">)</span><span class="op">[</span><span class="va">to</span> <span class="op">==</span> <span class="st">"Q5"</span><span class="op">]</span></span>
 <span><span class="fu"><a href="https://rdrr.io/pkg/data.table/man/dcast.data.table.html" class="external-link">dcast</a></span><span class="op">(</span><span class="va">sc</span>, <span class="va">cause</span> <span class="op">~</span> <span class="va">sex</span>, value.var <span class="op">=</span> <span class="st">"mean"</span><span class="op">)</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/order.html" class="external-link">order</a></span><span class="op">(</span><span class="op">-</span><span class="va">female</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span><span class="va">.SD</span>, <span class="kw">function</span><span class="op">(</span><span class="va">v</span><span class="op">)</span> <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">is.numeric</a></span><span class="op">(</span><span class="va">v</span><span class="op">)</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">v</span>, <span class="fl">2</span><span class="op">)</span> <span class="kw">else</span> <span class="va">v</span><span class="op">)</span><span class="op">]</span></span>
 <span><span class="co">#&gt;                 cause female  male</span></span>
@@ -276,7 +281,7 @@ over (as in “Causes of death by deprivation”):</p>
 <span><span class="co">#&gt; 11: colorectal_cancer   0.04  0.09</span></span>
 <span><span class="co">#&gt; 12:   breast_prostate   0.04  0.07</span></span></code></pre></div>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/mt_plot_decomposition.html">mt_plot_decomposition</a></span><span class="op">(</span><span class="va">gc</span>, by <span class="op">=</span> <span class="st">"age"</span>, fill <span class="op">=</span> <span class="st">"cause"</span>, comparisons <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">4</span>, <span class="fl">8</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/mt_plot_decomposition.html">mt_plot_decomposition</a></span><span class="op">(</span><span class="va">gc</span>, by <span class="op">=</span> <span class="st">"age"</span>, fill <span class="op">=</span> <span class="st">"cause"</span>, comparisons <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>to <span class="op">=</span> <span class="st">"Q5"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <p><img src="decomposition_files/figure-html/unnamed-chunk-7-1.png" class="r-plt" alt="" width="672"></p>
 <p>Each age contribution is split over the causes in proportion to their
 rate differences (Riffe et al. 2024, eqs. 12-13). Of the gap in life
@@ -289,61 +294,91 @@ contributions.</p>
 <div class="section level2">
 <h2 id="change-over-time-and-the-composition-of-england">Change over time and the composition of England<a class="anchor" aria-label="anchor" href="#change-over-time-and-the-composition-of-england"></a>
 </h2>
-<p>The life expectancy of England changes because the mortality of every
-quintile changes and because the population shifts between quintiles.
-Riffe, Tursun-zade and Trias Llimós (2024) treat the life expectancy of
-a population of subgroups as the mean of the subgroups’ life
-expectancies, weighted by their shares at the start of life (the radix).
+<p>The life expectancy of a population of subgroups changes because the
+mortality of every subgroup changes and because the population shifts
+between subgroups. <code>groups</code> names the subgroups, and
+<code>composition</code> decides which life expectancy of the whole
+population is decomposed. The choice matters, so it has no default.</p>
+<p><strong>Subgroups fixed from the start of life:
+<code>composition = "radix"</code>.</strong> Riffe, Tursun-zade and
+Trias Llimós (2024) treat the life expectancy of a population as the
+mean of the subgroups’ life expectancies, weighted by their shares at
+the starting age, as if subgroup life tables were blended at the radix.
 A Kitagawa decomposition of that mean separates the composition from the
-change within each subgroup, which is then split by age:</p>
+change within each subgroup, which is then split by age. The authors
+state the condition: membership must be fixed from the starting age on,
+and later shares must change through mortality only, as for sex,
+education from age 30 or country of birth. Sex is such a subgroup: the
+life expectancy at birth of both sexes in each quintile, with the sex
+ratio at birth as the composition:</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">eng</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_decompose.html">mt_decompose</a></span><span class="op">(</span><span class="va">x</span>, periods <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2001</span>, <span class="fl">2019</span><span class="op">)</span>, groups <span class="op">=</span> <span class="st">"quintile"</span><span class="op">)</span></span>
-<span><span class="va">eng</span></span>
-<span><span class="co">#&gt; &lt;mt_decomposition&gt; life expectancy at 0, method arriaga, radix composition; 2 comparison(s), 1 draw(s)</span></span>
-<span><span class="co">#&gt;    comparison    sex   from     to from_value to_value difference</span></span>
-<span><span class="co">#&gt;         &lt;int&gt; &lt;char&gt; &lt;char&gt; &lt;char&gt;      &lt;num&gt;    &lt;num&gt;      &lt;num&gt;</span></span>
-<span><span class="co">#&gt; 1:          1 female   2001   2019     80.418   83.139      2.721</span></span>
-<span><span class="co">#&gt; 2:          2   male   2001   2019     75.721   79.463      3.742</span></span>
+<code class="sourceCode R"><span><span class="va">both</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_decompose.html">mt_decompose</a></span><span class="op">(</span><span class="va">x</span>, periods <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2001</span>, <span class="fl">2019</span><span class="op">)</span>, groups <span class="op">=</span> <span class="st">"sex"</span>, composition <span class="op">=</span> <span class="st">"radix"</span><span class="op">)</span></span>
+<span><span class="va">both</span></span>
+<span><span class="co">#&gt; &lt;mt_decomposition&gt; life expectancy at 0, method arriaga, radix composition; 5 comparison(s), 1 draw</span></span>
+<span><span class="co">#&gt; Values: means of the subgroups' values weighted by their shares at age 0 (subgroups blended at the radix),</span></span>
+<span><span class="co">#&gt; not the values of the pooled rates.</span></span>
+<span><span class="co">#&gt;    comparison quintile   from     to from_value to_value difference</span></span>
+<span><span class="co">#&gt;         &lt;int&gt;   &lt;char&gt; &lt;char&gt; &lt;char&gt;      &lt;num&gt;    &lt;num&gt;      &lt;num&gt;</span></span>
+<span><span class="co">#&gt; 1:          1       Q1   2001   2019     74.598   77.572      2.974</span></span>
+<span><span class="co">#&gt; 2:          2       Q2   2001   2019     77.149   80.503      3.354</span></span>
+<span><span class="co">#&gt; 3:          3       Q3   2001   2019     78.835   82.218      3.383</span></span>
+<span><span class="co">#&gt; 4:          4       Q4   2001   2019     79.860   83.374      3.514</span></span>
+<span><span class="co">#&gt; 5:          5       Q5   2001   2019     80.995   84.643      3.647</span></span>
 <span><span class="co">#&gt;    sum_contributions max_residual</span></span>
 <span><span class="co">#&gt;                &lt;num&gt;        &lt;num&gt;</span></span>
-<span><span class="co">#&gt; 1:             2.721      3.1e-15</span></span>
-<span><span class="co">#&gt; 2:             3.742      1.3e-15</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">eng</span>, by <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"component"</span>, <span class="st">"group"</span><span class="op">)</span><span class="op">)</span><span class="op">[</span>, <span class="fu">.</span><span class="op">(</span><span class="va">sex</span>, <span class="va">component</span>, <span class="va">group</span>, mean <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">mean</span>, <span class="fl">3</span><span class="op">)</span><span class="op">)</span><span class="op">]</span></span>
-<span><span class="co">#&gt;        sex   component  group   mean</span></span>
-<span><span class="co">#&gt;     &lt;char&gt;      &lt;char&gt; &lt;char&gt;  &lt;num&gt;</span></span>
-<span><span class="co">#&gt;  1: female        rate     Q1  0.543</span></span>
-<span><span class="co">#&gt;  2: female        rate     Q2  0.600</span></span>
-<span><span class="co">#&gt;  3: female        rate     Q3  0.549</span></span>
-<span><span class="co">#&gt;  4: female        rate     Q4  0.536</span></span>
-<span><span class="co">#&gt;  5: female        rate     Q5  0.589</span></span>
-<span><span class="co">#&gt;  6: female composition   &lt;NA&gt; -0.096</span></span>
-<span><span class="co">#&gt;  7:   male        rate     Q1  0.947</span></span>
-<span><span class="co">#&gt;  8:   male        rate     Q2  0.825</span></span>
-<span><span class="co">#&gt;  9:   male        rate     Q3  0.737</span></span>
-<span><span class="co">#&gt; 10:   male        rate     Q4  0.703</span></span>
-<span><span class="co">#&gt; 11:   male        rate     Q5  0.658</span></span>
-<span><span class="co">#&gt; 12:   male composition   &lt;NA&gt; -0.128</span></span></code></pre></div>
-<p>Life expectancy at birth of England, computed this way, rose by 2.7
-years for women and 3.7 years for men. Every quintile contributed about
-half a year or more; for men, Q1 contributed most. The composition
-effect is negative: in 2019 a larger share of births was in the more
-deprived quintiles than in 2001. The deciles are defined by the IMD
-version of each year, so the shares partly reflect reclassification of
-areas.</p>
-<p>The radix-weighted life expectancy is not the life expectancy of the
-pooled rates of England, which weight the quintiles by their population
-at each age (Vaupel 2002 calls these “current conditions” and “current
-rates”). <code>composition = "pooled"</code> decomposes the latter, with
-the shares at every age as parameters of a line-integral
-decomposition:</p>
+<span><span class="co">#&gt; 1:             2.974      1.8e-15</span></span>
+<span><span class="co">#&gt; 2:             3.354      8.4e-15</span></span>
+<span><span class="co">#&gt; 3:             3.383      1.4e-14</span></span>
+<span><span class="co">#&gt; 4:             3.514      4.4e-15</span></span>
+<span><span class="co">#&gt; 5:             3.647      8.0e-15</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">both</span>, by <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"component"</span>, <span class="st">"group"</span><span class="op">)</span><span class="op">)</span><span class="op">[</span>, <span class="fu">.</span><span class="op">(</span><span class="va">quintile</span>, <span class="va">component</span>, <span class="va">group</span>, mean <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">mean</span>, <span class="fl">3</span><span class="op">)</span><span class="op">)</span><span class="op">]</span></span>
+<span><span class="co">#&gt;     quintile   component  group   mean</span></span>
+<span><span class="co">#&gt;       &lt;char&gt;      &lt;char&gt; &lt;char&gt;  &lt;num&gt;</span></span>
+<span><span class="co">#&gt;  1:       Q1        rate female  1.060</span></span>
+<span><span class="co">#&gt;  2:       Q1        rate   male  1.942</span></span>
+<span><span class="co">#&gt;  3:       Q1 composition   &lt;NA&gt; -0.028</span></span>
+<span><span class="co">#&gt;  4:       Q2        rate female  1.374</span></span>
+<span><span class="co">#&gt;  5:       Q2        rate   male  1.983</span></span>
+<span><span class="co">#&gt;  6:       Q2 composition   &lt;NA&gt; -0.003</span></span>
+<span><span class="co">#&gt;  7:       Q3        rate female  1.409</span></span>
+<span><span class="co">#&gt;  8:       Q3        rate   male  1.988</span></span>
+<span><span class="co">#&gt;  9:       Q3 composition   &lt;NA&gt; -0.014</span></span>
+<span><span class="co">#&gt; 10:       Q4        rate female  1.479</span></span>
+<span><span class="co">#&gt; 11:       Q4        rate   male  2.038</span></span>
+<span><span class="co">#&gt; 12:       Q4 composition   &lt;NA&gt; -0.004</span></span>
+<span><span class="co">#&gt; 13:       Q5        rate female  1.686</span></span>
+<span><span class="co">#&gt; 14:       Q5        rate   male  1.978</span></span>
+<span><span class="co">#&gt; 15:       Q5 composition   &lt;NA&gt; -0.017</span></span></code></pre></div>
+<p>The printout states what the values are: means of women’s and men’s
+life expectancy weighted by the sex ratio at birth, not the life
+expectancy of the pooled rates. In every quintile men contributed more
+to the rise than women (in Q1 1.9 against 1.1 years); the sex ratio at
+birth hardly changed, so its composition effect is a few hundredths of a
+year.</p>
+<p><strong>Areas and other changing groups:
+<code>composition = "pooled"</code>.</strong> Deprivation quintiles are
+areas: people move between them, and areas change quintile with each IMD
+version. The condition of the radix version does not hold. The pooled
+version decomposes the life expectancy of the pooled rates of England
+(the quintiles weighted by their population at each age, as in published
+life tables; “current rates” in Vaupel’s terms, which Riffe et al. use,
+against “current conditions” for the radix version). The rates of every
+quintile and age and the shares at every age are the parameters of a
+line-integral decomposition:</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">eng_pooled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_decompose.html">mt_decompose</a></span><span class="op">(</span><span class="va">x</span>, periods <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2001</span>, <span class="fl">2019</span><span class="op">)</span>, groups <span class="op">=</span> <span class="st">"quintile"</span>, composition <span class="op">=</span> <span class="st">"pooled"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">eng_pooled</span>, by <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span><span class="op">[</span>, <span class="fu">.</span><span class="op">(</span><span class="va">sex</span>, <span class="va">from_value</span>, <span class="va">to_value</span>, <span class="va">difference</span><span class="op">)</span><span class="op">]</span></span>
-<span><span class="co">#&gt;       sex from_value to_value difference</span></span>
-<span><span class="co">#&gt;    &lt;char&gt;      &lt;num&gt;    &lt;num&gt;      &lt;num&gt;</span></span>
-<span><span class="co">#&gt; 1: female   80.64917 83.63128   2.982103</span></span>
-<span><span class="co">#&gt; 2:   male   76.02971 79.98056   3.950856</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">eng_pooled</span>, by <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"component"</span>, <span class="st">"group"</span><span class="op">)</span><span class="op">)</span><span class="op">[</span>, <span class="fu">.</span><span class="op">(</span><span class="va">sex</span>, <span class="va">component</span>, <span class="va">group</span>, mean <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">mean</span>, <span class="fl">3</span><span class="op">)</span><span class="op">)</span><span class="op">]</span></span>
+<code class="sourceCode R"><span><span class="va">eng</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_decompose.html">mt_decompose</a></span><span class="op">(</span><span class="va">x</span>, periods <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2001</span>, <span class="fl">2019</span><span class="op">)</span>, groups <span class="op">=</span> <span class="st">"quintile"</span>, composition <span class="op">=</span> <span class="st">"pooled"</span><span class="op">)</span></span>
+<span><span class="va">eng</span></span>
+<span><span class="co">#&gt; &lt;mt_decomposition&gt; life expectancy at 0, method horiuchi, pooled composition; 2 comparison(s), 1 draw</span></span>
+<span><span class="co">#&gt; Values: of the pooled rates (subgroups weighted by their shares at each age).</span></span>
+<span><span class="co">#&gt;    comparison    sex   from     to from_value to_value difference</span></span>
+<span><span class="co">#&gt;         &lt;int&gt; &lt;char&gt; &lt;char&gt; &lt;char&gt;      &lt;num&gt;    &lt;num&gt;      &lt;num&gt;</span></span>
+<span><span class="co">#&gt; 1:          1 female   2001   2019     80.649   83.631      2.982</span></span>
+<span><span class="co">#&gt; 2:          2   male   2001   2019     76.030   79.981      3.951</span></span>
+<span><span class="co">#&gt;    sum_contributions max_residual</span></span>
+<span><span class="co">#&gt;                &lt;num&gt;        &lt;num&gt;</span></span>
+<span><span class="co">#&gt; 1:             2.982      3.6e-05</span></span>
+<span><span class="co">#&gt; 2:             3.951      7.4e-05</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">eng</span>, by <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"component"</span>, <span class="st">"group"</span><span class="op">)</span><span class="op">)</span><span class="op">[</span>, <span class="fu">.</span><span class="op">(</span><span class="va">sex</span>, <span class="va">component</span>, <span class="va">group</span>, mean <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">mean</span>, <span class="fl">3</span><span class="op">)</span><span class="op">)</span><span class="op">]</span></span>
 <span><span class="co">#&gt;        sex   component  group  mean</span></span>
 <span><span class="co">#&gt;     &lt;char&gt;      &lt;char&gt; &lt;char&gt; &lt;num&gt;</span></span>
 <span><span class="co">#&gt;  1: female        rate     Q1 0.462</span></span>
@@ -357,7 +392,27 @@ decomposition:</p>
 <span><span class="co">#&gt;  9:   male        rate     Q3 0.785</span></span>
 <span><span class="co">#&gt; 10:   male        rate     Q4 0.783</span></span>
 <span><span class="co">#&gt; 11:   male        rate     Q5 0.696</span></span>
-<span><span class="co">#&gt; 12:   male composition   &lt;NA&gt; 0.033</span></span>
+<span><span class="co">#&gt; 12:   male composition   &lt;NA&gt; 0.033</span></span></code></pre></div>
+<p>Life expectancy at birth of England rose by 3.0 years for women and
+4.0 years for men. Every quintile contributed about half a year or more;
+for men, Q1 contributed most. The composition effect is positive and
+small (0.10 and 0.03 years). Applied to the quintiles, the radix version
+would give a negative composition effect, because the shares at birth
+and at older ages moved in opposite directions:</p>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">eng_radix</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_decompose.html">mt_decompose</a></span><span class="op">(</span><span class="va">x</span>, periods <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2001</span>, <span class="fl">2019</span><span class="op">)</span>, groups <span class="op">=</span> <span class="st">"quintile"</span>, composition <span class="op">=</span> <span class="st">"radix"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">rbind</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">eng</span>, by <span class="op">=</span> <span class="st">"component"</span><span class="op">)</span><span class="op">[</span>, <span class="fu">.</span><span class="op">(</span>composition <span class="op">=</span> <span class="st">"pooled"</span>, <span class="va">sex</span>, <span class="va">component</span>, mean <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">mean</span>, <span class="fl">3</span><span class="op">)</span><span class="op">)</span><span class="op">]</span>,</span>
+<span>      <span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">eng_radix</span>, by <span class="op">=</span> <span class="st">"component"</span><span class="op">)</span><span class="op">[</span>, <span class="fu">.</span><span class="op">(</span>composition <span class="op">=</span> <span class="st">"radix"</span>, <span class="va">sex</span>, <span class="va">component</span>, mean <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">mean</span>, <span class="fl">3</span><span class="op">)</span><span class="op">)</span><span class="op">]</span><span class="op">)</span></span>
+<span><span class="co">#&gt;    composition    sex   component   mean</span></span>
+<span><span class="co">#&gt;         &lt;char&gt; &lt;char&gt;      &lt;char&gt;  &lt;num&gt;</span></span>
+<span><span class="co">#&gt; 1:      pooled female        rate  2.881</span></span>
+<span><span class="co">#&gt; 2:      pooled female composition  0.101</span></span>
+<span><span class="co">#&gt; 3:      pooled   male        rate  3.917</span></span>
+<span><span class="co">#&gt; 4:      pooled   male composition  0.033</span></span>
+<span><span class="co">#&gt; 5:       radix female        rate  2.817</span></span>
+<span><span class="co">#&gt; 6:       radix female composition -0.096</span></span>
+<span><span class="co">#&gt; 7:       radix   male        rate  3.870</span></span>
+<span><span class="co">#&gt; 8:       radix   male composition -0.128</span></span>
 <span><span class="va">E</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_array.html">mt_array</a></span><span class="op">(</span><span class="va">x</span>, <span class="st">"exposure"</span><span class="op">)</span></span>
 <span><span class="va">women</span> <span class="op">&lt;-</span> <span class="va">x</span><span class="op">$</span><span class="va">strata</span><span class="op">$</span><span class="va">label</span><span class="op">[</span><span class="va">x</span><span class="op">$</span><span class="va">strata</span><span class="op">$</span><span class="va">sex</span> <span class="op">==</span> <span class="st">"female"</span><span class="op">]</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">rbind</a></span><span class="op">(</span>birth_2001 <span class="op">=</span> <span class="va">E</span><span class="op">[</span><span class="st">"0"</span>, <span class="st">"2001"</span>, <span class="va">women</span><span class="op">]</span>, birth_2019 <span class="op">=</span> <span class="va">E</span><span class="op">[</span><span class="st">"0"</span>, <span class="st">"2019"</span>, <span class="va">women</span><span class="op">]</span>,</span>
@@ -369,15 +424,12 @@ decomposition:</p>
 <span><span class="co">#&gt; birth_2019     0.252     0.223     0.195     0.175     0.156</span></span>
 <span><span class="co">#&gt; age75_2001     0.188     0.200     0.211     0.208     0.193</span></span>
 <span><span class="co">#&gt; age75_2019     0.143     0.175     0.211     0.232     0.239</span></span></code></pre></div>
-<p>The pooled life expectancy is 0.2 to 0.5 years higher, and its
-composition effect is positive. The shares explain the difference: at
-birth the share of Q5 fell (from 18% to 16% for girls), while at ages
-75-79, where many deaths occur, it rose from 19% to 24% and the share of
-Q1 fell from 19% to 14%. The two decompositions answer different
-questions; the radix version is the one of Riffe et al. and is exact,
-the pooled one matches the life expectancy published for the whole
-population. The composition effect is a single number (radix) or one per
-age (pooled): the separate composition terms of the subgroups are not
+<p>At birth the share of Q5 fell (from 18% to 16% for girls), while at
+ages 75-79, where many deaths occur, it rose from 19% to 24% and the
+share of Q1 fell from 19% to 14%. The radix version treats the shares at
+birth as the composition of the whole population, which is wrong for
+areas. The composition effect is a single number (radix) or one per age
+(pooled): the separate composition terms of the subgroups are not
 identified.</p>
 </div>
 <div class="section level2">
@@ -386,100 +438,135 @@ identified.</p>
 <p>Li-Lee forecasts to 2035, decomposed draw by draw. With draws,
 <code>periods</code> can combine an observed year (held in the draws)
 with forecast years:</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">fc</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_forecast.html">mt_forecast</a></span><span class="op">(</span><span class="fu"><a href="../reference/mt_fit.html">mt_fit</a></span><span class="op">(</span><span class="fu"><a href="../reference/li_lee.html">li_lee</a></span><span class="op">(</span>common_by <span class="op">=</span> <span class="st">"sex"</span><span class="op">)</span>, <span class="va">x</span><span class="op">)</span>, to <span class="op">=</span> <span class="fl">2035</span>, n_draws <span class="op">=</span> <span class="fl">500</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
 <span><span class="va">change</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_decompose.html">mt_decompose</a></span><span class="op">(</span><span class="va">fc</span>, periods <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2019</span>, <span class="fl">2035</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">change</span>, by <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span><span class="op">[</span>, <span class="fu">.</span><span class="op">(</span><span class="va">sex</span>, <span class="va">quintile</span>, <span class="va">from_value</span>, <span class="va">to_value</span>, <span class="va">difference</span>, <span class="va">difference_q0.025</span>,</span>
-<span>                               <span class="va">difference_q0.975</span><span class="op">)</span><span class="op">]</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">change</span>, by <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span><span class="op">[</span>, <span class="fu">.</span><span class="op">(</span><span class="va">sex</span>, <span class="va">quintile</span>, <span class="va">from_value</span>, <span class="va">to_value</span>, <span class="va">difference</span>, <span class="va">jump_off</span><span class="op">)</span><span class="op">]</span></span>
+<span><span class="co">#&gt;        sex quintile from_value to_value difference    jump_off</span></span>
+<span><span class="co">#&gt;     &lt;char&gt;   &lt;char&gt;      &lt;num&gt;    &lt;num&gt;      &lt;num&gt;       &lt;num&gt;</span></span>
+<span><span class="co">#&gt;  1: female       Q1   79.83321 83.38002   3.546810  0.42834663</span></span>
+<span><span class="co">#&gt;  2: female       Q2   82.49875 85.19000   2.691251  0.24430512</span></span>
+<span><span class="co">#&gt;  3: female       Q3   83.93153 86.29470   2.363171  0.08339506</span></span>
+<span><span class="co">#&gt;  4: female       Q4   85.01728 87.04342   2.026131 -0.13923362</span></span>
+<span><span class="co">#&gt;  5: female       Q5   86.29508 87.95801   1.662930 -0.34119674</span></span>
+<span><span class="co">#&gt;  6:   male       Q1   75.43067 79.56163   4.130958  0.41338747</span></span>
+<span><span class="co">#&gt;  7:   male       Q2   78.59779 82.07083   3.473034  0.14018639</span></span>
+<span><span class="co">#&gt;  8:   male       Q3   80.60501 83.66165   3.056633 -0.04412830</span></span>
+<span><span class="co">#&gt;  9:   male       Q4   81.82001 84.69466   2.874653 -0.06719945</span></span>
+<span><span class="co">#&gt; 10:   male       Q5   83.08997 85.79980   2.709830 -0.07113273</span></span></code></pre></div>
+<p>A change from an observed to a forecast year contains the step from
+the observed rates of 2019 to the model’s fitted rates of 2019 (the
+jump-off, see <code><a href="../reference/mt_jump_off.html">mt_jump_off()</a></code>), and with it the noise of the
+observed year. Column <code>jump_off</code> gives its share: of the
+forecast gain of 3.5 years for women in Q1, 0.4 years come from this
+step. <code>observed = "fitted"</code> decomposes the model’s change
+alone:</p>
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">change_fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_decompose.html">mt_decompose</a></span><span class="op">(</span><span class="va">fc</span>, periods <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2019</span>, <span class="fl">2035</span><span class="op">)</span>, observed <span class="op">=</span> <span class="st">"fitted"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">change_fit</span>, by <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span><span class="op">[</span>, <span class="fu">.</span><span class="op">(</span><span class="va">sex</span>, <span class="va">quintile</span>, <span class="va">from_value</span>, <span class="va">to_value</span>, <span class="va">difference</span>, <span class="va">difference_q0.025</span>,</span>
+<span>                                   <span class="va">difference_q0.975</span><span class="op">)</span><span class="op">]</span></span>
 <span><span class="co">#&gt;        sex quintile from_value to_value difference difference_q0.025</span></span>
 <span><span class="co">#&gt;     &lt;char&gt;   &lt;char&gt;      &lt;num&gt;    &lt;num&gt;      &lt;num&gt;             &lt;num&gt;</span></span>
-<span><span class="co">#&gt;  1: female       Q1   79.83321 83.38002   3.546810        -0.4746512</span></span>
-<span><span class="co">#&gt;  2: female       Q2   82.49875 85.19000   2.691251        -0.9157246</span></span>
-<span><span class="co">#&gt;  3: female       Q3   83.93153 86.29470   2.363171        -0.9994910</span></span>
-<span><span class="co">#&gt;  4: female       Q4   85.01728 87.04342   2.026131        -1.1991626</span></span>
-<span><span class="co">#&gt;  5: female       Q5   86.29508 87.95801   1.662930        -1.3416993</span></span>
-<span><span class="co">#&gt;  6:   male       Q1   75.43067 79.56163   4.130958         1.9716285</span></span>
-<span><span class="co">#&gt;  7:   male       Q2   78.59779 82.07083   3.473034         1.5525868</span></span>
-<span><span class="co">#&gt;  8:   male       Q3   80.60501 83.66165   3.056633         1.3083920</span></span>
-<span><span class="co">#&gt;  9:   male       Q4   81.82001 84.69466   2.874653         1.1883222</span></span>
-<span><span class="co">#&gt; 10:   male       Q5   83.08997 85.79980   2.709830         1.1197734</span></span>
+<span><span class="co">#&gt;  1: female       Q1   80.26155 83.38002   3.118463        -0.9029978</span></span>
+<span><span class="co">#&gt;  2: female       Q2   82.74305 85.19000   2.446946        -1.1600297</span></span>
+<span><span class="co">#&gt;  3: female       Q3   84.01493 86.29470   2.279776        -1.0828860</span></span>
+<span><span class="co">#&gt;  4: female       Q4   84.87805 87.04342   2.165365        -1.0599289</span></span>
+<span><span class="co">#&gt;  5: female       Q5   85.95388 87.95801   2.004127        -1.0005026</span></span>
+<span><span class="co">#&gt;  6:   male       Q1   75.84405 79.56163   3.717571         1.5582410</span></span>
+<span><span class="co">#&gt;  7:   male       Q2   78.73798 82.07083   3.332848         1.4124004</span></span>
+<span><span class="co">#&gt;  8:   male       Q3   80.56089 83.66165   3.100761         1.3525203</span></span>
+<span><span class="co">#&gt;  9:   male       Q4   81.75281 84.69466   2.941852         1.2555216</span></span>
+<span><span class="co">#&gt; 10:   male       Q5   83.01884 85.79980   2.780963         1.1909061</span></span>
 <span><span class="co">#&gt;     difference_q0.975</span></span>
 <span><span class="co">#&gt;                 &lt;num&gt;</span></span>
-<span><span class="co">#&gt;  1:          7.056338</span></span>
-<span><span class="co">#&gt;  2:          5.833867</span></span>
-<span><span class="co">#&gt;  3:          5.259254</span></span>
-<span><span class="co">#&gt;  4:          4.759013</span></span>
-<span><span class="co">#&gt;  5:          4.286227</span></span>
-<span><span class="co">#&gt;  6:          6.373607</span></span>
-<span><span class="co">#&gt;  7:          5.442919</span></span>
-<span><span class="co">#&gt;  8:          4.848403</span></span>
-<span><span class="co">#&gt;  9:          4.601860</span></span>
-<span><span class="co">#&gt; 10:          4.325339</span></span></code></pre></div>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/mt_plot_decomposition.html">mt_plot_decomposition</a></span><span class="op">(</span><span class="va">change</span>, by <span class="op">=</span> <span class="st">"age"</span>, comparisons <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">5</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<p><img src="decomposition_files/figure-html/unnamed-chunk-11-1.png" class="r-plt" alt="" width="672"></p>
-<p>The forecast gain of women in Q1 (3.5 years by 2035) comes mostly
-from ages 50 to 84 (2.5 years). The bars give the mean contribution and
-the lines the 95% interval of each age over the draws. The intervals are
-wide and include zero at most ages: the common trend of Li-Lee is
-uncertain 16 years ahead, and it moves all ages together, so the
-uncertainty of the ages adds up in the total (its interval is in the
-table above).</p>
-<p>The gap between Q5 and Q1, observed in 2019 and forecast for
-2035:</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">g</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_decompose.html">mt_decompose</a></span><span class="op">(</span><span class="va">fc</span>, var <span class="op">=</span> <span class="st">"quintile"</span>, ref <span class="op">=</span> <span class="st">"Q1"</span>, periods <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2019</span>, <span class="fl">2035</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="va">sg</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">g</span>, by <span class="op">=</span> <span class="st">"age"</span><span class="op">)</span><span class="op">[</span><span class="va">to</span> <span class="op">==</span> <span class="st">"Q5"</span> <span class="op">&amp;</span> <span class="va">sex</span> <span class="op">==</span> <span class="st">"female"</span><span class="op">]</span></span>
-<span><span class="va">sg</span><span class="op">[</span>, <span class="va">age</span> <span class="op">:=</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="va">age</span>, <span class="fu"><a href="https://rdrr.io/r/base/unique.html" class="external-link">unique</a></span><span class="op">(</span><span class="va">age</span><span class="op">)</span><span class="op">)</span><span class="op">]</span></span>
-<span><span class="fu"><a href="https://rdrr.io/pkg/data.table/man/dcast.data.table.html" class="external-link">dcast</a></span><span class="op">(</span><span class="va">sg</span>, <span class="va">age</span> <span class="op">~</span> <span class="va">period</span>, value.var <span class="op">=</span> <span class="st">"mean"</span><span class="op">)</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span><span class="va">.SD</span>, <span class="kw">function</span><span class="op">(</span><span class="va">v</span><span class="op">)</span> <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">is.numeric</a></span><span class="op">(</span><span class="va">v</span><span class="op">)</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">v</span>, <span class="fl">3</span><span class="op">)</span> <span class="kw">else</span> <span class="va">v</span><span class="op">)</span><span class="op">]</span></span>
-<span><span class="co">#&gt; Key: &lt;age&gt;</span></span>
-<span><span class="co">#&gt;        age   2019  2035</span></span>
-<span><span class="co">#&gt;     &lt;fctr&gt;  &lt;num&gt; &lt;num&gt;</span></span>
-<span><span class="co">#&gt;  1:      0  0.221 0.147</span></span>
-<span><span class="co">#&gt;  2:    1-4  0.036 0.017</span></span>
-<span><span class="co">#&gt;  3:    5-9 -0.003 0.009</span></span>
-<span><span class="co">#&gt;  4:  10-14  0.030 0.010</span></span>
-<span><span class="co">#&gt;  5:  15-19  0.027 0.012</span></span>
-<span><span class="co">#&gt;  6:  20-24  0.002 0.010</span></span>
-<span><span class="co">#&gt;  7:  25-29  0.043 0.029</span></span>
-<span><span class="co">#&gt;  8:  30-34  0.031 0.067</span></span>
-<span><span class="co">#&gt;  9:  35-39  0.159 0.122</span></span>
-<span><span class="co">#&gt; 10:  40-44  0.232 0.181</span></span>
-<span><span class="co">#&gt; 11:  45-49  0.272 0.229</span></span>
-<span><span class="co">#&gt; 12:  50-54  0.350 0.278</span></span>
-<span><span class="co">#&gt; 13:  55-59  0.501 0.372</span></span>
-<span><span class="co">#&gt; 14:  60-64  0.651 0.475</span></span>
-<span><span class="co">#&gt; 15:  65-69  0.766 0.532</span></span>
-<span><span class="co">#&gt; 16:  70-74  0.843 0.568</span></span>
-<span><span class="co">#&gt; 17:  75-79  0.881 0.565</span></span>
-<span><span class="co">#&gt; 18:  80-84  0.716 0.492</span></span>
-<span><span class="co">#&gt; 19:  85-89  0.428 0.304</span></span>
-<span><span class="co">#&gt; 20:    90+  0.276 0.158</span></span>
-<span><span class="co">#&gt;        age   2019  2035</span></span>
-<span><span class="co">#&gt;     &lt;fctr&gt;  &lt;num&gt; &lt;num&gt;</span></span></code></pre></div>
-<p>Li-Lee narrows the female gap from 6.5 to 4.6 years mainly at ages 60
-to 84, where its deviations of Q1 from the common trend return towards
-their average (see “Forecasting mortality by deprivation quintile”).</p>
-<p>Two forecasts of the same year are compared by giving the second as
-<code>y</code>. Lee-Carter per quintile against Li-Lee, for 2035:</p>
+<span><span class="co">#&gt;  1:          6.627991</span></span>
+<span><span class="co">#&gt;  2:          5.589562</span></span>
+<span><span class="co">#&gt;  3:          5.175859</span></span>
+<span><span class="co">#&gt;  4:          4.898247</span></span>
+<span><span class="co">#&gt;  5:          4.627423</span></span>
+<span><span class="co">#&gt;  6:          5.960220</span></span>
+<span><span class="co">#&gt;  7:          5.302733</span></span>
+<span><span class="co">#&gt;  8:          4.892532</span></span>
+<span><span class="co">#&gt;  9:          4.669059</span></span>
+<span><span class="co">#&gt; 10:          4.396472</span></span></code></pre></div>
 <div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/mt_plot_decomposition.html">mt_plot_decomposition</a></span><span class="op">(</span><span class="va">change_fit</span>, by <span class="op">=</span> <span class="st">"age"</span>, comparisons <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>quintile <span class="op">=</span> <span class="st">"Q1"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<p><img src="decomposition_files/figure-html/unnamed-chunk-13-1.png" class="r-plt" alt="" width="672"></p>
+<p>The model’s gain for women in Q1 (3.1 years) comes mostly from ages
+50 to 84. The bars give the mean contribution and the lines the 95%
+interval of each age over the draws. The intervals are wide and include
+zero at most ages: the common trend of Li-Lee is uncertain 16 years
+ahead, and it moves all ages together, so the uncertainty of the ages
+adds up in the total. <code>observed = "poisson"</code> would add the
+sampling uncertainty of the observed year.</p>
+<p>The gap between Q5 and Q1 in 2019 and in 2035, and its change. For
+the change, <code>summary(change = )</code> subtracts the two
+decompositions draw by draw:</p>
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">g</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_decompose.html">mt_decompose</a></span><span class="op">(</span><span class="va">fc</span>, var <span class="op">=</span> <span class="st">"quintile"</span>, ref <span class="op">=</span> <span class="st">"Q1"</span>, periods <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2019</span>, <span class="fl">2035</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">g</span>, by <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span><span class="op">[</span><span class="va">to</span> <span class="op">==</span> <span class="st">"Q5"</span>, <span class="fu">.</span><span class="op">(</span><span class="va">sex</span>, <span class="va">period</span>, <span class="va">difference</span>, <span class="va">difference_q0.025</span>, <span class="va">difference_q0.975</span>, <span class="va">jump_off</span><span class="op">)</span><span class="op">]</span></span>
+<span><span class="co">#&gt;       sex period difference difference_q0.025 difference_q0.975  jump_off</span></span>
+<span><span class="co">#&gt;    &lt;char&gt;  &lt;num&gt;      &lt;num&gt;             &lt;num&gt;             &lt;num&gt;     &lt;num&gt;</span></span>
+<span><span class="co">#&gt; 1: female   2019   6.461871          6.461871          6.461871 0.7695434</span></span>
+<span><span class="co">#&gt; 2: female   2035   4.577992          3.649408          5.662527        NA</span></span>
+<span><span class="co">#&gt; 3:   male   2019   7.659303          7.659303          7.659303 0.4845202</span></span>
+<span><span class="co">#&gt; 4:   male   2035   6.238175          5.633736          6.807403        NA</span></span>
+<span><span class="va">g_fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_decompose.html">mt_decompose</a></span><span class="op">(</span><span class="va">fc</span>, var <span class="op">=</span> <span class="st">"quintile"</span>, ref <span class="op">=</span> <span class="st">"Q1"</span>, periods <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2019</span>, <span class="fl">2035</span><span class="op">)</span>, observed <span class="op">=</span> <span class="st">"fitted"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">g_fit</span>, by <span class="op">=</span> <span class="cn">NULL</span>, change <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2019</span>, <span class="fl">2035</span><span class="op">)</span><span class="op">)</span><span class="op">[</span><span class="va">to</span> <span class="op">==</span> <span class="st">"Q5"</span>, <span class="fu">.</span><span class="op">(</span><span class="va">sex</span>, <span class="va">period</span>, <span class="va">from_value</span>, <span class="va">to_value</span>, <span class="va">difference</span>,</span>
+<span>                                                                <span class="va">difference_q0.025</span>, <span class="va">difference_q0.975</span><span class="op">)</span><span class="op">]</span></span>
+<span><span class="co">#&gt;       sex       period from_value to_value difference difference_q0.025</span></span>
+<span><span class="co">#&gt;    &lt;char&gt;       &lt;char&gt;      &lt;num&gt;    &lt;num&gt;      &lt;num&gt;             &lt;num&gt;</span></span>
+<span><span class="co">#&gt; 1: female 2019 to 2035   5.692328 4.577992 -1.1143361         -2.042920</span></span>
+<span><span class="co">#&gt; 2:   male 2019 to 2035   7.174783 6.238175 -0.9366078         -1.541046</span></span>
+<span><span class="co">#&gt;    difference_q0.975</span></span>
+<span><span class="co">#&gt;                &lt;num&gt;</span></span>
+<span><span class="co">#&gt; 1:       -0.02980065</span></span>
+<span><span class="co">#&gt; 2:       -0.36737929</span></span>
+<span><span class="va">ch</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">g_fit</span>, by <span class="op">=</span> <span class="st">"age"</span>, change <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2019</span>, <span class="fl">2035</span><span class="op">)</span><span class="op">)</span><span class="op">[</span><span class="va">to</span> <span class="op">==</span> <span class="st">"Q5"</span> <span class="op">&amp;</span> <span class="va">sex</span> <span class="op">==</span> <span class="st">"female"</span><span class="op">]</span></span>
+<span><span class="va">ch</span><span class="op">[</span>, <span class="va">band</span> <span class="op">:=</span> <span class="fu"><a href="https://rdrr.io/r/base/cut.html" class="external-link">cut</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">sub</a></span><span class="op">(</span><span class="st">"[-+].*"</span>, <span class="st">""</span>, <span class="va">age</span><span class="op">)</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">-</span><span class="fl">1</span>, <span class="fl">39</span>, <span class="fl">59</span>, <span class="fl">84</span>, <span class="cn">Inf</span><span class="op">)</span>,</span>
+<span>                 labels <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"0-39"</span>, <span class="st">"40-59"</span>, <span class="st">"60-84"</span>, <span class="st">"85+"</span><span class="op">)</span><span class="op">)</span><span class="op">]</span></span>
+<span><span class="va">ch</span><span class="op">[</span>, <span class="fu">.</span><span class="op">(</span>change <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">mean</span><span class="op">)</span>, <span class="fl">2</span><span class="op">)</span><span class="op">)</span>, by <span class="op">=</span> <span class="va">band</span><span class="op">]</span></span>
+<span><span class="co">#&gt;      band change</span></span>
+<span><span class="co">#&gt;    &lt;fctr&gt;  &lt;num&gt;</span></span>
+<span><span class="co">#&gt; 1:   0-39  -0.13</span></span>
+<span><span class="co">#&gt; 2:  40-59  -0.21</span></span>
+<span><span class="co">#&gt; 3:  60-84  -0.78</span></span>
+<span><span class="co">#&gt; 4:    85+   0.00</span></span></code></pre></div>
+<p>Li-Lee forecasts a female gap of 4.6 years in 2035, against 6.5
+observed in 2019. Of this narrowing of 1.9 years, 0.8 years is the
+jump-off: the Li-Lee fit of 2019 already puts the gap at 5.7 years. The
+model’s own narrowing, from the fitted 2019 gap, is 1.1 years (95%
+interval 0.03 to 2.0), 0.8 of it at ages 60 to 84, where the deviations
+of Q1 from the common trend return towards their average (see
+“Forecasting mortality by deprivation quintile”).
+<code><a href="../reference/anchored.html">anchored()</a></code> moves the start towards the observed level but
+fades out within ten years, so it does not change the gap in 2035.</p>
+<p>Two forecasts of the same year are compared by giving the second as
+<code>y</code>. Their draws are independent, so they are shuffled before
+they are paired (<code>pairing = "independent"</code>). Lee-Carter per
+quintile against Li-Lee, for 2035:</p>
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">fl</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_forecast.html">mt_forecast</a></span><span class="op">(</span><span class="fu"><a href="../reference/mt_fit.html">mt_fit</a></span><span class="op">(</span><span class="fu"><a href="../reference/lee_carter.html">lee_carter</a></span><span class="op">(</span><span class="op">)</span>, <span class="va">x</span><span class="op">)</span>, to <span class="op">=</span> <span class="fl">2035</span>, n_draws <span class="op">=</span> <span class="fl">500</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
 <span><span class="va">mm</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_decompose.html">mt_decompose</a></span><span class="op">(</span><span class="va">fc</span>, <span class="va">fl</span>, periods <span class="op">=</span> <span class="fl">2035</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">mm</span>, by <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span><span class="op">[</span><span class="va">sex</span> <span class="op">==</span> <span class="st">"female"</span>, <span class="fu">.</span><span class="op">(</span><span class="va">quintile</span>, <span class="va">from_value</span>, <span class="va">to_value</span>, <span class="va">difference</span><span class="op">)</span><span class="op">]</span></span>
-<span><span class="co">#&gt;    quintile from_value to_value difference</span></span>
-<span><span class="co">#&gt;      &lt;char&gt;      &lt;num&gt;    &lt;num&gt;      &lt;num&gt;</span></span>
-<span><span class="co">#&gt; 1:       Q1   83.38002 81.45818 -1.9218316</span></span>
-<span><span class="co">#&gt; 2:       Q2   85.19000 84.66799 -0.5220072</span></span>
-<span><span class="co">#&gt; 3:       Q3   86.29470 86.20373 -0.0909772</span></span>
-<span><span class="co">#&gt; 4:       Q4   87.04342 87.46871  0.4252962</span></span>
-<span><span class="co">#&gt; 5:       Q5   87.95801 89.20283  1.2448255</span></span></code></pre></div>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/mt_plot_decomposition.html">mt_plot_decomposition</a></span><span class="op">(</span><span class="va">mm</span>, by <span class="op">=</span> <span class="st">"age"</span>, comparisons <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">5</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<p><img src="decomposition_files/figure-html/unnamed-chunk-14-1.png" class="r-plt" alt="" width="672"></p>
-<p>For women in Q1, Lee-Carter forecasts 1.9 years less than Li-Lee, 1.5
+<span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">mm</span>, by <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span><span class="op">[</span><span class="va">sex</span> <span class="op">==</span> <span class="st">"female"</span>, <span class="fu">.</span><span class="op">(</span><span class="va">quintile</span>, <span class="va">from_value</span>, <span class="va">to_value</span>, <span class="va">difference</span>, <span class="va">difference_q0.025</span>,</span>
+<span>                                          <span class="va">difference_q0.975</span><span class="op">)</span><span class="op">]</span></span>
+<span><span class="co">#&gt;    quintile from_value to_value difference difference_q0.025 difference_q0.975</span></span>
+<span><span class="co">#&gt;      &lt;char&gt;      &lt;num&gt;    &lt;num&gt;      &lt;num&gt;             &lt;num&gt;             &lt;num&gt;</span></span>
+<span><span class="co">#&gt; 1:       Q1   83.38002 81.45818 -1.9218316         -6.649883          2.623245</span></span>
+<span><span class="co">#&gt; 2:       Q2   85.19000 84.66799 -0.5220072         -4.504384          4.044343</span></span>
+<span><span class="co">#&gt; 3:       Q3   86.29470 86.20373 -0.0909772         -3.992022          4.002413</span></span>
+<span><span class="co">#&gt; 4:       Q4   87.04342 87.46871  0.4252962         -3.547072          4.280894</span></span>
+<span><span class="co">#&gt; 5:       Q5   87.95801 89.20283  1.2448255         -2.182106          4.895994</span></span></code></pre></div>
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/mt_plot_decomposition.html">mt_plot_decomposition</a></span><span class="op">(</span><span class="va">mm</span>, by <span class="op">=</span> <span class="st">"age"</span>, comparisons <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>quintile <span class="op">=</span> <span class="st">"Q1"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<p><img src="decomposition_files/figure-html/unnamed-chunk-16-1.png" class="r-plt" alt="" width="672"></p>
+<p>For women in Q1, Lee-Carter forecasts 1.9 years less than Li-Lee, 1.7
 years of it at ages 60 and over: Lee-Carter extrapolates the slower
 improvement of Q1 at these ages in 2001-2019, while Li-Lee lets Q1
-return towards the common trend of all quintiles.</p>
+return towards the common trend of all quintiles. The interval of the
+difference is wide because both forecasts are uncertain; it says how
+different two independent forecasts can be, not how different the models
+are.</p>
 </div>
 <div class="section level2">
 <h2 id="other-quantities">Other quantities<a class="anchor" aria-label="anchor" href="#other-quantities"></a>
@@ -488,7 +575,7 @@ return towards the common trend of all quintiles.</p>
 between 30 and 75 and the age-standardised rate are decomposed by age
 with the line integral; any function of the rates can be given as
 well:</p>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pd</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_decompose.html">mt_decompose</a></span><span class="op">(</span><span class="va">x</span>, periods <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2001</span>, <span class="fl">2019</span><span class="op">)</span>, quantity <span class="op">=</span> <span class="st">"prob_dying"</span>, at <span class="op">=</span> <span class="fl">30</span>, to <span class="op">=</span> <span class="fl">75</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">pd</span>, by <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span><span class="op">[</span><span class="va">sex</span> <span class="op">==</span> <span class="st">"male"</span>, <span class="fu">.</span><span class="op">(</span><span class="va">quintile</span>, <span class="va">from_value</span>, <span class="va">to_value</span>, <span class="va">difference</span><span class="op">)</span><span class="op">]</span></span>
 <span><span class="co">#&gt;    quintile from_value  to_value  difference</span></span>
@@ -501,7 +588,7 @@ well:</p>
 <p>The crude death rate changes with the rates and with the age
 structure of the population. Kitagawa’s decomposition separates the
 two:</p>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">cr</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_decompose.html">mt_decompose</a></span><span class="op">(</span><span class="va">x</span>, periods <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2001</span>, <span class="fl">2019</span><span class="op">)</span>, quantity <span class="op">=</span> <span class="st">"crude_rate"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/pkg/data.table/man/dcast.data.table.html" class="external-link">dcast</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">cr</span>, by <span class="op">=</span> <span class="st">"component"</span><span class="op">)</span>, <span class="va">sex</span> <span class="op">+</span> <span class="va">quintile</span> <span class="op">~</span> <span class="va">component</span>, value.var <span class="op">=</span> <span class="st">"mean"</span><span class="op">)</span><span class="op">[</span></span>
 <span>  , <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span><span class="va">.SD</span>, <span class="kw">function</span><span class="op">(</span><span class="va">v</span><span class="op">)</span> <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">is.numeric</a></span><span class="op">(</span><span class="va">v</span><span class="op">)</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">v</span><span class="op">)</span> <span class="kw">else</span> <span class="va">v</span><span class="op">)</span><span class="op">]</span></span>
@@ -532,9 +619,15 @@ although the rates fell.</p>
 fast). Other quantities: <code>"horiuchi"</code> or
 <code>"stepwise"</code>; the line integral distributes interactions
 evenly, stepwise replacement depends on the order of the ages.</li>
-<li>Populations of subgroups: <code>composition = "radix"</code> for the
-decomposition of Riffe et al.; <code>"pooled"</code> when the target is
-the life expectancy of the whole population as usually published.</li>
+<li>Populations of subgroups: <code>composition = "radix"</code> (Riffe
+et al.) for subgroups fixed from the starting age (sex, education from
+30 or 35, country of birth); <code>"pooled"</code> for areas, regions
+and other groups between which people move, and whenever the target is
+the life expectancy of the whole population as published.</li>
+<li>Forecasts from an observed year: report the jump-off
+(<code>jump_off</code>) or decompose from the fitted rates
+(<code>observed = "fitted"</code>); compare two models with independent
+draws (the default).</li>
 <li>Forecasts: contributions and their sums come with intervals, because
 every draw is decomposed. Sums over ages or causes are formed draw by
 draw (<code>summary(by = )</code>), so their intervals are not sums of
@@ -562,7 +655,9 @@ based on a model of continuous change. <em>Demography</em> 45(4):
 1168-1194.</p>
 <p>Riffe T, Tursun-zade R, Trias Llimós S (2024). Arriaga meets
 Kitagawa. Life expectancy decomposition with population subgroups. MPIDR
-Working Paper WP-2024-029. <a href="doi:10.4054/MPIDR-WP-2024-029" class="uri">doi:10.4054/MPIDR-WP-2024-029</a>.</p>
+Working Paper WP-2024-029. <a href="doi:10.4054/MPIDR-WP-2024-029" class="uri">doi:10.4054/MPIDR-WP-2024-029</a>. Published in
+<em>Geographical Analysis</em> (2026), <a href="doi:10.1111/gean.70033" class="uri">doi:10.1111/gean.70033</a>. Equation numbers in this package
+refer to the working paper.</p>
 <p>Vaupel JW (2002). Life expectancy at current rates vs. current
 conditions: a reflexion stimulated by Bongaarts and Feeney’s “How long
 do we live?”. <em>Demographic Research</em> 7: 365-378.</p>

@@ -388,12 +388,14 @@ data:</p>
 <span><span class="co">#&gt;  9:   male.Q4  0.0170     0.7134      0.1958</span></span>
 <span><span class="co">#&gt; 10:   male.Q5  0.0176     0.6753      0.1626</span></span></code></pre></div>
 <p>The smoothed rates differ from the observed ones by a median of 1-2%
-(<code>mad_log</code>). The mean squared Pearson residual
-(<code>dispersion</code>) is below 1 in every stratum: the variation
-around the smoothed trend is no larger than Poisson noise, so the
-smoother removes noise and no visible signal. The year-to-year changes
-of the smoothed rates have 12-29% of the variance of the observed
-changes (<code>trend_ratio</code>).</p>
+(<code>mad_log</code>). The mean squared Pearson residual of the
+observed deaths around the smoothed ones (<code>dispersion</code>) would
+be about 1 if the smoother removed exactly the Poisson noise; it is 0.4
+to 1.0, so the smoother follows part of the noise and removes no visible
+signal: the smoothing is mild. Even so, the year-to-year changes of the
+smoothed rates have only 12% to 29% of the variance of the observed
+changes (<code>trend_ratio</code>), and that is what narrows the
+intervals of models with a period index (below).</p>
 <div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/mt_smooth_check.html">mt_plot_smooth</a></span><span class="op">(</span><span class="va">x</span>, <span class="va">xs</span>, ages <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"45-49"</span>, <span class="st">"65-69"</span>, <span class="st">"85-89"</span><span class="op">)</span>, strata <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"female.Q1"</span>, <span class="st">"female.Q5"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <div class="float">
@@ -412,20 +414,20 @@ offsets fading out over ten years:</p>
 <span><span class="fu">rnd</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/merge.html" class="external-link">merge</a></span><span class="op">(</span><span class="fu"><a href="../reference/mt_jump_off.html">mt_jump_off</a></span><span class="op">(</span><span class="va">fc_ll</span><span class="op">)</span><span class="op">[</span>, <span class="fu">.</span><span class="op">(</span><span class="va">label</span>, <span class="va">observed</span>, <span class="va">fitted</span>, li_lee <span class="op">=</span> <span class="va">forecast</span><span class="op">)</span><span class="op">]</span>,</span>
 <span>          <span class="fu"><a href="../reference/mt_jump_off.html">mt_jump_off</a></span><span class="op">(</span><span class="va">fc_an</span><span class="op">)</span><span class="op">[</span>, <span class="fu">.</span><span class="op">(</span><span class="va">label</span>, anchored <span class="op">=</span> <span class="va">forecast</span><span class="op">)</span><span class="op">]</span>, by <span class="op">=</span> <span class="st">"label"</span>, sort <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt;         label observed  fitted  li_lee anchored</span></span>
-<span><span class="co">#&gt;  1: female.Q1  79.8332 80.2616 80.8909  80.3740</span></span>
-<span><span class="co">#&gt;  2: female.Q2  82.4987 82.7431 82.8888  82.7112</span></span>
-<span><span class="co">#&gt;  3: female.Q3  83.9315 84.0149 84.1699  84.1874</span></span>
-<span><span class="co">#&gt;  4: female.Q4  85.0173 84.8781 85.0373  85.1519</span></span>
-<span><span class="co">#&gt;  5: female.Q5  86.2951 85.9539 86.0079  86.3633</span></span>
-<span><span class="co">#&gt;  6:   male.Q1  75.4307 75.8441 76.1210  75.7236</span></span>
-<span><span class="co">#&gt;  7:   male.Q2  78.5978 78.7380 78.9657  78.8304</span></span>
-<span><span class="co">#&gt;  8:   male.Q3  80.6050 80.5609 80.7945  80.8163</span></span>
-<span><span class="co">#&gt;  9:   male.Q4  81.8200 81.7528 81.9753  82.0844</span></span>
-<span><span class="co">#&gt; 10:   male.Q5  83.0900 83.0188 83.2118  83.4247</span></span></code></pre></div>
+<span><span class="co">#&gt;  1: female.Q1  79.8332 80.2616 80.8909  80.3919</span></span>
+<span><span class="co">#&gt;  2: female.Q2  82.4987 82.7431 82.8888  82.7158</span></span>
+<span><span class="co">#&gt;  3: female.Q3  83.9315 84.0149 84.1699  84.2042</span></span>
+<span><span class="co">#&gt;  4: female.Q4  85.0173 84.8781 85.0373  85.1573</span></span>
+<span><span class="co">#&gt;  5: female.Q5  86.2951 85.9539 86.0079  86.3666</span></span>
+<span><span class="co">#&gt;  6:   male.Q1  75.4307 75.8441 76.1210  75.7482</span></span>
+<span><span class="co">#&gt;  7:   male.Q2  78.5978 78.7380 78.9657  78.8289</span></span>
+<span><span class="co">#&gt;  8:   male.Q3  80.6050 80.5609 80.7945  80.8193</span></span>
+<span><span class="co">#&gt;  9:   male.Q4  81.8200 81.7528 81.9753  82.0868</span></span>
+<span><span class="co">#&gt; 10:   male.Q5  83.0900 83.0188 83.2118  83.4264</span></span></code></pre></div>
 <p>For women in Q1, life expectancy in the first forecast year (2020)
 lies 1.1 years above the observed value of 2019 under Li-Lee: 0.4 years
 come from the fit of 2019, the rest from one year of forecast. Anchored,
-the step is 0.5 years; in the other strata it is 0.1 to 0.3 years, about
+the step is 0.6 years; in the other strata it is 0.1 to 0.3 years, about
 one year of improvement.</p>
 <p>Backtests from the origins 2008 to 2014 compare the options for the
 rates and for life expectancy at birth (<code>quantities</code>):</p>
@@ -445,14 +447,14 @@ rates and for life expectancy at birth (<code>quantities</code>):</p>
 <span>          by <span class="op">=</span> <span class="st">"model"</span>, sort <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt;                         model   crps  cov95 crps_e0 cov95_e0</span></span>
 <span><span class="co">#&gt; 1:                     Li-Lee 0.0666 0.8467  0.3356   0.8114</span></span>
-<span><span class="co">#&gt; 2:           Li-Lee, anchored 0.0658 0.8579  0.3126   0.8429</span></span>
+<span><span class="co">#&gt; 2:           Li-Lee, anchored 0.0654 0.8589  0.3149   0.8629</span></span>
 <span><span class="co">#&gt; 3:  Li-Lee, observed jump-off 0.0709 0.8480  0.3151   0.8257</span></span>
 <span><span class="co">#&gt; 4: Li-Lee, smoothed over time 0.0669 0.7736  0.3482   0.6057</span></span>
 <span><span class="fu">rnd</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/pkg/data.table/man/dcast.data.table.html" class="external-link">dcast</a></span><span class="op">(</span><span class="fu"><a href="../reference/mt_score.html">mt_score</a></span><span class="op">(</span><span class="va">bj</span>, by <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"model"</span>, <span class="st">"quintile"</span><span class="op">)</span>, target <span class="op">=</span> <span class="st">"life_expectancy"</span><span class="op">)</span>, <span class="va">model</span> <span class="op">~</span> <span class="va">quintile</span>,</span>
 <span>          value.var <span class="op">=</span> <span class="st">"crps"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt;                         model     Q1     Q2     Q3     Q4     Q5</span></span>
 <span><span class="co">#&gt; 1:                     Li-Lee 0.5835 0.3475 0.2889 0.2580 0.2002</span></span>
-<span><span class="co">#&gt; 2:           Li-Lee, anchored 0.4953 0.3087 0.2755 0.2742 0.2093</span></span>
+<span><span class="co">#&gt; 2:           Li-Lee, anchored 0.5061 0.3090 0.2752 0.2741 0.2099</span></span>
 <span><span class="co">#&gt; 3:  Li-Lee, observed jump-off 0.4787 0.3205 0.2710 0.2797 0.2256</span></span>
 <span><span class="co">#&gt; 4: Li-Lee, smoothed over time 0.5586 0.3630 0.3092 0.3074 0.2030</span></span></code></pre></div>
 <p><code>crps_e0</code> is in years of life expectancy at birth.
@@ -521,11 +523,11 @@ in where they start:</p>
 <span><span class="co">#&gt;         measure                           model    sex q0.025 q0.5 q0.975</span></span>
 <span><span class="co">#&gt;  1:         SII                      Lee-Carter female    5.2  9.1   12.9</span></span>
 <span><span class="co">#&gt;  2:         SII                          Li-Lee female    4.4  5.5    6.7</span></span>
-<span><span class="co">#&gt;  3:         SII Li-Lee, anchored and calibrated female    3.8  5.5    7.4</span></span>
+<span><span class="co">#&gt;  3:         SII Li-Lee, anchored and calibrated female    3.8  5.5    7.5</span></span>
 <span><span class="co">#&gt;  4:         SII  Ensemble (Li-Lee, random walk) female    4.6  6.5   12.0</span></span>
 <span><span class="co">#&gt;  5:         SII                      Lee-Carter   male    6.5  9.4   12.2</span></span>
 <span><span class="co">#&gt;  6:         SII                          Li-Lee   male    6.8  7.5    8.2</span></span>
-<span><span class="co">#&gt;  7:         SII Li-Lee, anchored and calibrated   male    6.4  7.6    8.6</span></span>
+<span><span class="co">#&gt;  7:         SII Li-Lee, anchored and calibrated   male    6.3  7.6    8.6</span></span>
 <span><span class="co">#&gt;  8:         SII  Ensemble (Li-Lee, random walk)   male    6.8  8.0   11.5</span></span>
 <span><span class="co">#&gt;  9: gap Q5 - Q1                      Lee-Carter female    4.2  7.7   11.2</span></span>
 <span><span class="co">#&gt; 10: gap Q5 - Q1                          Li-Lee female    3.7  4.6    5.6</span></span>
@@ -553,16 +555,17 @@ in where they start:</p>
 <img src="deprivation-plot-gap-forecast-1.png" alt="plot of chunk plot-gap-forecast"><div class="figcaption">plot of chunk plot-gap-forecast</div>
 </div>
 <p>Lee-Carter extrapolates the quintile-specific trends of 2001-2019, so
-the female gap keeps widening, with wide intervals. Li-Lee forecasts a
-female gap below the observed gap of 2019: its deviations from the
-common trend return towards zero, and its forecasts start from the
-fitted rates of 2019, which for women give a life expectancy 0.4 years
-above the observed one in Q1 and 0.3 years below it in Q5, so the
-forecast gap starts about 0.8 years below the observed gap. Anchored,
-Li-Lee starts closer to the observed gap and joins the medians of Li-Lee
-once the offsets have faded (after ten years, so the values of 2035
-agree); the calibration widens its intervals. The mixture lies between
-Lee-Carter and Li-Lee.</p>
+the female gap keeps widening, with wide intervals (and in 0.1% of its
+draws the rates of women in Q1 at 90+ exceed 1 by 2035, as
+<code><a href="../reference/mt_forecast.html">mt_forecast()</a></code> warns). Li-Lee forecasts a female gap below
+the observed gap of 2019: its deviations from the common trend return
+towards zero, and its forecasts start from the fitted rates of 2019,
+which for women give a life expectancy 0.4 years above the observed one
+in Q1 and 0.3 years below it in Q5, so the forecast gap starts about 0.8
+years below the observed gap. Anchored, Li-Lee starts closer to the
+observed gap and joins the medians of Li-Lee once the offsets have faded
+(after ten years, so the values of 2035 agree); the calibration widens
+its intervals. The mixture lies between Lee-Carter and Li-Lee.</p>
 </div>
 <div class="section level2">
 <h2 id="sensitivity-to-the-fitting-period">Sensitivity to the fitting period<a class="anchor" aria-label="anchor" href="#sensitivity-to-the-fitting-period"></a>
@@ -574,6 +577,12 @@ Lee-Carter and Li-Lee.</p>
 <span><span class="va">recent</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span><span class="va">final</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Lee-Carter"</span>, <span class="st">"Li-Lee"</span><span class="op">)</span><span class="op">]</span>, <span class="kw">function</span><span class="op">(</span><span class="va">sp</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="fu"><a href="../reference/mt_forecast.html">mt_forecast</a></span><span class="op">(</span><span class="fu"><a href="../reference/mt_fit.html">mt_fit</a></span><span class="op">(</span><span class="va">sp</span>, <span class="va">x11</span><span class="op">)</span>, to <span class="op">=</span> <span class="fl">2035</span>, n_draws <span class="op">=</span> <span class="fl">1000</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
 <span><span class="op">}</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label):</span></span>
+<span><span class="co">#&gt; Lee-Carter: forecast death rates above 1 in 0.1% of the draws (strata</span></span>
+<span><span class="co">#&gt; female.Q1; ages 90+). The model is unstable here, often because of sparse</span></span>
+<span><span class="co">#&gt; counts or a steep trend extrapolated far ahead; consider wider age groups</span></span>
+<span><span class="co">#&gt; (mt_regroup()), pooling (li_lee(common_by = )), smoothing (step_smooth()) or an</span></span>
+<span><span class="co">#&gt; ensemble.</span></span>
 <span><span class="va">e0_recent</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/data.table/man/rbindlist.html" class="external-link">rbindlist</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">recent</span><span class="op">)</span>, <span class="kw">function</span><span class="op">(</span><span class="va">n</span><span class="op">)</span> <span class="fu"><a href="../reference/life_expectancy.html">life_expectancy</a></span><span class="op">(</span><span class="va">recent</span><span class="op">[[</span><span class="va">n</span><span class="op">]</span><span class="op">]</span><span class="op">)</span><span class="op">[</span>, <span class="va">model</span> <span class="op">:=</span> <span class="va">n</span><span class="op">]</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">rbind</a></span><span class="op">(</span><span class="va">e0_fc</span><span class="op">[</span><span class="va">period</span> <span class="op">==</span> <span class="fl">2035</span> <span class="op">&amp;</span> <span class="va">model</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">recent</span><span class="op">)</span><span class="op">]</span><span class="op">[</span>, <span class="va">fitted</span> <span class="op">:=</span> <span class="st">"2001-2019"</span><span class="op">]</span>,</span>
 <span>      <span class="va">e0_recent</span><span class="op">[</span><span class="va">period</span> <span class="op">==</span> <span class="fl">2035</span><span class="op">]</span><span class="op">[</span>, <span class="va">fitted</span> <span class="op">:=</span> <span class="st">"2011-2019"</span><span class="op">]</span><span class="op">)</span><span class="op">[</span></span>

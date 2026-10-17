@@ -88,30 +88,34 @@ bt <- rbindlist(lapply(specs, function(sp) {
   b
 }))
 #> Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label): Random
-#> walk with drift: forecast death rates above 1 in 35.5% of the draws (strata
+#> walk with drift: forecast death rates above 1 in 61.5% of the draws (strata
 #> female, male; ages 95, 96, 97, 98). The model is unstable here, often because
-#> of sparse counts; consider wider age groups (mt_regroup()), pooling
-#> (li_lee(common_by = )), smoothing (step_smooth()) or an ensemble.
-#> Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label): Random
-#> walk with drift: forecast death rates above 1 in 26.0% of the draws (strata
-#> female, male; ages 95, 96, 97, 98). The model is unstable here, often because
-#> of sparse counts; consider wider age groups (mt_regroup()), pooling
-#> (li_lee(common_by = )), smoothing (step_smooth()) or an ensemble.
-#> Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label): Random
-#> walk with drift: forecast death rates above 1 in 27.0% of the draws (strata
-#> male; ages 97, 98, 99). The model is unstable here, often because of sparse
-#> counts; consider wider age groups (mt_regroup()), pooling (li_lee(common_by =
-#> )), smoothing (step_smooth()) or an ensemble.
-#> Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label): Random
-#> walk with drift: forecast death rates above 1 in 27.0% of the draws (strata
-#> male; ages 97, 98, 99). The model is unstable here, often because of sparse
-#> counts; consider wider age groups (mt_regroup()), pooling (li_lee(common_by =
-#> )), smoothing (step_smooth()) or an ensemble.
-#> Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label):
-#> Tucker3-Direct: forecast death rates above 1 in 0.5% of the draws (strata male;
-#> ages 99). The model is unstable here, often because of sparse counts; consider
-#> wider age groups (mt_regroup()), pooling (li_lee(common_by = )), smoothing
+#> of sparse counts or a steep trend extrapolated far ahead; consider wider age
+#> groups (mt_regroup()), pooling (li_lee(common_by = )), smoothing
 #> (step_smooth()) or an ensemble.
+#> Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label): Random
+#> walk with drift: forecast death rates above 1 in 45.5% of the draws (strata
+#> female, male; ages 95, 96, 97, 98). The model is unstable here, often because
+#> of sparse counts or a steep trend extrapolated far ahead; consider wider age
+#> groups (mt_regroup()), pooling (li_lee(common_by = )), smoothing
+#> (step_smooth()) or an ensemble.
+#> Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label): Random
+#> walk with drift: forecast death rates above 1 in 52.0% of the draws (strata
+#> female, male; ages 97, 98, 99, 100+). The model is unstable here, often because
+#> of sparse counts or a steep trend extrapolated far ahead; consider wider age
+#> groups (mt_regroup()), pooling (li_lee(common_by = )), smoothing
+#> (step_smooth()) or an ensemble.
+#> Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label): Random
+#> walk with drift: forecast death rates above 1 in 46.0% of the draws (strata
+#> female, male; ages 97, 98, 99, 100+). The model is unstable here, often because
+#> of sparse counts or a steep trend extrapolated far ahead; consider wider age
+#> groups (mt_regroup()), pooling (li_lee(common_by = )), smoothing
+#> (step_smooth()) or an ensemble.
+#> Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label):
+#> Tucker3-Direct: forecast death rates above 1 in 1.0% of the draws (strata male;
+#> ages 99, 100+). The model is unstable here, often because of sparse counts or a
+#> steep trend extrapolated far ahead; consider wider age groups (mt_regroup()),
+#> pooling (li_lee(common_by = )), smoothing (step_smooth()) or an ensemble.
 mt_score(bt, by = "model")[order(crps)]
 #>                             model       crps        wis        mae     mase
 #>                            <char>      <num>      <num>      <num>    <num>
@@ -119,12 +123,12 @@ mt_score(bt, by = "model")[order(crps)]
 #> 2: Lee-Carter (observed jump-off) 0.05417153 0.04857804 0.07400185 1.447016
 #> 3:                     Lee-Carter 0.06049163 0.05398945 0.08532748 1.651223
 #> 4:         Random walk with drift 0.06156062 0.05523146 0.07678813 1.490622
-#>        cov50     cov80     cov95  pit_mean     n
-#>        <num>     <num>     <num>     <num> <int>
-#> 1: 0.6140845 0.8691901 0.9503521 0.4557301  5680
-#> 2: 0.5855634 0.8528169 0.9544014 0.4540421  5680
-#> 3: 0.5031690 0.7980634 0.9459507 0.5127234  5680
-#> 4: 0.7130282 0.9336268 0.9839789 0.4659921  5680
+#>        cov50     cov80     cov95  pit_mean     n     unit
+#>        <num>     <num>     <num>     <num> <int>   <char>
+#> 1: 0.6140845 0.8691901 0.9503521 0.4557301  5680 log rate
+#> 2: 0.5855634 0.8528169 0.9544014 0.4540421  5680 log rate
+#> 3: 0.5031690 0.7980634 0.9459507 0.5127234  5680 log rate
+#> 4: 0.7130282 0.9336268 0.9839789 0.4659921  5680 log rate
 ```
 
 ``` r
@@ -176,26 +180,40 @@ training data, so they never use the years being forecast.
 
 ens <- ensemble(lc = lee_carter(jump_off = "observed"), t3 = tucker3(), rw = rwd(), weights = "crps")
 bt_ens <- mt_backtest(ens, fr, origins = origins, h = 10, n_draws = 200)
+#> Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label):
+#> Tucker3-Direct: forecast death rates above 1 in 2.0% of the draws (strata male;
+#> ages 100+). The model is unstable here, often because of sparse counts or a
+#> steep trend extrapolated far ahead; consider wider age groups (mt_regroup()),
+#> pooling (li_lee(common_by = )), smoothing (step_smooth()) or an ensemble.
 #> Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label): Random
-#> walk with drift: forecast death rates above 1 in 27.0% of the draws (strata
-#> female, male; ages 97, 98, 99). The model is unstable here, often because of
-#> sparse counts; consider wider age groups (mt_regroup()), pooling
-#> (li_lee(common_by = )), smoothing (step_smooth()) or an ensemble.
+#> walk with drift: forecast death rates above 1 in 57.0% of the draws (strata
+#> female, male; ages 97, 98, 99, 100+). The model is unstable here, often because
+#> of sparse counts or a steep trend extrapolated far ahead; consider wider age
+#> groups (mt_regroup()), pooling (li_lee(common_by = )), smoothing
+#> (step_smooth()) or an ensemble.
+#> Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label):
+#> Tucker3-Direct: forecast death rates above 1 in 0.5% of the draws (strata male;
+#> ages 100+). The model is unstable here, often because of sparse counts or a
+#> steep trend extrapolated far ahead; consider wider age groups (mt_regroup()),
+#> pooling (li_lee(common_by = )), smoothing (step_smooth()) or an ensemble.
 #> Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label): Random
-#> walk with drift: forecast death rates above 1 in 27.5% of the draws (strata
-#> female, male; ages 98, 99). The model is unstable here, often because of sparse
-#> counts; consider wider age groups (mt_regroup()), pooling (li_lee(common_by =
-#> )), smoothing (step_smooth()) or an ensemble.
+#> walk with drift: forecast death rates above 1 in 47.5% of the draws (strata
+#> female, male; ages 98, 99, 100+). The model is unstable here, often because of
+#> sparse counts or a steep trend extrapolated far ahead; consider wider age
+#> groups (mt_regroup()), pooling (li_lee(common_by = )), smoothing
+#> (step_smooth()) or an ensemble.
 #> Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label): Random
-#> walk with drift: forecast death rates above 1 in 23.5% of the draws (strata
+#> walk with drift: forecast death rates above 1 in 52.0% of the draws (strata
 #> female, male; ages 96, 97, 98, 99). The model is unstable here, often because
-#> of sparse counts; consider wider age groups (mt_regroup()), pooling
-#> (li_lee(common_by = )), smoothing (step_smooth()) or an ensemble.
+#> of sparse counts or a steep trend extrapolated far ahead; consider wider age
+#> groups (mt_regroup()), pooling (li_lee(common_by = )), smoothing
+#> (step_smooth()) or an ensemble.
 #> Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label): Random
-#> walk with drift: forecast death rates above 1 in 30.5% of the draws (strata
+#> walk with drift: forecast death rates above 1 in 46.5% of the draws (strata
 #> female, male; ages 96, 97, 98, 99). The model is unstable here, often because
-#> of sparse counts; consider wider age groups (mt_regroup()), pooling
-#> (li_lee(common_by = )), smoothing (step_smooth()) or an ensemble.
+#> of sparse counts or a steep trend extrapolated far ahead; consider wider age
+#> groups (mt_regroup()), pooling (li_lee(common_by = )), smoothing
+#> (step_smooth()) or an ensemble.
 mt_score(rbind(bt, bt_ens), by = "model")[order(crps)]
 #>                             model       crps        wis        mae     mase
 #>                            <char>      <num>      <num>      <num>    <num>
@@ -204,13 +222,13 @@ mt_score(rbind(bt, bt_ens), by = "model")[order(crps)]
 #> 3: Lee-Carter (observed jump-off) 0.05417153 0.04857804 0.07400185 1.447016
 #> 4:                     Lee-Carter 0.06049163 0.05398945 0.08532748 1.651223
 #> 5:         Random walk with drift 0.06156062 0.05523146 0.07678813 1.490622
-#>        cov50     cov80     cov95  pit_mean     n
-#>        <num>     <num>     <num>     <num> <int>
-#> 1: 0.6686620 0.9132042 0.9786972 0.4587736  5680
-#> 2: 0.6140845 0.8691901 0.9503521 0.4557301  5680
-#> 3: 0.5855634 0.8528169 0.9544014 0.4540421  5680
-#> 4: 0.5031690 0.7980634 0.9459507 0.5127234  5680
-#> 5: 0.7130282 0.9336268 0.9839789 0.4659921  5680
+#>        cov50     cov80     cov95  pit_mean     n     unit
+#>        <num>     <num>     <num>     <num> <int>   <char>
+#> 1: 0.6686620 0.9132042 0.9786972 0.4587736  5680 log rate
+#> 2: 0.6140845 0.8691901 0.9503521 0.4557301  5680 log rate
+#> 3: 0.5855634 0.8528169 0.9544014 0.4540421  5680 log rate
+#> 4: 0.5031690 0.7980634 0.9459507 0.5127234  5680 log rate
+#> 5: 0.7130282 0.9336268 0.9839789 0.4659921  5680 log rate
 ```
 
 ## Forecast to 2030
@@ -222,11 +240,17 @@ fit_ens$weights
 #>        lc        t3        rw 
 #> 0.3666762 0.2896811 0.3436428
 fc <- mt_forecast(fit_ens, to = 2030, n_draws = 1000, seed = 2026)
+#> Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label):
+#> Tucker3-Direct: forecast death rates above 1 in 0.1% of the draws (strata male;
+#> ages 100+). The model is unstable here, often because of sparse counts or a
+#> steep trend extrapolated far ahead; consider wider age groups (mt_regroup()),
+#> pooling (li_lee(common_by = )), smoothing (step_smooth()) or an ensemble.
 #> Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label): Random
-#> walk with drift: forecast death rates above 1 in 41.8% of the draws (strata
+#> walk with drift: forecast death rates above 1 in 63.9% of the draws (strata
 #> female, male; ages 95, 96, 97, 98). The model is unstable here, often because
-#> of sparse counts; consider wider age groups (mt_regroup()), pooling
-#> (li_lee(common_by = )), smoothing (step_smooth()) or an ensemble.
+#> of sparse counts or a steep trend extrapolated far ahead; consider wider age
+#> groups (mt_regroup()), pooling (li_lee(common_by = )), smoothing
+#> (step_smooth()) or an ensemble.
 fc
 #> <mt_draws> Ensemble (lc, t3, rw); origin 2006; 71 ages x 24 periods (2007-2030) x 2 strata x 1000 draws
 ```
@@ -288,74 +312,80 @@ bt_ew <- rbind(
 #> Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label): Random
 #> walk with drift: forecast death rates above 1 in 54.0% of the draws (strata
 #> male; ages 97, 98, 99, 100). The model is unstable here, often because of
-#> sparse counts; consider wider age groups (mt_regroup()), pooling
-#> (li_lee(common_by = )), smoothing (step_smooth()) or an ensemble.
+#> sparse counts or a steep trend extrapolated far ahead; consider wider age
+#> groups (mt_regroup()), pooling (li_lee(common_by = )), smoothing
+#> (step_smooth()) or an ensemble.
 #> Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label): Random
 #> walk with drift: forecast death rates above 1 in 32.0% of the draws (strata
 #> male; ages 98, 99, 100). The model is unstable here, often because of sparse
-#> counts; consider wider age groups (mt_regroup()), pooling (li_lee(common_by =
-#> )), smoothing (step_smooth()) or an ensemble.
+#> counts or a steep trend extrapolated far ahead; consider wider age groups
+#> (mt_regroup()), pooling (li_lee(common_by = )), smoothing (step_smooth()) or an
+#> ensemble.
 #> Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label): Random
 #> walk with drift: forecast death rates above 1 in 30.0% of the draws (strata
 #> male; ages 97, 98, 99, 100). The model is unstable here, often because of
-#> sparse counts; consider wider age groups (mt_regroup()), pooling
-#> (li_lee(common_by = )), smoothing (step_smooth()) or an ensemble.
+#> sparse counts or a steep trend extrapolated far ahead; consider wider age
+#> groups (mt_regroup()), pooling (li_lee(common_by = )), smoothing
+#> (step_smooth()) or an ensemble.
 #> Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label): Random
 #> walk with drift: forecast death rates above 1 in 42.5% of the draws (strata
 #> male; ages 98, 99, 100). The model is unstable here, often because of sparse
-#> counts; consider wider age groups (mt_regroup()), pooling (li_lee(common_by =
-#> )), smoothing (step_smooth()) or an ensemble.
+#> counts or a steep trend extrapolated far ahead; consider wider age groups
+#> (mt_regroup()), pooling (li_lee(common_by = )), smoothing (step_smooth()) or an
+#> ensemble.
 #> Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label): Random
 #> walk with drift: forecast death rates above 1 in 35.0% of the draws (strata
 #> male; ages 97, 98, 99, 100). The model is unstable here, often because of
-#> sparse counts; consider wider age groups (mt_regroup()), pooling
-#> (li_lee(common_by = )), smoothing (step_smooth()) or an ensemble.
+#> sparse counts or a steep trend extrapolated far ahead; consider wider age
+#> groups (mt_regroup()), pooling (li_lee(common_by = )), smoothing
+#> (step_smooth()) or an ensemble.
 #> Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label): Random
 #> walk with drift: forecast death rates above 1 in 33.5% of the draws (strata
 #> male; ages 98, 99, 100). The model is unstable here, often because of sparse
-#> counts; consider wider age groups (mt_regroup()), pooling (li_lee(common_by =
-#> )), smoothing (step_smooth()) or an ensemble.
+#> counts or a steep trend extrapolated far ahead; consider wider age groups
+#> (mt_regroup()), pooling (li_lee(common_by = )), smoothing (step_smooth()) or an
+#> ensemble.
 #> Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label):
 #> Tucker3-Direct: forecast death rates above 1 in 9.5% of the draws (strata male;
-#> ages 100). The model is unstable here, often because of sparse counts; consider
-#> wider age groups (mt_regroup()), pooling (li_lee(common_by = )), smoothing
-#> (step_smooth()) or an ensemble.
+#> ages 100). The model is unstable here, often because of sparse counts or a
+#> steep trend extrapolated far ahead; consider wider age groups (mt_regroup()),
+#> pooling (li_lee(common_by = )), smoothing (step_smooth()) or an ensemble.
 #> Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label):
 #> Tucker3-Direct: forecast death rates above 1 in 2.5% of the draws (strata male;
-#> ages 100). The model is unstable here, often because of sparse counts; consider
-#> wider age groups (mt_regroup()), pooling (li_lee(common_by = )), smoothing
-#> (step_smooth()) or an ensemble.
+#> ages 100). The model is unstable here, often because of sparse counts or a
+#> steep trend extrapolated far ahead; consider wider age groups (mt_regroup()),
+#> pooling (li_lee(common_by = )), smoothing (step_smooth()) or an ensemble.
 #> Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label):
 #> Tucker3-Direct: forecast death rates above 1 in 1.5% of the draws (strata male;
-#> ages 100). The model is unstable here, often because of sparse counts; consider
-#> wider age groups (mt_regroup()), pooling (li_lee(common_by = )), smoothing
-#> (step_smooth()) or an ensemble.
+#> ages 100). The model is unstable here, often because of sparse counts or a
+#> steep trend extrapolated far ahead; consider wider age groups (mt_regroup()),
+#> pooling (li_lee(common_by = )), smoothing (step_smooth()) or an ensemble.
 #> Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label):
 #> Tucker3-Direct: forecast death rates above 1 in 2.0% of the draws (strata male;
-#> ages 100). The model is unstable here, often because of sparse counts; consider
-#> wider age groups (mt_regroup()), pooling (li_lee(common_by = )), smoothing
-#> (step_smooth()) or an ensemble.
+#> ages 100). The model is unstable here, often because of sparse counts or a
+#> steep trend extrapolated far ahead; consider wider age groups (mt_regroup()),
+#> pooling (li_lee(common_by = )), smoothing (step_smooth()) or an ensemble.
 #> Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label):
 #> Tucker3-Direct: forecast death rates above 1 in 4.5% of the draws (strata male;
-#> ages 100). The model is unstable here, often because of sparse counts; consider
-#> wider age groups (mt_regroup()), pooling (li_lee(common_by = )), smoothing
-#> (step_smooth()) or an ensemble.
+#> ages 100). The model is unstable here, often because of sparse counts or a
+#> steep trend extrapolated far ahead; consider wider age groups (mt_regroup()),
+#> pooling (li_lee(common_by = )), smoothing (step_smooth()) or an ensemble.
 #> Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label):
 #> Tucker3-Direct: forecast death rates above 1 in 1.0% of the draws (strata male;
-#> ages 100). The model is unstable here, often because of sparse counts; consider
-#> wider age groups (mt_regroup()), pooling (li_lee(common_by = )), smoothing
-#> (step_smooth()) or an ensemble.
+#> ages 100). The model is unstable here, often because of sparse counts or a
+#> steep trend extrapolated far ahead; consider wider age groups (mt_regroup()),
+#> pooling (li_lee(common_by = )), smoothing (step_smooth()) or an ensemble.
 mt_score(bt_ew, by = "model")
 #>                     model       crps        wis        mae     mase     cov50
 #>                    <char>      <num>      <num>      <num>    <num>     <num>
 #> 1:             Lee-Carter 0.06868347 0.06196427 0.09468173 2.276649 0.2814554
 #> 2: Random walk with drift 0.05859945 0.05244993 0.07524011 1.806958 0.6150235
 #> 3:         Tucker3-Direct 0.06453556 0.05827886 0.08698994 2.146668 0.4223005
-#>        cov80     cov95  pit_mean     n
-#>        <num>     <num>     <num> <int>
-#> 1: 0.5455399 0.7460094 0.4235839  4260
-#> 2: 0.8516432 0.9666667 0.3779308  4260
-#> 3: 0.6685446 0.8117371 0.3628478  4260
+#>        cov80     cov95  pit_mean     n     unit
+#>        <num>     <num>     <num> <int>   <char>
+#> 1: 0.5455399 0.7460094 0.4235839  4260 log rate
+#> 2: 0.8516432 0.9666667 0.3779308  4260 log rate
+#> 3: 0.6685446 0.8117371 0.3628478  4260 log rate
 ```
 
 Backtests like this one are the reason mortensor reports interval
@@ -372,11 +402,12 @@ too:
   Smith 2002);
 - [`anchored()`](../reference/anchored.md) starts the forecast at the
   observed level of the last three years instead of the fitted rates;
+- [`calibrated()`](../reference/calibrated.md), which fits the spread of
+  the draws to the forecast errors of the last ten training years;
 - smoothing over time before fitting (`step_smooth(along = "period")`)
-  with [`calibrated()`](../reference/calibrated.md), which fits the
-  spread of the draws to the forecast errors of the last ten training
-  years (smoothing alone would make the intervals narrower still,
-  because the smoothed period index varies less).
+  together with [`calibrated()`](../reference/calibrated.md) (smoothing
+  alone makes the intervals narrower still, because the smoothed period
+  index varies less).
 
 The backtest also scores life expectancy at age 30 (`quantities`), the
 quantity most reports are about:
@@ -386,6 +417,7 @@ quantity most reports are about:
 smooth_t <- mt_prep(step_smooth(along = "period", method = "whittaker"))
 variants <- list(list(lee_carter(choose_period = TRUE), NULL),
                  list(anchored(lee_carter(), years = 3), NULL),
+                 list(calibrated(lee_carter()), NULL),
                  list(calibrated(lee_carter()), smooth_t))
 bt_v <- rbindlist(c(list(mt_backtest(lee_carter(), ew, origins = 1996:2001, h = 10, n_draws = 200,
                                      quantities = "life_expectancy")),
@@ -393,34 +425,41 @@ bt_v <- rbindlist(c(list(mt_backtest(lee_carter(), ew, origins = 1996:2001, h = 
                       mt_backtest(v[[1]], ew, origins = 1996:2001, h = 10, n_draws = 200, prep = v[[2]],
                                   quantities = "life_expectancy")
                     })))
-bt_v[, model := c("Lee-Carter", "chosen period", "anchored", "smoothed + calibrated")[match(model, unique(model))]]
+bt_v[, model := paste(model, prep)]
+bt_v[, model := c("Lee-Carter", "chosen period", "anchored", "calibrated",
+                  "smoothed + calibrated")[match(model, unique(model))]]
 merge(mt_score(bt_v)[, .(model, crps, cov95)],
       mt_score(bt_v, target = "life_expectancy")[, .(model, crps_e30 = crps, cov95_e30 = cov95)], by = "model")
 #> Key: <model>
 #>                    model       crps     cov95  crps_e30 cov95_e30
 #>                   <char>      <num>     <num>     <num>     <num>
 #> 1:            Lee-Carter 0.06868347 0.7460094 0.4734708 0.9166667
-#> 2:              anchored 0.06475877 0.7701878 0.4739414 0.9500000
-#> 3:         chosen period 0.06147190 0.6887324 0.3179468 1.0000000
-#> 4: smoothed + calibrated 0.06575973 0.8734742 0.4418967 1.0000000
+#> 2:              anchored 0.06385977 0.7737089 0.4764000 0.9000000
+#> 3:            calibrated 0.06569789 0.8772300 0.4419250 1.0000000
+#> 4:         chosen period 0.06147190 0.6887324 0.3179468 1.0000000
+#> 5: smoothed + calibrated 0.06575973 0.8734742 0.4418967 1.0000000
 ```
 
-`crps_e30` is in years of life expectancy. For the rates, all three
+`crps_e30` is in years of life expectancy. For the rates, all four
 modifications are more accurate than Lee-Carter fitted to all years
-(CRPS 0.061 to 0.066 against 0.069), and only the calibration brings the
-95% coverage close to nominal (0.87 against 0.75). For life expectancy
-at 30 the chosen period gives the largest gain (0.32 against 0.47
-years), anchoring changes nothing, and smoothing with calibration helps
-a little. The coverage of life expectancy is at or above 95% for all
-four: the rates fall outside their intervals mostly through deviations
-of single ages, which largely cancel in life expectancy. With six
-origins of one population these differences are indicative only.
+(CRPS 0.061 to 0.066 against 0.069), and only calibration brings the 95%
+coverage close to nominal (0.88 against 0.75); smoothing over time adds
+nothing to calibration here. For life expectancy at 30 the chosen period
+gives the largest gain (0.32 against 0.47 years), calibration a small
+one (0.44), and anchoring none. The coverage of life expectancy is 0.90
+to 1.00: the rates fall outside their intervals mostly through
+deviations of single ages, which largely cancel in life expectancy. With
+six origins of one population these differences are indicative only.
 
 ## References
 
 Brouhns N, Denuit M, Vermunt JK (2002). A Poisson log-bilinear
 regression approach to the construction of projected lifetables.
 *Insurance: Mathematics and Economics* 31(3): 373-393.
+
+Booth H, Maindonald J, Smith L (2002). Applying Lee-Carter under
+conditions of variable mortality decline. *Population Studies* 56(3):
+325-336.
 
 Lee RD, Carter LR (1992). Modeling and forecasting U.S. mortality.
 *Journal of the American Statistical Association* 87(419): 659-671.

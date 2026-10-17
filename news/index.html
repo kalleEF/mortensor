@@ -58,6 +58,36 @@ window.addEventListener("load", async () => {
 <h2 class="pkg-version" data-toc-text="0.1.9000" id="mortensor-019000-development-of-020">mortensor 0.1.9000 (development of 0.2.0)<a class="anchor" aria-label="anchor" href="#mortensor-019000-development-of-020"></a></h2>
 <p>Clean break: the 0.1.x interface is replaced (see <code>dev/revamp-plan.md</code>).</p>
 <div class="section level3">
+<h3 id="changes-after-the-third-and-fourth-applied-reviews-0-1-9000">Changes after the third and fourth applied reviews<a class="anchor" aria-label="anchor" href="#changes-after-the-third-and-fourth-applied-reviews-0-1-9000"></a></h3>
+<p>Two further reviews (<code>dev/review-applied-3.md</code>, <code>-4.md</code>; an epidemiologist and a demographer working through the vignettes on their own questions).</p>
+<ul><li>
+<code><a href="../reference/mt_decompose.html">mt_decompose()</a></code>:
+<ul><li>Strata that are totals of others (<code>mt_group_levels(total = )</code>, a hierarchy) are no longer added to their parts: such a cause or group is refused with a message naming it. Causes passed as <code>groups</code> (levels sharing one population) give a warning.</li>
+<li>
+<code>groups</code> needs <code>composition = "radix"</code> or <code>"pooled"</code>; the documentation states when each applies (radix only for membership fixed from the start age, such as sex or education).</li>
+<li>
+<code>observed = "fitted"</code> uses the fitted rates for observed years, so that a forecast is compared with its own model; <code>"poisson"</code> adds the sampling noise of observed years. Decompositions of an observed against a forecast year report <code>jump_off</code>, the part due to the observed instead of the fitted rates.</li>
+<li>
+<code>pairing = "draw"</code> pairs the draws of two objects (default: independent shuffling). <code>summary(change = )</code> gives the change of a gap between two years path by path, with intervals.</li>
+<li>Non-finite draws are dropped with a warning; residuals above the tolerance give a warning. <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> explains the components; <code><a href="https://rdrr.io/pkg/data.table/man/as.data.table.html" class="external-link">as.data.table()</a></code> and <code><a href="../reference/mt_export.html">mt_export()</a></code> work on decompositions.</li>
+<li>
+<code>mt_plot_decomposition(comparisons = )</code> selects comparisons; titles and axes name the quantity, the unit and the method.</li>
+</ul></li>
+<li>Life tables: where <code>n m / (1 + (n - a) m)</code> exceeds 1 (extreme forecast rates), <code>q</code> is <code>1 - exp(-n m)</code> instead of 1.</li>
+<li>Reconciliation: <code>method = "proportional"</code> keeps fixed nodes and scales their parts in proportion to their forecasts, draw by draw (top-down, Athanasopoulos, Ahmed and Hyndman 2009). Non-negative projections warn when more than 5% of the draws hold strata at zero or fixed nodes move; <code>info$share_draws_with_zeros</code>. <code><a href="../reference/mt_coherence.html">mt_plot_coherence()</a></code> shows the range of the paths.</li>
+<li>
+<code><a href="../reference/anchored.html">anchored()</a></code>: the empirical Bayes shrinkage subtracted the sampling variance from the wrong term, so offsets of noisy cells were shrunk too little. ONS Li-Lee anchored: CRPS 0.0654 (before 0.0658) against 0.0666; life expectancy at birth 0.315 against 0.336. <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> of anchored fits shows the offsets.</li>
+<li>
+<code><a href="../reference/mt_fit.html">mt_fit()</a></code> warns when data were smoothed before the fit (raw deaths are then missing and intervals too narrow); <code><a href="../reference/mt_backtest.html">mt_backtest()</a></code> refuses such data (the smoother has seen the test years). Smooth inside the fit with <code>prep = mt_prep(step_smooth(...))</code>.</li>
+<li>Backtests carry a <code>prep</code> column; <code><a href="../reference/mt_score.html">mt_score()</a></code> scores the same model with different preprocessing separately and reports the <code>unit</code> of the scores. <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> of backtests with life expectancy or ASR names the other targets.</li>
+<li>Period axes may have gaps (census years 2001, 2011, 2021): observed indicators and decompositions work on such data; models ask for consecutive years.</li>
+<li>
+<code>mt_group_levels(total = )</code> records totals, which fits and forecast draws carry, so <code><a href="../reference/mt_decompose.html">mt_decompose()</a></code> recognises them.</li>
+<li>The plausibility warning of forecasts covers the open age interval.</li>
+<li>The categorical palette has 12 colours (more are interpolated).</li>
+<li>Vignettes: all-cause forecasts implied by the causes against all-cause models (Wilmoth 1995) in the causes and regional vignettes; proportional reconciliation; decomposition of forecasts (jump-off, the model’s own change, change of the gap, comparison of two models); calibrated Lee-Carter without smoothing in “Forecasting and backtesting”; corrected interpretations and numbers in the deprivation vignette and the FAQ.</li>
+</ul></div>
+<div class="section level3">
 <h3 id="decomposition-0-1-9000">Decomposition<a class="anchor" aria-label="anchor" href="#decomposition-0-1-9000"></a></h3>
 <ul><li>
 <code><a href="../reference/mt_decompose.html">mt_decompose()</a></code> splits the difference in a mortality summary between two sets of rates into contributions of ages, causes and population subgroups, as post-processing of observed data (optionally with Poisson draws), forecast draws (draw by draw, so contributions have intervals), or both (an observed year against a forecast year, or two objects). Comparisons: between levels of a stratum variable (<code>var</code>, <code>ref</code>), between years (<code>periods</code>), or between two objects (<code>y</code>). Methods: symmetric Arriaga for life expectancy with causes split by the implied sensitivity (exact), the line integral of Horiuchi, Wilmoth and Pletcher (2008) and stepwise replacement of Andreev, Shkolnikov and Begun (2002) for any quantity (life expectancy, probability of dying, age-standardised rate, or a function of the rates), and Kitagawa’s rate and age-structure components of the crude death rate. With <code>groups</code>, the composition of a population of subgroups is separated from their mortality: as in Riffe, Tursun-zade and Trias Llimós (2024, “Arriaga meets Kitagawa”), with subgroups blended at the radix (<code>composition = "radix"</code>), or for the pooled rates (<code>"pooled"</code>, composition effects by age).</li>

@@ -99,6 +99,13 @@ Windows).</p></dd>
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>An object of class <code>mt_fit</code>.</p>
     </div>
+    <div class="section level2">
+    <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
+    <p>Smooth inside the fit (<code>prep = mt_prep(step_smooth(...))</code>), not
+before it: data returned by <code><a href="mt_smooth.html">mt_smooth()</a></code> carry no raw deaths, so
+residuals and observation noise would refer to the smoothed rates and
+the intervals would be too narrow. Such data give a warning.</p>
+    </div>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>

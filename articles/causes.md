@@ -156,6 +156,14 @@ bt <- rbindlist(lapply(specs, function(sp) {
   b <- mt_backtest(sp, xc, origins = c(2008, 2011, 2014), h = 5, n_draws = 200)
   b[, level := ifelse(cause == "all", "all causes", "causes")]
 }))
+#> Warning in reconcile_array(arr, rc$structure, rc$hierarchy$additive, rc$method,
+#> : In 66% of the draws some bottom forecasts were set to zero to keep the
+#> aggregates; their distributions are truncated. Check the base forecasts
+#> (mt_coherence()) or use method = "proportional" with fixed nodes.
+#> Warning in reconcile_array(arr, rc$structure, rc$hierarchy$additive, rc$method,
+#> : In 18% of the draws some bottom forecasts were set to zero to keep the
+#> aggregates; their distributions are truncated. Check the base forecasts
+#> (mt_coherence()) or use method = "proportional" with fixed nodes.
 sc <- bt[, .(crps = round(mean(crps), 4), cov50 = round(mean(cov50), 2), cov95 = round(mean(cov95), 2)),
          by = .(model, level)]
 dcast(sc, model ~ level, value.var = c("crps", "cov95"))
@@ -178,18 +186,20 @@ dcast(sc, model ~ level, value.var = c("crps", "cov95"))
 
 The last row, separate Lee-Carter models without reconciliation, is not
 coherent: its all-cause forecasts come from a model of their own. On
-these data the bottom-up sum of separate Lee-Carter models is coherent
-and forecasts all causes more accurately than a model of all-cause
-mortality itself: the trends of the causes differ (ischaemic heart
-disease fell much faster than the rest), and their sum follows the
-changing composition. Li-Lee with one common trend per sex and cause,
-also summed bottom-up, is slightly more accurate for the single causes
-and less accurate for all causes. The cause-share model is clearly less
-accurate here: it describes the composition through a few factors shared
-by ages, years, groups and causes, which these data, with large counts
-and diverse cause trends, do not need. The 95% intervals of all
-approaches are too narrow for all causes (see “Frequently asked
-questions” on interval calibration).
+these data, five years ahead, the bottom-up sum of separate Lee-Carter
+models is coherent and forecasts all causes more accurately than a model
+of all-cause mortality itself: the trends of the causes differ
+(ischaemic heart disease fell much faster than the rest), and their sum
+follows the changing composition. Li-Lee with one common trend per sex
+and cause, also summed bottom-up, is slightly more accurate for the
+single causes and less accurate for all causes. The cause-share model is
+clearly less accurate here: it describes the composition through a few
+factors shared by ages, years, groups and causes, which these data, with
+large counts and diverse cause trends, do not need. The 95% intervals of
+all approaches are too narrow for all causes (see “Frequently asked
+questions” on interval calibration). WLS reconciliation of separate
+models warns that it sets some causes to zero in many draws: in those
+paths the separate all-cause model lies far below the sum of the causes.
 
 ## Forecasts
 
@@ -199,6 +209,12 @@ Forecasts to 2034 with the bottom-up approach:
 
 fit <- mt_fit(reconciled(lee_carter(), h, method = "bottom_up"), xc)
 fc <- mt_forecast(fit, h = 15, n_draws = 500, seed = 1)
+#> Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label):
+#> Lee-Carter: forecast death rates above 1 in 1.0% of the draws (strata
+#> female.Q1.dementia, male.Q1.dementia, male.Q2.dementia; ages 90+). The model is
+#> unstable here, often because of sparse counts or a steep trend extrapolated far
+#> ahead; consider wider age groups (mt_regroup()), pooling (li_lee(common_by =
+#> )), smoothing (step_smooth()) or an ensemble.
 fc$reconciliation
 #> $method
 #> [1] "bottom_up"
@@ -211,6 +227,9 @@ fc$reconciliation
 #> 
 #> $mean_shrinkage
 #> [1] NA
+#> 
+#> $share_draws_with_zeros
+#> [1] 0
 #> 
 #> $max_relative_change_fixed
 #> [1] NA
@@ -230,6 +249,53 @@ largest group by 2034 with very wide intervals. Whether such a trend
 continues is a substantive question (recorded trends of single causes
 can reflect changes in diagnosis, certification and coding as well as in
 risk), and the forecast should be read as a conditional statement.
+
+What the cause forecasts imply for all causes is the first thing to
+check. Life expectancy at 50 in 2034 from the sum of the cause models,
+against Lee-Carter and Li-Lee fitted to all causes directly
+([`mt_coherence()`](../reference/mt_coherence.md) on unreconciled
+forecasts shows the same gap as a ratio):
+
+``` r
+
+xa <- mt_subset(xc, strata = cause == "all")
+fc_all <- list("Lee-Carter on all causes" = mt_forecast(mt_fit(lee_carter(), xa), h = 15, n_draws = 500, seed = 1),
+               "Li-Lee on all causes" = mt_forecast(mt_fit(li_lee(common_by = "sex"), xa), h = 15, n_draws = 500,
+                                                    seed = 1))
+e50 <- rbind(life_expectancy(fc, at = 50)[cause == "all"][, approach := "Lee-Carter by cause, summed"],
+             rbindlist(lapply(names(fc_all), function(n) life_expectancy(fc_all[[n]], at = 50)[, approach := n])))
+obs50 <- life_expectancy(mt_subset(xa, periods = c(2019, 2019)), at = 50)[, .(sex, quintile, observed_2019 = q0.5)]
+merge(obs50, dcast(e50[period == 2034, .(sex, quintile, approach, e50 = sprintf("%.1f (%.1f-%.1f)", q0.5, q0.025,
+                                                                                 q0.975))],
+                   sex + quintile ~ approach, value.var = "e50"), by = c("sex", "quintile"))[
+  quintile %in% c("Q1", "Q5")]
+#> Key: <sex, quintile>
+#>       sex quintile observed_2019 Lee-Carter by cause, summed
+#>    <char>   <char>         <num>                      <char>
+#> 1: female       Q1      31.69435            30.8 (29.1-32.8)
+#> 2: female       Q5      37.25979            37.3 (34.7-40.2)
+#> 3:   male       Q1      28.33531            29.0 (27.4-30.6)
+#> 4:   male       Q5      34.47609            35.7 (33.6-37.4)
+#>    Lee-Carter on all causes Li-Lee on all causes
+#>                      <char>               <char>
+#> 1:         32.9 (30.4-35.7)     34.3 (30.9-37.9)
+#> 2:         39.8 (37.6-41.9)     38.5 (36.1-41.4)
+#> 3:         30.6 (29.0-32.2)     31.7 (30.0-33.7)
+#> 4:         37.1 (35.8-38.4)     36.7 (35.4-38.2)
+```
+
+The sum of the cause models forecasts much smaller gains in life
+expectancy at 50 by 2034 than the models of all causes, and a fall for
+women in Q1 (from 31.7 to 30.8 years). The warning of
+[`mt_forecast()`](../reference/mt_forecast.md) above points the same
+way: in some draws the dementia rates at 90+ exceed 1 by 2034. Sums of
+cause-specific extrapolations are dominated by the causes that fall
+slowest or rise (here dementia), so forecasts by cause tend to be more
+pessimistic than forecasts of all causes (Wilmoth 1995). The five-year
+backtest above cannot detect this: it rewards the cause models for the
+recent past and says nothing about fifteen years of compounding cause
+trends. For long horizons, reconcile the causes to a forecast of all
+causes, as below, and report both.
 
 Age-standardised rates and the ratio Q1 / Q5, path by path, so that the
 intervals of the ratio include the joint uncertainty of both quintiles:
@@ -280,6 +346,12 @@ which keeps the ratios close to their average over the training years:
 ``` r
 
 fc_ll <- mt_forecast(mt_fit(specs[[3]], xc), h = 15, n_draws = 500, seed = 1)
+#> Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label): Li-Lee
+#> (common by sex, cause): forecast death rates above 1 in 0.2% of the draws
+#> (strata female.Q1.dementia, female.Q2.dementia; ages 90+). The model is
+#> unstable here, often because of sparse counts or a steep trend extrapolated far
+#> ahead; consider wider age groups (mt_regroup()), pooling (li_lee(common_by =
+#> )), smoothing (step_smooth()) or an ensemble.
 rr_ll <- mt_contrast(fc_ll, var = "quintile", ref = "Q5", quantity = "asr", type = "ratio")[level == "Q1" &
                                                                                               period == 2034]
 merge(rr[, .(sex, cause, lee_carter = q0.5)], rr_ll[, .(sex, cause, li_lee = round(q0.5, 2))],
@@ -316,58 +388,76 @@ merge(rr[, .(sex, cause, lee_carter = q0.5)], rr_ll[, .(sex, cause, li_lee = rou
 #>     <char>            <char>      <num>  <num>
 ```
 
-When an all-cause forecast is trusted more than the sum of the causes
-(for example one that matches an official projection), the causes can be
-reconciled to it: `fixed = "total"` keeps the strata of the total level,
-here all causes in every sex and quintile, and a projection method moves
-only the causes. On these data the bottom-up sum forecast all causes
-more accurately, so this is shown for illustration:
+When the forecast of all causes is trusted more than the sum of the
+causes, the causes can be reconciled to it: `fixed = "total"` keeps the
+strata of the total level, here all causes in every sex and quintile.
+`method = "proportional"` then scales the causes of each stratum in
+proportion to their own forecasts, draw by draw, so that they add up to
+it; the projection methods (`"wls"` and others) instead move the causes
+with the most variable forecasts, and set causes to zero where the gap
+is large:
 
 ``` r
 
-fc_fx <- mt_forecast(mt_fit(reconciled(lee_carter(), h, method = "wls", fixed = "total"), xc), h = 10,
-                     n_draws = 100, seed = 1)
-fc_fx$reconciliation$max_relative_change_fixed
-#> [1] 6.502021e-09
+fc_fx <- mt_forecast(mt_fit(reconciled(lee_carter(), h, method = "proportional", fixed = "total"), xc), h = 15,
+                     n_draws = 200, seed = 1)
+#> Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label):
+#> Lee-Carter: forecast death rates above 1 in 1.5% of the draws (strata
+#> male.Q1.dementia, male.Q4.dementia; ages 90+). The model is unstable here,
+#> often because of sparse counts or a steep trend extrapolated far ahead;
+#> consider wider age groups (mt_regroup()), pooling (li_lee(common_by = )),
+#> smoothing (step_smooth()) or an ensemble.
+fc_fx$reconciliation[c("max_relative_change_fixed", "share_set_to_zero")]
+#> $max_relative_change_fixed
+#> [1] 5.560493e-16
+#> 
+#> $share_set_to_zero
+#> [1] 0
 a <- rbind(asr(fc)[, approach := "bottom-up"], asr(fc_fx)[, approach := "all causes fixed"])
-dcast(a[period == 2029 & sex == "female" & cause %in% c("all", "ihd", "dementia", "lung_cancer"),
+dcast(a[period == 2034 & sex == "female" & cause %in% c("all", "ihd", "dementia", "lung_cancer"),
         .(approach, quintile, cause, asr = round(q0.5))], quintile + cause ~ approach, value.var = "asr")
 #> Key: <quintile, cause>
 #>     quintile       cause all causes fixed bottom-up
 #>       <char>      <char>            <num>     <num>
-#>  1:       Q1         all             2423      2954
-#>  2:       Q1    dementia              465       824
-#>  3:       Q1         ihd              139       141
-#>  4:       Q1 lung_cancer              229       231
-#>  5:       Q2         all             1894      2223
-#>  6:       Q2    dementia              387       611
-#>  7:       Q2         ihd               99       101
-#>  8:       Q2 lung_cancer              148       151
-#>  9:       Q3         all             1669      1928
-#> 10:       Q3    dementia              372       561
-#> 11:       Q3         ihd               83        80
-#> 12:       Q3 lung_cancer              115       116
-#> 13:       Q4         all             1514      1756
-#> 14:       Q4    dementia              330       490
-#> 15:       Q4         ihd               71        71
-#> 16:       Q4 lung_cancer               98       100
-#> 17:       Q5         all             1251      1506
-#> 18:       Q5    dementia              257       447
-#> 19:       Q5         ihd               56        57
-#> 20:       Q5 lung_cancer               70        70
+#>  1:       Q1         all             2293      3273
+#>  2:       Q1    dementia              740      1142
+#>  3:       Q1         ihd               82       111
+#>  4:       Q1 lung_cancer              192       247
+#>  5:       Q2         all             1810      2339
+#>  6:       Q2    dementia              578       802
+#>  7:       Q2         ihd               56        77
+#>  8:       Q2 lung_cancer              127       156
+#>  9:       Q3         all             1558      2060
+#> 10:       Q3    dementia              549       752
+#> 11:       Q3         ihd               48        59
+#> 12:       Q3 lung_cancer              101       119
+#> 13:       Q4         all             1388      1838
+#> 14:       Q4    dementia              491       632
+#> 15:       Q4         ihd               39        52
+#> 16:       Q4 lung_cancer               85       104
+#> 17:       Q5         all             1152      1588
+#> 18:       Q5    dementia              405       608
+#> 19:       Q5         ihd               30        42
+#> 20:       Q5 lung_cancer               56        70
 #>     quintile       cause all causes fixed bottom-up
 #>       <char>      <char>            <num>     <num>
 ```
 
-The all-cause model forecasts lower rates than the sum of the cause
-models. With WLS the difference falls mostly on dementia, whose draws
-vary most and so carry the largest weight; the other causes barely
-change. Which cause absorbs the gap follows from the weights, not from
-evidence about the causes, so a fixed total is a modelling decision that
-should be reported.
+The all-cause rates are now those of the all-cause model, and every
+cause is scaled by the same factor within a stratum and draw. This keeps
+the composition of the cause models and the level of the all-cause
+model; it does not tell which causes the all-cause model’s lower level
+should come from. A fixed total is a modelling decision that should be
+reported.
 
 Which assumption is more plausible is a judgement the backtest cannot
 settle over five years. Deprivation deciles are also reclassified with
 each new IMD version (2007, 2010, 2015 and 2019 in these data), and
 cause coding changes over time, so trends of single causes in single
 quintiles deserve a critical look before they are extrapolated.
+
+## References
+
+Wilmoth JR (1995). Are mortality projections always more pessimistic
+when disaggregated by cause of death? *Mathematical Population Studies*
+5(4): 293-319. <doi:10.1080/08898489509525409>.

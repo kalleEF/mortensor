@@ -138,20 +138,27 @@ Observed life expectancy at birth shows the deprivation gradient:
 
 ``` r
 
-m <- mt_array(x, "deaths") / mt_array(x, "exposure")
-e0 <- life_expectancy(m, mt_grid(x)$age)
-round(e0[c("2001", "2010", "2019"), ], 1)
-#>       stratum
-#> period female.Q1 female.Q2 female.Q3 female.Q4 female.Q5 male.Q1 male.Q2
-#>   2001      77.7      79.7      81.0      82.0      82.8    71.6    74.7
-#>   2010      79.5      81.6      82.9      83.8      84.9    74.5    77.3
-#>   2019      79.8      82.5      83.9      85.0      86.3    75.4    78.6
-#>       stratum
-#> period male.Q3 male.Q4 male.Q5
-#>   2001    76.7    77.9    79.2
-#>   2010    79.2    80.6    81.8
-#>   2019    80.6    81.8    83.1
+e0 <- life_expectancy(x)
+dcast(e0[period %in% c(2001, 2010, 2019)], sex + quintile ~ period, value.var = "q0.5")[
+  , lapply(.SD, function(v) if (is.numeric(v)) round(v, 1) else v)]
+#> Key: <sex, quintile>
+#>        sex quintile  2001  2010  2019
+#>     <char>   <char> <num> <num> <num>
+#>  1: female       Q1  77.7  79.5  79.8
+#>  2: female       Q2  79.7  81.6  82.5
+#>  3: female       Q3  81.0  82.9  83.9
+#>  4: female       Q4  82.0  83.8  85.0
+#>  5: female       Q5  82.8  84.9  86.3
+#>  6:   male       Q1  71.6  74.5  75.4
+#>  7:   male       Q2  74.7  77.3  78.6
+#>  8:   male       Q3  76.7  79.2  80.6
+#>  9:   male       Q4  77.9  80.6  81.8
+#> 10:   male       Q5  79.2  81.8  83.1
 ```
+
+On data, [`life_expectancy()`](../reference/life_expectancy.md)
+describes the observed rates with Poisson intervals (columns `q0.025`
+and `q0.975`); the table shows the medians.
 
 ## Harmonisation
 
@@ -362,12 +369,12 @@ mt_score(bt, by = "model")
 #> 2: Li-Lee (common by sex) 0.06661856 0.05973344 0.09266528 1.447387 0.4102857
 #> 3: Random walk with drift 0.08502155 0.07617632 0.11484454 1.530626 0.5318571
 #> 4:      Ensemble (lc, rw) 0.07028030 0.06304565 0.09627202 1.368822 0.4757143
-#>        cov80     cov95  pit_mean     n
-#>        <num>     <num>     <num> <int>
-#> 1: 0.6540000 0.8290000 0.5552149  7000
-#> 2: 0.6731429 0.8467143 0.5585903  7000
-#> 3: 0.8027143 0.9147143 0.5763921  7000
-#> 4: 0.7838571 0.9294286 0.5662695  7000
+#>        cov80     cov95  pit_mean     n     unit
+#>        <num>     <num>     <num> <int>   <char>
+#> 1: 0.6540000 0.8290000 0.5552149  7000 log rate
+#> 2: 0.6731429 0.8467143 0.5585903  7000 log rate
+#> 3: 0.8027143 0.9147143 0.5763921  7000 log rate
+#> 4: 0.7838571 0.9294286 0.5662695  7000 log rate
 ```
 
 Lower CRPS and WIS are better; `cov50`, `cov80` and `cov95` are the

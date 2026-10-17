@@ -335,11 +335,14 @@ rnd(mt_smooth_check(x, xs)[, .(label, mad_log, dispersion, trend_ratio)])
 ```
 
 The smoothed rates differ from the observed ones by a median of 1-2%
-(`mad_log`). The mean squared Pearson residual (`dispersion`) is below 1
-in every stratum: the variation around the smoothed trend is no larger
-than Poisson noise, so the smoother removes noise and no visible signal.
-The year-to-year changes of the smoothed rates have 12-29% of the
-variance of the observed changes (`trend_ratio`).
+(`mad_log`). The mean squared Pearson residual of the observed deaths
+around the smoothed ones (`dispersion`) would be about 1 if the smoother
+removed exactly the Poisson noise; it is 0.4 to 1.0, so the smoother
+follows part of the noise and removes no visible signal: the smoothing
+is mild. Even so, the year-to-year changes of the smoothed rates have
+only 12% to 29% of the variance of the observed changes (`trend_ratio`),
+and that is what narrows the intervals of models with a period index
+(below).
 
 ``` r
 
@@ -366,22 +369,22 @@ fc_an <- mt_forecast(mt_fit(anchored(li_lee(common_by = "sex"), years = 3), x), 
 rnd(merge(mt_jump_off(fc_ll)[, .(label, observed, fitted, li_lee = forecast)],
           mt_jump_off(fc_an)[, .(label, anchored = forecast)], by = "label", sort = FALSE))
 #>         label observed  fitted  li_lee anchored
-#>  1: female.Q1  79.8332 80.2616 80.8909  80.3740
-#>  2: female.Q2  82.4987 82.7431 82.8888  82.7112
-#>  3: female.Q3  83.9315 84.0149 84.1699  84.1874
-#>  4: female.Q4  85.0173 84.8781 85.0373  85.1519
-#>  5: female.Q5  86.2951 85.9539 86.0079  86.3633
-#>  6:   male.Q1  75.4307 75.8441 76.1210  75.7236
-#>  7:   male.Q2  78.5978 78.7380 78.9657  78.8304
-#>  8:   male.Q3  80.6050 80.5609 80.7945  80.8163
-#>  9:   male.Q4  81.8200 81.7528 81.9753  82.0844
-#> 10:   male.Q5  83.0900 83.0188 83.2118  83.4247
+#>  1: female.Q1  79.8332 80.2616 80.8909  80.3919
+#>  2: female.Q2  82.4987 82.7431 82.8888  82.7158
+#>  3: female.Q3  83.9315 84.0149 84.1699  84.2042
+#>  4: female.Q4  85.0173 84.8781 85.0373  85.1573
+#>  5: female.Q5  86.2951 85.9539 86.0079  86.3666
+#>  6:   male.Q1  75.4307 75.8441 76.1210  75.7482
+#>  7:   male.Q2  78.5978 78.7380 78.9657  78.8289
+#>  8:   male.Q3  80.6050 80.5609 80.7945  80.8193
+#>  9:   male.Q4  81.8200 81.7528 81.9753  82.0868
+#> 10:   male.Q5  83.0900 83.0188 83.2118  83.4264
 ```
 
 For women in Q1, life expectancy in the first forecast year (2020) lies
 1.1 years above the observed value of 2019 under Li-Lee: 0.4 years come
 from the fit of 2019, the rest from one year of forecast. Anchored, the
-step is 0.5 years; in the other strata it is 0.1 to 0.3 years, about one
+step is 0.6 years; in the other strata it is 0.1 to 0.3 years, about one
 year of improvement.
 
 Backtests from the origins 2008 to 2014 compare the options for the
@@ -404,14 +407,14 @@ rnd(merge(mt_score(bj)[, .(model, crps, cov95)],
           by = "model", sort = FALSE))
 #>                         model   crps  cov95 crps_e0 cov95_e0
 #> 1:                     Li-Lee 0.0666 0.8467  0.3356   0.8114
-#> 2:           Li-Lee, anchored 0.0658 0.8579  0.3126   0.8429
+#> 2:           Li-Lee, anchored 0.0654 0.8589  0.3149   0.8629
 #> 3:  Li-Lee, observed jump-off 0.0709 0.8480  0.3151   0.8257
 #> 4: Li-Lee, smoothed over time 0.0669 0.7736  0.3482   0.6057
 rnd(dcast(mt_score(bj, by = c("model", "quintile"), target = "life_expectancy"), model ~ quintile,
           value.var = "crps"))
 #>                         model     Q1     Q2     Q3     Q4     Q5
 #> 1:                     Li-Lee 0.5835 0.3475 0.2889 0.2580 0.2002
-#> 2:           Li-Lee, anchored 0.4953 0.3087 0.2755 0.2742 0.2093
+#> 2:           Li-Lee, anchored 0.5061 0.3090 0.2752 0.2741 0.2099
 #> 3:  Li-Lee, observed jump-off 0.4787 0.3205 0.2710 0.2797 0.2256
 #> 4: Li-Lee, smoothed over time 0.5586 0.3630 0.3092 0.3074 0.2030
 ```
@@ -494,11 +497,11 @@ gaps[period == 2035, .(measure, model, sex, q0.025 = round(q0.025, 1), q0.5 = ro
 #>         measure                           model    sex q0.025 q0.5 q0.975
 #>  1:         SII                      Lee-Carter female    5.2  9.1   12.9
 #>  2:         SII                          Li-Lee female    4.4  5.5    6.7
-#>  3:         SII Li-Lee, anchored and calibrated female    3.8  5.5    7.4
+#>  3:         SII Li-Lee, anchored and calibrated female    3.8  5.5    7.5
 #>  4:         SII  Ensemble (Li-Lee, random walk) female    4.6  6.5   12.0
 #>  5:         SII                      Lee-Carter   male    6.5  9.4   12.2
 #>  6:         SII                          Li-Lee   male    6.8  7.5    8.2
-#>  7:         SII Li-Lee, anchored and calibrated   male    6.4  7.6    8.6
+#>  7:         SII Li-Lee, anchored and calibrated   male    6.3  7.6    8.6
 #>  8:         SII  Ensemble (Li-Lee, random walk)   male    6.8  8.0   11.5
 #>  9: gap Q5 - Q1                      Lee-Carter female    4.2  7.7   11.2
 #> 10: gap Q5 - Q1                          Li-Lee female    3.7  4.6    5.6
@@ -532,8 +535,10 @@ ggplot(gaps[measure == "gap Q5 - Q1"], aes(period)) +
 plot of chunk plot-gap-forecast
 
 Lee-Carter extrapolates the quintile-specific trends of 2001-2019, so
-the female gap keeps widening, with wide intervals. Li-Lee forecasts a
-female gap below the observed gap of 2019: its deviations from the
+the female gap keeps widening, with wide intervals (and in 0.1% of its
+draws the rates of women in Q1 at 90+ exceed 1 by 2035, as
+[`mt_forecast()`](../reference/mt_forecast.md) warns). Li-Lee forecasts
+a female gap below the observed gap of 2019: its deviations from the
 common trend return towards zero, and its forecasts start from the
 fitted rates of 2019, which for women give a life expectancy 0.4 years
 above the observed one in Q1 and 0.3 years below it in Q5, so the
@@ -554,6 +559,12 @@ x11 <- mt_subset(x, periods = c(2011, NA))
 recent <- lapply(final[c("Lee-Carter", "Li-Lee")], function(sp) {
   mt_forecast(mt_fit(sp, x11), to = 2035, n_draws = 1000, seed = 1)
 })
+#> Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label):
+#> Lee-Carter: forecast death rates above 1 in 0.1% of the draws (strata
+#> female.Q1; ages 90+). The model is unstable here, often because of sparse
+#> counts or a steep trend extrapolated far ahead; consider wider age groups
+#> (mt_regroup()), pooling (li_lee(common_by = )), smoothing (step_smooth()) or an
+#> ensemble.
 e0_recent <- rbindlist(lapply(names(recent), function(n) life_expectancy(recent[[n]])[, model := n]))
 rbind(e0_fc[period == 2035 & model %in% names(recent)][, fitted := "2001-2019"],
       e0_recent[period == 2035][, fitted := "2011-2019"])[

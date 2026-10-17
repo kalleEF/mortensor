@@ -84,10 +84,11 @@ mt_backtest(
 ## Value
 
 An object of class `mt_backtest`: a `data.table` with one row per
-observed cell, origin and horizon: `model`, `origin`, `horizon`, stratum
-columns, `age_lo`, `age_hi`, `period`, `observed` (log rate), `median`,
-`mean`, quantiles, and the scores `crps`, `wis`, `ae` (absolute error of
-the median), `cov50`, `cov80`, `cov95`, `pit` and the MASE scale `scale`
+observed cell, origin and horizon: `model`, `prep` (the preprocessing
+steps, `"none"` without), `origin`, `horizon`, stratum columns,
+`age_lo`, `age_hi`, `period`, `observed` (log rate), `median`, `mean`,
+quantiles, and the scores `crps`, `wis`, `ae` (absolute error of the
+median), `cov50`, `cov80`, `cov95`, `pit` and the MASE scale `scale`
 (mean absolute year-to-year change in the training data), and `target`
 (`"rate"`, or the derived quantity). Summarise with
 [`mt_score()`](mt_score.md).
@@ -110,7 +111,7 @@ mt_score(bt)
 #>                     model       crps        wis        mae     mase     cov50
 #>                    <char>      <num>      <num>      <num>    <num>     <num>
 #> 1: Random walk with drift 0.05507087 0.04923878 0.07405228 1.265727 0.6415493
-#>       cov80     cov95  pit_mean     n
-#>       <num>     <num>     <num> <int>
-#> 1: 0.878169 0.9591549 0.4867606  1420
+#>       cov80     cov95  pit_mean     n     unit
+#>       <num>     <num>     <num> <int>   <char>
+#> 1: 0.878169 0.9591549 0.4867606  1420 log rate
 ```

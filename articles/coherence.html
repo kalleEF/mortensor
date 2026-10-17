@@ -231,6 +231,11 @@ weights move most):</p>
 <td>covariance of the draws, shrunk to its diagonal</td>
 <td>uncertain strata, using their correlation</td>
 </tr>
+<tr class="even">
+<td><code>"proportional"</code></td>
+<td>(none; needs <code>fixed</code> nodes)</td>
+<td>the parts of each fixed node, in proportion to their forecasts</td>
+</tr>
 </tbody>
 </table>
 <p>MinT follows Wickramasuriya et al. (2019), with the covariance of the
@@ -367,6 +372,29 @@ of its own model (CRPS 0.0452 against 0.0440). The quintiles and the
 bottom series absorb the trend of England and become less accurate than
 with plain WLS (bottom series 0.0694 against 0.0677): here the total was
 not better informed than its parts.</p>
+<p><code>method = "proportional"</code> keeps the fixed nodes too, but
+scales the parts below each of them in proportion to their own
+forecasts, draw by draw (top-down allocation, Athanasopoulos et
+al. 2009), instead of moving the most uncertain strata. It never sets a
+part to zero and is the usual choice for causes of death that must add
+up to an all-cause forecast (see “Causes of death by deprivation”); here
+the parts of England are the ten sex-by-quintile strata:</p>
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">rec_prop</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_reconcile.html">mt_reconcile</a></span><span class="op">(</span><span class="va">fc_base</span>, <span class="va">h</span>, method <span class="op">=</span> <span class="st">"proportional"</span>, fixed <span class="op">=</span> <span class="st">"total"</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
+<span><span class="va">e0_prop</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/life_expectancy.html">life_expectancy</a></span><span class="op">(</span><span class="va">rec_prop</span><span class="op">)</span><span class="op">[</span><span class="va">period</span> <span class="op">==</span> <span class="fl">2035</span><span class="op">]</span><span class="op">[</span>, <span class="va">method</span> <span class="op">:=</span> <span class="st">"proportional, England fixed"</span><span class="op">]</span></span>
+<span><span class="fu"><a href="https://rdrr.io/pkg/data.table/man/dcast.data.table.html" class="external-link">dcast</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">rbind</a></span><span class="op">(</span><span class="va">e0_fixed</span>, <span class="va">e0_prop</span>, fill <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">[</span></span>
+<span>  <span class="va">label</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"both.England"</span>, <span class="st">"female.England"</span>, <span class="st">"male.England"</span>, <span class="st">"female.Q1"</span>, <span class="st">"male.Q5"</span><span class="op">)</span>,</span>
+<span>  <span class="fu">.</span><span class="op">(</span><span class="va">label</span>, <span class="va">method</span>, e0 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">q0.5</span>, <span class="fl">2</span><span class="op">)</span><span class="op">)</span><span class="op">]</span>, <span class="va">label</span> <span class="op">~</span> <span class="va">method</span>, value.var <span class="op">=</span> <span class="st">"e0"</span><span class="op">)</span></span>
+<span><span class="co">#&gt;             label proportional, England fixed wls, England fixed</span></span>
+<span><span class="co">#&gt; 1:   both.England                       84.55              84.55</span></span>
+<span><span class="co">#&gt; 2: female.England                       85.90              85.88</span></span>
+<span><span class="co">#&gt; 3:      female.Q1                       81.63              81.65</span></span>
+<span><span class="co">#&gt; 4:   male.England                       83.14              83.12</span></span>
+<span><span class="co">#&gt; 5:        male.Q5                       86.21              86.24</span></span></code></pre></div>
+<p>Here the two give almost the same life expectancies (differences of
+at most 0.03 years). WLS moves each stratum in proportion to the
+variance of its draws, which grows with the level of its rates, so both
+methods move the strata with high rates most.</p>
 </div>
 <div class="section level2">
 <h2 id="what-reconciliation-changes-in-accuracy">What reconciliation changes in accuracy<a class="anchor" aria-label="anchor" href="#what-reconciliation-changes-in-accuracy"></a>
@@ -376,7 +404,7 @@ reconciliation inside each fit (<code><a href="../reference/reconciled.html">rec
 every origin is reconciled on its own training data. A joint Li-Lee
 model with bottom-up aggregation is added as a model that is coherent by
 construction:</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">specs</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>base <span class="op">=</span> <span class="fu"><a href="../reference/lee_carter.html">lee_carter</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span>,</span>
 <span>           <span class="fu"><a href="https://rdrr.io/r/stats/setNames.html" class="external-link">setNames</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span><span class="va">methods</span>, <span class="kw">function</span><span class="op">(</span><span class="va">m</span><span class="op">)</span> <span class="fu"><a href="../reference/reconciled.html">reconciled</a></span><span class="op">(</span><span class="fu"><a href="../reference/lee_carter.html">lee_carter</a></span><span class="op">(</span><span class="op">)</span>, <span class="va">h</span>, method <span class="op">=</span> <span class="va">m</span><span class="op">)</span><span class="op">)</span>, <span class="va">methods</span><span class="op">)</span>,</span>
 <span>           <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="st">"wls, England fixed"</span> <span class="op">=</span> <span class="fu"><a href="../reference/reconciled.html">reconciled</a></span><span class="op">(</span><span class="fu"><a href="../reference/lee_carter.html">lee_carter</a></span><span class="op">(</span><span class="op">)</span>, <span class="va">h</span>, method <span class="op">=</span> <span class="st">"wls"</span>, fixed <span class="op">=</span> <span class="st">"total"</span><span class="op">)</span>,</span>
@@ -437,7 +465,7 @@ sum, so the intervals of the totals are too narrow. By default,
 <code><a href="../reference/reconciled.html">reconciled()</a></code> reorders the draws of separately fitted strata
 so that they move together as the strata did in the training years (an
 empirical copula, <code>dependence = "empirical"</code>):</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">dep</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>empirical <span class="op">=</span> <span class="fu"><a href="../reference/reconciled.html">reconciled</a></span><span class="op">(</span><span class="fu"><a href="../reference/lee_carter.html">lee_carter</a></span><span class="op">(</span><span class="op">)</span>, <span class="va">h</span>, method <span class="op">=</span> <span class="st">"bottom_up"</span><span class="op">)</span>,</span>
 <span>            none <span class="op">=</span> <span class="fu"><a href="../reference/reconciled.html">reconciled</a></span><span class="op">(</span><span class="fu"><a href="../reference/lee_carter.html">lee_carter</a></span><span class="op">(</span><span class="op">)</span>, <span class="va">h</span>, method <span class="op">=</span> <span class="st">"bottom_up"</span>, dependence <span class="op">=</span> <span class="st">"none"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">bd</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/data.table/man/rbindlist.html" class="external-link">rbindlist</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">dep</span><span class="op">)</span>, <span class="kw">function</span><span class="op">(</span><span class="va">n</span><span class="op">)</span> <span class="op">{</span></span>
@@ -475,7 +503,10 @@ still cover the observations (here they covered least).</li>
 <li>
 <code>fixed</code> keeps a node that is trusted more than the others
 (an official total, an all-cause forecast) and lets the rest of the
-hierarchy adapt.</li>
+hierarchy adapt; <code>"proportional"</code> scales the parts of fixed
+nodes without changing their composition. Fixed nodes whose forecasts do
+not add up (a node fixed together with all its parts) cannot all be
+kept; <code><a href="../reference/mt_reconcile.html">mt_reconcile()</a></code> warns.</li>
 <li>Check the choice in a backtest at every level of the hierarchy, as
 above. When the totals are well estimated by their own models, report
 how much coherence changes them. The vignette “Coherent forecasts by
@@ -486,6 +517,9 @@ where small Laender make the differences larger.</li>
 <div class="section level2">
 <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a>
 </h2>
+<p>Athanasopoulos G, Ahmed RA, Hyndman RJ (2009). Hierarchical forecasts
+for Australian domestic tourism. <em>International Journal of
+Forecasting</em> 25: 146-166.</p>
 <p>Wickramasuriya SL, Athanasopoulos G, Hyndman RJ (2019). Optimal
 forecast reconciliation for hierarchical and grouped time series through
 trace minimization. <em>Journal of the American Statistical

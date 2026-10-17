@@ -25,7 +25,9 @@ mt_export(
 
 - x:
 
-  An [mt_draws](mt_draws.md) object or a data frame.
+  An [mt_draws](mt_draws.md) object, an
+  [`mt_decompose()`](mt_decompose.md) result (its summary is written) or
+  a data frame.
 
 - dir:
 

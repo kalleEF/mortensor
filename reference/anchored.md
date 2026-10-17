@@ -63,10 +63,12 @@ A model specification. The fitted object has the offsets in
     after `decay` years (`decay = Inf` keeps the offset, `decay = 0`
     leaves the model's own jump-off).
 
-`years = 1, decay = Inf, shrink = FALSE` is the observed jump-off of
-Lee-Carter models (`lee_carter(jump_off = "observed")`). Models that
-have no fitted rates (random walks, time series per age) start from the
-observed rates already and are left unchanged; in an
+With the default `decay = 10`, forecasts more than ten years ahead are
+those of the model itself; during the fade the offsets add a small
+apparent trend. `years = 1, decay = Inf, shrink = FALSE` is the observed
+jump-off of Lee-Carter models (`lee_carter(jump_off = "observed")`).
+Models that have no fitted rates (random walks, time series per age)
+start from the observed rates already and are left unchanged; in an
 [`ensemble()`](ensemble.md) each draw is anchored with the offset of the
 component it comes from. For [`reconciled()`](reconciled.md) models the
 bottom strata are anchored and the aggregates recomputed, so the draws
@@ -75,12 +77,13 @@ between the last observed or fitted year and the first forecast year.
 
 In backtests on England & Wales men (origins 1996-2001, h = 10),
 anchoring Lee-Carter to the last 3 years (`decay = 10`) lowered the CRPS
-of the first two forecast years from 0.040 to 0.033 and over all
-horizons from 0.0687 to 0.0648; the observed jump-off of the last year
-alone gave 0.0583. On the ONS deprivation data (h = 5), where the last
+of the first two forecast years from 0.040 to 0.032 and over all
+horizons from 0.0687 to 0.0639; the observed jump-off of the last year
+alone gave 0.0583, so for these data with large counts the last year is
+the better anchor. On the ONS deprivation data (h = 5), where the last
 observed rates of the quintiles are noisier, anchoring Li-Lee to 3 years
-improved the CRPS slightly (0.0658 against 0.0666), while the observed
-jump-off of one year made it worse (0.0708).
+improved the CRPS slightly (0.0654 against 0.0666), while the observed
+jump-off of one year made it worse (0.0709).
 
 ## Examples
 

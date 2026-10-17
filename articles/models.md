@@ -36,7 +36,7 @@ stratum `i` (deaths divided by exposure), `D` deaths, `E` exposures.
 | Suppressed cells | raking (iterative proportional fitting; Deming and Stephan 1940) of the missing counts to published totals, within optional bounds | [`mt_fill_suppressed()`](../reference/mt_fill_suppressed.md) |
 | Unknown ages | distributed over the age groups of the same stratum and year in proportion to the known deaths | [`mt_data()`](../reference/mt_data.md) |
 | Ungrouping | penalised composite link model with exposures (Rizzi, Gampe and Eilers 2015) or spline methods | [`mt_ungroup()`](../reference/mt_ungroup.md), [`step_ungroup()`](../reference/mt_prep.md) |
-| Smoothing | over age (Poisson P-splines, Currie, Durban and Eilers 2004; Whittaker; GAM), over time (Whittaker) or the age-period surface (P-splines; quasi-Poisson `te(age, year)` GAM, Wood 2017); age 0 is not smoothed; models are fitted to the smoothed rates, their observation noise, residuals and backtest scales come from the raw rates | [`mt_smooth()`](../reference/mt_smooth.md), [`step_smooth()`](../reference/mt_prep.md), [`mt_smooth_check()`](../reference/mt_smooth_check.md) |
+| Smoothing | over age (Poisson P-splines, Currie, Durban and Eilers 2004; Whittaker; GAM), over time (Whittaker) or the age-period surface (P-splines; quasi-Poisson `te(age, year)` GAM, Wood 2017); age 0 is not smoothed; models are fitted to the smoothed rates, their observation noise, residuals and backtest scales come from the raw rates; smoothing over time narrows the intervals of models with a period index (check coverage, [`calibrated()`](../reference/calibrated.md)) | [`mt_smooth()`](../reference/mt_smooth.md), [`step_smooth()`](../reference/mt_prep.md), [`mt_smooth_check()`](../reference/mt_smooth_check.md) |
 | Zero deaths | models on log rates use 0.5 deaths in a cell without deaths |  |
 
 All preprocessing steps given as `prep` are refitted on every training
@@ -204,11 +204,15 @@ Forecasts of all nodes of a hierarchy (bottom strata and their totals)
 are made to add up draw by draw: bottom-up sums, or projections of the
 base forecasts with weights from their variances (WLS), the shrunk
 covariance (MinT; Wickramasuriya, Athanasopoulos and Hyndman 2019), the
-structure (Hyndman et al. 2011) or equal weights (OLS). Deaths add up
-over every hierarchy variable; exposures add up over variables that
-divide the population and are shared by the levels of variables such as
-causes of death (`additive = "rates"`). The exposures of the forecast
-years are those of the last observed year unless projections are given.
+structure (Hyndman et al. 2011) or equal weights (OLS). Parts that a
+projection would make negative are held at zero and the rest projected
+again, so that `fixed` nodes (a trusted total) are kept; with fixed
+nodes, `"proportional"` instead scales their parts in proportion to
+their forecasts (top-down allocation). Deaths add up over every
+hierarchy variable; exposures add up over variables that divide the
+population and are shared by the levels of variables such as causes of
+death (`additive = "rates"`). The exposures of the forecast years are
+those of the last observed year unless projections are given.
 
 ### Calibration on recent years: `calibrated()`
 

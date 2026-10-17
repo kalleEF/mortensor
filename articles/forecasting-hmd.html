@@ -191,30 +191,34 @@ observations.</p>
 <span>  <span class="va">b</span></span>
 <span><span class="op">}</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label): Random</span></span>
-<span><span class="co">#&gt; walk with drift: forecast death rates above 1 in 35.5% of the draws (strata</span></span>
+<span><span class="co">#&gt; walk with drift: forecast death rates above 1 in 61.5% of the draws (strata</span></span>
 <span><span class="co">#&gt; female, male; ages 95, 96, 97, 98). The model is unstable here, often because</span></span>
-<span><span class="co">#&gt; of sparse counts; consider wider age groups (mt_regroup()), pooling</span></span>
-<span><span class="co">#&gt; (li_lee(common_by = )), smoothing (step_smooth()) or an ensemble.</span></span>
-<span><span class="co">#&gt; Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label): Random</span></span>
-<span><span class="co">#&gt; walk with drift: forecast death rates above 1 in 26.0% of the draws (strata</span></span>
-<span><span class="co">#&gt; female, male; ages 95, 96, 97, 98). The model is unstable here, often because</span></span>
-<span><span class="co">#&gt; of sparse counts; consider wider age groups (mt_regroup()), pooling</span></span>
-<span><span class="co">#&gt; (li_lee(common_by = )), smoothing (step_smooth()) or an ensemble.</span></span>
-<span><span class="co">#&gt; Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label): Random</span></span>
-<span><span class="co">#&gt; walk with drift: forecast death rates above 1 in 27.0% of the draws (strata</span></span>
-<span><span class="co">#&gt; male; ages 97, 98, 99). The model is unstable here, often because of sparse</span></span>
-<span><span class="co">#&gt; counts; consider wider age groups (mt_regroup()), pooling (li_lee(common_by =</span></span>
-<span><span class="co">#&gt; )), smoothing (step_smooth()) or an ensemble.</span></span>
-<span><span class="co">#&gt; Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label): Random</span></span>
-<span><span class="co">#&gt; walk with drift: forecast death rates above 1 in 27.0% of the draws (strata</span></span>
-<span><span class="co">#&gt; male; ages 97, 98, 99). The model is unstable here, often because of sparse</span></span>
-<span><span class="co">#&gt; counts; consider wider age groups (mt_regroup()), pooling (li_lee(common_by =</span></span>
-<span><span class="co">#&gt; )), smoothing (step_smooth()) or an ensemble.</span></span>
-<span><span class="co">#&gt; Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label):</span></span>
-<span><span class="co">#&gt; Tucker3-Direct: forecast death rates above 1 in 0.5% of the draws (strata male;</span></span>
-<span><span class="co">#&gt; ages 99). The model is unstable here, often because of sparse counts; consider</span></span>
-<span><span class="co">#&gt; wider age groups (mt_regroup()), pooling (li_lee(common_by = )), smoothing</span></span>
+<span><span class="co">#&gt; of sparse counts or a steep trend extrapolated far ahead; consider wider age</span></span>
+<span><span class="co">#&gt; groups (mt_regroup()), pooling (li_lee(common_by = )), smoothing</span></span>
 <span><span class="co">#&gt; (step_smooth()) or an ensemble.</span></span>
+<span><span class="co">#&gt; Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label): Random</span></span>
+<span><span class="co">#&gt; walk with drift: forecast death rates above 1 in 45.5% of the draws (strata</span></span>
+<span><span class="co">#&gt; female, male; ages 95, 96, 97, 98). The model is unstable here, often because</span></span>
+<span><span class="co">#&gt; of sparse counts or a steep trend extrapolated far ahead; consider wider age</span></span>
+<span><span class="co">#&gt; groups (mt_regroup()), pooling (li_lee(common_by = )), smoothing</span></span>
+<span><span class="co">#&gt; (step_smooth()) or an ensemble.</span></span>
+<span><span class="co">#&gt; Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label): Random</span></span>
+<span><span class="co">#&gt; walk with drift: forecast death rates above 1 in 52.0% of the draws (strata</span></span>
+<span><span class="co">#&gt; female, male; ages 97, 98, 99, 100+). The model is unstable here, often because</span></span>
+<span><span class="co">#&gt; of sparse counts or a steep trend extrapolated far ahead; consider wider age</span></span>
+<span><span class="co">#&gt; groups (mt_regroup()), pooling (li_lee(common_by = )), smoothing</span></span>
+<span><span class="co">#&gt; (step_smooth()) or an ensemble.</span></span>
+<span><span class="co">#&gt; Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label): Random</span></span>
+<span><span class="co">#&gt; walk with drift: forecast death rates above 1 in 46.0% of the draws (strata</span></span>
+<span><span class="co">#&gt; female, male; ages 97, 98, 99, 100+). The model is unstable here, often because</span></span>
+<span><span class="co">#&gt; of sparse counts or a steep trend extrapolated far ahead; consider wider age</span></span>
+<span><span class="co">#&gt; groups (mt_regroup()), pooling (li_lee(common_by = )), smoothing</span></span>
+<span><span class="co">#&gt; (step_smooth()) or an ensemble.</span></span>
+<span><span class="co">#&gt; Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label):</span></span>
+<span><span class="co">#&gt; Tucker3-Direct: forecast death rates above 1 in 1.0% of the draws (strata male;</span></span>
+<span><span class="co">#&gt; ages 99, 100+). The model is unstable here, often because of sparse counts or a</span></span>
+<span><span class="co">#&gt; steep trend extrapolated far ahead; consider wider age groups (mt_regroup()),</span></span>
+<span><span class="co">#&gt; pooling (li_lee(common_by = )), smoothing (step_smooth()) or an ensemble.</span></span>
 <span><span class="fu"><a href="../reference/mt_score.html">mt_score</a></span><span class="op">(</span><span class="va">bt</span>, by <span class="op">=</span> <span class="st">"model"</span><span class="op">)</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/order.html" class="external-link">order</a></span><span class="op">(</span><span class="va">crps</span><span class="op">)</span><span class="op">]</span></span>
 <span><span class="co">#&gt;                             model       crps        wis        mae     mase</span></span>
 <span><span class="co">#&gt;                            &lt;char&gt;      &lt;num&gt;      &lt;num&gt;      &lt;num&gt;    &lt;num&gt;</span></span>
@@ -222,12 +226,12 @@ observations.</p>
 <span><span class="co">#&gt; 2: Lee-Carter (observed jump-off) 0.05417153 0.04857804 0.07400185 1.447016</span></span>
 <span><span class="co">#&gt; 3:                     Lee-Carter 0.06049163 0.05398945 0.08532748 1.651223</span></span>
 <span><span class="co">#&gt; 4:         Random walk with drift 0.06156062 0.05523146 0.07678813 1.490622</span></span>
-<span><span class="co">#&gt;        cov50     cov80     cov95  pit_mean     n</span></span>
-<span><span class="co">#&gt;        &lt;num&gt;     &lt;num&gt;     &lt;num&gt;     &lt;num&gt; &lt;int&gt;</span></span>
-<span><span class="co">#&gt; 1: 0.6140845 0.8691901 0.9503521 0.4557301  5680</span></span>
-<span><span class="co">#&gt; 2: 0.5855634 0.8528169 0.9544014 0.4540421  5680</span></span>
-<span><span class="co">#&gt; 3: 0.5031690 0.7980634 0.9459507 0.5127234  5680</span></span>
-<span><span class="co">#&gt; 4: 0.7130282 0.9336268 0.9839789 0.4659921  5680</span></span></code></pre></div>
+<span><span class="co">#&gt;        cov50     cov80     cov95  pit_mean     n     unit</span></span>
+<span><span class="co">#&gt;        &lt;num&gt;     &lt;num&gt;     &lt;num&gt;     &lt;num&gt; &lt;int&gt;   &lt;char&gt;</span></span>
+<span><span class="co">#&gt; 1: 0.6140845 0.8691901 0.9503521 0.4557301  5680 log rate</span></span>
+<span><span class="co">#&gt; 2: 0.5855634 0.8528169 0.9544014 0.4540421  5680 log rate</span></span>
+<span><span class="co">#&gt; 3: 0.5031690 0.7980634 0.9459507 0.5127234  5680 log rate</span></span>
+<span><span class="co">#&gt; 4: 0.7130282 0.9336268 0.9839789 0.4659921  5680 log rate</span></span></code></pre></div>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/mt_plot.html">mt_plot_coverage</a></span><span class="op">(</span><span class="va">bt</span><span class="op">)</span></span></code></pre></div>
 <p><img src="forecasting-hmd_files/figure-html/unnamed-chunk-6-1.png" class="r-plt" alt="" width="672"></p>
@@ -270,26 +274,40 @@ forecast.</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">ens</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ensemble.html">ensemble</a></span><span class="op">(</span>lc <span class="op">=</span> <span class="fu"><a href="../reference/lee_carter.html">lee_carter</a></span><span class="op">(</span>jump_off <span class="op">=</span> <span class="st">"observed"</span><span class="op">)</span>, t3 <span class="op">=</span> <span class="fu"><a href="../reference/tucker3.html">tucker3</a></span><span class="op">(</span><span class="op">)</span>, rw <span class="op">=</span> <span class="fu"><a href="../reference/rwd.html">rwd</a></span><span class="op">(</span><span class="op">)</span>, weights <span class="op">=</span> <span class="st">"crps"</span><span class="op">)</span></span>
 <span><span class="va">bt_ens</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_backtest.html">mt_backtest</a></span><span class="op">(</span><span class="va">ens</span>, <span class="va">fr</span>, origins <span class="op">=</span> <span class="va">origins</span>, h <span class="op">=</span> <span class="fl">10</span>, n_draws <span class="op">=</span> <span class="fl">200</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label):</span></span>
+<span><span class="co">#&gt; Tucker3-Direct: forecast death rates above 1 in 2.0% of the draws (strata male;</span></span>
+<span><span class="co">#&gt; ages 100+). The model is unstable here, often because of sparse counts or a</span></span>
+<span><span class="co">#&gt; steep trend extrapolated far ahead; consider wider age groups (mt_regroup()),</span></span>
+<span><span class="co">#&gt; pooling (li_lee(common_by = )), smoothing (step_smooth()) or an ensemble.</span></span>
 <span><span class="co">#&gt; Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label): Random</span></span>
-<span><span class="co">#&gt; walk with drift: forecast death rates above 1 in 27.0% of the draws (strata</span></span>
-<span><span class="co">#&gt; female, male; ages 97, 98, 99). The model is unstable here, often because of</span></span>
-<span><span class="co">#&gt; sparse counts; consider wider age groups (mt_regroup()), pooling</span></span>
-<span><span class="co">#&gt; (li_lee(common_by = )), smoothing (step_smooth()) or an ensemble.</span></span>
+<span><span class="co">#&gt; walk with drift: forecast death rates above 1 in 57.0% of the draws (strata</span></span>
+<span><span class="co">#&gt; female, male; ages 97, 98, 99, 100+). The model is unstable here, often because</span></span>
+<span><span class="co">#&gt; of sparse counts or a steep trend extrapolated far ahead; consider wider age</span></span>
+<span><span class="co">#&gt; groups (mt_regroup()), pooling (li_lee(common_by = )), smoothing</span></span>
+<span><span class="co">#&gt; (step_smooth()) or an ensemble.</span></span>
+<span><span class="co">#&gt; Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label):</span></span>
+<span><span class="co">#&gt; Tucker3-Direct: forecast death rates above 1 in 0.5% of the draws (strata male;</span></span>
+<span><span class="co">#&gt; ages 100+). The model is unstable here, often because of sparse counts or a</span></span>
+<span><span class="co">#&gt; steep trend extrapolated far ahead; consider wider age groups (mt_regroup()),</span></span>
+<span><span class="co">#&gt; pooling (li_lee(common_by = )), smoothing (step_smooth()) or an ensemble.</span></span>
 <span><span class="co">#&gt; Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label): Random</span></span>
-<span><span class="co">#&gt; walk with drift: forecast death rates above 1 in 27.5% of the draws (strata</span></span>
-<span><span class="co">#&gt; female, male; ages 98, 99). The model is unstable here, often because of sparse</span></span>
-<span><span class="co">#&gt; counts; consider wider age groups (mt_regroup()), pooling (li_lee(common_by =</span></span>
-<span><span class="co">#&gt; )), smoothing (step_smooth()) or an ensemble.</span></span>
+<span><span class="co">#&gt; walk with drift: forecast death rates above 1 in 47.5% of the draws (strata</span></span>
+<span><span class="co">#&gt; female, male; ages 98, 99, 100+). The model is unstable here, often because of</span></span>
+<span><span class="co">#&gt; sparse counts or a steep trend extrapolated far ahead; consider wider age</span></span>
+<span><span class="co">#&gt; groups (mt_regroup()), pooling (li_lee(common_by = )), smoothing</span></span>
+<span><span class="co">#&gt; (step_smooth()) or an ensemble.</span></span>
 <span><span class="co">#&gt; Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label): Random</span></span>
-<span><span class="co">#&gt; walk with drift: forecast death rates above 1 in 23.5% of the draws (strata</span></span>
+<span><span class="co">#&gt; walk with drift: forecast death rates above 1 in 52.0% of the draws (strata</span></span>
 <span><span class="co">#&gt; female, male; ages 96, 97, 98, 99). The model is unstable here, often because</span></span>
-<span><span class="co">#&gt; of sparse counts; consider wider age groups (mt_regroup()), pooling</span></span>
-<span><span class="co">#&gt; (li_lee(common_by = )), smoothing (step_smooth()) or an ensemble.</span></span>
+<span><span class="co">#&gt; of sparse counts or a steep trend extrapolated far ahead; consider wider age</span></span>
+<span><span class="co">#&gt; groups (mt_regroup()), pooling (li_lee(common_by = )), smoothing</span></span>
+<span><span class="co">#&gt; (step_smooth()) or an ensemble.</span></span>
 <span><span class="co">#&gt; Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label): Random</span></span>
-<span><span class="co">#&gt; walk with drift: forecast death rates above 1 in 30.5% of the draws (strata</span></span>
+<span><span class="co">#&gt; walk with drift: forecast death rates above 1 in 46.5% of the draws (strata</span></span>
 <span><span class="co">#&gt; female, male; ages 96, 97, 98, 99). The model is unstable here, often because</span></span>
-<span><span class="co">#&gt; of sparse counts; consider wider age groups (mt_regroup()), pooling</span></span>
-<span><span class="co">#&gt; (li_lee(common_by = )), smoothing (step_smooth()) or an ensemble.</span></span>
+<span><span class="co">#&gt; of sparse counts or a steep trend extrapolated far ahead; consider wider age</span></span>
+<span><span class="co">#&gt; groups (mt_regroup()), pooling (li_lee(common_by = )), smoothing</span></span>
+<span><span class="co">#&gt; (step_smooth()) or an ensemble.</span></span>
 <span><span class="fu"><a href="../reference/mt_score.html">mt_score</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">rbind</a></span><span class="op">(</span><span class="va">bt</span>, <span class="va">bt_ens</span><span class="op">)</span>, by <span class="op">=</span> <span class="st">"model"</span><span class="op">)</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/order.html" class="external-link">order</a></span><span class="op">(</span><span class="va">crps</span><span class="op">)</span><span class="op">]</span></span>
 <span><span class="co">#&gt;                             model       crps        wis        mae     mase</span></span>
 <span><span class="co">#&gt;                            &lt;char&gt;      &lt;num&gt;      &lt;num&gt;      &lt;num&gt;    &lt;num&gt;</span></span>
@@ -298,13 +316,13 @@ forecast.</p>
 <span><span class="co">#&gt; 3: Lee-Carter (observed jump-off) 0.05417153 0.04857804 0.07400185 1.447016</span></span>
 <span><span class="co">#&gt; 4:                     Lee-Carter 0.06049163 0.05398945 0.08532748 1.651223</span></span>
 <span><span class="co">#&gt; 5:         Random walk with drift 0.06156062 0.05523146 0.07678813 1.490622</span></span>
-<span><span class="co">#&gt;        cov50     cov80     cov95  pit_mean     n</span></span>
-<span><span class="co">#&gt;        &lt;num&gt;     &lt;num&gt;     &lt;num&gt;     &lt;num&gt; &lt;int&gt;</span></span>
-<span><span class="co">#&gt; 1: 0.6686620 0.9132042 0.9786972 0.4587736  5680</span></span>
-<span><span class="co">#&gt; 2: 0.6140845 0.8691901 0.9503521 0.4557301  5680</span></span>
-<span><span class="co">#&gt; 3: 0.5855634 0.8528169 0.9544014 0.4540421  5680</span></span>
-<span><span class="co">#&gt; 4: 0.5031690 0.7980634 0.9459507 0.5127234  5680</span></span>
-<span><span class="co">#&gt; 5: 0.7130282 0.9336268 0.9839789 0.4659921  5680</span></span></code></pre></div>
+<span><span class="co">#&gt;        cov50     cov80     cov95  pit_mean     n     unit</span></span>
+<span><span class="co">#&gt;        &lt;num&gt;     &lt;num&gt;     &lt;num&gt;     &lt;num&gt; &lt;int&gt;   &lt;char&gt;</span></span>
+<span><span class="co">#&gt; 1: 0.6686620 0.9132042 0.9786972 0.4587736  5680 log rate</span></span>
+<span><span class="co">#&gt; 2: 0.6140845 0.8691901 0.9503521 0.4557301  5680 log rate</span></span>
+<span><span class="co">#&gt; 3: 0.5855634 0.8528169 0.9544014 0.4540421  5680 log rate</span></span>
+<span><span class="co">#&gt; 4: 0.5031690 0.7980634 0.9459507 0.5127234  5680 log rate</span></span>
+<span><span class="co">#&gt; 5: 0.7130282 0.9336268 0.9839789 0.4659921  5680 log rate</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="forecast-to-2030">Forecast to 2030<a class="anchor" aria-label="anchor" href="#forecast-to-2030"></a>
@@ -315,11 +333,17 @@ forecast.</p>
 <span><span class="co">#&gt;        lc        t3        rw </span></span>
 <span><span class="co">#&gt; 0.3666762 0.2896811 0.3436428</span></span>
 <span><span class="va">fc</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_forecast.html">mt_forecast</a></span><span class="op">(</span><span class="va">fit_ens</span>, to <span class="op">=</span> <span class="fl">2030</span>, n_draws <span class="op">=</span> <span class="fl">1000</span>, seed <span class="op">=</span> <span class="fl">2026</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label):</span></span>
+<span><span class="co">#&gt; Tucker3-Direct: forecast death rates above 1 in 0.1% of the draws (strata male;</span></span>
+<span><span class="co">#&gt; ages 100+). The model is unstable here, often because of sparse counts or a</span></span>
+<span><span class="co">#&gt; steep trend extrapolated far ahead; consider wider age groups (mt_regroup()),</span></span>
+<span><span class="co">#&gt; pooling (li_lee(common_by = )), smoothing (step_smooth()) or an ensemble.</span></span>
 <span><span class="co">#&gt; Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label): Random</span></span>
-<span><span class="co">#&gt; walk with drift: forecast death rates above 1 in 41.8% of the draws (strata</span></span>
+<span><span class="co">#&gt; walk with drift: forecast death rates above 1 in 63.9% of the draws (strata</span></span>
 <span><span class="co">#&gt; female, male; ages 95, 96, 97, 98). The model is unstable here, often because</span></span>
-<span><span class="co">#&gt; of sparse counts; consider wider age groups (mt_regroup()), pooling</span></span>
-<span><span class="co">#&gt; (li_lee(common_by = )), smoothing (step_smooth()) or an ensemble.</span></span>
+<span><span class="co">#&gt; of sparse counts or a steep trend extrapolated far ahead; consider wider age</span></span>
+<span><span class="co">#&gt; groups (mt_regroup()), pooling (li_lee(common_by = )), smoothing</span></span>
+<span><span class="co">#&gt; (step_smooth()) or an ensemble.</span></span>
 <span><span class="va">fc</span></span>
 <span><span class="co">#&gt; &lt;mt_draws&gt; Ensemble (lc, t3, rw); origin 2006; 71 ages x 24 periods (2007-2030) x 2 strata x 1000 draws</span></span></code></pre></div>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
@@ -363,74 +387,80 @@ of mortality improvement changes, as it did for British men from the
 <span><span class="co">#&gt; Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label): Random</span></span>
 <span><span class="co">#&gt; walk with drift: forecast death rates above 1 in 54.0% of the draws (strata</span></span>
 <span><span class="co">#&gt; male; ages 97, 98, 99, 100). The model is unstable here, often because of</span></span>
-<span><span class="co">#&gt; sparse counts; consider wider age groups (mt_regroup()), pooling</span></span>
-<span><span class="co">#&gt; (li_lee(common_by = )), smoothing (step_smooth()) or an ensemble.</span></span>
+<span><span class="co">#&gt; sparse counts or a steep trend extrapolated far ahead; consider wider age</span></span>
+<span><span class="co">#&gt; groups (mt_regroup()), pooling (li_lee(common_by = )), smoothing</span></span>
+<span><span class="co">#&gt; (step_smooth()) or an ensemble.</span></span>
 <span><span class="co">#&gt; Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label): Random</span></span>
 <span><span class="co">#&gt; walk with drift: forecast death rates above 1 in 32.0% of the draws (strata</span></span>
 <span><span class="co">#&gt; male; ages 98, 99, 100). The model is unstable here, often because of sparse</span></span>
-<span><span class="co">#&gt; counts; consider wider age groups (mt_regroup()), pooling (li_lee(common_by =</span></span>
-<span><span class="co">#&gt; )), smoothing (step_smooth()) or an ensemble.</span></span>
+<span><span class="co">#&gt; counts or a steep trend extrapolated far ahead; consider wider age groups</span></span>
+<span><span class="co">#&gt; (mt_regroup()), pooling (li_lee(common_by = )), smoothing (step_smooth()) or an</span></span>
+<span><span class="co">#&gt; ensemble.</span></span>
 <span><span class="co">#&gt; Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label): Random</span></span>
 <span><span class="co">#&gt; walk with drift: forecast death rates above 1 in 30.0% of the draws (strata</span></span>
 <span><span class="co">#&gt; male; ages 97, 98, 99, 100). The model is unstable here, often because of</span></span>
-<span><span class="co">#&gt; sparse counts; consider wider age groups (mt_regroup()), pooling</span></span>
-<span><span class="co">#&gt; (li_lee(common_by = )), smoothing (step_smooth()) or an ensemble.</span></span>
+<span><span class="co">#&gt; sparse counts or a steep trend extrapolated far ahead; consider wider age</span></span>
+<span><span class="co">#&gt; groups (mt_regroup()), pooling (li_lee(common_by = )), smoothing</span></span>
+<span><span class="co">#&gt; (step_smooth()) or an ensemble.</span></span>
 <span><span class="co">#&gt; Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label): Random</span></span>
 <span><span class="co">#&gt; walk with drift: forecast death rates above 1 in 42.5% of the draws (strata</span></span>
 <span><span class="co">#&gt; male; ages 98, 99, 100). The model is unstable here, often because of sparse</span></span>
-<span><span class="co">#&gt; counts; consider wider age groups (mt_regroup()), pooling (li_lee(common_by =</span></span>
-<span><span class="co">#&gt; )), smoothing (step_smooth()) or an ensemble.</span></span>
+<span><span class="co">#&gt; counts or a steep trend extrapolated far ahead; consider wider age groups</span></span>
+<span><span class="co">#&gt; (mt_regroup()), pooling (li_lee(common_by = )), smoothing (step_smooth()) or an</span></span>
+<span><span class="co">#&gt; ensemble.</span></span>
 <span><span class="co">#&gt; Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label): Random</span></span>
 <span><span class="co">#&gt; walk with drift: forecast death rates above 1 in 35.0% of the draws (strata</span></span>
 <span><span class="co">#&gt; male; ages 97, 98, 99, 100). The model is unstable here, often because of</span></span>
-<span><span class="co">#&gt; sparse counts; consider wider age groups (mt_regroup()), pooling</span></span>
-<span><span class="co">#&gt; (li_lee(common_by = )), smoothing (step_smooth()) or an ensemble.</span></span>
+<span><span class="co">#&gt; sparse counts or a steep trend extrapolated far ahead; consider wider age</span></span>
+<span><span class="co">#&gt; groups (mt_regroup()), pooling (li_lee(common_by = )), smoothing</span></span>
+<span><span class="co">#&gt; (step_smooth()) or an ensemble.</span></span>
 <span><span class="co">#&gt; Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label): Random</span></span>
 <span><span class="co">#&gt; walk with drift: forecast death rates above 1 in 33.5% of the draws (strata</span></span>
 <span><span class="co">#&gt; male; ages 98, 99, 100). The model is unstable here, often because of sparse</span></span>
-<span><span class="co">#&gt; counts; consider wider age groups (mt_regroup()), pooling (li_lee(common_by =</span></span>
-<span><span class="co">#&gt; )), smoothing (step_smooth()) or an ensemble.</span></span>
+<span><span class="co">#&gt; counts or a steep trend extrapolated far ahead; consider wider age groups</span></span>
+<span><span class="co">#&gt; (mt_regroup()), pooling (li_lee(common_by = )), smoothing (step_smooth()) or an</span></span>
+<span><span class="co">#&gt; ensemble.</span></span>
 <span><span class="co">#&gt; Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label):</span></span>
 <span><span class="co">#&gt; Tucker3-Direct: forecast death rates above 1 in 9.5% of the draws (strata male;</span></span>
-<span><span class="co">#&gt; ages 100). The model is unstable here, often because of sparse counts; consider</span></span>
-<span><span class="co">#&gt; wider age groups (mt_regroup()), pooling (li_lee(common_by = )), smoothing</span></span>
-<span><span class="co">#&gt; (step_smooth()) or an ensemble.</span></span>
+<span><span class="co">#&gt; ages 100). The model is unstable here, often because of sparse counts or a</span></span>
+<span><span class="co">#&gt; steep trend extrapolated far ahead; consider wider age groups (mt_regroup()),</span></span>
+<span><span class="co">#&gt; pooling (li_lee(common_by = )), smoothing (step_smooth()) or an ensemble.</span></span>
 <span><span class="co">#&gt; Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label):</span></span>
 <span><span class="co">#&gt; Tucker3-Direct: forecast death rates above 1 in 2.5% of the draws (strata male;</span></span>
-<span><span class="co">#&gt; ages 100). The model is unstable here, often because of sparse counts; consider</span></span>
-<span><span class="co">#&gt; wider age groups (mt_regroup()), pooling (li_lee(common_by = )), smoothing</span></span>
-<span><span class="co">#&gt; (step_smooth()) or an ensemble.</span></span>
+<span><span class="co">#&gt; ages 100). The model is unstable here, often because of sparse counts or a</span></span>
+<span><span class="co">#&gt; steep trend extrapolated far ahead; consider wider age groups (mt_regroup()),</span></span>
+<span><span class="co">#&gt; pooling (li_lee(common_by = )), smoothing (step_smooth()) or an ensemble.</span></span>
 <span><span class="co">#&gt; Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label):</span></span>
 <span><span class="co">#&gt; Tucker3-Direct: forecast death rates above 1 in 1.5% of the draws (strata male;</span></span>
-<span><span class="co">#&gt; ages 100). The model is unstable here, often because of sparse counts; consider</span></span>
-<span><span class="co">#&gt; wider age groups (mt_regroup()), pooling (li_lee(common_by = )), smoothing</span></span>
-<span><span class="co">#&gt; (step_smooth()) or an ensemble.</span></span>
+<span><span class="co">#&gt; ages 100). The model is unstable here, often because of sparse counts or a</span></span>
+<span><span class="co">#&gt; steep trend extrapolated far ahead; consider wider age groups (mt_regroup()),</span></span>
+<span><span class="co">#&gt; pooling (li_lee(common_by = )), smoothing (step_smooth()) or an ensemble.</span></span>
 <span><span class="co">#&gt; Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label):</span></span>
 <span><span class="co">#&gt; Tucker3-Direct: forecast death rates above 1 in 2.0% of the draws (strata male;</span></span>
-<span><span class="co">#&gt; ages 100). The model is unstable here, often because of sparse counts; consider</span></span>
-<span><span class="co">#&gt; wider age groups (mt_regroup()), pooling (li_lee(common_by = )), smoothing</span></span>
-<span><span class="co">#&gt; (step_smooth()) or an ensemble.</span></span>
+<span><span class="co">#&gt; ages 100). The model is unstable here, often because of sparse counts or a</span></span>
+<span><span class="co">#&gt; steep trend extrapolated far ahead; consider wider age groups (mt_regroup()),</span></span>
+<span><span class="co">#&gt; pooling (li_lee(common_by = )), smoothing (step_smooth()) or an ensemble.</span></span>
 <span><span class="co">#&gt; Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label):</span></span>
 <span><span class="co">#&gt; Tucker3-Direct: forecast death rates above 1 in 4.5% of the draws (strata male;</span></span>
-<span><span class="co">#&gt; ages 100). The model is unstable here, often because of sparse counts; consider</span></span>
-<span><span class="co">#&gt; wider age groups (mt_regroup()), pooling (li_lee(common_by = )), smoothing</span></span>
-<span><span class="co">#&gt; (step_smooth()) or an ensemble.</span></span>
+<span><span class="co">#&gt; ages 100). The model is unstable here, often because of sparse counts or a</span></span>
+<span><span class="co">#&gt; steep trend extrapolated far ahead; consider wider age groups (mt_regroup()),</span></span>
+<span><span class="co">#&gt; pooling (li_lee(common_by = )), smoothing (step_smooth()) or an ensemble.</span></span>
 <span><span class="co">#&gt; Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label):</span></span>
 <span><span class="co">#&gt; Tucker3-Direct: forecast death rates above 1 in 1.0% of the draws (strata male;</span></span>
-<span><span class="co">#&gt; ages 100). The model is unstable here, often because of sparse counts; consider</span></span>
-<span><span class="co">#&gt; wider age groups (mt_regroup()), pooling (li_lee(common_by = )), smoothing</span></span>
-<span><span class="co">#&gt; (step_smooth()) or an ensemble.</span></span>
+<span><span class="co">#&gt; ages 100). The model is unstable here, often because of sparse counts or a</span></span>
+<span><span class="co">#&gt; steep trend extrapolated far ahead; consider wider age groups (mt_regroup()),</span></span>
+<span><span class="co">#&gt; pooling (li_lee(common_by = )), smoothing (step_smooth()) or an ensemble.</span></span>
 <span><span class="fu"><a href="../reference/mt_score.html">mt_score</a></span><span class="op">(</span><span class="va">bt_ew</span>, by <span class="op">=</span> <span class="st">"model"</span><span class="op">)</span></span>
 <span><span class="co">#&gt;                     model       crps        wis        mae     mase     cov50</span></span>
 <span><span class="co">#&gt;                    &lt;char&gt;      &lt;num&gt;      &lt;num&gt;      &lt;num&gt;    &lt;num&gt;     &lt;num&gt;</span></span>
 <span><span class="co">#&gt; 1:             Lee-Carter 0.06868347 0.06196427 0.09468173 2.276649 0.2814554</span></span>
 <span><span class="co">#&gt; 2: Random walk with drift 0.05859945 0.05244993 0.07524011 1.806958 0.6150235</span></span>
 <span><span class="co">#&gt; 3:         Tucker3-Direct 0.06453556 0.05827886 0.08698994 2.146668 0.4223005</span></span>
-<span><span class="co">#&gt;        cov80     cov95  pit_mean     n</span></span>
-<span><span class="co">#&gt;        &lt;num&gt;     &lt;num&gt;     &lt;num&gt; &lt;int&gt;</span></span>
-<span><span class="co">#&gt; 1: 0.5455399 0.7460094 0.4235839  4260</span></span>
-<span><span class="co">#&gt; 2: 0.8516432 0.9666667 0.3779308  4260</span></span>
-<span><span class="co">#&gt; 3: 0.6685446 0.8117371 0.3628478  4260</span></span></code></pre></div>
+<span><span class="co">#&gt;        cov80     cov95  pit_mean     n     unit</span></span>
+<span><span class="co">#&gt;        &lt;num&gt;     &lt;num&gt;     &lt;num&gt; &lt;int&gt;   &lt;char&gt;</span></span>
+<span><span class="co">#&gt; 1: 0.5455399 0.7460094 0.4235839  4260 log rate</span></span>
+<span><span class="co">#&gt; 2: 0.8516432 0.9666667 0.3779308  4260 log rate</span></span>
+<span><span class="co">#&gt; 3: 0.6685446 0.8117371 0.3628478  4260 log rate</span></span></code></pre></div>
 <p>Backtests like this one are the reason mortensor reports interval
 coverage alongside accuracy: a model can rank well on point accuracy and
 still give misleading uncertainty.</p>
@@ -447,12 +477,13 @@ Maindonald and Smith 2002);</li>
 <li>
 <code><a href="../reference/anchored.html">anchored()</a></code> starts the forecast at the observed level of
 the last three years instead of the fitted rates;</li>
-<li>smoothing over time before fitting
-(<code>step_smooth(along = "period")</code>) with
+<li>
 <code><a href="../reference/calibrated.html">calibrated()</a></code>, which fits the spread of the draws to the
-forecast errors of the last ten training years (smoothing alone would
-make the intervals narrower still, because the smoothed period index
-varies less).</li>
+forecast errors of the last ten training years;</li>
+<li>smoothing over time before fitting
+(<code>step_smooth(along = "period")</code>) together with
+<code><a href="../reference/calibrated.html">calibrated()</a></code> (smoothing alone makes the intervals narrower
+still, because the smoothed period index varies less).</li>
 </ul>
 <p>The backtest also scores life expectancy at age 30
 (<code>quantities</code>), the quantity most reports are about:</p>
@@ -460,6 +491,7 @@ varies less).</li>
 <code class="sourceCode R"><span><span class="va">smooth_t</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_prep.html">mt_prep</a></span><span class="op">(</span><span class="fu"><a href="../reference/mt_prep.html">step_smooth</a></span><span class="op">(</span>along <span class="op">=</span> <span class="st">"period"</span>, method <span class="op">=</span> <span class="st">"whittaker"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">variants</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="fu"><a href="../reference/lee_carter.html">lee_carter</a></span><span class="op">(</span>choose_period <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>, <span class="cn">NULL</span><span class="op">)</span>,</span>
 <span>                 <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="fu"><a href="../reference/anchored.html">anchored</a></span><span class="op">(</span><span class="fu"><a href="../reference/lee_carter.html">lee_carter</a></span><span class="op">(</span><span class="op">)</span>, years <span class="op">=</span> <span class="fl">3</span><span class="op">)</span>, <span class="cn">NULL</span><span class="op">)</span>,</span>
+<span>                 <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="fu"><a href="../reference/calibrated.html">calibrated</a></span><span class="op">(</span><span class="fu"><a href="../reference/lee_carter.html">lee_carter</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span>, <span class="cn">NULL</span><span class="op">)</span>,</span>
 <span>                 <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="fu"><a href="../reference/calibrated.html">calibrated</a></span><span class="op">(</span><span class="fu"><a href="../reference/lee_carter.html">lee_carter</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span>, <span class="va">smooth_t</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">bt_v</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/data.table/man/rbindlist.html" class="external-link">rbindlist</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="fu"><a href="../reference/mt_backtest.html">mt_backtest</a></span><span class="op">(</span><span class="fu"><a href="../reference/lee_carter.html">lee_carter</a></span><span class="op">(</span><span class="op">)</span>, <span class="va">ew</span>, origins <span class="op">=</span> <span class="fl">1996</span><span class="op">:</span><span class="fl">2001</span>, h <span class="op">=</span> <span class="fl">10</span>, n_draws <span class="op">=</span> <span class="fl">200</span>,</span>
 <span>                                     quantities <span class="op">=</span> <span class="st">"life_expectancy"</span><span class="op">)</span><span class="op">)</span>,</span>
@@ -467,26 +499,30 @@ varies less).</li>
 <span>                      <span class="fu"><a href="../reference/mt_backtest.html">mt_backtest</a></span><span class="op">(</span><span class="va">v</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span>, <span class="va">ew</span>, origins <span class="op">=</span> <span class="fl">1996</span><span class="op">:</span><span class="fl">2001</span>, h <span class="op">=</span> <span class="fl">10</span>, n_draws <span class="op">=</span> <span class="fl">200</span>, prep <span class="op">=</span> <span class="va">v</span><span class="op">[[</span><span class="fl">2</span><span class="op">]</span><span class="op">]</span>,</span>
 <span>                                  quantities <span class="op">=</span> <span class="st">"life_expectancy"</span><span class="op">)</span></span>
 <span>                    <span class="op">}</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="va">bt_v</span><span class="op">[</span>, <span class="va">model</span> <span class="op">:=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Lee-Carter"</span>, <span class="st">"chosen period"</span>, <span class="st">"anchored"</span>, <span class="st">"smoothed + calibrated"</span><span class="op">)</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/match.html" class="external-link">match</a></span><span class="op">(</span><span class="va">model</span>, <span class="fu"><a href="https://rdrr.io/r/base/unique.html" class="external-link">unique</a></span><span class="op">(</span><span class="va">model</span><span class="op">)</span><span class="op">)</span><span class="op">]</span><span class="op">]</span></span>
+<span><span class="va">bt_v</span><span class="op">[</span>, <span class="va">model</span> <span class="op">:=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="va">model</span>, <span class="va">prep</span><span class="op">)</span><span class="op">]</span></span>
+<span><span class="va">bt_v</span><span class="op">[</span>, <span class="va">model</span> <span class="op">:=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Lee-Carter"</span>, <span class="st">"chosen period"</span>, <span class="st">"anchored"</span>, <span class="st">"calibrated"</span>,</span>
+<span>                  <span class="st">"smoothed + calibrated"</span><span class="op">)</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/match.html" class="external-link">match</a></span><span class="op">(</span><span class="va">model</span>, <span class="fu"><a href="https://rdrr.io/r/base/unique.html" class="external-link">unique</a></span><span class="op">(</span><span class="va">model</span><span class="op">)</span><span class="op">)</span><span class="op">]</span><span class="op">]</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/merge.html" class="external-link">merge</a></span><span class="op">(</span><span class="fu"><a href="../reference/mt_score.html">mt_score</a></span><span class="op">(</span><span class="va">bt_v</span><span class="op">)</span><span class="op">[</span>, <span class="fu">.</span><span class="op">(</span><span class="va">model</span>, <span class="va">crps</span>, <span class="va">cov95</span><span class="op">)</span><span class="op">]</span>,</span>
 <span>      <span class="fu"><a href="../reference/mt_score.html">mt_score</a></span><span class="op">(</span><span class="va">bt_v</span>, target <span class="op">=</span> <span class="st">"life_expectancy"</span><span class="op">)</span><span class="op">[</span>, <span class="fu">.</span><span class="op">(</span><span class="va">model</span>, crps_e30 <span class="op">=</span> <span class="va">crps</span>, cov95_e30 <span class="op">=</span> <span class="va">cov95</span><span class="op">)</span><span class="op">]</span>, by <span class="op">=</span> <span class="st">"model"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Key: &lt;model&gt;</span></span>
 <span><span class="co">#&gt;                    model       crps     cov95  crps_e30 cov95_e30</span></span>
 <span><span class="co">#&gt;                   &lt;char&gt;      &lt;num&gt;     &lt;num&gt;     &lt;num&gt;     &lt;num&gt;</span></span>
 <span><span class="co">#&gt; 1:            Lee-Carter 0.06868347 0.7460094 0.4734708 0.9166667</span></span>
-<span><span class="co">#&gt; 2:              anchored 0.06475877 0.7701878 0.4739414 0.9500000</span></span>
-<span><span class="co">#&gt; 3:         chosen period 0.06147190 0.6887324 0.3179468 1.0000000</span></span>
-<span><span class="co">#&gt; 4: smoothed + calibrated 0.06575973 0.8734742 0.4418967 1.0000000</span></span></code></pre></div>
+<span><span class="co">#&gt; 2:              anchored 0.06385977 0.7737089 0.4764000 0.9000000</span></span>
+<span><span class="co">#&gt; 3:            calibrated 0.06569789 0.8772300 0.4419250 1.0000000</span></span>
+<span><span class="co">#&gt; 4:         chosen period 0.06147190 0.6887324 0.3179468 1.0000000</span></span>
+<span><span class="co">#&gt; 5: smoothed + calibrated 0.06575973 0.8734742 0.4418967 1.0000000</span></span></code></pre></div>
 <p><code>crps_e30</code> is in years of life expectancy. For the rates,
-all three modifications are more accurate than Lee-Carter fitted to all
-years (CRPS 0.061 to 0.066 against 0.069), and only the calibration
-brings the 95% coverage close to nominal (0.87 against 0.75). For life
-expectancy at 30 the chosen period gives the largest gain (0.32 against
-0.47 years), anchoring changes nothing, and smoothing with calibration
-helps a little. The coverage of life expectancy is at or above 95% for
-all four: the rates fall outside their intervals mostly through
-deviations of single ages, which largely cancel in life expectancy. With
-six origins of one population these differences are indicative only.</p>
+all four modifications are more accurate than Lee-Carter fitted to all
+years (CRPS 0.061 to 0.066 against 0.069), and only calibration brings
+the 95% coverage close to nominal (0.88 against 0.75); smoothing over
+time adds nothing to calibration here. For life expectancy at 30 the
+chosen period gives the largest gain (0.32 against 0.47 years),
+calibration a small one (0.44), and anchoring none. The coverage of life
+expectancy is 0.90 to 1.00: the rates fall outside their intervals
+mostly through deviations of single ages, which largely cancel in life
+expectancy. With six origins of one population these differences are
+indicative only.</p>
 </div>
 </div>
 <div class="section level2">
@@ -495,6 +531,9 @@ six origins of one population these differences are indicative only.</p>
 <p>Brouhns N, Denuit M, Vermunt JK (2002). A Poisson log-bilinear
 regression approach to the construction of projected lifetables.
 <em>Insurance: Mathematics and Economics</em> 31(3): 373-393.</p>
+<p>Booth H, Maindonald J, Smith L (2002). Applying Lee-Carter under
+conditions of variable mortality decline. <em>Population Studies</em>
+56(3): 325-336.</p>
 <p>Lee RD, Carter LR (1992). Modeling and forecasting U.S. mortality.
 <em>Journal of the American Statistical Association</em> 87(419):
 659-671.</p>

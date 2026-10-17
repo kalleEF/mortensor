@@ -51,7 +51,9 @@ A `data.table` with `age_lo`, `age_hi`, `n`, `mx`, `ax`, `qx`, `lx`,
 
 ## Details
 
-- `q_x = n m / (1 + (n - a) m)`, capped at 1;
+- `q_x = n m / (1 + (n - a) m)`; where this exceeds 1 (rates above about
+  `2 / n`, far beyond observed values), the constant-hazard value
+  `1 - exp(-n m)` is used, so that survivors stay positive;
 
 - `a_x` defaults to `n / 2` for every closed interval (supply `ax` to
   override, for example for age 0, where `n / 2` overstates the average

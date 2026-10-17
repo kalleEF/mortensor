@@ -74,7 +74,8 @@ decompositions with subgroups is shown as its own bar.</p>
 <span>  <span class="va">decomposition</span>,</span>
 <span>  by <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"age"</span>, <span class="st">"cause"</span>, <span class="st">"group"</span><span class="op">)</span>,</span>
 <span>  fill <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  comparisons <span class="op">=</span> <span class="cn">NULL</span></span>
+<span>  comparisons <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  change <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -96,8 +97,14 @@ decompositions with subgroups is shown as its own bar.</p>
 
 
 <dt id="arg-comparisons">comparisons<a class="anchor" aria-label="anchor" href="#arg-comparisons"></a></dt>
-<dd><p>Numbers of the comparisons to show (rows of
-<code>summary(decomposition, by = NULL)</code>; default: all, as panels).</p></dd>
+<dd><p>Comparisons to show: numbers (column <code>comparison</code> of
+<code>summary(decomposition, by = NULL)</code>) or a named list of values of its
+columns, for example <code>list(to = "Q5")</code>; default: all, as panels.</p></dd>
+
+
+<dt id="arg-change">change<a class="anchor" aria-label="anchor" href="#arg-change"></a></dt>
+<dd><p>Two periods: plot the change between them (see
+<code><a href="mt_decompose.html">summary.mt_decomposition()</a></code>).</p></dd>
 
 </dl></div>
     <div class="section level2">

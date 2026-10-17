@@ -228,9 +228,11 @@ per age group and year (lower is better); `cov95` is the share of
 observed rates inside the 95% intervals (target 0.95). Pooling the
 Laender of one sex into a common trend (Li-Lee) is more accurate than
 separate models, and the ensemble with random walks is the most accurate
-and the best calibrated. All models are too narrow for the aggregates,
-as single models usually are on real data, where trends change; the
-ensemble comes closest to nominal coverage.
+and the best calibrated. Differences of a few thousandths in CRPS are
+small against the variation between origins and strata; the ensemble is
+preferred mainly for its coverage. All models are too narrow for the
+aggregates, as single models usually are on real data, where trends
+change; the ensemble comes closest to nominal coverage.
 
 ### Forecasts
 
@@ -361,6 +363,18 @@ fc_lc <- mt_forecast(mt_fit(lee_carter(), xh), to = 2035, n_draws = 1000, seed =
 methods <- c("bottom_up", "ols", "structural", "wls", "mint")
 rec <- c(list(base = fc_lc),
          lapply(setNames(methods, methods), function(m) mt_reconcile(fc_lc, h, method = m, seed = 1)))
+#> Warning in reconcile_array(arr, hs, h$additive, method, shrink, exposure %||% :
+#> In 89% of the draws some bottom forecasts were set to zero to keep the
+#> aggregates; their distributions are truncated. Check the base forecasts
+#> (mt_coherence()) or use method = "proportional" with fixed nodes.
+#> Warning in reconcile_array(arr, hs, h$additive, method, shrink, exposure %||% :
+#> In 60% of the draws some bottom forecasts were set to zero to keep the
+#> aggregates; their distributions are truncated. Check the base forecasts
+#> (mt_coherence()) or use method = "proportional" with fixed nodes.
+#> Warning in reconcile_array(arr, hs, h$additive, method, shrink, exposure %||% :
+#> In 8% of the draws some bottom forecasts were set to zero to keep the
+#> aggregates; their distributions are truncated. Check the base forecasts
+#> (mt_coherence()) or use method = "proportional" with fixed nodes.
 e0m <- rbindlist(lapply(names(rec), function(m) life_expectancy(rec[[m]], at = 0)[period == 2035][, method := m]))
 e0m[, method := factor(method, c("base", methods))]
 show <- c("Bremen", "Saarland", "Hamburg", "Sachsen", "Bayern", "Nordrhein-Westfalen", "East", "West",
@@ -421,15 +435,19 @@ plot of chunk plot-width
 - **OLS** distributes the adjustment equally over all strata in deaths.
   An adjustment of a few hundred deaths is small for Nordrhein-Westfalen
   and large for Bremen, so the intervals of the small Laender widen
-  most.
-- **Structural** weights widen the small Laender less than OLS.
+  most. In 89% of the draws it would make the deaths of some strata
+  negative; they are held at zero (the warnings above), which truncates
+  their distributions.
+- **Structural** weights widen the small Laender less than OLS (strata
+  held at zero in 60% of the draws).
 - **WLS** (weights from the variance of each stratum’s draws) keeps the
   intervals of the Laender close to those of their own models and
   narrows the aggregates towards the sums of the Laender.
 - **Bottom-up** keeps the Laender of each sex as forecast and replaces
   all aggregates by sums.
 - **MinT** uses the covariance between the strata and gives the
-  narrowest intervals at every level.
+  narrowest intervals at every level (strata held at zero in 8% of the
+  draws, WLS 4%).
 
 Narrower intervals are better only if they still cover the observations.
 The backtest of all methods with the same base model (origins 2008,
@@ -444,6 +462,31 @@ bt_m <- rbindlist(lapply(names(specs_m), function(n) {
   b <- mt_backtest(specs_m[[n]], xh, origins = c(2008, 2011, 2014), h = 5, n_draws = 300)
   merge(b, lev, by = "label")[, spec := n]
 }))
+#> Warning in reconcile_array(arr, rc$structure, rc$hierarchy$additive, rc$method,
+#> : In 43% of the draws some bottom forecasts were set to zero to keep the
+#> aggregates; their distributions are truncated. Check the base forecasts
+#> (mt_coherence()) or use method = "proportional" with fixed nodes.
+#> Warning in reconcile_array(arr, rc$structure, rc$hierarchy$additive, rc$method,
+#> : In 34% of the draws some bottom forecasts were set to zero to keep the
+#> aggregates; their distributions are truncated. Check the base forecasts
+#> (mt_coherence()) or use method = "proportional" with fixed nodes.
+
+#> Warning in reconcile_array(arr, rc$structure, rc$hierarchy$additive, rc$method,
+#> : In 34% of the draws some bottom forecasts were set to zero to keep the
+#> aggregates; their distributions are truncated. Check the base forecasts
+#> (mt_coherence()) or use method = "proportional" with fixed nodes.
+#> Warning in reconcile_array(arr, rc$structure, rc$hierarchy$additive, rc$method,
+#> : In 14% of the draws some bottom forecasts were set to zero to keep the
+#> aggregates; their distributions are truncated. Check the base forecasts
+#> (mt_coherence()) or use method = "proportional" with fixed nodes.
+#> Warning in reconcile_array(arr, rc$structure, rc$hierarchy$additive, rc$method,
+#> : In 15% of the draws some bottom forecasts were set to zero to keep the
+#> aggregates; their distributions are truncated. Check the base forecasts
+#> (mt_coherence()) or use method = "proportional" with fixed nodes.
+#> Warning in reconcile_array(arr, rc$structure, rc$hierarchy$additive, rc$method,
+#> : In 9% of the draws some bottom forecasts were set to zero to keep the
+#> aggregates; their distributions are truncated. Check the base forecasts
+#> (mt_coherence()) or use method = "proportional" with fixed nodes.
 bt_m <- rbind(bt[spec %in% c("Lee-Carter, separate", "Lee-Carter, WLS")], bt_m)
 bt_m[, .(crps_bottom = mean(crps[level == "bottom"]), crps_aggregate = mean(crps[level != "bottom"]),
          crps_bremen_saarland = mean(crps[level == "bottom" & region %in% c("Bremen", "Saarland")]),
@@ -592,23 +635,25 @@ btc <- rbindlist(lapply(names(specs_c), function(n) {
   merge(b, levc, by = "label")[, spec := n]
 }))
 #> Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label):
-#> Lee-Carter: forecast death rates above 1 in 19.3% of the draws (strata
-#> Bremen.female.respiratory, Bremen.female.mental_nervous,
-#> Bremen.male.mental_nervous; ages 50-54, 85-89). The model is unstable here,
-#> often because of sparse counts; consider wider age groups (mt_regroup()),
+#> Lee-Carter: forecast death rates above 1 in 53.3% of the draws (strata
+#> Bremen.female.respiratory, Bremen.female.mental_nervous, Bremen.male.digestive;
+#> ages 50-54, 85-89, 90+). The model is unstable here, often because of sparse
+#> counts or a steep trend extrapolated far ahead; consider wider age groups
+#> (mt_regroup()), pooling (li_lee(common_by = )), smoothing (step_smooth()) or an
+#> ensemble.
+#> Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label):
+#> Lee-Carter: forecast death rates above 1 in 24.3% of the draws (strata
+#> Bremen.female.mental_nervous, Bremen.male.mental_nervous, Bremen.male.external;
+#> ages 80-84, 85-89, 90+). The model is unstable here, often because of sparse
+#> counts or a steep trend extrapolated far ahead; consider wider age groups
+#> (mt_regroup()), pooling (li_lee(common_by = )), smoothing (step_smooth()) or an
+#> ensemble.
+#> Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label):
+#> Lee-Carter: forecast death rates above 1 in 14.7% of the draws (strata
+#> Bremen.female.mental_nervous, Bremen.male.mental_nervous, Bremen.male.external;
+#> ages 85-89, 90+). The model is unstable here, often because of sparse counts or
+#> a steep trend extrapolated far ahead; consider wider age groups (mt_regroup()),
 #> pooling (li_lee(common_by = )), smoothing (step_smooth()) or an ensemble.
-#> Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label):
-#> Lee-Carter: forecast death rates above 1 in 7.0% of the draws (strata
-#> Bremen.male.mental_nervous, Bremen.male.external; ages 80-84, 85-89). The model
-#> is unstable here, often because of sparse counts; consider wider age groups
-#> (mt_regroup()), pooling (li_lee(common_by = )), smoothing (step_smooth()) or an
-#> ensemble.
-#> Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label):
-#> Lee-Carter: forecast death rates above 1 in 4.3% of the draws (strata
-#> Bremen.male.mental_nervous, Bremen.male.external; ages 85-89). The model is
-#> unstable here, often because of sparse counts; consider wider age groups
-#> (mt_regroup()), pooling (li_lee(common_by = )), smoothing (step_smooth()) or an
-#> ensemble.
 btc[, .(crps_causes_laender = mean(crps[level == "bottom"]),
         crps_causes_bremen_saarland = mean(crps[level == "bottom" & region %in% c("Bremen", "Saarland")]),
         crps_germany = mean(crps[region == "Deutschland"]),
@@ -641,11 +686,19 @@ and the causes add up to all causes.
 
 spc <- specs_c[["Ensemble, smoothed"]][[1]]
 fcc <- mt_forecast(mt_fit(spc, xcc, prep = smooth), to = 2035, n_draws = 500, seed = 2)
+#> Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label): Li-Lee
+#> (common by sex, cause): forecast death rates above 1 in 0.4% of the draws
+#> (strata Bayern.female.mental_nervous, Bremen.female.mental_nervous; ages 90+).
+#> The model is unstable here, often because of sparse counts or a steep trend
+#> extrapolated far ahead; consider wider age groups (mt_regroup()), pooling
+#> (li_lee(common_by = )), smoothing (step_smooth()) or an ensemble.
 #> Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label): Random
-#> walk with drift plus noise: forecast death rates above 1 in 0.6% of the draws
-#> (strata Berlin.female.mental_nervous; ages 85-89). The model is unstable here,
-#> often because of sparse counts; consider wider age groups (mt_regroup()),
-#> pooling (li_lee(common_by = )), smoothing (step_smooth()) or an ensemble.
+#> walk with drift plus noise: forecast death rates above 1 in 43.2% of the draws
+#> (strata Baden-Württemberg.female.mental_nervous, Berlin.female.mental_nervous,
+#> Brandenburg.female.mental_nervous; ages 85-89, 90+). The model is unstable
+#> here, often because of sparse counts or a steep trend extrapolated far ahead;
+#> consider wider age groups (mt_regroup()), pooling (li_lee(common_by = )),
+#> smoothing (step_smooth()) or an ensemble.
 ```
 
 Age-standardised death rates at ages 50 and over (per 100,000 of the
@@ -719,11 +772,89 @@ intervals for 2035 are very wide, and they widen the all-cause intervals
 of the bottom-up sums. Deaths in this group rose steeply between 1998
 and 2019, partly because dementia was increasingly coded as the
 underlying cause. Extrapolating that trend over 16 years is uncertain,
-and the forecast says so. For such causes, a shorter horizon or a
-fitting period that starts after the coding changes
+and the forecast says so. The random walk component of the ensemble
+extrapolates the rise in each Land, and 43% of its draws reach death
+rates above 1 at ages 85 and over by 2035 (the warning above): the upper
+ends of these intervals are not plausible. For such causes, a shorter
+horizon or a fitting period that starts after the coding changes
 ([`step_window()`](../reference/mt_prep.md), compared in a backtest) is
 more defensible than a long extrapolation; the gaps between East and
 West Germany by cause are better determined than the levels.
+
+### What the causes imply for all causes
+
+Summed bottom-up, the cause forecasts also forecast all causes. Over 16
+years their sum is dominated by the causes that fall slowest or rise, so
+forecasts by cause tend to be more pessimistic than forecasts of all
+causes (Wilmoth 1995). The remedy is to keep the all-cause forecast of
+each Land and scale its causes to it, draw by draw, in proportion to the
+cause forecasts (`method = "proportional"` with the all-cause strata of
+the Laender as `fixed` nodes); the national figures remain sums of the
+Laender. The all-cause forecasts come from the same ensemble, fitted to
+the all-cause strata:
+
+``` r
+
+fixed_all <- mt_strata(xcc)[cause == "all" & region %in% laender, label]
+spc_fx <- reconciled(ensemble(ll = li_lee(common_by = c("sex", "cause")), rw = rwd(observation_noise = TRUE)),
+                     hc, method = "proportional", fixed = fixed_all)
+fcx <- mt_forecast(mt_fit(spc_fx, xcc, prep = smooth), to = 2035, n_draws = 500, seed = 2)
+#> Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label): Li-Lee
+#> (common by sex, cause): forecast death rates above 1 in 0.4% of the draws
+#> (strata Bayern.female.mental_nervous, Bremen.female.mental_nervous; ages 90+).
+#> The model is unstable here, often because of sparse counts or a steep trend
+#> extrapolated far ahead; consider wider age groups (mt_regroup()), pooling
+#> (li_lee(common_by = )), smoothing (step_smooth()) or an ensemble.
+#> Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label): Random
+#> walk with drift plus noise: forecast death rates above 1 in 43.2% of the draws
+#> (strata Baden-Württemberg.female.mental_nervous, Berlin.female.mental_nervous,
+#> Brandenburg.female.mental_nervous; ages 85-89, 90+). The model is unstable
+#> here, often because of sparse counts or a steep trend extrapolated far ahead;
+#> consider wider age groups (mt_regroup()), pooling (li_lee(common_by = )),
+#> smoothing (step_smooth()) or an ensemble.
+show <- function(f, approach) {
+  a <- asr(f)[region == "Deutschland" & cause %in% c("all", "mental_nervous") & period == 2035]
+  e <- life_expectancy(f, at = 50)[region == "Deutschland" & cause == "all" & period == 2035]
+  rbind(a[, .(sex, quantity = paste("ASR", cause), approach, value = sprintf("%.0f (%.0f-%.0f)", q0.5, q0.025,
+                                                                                q0.975))],
+        e[, .(sex, quantity = "e50 all", approach, value = sprintf("%.1f (%.1f-%.1f)", q0.5, q0.025, q0.975))])
+}
+obs <- rbind(asr(xcc)[region == "Deutschland" & cause %in% c("all", "mental_nervous") & period == 2019,
+                      .(sex, quantity = paste("ASR", cause), observed_2019 = sprintf("%.0f", q0.5))],
+             life_expectancy(xcc, at = 50)[region == "Deutschland" & cause == "all" & period == 2019,
+                                           .(sex, quantity = "e50 all", observed_2019 = sprintf("%.1f", q0.5))])
+merge(obs, dcast(rbind(show(fcc, "causes summed"), show(fcx, "causes scaled to all causes")),
+                 sex + quantity ~ approach, value.var = "value"), by = c("sex", "quantity"))
+#>       sex           quantity observed_2019 causes scaled to all causes
+#> 1: female            ASR all          2037            1722 (1471-2046)
+#> 2: female ASR mental_nervous           222               505 (371-671)
+#> 3: female            e50 all          34.7            36.2 (34.7-37.6)
+#> 4:   male            ASR all          2969            2405 (2134-2790)
+#> 5:   male ASR mental_nervous           256               491 (347-632)
+#> 6:   male            e50 all          30.6            32.9 (31.4-34.1)
+#>       causes summed
+#> 1: 2424 (2054-3375)
+#> 2:   793 (540-1650)
+#> 3: 34.2 (33.0-35.0)
+#> 4: 3000 (2594-3625)
+#> 5:    649 (425-964)
+#> 6: 31.4 (30.2-32.3)
+```
+
+Summed bottom-up, the cause forecasts raise the national all-cause rate
+of women at 50+ from 2037 per 100,000 in 2019 to 2424 in 2035, and their
+life expectancy at 50 falls from 34.7 to 34.2 years; for men the rate
+stays at its level of 2019 and life expectancy at 50 rises by 0.8 years.
+The rise of the mental and nervous group (from 222 to 793 for women),
+partly a coding shift, is larger than the whole all-cause rise. Scaled
+to the all-cause forecasts of the Laender, the all-cause rate falls
+(women 1722, men 2405) and life expectancy at 50 rises to 36.2 and 32.9
+years. The causes keep their forecast composition, so the mental and
+nervous group still more than doubles (505). For a horizon of 16 years
+the scaled forecasts are the more defensible choice; the level of each
+cause remains conditional on the extrapolated composition, and a
+five-year backtest says little about which approach is closer over 16
+years. Report which one is used.
 
 ## Summary of the decisions
 
@@ -736,5 +867,11 @@ West Germany by cause are better determined than the levels.
 | Aggregation layers | East and West; cause groups and rest | `mt_hierarchy(region = list(total = , groups = ))`, [`mt_group_levels()`](../reference/mt_group_levels.md) |
 | Shared exposures | causes share the population of their Land | `mt_hierarchy(cause = list(total = "all", additive = "rates"))` |
 | Sparse cells | pooling and Whittaker smoothing | `li_lee(common_by = )`, [`step_smooth()`](../reference/mt_prep.md) |
-| Coherence | bottom-up sums of a joint model | [`reconciled()`](../reference/reconciled.md) |
+| Coherence | bottom-up sums of a joint model; causes scaled to the all-cause forecast of each Land | [`reconciled()`](../reference/reconciled.md), `reconciled(method = "proportional", fixed = )` |
 | Calibration | ensemble with noise-robust random walks | [`ensemble()`](../reference/ensemble.md), `rwd(observation_noise = TRUE)` |
+
+## References
+
+Wilmoth JR (1995). Are mortality projections always more pessimistic
+when disaggregated by cause of death? *Mathematical Population Studies*
+5(4): 293-319. <doi:10.1080/08898489509525409>.

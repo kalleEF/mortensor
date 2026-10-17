@@ -6,7 +6,8 @@ forecast medians as dashed lines with light interval ribbons, and a
 dotted vertical line between the last observed and the first forecast
 year. Strata with ordered levels (such as deprivation quintiles `Q1` to
 `Q5`) are coloured on a red-yellow-green scale, other strata (causes,
-regions, models) with distinct colours.
+regions, models) with distinct colours (12 distinct colours; more are
+interpolated).
 
 ## Usage
 

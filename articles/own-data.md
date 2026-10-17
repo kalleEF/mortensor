@@ -190,23 +190,27 @@ bt <- rbindlist(lapply(specs, function(sp) mt_backtest(sp, x, origins = 2012:201
 #> Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label):
 #> Lee-Carter: forecast death rates above 1 in 22.0% of the draws (strata
 #> female.Q3; ages 10-14). The model is unstable here, often because of sparse
-#> counts; consider wider age groups (mt_regroup()), pooling (li_lee(common_by =
-#> )), smoothing (step_smooth()) or an ensemble.
+#> counts or a steep trend extrapolated far ahead; consider wider age groups
+#> (mt_regroup()), pooling (li_lee(common_by = )), smoothing (step_smooth()) or an
+#> ensemble.
 #> Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label):
 #> Lee-Carter: forecast death rates above 1 in 4.5% of the draws (strata
 #> female.Q3; ages 10-14). The model is unstable here, often because of sparse
-#> counts; consider wider age groups (mt_regroup()), pooling (li_lee(common_by =
-#> )), smoothing (step_smooth()) or an ensemble.
+#> counts or a steep trend extrapolated far ahead; consider wider age groups
+#> (mt_regroup()), pooling (li_lee(common_by = )), smoothing (step_smooth()) or an
+#> ensemble.
 #> Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label):
 #> Lee-Carter: forecast death rates above 1 in 22.0% of the draws (strata
 #> female.Q3; ages 10-14). The model is unstable here, often because of sparse
-#> counts; consider wider age groups (mt_regroup()), pooling (li_lee(common_by =
-#> )), smoothing (step_smooth()) or an ensemble.
+#> counts or a steep trend extrapolated far ahead; consider wider age groups
+#> (mt_regroup()), pooling (li_lee(common_by = )), smoothing (step_smooth()) or an
+#> ensemble.
 #> Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label):
 #> Lee-Carter: forecast death rates above 1 in 4.5% of the draws (strata
 #> female.Q3; ages 10-14). The model is unstable here, often because of sparse
-#> counts; consider wider age groups (mt_regroup()), pooling (li_lee(common_by =
-#> )), smoothing (step_smooth()) or an ensemble.
+#> counts or a steep trend extrapolated far ahead; consider wider age groups
+#> (mt_regroup()), pooling (li_lee(common_by = )), smoothing (step_smooth()) or an
+#> ensemble.
 scores <- mt_score(bt)
 scores[, .(model, crps, cov95)]
 #>                            model      crps     cov95

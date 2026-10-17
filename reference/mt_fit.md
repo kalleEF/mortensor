@@ -37,6 +37,13 @@ mt_fit(spec, data, prep = NULL, cores = 1, ...)
 
 An object of class `mt_fit`.
 
+## Details
+
+Smooth inside the fit (`prep = mt_prep(step_smooth(...))`), not before
+it: data returned by [`mt_smooth()`](mt_smooth.md) carry no raw deaths,
+so residuals and observation noise would refer to the smoothed rates and
+the intervals would be too narrow. Such data give a warning.
+
 ## Examples
 
 ``` r

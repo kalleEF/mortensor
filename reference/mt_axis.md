@@ -3,7 +3,9 @@
 An axis is an ordered set of contiguous half-open intervals
 `[lower, upper)`. Only the last interval may be open (`upper = Inf`), as
 for an age group such as 90+. Axes describe the resolution of observed
-data and of the modelling grid.
+data and of the modelling grid. Period axes may have gaps (for example
+the census years 2001, 2011 and 2021), which describe observed data;
+models need consecutive years.
 
 ## Usage
 

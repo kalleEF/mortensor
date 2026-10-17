@@ -34,7 +34,8 @@ mt_plot_coherence(draws, hierarchy, exposure = NULL)
 `mt_coherence()`: a `data.table` with the aggregate strata, `period`,
 and the median and the 2.5% and 97.5% quantiles of the ratio over ages
 and draws. `mt_plot_coherence()`: a ggplot object with the distribution
-of the ratios per year.
+of the median ratios of the aggregates per year and the range of the
+ratios of single paths.
 
 ## Examples
 

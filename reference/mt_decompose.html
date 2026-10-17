@@ -78,7 +78,9 @@ is a post-processing step for observed data, forecasts, or both:</p>
 <span>  cause <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  groups <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  hierarchy <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  composition <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"radix"</span>, <span class="st">"pooled"</span><span class="op">)</span>,</span>
+<span>  composition <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  observed <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"data"</span>, <span class="st">"fitted"</span>, <span class="st">"poisson"</span><span class="op">)</span>,</span>
+<span>  pairing <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"independent"</span>, <span class="st">"draw"</span><span class="op">)</span>,</span>
 <span>  at <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  to <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  standard <span class="op">=</span> <span class="st">"esp2013"</span>,</span>
@@ -87,7 +89,8 @@ is a post-processing step for observed data, forecasts, or both:</p>
 <span>  n_steps <span class="op">=</span> <span class="fl">20</span>,</span>
 <span>  n_draws <span class="op">=</span> <span class="fl">1</span>,</span>
 <span>  probs <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.025</span>, <span class="fl">0.5</span>, <span class="fl">0.975</span><span class="op">)</span>,</span>
-<span>  seed <span class="op">=</span> <span class="fl">1</span></span>
+<span>  seed <span class="op">=</span> <span class="fl">1</span>,</span>
+<span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># S3 method for class 'mt_decomposition'</span></span>
@@ -95,6 +98,7 @@ is a post-processing step for observed data, forecasts, or both:</p>
 <span>  <span class="va">object</span>,</span>
 <span>  by <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"component"</span>, <span class="st">"group"</span>, <span class="st">"age"</span>, <span class="st">"cause"</span><span class="op">)</span>,</span>
 <span>  probs <span class="op">=</span> <span class="va">object</span><span class="op">$</span><span class="va">probs</span>,</span>
+<span>  change <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -148,12 +152,25 @@ up to all causes.</p></dd>
 
 
 <dt id="arg-hierarchy">hierarchy<a class="anchor" aria-label="anchor" href="#arg-hierarchy"></a></dt>
-<dd><p>Optional <code><a href="mt_hierarchy.html">mt_hierarchy()</a></code>: total and group levels of
-<code>cause</code> and <code>groups</code> are left out (they are sums of the others).</p></dd>
+<dd><p>An <code><a href="mt_hierarchy.html">mt_hierarchy()</a></code> that declares total and group levels
+of <code>cause</code> and <code>groups</code> (default: the hierarchy stored in <code>x</code> or <code>y</code>).</p></dd>
 
 
 <dt id="arg-composition">composition<a class="anchor" aria-label="anchor" href="#arg-composition"></a></dt>
-<dd><p><code>"radix"</code> or <code>"pooled"</code> (see Subgroups).</p></dd>
+<dd><p><code>"radix"</code> or <code>"pooled"</code>; required with <code>groups</code> (see
+Subgroups).</p></dd>
+
+
+<dt id="arg-observed">observed<a class="anchor" aria-label="anchor" href="#arg-observed"></a></dt>
+<dd><p>How observed years held in forecast draws enter:
+<code>"data"</code> (observed rates), <code>"fitted"</code> (the model's fitted rates) or
+<code>"poisson"</code> (Poisson draws of the observed deaths). See Observed and
+forecast years.</p></dd>
+
+
+<dt id="arg-pairing">pairing<a class="anchor" aria-label="anchor" href="#arg-pairing"></a></dt>
+<dd><p><code>"independent"</code> or <code>"draw"</code>: how the draws of <code>x</code> and <code>y</code>
+are paired.</p></dd>
 
 
 <dt id="arg-at">at<a class="anchor" aria-label="anchor" href="#arg-at"></a></dt>
@@ -189,7 +206,12 @@ Poisson draws.</p></dd>
 
 
 <dt id="arg-seed">seed<a class="anchor" aria-label="anchor" href="#arg-seed"></a></dt>
-<dd><p>Seed of the Poisson draws.</p></dd>
+<dd><p>Seed of Poisson draws and of the shuffling of <code>y</code>.</p></dd>
+
+
+<dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
+<dd><p>Passed to the life table (<code>ax</code>, <code>open</code>, <code>k</code>, see
+<code><a href="life_table.html">life_table()</a></code>) for life expectancy.</p></dd>
 
 
 <dt id="arg-object">object<a class="anchor" aria-label="anchor" href="#arg-object"></a></dt>
@@ -202,8 +224,10 @@ Poisson draws.</p></dd>
 <code>NULL</code> gives the totals.</p></dd>
 
 
-<dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
-<dd><p>Unused.</p></dd>
+<dt id="arg-change">change<a class="anchor" aria-label="anchor" href="#arg-change"></a></dt>
+<dd><p>Two periods: the change of each comparison between them
+(for comparisons between strata or objects in several periods), formed
+path by path.</p></dd>
 
 </dl></div>
     <div class="section level2">
@@ -212,9 +236,12 @@ Poisson draws.</p></dd>
 summed (path by path) over the variables not in <code>by</code>, with mean and
 quantiles; <code>summary(by = NULL)</code> returns one row per comparison (its
 number in <code>comparison</code>) with the values in the two populations, their
-difference (mean and quantiles), the sum of the contributions and the
-largest difference between the two over draws (<code>max_residual</code>).
-<code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> shows the totals.</p>
+difference (mean and quantiles), the jump-off share where it applies,
+the sum of the contributions and the largest difference between the
+two over draws (<code>max_residual</code>). <code>summary(change = c(p1, p2))</code>
+decomposes the change between two periods of comparisons between
+strata or objects (for example of a gap), path by path. <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code>
+shows the totals.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
@@ -232,8 +259,28 @@ years.</p></li>
 interval, and sums over ages, causes or subgroups (<code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code>) are formed
 path by path. Observed data give the decomposition of the observed rates
 (<code>n_draws = 1</code>) or, with <code>n_draws &gt; 1</code>, Poisson draws of the deaths as in
-<code><a href="mt_observed.html">mt_observed()</a></code>. Observed years inside forecast draws are the same in
-every draw.</p>
+<code><a href="mt_observed.html">mt_observed()</a></code>. Totals and contributions are means over draws;
+<code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> adds quantiles.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="observed-and-forecast-years">Observed and forecast years<a class="anchor" aria-label="anchor" href="#observed-and-forecast-years"></a></h2>
+
+
+<p>Forecast draws hold the observed rates of their training years. A change
+from an observed year to a forecast year then contains the step from the
+observed to the model's fitted rates of that year (the jump-off, see
+<code><a href="mt_jump_off.html">mt_jump_off()</a></code>) and the sampling noise of the observed year, besides
+the forecast change itself. The totals report the jump-off share
+(<code>jump_off</code>). <code>observed = "fitted"</code> uses the fitted rates of observed
+years, so that the decomposition describes the model's change alone;
+<code>observed = "poisson"</code> uses Poisson draws of the observed deaths, so that
+their sampling uncertainty enters the intervals.</p>
+<p>Two objects (<code>y</code>) are compared draw by draw. Draws of different models
+are independent, so by default (<code>pairing = "independent"</code>) the draws of
+<code>y</code> are shuffled before pairing; draws of models with the same seed would
+otherwise share their random numbers and give intervals that are too
+narrow. Use <code>pairing = "draw"</code> when <code>y</code> is derived from the draws of <code>x</code>
+(for example a reconciliation of the same draws).</p>
     </div>
     <div class="section level2">
     <h2 id="methods">Methods<a class="anchor" aria-label="anchor" href="#methods"></a></h2>
@@ -241,49 +288,77 @@ every draw.</p>
 
 <ul><li><p><code>"arriaga"</code> (life expectancy): the symmetric Arriaga decomposition, the
 average of the decompositions from 1 to 2 and (with the sign reversed)
-from 2 to 1, computed on the package's life table. Causes get the
-age-specific contribution in proportion to their rate differences
-(an implied sensitivity, Riffe et al. 2024, eqs. 12-13); where the
-all-cause difference is close to zero, the sensitivity is a numerical
-derivative at the average rates. Exact.</p></li>
+from 2 to 1, computed on the package's life table (<code>...</code> passes <code>ax</code>
+and <code>open</code> to it). Causes get the age-specific contribution in
+proportion to their rate differences (an implied sensitivity, Riffe et
+al. 2024, eqs. 12-13 of the working paper); where the all-cause
+difference is close to zero, the sensitivity is a numerical derivative
+at the average rates. Exact.</p></li>
 <li><p><code>"horiuchi"</code> (any quantity): the line-integral method of Horiuchi,
 Wilmoth and Pletcher (2008) with <code>n_steps</code> steps; exact up to a small
 discretisation error, reported in the totals.</p></li>
 <li><p><code>"stepwise"</code> (any quantity): stepwise replacement (Andreev, Shkolnikov
 and Begun 2002) from the youngest to the oldest age, averaged over
-both directions of the comparison. Exact; results depend on the order.
-Arriaga's decomposition from 1 to 2 is stepwise replacement from the
-oldest to the youngest age, so for life expectancy without causes the
-two symmetric versions give identical results.</p></li>
+both directions of the comparison; with causes, all causes of an age
+are replaced before the next age (DemoDecomp and LEdecomp replace cause
+by cause, which changes the split between causes slightly). Exact;
+results depend on the order. Arriaga's decomposition from 1 to 2 is
+stepwise replacement from the oldest to the youngest age, so for life
+expectancy without causes the two symmetric versions are identical.</p></li>
 <li><p><code>"kitagawa"</code> (crude death rate): the rate effect (age-specific rates at
 the average age structure) and the composition effect (age structure
 at the average rates) of Kitagawa (1955). Exact.</p></li>
-</ul></div>
+</ul><p>Draws whose rates give no valid life table (for example rates far above
+any observed value, see the warning of <code><a href="mt_forecast.html">mt_forecast()</a></code>) are left out with
+a warning, and a warning reports contributions that do not add up to
+the difference.</p>
+    </div>
     <div class="section level2">
     <h2 id="subgroups">Subgroups<a class="anchor" aria-label="anchor" href="#subgroups"></a></h2>
 
 
 <p>With <code>groups</code>, the populations being compared consist of the levels of a
-stratum variable (for example deprivation quintiles or education
-groups), and the decomposition separates the effect of their
-composition:</p><ul><li><p><code>composition = "radix"</code> (Riffe, Tursun-zade and Trias Llimós 2024,
-"Arriaga meets Kitagawa"): life expectancy (or the probability of
-dying) of the population is the mean of the subgroups' values, weighted
-by their population shares at the starting age (<code>at</code>), as when
-subgroup life tables are blended at the radix. A Kitagawa
-decomposition of that mean gives one composition effect and, for each
-subgroup, its difference times its average share, which is split by
-age (and cause) with <code>method</code>.</p></li>
-<li><p><code>composition = "pooled"</code>: the quantity of the pooled rates, which
-weight the subgroup rates by their population shares at each age (the
-rates of the aggregate strata; Vaupel 2002, "current rates"). The rates
-of every subgroup, age and cause and the shares at every age are the
-parameters of a <code>"horiuchi"</code> or <code>"stepwise"</code> decomposition; the
-composition effects are reported by age, summed over subgroups, whose
-separate composition terms are not identified.</p></li>
+stratum variable, and the decomposition separates the effect of their
+composition. <code>composition</code> must be chosen, because the two options
+describe different quantities:</p><ul><li><p><code>"radix"</code> (Riffe, Tursun-zade and Trias Llimós 2024, "Arriaga meets
+Kitagawa"): life expectancy (or the probability of dying) of the
+population is the mean of the subgroups' values, weighted by their
+population shares at the starting age (<code>at</code>), as when subgroup life
+tables are blended at the radix ("current conditions" in the terms of
+Vaupel 2002, which the authors use). A Kitagawa decomposition of that
+mean gives one composition effect and, for each subgroup, its
+difference times its average share, which is split by age (and cause)
+with <code>method</code>. The authors state that this holds when membership is
+fixed from the starting age on and later shares change only through
+mortality: education from age 30 or 35, sex, country of birth. It does
+not hold for areas such as deprivation quintiles or regions, between
+which people move and which are reclassified.</p></li>
+<li><p><code>"pooled"</code>: the quantity of the pooled rates, which weight the
+subgroup rates by their population shares at each age (the rates of the
+aggregate strata, as published for whole populations; "current
+rates"). The rates of every subgroup, age and cause and the shares at
+every age are the parameters of a <code>"horiuchi"</code> (default) or
+<code>"stepwise"</code> decomposition; the composition effects are reported by
+age, summed over subgroups, whose separate composition terms are not
+identified. With many subgroups, causes and draws this takes minutes;
+lower <code>n_steps</code> or the number of draws for a first look.</p></li>
 </ul><p>Shares come from the exposures: of each observed year, and for forecast
 years from <code>exposure</code> (default: the last observed year, so composition
-does not change in the forecast unless exposures are given).</p>
+does not change in the forecast unless exposures, for example a
+population projection, are given).</p>
+    </div>
+    <div class="section level2">
+    <h2 id="totals-among-causes-and-groups">Totals among causes and groups<a class="anchor" aria-label="anchor" href="#totals-among-causes-and-groups"></a></h2>
+
+
+<p>Levels of <code>cause</code> and <code>groups</code> that are totals of the others (for example
+the cause <code>"all"</code> or the region <code>"Germany"</code>) must not be counted as
+parts. They are left out when the hierarchy declares them: <code>hierarchy</code>,
+or what the object records, the total of <code><a href="mt_group_levels.html">mt_group_levels()</a></code> (<code>total</code>,
+also in fits and draws of such data) and the hierarchy of
+<code><a href="mt_aggregate_strata.html">mt_aggregate_strata()</a></code> or <code><a href="reconciled.html">reconciled()</a></code>. A level that equals the sum
+of the others in the observed deaths without being declared stops the
+decomposition.</p>
     </div>
     <div class="section level2">
     <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a></h2>
@@ -301,7 +376,10 @@ on a model of continuous change. <em>Demography</em> 45(4): 785-801.
 <a href="https://doi.org/10.1353/dem.0.0033" class="external-link">doi:10.1353/dem.0.0033</a></p>
 <p>Riffe T, Tursun-zade R, Trias Llimós S (2024). Arriaga meets Kitagawa.
 Life expectancy decomposition with population subgroups. MPIDR Working
-Paper WP-2024-029. <a href="https://doi.org/10.4054/MPIDR-WP-2024-029" class="external-link">doi:10.4054/MPIDR-WP-2024-029</a></p>
+Paper WP-2024-029. <a href="https://doi.org/10.4054/MPIDR-WP-2024-029" class="external-link">doi:10.4054/MPIDR-WP-2024-029</a>
+. Published in
+<em>Geographical Analysis</em> (2026), <a href="https://doi.org/10.1111/gean.70033" class="external-link">doi:10.1111/gean.70033</a>
+.</p>
 <p>Vaupel JW (2002). Life expectancy at current rates vs. current
 conditions: a reflexion stimulated by Bongaarts and Feeney's "How long
 do we live?". <em>Demographic Research</em> 7: 365-378.</p>
@@ -313,7 +391,7 @@ do we live?". <em>Demographic Research</em> 7: 365-378.</p>
 <span class="r-in"><span><span class="co"># change 2000-2015 in life expectancy at 30, by age, per sex</span></span></span>
 <span class="r-in"><span><span class="va">d</span> <span class="op">&lt;-</span> <span class="fu">mt_decompose</span><span class="op">(</span><span class="va">x</span>, periods <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2000</span>, <span class="fl">2015</span><span class="op">)</span>, at <span class="op">=</span> <span class="fl">30</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">d</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;mt_decomposition&gt; life expectancy at 30, method arriaga; 2 comparison(s), 1 draw(s)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;mt_decomposition&gt; life expectancy at 30, method arriaga; 2 comparison(s), 1 draw</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    comparison    sex   from     to from_value to_value difference</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>         &lt;int&gt; &lt;char&gt; &lt;char&gt; &lt;char&gt;      &lt;num&gt;    &lt;num&gt;      &lt;num&gt;</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1:          1 female   2000   2015     53.853   55.443      1.590</span>
@@ -330,33 +408,54 @@ do we live?". <em>Demographic Research</em> 7: 365-378.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 3: female   2000   2015     32 0.013227430 0.013227430 0.013227430 0.013227430</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 4: female   2000   2015     33 0.005466655 0.005466655 0.005466655 0.005466655</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 5: female   2000   2015     34 0.019223513 0.019223513 0.019223513 0.019223513</span>
-<span class="r-in"><span><span class="co"># the sex gap in a forecast year, with intervals</span></span></span>
+<span class="r-in"><span><span class="co"># the sex gap in forecast years, with intervals, and its change</span></span></span>
 <span class="r-in"><span><span class="va">fc</span> <span class="op">&lt;-</span> <span class="fu"><a href="mt_forecast.html">mt_forecast</a></span><span class="op">(</span><span class="fu"><a href="mt_fit.html">mt_fit</a></span><span class="op">(</span><span class="fu"><a href="lee_carter.html">lee_carter</a></span><span class="op">(</span><span class="op">)</span>, <span class="va">x</span><span class="op">)</span>, h <span class="op">=</span> <span class="fl">10</span>, n_draws <span class="op">=</span> <span class="fl">100</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="fu">mt_decompose</span><span class="op">(</span><span class="va">fc</span>, var <span class="op">=</span> <span class="st">"sex"</span>, ref <span class="op">=</span> <span class="st">"male"</span>, at <span class="op">=</span> <span class="fl">30</span><span class="op">)</span>, by <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">g</span> <span class="op">&lt;-</span> <span class="fu">mt_decompose</span><span class="op">(</span><span class="va">fc</span>, var <span class="op">=</span> <span class="st">"sex"</span>, ref <span class="op">=</span> <span class="st">"male"</span>, periods <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2016</span>, <span class="fl">2025</span><span class="op">)</span>, at <span class="op">=</span> <span class="fl">30</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">g</span>, by <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    comparison   from     to period from_value to_value difference</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>         &lt;int&gt; &lt;char&gt; &lt;char&gt;  &lt;num&gt;      &lt;num&gt;    &lt;num&gt;      &lt;num&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1:          1   male female   2025     51.886 56.43574   4.549737</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1:          1   male female   2016    50.7036 55.53837   4.834771</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2:          2   male female   2025    51.8860 56.43574   4.549737</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    difference_q0.025 difference_q0.5 difference_q0.975 sum_contributions</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>                &lt;num&gt;           &lt;num&gt;             &lt;num&gt;             &lt;num&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1:          3.524936        4.490365          5.738382          4.549737</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1:          4.598310        4.822230          5.116275          4.834771</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2:          3.524936        4.490365          5.738382          4.549737</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    max_residual</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>           &lt;num&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1: 6.661338e-15</span>
-<span class="r-in"><span><span class="co"># observed 2015 against the forecast of 2025</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1: 7.105427e-15</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2: 7.105427e-15</span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">g</span>, by <span class="op">=</span> <span class="st">"age"</span>, change <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2016</span>, <span class="fl">2025</span><span class="op">)</span><span class="op">)</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">5</span><span class="op">]</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>      from     to       period    age          mean       q0.025          q0.5</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    &lt;char&gt; &lt;char&gt;       &lt;char&gt; &lt;char&gt;         &lt;num&gt;        &lt;num&gt;         &lt;num&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1:   male female 2016 to 2025     30 -0.0024570174 -0.006658112 -0.0028170201</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2:   male female 2016 to 2025     31 -0.0022004343 -0.006999818 -0.0025019450</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3:   male female 2016 to 2025     32 -0.0052739998 -0.010412948 -0.0057943852</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4:   male female 2016 to 2025     33 -0.0035476847 -0.007691005 -0.0039742845</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5:   male female 2016 to 2025     34 -0.0001011823 -0.004194642 -0.0000860906</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>         q0.975</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>          &lt;num&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1: 0.002982563</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2: 0.004271740</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3: 0.001939599</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4: 0.001811163</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5: 0.005137142</span>
+<span class="r-in"><span><span class="co"># observed 2015 against the forecast of 2025, with the jump-off share</span></span></span>
 <span class="r-in"><span><span class="fu">mt_decompose</span><span class="op">(</span><span class="va">fc</span>, periods <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2015</span>, <span class="fl">2025</span><span class="op">)</span>, at <span class="op">=</span> <span class="fl">30</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;mt_decomposition&gt; life expectancy at 30, method arriaga; 2 comparison(s), 100 draw(s)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;mt_decomposition&gt; life expectancy at 30, method arriaga; 2 comparison(s), means over 100 draws</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    comparison    sex   from     to from_value to_value difference</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>         &lt;int&gt; &lt;char&gt; &lt;char&gt; &lt;char&gt;      &lt;num&gt;    &lt;num&gt;      &lt;num&gt;</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1:          1 female   2015   2025     55.443   56.436      0.993</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2:          2   male   2015   2025     50.584   51.886      1.302</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>    difference_q0.025 difference_q0.5 difference_q0.975 sum_contributions</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>                &lt;num&gt;           &lt;num&gt;             &lt;num&gt;             &lt;num&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1:             0.442           1.005             1.523             0.993</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2:             0.251           1.337             2.231             1.302</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>    max_residual</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>           &lt;num&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1:      4.8e-15</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2:      6.9e-15</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    difference_q0.025 difference_q0.5 difference_q0.975 jump_off</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>                &lt;num&gt;           &lt;num&gt;             &lt;num&gt;    &lt;num&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1:             0.442           1.005             1.523   -0.008</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2:             0.251           1.337             2.231    0.024</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    sum_contributions max_residual</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>                &lt;num&gt;        &lt;num&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1:             0.993      4.3e-15</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2:             1.302      6.9e-15</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> jump_off: part of the difference due to observed instead of fitted rates in observed years of the draws</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> (see mt_jump_off()); observed = "fitted" decomposes the model's change alone.</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

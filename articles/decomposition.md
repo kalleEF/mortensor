@@ -16,8 +16,8 @@ draw by draw, so every contribution has an interval.
 | `"horiuchi"` | any function of the rates | Horiuchi, Wilmoth and Pletcher (2008) |
 | `"stepwise"` | any function of the rates | Andreev, Shkolnikov and Begun (2002) |
 | `"kitagawa"` | crude death rate: rates and age structure | Kitagawa (1955) |
-| `groups` with `composition = "radix"` | life expectancy of a population of subgroups: subgroup rates and composition | Riffe, Tursun-zade and Trias Llimós (2024), “Arriaga meets Kitagawa” |
-| `groups` with `composition = "pooled"` | life expectancy of the pooled rates: subgroup rates and age-specific composition | Horiuchi et al. (2008) |
+| `groups` with `composition = "radix"` | life expectancy of a population of subgroups fixed from the start (sex, education): subgroup rates and composition | Riffe, Tursun-zade and Trias Llimós (2024), “Arriaga meets Kitagawa” |
+| `groups` with `composition = "pooled"` | life expectancy of the pooled rates (areas, regions): subgroup rates and age-specific composition | Horiuchi et al. (2008) |
 
 ``` r
 
@@ -43,7 +43,7 @@ deaths for the intervals:
 
 gap <- mt_decompose(x, var = "quintile", ref = "Q1", periods = 2019, n_draws = 200)
 gap
-#> <mt_decomposition> life expectancy at 0, method arriaga; 8 comparison(s), 200 draw(s)
+#> <mt_decomposition> life expectancy at 0, method arriaga; 8 comparison(s), means over 200 draws
 #>    comparison    sex   from     to period from_value to_value difference
 #>         <int> <char> <char> <char>  <num>      <num>    <num>      <num>
 #> 1:          1 female     Q1     Q2   2019     79.825   82.501      2.676
@@ -80,12 +80,15 @@ The totals list one comparison per row: the life expectancy of the
 reference (`from_value`) and of the level (`to_value`), their difference
 with its interval, and the sum of the age contributions, which equals
 the difference (`max_residual` is the largest discrepancy over draws).
+Values are means over the draws; quantiles are in the columns
+`difference_q*` and in
+[`summary()`](https://rdrr.io/r/base/summary.html).
 `summary(gap, by = "age")` gives the contributions; the plot shows them
-for the gap between Q5 and Q1 (comparisons 4 and 8):
+for the gap between Q5 and Q1:
 
 ``` r
 
-mt_plot_decomposition(gap, by = "age", comparisons = c(4, 8))
+mt_plot_decomposition(gap, by = "age", comparisons = list(to = "Q5"))
 ```
 
 ![](decomposition_files/figure-html/unnamed-chunk-3-1.png)
@@ -137,9 +140,12 @@ dcast(meth, age ~ method, value.var = "mean")[age %in% c("0", "40-44", "60-64", 
 ## Causes behind the gap
 
 Causes of death are a stratum variable whose rates add up to all causes.
-`cause` names it, and the hierarchy tells
-[`mt_decompose()`](../reference/mt_decompose.md) which level is the
-total. At ages 50 and over (as in “Causes of death by deprivation”):
+`cause` names it. The total level (`"all"`) is left out because
+`mt_group_levels(total = "all")` records it in the data; without such a
+record (or a `hierarchy`),
+[`mt_decompose()`](../reference/mt_decompose.md) stops rather than count
+all causes as one more cause. At ages 50 and over (as in “Causes of
+death by deprivation”):
 
 ``` r
 
@@ -150,8 +156,7 @@ xc <- mt_as_exposure(xc, type = "midyear")
 xc <- mt_subset(xc, ages = c(50, Inf), periods = c(2019, 2019))
 xc <- mt_group_levels(xc, "imd_decile", function(d) paste0("Q", ceiling(as.numeric(d) / 2)), name = "quintile")
 xc <- mt_group_levels(xc, "cause", ons_cause_groups, other = "rest", total = "all", additive = "rates")
-gc <- mt_decompose(xc, var = "quintile", ref = "Q1", cause = "cause",
-                   hierarchy = mt_hierarchy(cause = "all", additive = "rates"))
+gc <- mt_decompose(xc, var = "quintile", ref = "Q1", cause = "cause")
 sc <- summary(gc, by = "cause")[to == "Q5"]
 dcast(sc, cause ~ sex, value.var = "mean")[order(-female), lapply(.SD, function(v) if (is.numeric(v)) round(v, 2) else v)]
 #>                 cause female  male
@@ -172,7 +177,7 @@ dcast(sc, cause ~ sex, value.var = "mean")[order(-female), lapply(.SD, function(
 
 ``` r
 
-mt_plot_decomposition(gc, by = "age", fill = "cause", comparisons = c(4, 8))
+mt_plot_decomposition(gc, by = "age", fill = "cause", comparisons = list(to = "Q5"))
 ```
 
 ![](decomposition_files/figure-html/unnamed-chunk-7-1.png)
@@ -186,67 +191,96 @@ higher rates in Q5 than in Q1 would have negative contributions.
 
 ## Change over time and the composition of England
 
-The life expectancy of England changes because the mortality of every
-quintile changes and because the population shifts between quintiles.
+The life expectancy of a population of subgroups changes because the
+mortality of every subgroup changes and because the population shifts
+between subgroups. `groups` names the subgroups, and `composition`
+decides which life expectancy of the whole population is decomposed. The
+choice matters, so it has no default.
+
+**Subgroups fixed from the start of life: `composition = "radix"`.**
 Riffe, Tursun-zade and Trias Llimós (2024) treat the life expectancy of
-a population of subgroups as the mean of the subgroups’ life
-expectancies, weighted by their shares at the start of life (the radix).
-A Kitagawa decomposition of that mean separates the composition from the
-change within each subgroup, which is then split by age:
+a population as the mean of the subgroups’ life expectancies, weighted
+by their shares at the starting age, as if subgroup life tables were
+blended at the radix. A Kitagawa decomposition of that mean separates
+the composition from the change within each subgroup, which is then
+split by age. The authors state the condition: membership must be fixed
+from the starting age on, and later shares must change through mortality
+only, as for sex, education from age 30 or country of birth. Sex is such
+a subgroup: the life expectancy at birth of both sexes in each quintile,
+with the sex ratio at birth as the composition:
 
 ``` r
 
-eng <- mt_decompose(x, periods = c(2001, 2019), groups = "quintile")
-eng
-#> <mt_decomposition> life expectancy at 0, method arriaga, radix composition; 2 comparison(s), 1 draw(s)
-#>    comparison    sex   from     to from_value to_value difference
-#>         <int> <char> <char> <char>      <num>    <num>      <num>
-#> 1:          1 female   2001   2019     80.418   83.139      2.721
-#> 2:          2   male   2001   2019     75.721   79.463      3.742
+both <- mt_decompose(x, periods = c(2001, 2019), groups = "sex", composition = "radix")
+both
+#> <mt_decomposition> life expectancy at 0, method arriaga, radix composition; 5 comparison(s), 1 draw
+#> Values: means of the subgroups' values weighted by their shares at age 0 (subgroups blended at the radix),
+#> not the values of the pooled rates.
+#>    comparison quintile   from     to from_value to_value difference
+#>         <int>   <char> <char> <char>      <num>    <num>      <num>
+#> 1:          1       Q1   2001   2019     74.598   77.572      2.974
+#> 2:          2       Q2   2001   2019     77.149   80.503      3.354
+#> 3:          3       Q3   2001   2019     78.835   82.218      3.383
+#> 4:          4       Q4   2001   2019     79.860   83.374      3.514
+#> 5:          5       Q5   2001   2019     80.995   84.643      3.647
 #>    sum_contributions max_residual
 #>                <num>        <num>
-#> 1:             2.721      3.1e-15
-#> 2:             3.742      1.3e-15
-summary(eng, by = c("component", "group"))[, .(sex, component, group, mean = round(mean, 3))]
-#>        sex   component  group   mean
-#>     <char>      <char> <char>  <num>
-#>  1: female        rate     Q1  0.543
-#>  2: female        rate     Q2  0.600
-#>  3: female        rate     Q3  0.549
-#>  4: female        rate     Q4  0.536
-#>  5: female        rate     Q5  0.589
-#>  6: female composition   <NA> -0.096
-#>  7:   male        rate     Q1  0.947
-#>  8:   male        rate     Q2  0.825
-#>  9:   male        rate     Q3  0.737
-#> 10:   male        rate     Q4  0.703
-#> 11:   male        rate     Q5  0.658
-#> 12:   male composition   <NA> -0.128
+#> 1:             2.974      1.8e-15
+#> 2:             3.354      8.4e-15
+#> 3:             3.383      1.4e-14
+#> 4:             3.514      4.4e-15
+#> 5:             3.647      8.0e-15
+summary(both, by = c("component", "group"))[, .(quintile, component, group, mean = round(mean, 3))]
+#>     quintile   component  group   mean
+#>       <char>      <char> <char>  <num>
+#>  1:       Q1        rate female  1.060
+#>  2:       Q1        rate   male  1.942
+#>  3:       Q1 composition   <NA> -0.028
+#>  4:       Q2        rate female  1.374
+#>  5:       Q2        rate   male  1.983
+#>  6:       Q2 composition   <NA> -0.003
+#>  7:       Q3        rate female  1.409
+#>  8:       Q3        rate   male  1.988
+#>  9:       Q3 composition   <NA> -0.014
+#> 10:       Q4        rate female  1.479
+#> 11:       Q4        rate   male  2.038
+#> 12:       Q4 composition   <NA> -0.004
+#> 13:       Q5        rate female  1.686
+#> 14:       Q5        rate   male  1.978
+#> 15:       Q5 composition   <NA> -0.017
 ```
 
-Life expectancy at birth of England, computed this way, rose by 2.7
-years for women and 3.7 years for men. Every quintile contributed about
-half a year or more; for men, Q1 contributed most. The composition
-effect is negative: in 2019 a larger share of births was in the more
-deprived quintiles than in 2001. The deciles are defined by the IMD
-version of each year, so the shares partly reflect reclassification of
-areas.
+The printout states what the values are: means of women’s and men’s life
+expectancy weighted by the sex ratio at birth, not the life expectancy
+of the pooled rates. In every quintile men contributed more to the rise
+than women (in Q1 1.9 against 1.1 years); the sex ratio at birth hardly
+changed, so its composition effect is a few hundredths of a year.
 
-The radix-weighted life expectancy is not the life expectancy of the
-pooled rates of England, which weight the quintiles by their population
-at each age (Vaupel 2002 calls these “current conditions” and “current
-rates”). `composition = "pooled"` decomposes the latter, with the shares
-at every age as parameters of a line-integral decomposition:
+**Areas and other changing groups: `composition = "pooled"`.**
+Deprivation quintiles are areas: people move between them, and areas
+change quintile with each IMD version. The condition of the radix
+version does not hold. The pooled version decomposes the life expectancy
+of the pooled rates of England (the quintiles weighted by their
+population at each age, as in published life tables; “current rates” in
+Vaupel’s terms, which Riffe et al. use, against “current conditions” for
+the radix version). The rates of every quintile and age and the shares
+at every age are the parameters of a line-integral decomposition:
 
 ``` r
 
-eng_pooled <- mt_decompose(x, periods = c(2001, 2019), groups = "quintile", composition = "pooled")
-summary(eng_pooled, by = NULL)[, .(sex, from_value, to_value, difference)]
-#>       sex from_value to_value difference
-#>    <char>      <num>    <num>      <num>
-#> 1: female   80.64917 83.63128   2.982103
-#> 2:   male   76.02971 79.98056   3.950856
-summary(eng_pooled, by = c("component", "group"))[, .(sex, component, group, mean = round(mean, 3))]
+eng <- mt_decompose(x, periods = c(2001, 2019), groups = "quintile", composition = "pooled")
+eng
+#> <mt_decomposition> life expectancy at 0, method horiuchi, pooled composition; 2 comparison(s), 1 draw
+#> Values: of the pooled rates (subgroups weighted by their shares at each age).
+#>    comparison    sex   from     to from_value to_value difference
+#>         <int> <char> <char> <char>      <num>    <num>      <num>
+#> 1:          1 female   2001   2019     80.649   83.631      2.982
+#> 2:          2   male   2001   2019     76.030   79.981      3.951
+#>    sum_contributions max_residual
+#>                <num>        <num>
+#> 1:             2.982      3.6e-05
+#> 2:             3.951      7.4e-05
+summary(eng, by = c("component", "group"))[, .(sex, component, group, mean = round(mean, 3))]
 #>        sex   component  group  mean
 #>     <char>      <char> <char> <num>
 #>  1: female        rate     Q1 0.462
@@ -261,6 +295,30 @@ summary(eng_pooled, by = c("component", "group"))[, .(sex, component, group, mea
 #> 10:   male        rate     Q4 0.783
 #> 11:   male        rate     Q5 0.696
 #> 12:   male composition   <NA> 0.033
+```
+
+Life expectancy at birth of England rose by 3.0 years for women and 4.0
+years for men. Every quintile contributed about half a year or more; for
+men, Q1 contributed most. The composition effect is positive and small
+(0.10 and 0.03 years). Applied to the quintiles, the radix version would
+give a negative composition effect, because the shares at birth and at
+older ages moved in opposite directions:
+
+``` r
+
+eng_radix <- mt_decompose(x, periods = c(2001, 2019), groups = "quintile", composition = "radix")
+rbind(summary(eng, by = "component")[, .(composition = "pooled", sex, component, mean = round(mean, 3))],
+      summary(eng_radix, by = "component")[, .(composition = "radix", sex, component, mean = round(mean, 3))])
+#>    composition    sex   component   mean
+#>         <char> <char>      <char>  <num>
+#> 1:      pooled female        rate  2.881
+#> 2:      pooled female composition  0.101
+#> 3:      pooled   male        rate  3.917
+#> 4:      pooled   male composition  0.033
+#> 5:       radix female        rate  2.817
+#> 6:       radix female composition -0.096
+#> 7:       radix   male        rate  3.870
+#> 8:       radix   male composition -0.128
 E <- mt_array(x, "exposure")
 women <- x$strata$label[x$strata$sex == "female"]
 round(rbind(birth_2001 = E["0", "2001", women], birth_2019 = E["0", "2019", women],
@@ -274,16 +332,12 @@ round(rbind(birth_2001 = E["0", "2001", women], birth_2019 = E["0", "2019", wome
 #> age75_2019     0.143     0.175     0.211     0.232     0.239
 ```
 
-The pooled life expectancy is 0.2 to 0.5 years higher, and its
-composition effect is positive. The shares explain the difference: at
-birth the share of Q5 fell (from 18% to 16% for girls), while at ages
+At birth the share of Q5 fell (from 18% to 16% for girls), while at ages
 75-79, where many deaths occur, it rose from 19% to 24% and the share of
-Q1 fell from 19% to 14%. The two decompositions answer different
-questions; the radix version is the one of Riffe et al. and is exact,
-the pooled one matches the life expectancy published for the whole
-population. The composition effect is a single number (radix) or one per
-age (pooled): the separate composition terms of the subgroups are not
-identified.
+Q1 fell from 19% to 14%. The radix version treats the shares at birth as
+the composition of the whole population, which is wrong for areas. The
+composition effect is a single number (radix) or one per age (pooled):
+the separate composition terms of the subgroups are not identified.
 
 ## Forecasts
 
@@ -294,116 +348,155 @@ can combine an observed year (held in the draws) with forecast years:
 
 fc <- mt_forecast(mt_fit(li_lee(common_by = "sex"), x), to = 2035, n_draws = 500, seed = 1)
 change <- mt_decompose(fc, periods = c(2019, 2035))
-summary(change, by = NULL)[, .(sex, quintile, from_value, to_value, difference, difference_q0.025,
-                               difference_q0.975)]
+summary(change, by = NULL)[, .(sex, quintile, from_value, to_value, difference, jump_off)]
+#>        sex quintile from_value to_value difference    jump_off
+#>     <char>   <char>      <num>    <num>      <num>       <num>
+#>  1: female       Q1   79.83321 83.38002   3.546810  0.42834663
+#>  2: female       Q2   82.49875 85.19000   2.691251  0.24430512
+#>  3: female       Q3   83.93153 86.29470   2.363171  0.08339506
+#>  4: female       Q4   85.01728 87.04342   2.026131 -0.13923362
+#>  5: female       Q5   86.29508 87.95801   1.662930 -0.34119674
+#>  6:   male       Q1   75.43067 79.56163   4.130958  0.41338747
+#>  7:   male       Q2   78.59779 82.07083   3.473034  0.14018639
+#>  8:   male       Q3   80.60501 83.66165   3.056633 -0.04412830
+#>  9:   male       Q4   81.82001 84.69466   2.874653 -0.06719945
+#> 10:   male       Q5   83.08997 85.79980   2.709830 -0.07113273
+```
+
+A change from an observed to a forecast year contains the step from the
+observed rates of 2019 to the model’s fitted rates of 2019 (the
+jump-off, see [`mt_jump_off()`](../reference/mt_jump_off.md)), and with
+it the noise of the observed year. Column `jump_off` gives its share: of
+the forecast gain of 3.5 years for women in Q1, 0.4 years come from this
+step. `observed = "fitted"` decomposes the model’s change alone:
+
+``` r
+
+change_fit <- mt_decompose(fc, periods = c(2019, 2035), observed = "fitted")
+summary(change_fit, by = NULL)[, .(sex, quintile, from_value, to_value, difference, difference_q0.025,
+                                   difference_q0.975)]
 #>        sex quintile from_value to_value difference difference_q0.025
 #>     <char>   <char>      <num>    <num>      <num>             <num>
-#>  1: female       Q1   79.83321 83.38002   3.546810        -0.4746512
-#>  2: female       Q2   82.49875 85.19000   2.691251        -0.9157246
-#>  3: female       Q3   83.93153 86.29470   2.363171        -0.9994910
-#>  4: female       Q4   85.01728 87.04342   2.026131        -1.1991626
-#>  5: female       Q5   86.29508 87.95801   1.662930        -1.3416993
-#>  6:   male       Q1   75.43067 79.56163   4.130958         1.9716285
-#>  7:   male       Q2   78.59779 82.07083   3.473034         1.5525868
-#>  8:   male       Q3   80.60501 83.66165   3.056633         1.3083920
-#>  9:   male       Q4   81.82001 84.69466   2.874653         1.1883222
-#> 10:   male       Q5   83.08997 85.79980   2.709830         1.1197734
+#>  1: female       Q1   80.26155 83.38002   3.118463        -0.9029978
+#>  2: female       Q2   82.74305 85.19000   2.446946        -1.1600297
+#>  3: female       Q3   84.01493 86.29470   2.279776        -1.0828860
+#>  4: female       Q4   84.87805 87.04342   2.165365        -1.0599289
+#>  5: female       Q5   85.95388 87.95801   2.004127        -1.0005026
+#>  6:   male       Q1   75.84405 79.56163   3.717571         1.5582410
+#>  7:   male       Q2   78.73798 82.07083   3.332848         1.4124004
+#>  8:   male       Q3   80.56089 83.66165   3.100761         1.3525203
+#>  9:   male       Q4   81.75281 84.69466   2.941852         1.2555216
+#> 10:   male       Q5   83.01884 85.79980   2.780963         1.1909061
 #>     difference_q0.975
 #>                 <num>
-#>  1:          7.056338
-#>  2:          5.833867
-#>  3:          5.259254
-#>  4:          4.759013
-#>  5:          4.286227
-#>  6:          6.373607
-#>  7:          5.442919
-#>  8:          4.848403
-#>  9:          4.601860
-#> 10:          4.325339
+#>  1:          6.627991
+#>  2:          5.589562
+#>  3:          5.175859
+#>  4:          4.898247
+#>  5:          4.627423
+#>  6:          5.960220
+#>  7:          5.302733
+#>  8:          4.892532
+#>  9:          4.669059
+#> 10:          4.396472
 ```
 
 ``` r
 
-mt_plot_decomposition(change, by = "age", comparisons = c(1, 5))
+mt_plot_decomposition(change_fit, by = "age", comparisons = list(quintile = "Q1"))
 ```
 
-![](decomposition_files/figure-html/unnamed-chunk-11-1.png)
+![](decomposition_files/figure-html/unnamed-chunk-13-1.png)
 
-The forecast gain of women in Q1 (3.5 years by 2035) comes mostly from
-ages 50 to 84 (2.5 years). The bars give the mean contribution and the
-lines the 95% interval of each age over the draws. The intervals are
-wide and include zero at most ages: the common trend of Li-Lee is
-uncertain 16 years ahead, and it moves all ages together, so the
-uncertainty of the ages adds up in the total (its interval is in the
-table above).
+The model’s gain for women in Q1 (3.1 years) comes mostly from ages 50
+to 84. The bars give the mean contribution and the lines the 95%
+interval of each age over the draws. The intervals are wide and include
+zero at most ages: the common trend of Li-Lee is uncertain 16 years
+ahead, and it moves all ages together, so the uncertainty of the ages
+adds up in the total. `observed = "poisson"` would add the sampling
+uncertainty of the observed year.
 
-The gap between Q5 and Q1, observed in 2019 and forecast for 2035:
+The gap between Q5 and Q1 in 2019 and in 2035, and its change. For the
+change, `summary(change = )` subtracts the two decompositions draw by
+draw:
 
 ``` r
 
 g <- mt_decompose(fc, var = "quintile", ref = "Q1", periods = c(2019, 2035))
-sg <- summary(g, by = "age")[to == "Q5" & sex == "female"]
-sg[, age := factor(age, unique(age))]
-dcast(sg, age ~ period, value.var = "mean")[, lapply(.SD, function(v) if (is.numeric(v)) round(v, 3) else v)]
-#> Key: <age>
-#>        age   2019  2035
-#>     <fctr>  <num> <num>
-#>  1:      0  0.221 0.147
-#>  2:    1-4  0.036 0.017
-#>  3:    5-9 -0.003 0.009
-#>  4:  10-14  0.030 0.010
-#>  5:  15-19  0.027 0.012
-#>  6:  20-24  0.002 0.010
-#>  7:  25-29  0.043 0.029
-#>  8:  30-34  0.031 0.067
-#>  9:  35-39  0.159 0.122
-#> 10:  40-44  0.232 0.181
-#> 11:  45-49  0.272 0.229
-#> 12:  50-54  0.350 0.278
-#> 13:  55-59  0.501 0.372
-#> 14:  60-64  0.651 0.475
-#> 15:  65-69  0.766 0.532
-#> 16:  70-74  0.843 0.568
-#> 17:  75-79  0.881 0.565
-#> 18:  80-84  0.716 0.492
-#> 19:  85-89  0.428 0.304
-#> 20:    90+  0.276 0.158
-#>        age   2019  2035
-#>     <fctr>  <num> <num>
+summary(g, by = NULL)[to == "Q5", .(sex, period, difference, difference_q0.025, difference_q0.975, jump_off)]
+#>       sex period difference difference_q0.025 difference_q0.975  jump_off
+#>    <char>  <num>      <num>             <num>             <num>     <num>
+#> 1: female   2019   6.461871          6.461871          6.461871 0.7695434
+#> 2: female   2035   4.577992          3.649408          5.662527        NA
+#> 3:   male   2019   7.659303          7.659303          7.659303 0.4845202
+#> 4:   male   2035   6.238175          5.633736          6.807403        NA
+g_fit <- mt_decompose(fc, var = "quintile", ref = "Q1", periods = c(2019, 2035), observed = "fitted")
+summary(g_fit, by = NULL, change = c(2019, 2035))[to == "Q5", .(sex, period, from_value, to_value, difference,
+                                                                difference_q0.025, difference_q0.975)]
+#>       sex       period from_value to_value difference difference_q0.025
+#>    <char>       <char>      <num>    <num>      <num>             <num>
+#> 1: female 2019 to 2035   5.692328 4.577992 -1.1143361         -2.042920
+#> 2:   male 2019 to 2035   7.174783 6.238175 -0.9366078         -1.541046
+#>    difference_q0.975
+#>                <num>
+#> 1:       -0.02980065
+#> 2:       -0.36737929
+ch <- summary(g_fit, by = "age", change = c(2019, 2035))[to == "Q5" & sex == "female"]
+ch[, band := cut(as.numeric(sub("[-+].*", "", age)), c(-1, 39, 59, 84, Inf),
+                 labels = c("0-39", "40-59", "60-84", "85+"))]
+ch[, .(change = round(sum(mean), 2)), by = band]
+#>      band change
+#>    <fctr>  <num>
+#> 1:   0-39  -0.13
+#> 2:  40-59  -0.21
+#> 3:  60-84  -0.78
+#> 4:    85+   0.00
 ```
 
-Li-Lee narrows the female gap from 6.5 to 4.6 years mainly at ages 60 to
-84, where its deviations of Q1 from the common trend return towards
-their average (see “Forecasting mortality by deprivation quintile”).
+Li-Lee forecasts a female gap of 4.6 years in 2035, against 6.5 observed
+in 2019. Of this narrowing of 1.9 years, 0.8 years is the jump-off: the
+Li-Lee fit of 2019 already puts the gap at 5.7 years. The model’s own
+narrowing, from the fitted 2019 gap, is 1.1 years (95% interval 0.03 to
+2.0), 0.8 of it at ages 60 to 84, where the deviations of Q1 from the
+common trend return towards their average (see “Forecasting mortality by
+deprivation quintile”). [`anchored()`](../reference/anchored.md) moves
+the start towards the observed level but fades out within ten years, so
+it does not change the gap in 2035.
 
 Two forecasts of the same year are compared by giving the second as `y`.
-Lee-Carter per quintile against Li-Lee, for 2035:
+Their draws are independent, so they are shuffled before they are paired
+(`pairing = "independent"`). Lee-Carter per quintile against Li-Lee, for
+2035:
 
 ``` r
 
 fl <- mt_forecast(mt_fit(lee_carter(), x), to = 2035, n_draws = 500, seed = 1)
 mm <- mt_decompose(fc, fl, periods = 2035)
-summary(mm, by = NULL)[sex == "female", .(quintile, from_value, to_value, difference)]
-#>    quintile from_value to_value difference
-#>      <char>      <num>    <num>      <num>
-#> 1:       Q1   83.38002 81.45818 -1.9218316
-#> 2:       Q2   85.19000 84.66799 -0.5220072
-#> 3:       Q3   86.29470 86.20373 -0.0909772
-#> 4:       Q4   87.04342 87.46871  0.4252962
-#> 5:       Q5   87.95801 89.20283  1.2448255
+summary(mm, by = NULL)[sex == "female", .(quintile, from_value, to_value, difference, difference_q0.025,
+                                          difference_q0.975)]
+#>    quintile from_value to_value difference difference_q0.025 difference_q0.975
+#>      <char>      <num>    <num>      <num>             <num>             <num>
+#> 1:       Q1   83.38002 81.45818 -1.9218316         -6.649883          2.623245
+#> 2:       Q2   85.19000 84.66799 -0.5220072         -4.504384          4.044343
+#> 3:       Q3   86.29470 86.20373 -0.0909772         -3.992022          4.002413
+#> 4:       Q4   87.04342 87.46871  0.4252962         -3.547072          4.280894
+#> 5:       Q5   87.95801 89.20283  1.2448255         -2.182106          4.895994
 ```
 
 ``` r
 
-mt_plot_decomposition(mm, by = "age", comparisons = c(1, 5))
+mt_plot_decomposition(mm, by = "age", comparisons = list(quintile = "Q1"))
 ```
 
-![](decomposition_files/figure-html/unnamed-chunk-14-1.png)
+![](decomposition_files/figure-html/unnamed-chunk-16-1.png)
 
-For women in Q1, Lee-Carter forecasts 1.9 years less than Li-Lee, 1.5
+For women in Q1, Lee-Carter forecasts 1.9 years less than Li-Lee, 1.7
 years of it at ages 60 and over: Lee-Carter extrapolates the slower
 improvement of Q1 at these ages in 2001-2019, while Li-Lee lets Q1
-return towards the common trend of all quintiles.
+return towards the common trend of all quintiles. The interval of the
+difference is wide because both forecasts are uncertain; it says how
+different two independent forecasts can be, not how different the models
+are.
 
 ## Other quantities
 
@@ -459,9 +552,14 @@ although the rates fell.
   quantities: `"horiuchi"` or `"stepwise"`; the line integral
   distributes interactions evenly, stepwise replacement depends on the
   order of the ages.
-- Populations of subgroups: `composition = "radix"` for the
-  decomposition of Riffe et al.; `"pooled"` when the target is the life
-  expectancy of the whole population as usually published.
+- Populations of subgroups: `composition = "radix"` (Riffe et al.) for
+  subgroups fixed from the starting age (sex, education from 30 or 35,
+  country of birth); `"pooled"` for areas, regions and other groups
+  between which people move, and whenever the target is the life
+  expectancy of the whole population as published.
+- Forecasts from an observed year: report the jump-off (`jump_off`) or
+  decompose from the fitted rates (`observed = "fitted"`); compare two
+  models with independent draws (the default).
 - Forecasts: contributions and their sums come with intervals, because
   every draw is decomposed. Sums over ages or causes are formed draw by
   draw (`summary(by = )`), so their intervals are not sums of intervals.
@@ -488,7 +586,9 @@ Kitagawa EM (1955). Components of a difference between two rates.
 
 Riffe T, Tursun-zade R, Trias Llimós S (2024). Arriaga meets Kitagawa.
 Life expectancy decomposition with population subgroups. MPIDR Working
-Paper WP-2024-029. <doi:10.4054/MPIDR-WP-2024-029>.
+Paper WP-2024-029. <doi:10.4054/MPIDR-WP-2024-029>. Published in
+*Geographical Analysis* (2026), <doi:10.1111/gean.70033>. Equation
+numbers in this package refer to the working paper.
 
 Vaupel JW (2002). Life expectancy at current rates vs. current
 conditions: a reflexion stimulated by Bongaarts and Feeney’s “How long

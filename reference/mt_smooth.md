@@ -143,18 +143,18 @@ s <- mt_smooth(x)
 head(attr(s, "smooth"))
 #>    measure stratum period     method lambda_age lambda_period       ed
 #>     <char>   <int> <char>     <char>      <num>         <num>    <num>
-#> 1:  deaths       1   2001 pspline_1d   84044.08            NA 5.767171
-#> 2:  deaths       1   2002 pspline_1d   55319.02            NA 6.280080
+#> 1:  deaths       1   2001 pspline_1d   84044.06            NA 5.767171
+#> 2:  deaths       1   2002 pspline_1d   55318.96            NA 6.280081
 #> 3:  deaths       1   2003 pspline_1d   27572.52            NA 7.243212
-#> 4:  deaths       2   2001 pspline_1d  101416.32            NA 5.532907
+#> 4:  deaths       2   2001 pspline_1d  101398.86            NA 5.533108
 #> 5:  deaths       2   2002 pspline_1d   23289.26            NA 7.546782
 #> 6:  deaths       2   2003 pspline_1d   92069.24            NA 5.638856
 #>    max_rel_diff at_bound
 #>           <num>   <lgcl>
-#> 1:    0.1988680    FALSE
-#> 2:    0.2322713    FALSE
+#> 1:    0.1988679    FALSE
+#> 2:    0.2322712    FALSE
 #> 3:    0.2057177    FALSE
-#> 4:    0.2271144    FALSE
+#> 4:    0.2271092    FALSE
 #> 5:    0.2455273    FALSE
 #> 6:    0.2102315    FALSE
 xt <- mt_example(deaths = "single", years = 2000:2015)

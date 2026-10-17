@@ -128,7 +128,11 @@ processed <a href="mt_data.html">mt_data</a> object.</p>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>Steps:</p><ul><li><p><code>step_ungroup(...)</code>: <code><a href="mt_ungroup.html">mt_ungroup()</a></code>;</p></li>
-<li><p><code>step_smooth(...)</code>: <code><a href="mt_smooth.html">mt_smooth()</a></code>;</p></li>
+<li><p><code>step_smooth(...)</code>: <code><a href="mt_smooth.html">mt_smooth()</a></code>. The model is fitted to the
+smoothed rates; residuals and observation noise refer to the raw
+deaths. Smoothing over time (<code>along = "period"</code>, or <code>dims = 2</code>)
+narrows the forecast intervals of models with a period index, so check
+coverage in a backtest and consider <code><a href="calibrated.html">calibrated()</a></code>;</p></li>
 <li><p><code>step_regroup(age, period)</code>: <code><a href="mt_regroup.html">mt_regroup()</a></code>;</p></li>
 <li><p><code>step_grid(age, period)</code>: <code><a href="mt_set_grid.html">mt_set_grid()</a></code>;</p></li>
 <li><p><code>step_window(years)</code>: keeps the last <code>years</code> years of the training

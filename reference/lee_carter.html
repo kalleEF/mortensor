@@ -134,6 +134,11 @@ linear <code>k[t]</code> to the mean deviance of the Lee-Carter fit (Booth,
 Maindonald and Smith 2002): the longest recent period over which the
 decline was close to linear (<code>demography::lca(chooseperiod = TRUE, breakmethod = "bms")</code> gives the same period). Fitted rates of earlier
 years are missing.</p>
+<p>Compared with <code><a href="https://pkg.robjhyndman.com/demography/reference/lca.html" class="external-link">demography::lca()</a></code>, <code>k[t]</code> is centred again after the
+second stage (a constant shift of <code>k</code> and <code>a</code>, with identical fitted
+rates), and life tables use <code>a_x = n/2</code> at age 0 (as <code><a href="life_table.html">life_table()</a></code>), so
+<code>adjust = "e0"</code> matches a slightly different life expectancy than
+demography's life table where age 0 is in the data.</p>
 <p>The period index follows a random walk with drift. Draws include the
 innovations and the uncertainty of the drift. With <code>bootstrap = TRUE</code> the
 parameters are re-estimated on <code>n_boot</code> Poisson resamples of the fitted
