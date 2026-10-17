@@ -590,12 +590,13 @@ shares_exposure <- function(E, st, v) {
 
 decomp_comparisons <- function(sx, sy, px, py, var, ref, periods) {
   last_any <- function(s) max(c(s$periods, s$obs_periods))
-  out <- list()
-  meta <- list()
+  acc <- new.env(parent = emptyenv())
+  acc$out <- list()
+  acc$meta <- list()
   add <- function(m, src1, tag1, p1, idx1, src2, tag2, p2, idx2) {
-    out[[length(out) + 1L]] <<- list(src1 = src1, tag1 = tag1, p1 = p1, idx1 = idx1, src2 = src2, tag2 = tag2,
-                                     p2 = p2, idx2 = idx2)
-    meta[[length(meta) + 1L]] <<- m
+    acc$out[[length(acc$out) + 1L]] <- list(src1 = src1, tag1 = tag1, p1 = p1, idx1 = idx1, src2 = src2,
+                                            tag2 = tag2, p2 = p2, idx2 = idx2)
+    acc$meta[[length(acc$meta) + 1L]] <- m
   }
   pv <- px$pop_vars
   if (!is.null(var)) {
@@ -638,10 +639,10 @@ decomp_comparisons <- function(sx, sy, px, py, var, ref, periods) {
       }
     }
   }
-  if (!length(out)) mt_abort("No comparisons: check `var`, `ref` and the strata of `y`.", class = "argument")
-  meta <- rbindlist(meta)
+  if (!length(acc$out)) mt_abort("No comparisons: check `var`, `ref` and the strata of `y`.", class = "argument")
+  meta <- rbindlist(acc$meta)
   meta[, comparison := seq_len(.N)]
-  list(list = out, meta = meta)
+  list(list = acc$out, meta = meta)
 }
 
 # One comparison: s1, s2 with R [age, cause, group, draw] and E [age, group]
