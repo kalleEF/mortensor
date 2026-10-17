@@ -2,7 +2,7 @@ url: ~
 template:
   bootstrap: 5
   includes:
-    # Mermaid diagrams (function map, README): fenced ```mermaid blocks are
+    # Mermaid diagrams (function map article): fenced ```mermaid blocks are
     # turned into diagrams in the browser
     in_header: |
       <style>
