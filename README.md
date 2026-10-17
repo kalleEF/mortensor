@@ -56,31 +56,27 @@ Articles, Function map) shows every function with its purpose, the
 possible workflows and what the package does not cover.
 
 ```mermaid
-flowchart LR
+flowchart TD
   T["`**your tables**
   deaths, populations`"]
   D["`**mt_data**
-  any resolution, strata`"]
+  any resolution, strata; prepared with mt_as_exposure(), mt_subset(), mt_regroup(), mt_validate(), ...`"]
   S["`**model specification**
-  lee_carter(), li_lee(), rwd(),
-  ensemble(), reconciled(), calibrated()`"]
+  lee_carter(), li_lee(), rwd(), ensemble(), reconciled(), calibrated(), ...`"]
   F["`**mt_fit**`"]
   P["`**mt_draws**
   simulated future rates`"]
+  B["`**backtest scores**
+  mt_score()`"]
   R["`**results**
-  life expectancy, ASR, deaths,
-  gaps, plots, CSV`"]
-  B["`**backtest scores**`"]
+  life_expectancy(), asr(), mt_contrast(), mt_decompose(), plots, CSV`"]
   T -- "mt_data()" --> D
-  D -- "mt_as_exposure(), mt_subset(), mt_group_levels(),
-  mt_fill_suppressed(), mt_regroup(), mt_validate()" --> D
-  S --> F
   D -- "mt_fit()" --> F
+  S --> F
   F -- "mt_forecast()" --> P
-  P -- "life_expectancy(), asr(), mt_contrast(),
-  mt_decompose(), mt_plot_*(), mt_export()" --> R
-  D -- "mt_backtest(), mt_score()" --> B
-  D -- "mt_observed()" --> R
+  D -- "mt_backtest()" --> B
+  P --> R
+  D -- "observed data" --> R
 ```
 
 ## Example

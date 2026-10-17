@@ -9,18 +9,17 @@ section "What is not covered" lists steps that need other tools.
 
 ## The main path
 
-Every analysis passes the same objects from left to right. Functions in
-the boxes create the objects; the labels on the arrows are the functions
-that connect them.
+Every analysis passes the same objects from top to bottom. The boxes are
+objects; the labels on the arrows are the functions that connect them.
 
 ```mermaid
 flowchart TD
   T["`**your tables**
   deaths, populations or exposures (CSV, Excel, official exports)`"]
-  D["`**mt_data object**
-  observations at any age and period resolution, strata`"]
+  D["`**mt_data**
+  observations at any age and period resolution, by strata`"]
   S["`**model specification**
-  lee_carter(), li_lee(), rwd(), ... and wrappers ensemble(), reconciled()`"]
+  lee_carter(), li_lee(), rwd(), ..., optionally inside ensemble(), reconciled(), calibrated(), anchored()`"]
   F["`**mt_fit**
   estimates per stratum or joint`"]
   P["`**mt_draws**
@@ -28,142 +27,88 @@ flowchart TD
   B["`**mt_backtest**
   scores of past forecasts`"]
   R["`**tables and plots**
-  life expectancy, rates, deaths, gaps, inequality indices`"]
+  life expectancy, rates, deaths, gaps, decompositions`"]
   T -- "mt_data()" --> D
   D -- "prepare and check (map 1)" --> D
-  D -- "mt_fit(spec, data, prep)" --> F
+  D -- "mt_fit()" --> F
   S --> F
+  S --> B
+  D -- "mt_backtest()" --> B
   F -- "mt_forecast()" --> P
   P -- "map 3" --> R
-  D -- "mt_backtest(spec, data, prep)" --> B
   B -- "mt_score()" --> R
-  D -- "mt_observed(): the past" --> R
+  D -- "the past (map 3)" --> R
 ```
 
 ## Map 1: from tables to analysis-ready data
 
-Each step is an analysis decision. Most data sets need only some of them.
+The steps in their usual order. Each is a decision about the data; skip
+those a data set does not need. Every step returns an `mt_data` object.
 
 ```mermaid
+%%{init: {"flowchart": {"wrappingWidth": 360}}}%%
 flowchart TD
-  subgraph READ["Read"]
-    A1["`**mt_data()**
-    deaths, exposures, populations in long
-    or wide tables; age labels such as 85+,
-    '85 years and over', '85 Jahre und mehr';
-    suppression symbols; totals and unknown
-    ages handled with warnings`"]
-    A2["`**mt_read_genesis(), mt_read_gbe()**
-    German official exports`"]
-    A3["`**mt_from_hmd(), as_mt_data()**
-    Human Mortality Database, StMoMo,
-    demography objects`"]
-  end
-  subgraph PREP["Prepare (decisions)"]
-    B1["`**mt_as_exposure(type)**
-    person-years from mid-year,
-    1 January or 31 December populations`"]
-    B2["`**mt_subset()**
-    ages, years, strata to analyse`"]
-    B3["`**mt_group_levels(), mt_relabel()**
-    aggregation layers: cause groups,
-    quintiles, regions; recode labels`"]
-    B4["`**mt_fill_suppressed()**
-    estimate suppressed counts from
-    published totals or known bounds`"]
-  end
-  subgraph CHECK["Check"]
-    C1["`**mt_validate()**
-    impossible values, missing cells,
-    totals among levels, sums of a hierarchy`"]
-  end
-  subgraph HARM["Harmonise resolution"]
-    H1["`**mt_regroup()**
-    common age groups or years
-    ('deaths', 'common')`"]
-    H2["`**mt_ungroup()**
-    single years from age groups
-    (penalised composite link)`"]
-    H3["`**mt_smooth()**
-    smooth rates over age, time or both
-    (P-splines, Whittaker, GAM);
-    mt_smooth_check(), mt_plot_smooth()`"]
-    H4["`**mt_prep() with step_*()**
-    the same steps inside fits
-    and backtests, without leakage`"]
-  end
-  A1 --> B1
-  A2 --> B1
-  A3 --> B2
-  B1 --> B2 --> B3 --> B4 --> C1
-  C1 --> H1
-  C1 --> H2
-  H2 --> H3
-  H1 --> M["model-ready mt_data"]
-  H3 --> M
-  H4 -.-> M
+  A["`**read**
+  mt_data(): long or wide tables, age labels such as 85+ or '85 Jahre und mehr', suppression symbols
+  mt_read_genesis(), mt_read_gbe(): German official exports
+  mt_from_hmd(), mt_read_hmd(), as_mt_data(): HMD, StMoMo, demography`"]
+  E["`**mt_as_exposure(type)**
+  person-years from mid-year, 1 January or 31 December populations`"]
+  S["`**mt_subset()**
+  ages, years and strata to analyse`"]
+  G["`**mt_regroup()**
+  common age groups or years, for example those of the deaths`"]
+  F["`**mt_fill_suppressed()**
+  suppressed counts estimated from published totals or bounds`"]
+  L["`**mt_group_levels(), mt_relabel()**
+  aggregation layers such as cause groups, quintiles or regions; labels`"]
+  U["`**mt_ungroup()**
+  single years of age from age groups (penalised composite link)`"]
+  V["`**mt_validate()**
+  impossible values, missing cells, totals among levels, sums of a hierarchy`"]
+  M["model-ready mt_data"]
+  A --> E --> S --> G --> F --> L --> U --> V --> M
 ```
+
+Smoothing is not a step of this map. `mt_smooth()` with
+`mt_smooth_check()` and `mt_plot_smooth()` shows what a smoother would do
+to the data; for forecasts, smooth inside the fit with `step_smooth()`
+(map 2), so that observation noise and backtests refer to the raw deaths.
+`mt_fit()` warns about data smoothed beforehand and `mt_backtest()` refuses
+them.
 
 ## Map 2: models, coherence and evaluation
 
+A model specification is one model, optionally inside wrappers.
+Preprocessing steps given as `prep` are repeated in every fit, so that
+backtests do not see the test years.
+
 ```mermaid
 flowchart TD
+  ONE["`**one population per stratum**
+  lee_carter(), rwd(), hyndman_ullah(), stmomo(), arima_series(), ets_series(), apc_bayes()`"]
+  MANY["`**several strata jointly**
+  li_lee(common_by), product_ratio(), tucker3(), cause_shares()`"]
+  H["`**mt_hierarchy()**
+  totals and groups of strata; fixed nodes such as a trusted total`"]
+  WRAP["`**wrappers around any model**
+  ensemble(), reconciled(), calibrated(), anchored(), bootstrapped(), tuned()`"]
+  SPEC["model specification"]
   M["model-ready mt_data"]
-  subgraph ONE["Models for one population per stratum"]
-    direction LR
-    S1["`**lee_carter()**
-    age pattern of a common trend`"]
-    S2["`**rwd()**
-    random walk per age; benchmark;
-    observation_noise for small counts`"]
-    S3["`**hyndman_ullah(), stmomo(),
-    arima_series()**
-    demography, StMoMo, forecast`"]
-    S4["`**apc_bayes(), apc_select()**
-    Bayesian age-period-cohort`"]
-  end
-  subgraph MANY["Models for several strata jointly"]
-    direction LR
-    J1["`**li_lee(common_by)**
-    common trend, bounded deviations`"]
-    J2["`**product_ratio(), tucker3(),
-    cause_shares()**
-    other joint and cause models`"]
-  end
-  subgraph WRAP["Wrappers around any model"]
-    direction LR
-    W1["`**ensemble()**
-    mixture of models,
-    better calibrated`"]
-    W2["`**reconciled(model, hierarchy)**
-    totals and parts add up
-    draw by draw`"]
-    W3["`**bootstrapped(), tuned()**
-    parameter uncertainty,
-    inner tuning`"]
-    W4["`**calibrated(model, years = 10)**
-    spread of the draws fitted to
-    the errors of the last years`"]
-    W5["`**anchored(model, years = 3)**
-    start of the forecast moved to
-    the observed level`"]
-  end
-  H["`**mt_hierarchy(), mt_aggregate_strata()**
-  totals and groups of strata; causes share exposures;
-  fixed nodes (a trusted total) in reconciliation`"]
-  FIT["`**mt_fit()**`"]
-  INS["`**summary(), mt_parameters(), residuals(), mt_plot_residuals()**
-  inspect the model, its assumptions and the fit`"]
+  PREP["`**mt_prep()**
+  step_smooth(), step_ungroup(), step_window(), ...`"]
+  FIT["`**mt_fit(spec, data, prep)**`"]
+  INS["`**inspect**
+  summary(), mt_parameters(), residuals(), mt_plot_residuals()`"]
   FC["`**mt_forecast()**
-  draws; warns about implausible rates;
-  mt_jump_off() reports the first-year step`"]
+  draws; warns about implausible rates; mt_jump_off()`"]
+  ONE --> SPEC
+  MANY --> SPEC
+  H --> WRAP
+  WRAP -. "optional" .-> SPEC
+  SPEC --> FIT
   M --> FIT
-  H --> W2
-  ONE --> WRAP
-  MANY --> WRAP
-  ONE --> FIT
-  MANY --> FIT
-  WRAP --> FIT
+  PREP -. "optional" .-> FIT
   FIT --> INS
   FIT --> FC
 ```
@@ -174,13 +119,11 @@ Choosing between specifications:
 flowchart TD
   M["model-ready mt_data"]
   SP["`**candidate specifications**
-  with their preprocessing (mt_prep)`"]
+  each with its preprocessing (prep)`"]
   BT["`**mt_backtest()**
-  rolling origins; preprocessing and model refitted
-  on each training window; suppressed cells not scored`"]
+  rolling origins; preprocessing and model refitted on each training window; suppressed cells not scored`"]
   SC["`**mt_score()**
-  CRPS, interval score, coverage, PIT, MASE;
-  for rates, life expectancy or ASR`"]
+  CRPS, interval score, coverage, PIT, MASE; for rates, life expectancy or ASR`"]
   PL["`**mt_plot_scores(), mt_plot_coverage()**
   by horizon, age or model`"]
   CH["chosen specification"]
@@ -190,63 +133,37 @@ flowchart TD
   BT --> PL --> CH
 ```
 
+`tuned()` and `mt_tune()` run the same comparison inside a fit, over a
+grid of settings.
+
 ## Map 3: from draws to results
+
+Indicators and comparisons are computed path by path, so their intervals
+include the joint uncertainty of all strata. The same functions describe
+observed data.
 
 ```mermaid
 flowchart TD
   P["`**mt_draws**
   forecast paths`"]
-  O["`**mt_observed(data)**
-  observed rates with Poisson draws`"]
-  subgraph IND["Indicators, path by path"]
-    direction LR
-    I1["`**life_expectancy()**`"]
-    I2["`**asr()**
-    standards esp2013, esp1976,
-    who2000 or your own`"]
-    I3["`**prob_dying()**`"]
-    I4["`**mt_deaths(), yll()**
-    deaths with projected
-    populations`"]
-  end
-  subgraph COMP["Comparisons, path by path"]
-    direction LR
-    C1["`**mt_contrast()**
-    differences and ratios
-    between strata`"]
-    C2["`**mt_inequality()**
-    slope and relative index
-    of inequality`"]
-    C3["`**mt_decompose()**
-    differences by age, cause
-    and subgroup composition`"]
-  end
-  subgraph AGG["Aggregation"]
-    direction LR
-    G1["`**mt_aggregate_draws()**
-    totals, wider age groups;
-    mt_coherence() checks sums`"]
-    G2["`**mt_disaggregate()**
-    finer ages (mt_shape_rates(),
-    mt_disaggregate_check())`"]
-  end
-  subgraph OUT["Output"]
-    direction LR
-    X1["`**mt_summarise()**
-    quantiles of rates`"]
-    X2["`**mt_plot_forecast(), mt_plot_age(),
-    mt_plot_life_expectancy(), mt_plot_shares()**`"]
-    X3["`**mt_export()**
-    CSV of draws or any table`"]
-  end
-  P --> AGG
+  O["`**mt_data**
+  observed data; mt_observed() adds Poisson draws`"]
+  AGG["`**aggregate or refine**
+  mt_aggregate_draws(), mt_disaggregate(); mt_coherence() checks sums`"]
+  IND["`**indicators**
+  life_expectancy(), asr(), prob_dying(), yll(), mt_deaths()`"]
+  COMP["`**comparisons**
+  mt_contrast(), mt_inequality(), mt_decompose()`"]
+  OUT["`**output**
+  mt_summarise(), mt_plot_forecast(), mt_plot_life_expectancy(), mt_plot_shares(), mt_plot_decomposition(), mt_export()`"]
+  P <--> AGG
   P --> IND
   O --> IND
   P --> COMP
   O --> COMP
+  P --> OUT
   IND --> OUT
   COMP --> OUT
-  P --> OUT
 ```
 
 ## Functions by purpose
@@ -254,19 +171,21 @@ flowchart TD
 | Step | Function | Purpose | Input | Output |
 |---|---|---|---|---|
 | Read | `mt_data()` | read deaths, exposures, populations (long or wide, suppression symbols, shared populations) | data frames | `mt_data` |
-| Read | `mt_add()` | add or replace one table | `mt_data`, data frame | `mt_data` |
+| Read | `mt_add()`, `mt_add_deaths()`, `mt_add_exposure()`, `mt_add_population()` | add or replace one table | `mt_data`, data frame | `mt_data` |
 | Read | `mt_read_genesis()`, `mt_read_gbe()` | read German official exports | files | `mt_data`, table |
 | Read | `mt_from_hmd()`, `mt_read_hmd()`, `as_mt_data()` | read or convert HMD, StMoMo, demography data | objects, files | `mt_data` |
-| Read | `parse_age_labels()`, `age_groups()`, `single_ages()`, `single_years()` | age and period axes from labels or bounds | labels | `mt_axis` |
+| Read | `parse_age_labels()`, `age_groups()`, `single_ages()`, `single_years()`, `period_groups()` | age and period axes from labels or bounds | labels | `mt_axis` |
+| Read | `axis_widths()`, `axis_midpoints()`, `is_open()` | interval widths, midpoints and the open interval of an axis | `mt_axis` | vector |
 | Prepare | `mt_as_exposure()` | exposures from populations (`type` required) | `mt_data` | `mt_data` |
 | Prepare | `mt_subset()` | restrict ages, years, strata | `mt_data` | `mt_data` |
-| Prepare | `mt_strata()`, `mt_obs()`, `mt_grid()`, `mt_set_grid()` | look at strata (with their level in a hierarchy), tables and the modelling grid | `mt_data` | table, grid |
+| Prepare | `mt_strata()`, `mt_obs()`, `mt_grid()`, `mt_set_grid()`, `mt_granularity()` | look at strata (with their level in a hierarchy), tables, their resolution and the modelling grid | `mt_data` | table, grid |
+| Prepare | `mt_array()`, `mt_operator()` | data as arrays on the grid; the matrix that sums grid cells to observed cells (for your own models) | `mt_data` | array, matrix |
 | Prepare | `mt_group_levels()`, `mt_relabel()` | aggregation layers, recode labels | `mt_data` | `mt_data` |
 | Prepare | `mt_fill_suppressed()` | estimate suppressed counts | `mt_data`, hierarchy or bounds | `mt_data` |
 | Check | `mt_validate()` | plausibility and hierarchy checks | `mt_data` | findings |
 | Harmonise | `mt_regroup()`, `mt_ungroup()`, `mt_smooth()` | common resolution, single years, smoothing over age, time or both | `mt_data` | `mt_data` |
 | Harmonise | `mt_smooth_check()`, `mt_plot_smooth()` | how much smoothing removed (dispersion, trend ratio) | `mt_data` pair | table, ggplot |
-| Harmonise | `mt_prep()` with `step_ungroup()`, `step_smooth()`, `step_regroup()`, `step_grid()`, `step_shocks()`, `step_window()` | preprocessing inside fits and backtests | steps | pipeline |
+| Harmonise | `mt_prep()`, `mt_prep_apply()` with `step_ungroup()`, `step_smooth()`, `step_regroup()`, `step_grid()`, `step_shocks()`, `step_window()` | preprocessing inside fits and backtests | steps | pipeline |
 | Model | `lee_carter()`, `rwd()`, `li_lee()`, `product_ratio()`, `hyndman_ullah()`, `stmomo()`, `arima_series()`, `ets_series()`, `apc_bayes()`, `tucker3()`, `cause_shares()` | model specifications | settings | `mt_spec` |
 | Model | `apc_select()`, `mcmc_control()`, `mt_tune()` | choose random-walk orders, MCMC settings, settings by inner backtest | data, grid | table, `mt_spec` |
 | Combine | `ensemble()` (optionally `top_k`), `reconciled()`, `bootstrapped()`, `tuned()` | mixtures, coherence, parameter uncertainty (and of smoothing, `type = "data"`), tuning | `mt_spec` | `mt_spec` |
@@ -287,9 +206,10 @@ flowchart TD
 | Report | `mt_decompose()`, `mt_plot_decomposition()` | differences in life expectancy (or other summaries) by age, cause and subgroup composition: Arriaga, Horiuchi, stepwise replacement, Kitagawa, Arriaga meets Kitagawa; jump-off share and changes of gaps | `mt_draws` or `mt_data` (or both; also census years with gaps) | `mt_decomposition`, table, ggplot |
 | Report | `mt_plot_forecast()`, `mt_plot_age()`, `mt_plot_life_expectancy()`, `mt_plot_shares()`, `mt_plot_rates()`, `mt_plot_ungroup()`, `mt_plot_tucker()`, `mt_export()` | figures and CSV files | draws, data, tables | ggplot, file |
 | Data | `ons_data`, `ons_cause_groups`, `de_deaths`, `de_population`, `de_cause_groups`, `mt_example()`, `mt_example_causes()`, `mt_example_regions()` | example data (published and simulated) | | tables, `mt_data` |
-| Report | `theme_mortensor()`, `scale_colour_mortensor()`, `mt_palette()` | the package's plot style for your own figures | | theme, scales |
+| Report | `theme_mortensor()`, `scale_colour_mortensor()`, `scale_fill_mortensor()`, `mt_palette()` | the package's plot style for your own figures | | theme, scales |
 | Disaggregate | `mt_disaggregate()`, `mt_shape_rates()`, `mt_disaggregate_check()`, `mt_plot_disaggregation()` | forecasts on finer ages, with fixed or changing age shapes | `mt_draws` | `mt_draws`, table, ggplot |
 | Exchange | `as_demogdata()`, `as_stmomodata()` | cross-checks with demography and StMoMo | `mt_data` | `demogdata`, `StMoMoData` |
+| Extend | `new_mt_spec()` | constructor for developers adding a model (methods for the internal generics `fit_model()` and `simulate_model()`) | model name, parameters | `mt_spec` |
 
 ## What is not covered
 

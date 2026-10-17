@@ -203,6 +203,14 @@ work: `claude/vigilant-albattani-2ssw1x` (plays the role of `dev-0.2`).
   all-cause Lee-Carter 32.9 and Li-Lee 34.3 (cause forecasts more
   pessimistic, as in Wilmoth 1995).
 
+- 2026-10-17: Function map. On the website the diagrams were scaled down
+  to unreadable text (map 2 1812 px wide, README 1905 px, column 776 px)
+  and their last lines were clipped (Bootstrap `p` margin inside mermaid
+  HTML labels). Diagrams redrawn top-down within 776 px (map 2 853 px),
+  CSS reset in `_pkgdown.yml`; map 1 no longer sends `mt_smooth()` output
+  to models, `mt_prep()` points to `mt_fit()`. Checked by rendering the
+  built pages in Chromium with mermaid 10.9.1.
+
 ## Open questions
 
 See `dev/implementation-plan.md` Section 17.

@@ -2,6 +2,15 @@
 
 Clean break: the 0.1.x interface is replaced (see `dev/revamp-plan.md`).
 
+## Function map
+
+* The diagrams of the function map and the README fit the width of the
+  website, and their labels are no longer clipped (Bootstrap's paragraph
+  margin inside mermaid labels made the boxes too small). Map 1 lists the
+  preparation steps in their usual order and leaves smoothing to
+  `step_smooth()` inside fits; `mt_prep()` feeds `mt_fit()`; the function
+  table lists every exported function.
+
 ## Changes after the third and fourth applied reviews
 
 Two further reviews (`dev/review-applied-3.md`, `-4.md`; an epidemiologist
