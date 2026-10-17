@@ -22,8 +22,6 @@
 #'   forecast (observed from `data` if given, otherwise from the training
 #'   data), with one panel per level of `facet` if given;
 #' * `mt_plot_rates()`: Lexis surface (age by period) of observed log rates;
-#' * `mt_plot_ungroup()`: grouped rates as steps and ungrouped single-year
-#'   rates for one period;
 #' * `mt_plot_coverage()`: empirical interval coverage by horizon from a
 #'   backtest, with the nominal levels.
 #'
@@ -41,8 +39,6 @@
 #'   (`log(death rate)`) instead of rates on a logarithmic axis.
 #' @param facet Stratum variable whose levels get one panel each (for
 #'   example `"sex"`), or `NULL`.
-#' @param ungrouped The [mt_ungroup()] result for `data`.
-#' @param period Year shown.
 #' @param backtest An [mt_backtest()] result.
 #' @return A ggplot object.
 #' @examples
@@ -274,35 +270,6 @@ mt_plot_rates <- function(data, strata = NULL) {
 
 #' @rdname mt_plot
 #' @export
-mt_plot_ungroup <- function(data, ungrouped, period = NULL, strata = NULL) {
-  need_ggplot()
-  g <- mt_grid(ungrouped)
-  period <- period %||% max(g$period$lower)
-  D <- mt_obs(data, "deaths")[period_lo == period]
-  E <- mt_obs(ungrouped, "exposure")[period_lo == period]
-  D[, exposure := vapply(seq_len(.N), function(i) {
-    sum(E$value[E$stratum == D$stratum[i] & E$age_lo >= D$age_lo[i] & E$age_hi <= D$age_hi[i]])
-  }, 0)]
-  D[, `:=`(rate = value / exposure, x_hi = pmin(age_hi, max(g$age$lower) + 1))]
-  U <- mt_obs(ungrouped, "deaths")[period_lo == period]
-  U <- merge(U, E[, list(stratum, age_lo, exposure = value)], by = c("stratum", "age_lo"))
-  U[, `:=`(rate = value / exposure, x = age_lo + 0.5)]
-  if (!is.null(strata)) {
-    D <- D[label %in% strata]
-    U <- U[label %in% strata]
-  }
-  ggplot2::ggplot() +
-    ggplot2::geom_segment(data = D, ggplot2::aes(x = age_lo, xend = x_hi, y = rate, yend = rate), colour = "grey40") +
-    ggplot2::geom_line(data = U, ggplot2::aes(x = x, y = rate), colour = "firebrick") +
-    ggplot2::facet_wrap(~label) +
-    ggplot2::scale_y_log10() +
-    ggplot2::labs(x = "Age", y = "Death rate (log scale)",
-                  title = sprintf("Grouped (grey) and ungrouped (red) rates, %s", period)) +
-    theme_mortensor()
-}
-
-#' @rdname mt_plot
-#' @export
 mt_plot_coverage <- function(backtest) {
   need_ggplot()
   s <- mt_score(backtest, by = c("model", "horizon"))
@@ -444,8 +411,10 @@ mt_plot_shares <- function(draws, var = NULL, total_level = NULL, ages = NULL, g
     ggplot2::geom_line(ggplot2::aes(linetype = kind), linewidth = 0.6) +
     ggplot2::geom_vline(xintercept = draws$origin + 0.5, linetype = "dotted", colour = "grey50") +
     ggplot2::facet_wrap(~ group) +
-    ggplot2::scale_linetype_manual(values = c(observed = "solid", forecast = "dashed")) +
-    scale_colour_mortensor(type = "categorical") + scale_fill_mortensor(type = "categorical") +
+    ggplot2::scale_linetype_manual(values = c(observed = "solid", forecast = "dashed"),
+                                   guide = ggplot2::guide_legend(order = 2)) +
+    scale_colour_mortensor(type = "categorical", guide = ggplot2::guide_legend(order = 1)) +
+    scale_fill_mortensor(type = "categorical", guide = ggplot2::guide_legend(order = 1)) +
     ggplot2::labs(x = NULL, y = "Share of deaths", colour = NULL, fill = NULL, linetype = NULL, title = draws$model,
                   subtitle = "Solid: observed; dashed: forecast median with 95% interval") +
     theme_mortensor()
@@ -454,7 +423,7 @@ mt_plot_shares <- function(draws, var = NULL, total_level = NULL, ages = NULL, g
 #' @rdname mt_plot_more
 #' @export
 mt_plot_scores <- function(backtest, metric = "crps", by = c("horizon", "age", "model"),
-                           target = c("rate", "life_expectancy", "asr")) {
+                           target = c("rate", "life_expectancy", "asr", "life_expectancy_gap", "asr_gap")) {
   need_ggplot()
   by <- match.arg(by)
   target <- match.arg(target)

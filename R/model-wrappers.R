@@ -114,7 +114,8 @@ simulate_model.mt_spec_fdm <- function(spec, fit, h, n_draws, ...) {
 #' initial exposures are approximated as central exposures plus half the
 #' deaths, and forecast death probabilities are converted to central rates
 #' (`m = -log(1 - q)`). Cohorts observed in fewer than `clip` cells get zero
-#' weight. Draws come from `simulate()` of the fitted model (period and
+#' weight; their fitted rates use the effect of the nearest estimated cohort.
+#' Draws come from `simulate()` of the fitted model (period and
 #' cohort indexes simulated as multivariate random walks with drift and
 #' ARIMA, respectively).
 #'
@@ -160,8 +161,18 @@ fit_model.mt_spec_stmomo <- function(spec, D, E, ages, periods, ...) {
   utils::capture.output(fit <- suppressWarnings(StMoMo::fit(mod, Dxt = Dx, Ext = Ex, ages = x, years = periods,
                                                             wxt = wxt, verbose = FALSE)))
   if (!isTRUE(fit$conv)) mt_abort("StMoMo fit did not converge.", class = "model_fit")
-  fv <- stats::fitted(fit, type = "rates")
+  fv <- stmomo_fitted(fit)
   list(fit = fit, logit = logit, gc_order = p$gc_order, fitted = if (logit) -log(1 - pmin(fv, 0.999)) else fv)
+}
+
+# Fitted rates; cohorts with zero weight (`clip`) have no estimated effect,
+# so their cells take the effect of the nearest estimated cohort
+stmomo_fitted <- function(fit) {
+  gc <- fit$gc
+  if (is.null(gc) || !anyNA(gc) || all(is.na(gc))) return(stats::fitted(fit, type = "rates"))
+  ok <- which(!is.na(gc))
+  gc[] <- gc[ok[vapply(seq_along(gc), function(i) which.min(abs(ok - i)), integer(1))]]
+  stats::predict(fit, years = fit$years, kt = fit$kt, gc = gc, type = "rates")
 }
 
 #' @export

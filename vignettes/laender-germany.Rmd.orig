@@ -1,0 +1,243 @@
+---
+title: "Differences between the German Laender"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Differences between the German Laender}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.cap = "", fig.width = 7, fig.height = 4.5,
+                      message = FALSE, fig.path = "laender-germany-")
+```
+
+*This vignette is precomputed (`dev/precompute-vignettes.R`) because its
+backtests take about half an hour.*
+
+How will life expectancy in the 16 German Laender develop until 2035, and
+will the remaining gap between East and West Germany close? This vignette
+answers with one complete pipeline: official tables with suppressed
+cells, a hierarchy of Laender, East and West and Germany, a model chosen
+in a backtest of both the Laender and the East-West gap, and forecasts
+that add up at every level. Each step refers to the vignette that
+explains it.
+
+```{r}
+library(mortensor)
+library(data.table)
+```
+
+## Data
+
+`de_deaths` holds deaths by year, Land, sex, age group and ICD-10 chapter
+(Destatis, published by the Federal Health Monitoring, GBE-Bund);
+`de_population` the populations on 31 December by single year of age
+(GENESIS-Online, table 12411-0013). Both are licensed under the
+Datenlizenz Deutschland - Namensnennung - Version 2.0.
+
+```{r}
+x <- mt_data(deaths = de_deaths, population = de_population, by = c("region", "sex", "cause"))
+x <- mt_as_exposure(x, type = "dec31")
+x <- mt_subset(x, periods = c(1998, 2019))
+x <- mt_regroup(x, age = "deaths")
+```
+
+* **Exposures**: the person-years of year *t* are the mean of the
+  populations on 31 December of *t* - 1 and *t* (`type = "dec31"`).
+* **Years**: 1998-2019, before the COVID-19 pandemic.
+* **Ages**: the age groups of the deaths (0, 1-14, 15-19, ..., 90+).
+
+**Suppressed cells.** The warning says that the source suppresses small
+counts. The published totals constrain them: the Laender add up to
+Germany and the chapters to all causes. `mt_fill_suppressed()` estimates
+the suppressed counts by raking them to these totals ("Your own data"):
+
+```{r}
+h_fill <- mt_hierarchy(region = "Deutschland", cause = list(total = "all", additive = "rates"))
+x <- mt_fill_suppressed(x, h_fill)
+attr(x, "fill")
+```
+
+All totals are matched (`max_gap`). For all causes only a few cells at
+young ages were suppressed, so the estimates matter little here.
+
+## The hierarchy
+
+The 16 Laender by sex are the bottom series. East (with Berlin) and West
+Germany, Germany, and both sexes are their sums. All forecasts below are
+made for the 32 bottom series and summed (`reconciled(method =
+"bottom_up")`, "Coherent forecasts: totals and their parts"):
+
+```{r}
+xa <- mt_subset(x, cause == "all", region != "Deutschland", drop = TRUE)
+laender <- unique(mt_strata(xa)$region)
+east <- c("Berlin", "Brandenburg", "Mecklenburg-Vorpommern", "Sachsen", "Sachsen-Anhalt",
+          grep("^Th", laender, value = TRUE))
+h <- mt_hierarchy(region = list(total = "Deutschland", groups = list(West = setdiff(laender, east), East = east)),
+                  sex = "both")
+xh <- mt_aggregate_strata(xa, h)
+mt_strata(xh, h)[, .N, by = level]
+bu <- function(model) reconciled(model, h, method = "bottom_up")
+```
+
+The observed difference in life expectancy at birth between East and
+West:
+
+```{r plot-gap-observed, fig.height = 3.5}
+gap_obs <- mt_contrast(xh, var = "region", ref = "West")
+mt_plot_contrast(observed = gap_obs, levels = "East")
+```
+
+Women in the East caught up with the West by about 2014 and lived 0.1
+years longer in 2019. Men in the East still live about 1.2 years less
+(1.7 years in 1998).
+
+## Model: a backtest of candidates
+
+Small Laender such as Bremen and Saarland have few deaths per age group,
+so their rates are noisy. The candidates differ in how the Laender may
+move relative to each other ("Choosing and combining models"):
+
+* **Lee-Carter** for each Land and sex: each Land continues its own trend;
+* **Li-Lee** and the **coherent fdm** (product-ratio method with
+  functional data models): the Laender of each sex share a common trend
+  and deviate from it with stationary factors, so small Laender borrow
+  strength from the others and gaps return towards their past level;
+* the **ensemble** of Lee-Carter and the coherent fdm.
+
+The East-West gap forecast by three of them:
+
+```{r plot-gap-models, fig.height = 3.5}
+cand <- list("Lee-Carter" = bu(lee_carter()), "Li-Lee" = bu(li_lee(common_by = "sex")),
+             "coherent fdm" = bu(coherent_fdm(common_by = "sex")),
+             "Lee-Carter + coherent fdm" = bu(ensemble(lc = lee_carter(), cf = coherent_fdm(common_by = "sex"))))
+gaps <- lapply(cand[c("Lee-Carter", "Li-Lee", "coherent fdm")], function(m) {
+  mt_contrast(mt_forecast(mt_fit(m, xh), to = 2035, n_draws = 300, seed = 1), var = "region", ref = "West", at = 0)
+})
+mt_plot_contrast(gaps, observed = gap_obs, levels = "East")
+```
+
+The backtest fits each candidate to the years up to 2008, 2011 and 2014,
+forecasts the following five years, and scores the rates and life
+expectancy of every series and the gap between each region and the West
+(`contrast`, "Backtesting and scores"):
+
+```{r}
+bt <- mt_compare(cand, xh, origins = c(2008, 2011, 2014), h = 5, n_draws = 200, quantities = "life_expectancy",
+                 contrast = c(var = "region", ref = "West"))
+mt_score_table(bt, metrics = c("crps", "cov95"), targets = c("rate", "life_expectancy"), hierarchy = h)
+```
+
+```{r}
+mt_score_table(bt[region == "East" & sex != "both"], metrics = c("crps", "cov95"), targets = "life_expectancy_gap")
+```
+
+```{r plot-scores, fig.height = 3}
+mt_plot_scores(bt[region %in% laender & sex != "both"], by = "model", target = "life_expectancy")
+```
+
+Lee-Carter continues the trends of 1998-2019: the gap of men keeps
+narrowing, and women in the East pull further ahead. Li-Lee and the
+coherent fdm hold the gaps near their recent level, with women in the
+East slightly behind again. The backtest decides between these
+assumptions:
+
+* For the Laender, the coherent fdm and the ensemble are the most accurate
+  (CRPS of the rates 0.082, against 0.089 for Li-Lee and 0.091 for
+  Lee-Carter); the intervals of the ensemble cover best (95% coverage of
+  life expectancy 1.00, coherent fdm 0.68).
+* For the totals (East, West and Germany), the ensemble is the most
+  accurate.
+* The East-West gap is forecast best by Lee-Carter (CRPS 0.11), the
+  ensemble second (0.14); the intervals of Li-Lee and the coherent fdm
+  covered the observed gap in only 40% and 50% of the cases.
+
+No single model is best for both questions. The ensemble of Lee-Carter and
+the coherent fdm is close to the best for the Laender and for the gap, so
+the pipeline continues with it: combining models pays here.
+
+### Jump-off
+
+Starting the forecasts at the observed level of the last three years
+(`anchored()`, "Where a forecast starts: the jump-off"), checked in the
+same backtest:
+
+```{r}
+ens <- ensemble(lc = lee_carter(), cf = coherent_fdm(common_by = "sex"))
+bt_anchor <- mt_compare(list("+ anchored" = bu(anchored(ens, years = 3))), xh, origins = c(2008, 2011, 2014),
+                        h = 5, n_draws = 200, quantities = "life_expectancy", contrast = c(var = "region", ref = "West"))
+bt_steps <- rbind(bt[model == "Lee-Carter + coherent fdm"], bt_anchor)
+mt_score_table(bt_steps[sex != "both"], metrics = c("crps", "cov95"))
+```
+
+Anchoring improved every score slightly (CRPS of the rates 0.0756
+against 0.0764), so the pipeline uses it. Smoothing the rates over age
+made the forecasts of this ensemble slightly worse in a separate run and
+is not used.
+
+## Forecasts to 2035
+
+```{r}
+fc <- mt_forecast(mt_fit(bu(anchored(ens, years = 3)), xh), to = 2035, n_draws = 1000, seed = 1)
+```
+
+Life expectancy at birth in 2035, both sexes, with 95% intervals:
+
+```{r plot-laender, fig.height = 5.5}
+e35 <- life_expectancy(fc)[period == 2035 & sex == "both"]
+mt_plot_compare(list(forecast = fc), periods = 2035, strata = rev(e35[order(q0.5), label]))
+```
+
+The intervals of small Laender are the widest. The paths of the Laender
+add up to those of East, West and Germany, so these intervals are
+consistent with each other.
+
+## The East-West gap
+
+The difference in life expectancy at birth between East and West Germany,
+path by path, with the observed differences:
+
+```{r plot-gap, fig.height = 3.5}
+gap <- mt_contrast(fc, var = "region", ref = "West", at = 0)
+mt_plot_contrast(gap, observed = gap_obs, levels = "East")
+```
+
+```{r}
+gap[level == "East" & period %in% c(2025, 2035),
+    .(sex, period, gap = sprintf("%.2f (%.2f to %.2f)", q0.5, q0.025, q0.975))]
+```
+
+In 2035, women in the East are forecast to live 0.2 years longer than
+those in the West (95% interval -0.45 to 1.13), men 0.9 years less (-1.68
+to -0.01). The forecast continues the slow narrowing of the male gap, but
+the gap most likely does not close by 2035.
+
+Which ages make up the gap of men in 2019 and in 2035 ("Decomposing
+differences in life expectancy"):
+
+```{r plot-decomp, fig.height = 4}
+dg <- mt_decompose(fc, var = "region", ref = "West", periods = c(2019, 2035))
+mt_plot_decomposition(dg, by = "age", comparisons = list(to = "East", sex = "male"))
+```
+
+The male gap arises at ages 45 to 74, in 2019 as in 2035; at older ages
+the contributions are small and uncertain.
+
+## Summary of the pipeline
+
+| Step | Decision here | Evidence | Function | Explained in |
+|---|---|---|---|---|
+| Exposures | mean of 31 December populations | | `mt_as_exposure(type = "dec31")` | "Your own data" |
+| Suppressed cells | raking to Land and national totals | all totals matched | `mt_fill_suppressed()` | "Your own data" |
+| Hierarchy | Laender, East and West, Germany; sexes | | `mt_hierarchy()`, `mt_aggregate_strata()` | "Coherent forecasts" |
+| Coherence | bottom-up sums of the Laender | | `reconciled(method = "bottom_up")` | "Coherent forecasts" |
+| Model | ensemble of Lee-Carter and coherent fdm | close to the best for the Laender and for the gap | `ensemble()`, `coherent_fdm()`, `mt_compare(contrast = )` | "Choosing and combining models" |
+| Jump-off | observed level of the last three years | slightly better scores | `anchored()` | "Where a forecast starts" |
+| Gap | East - West, path by path | | `mt_contrast()`, `mt_decompose()` | "Decomposing differences" |
+
+## References
+
+Hyndman RJ, Booth H, Yasmeen F (2013). Coherent mortality forecasting: the
+product-ratio method with functional time series models. *Demography*
+50(1): 261-283.

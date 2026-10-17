@@ -56,9 +56,7 @@ the in-sample residual variation is added to the draws;
 }
 
 Shares of rare causes are noisy; smoothing the rates first
-(\code{prep = mt_prep(step_smooth())}) helps. In backtests on simulated cause
-data (\code{\link[=mt_example_causes]{mt_example_causes()}}), the 95\% coverage was 0.99 without smoothing
-and 0.94 to 0.97 with it.
+(\code{prep = mt_prep(step_smooth())}) can help.
 
 The data need a stratum variable \code{var} with the all-cause level
 \code{total_level} and the cause levels; other stratum variables (for example

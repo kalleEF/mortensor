@@ -52,6 +52,7 @@ reference:
     contents:
       - mt_regroup
       - mt_ungroup
+      - ungroup-diagnostics
       - mt_smooth
       - mt_smooth_check
       - mt_prep
@@ -82,12 +83,14 @@ reference:
   - title: 6. Models for several populations and causes
     contents:
       - li_lee
+      - coherent_fdm
       - tucker3
       - cause_shares
   - title: 7. Combine models and make forecasts coherent
-    desc: Model wrappers (ensembles, reconciliation, calibration, jump-off, bootstrap, tuning) and hierarchies of strata.
+    desc: Model wrappers (ensembles, different models for groups of strata, reconciliation, calibration, jump-off, bootstrap, tuning) and hierarchies of strata.
     contents:
       - ensemble
+      - stratified
       - reconciled
       - calibrated
       - anchored
@@ -154,7 +157,7 @@ articles:
   - title: Concepts, one at a time
     desc: Each article explains one step with a simple model and figures.
     contents:
-      - granularity-hmd
+      - ungrouping
       - smoothing
       - jump-off
       - backtesting
@@ -162,17 +165,17 @@ articles:
       - coherence
       - decomposition
   - title: Models
+    desc: Which model to use, and how to combine several.
     contents:
+      - model-choice
       - models
       - bayesian-apc
       - comparison
   - title: Applications
     desc: Complete analyses from the published tables to the reported results.
     contents:
-      - deprivation
-      - causes
-      - regions
-      - forecasting-hmd
+      - inequality-england
+      - laender-germany
   - title: Help
     contents:
       - faq

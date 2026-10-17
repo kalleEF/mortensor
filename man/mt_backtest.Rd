@@ -15,7 +15,8 @@ mt_backtest(
   seed = 1,
   cores = 1,
   score_estimated = FALSE,
-  quantities = NULL
+  quantities = NULL,
+  contrast = NULL
 )
 }
 \arguments{
@@ -51,6 +52,15 @@ observed age groups of each stratum and test year (years with missing
 or suppressed cells are skipped). They are added as rows with \code{target}
 \code{"life_expectancy"} or \code{"asr"}; summarise them with
 \code{mt_score(..., target = )}.}
+
+\item{contrast}{Optional \code{c(var = , ref = )}: a stratum variable and its
+reference level. With \code{quantities}, the differences between every other
+level and the reference level (with the same values of the other
+stratum variables) are scored too, path by path: targets
+\code{"life_expectancy_gap"} (difference in years) and \code{"asr_gap"}
+(difference of log ASR, the log rate ratio). This checks forecasts of
+inequality, whose uncertainty depends on how the paths of the strata
+move together; the rows carry the stratum of the compared level.}
 }
 \value{
 An object of class \code{mt_backtest}: a \code{data.table} with one row per

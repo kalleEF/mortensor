@@ -6,7 +6,6 @@
 \alias{mt_plot_age}
 \alias{mt_plot_life_expectancy}
 \alias{mt_plot_rates}
-\alias{mt_plot_ungroup}
 \alias{mt_plot_coverage}
 \title{Plots}
 \usage{
@@ -41,8 +40,6 @@ mt_plot_life_expectancy(
 
 mt_plot_rates(data, strata = NULL)
 
-mt_plot_ungroup(data, ungrouped, period = NULL, strata = NULL)
-
 mt_plot_coverage(backtest)
 }
 \arguments{
@@ -69,10 +66,6 @@ with the most levels among the shown strata).}
 
 \item{facet}{Stratum variable whose levels get one panel each (for
 example \code{"sex"}), or \code{NULL}.}
-
-\item{ungrouped}{The \code{\link[=mt_ungroup]{mt_ungroup()}} result for \code{data}.}
-
-\item{period}{Year shown.}
 
 \item{backtest}{An \code{\link[=mt_backtest]{mt_backtest()}} result.}
 }
@@ -103,8 +96,6 @@ the rates as published;
 forecast (observed from \code{data} if given, otherwise from the training
 data), with one panel per level of \code{facet} if given;
 \item \code{mt_plot_rates()}: Lexis surface (age by period) of observed log rates;
-\item \code{mt_plot_ungroup()}: grouped rates as steps and ungrouped single-year
-rates for one period;
 \item \code{mt_plot_coverage()}: empirical interval coverage by horizon from a
 backtest, with the nominal levels.
 }

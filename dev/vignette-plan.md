@@ -25,7 +25,7 @@ need clearer explanations.
 |---|---|---|---|
 | Start | Getting started | data, one model, forecast, life expectancy, plot | `mortensor.Rmd`, shortened |
 | Start | Your own data | reading tables, suppression, exposures, checks | `own-data.Rmd` |
-| Concepts | Age groups and ungrouping | regroup, ungroup, accuracy against single ages | `granularity-hmd.Rmd`, shortened |
+| Concepts | Ungrouping age groups | methods compared against known single years; diagnostics (profile, errors with noise band, stability over time); grouped exposures; effect on a forecast | `ungrouping.Rmd` (was `granularity-hmd.Rmd`) |
 | Concepts | Smoothing | methods over age, time and both; how much each smooths (figures); choice of the smoothing parameter; effect on one forecast; smoothing inside the fit | new |
 | Concepts | Jump-off | fitted, observed and anchored start; the step in the first forecast year; effect on a forecast | new |
 | Concepts | Backtesting and scores | rolling origins (figure), CRPS, interval score, coverage, PIT, MASE explained with figures; comparing models | new, from `forecasting-hmd.Rmd` |
@@ -58,6 +58,19 @@ Removed after their content moved: `forecasting-hmd.Rmd`,
 * `mt_plot_jump_off()`: observed, fitted and forecast rates around the
   jump-off year.
 * `mt_plot_tuning()`: scores of a tuning grid with standard errors.
+* `mt_plot_contrast()`: gaps between strata over time, for one or several
+  forecasts with the observed gaps.
+* `mt_plot_ungroup()` (profile, time, error) and `mt_ungroup_check()`.
+* `mt_backtest(contrast = )`: backtests of gaps; `mt_score_table(hierarchy = )`.
+* `stratified()`: different models for groups of strata.
+
+## Status (2026-10-17)
+
+All vignettes of the structure above are written and knitted; the
+applied ones choose every step by a backtest (model by the gap scores,
+smoothing, jump-off, calibration only where they helped).
+`mt_plot_jump_off()` was not needed: `mt_plot_compare(periods = )` shows
+the jump-off.
 
 ## Open decisions for the owner
 

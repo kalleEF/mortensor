@@ -38,7 +38,8 @@ penalty.}
 \item{lambda_range}{Search range for the smoothing parameters.}
 
 \item{method}{\code{"pspline"} (Poisson P-splines, default), \code{"whittaker"} or
-\code{"gam"} (package \pkg{mgcv}); see Details.}
+\code{"gam"} (package \pkg{mgcv}); see Details. With \code{dims = 1} and
+\code{along = "period"} the default is \code{"whittaker"}.}
 
 \item{ages}{Range of ages that is smoothed, \code{c(lower, upper)}; other
 ages keep their observed deaths and do not enter the fit. By default
@@ -90,17 +91,12 @@ Smoothing over time removes year-to-year fluctuations from the fitted
 trends and from the starting level of forecasts; the last years are
 estimated from one side only. It also removes the year-to-year variation
 from which models such as Lee-Carter estimate the uncertainty of their
-period index, so their intervals become too narrow: in backtests on
-England & Wales men (origins 1996-2001, h = 10) the 95\% coverage of
-Lee-Carter fell from 0.75 to 0.59 with the age-period GAM, and on the ONS
-deprivation data from 0.83 to 0.72. Combined with \code{\link[=calibrated]{calibrated()}}, which
-re-estimates the spread against the raw observations, the same smoothing
-gave the best Lee-Carter forecasts on England & Wales (CRPS 0.0646
-against 0.0687, 95\% coverage 0.91), and an ensemble of Lee-Carter and
-\code{rwd(observation_noise = TRUE)} on rates smoothed over time with
-calibration the best overall (0.0562, 0.92). Smoothing over age alone
-changed little for large populations and helped for sparse
-cause-specific data (German Laender). Use \code{\link[=mt_smooth_check]{mt_smooth_check()}} to see how
+period index, so their intervals become too narrow unless the spread is
+re-estimated against the raw observations (\code{\link[=calibrated]{calibrated()}}). Smoothing
+over age alone changes little for large populations and helps for sparse
+data such as cause-specific rates of small regions. Whether smoothing
+improves a forecast is a question for a backtest; the vignette
+"Smoothing death rates" shows one. Use \code{\link[=mt_smooth_check]{mt_smooth_check()}} to see how
 much was removed and \code{\link[=mt_plot_smooth]{mt_plot_smooth()}} to look at it. The 2D P-spline
 surface is slow for many ages and years (minutes per stratum); the 2D
 GAM takes about a second.

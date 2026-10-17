@@ -88,11 +88,11 @@ flowchart TD
   ONE["`**one population per stratum**
   lee_carter(), rwd(), hyndman_ullah(), stmomo(), arima_series(), ets_series(), apc_bayes()`"]
   MANY["`**several strata jointly**
-  li_lee(common_by), product_ratio(), tucker3(), cause_shares()`"]
+  li_lee(common_by), product_ratio(), coherent_fdm(), tucker3(), cause_shares()`"]
   H["`**mt_hierarchy()**
   totals and groups of strata; fixed nodes such as a trusted total`"]
   WRAP["`**wrappers around any model**
-  ensemble(), reconciled(), calibrated(), anchored(), bootstrapped(), tuned()`"]
+  ensemble(), stratified(), reconciled(), calibrated(), anchored(), bootstrapped(), tuned()`"]
   SPEC["model specification"]
   M["model-ready mt_data"]
   PREP["`**mt_prep()**
@@ -188,11 +188,12 @@ flowchart TD
 | Prepare | `mt_fill_suppressed()` | estimate suppressed counts | `mt_data`, hierarchy or bounds | `mt_data` |
 | Check | `mt_validate()` | plausibility and hierarchy checks | `mt_data` | findings |
 | Harmonise | `mt_regroup()`, `mt_ungroup()`, `mt_smooth()` | common resolution, single years, smoothing over age, time or both | `mt_data` | `mt_data` |
-| Harmonise | `mt_smooth_check()`, `mt_plot_smooth()` | how much smoothing removed (dispersion, trend ratio) | `mt_data` pair | table, ggplot |
+| Harmonise | `mt_plot_ungroup()`, `mt_ungroup_check()` | ungrouped against grouped rates, stability over time, errors against known single years; several methods side by side | `mt_data` and ungrouped data (or a list) | ggplot, table |
+| Harmonise | `mt_smooth_check()`, `mt_plot_smooth()` | how much smoothing removed (dispersion, trend ratio); several smoothers in one figure | `mt_data` pair or list | table, ggplot |
 | Harmonise | `mt_prep()`, `mt_prep_apply()` with `step_ungroup()`, `step_smooth()`, `step_regroup()`, `step_grid()`, `step_shocks()`, `step_window()` | preprocessing inside fits and backtests | steps | pipeline |
-| Model | `lee_carter()`, `rwd()`, `li_lee()`, `product_ratio()`, `hyndman_ullah()`, `stmomo()`, `arima_series()`, `ets_series()`, `apc_bayes()`, `tucker3()`, `cause_shares()` | model specifications | settings | `mt_spec` |
+| Model | `lee_carter()`, `rwd()`, `li_lee()`, `product_ratio()`, `hyndman_ullah()`, `coherent_fdm()`, `stmomo()`, `arima_series()`, `ets_series()`, `apc_bayes()`, `tucker3()`, `cause_shares()` | model specifications | settings | `mt_spec` |
 | Model | `apc_select()`, `mcmc_control()`, `mt_tune()` | choose random-walk orders, MCMC settings; model and preprocessing settings by forecast accuracy on the last years (hold-out or rolling origins; rates, life expectancy or ASR) | data, grid | table, `mt_spec` |
-| Combine | `ensemble()` (optionally `top_k`), `reconciled()`, `bootstrapped()`, `tuned()` | mixtures, coherence, parameter uncertainty (and of smoothing, `type = "data"`), tuning | `mt_spec` | `mt_spec` |
+| Combine | `ensemble()` (optionally `top_k`), `stratified()`, `reconciled()`, `bootstrapped()`, `tuned()` | mixtures, different models for groups of strata, coherence, parameter uncertainty (and of smoothing, `type = "data"`), tuning | `mt_spec` | `mt_spec` |
 | Combine | `mt_order_strata()` | keep an ordering between strata (for example women below men) path by path | `mt_draws` | `mt_draws` |
 | Calibrate | `calibrated()` | rescale the spread (optionally the drift) of any model's draws to its forecast errors in the last years, overall or by age band, for rates, life expectancy or ASR | `mt_spec` | `mt_spec` |
 | Jump-off | `anchored()`, `mt_jump_off()` | start forecasts at the observed level of the last years; report the first-year step | `mt_spec`, `mt_draws` | `mt_spec`, table |
@@ -201,14 +202,17 @@ flowchart TD
 | Fit | `mt_fit()` | estimate | `mt_spec`, `mt_data` | `mt_fit` |
 | Inspect | `summary()`, `mt_parameters()`, `fitted()`, `residuals()`, `mt_plot_residuals()` | model, assumptions, estimates, fit | `mt_fit` | text, table, plot |
 | Forecast | `mt_forecast()`, `mt_summarise()` | simulated paths and their quantiles | `mt_fit` | `mt_draws`, table |
-| Evaluate | `mt_backtest()`, `mt_score()` | rolling-origin scores of rates, life expectancy or ASR | `mt_spec`, `mt_data` | table |
+| Evaluate | `mt_backtest()`, `mt_score()` | rolling-origin scores of rates, life expectancy or ASR, and of gaps between strata (`contrast`) | `mt_spec`, `mt_data` | table |
+| Evaluate | `mt_compare()`, `mt_score_table()` | backtests of several models on the same origins; scores of rates, life expectancy and gaps side by side, by level of a hierarchy | named list of `mt_spec`, `mt_data` | table |
+| Evaluate | `mt_plot_scores()`, `mt_plot_coverage()`, `mt_plot_pit()`, `mt_plot_backtest_design()`, `mt_plot_tuning()` | scores by horizon or model, interval coverage, PIT histograms, the design of a backtest, tuning scores | backtest, tuning | ggplot |
 | Describe | `mt_observed()` | observed rates as draws | `mt_data` | `mt_draws` |
 | Report | `life_expectancy()`, `asr()`, `prob_dying()` | indicators path by path, observed or forecast | `mt_draws` or `mt_data` | table |
 | Report | `yll()`, `mt_deaths()` | years of life lost, deaths with projected populations | `mt_draws` | table, array |
 | Report | `life_table()`, `standard_population()` | life tables from rates; standard populations esp2013, esp1976, who2000 | rates, name | table |
-| Report | `mt_contrast()`, `mt_inequality()` | gaps, ratios, SII, RII | `mt_draws` or `mt_data` | table |
+| Report | `mt_contrast()`, `mt_inequality()`, `mt_plot_contrast()` | gaps, ratios, SII, RII; gaps over time | `mt_draws` or `mt_data` | table, ggplot |
+| Report | `mt_compare_forecasts()`, `mt_plot_compare()` | one quantity of several forecasts (models, jump-off choices, reconciliation methods) side by side | named list of `mt_draws` or `mt_data` | table, ggplot |
 | Report | `mt_decompose()`, `mt_plot_decomposition()` | differences in life expectancy (or other summaries) by age, cause and subgroup composition: Arriaga, Horiuchi, stepwise replacement, Kitagawa, Arriaga meets Kitagawa; jump-off share and changes of gaps | `mt_draws` or `mt_data` (or both; also census years with gaps) | `mt_decomposition`, table, ggplot |
-| Report | `mt_plot_forecast()`, `mt_plot_age()`, `mt_plot_life_expectancy()`, `mt_plot_shares()`, `mt_plot_rates()`, `mt_plot_ungroup()`, `mt_plot_tucker()`, `mt_export()` | figures and CSV files | draws, data, tables | ggplot, file |
+| Report | `mt_plot_forecast()`, `mt_plot_age()`, `mt_plot_life_expectancy()`, `mt_plot_shares()`, `mt_plot_rates()`, `mt_plot_tucker()`, `mt_export()` | figures and CSV files | draws, data, tables | ggplot, file |
 | Data | `ons_data`, `ons_cause_groups`, `de_deaths`, `de_population`, `de_cause_groups`, `mt_example()`, `mt_example_causes()`, `mt_example_regions()` | example data (published and simulated) | | tables, `mt_data` |
 | Report | `theme_mortensor()`, `scale_colour_mortensor()`, `scale_fill_mortensor()`, `mt_palette()` | the package's plot style for your own figures | | theme, scales |
 | Disaggregate | `mt_disaggregate()`, `mt_shape_rates()`, `mt_disaggregate_check()`, `mt_plot_disaggregation()` | forecasts on finer ages, with fixed or changing age shapes | `mt_draws` | `mt_draws`, table, ggplot |

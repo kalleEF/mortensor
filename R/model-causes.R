@@ -18,9 +18,7 @@
 #' 4. inverse ILR gives share draws, which multiply the all-cause draws.
 #'
 #' Shares of rare causes are noisy; smoothing the rates first
-#' (`prep = mt_prep(step_smooth())`) helps. In backtests on simulated cause
-#' data ([mt_example_causes()]), the 95% coverage was 0.99 without smoothing
-#' and 0.94 to 0.97 with it.
+#' (`prep = mt_prep(step_smooth())`) can help.
 #'
 #' The data need a stratum variable `var` with the all-cause level
 #' `total_level` and the cause levels; other stratum variables (for example

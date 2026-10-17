@@ -279,6 +279,13 @@ model_assumptions <- function(spec) {
            "(|phi| <= 0.99), independent across strata, so deviations from the common trend stay bounded.",
            "Draws include the innovations and drift uncertainty of K and the AR(1) innovations;",
            "a, b and phi are fixed."),
+         mt_spec_coherent_fdm = paste(
+           "Product-ratio method with functional data models (Hyndman, Booth and Yasmeen 2013; demography):",
+           "rates smoothed over age; the geometric mean of the strata (per group of `common_by`) and the ratio",
+           "of each stratum to it are decomposed into principal components; the product's scores follow ARIMA",
+           "models, the ratios' scores stationary ARFIMA models, so deviations from the product stay bounded.",
+           "Draws simulate the scores and resample the model errors; predictive draws add Poisson and",
+           "extra-Poisson noise."),
          mt_spec_apc_bayes = paste(
            "Bayesian age-period-cohort model (bamp; Schmid and Held 2007): logit rate = age + period + cohort",
            "effects with random-walk priors, binomial likelihood, each stratum fitted separately. Draws are",

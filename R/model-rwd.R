@@ -23,12 +23,10 @@
 #' first autocovariance of the changes (the noise variance is the Poisson
 #' part, one over the deaths, plus an extra part common to all ages), the
 #' level is Kalman filtered, and the forecast draws are paths of the level;
-#' predictive draws add the observation noise. In backtests the variant had
-#' a lower CRPS than the plain random walk on simulated, HMD and ONS data,
-#' and calibrated intervals on simulated data; on real data over 5 to 10
-#' years its 95% intervals were too narrow (coverage 0.78 to 0.87), because
-#' changes of trend exceed the uncertainty of a constant drift. The plain
-#' random walk, which is wider, covered 0.92 to 0.97.
+#' predictive draws add the observation noise. The variant is more accurate
+#' than the plain random walk where deaths are few, but over 5 to 10 years
+#' its intervals can be too narrow, because changes of trend exceed the
+#' uncertainty of a constant drift; the plain random walk is wider.
 #'
 #' @param drift_window Number of most recent years used for drift and
 #'   innovations (`NULL`: all years).

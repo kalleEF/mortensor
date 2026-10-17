@@ -20,7 +20,8 @@ mt_inequality(
 
 \item{order}{Levels of \code{var} from rank 0 to rank 1 (default: their order
 in the data). For deprivation, list the least deprived level first so
-that a positive SII means higher values in more deprived groups.}
+that a positive SII means higher values in more deprived groups. Levels
+not listed, such as the total of a hierarchy, are left out.}
 
 \item{quantity}{\code{"life_expectancy"}, \code{"asr"}, \code{"prob_dying"} or
 \code{"rate"}.}

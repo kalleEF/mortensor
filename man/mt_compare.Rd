@@ -22,7 +22,8 @@ mt_score_table(
   metrics = c("crps", "cov95"),
   targets = NULL,
   by = "model",
-  digits = 3
+  digits = 3,
+  hierarchy = NULL
 )
 
 mt_compare_forecasts(
@@ -72,6 +73,10 @@ the training data of the first forecast).}
 \item{digits}{Significant digits (\code{mt_score_table()}) or decimals
 (\code{mt_compare_forecasts()}).}
 
+\item{hierarchy}{Optional \code{\link[=mt_hierarchy]{mt_hierarchy()}}: scores are then given
+separately for the bottom series, the aggregates and the grand total
+(column \code{level}).}
+
 \item{forecasts}{A named list of \link{mt_draws} objects or \link{mt_data} objects
 (observed values).}
 
@@ -115,7 +120,9 @@ a model specification or \code{list(spec = , prep = )} with its own
 preprocessing.
 \item \code{mt_score_table()} gives the mean scores of a backtest for every
 target it holds side by side: log death rates without suffix, life
-expectancy with \verb{_le} (years), the age-standardised rate with \verb{_asr}.
+expectancy with \verb{_le} (years), the age-standardised rate with \verb{_asr},
+and differences between strata (\code{contrast} in \code{\link[=mt_backtest]{mt_backtest()}}) with
+\verb{_le_gap} and \verb{_asr_gap}.
 \item \code{mt_compare_forecasts()} gives one quantity of several forecasts
 (\code{mt_draws}) or observed data (\code{mt_data}, with Poisson intervals) as
 "median (lower-upper)", one column per forecast.
@@ -127,8 +134,9 @@ around the last observed year it shows the jump-off of each forecast.
 }
 \examples{
 x <- mt_example(deaths = "single", years = 1990:2012)
-bt <- mt_compare(list("random walk" = rwd(), "Lee-Carter" = lee_carter()), x, origins = c(2005, 2007),
-                 h = 5, n_draws = 50, quantities = "life_expectancy")
+models <- list("random walk" = rwd(), "Lee-Carter" = lee_carter())
+bt <- mt_compare(models, x, origins = c(2005, 2007), h = 5, n_draws = 50,
+                 quantities = "life_expectancy")
 mt_score_table(bt)
 fc <- list("random walk" = mt_forecast(mt_fit(rwd(), x), h = 10, n_draws = 100, seed = 1),
            "Lee-Carter" = mt_forecast(mt_fit(lee_carter(), x), h = 10, n_draws = 100, seed = 1))

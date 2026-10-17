@@ -90,9 +90,11 @@
 #'               data.frame(drift_window = c(5, 10, 20)), x, inner_origins = 2, inner_h = 3)
 #' tn$scores
 #' # a single hold-out of the last 5 years, tuning the smoothing too
-#' tn2 <- mt_tune(function(lambda) list(spec = lee_carter(), prep = mt_prep(step_smooth(lambda = lambda))),
-#'                data.frame(lambda = c(1, 100)), x, inner_origins = 1, inner_h = 5, metric = "rmse",
-#'                n_draws = 50)
+#' smoothed_lc <- function(lambda) {
+#'   list(spec = lee_carter(), prep = mt_prep(step_smooth(lambda = lambda)))
+#' }
+#' tn2 <- mt_tune(smoothed_lc, data.frame(lambda = c(1, 100)), x, inner_origins = 1, inner_h = 5,
+#'                metric = "rmse", n_draws = 50)
 #' tn2$scores
 #' @export
 mt_tune <- function(spec_fun, grid, data, prep = NULL, inner_origins = 3, inner_h = 5, metric = "crps",

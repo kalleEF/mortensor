@@ -57,7 +57,8 @@ drift.
 
 `hyndman_ullah()` calls `demography::fdm()` and draws paths with
 `simulate()` from the forecast. With the same input (French men 0-95,
-1950-2006, 6 components, ARIMA), the median of 2,000 mortensor draws is
+1950-2006, 6 components, ARIMA, without the smoothing over age that
+`hyndman_ullah()` applies by default), the median of 2,000 mortensor draws is
 compared with demography's point forecast, and the width of the central 80%
 interval of the draws with demography's 80% interval:
 
@@ -168,22 +169,23 @@ no difference beyond Monte Carlo error.
 **Accuracy.** Four observations hold across the data sets:
 
 * The same model used through mortensor scores better than the native
-  package in 6 of 7 comparisons, mainly because mortensor's
+  package in 5 of 7 comparisons, mainly because mortensor's
   predictive draws include the variation of observed rates around the
   smooth forecast, which the native intervals omit. This improves coverage
   most: bamp on the ONS data covers 0.79 of observed rates at 95% natively
   and 0.92 through `apc_bayes()`; the functional demographic model 0.76
-  against 0.84 (ONS) and 0.59 against 0.75 (France). The exception is
-  `demography::lca()` on England & Wales men, whose least-squares fit with
-  k adjusted to the observed deaths is more accurate there than the Poisson
-  Lee-Carter of `lee_carter()` and of StMoMo.
+  against 0.83 (ONS) and 0.59 against 0.70 (France). The exceptions are
+  the functional demographic model on the ONS data, where both have the
+  same CRPS (0.072), and `demography::lca()` on England & Wales men, whose
+  least-squares fit with k adjusted to the observed deaths is more accurate
+  there than the Poisson Lee-Carter of `lee_carter()` and of StMoMo.
 * No single model is best everywhere. The Bayesian APC model is the most
   accurate on the ONS data and on bamp's example, the StMoMo APC model on
   England & Wales men 55-89 (cohort effects), and the random walk with drift
   on France, where the age pattern of mortality decline changed over the
   period and Lee-Carter extrapolates the old pattern.
 * Single structured models (Lee-Carter, `lca()`, functional demographic
-  model, StMoMo LC and CBD) have 95% intervals that cover 56% to 84% of the
+  model, StMoMo LC and CBD) have 95% intervals that cover 56% to 83% of the
   observed rates, so they understate the uncertainty of real forecasts. On
   the three larger data sets the random walk and the ensemble of Lee-Carter
   and random walk cover 92% to 98% (bamp's example has only 48 scored

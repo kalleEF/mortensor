@@ -148,11 +148,26 @@ other models of smooth rates. Each stratum is fitted separately.
   AR(1) processes (independent across strata). `a`, `b`, `B` and `phi`
   are fixed.
 
-### Product-ratio: `product_ratio()`
+### Product-ratio: `product_ratio()`, `coherent_fdm()`
 
-The same structure on the geometric mean of the strata (common factor)
-and their ratios to it (Hyndman, Booth and Yasmeen 2013), with
-Lee-Carter components in place of functional data models.
+The product-ratio method (Hyndman, Booth and Yasmeen 2013) models the
+geometric mean of the strata (the product, which carries the common trend)
+and the ratio of each stratum to it. `coherent_fdm()` is the original
+method with the functional data models of demography:
+
+* **Estimation**: the rates of each stratum are smoothed over age; the
+  product and the ratios are decomposed into principal components
+  (`demography::fdm()`). With `common_by`, each group has its own product;
+  in a hierarchy only the bottom strata enter the product.
+* **Forecast**: the scores of the product follow ARIMA models, those of the
+  ratios stationary ARFIMA models, so the ratios return towards their
+  recent level and the strata do not diverge.
+* **Uncertainty**: simulated scores and resampled model errors of the
+  product and of each ratio; the ratios of each path are rescaled to
+  multiply to one, as in `demography::forecast.fdmpr()`.
+
+`product_ratio()` uses Lee-Carter components in place of functional data
+models.
 
 ### Tucker3 and cause shares (experimental)
 
@@ -185,6 +200,14 @@ comes from one component, for all strata at once, chosen with
 probabilities equal to the weights (equal, inverse CRPS of an inner
 backtest, or stacking). The mixture contains the uncertainty of each
 component and the disagreement between them.
+
+### Different models for groups of strata: `stratified()`
+
+One model per level of a stratum variable, for example Lee-Carter for
+all-cause mortality and Li-Lee for the causes of death. The groups are
+fitted and forecast separately and their draws combined; inside
+`reconciled()` they can be made coherent, for example with the causes
+scaled to the all-cause forecast.
 
 ### Reconciled forecasts: `reconciled()`
 
@@ -249,12 +272,14 @@ preprocessing step that tuning compares across windows.
 | `rwd(observation_noise = TRUE)` | yes (level) | yes | no | predictive draws | predictive draws |
 | `arima_series()`, `ets_series()` | yes | as the fitted model | no | contained in the series | contained in the series |
 | `li_lee()`, `product_ratio()` | yes (common and stratum) | common factor | no | predictive draws | predictive draws |
+| `coherent_fdm()` | yes (product and ratios) | as fdm (product) | no | predictive draws | predictive draws |
 | `tucker3()` | yes (period factors) | yes | no | predictive draws | residual variation and predictive draws |
 | `cause_shares()` | of the total model and the share factors | yes | no | predictive draws | residual variation and predictive draws |
 | `hyndman_ullah()` | yes | as fdm | no | predictive draws | predictive draws |
 | `stmomo()` | yes | yes | no | predictive draws | predictive draws |
 | `apc_bayes()` | yes | posterior | yes (posterior) | predictive draws | predictive draws |
 | `ensemble()` | of the components | of the components | of the components, plus model choice | of the components | of the components |
+| `stratified()` | of the model of each group | of the model of each group | of the model of each group | as the models | as the models |
 | `bootstrapped()` | of the base model | of the base model | yes | as the base model | as the base model |
 | `reconciled()` | of the base model, projected | | | bottom strata, summed | bottom strata, summed |
 | `calibrated()` | of the base model, rescaled | rescaled (optional correction) | | as the base model | as the base model |

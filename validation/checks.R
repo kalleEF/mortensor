@@ -184,6 +184,28 @@ checks$coverage_fdm <- list(
   description = "As coverage_lee_carter for hyndman_ullah() (functional demographic model, demography).",
   run = function() coverage_check(hyndman_ullah(order = 3), 10))
 
+checks$coherent_fdm_france <- list(
+  suite = "full",
+  description = paste("coherent_fdm() against hyndman_ullah() per sex on French women and men (HMD via demography),",
+                      "ages 30-99, 1950-2006: backtest from 1986, 1991 and 1996 (h = 10), and the female/male rate",
+                      "ratio at age 70 after 50 years relative to the last observed ratio (median over draws)."),
+  run = function() {
+    fr <- suppressWarnings(as_mt_data(mortensor:::pkg_data("fr.mort", "demography"), series = c("female", "male"),
+                                      years = 1950:2006))
+    fr <- mt_regroup(fr, age = 30:100)
+    fr <- mt_subset(fr, ages = c(30, 100))
+    org <- c(1986, 1991, 1996)
+    cf <- mt_backtest(coherent_fdm(order1 = 3, order2 = 2), fr, origins = org, h = 10, n_draws = 200)
+    sep <- mt_backtest(hyndman_ullah(order = 3), fr, origins = org, h = 10, n_draws = 200)
+    fc <- mt_forecast(mt_fit(coherent_fdm(order1 = 3, order2 = 2), fr), h = 50, n_draws = 200, seed = 1)
+    a70 <- which(fc$age$lower == 70)
+    ratio_end <- stats::median(fc$rates[a70, 50, "female", ] / fc$rates[a70, 50, "male", ])
+    ratio_obs <- mean(fc$observed[a70, 53:57, "female"] / fc$observed[a70, 53:57, "male"])
+    data.frame(metric = c("crps", "cov95", "crps_ratio_separate", "ratio_drift"),
+               value = c(mean(cf$crps), mean(cf$cov95), mean(cf$crps) / mean(sep$crps),
+                         abs(log(ratio_end / ratio_obs))))
+  })
+
 checks$cause_shares_coherence <- list(
   suite = "quick",
   description = paste("cause_shares(lee_carter()) with step_smooth() on mt_example_causes(): largest relative gap",

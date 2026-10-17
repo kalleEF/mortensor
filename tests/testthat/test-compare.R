@@ -76,4 +76,38 @@ test_that("mt_plot_contrast() draws gaps of one or several forecasts", {
   expect_s3_class(mt_plot_contrast(list(a = cf, b = cf)), "ggplot")
   expect_error(mt_plot_contrast(list(cf, cf)), class = "mt_error_argument")
   expect_error(mt_plot_contrast(data.frame(a = 1)), class = "mt_error_argument")
+  # observed gaps alone, optionally for some levels
+  obs <- mt_contrast(x, var = "sex", ref = "male")
+  p <- mt_plot_contrast(observed = obs, levels = "female")
+  expect_s3_class(p, "ggplot")
+  expect_setequal(unique(as.character(p$data$level)), "female")
+  expect_error(mt_plot_contrast(), class = "mt_error_argument")
+})
+
+test_that("backtests score differences between strata path by path", {
+  x <- mt_example(deaths = "single", years = 1995:2012)
+  bt <- mt_backtest(lee_carter(), x, origins = 2007, h = 3, n_draws = 50, quantities = "life_expectancy",
+                    contrast = c(var = "sex", ref = "male"))
+  gap <- bt[target == "life_expectancy_gap"]
+  le <- bt[target == "life_expectancy"]
+  expect_identical(unique(gap$sex), "female")
+  expect_equal(nrow(gap), 3L)
+  expect_equal(gap$observed, le[sex == "female"]$observed - le[sex == "male"]$observed)
+  s <- mt_score(bt, target = "life_expectancy_gap")
+  expect_identical(s$unit, "years (difference)")
+  expect_true("crps_le_gap" %in% names(mt_score_table(bt)))
+  expect_error(mt_backtest(lee_carter(), x, origins = 2007, h = 3, contrast = c(var = "sex", ref = "male")),
+               class = "mt_error_argument")
+  expect_error(mt_backtest(lee_carter(), x, origins = 2007, h = 3, quantities = "life_expectancy",
+                           contrast = c(var = "sex", ref = "both")), class = "mt_error_argument")
+})
+
+test_that("mt_score_table() separates the levels of a hierarchy", {
+  x <- mt_example(deaths = "single", years = 1995:2012)
+  h <- mt_hierarchy(sex = "both")
+  xa <- mt_aggregate_strata(x, h)
+  bt <- mt_backtest(reconciled(lee_carter(), h, method = "bottom_up"), xa, origins = 2009, h = 3, n_draws = 50)
+  tab <- mt_score_table(bt, hierarchy = h)
+  expect_identical(as.character(tab$level), c("bottom", "total"))
+  expect_false("level" %in% names(bt))
 })

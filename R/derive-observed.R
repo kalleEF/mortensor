@@ -145,7 +145,8 @@ quantity_paths <- function(x, quantity, ...) {
 #' @param var Ordered stratum variable (for example `"quintile"`).
 #' @param order Levels of `var` from rank 0 to rank 1 (default: their order
 #'   in the data). For deprivation, list the least deprived level first so
-#'   that a positive SII means higher values in more deprived groups.
+#'   that a positive SII means higher values in more deprived groups. Levels
+#'   not listed, such as the total of a hierarchy, are left out.
 #' @inheritParams mt_contrast
 #' @return A `data.table` with the other stratum variables, `index` (`"sii"`
 #'   or `"rii"`), `period`, `mean` and quantiles.
@@ -165,8 +166,8 @@ mt_inequality <- function(x, var, order = NULL, quantity = c("asr", "life_expect
   st <- x$strata
   if (!var %in% names(st)) mt_abort("`var` must be a stratum variable.", class = "argument")
   order <- order %||% unique(st[[var]])
-  if (!setequal(order, unique(st[[var]]))) {
-    mt_abort(sprintf("`order` must list every level of `%s` once.", var), class = "argument")
+  if (anyDuplicated(order) || !all(order %in% st[[var]]) || length(order) < 2) {
+    mt_abort(sprintf("`order` must list at least two levels of `%s`, each once.", var), class = "argument")
   }
   q <- quantity_paths(x, quantity, ...)
   # population weights per year: the exposures of each year for observed
@@ -182,7 +183,8 @@ mt_inequality <- function(x, var, order = NULL, quantity = c("asr", "life_expect
   key <- if (length(others)) do.call(paste, c(lapply(others, function(o) st[[o]]), sep = "\r")) else rep("", nrow(st))
   rows <- list()
   for (k in unique(key)) {
-    idx <- which(key == k)[order(match(st[[var]][key == k], order))]
+    sel <- which(key == k & st[[var]] %in% order)
+    idx <- sel[order(match(st[[var]][sel], order))]
     if (length(idx) < 2) next
     sii <- rii <- matrix(NA_real_, dim(q)[1], dim(q)[3])
     for (t in seq_len(dim(q)[1])) {

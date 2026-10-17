@@ -75,10 +75,9 @@ mt_read_gbe <- function(file, row_names = c("region", "age", "sex"), col_names =
 #'
 #' Deaths by year (1998-2024), Land, sex, age group and ICD-10 chapter, and
 #' populations on 31 December (1997-2024) by Land, sex and single year of
-#' age. The vignette "Coherent forecasts by sex, region and cause" reads them
+#' age. The vignette "Differences between the German Laender" reads them
 #' with [mt_data()] and prepares them with [mt_as_exposure()],
-#' [mt_regroup()], [mt_subset()], [mt_fill_suppressed()] and
-#' [mt_group_levels()].
+#' [mt_regroup()], [mt_subset()] and [mt_fill_suppressed()].
 #'
 #' `de_deaths` holds the national total (`region = "Deutschland"`) and the 16
 #' Laender, 18 age groups (column `age`: `"Unter 1 Jahr"`, `"1 Jahr bis unter 15 Jahre"`,
@@ -93,7 +92,7 @@ mt_read_gbe <- function(file, row_names = c("region", "age", "sex"), col_names =
 #' published; 2025 is left out because its chapters did not add up. Injuries
 #' and poisonings (S00-T98) are the chapter of external causes.
 #'
-#' `de_cause_groups` lists the cause groups of the regional vignette for ages
+#' `de_cause_groups` lists cause groups for cause-specific analyses at ages
 #' 50 and over: neoplasms, diseases of the circulatory, respiratory and
 #' digestive systems, mental and nervous system disorders combined (dementia
 #' is coded in both chapters), endocrine diseases and external causes; the

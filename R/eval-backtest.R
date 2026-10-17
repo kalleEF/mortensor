@@ -35,6 +35,14 @@
 #'   or suppressed cells are skipped). They are added as rows with `target`
 #'   `"life_expectancy"` or `"asr"`; summarise them with
 #'   `mt_score(..., target = )`.
+#' @param contrast Optional `c(var = , ref = )`: a stratum variable and its
+#'   reference level. With `quantities`, the differences between every other
+#'   level and the reference level (with the same values of the other
+#'   stratum variables) are scored too, path by path: targets
+#'   `"life_expectancy_gap"` (difference in years) and `"asr_gap"`
+#'   (difference of log ASR, the log rate ratio). This checks forecasts of
+#'   inequality, whose uncertainty depends on how the paths of the strata
+#'   move together; the rows carry the stratum of the compared level.
 #' @return An object of class `mt_backtest`: a `data.table` with one row per
 #'   observed cell, origin and horizon: `model`, `prep` (the preprocessing
 #'   steps, `"none"` without), `origin`, `horizon`,
@@ -50,12 +58,13 @@
 #' mt_score(bt)
 #' @export
 mt_backtest <- function(spec, data, origins = NULL, h = 10, prep = NULL, n_draws = 200, n_origins = 5,
-                        seed = 1, cores = 1, score_estimated = FALSE, quantities = NULL) {
+                        seed = 1, cores = 1, score_estimated = FALSE, quantities = NULL, contrast = NULL) {
   if (length(quantities)) {
     bad <- setdiff(quantities, c("life_expectancy", "asr"))
     if (length(bad)) mt_abort("`quantities` can be \"life_expectancy\" and \"asr\".", class = "argument")
   }
   check_class(data, "mt_data", "data")
+  contrast <- check_backtest_contrast(contrast, data, quantities)
   if (!is.null(attr(data, "smooth"))) {
     mt_abort(paste("`data` were smoothed with mt_smooth(): the forecasts would be scored against smoothed values,",
                    "and the smoother has seen the test years. Pass the raw data and smooth inside each fit:",
@@ -79,8 +88,8 @@ mt_backtest <- function(spec, data, origins = NULL, h = 10, prep = NULL, n_draws
   origins <- origins[origins < last]
   if (!length(origins)) mt_abort("No origin leaves test data.", class = "backtest")
   one <- function(o) {
-    res <- tryCatch(backtest_origin(spec, data, o, h, prep, n_draws, seed + o, score_estimated, quantities),
-                    error = function(e) e)
+    res <- tryCatch(backtest_origin(spec, data, o, h, prep, n_draws, seed + o, score_estimated, quantities,
+                                    contrast), error = function(e) e)
     if (inherits(res, "error")) {
       mt_warn(sprintf("Origin %s failed: %s", o, conditionMessage(res)), class = "backtest_origin")
       return(NULL)
@@ -93,7 +102,8 @@ mt_backtest <- function(spec, data, origins = NULL, h = 10, prep = NULL, n_draws
   out
 }
 
-backtest_origin <- function(spec, data, origin, h, prep, n_draws, seed, score_estimated = FALSE, quantities = NULL) {
+backtest_origin <- function(spec, data, origin, h, prep, n_draws, seed, score_estimated = FALSE, quantities = NULL,
+                            contrast = NULL) {
   train <- mt_window(data, to = origin)
   fit <- mt_fit(spec, train, prep = prep)
   last_fit <- max(fit$periods)
@@ -115,6 +125,7 @@ backtest_origin <- function(spec, data, origin, h, prep, n_draws, seed, score_es
   np <- length(gt$period)
   probs <- wis_probs()
   rows <- list()
+  qdraws <- list()
   # the randomised PIT draws uniforms: seeded like the forecast
   old_seed <- if (exists(".Random.seed", envir = globalenv())) get(".Random.seed", envir = globalenv()) else NULL
   if (!is.null(seed)) set.seed(seed + 1L)
@@ -139,18 +150,78 @@ backtest_origin <- function(spec, data, origin, h, prep, n_draws, seed, score_es
     if (length(quantities)) {
       qr <- quantity_scores(X, o, Ecell, quantities, probs)
       if (!is.null(qr)) {
-        rows[[length(rows) + 1L]] <- cbind(data.table(model = spec$label, prep = prep_label(prep), origin = origin,
-                                                      horizon = qr$period - origin, stratum = s, age_lo = NA_real_,
-                                                      age_hi = NA_real_, period = qr$period, observed = qr$observed,
-                                                      scale = NA_real_, target = qr$target),
-                                           qr$scores)
+        rows[[length(rows) + 1L]] <- quantity_rows(qr, spec, prep, origin, s)
+        qdraws[[as.character(s)]] <- qr
       }
+    }
+  }
+  if (!is.null(contrast) && length(qdraws)) {
+    for (qr in contrast_quantity_scores(qdraws, data$strata, contrast, probs)) {
+      rows[[length(rows) + 1L]] <- quantity_rows(qr, spec, prep, origin, qr$stratum)
     }
   }
   if (!length(rows)) mt_abort("The model failed in every stratum.", class = "backtest")
   out <- rbindlist(rows)
   out <- merge(data$strata, out, by = "stratum", sort = FALSE)
   out[]
+}
+
+# Rows of a backtest table for scored derived quantities
+quantity_rows <- function(qr, spec, prep, origin, s) {
+  cbind(data.table(model = spec$label, prep = prep_label(prep), origin = origin, horizon = qr$period - origin,
+                   stratum = s, age_lo = NA_real_, age_hi = NA_real_, period = qr$period, observed = qr$observed,
+                   scale = NA_real_, target = qr$target),
+        qr$scores)
+}
+
+# `contrast` of mt_backtest(): c(var = , ref = ) with a stratum variable and
+# one of its levels
+check_backtest_contrast <- function(contrast, data, quantities) {
+  if (is.null(contrast)) return(NULL)
+  if (!length(quantities)) mt_abort("`contrast` needs `quantities` to score.", class = "argument")
+  if (!is.character(contrast) || !all(c("var", "ref") %in% names(contrast))) {
+    mt_abort("`contrast` must be c(var = , ref = ).", class = "argument")
+  }
+  st <- data$strata
+  if (!contrast[["var"]] %in% setdiff(names(st), c("stratum", "label"))) {
+    mt_abort(sprintf("`contrast`: \"%s\" is not a stratum variable.", contrast[["var"]]), class = "argument")
+  }
+  if (!contrast[["ref"]] %in% st[[contrast[["var"]]]]) {
+    mt_abort(sprintf("`contrast`: \"%s\" is not a level of %s.", contrast[["ref"]], contrast[["var"]]),
+             class = "argument")
+  }
+  contrast[c("var", "ref")]
+}
+
+# Scores of the differences of derived quantities between each level of a
+# stratum variable and its reference level, path by path
+contrast_quantity_scores <- function(qdraws, strata, contrast, probs) {
+  st <- as.data.table(strata)
+  var <- contrast[["var"]]
+  others <- setdiff(names(st), c("stratum", "label", var))
+  key <- if (length(others)) do.call(paste, c(unname(as.list(st[, others, with = FALSE])), sep = "\r")) else
+    rep("", nrow(st))
+  out <- list()
+  for (s in names(qdraws)) {
+    i <- match(as.integer(s), st$stratum)
+    if (st[[var]][i] == contrast[["ref"]]) next
+    r <- st$stratum[st[[var]] == contrast[["ref"]] & key == key[i]]
+    qr <- qdraws[[as.character(r[1])]]
+    if (length(r) != 1 || is.null(qr)) next
+    qs <- qdraws[[s]]
+    j <- match(paste(qs$period, qs$target), paste(qr$period, qr$target))
+    k <- which(!is.na(j))
+    if (!length(k)) next
+    gaps <- lapply(k, function(m) {
+      g <- qs$draws[[m]] - qr$draws[[j[m]]]
+      go <- qs$observed[m] - qr$observed[j[m]]
+      list(observed = go, scores = score_samples(matrix(g, 1), go, probs))
+    })
+    out[[length(out) + 1L]] <- list(period = qs$period[k], target = paste0(qs$target[k], "_gap"),
+                                    observed = vapply(gaps, `[[`, 0, "observed"),
+                                    scores = rbindlist(lapply(gaps, `[[`, "scores")), stratum = as.integer(s))
+  }
+  out
 }
 
 # Scores of derived quantities per test year from the draws of log rates X
@@ -175,13 +246,14 @@ quantity_scores <- function(X, o, Ecell, quantities, probs) {
         qd <- log(colSums(R * w) / sum(w))
         qo <- log(sum(r_obs * w) / sum(w))
       }
-      out[[length(out) + 1L]] <- list(period = pp, target = q, observed = qo,
+      out[[length(out) + 1L]] <- list(period = pp, target = q, observed = qo, draws = qd,
                                       scores = score_samples(matrix(qd, 1), qo, probs))
     }
   }
   if (!length(out)) return(NULL)
   list(period = vapply(out, `[[`, 0, "period"), target = vapply(out, `[[`, "", "target"),
-       observed = vapply(out, `[[`, 0, "observed"), scores = rbindlist(lapply(out, `[[`, "scores")))
+       observed = vapply(out, `[[`, 0, "observed"), draws = lapply(out, `[[`, "draws"),
+       scores = rbindlist(lapply(out, `[[`, "scores")))
 }
 
 # Exposures of the forecast periods on the grid (ungrouped if needed; deaths not used)
@@ -280,7 +352,9 @@ wis_from_quantiles <- function(Q, y, probs) {
 #' @param by Grouping columns, for example `c("model", "horizon")`.
 #' @param target `"rate"` (log death rates per cell, default),
 #'   `"life_expectancy"` or `"asr"` (when the backtest scored these
-#'   quantities, see `quantities` in [mt_backtest()]).
+#'   quantities, see `quantities` in [mt_backtest()]), or
+#'   `"life_expectancy_gap"` or `"asr_gap"` (differences between strata, see
+#'   `contrast` in [mt_backtest()]).
 #' @return A `data.table` with the mean CRPS, WIS and absolute error, the
 #'   root mean squared error of the median (`rmse`), MASE
 #'   (mean of absolute error over the scale; rates only), empirical coverage
@@ -293,7 +367,8 @@ wis_from_quantiles <- function(Q, y, probs) {
 #' bt <- mt_backtest(rwd(), x, origins = 2007, h = 5, n_draws = 100)
 #' mt_score(bt, by = c("model", "horizon"))
 #' @export
-mt_score <- function(backtest, by = "model", target = c("rate", "life_expectancy", "asr")) {
+mt_score <- function(backtest, by = "model",
+                     target = c("rate", "life_expectancy", "asr", "life_expectancy_gap", "asr_gap")) {
   if (!is.data.frame(backtest)) mt_abort("`backtest` must be a backtest table.", class = "argument")
   target <- match.arg(target)
   bt <- as.data.table(backtest)
@@ -314,7 +389,8 @@ mt_score <- function(backtest, by = "model", target = c("rate", "life_expectancy
                    mase = if (rates_only) mean(ae / scale, na.rm = TRUE) else NA_real_,
                    cov50 = mean(cov50), cov80 = mean(cov80), cov95 = mean(cov95), pit_mean = mean(pit), n = .N),
             by = by]
-  out[, unit := switch(target, rate = "log rate", life_expectancy = "years", asr = "log rate (ASR)")]
+  out[, unit := switch(target, rate = "log rate", life_expectancy = "years", asr = "log rate (ASR)",
+                       life_expectancy_gap = "years (difference)", asr_gap = "log rate ratio (ASR)")]
   out[]
 }
 

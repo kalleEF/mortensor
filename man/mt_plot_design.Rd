@@ -11,7 +11,11 @@ mt_plot_backtest_design(data, origins, h)
 
 mt_plot_tuning(tune)
 
-mt_plot_pit(backtest, target = c("rate", "life_expectancy", "asr"), bins = 10)
+mt_plot_pit(
+  backtest,
+  target = c("rate", "life_expectancy", "asr", "life_expectancy_gap", "asr_gap"),
+  bins = 10
+)
 }
 \arguments{
 \item{data}{An \link{mt_data} object (its years).}

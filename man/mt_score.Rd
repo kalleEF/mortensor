@@ -4,7 +4,11 @@
 \alias{mt_score}
 \title{Summarise backtest scores}
 \usage{
-mt_score(backtest, by = "model", target = c("rate", "life_expectancy", "asr"))
+mt_score(
+  backtest,
+  by = "model",
+  target = c("rate", "life_expectancy", "asr", "life_expectancy_gap", "asr_gap")
+)
 }
 \arguments{
 \item{backtest}{An \code{\link[=mt_backtest]{mt_backtest()}} result (or several combined with
@@ -14,7 +18,9 @@ mt_score(backtest, by = "model", target = c("rate", "life_expectancy", "asr"))
 
 \item{target}{\code{"rate"} (log death rates per cell, default),
 \code{"life_expectancy"} or \code{"asr"} (when the backtest scored these
-quantities, see \code{quantities} in \code{\link[=mt_backtest]{mt_backtest()}}).}
+quantities, see \code{quantities} in \code{\link[=mt_backtest]{mt_backtest()}}), or
+\code{"life_expectancy_gap"} or \code{"asr_gap"} (differences between strata, see
+\code{contrast} in \code{\link[=mt_backtest]{mt_backtest()}}).}
 }
 \value{
 A \code{data.table} with the mean CRPS, WIS and absolute error, the

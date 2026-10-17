@@ -26,6 +26,39 @@ test_that("hyndman_ullah() smooths over age before the decomposition", {
   expect_error(hyndman_ullah(smooth_args = 3), class = "mt_error_argument")
 })
 
+test_that("coherent_fdm() satisfies the contract and keeps strata together", {
+  skip_if_not_installed("demography")
+  skip_if_not_installed("forecast")
+  expect_mt_model(coherent_fdm(order1 = 2, order2 = 1), n_draws = 20)
+  x <- mt_example(deaths = "single", years = 1990:2019)
+  fit <- mt_fit(coherent_fdm(order1 = 2, order2 = 1), x)
+  expect_true(all(is.finite(stats::fitted(fit))))
+  fc <- mt_forecast(fit, h = 30, n_draws = 100, seed = 1)
+  a70 <- which(fc$age$lower == 70)
+  ratio <- stats::median(fc$rates[a70, 30, "female", ] / fc$rates[a70, 30, "male", ])
+  obs <- mean(fc$observed[a70, 26:30, "female"] / fc$observed[a70, 26:30, "male"])
+  expect_lt(abs(log(ratio / obs)), 0.2)
+  expect_match(model_assumptions(coherent_fdm()), "Product-ratio")
+  # groups of common_by and aggregates of a hierarchy
+  h <- mt_hierarchy(sex = "both")
+  xa <- mt_aggregate_strata(x, h)
+  fa <- mt_fit(coherent_fdm(order1 = 2, order2 = 1), xa)
+  expect_identical(fa$fits$groups[[1]]$pool, 1:2)
+  expect_error(mt_fit(coherent_fdm(common_by = "region"), x), class = "mt_error_model_fit")
+})
+
+test_that("StMoMo cohort models have fitted rates for clipped cohorts", {
+  skip_if_not_installed("StMoMo")
+  x <- mt_example(deaths = "single", years = 1990:2019)
+  x <- mt_regroup(mt_set_grid(x, age = single_ages(55, 90, open = FALSE)), age = single_ages(55, 90, open = FALSE))
+  fit <- mt_fit(stmomo("apc", clip = 3), x)
+  expect_true(anyNA(fit$fits[[1]]$fit$gc))
+  f <- stats::fitted(fit)
+  expect_false(anyNA(f))
+  e <- life_expectancy(f, fit$age)
+  expect_gt(min(e), 15)
+})
+
 test_that("StMoMo cohort models need single years of age", {
   skip_if_not_installed("StMoMo")
   x <- mortensor:::simulate_lc_dgp(n_t = 12)

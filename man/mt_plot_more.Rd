@@ -22,7 +22,7 @@ mt_plot_scores(
   backtest,
   metric = "crps",
   by = c("horizon", "age", "model"),
-  target = c("rate", "life_expectancy", "asr")
+  target = c("rate", "life_expectancy", "asr", "life_expectancy_gap", "asr_gap")
 )
 }
 \arguments{

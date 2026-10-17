@@ -4,14 +4,15 @@
 \alias{mt_plot_contrast}
 \title{Plot gaps between strata over time}
 \usage{
-mt_plot_contrast(contrast, observed = NULL, levels = NULL)
+mt_plot_contrast(contrast = NULL, observed = NULL, levels = NULL)
 }
 \arguments{
 \item{contrast}{The result of \code{\link[=mt_contrast]{mt_contrast()}} for a forecast, or a named
 list of such results.}
 
 \item{observed}{The result of \code{\link[=mt_contrast]{mt_contrast()}} for observed data, or
-\code{NULL}.}
+\code{NULL}. Without \code{contrast}, the observed gaps are drawn with their
+Poisson intervals.}
 
 \item{levels}{Levels of the compared variable to show (default all).}
 }

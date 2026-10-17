@@ -123,7 +123,7 @@ calibration" how to widen the intervals.
 | Step | Vignette |
 |---|---|
 | Your own tables | "Your own data, from CSV to report" |
-| Age groups and single years | "Data at different granularities" |
+| Age groups and single years | "Ungrouping age groups: methods and diagnostics" |
 | Smoothing | "Smoothing death rates" |
 | Where a forecast starts | "Where a forecast starts: the jump-off" |
 | Scores and backtests | "Backtesting and scores" |

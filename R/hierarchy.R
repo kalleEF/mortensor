@@ -275,10 +275,8 @@ mt_aggregate_strata <- function(data, hierarchy, replace = FALSE) {
 #' @param hierarchy An [mt_hierarchy()] (or, for one variable, `var` and
 #'   `total`).
 #' @param method `"wls"` (default), `"mint"`, `"structural"`, `"ols"`,
-#'   `"bottom_up"` or `"proportional"` (with `fixed`). In a backtest on [mt_example_regions()] (Lee-Carter per
-#'   stratum, 90 strata) WLS and structural scaling kept 95% coverage of
-#'   bottom and aggregate strata at 0.95-0.98 and improved the bottom-level
-#'   CRPS; MinT with the draw covariance under-covered aggregates (0.88).
+#'   `"bottom_up"` or `"proportional"` (with `fixed`). The vignette
+#'   "Coherent forecasts: totals and their parts" compares them.
 #' @param shrink Shrinkage intensity for `"mint"` (number between 0 and 1),
 #'   or `"auto"`.
 #' @param exposure Exposures `[age, period, stratum]` or `[age, stratum]` for
@@ -657,14 +655,10 @@ shrink_cov <- function(X, shrink = "auto") {
 #' as well: Poisson and extra-Poisson variation are drawn for the bottom
 #' strata only and the aggregates are their sums.
 #'
-#' On [mt_example_regions()] (4 regions, 90 strata, origins 2005 and 2008,
-#' h = 10), `li_lee(common_by = "sex")` with `method = "bottom_up"` was the
-#' most accurate coherent forecast (CRPS 0.0425 bottom, 0.0269 aggregates;
-#' 95% coverage 0.95), and Lee-Carter per stratum with `"wls"` reconciliation
-#' was calibrated (0.95-0.97) but less accurate (0.0477, 0.0292). On the ONS
-#' and German regional data, reconciliation changed the accuracy of the
-#' bottom strata little and lowered the coverage of the totals (see the
-#' vignette "Coherent forecasts: what reconciliation changes").
+#' Whether coherence costs accuracy, and which method and base model work
+#' best, depends on the data: compare them in a backtest at every level of
+#' the hierarchy (`mt_score_table(..., hierarchy = )`), as in the vignette
+#' "Coherent forecasts: totals and their parts".
 #'
 #' @param spec Base model specification (fitted to all strata).
 #' @param hierarchy An [mt_hierarchy()].

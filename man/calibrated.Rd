@@ -136,17 +136,11 @@ settings (smoothing, number of components, fitting window) by forecast
 accuracy is tuning, done by \code{\link[=tuned]{tuned()}} and \code{\link[=mt_tune]{mt_tune()}}; the two combine
 as \code{calibrated(tuned(...))}.
 
-In backtests on England & Wales men (HMD via StMoMo, origins 1996-2001,
-h = 10), calibration raised the 95\% coverage of \code{\link[=lee_carter]{lee_carter()}} from 0.75
-to 0.88 and lowered its CRPS by 4\% (0.0687 to 0.0657); \code{bias = TRUE}
-gave the same. On the ONS deprivation data (6-year window), the coverage
-of Lee-Carter and Li-Lee rose with \code{target = "interval"} (0.83 to 0.90 and
-0.84 to 0.89) at unchanged CRPS, and \code{bias = TRUE} made the CRPS worse
-(0.069 to 0.082). An equal-weight \code{\link[=ensemble]{ensemble()}} of Lee-Carter and \code{\link[=rwd]{rwd()}}
-was already calibrated; calibration then narrowed it (95\% coverage 0.93
-to 0.85 on ONS, 0.95 to 0.90 on England & Wales) at the same CRPS. In
-the vignette "Forecasting mortality by deprivation quintile" it changed a
-mixture of Li-Lee and random walks little (0.86 to 0.85).
+Calibration widens the intervals of models that were too narrow in the
+recent past and narrows those that were too wide, for example of
+ensembles whose intervals already covered. With few training years it
+rests on few forecasts and can make intervals worse; check it in a
+backtest, as in the vignette "Tuning and calibration".
 
 \code{target = "crps"} (default) balances calibration and sharpness;
 \code{target = "interval"} minimises the interval score of the central \code{level}

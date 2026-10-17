@@ -2,6 +2,41 @@
 
 Clean break: the 0.1.x interface is replaced (see `dev/revamp-plan.md`).
 
+## Vignettes restructured, models and diagnostics added
+
+* The vignettes are reorganised: one concept per vignette with a simple
+  model, a model vignette, and two applied pipelines. New: "Choosing and
+  combining models" (implemented and wrapped models side by side,
+  ensembles of any combination), "Ungrouping age groups: methods and
+  diagnostics" (replaces "Data at different granularities"), "Inequality
+  in England" and "Differences between the German Laender" (replace the
+  deprivation, causes, regions and HMD forecasting vignettes). Every step
+  of the applied pipelines is chosen in a backtest of the quantity the
+  question is about.
+* `coherent_fdm()`: the product-ratio method with functional data models
+  of demography (Hyndman, Booth and Yasmeen 2013), with simulated paths,
+  groups (`common_by`) and hierarchies.
+* `stratified()`: different models for groups of strata, for example
+  Lee-Carter for all causes and Li-Lee for the causes of death, inside
+  `reconciled()` with the causes scaled to the all-cause forecast.
+* Backtests score gaps between strata path by path:
+  `mt_backtest(contrast = c(var = , ref = ))` adds the targets
+  `"life_expectancy_gap"` and `"asr_gap"`. `mt_score_table(hierarchy = )`
+  scores the bottom series, aggregates and total separately.
+* `mt_plot_ungroup()` compares several ungrouping results (a named list)
+  with three views: age profile against the groups, stability over time,
+  and errors against known single years with the Poisson noise band;
+  `mt_ungroup_check()` gives the same as a table. `mt_regroup(measures = )`
+  regroups only some tables (for example the deaths, to check ungrouping).
+* Help pages no longer quote benchmark results; the vignettes show them.
+* Fixes: StMoMo cohort models now have fitted rates for clipped cohorts
+  (their fitted life expectancy dropped to zero in the last years); a
+  missing rate gives a missing life expectancy instead of certain death;
+  `mt_smooth(along = "period")` uses Whittaker smoothing by default;
+  errors raised inside `do.call()` no longer print the whole function;
+  `mt_inequality()` leaves out levels not in `order` (such as a hierarchy
+  total); the legend order of `mt_plot_shares()` is fixed.
+
 ## Comparing models and forecasts
 
 * `mt_compare()` backtests a named list of models (each with its own

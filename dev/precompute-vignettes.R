@@ -1,8 +1,10 @@
 # Precompute vignettes whose chunks take several minutes (MCMC, backtests). Run from the
-# package root after installing the current version:
-#   R CMD INSTALL . && Rscript dev/precompute-vignettes.R
+# package root; the vignettes use the development version of the package:
+#   Rscript dev/precompute-vignettes.R
+# Each knit takes 5-20 minutes. The figures are written next to the vignettes.
+suppressMessages(devtools::load_all(".", quiet = TRUE))
 old <- setwd("vignettes")
 on.exit(setwd(old))
-knitr::knit("bayesian-apc.Rmd.orig", output = "bayesian-apc.Rmd")
-knitr::knit("regions.Rmd.orig", output = "regions.Rmd")
-knitr::knit("deprivation.Rmd.orig", output = "deprivation.Rmd")
+for (v in c("bayesian-apc", "model-choice", "inequality-england", "laender-germany")) {
+  knitr::knit(paste0(v, ".Rmd.orig"), output = paste0(v, ".Rmd"))
+}

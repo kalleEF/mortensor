@@ -11,7 +11,9 @@
 #'   preprocessing.
 #' * `mt_score_table()` gives the mean scores of a backtest for every
 #'   target it holds side by side: log death rates without suffix, life
-#'   expectancy with `_le` (years), the age-standardised rate with `_asr`.
+#'   expectancy with `_le` (years), the age-standardised rate with `_asr`,
+#'   and differences between strata (`contrast` in [mt_backtest()]) with
+#'   `_le_gap` and `_asr_gap`.
 #' * `mt_compare_forecasts()` gives one quantity of several forecasts
 #'   (`mt_draws`) or observed data (`mt_data`, with Poisson intervals) as
 #'   "median (lower-upper)", one column per forecast.
@@ -32,6 +34,9 @@
 #' @param by Columns that define the rows (default `"model"`).
 #' @param digits Significant digits (`mt_score_table()`) or decimals
 #'   (`mt_compare_forecasts()`).
+#' @param hierarchy Optional [mt_hierarchy()]: scores are then given
+#'   separately for the bottom series, the aggregates and the grand total
+#'   (column `level`).
 #' @param forecasts A named list of [mt_draws] objects or [mt_data] objects
 #'   (observed values).
 #' @param quantity `"life_expectancy"`, `"asr"` (per 100,000), `"deaths"`
@@ -52,8 +57,9 @@
 #'   object.
 #' @examples
 #' x <- mt_example(deaths = "single", years = 1990:2012)
-#' bt <- mt_compare(list("random walk" = rwd(), "Lee-Carter" = lee_carter()), x, origins = c(2005, 2007),
-#'                  h = 5, n_draws = 50, quantities = "life_expectancy")
+#' models <- list("random walk" = rwd(), "Lee-Carter" = lee_carter())
+#' bt <- mt_compare(models, x, origins = c(2005, 2007), h = 5, n_draws = 50,
+#'                  quantities = "life_expectancy")
 #' mt_score_table(bt)
 #' fc <- list("random walk" = mt_forecast(mt_fit(rwd(), x), h = 10, n_draws = 100, seed = 1),
 #'            "Lee-Carter" = mt_forecast(mt_fit(lee_carter(), x), h = 10, n_draws = 100, seed = 1))
@@ -82,6 +88,22 @@ mt_compare <- function(specs, data, origins = NULL, h = 10, n_draws = 200, quant
   out[]
 }
 
+# Level of each backtest row in a hierarchy: "total" where every variable is
+# at its total, "aggregate" where some variable is at its total or a group,
+# "bottom" otherwise
+score_levels <- function(bt, hierarchy) {
+  h <- as_hierarchy(hierarchy)
+  vars <- names(h$vars)
+  miss <- setdiff(vars, names(bt))
+  if (length(miss)) {
+    mt_abort(sprintf("The backtest has no stratum column %s of the hierarchy.", paste(miss, collapse = ", ")),
+             class = "argument")
+  }
+  agg <- Reduce(`|`, lapply(vars, function(v) bt[[v]] %in% c(h$vars[[v]]$total, names(h$vars[[v]]$groups))))
+  tot <- Reduce(`&`, lapply(vars, function(v) bt[[v]] == h$vars[[v]]$total))
+  ifelse(tot, "total", ifelse(agg, "aggregate", "bottom"))
+}
+
 # Specification and preprocessing of a list element
 spec_and_prep <- function(x) {
   if (inherits(x, "mt_spec")) return(list(spec = x, prep = NULL))
@@ -91,11 +113,18 @@ spec_and_prep <- function(x) {
 
 #' @rdname mt_compare
 #' @export
-mt_score_table <- function(backtest, metrics = c("crps", "cov95"), targets = NULL, by = "model", digits = 3) {
+mt_score_table <- function(backtest, metrics = c("crps", "cov95"), targets = NULL, by = "model", digits = 3,
+                           hierarchy = NULL) {
   bt <- as.data.table(backtest)
+  if (!is.null(hierarchy)) {
+    bt <- copy(bt)
+    bt[, level := factor(score_levels(bt, hierarchy), c("bottom", "aggregate", "total"))]
+    if (!"level" %in% by) by <- c(by, "level")
+    backtest <- bt
+  }
   have <- if ("target" %in% names(bt)) unique(bt$target) else "rate"
-  targets <- targets %||% intersect(c("rate", "life_expectancy", "asr"), have)
-  suffix <- c(rate = "", life_expectancy = "_le", asr = "_asr")
+  targets <- targets %||% intersect(c("rate", "life_expectancy", "asr", "life_expectancy_gap", "asr_gap"), have)
+  suffix <- c(rate = "", life_expectancy = "_le", asr = "_asr", life_expectancy_gap = "_le_gap", asr_gap = "_asr_gap")
   tabs <- lapply(targets, function(tg) {
     s <- mt_score(backtest, by = by, target = tg)
     miss <- setdiff(metrics, names(s))
@@ -345,7 +374,8 @@ mt_plot_tuning <- function(tune) {
 
 #' @rdname mt_plot_design
 #' @export
-mt_plot_pit <- function(backtest, target = c("rate", "life_expectancy", "asr"), bins = 10) {
+mt_plot_pit <- function(backtest, target = c("rate", "life_expectancy", "asr", "life_expectancy_gap", "asr_gap"),
+                        bins = 10) {
   need_ggplot()
   target <- match.arg(target)
   bt <- as.data.table(backtest)
@@ -372,7 +402,8 @@ mt_plot_pit <- function(backtest, target = c("rate", "life_expectancy", "asr"), 
 #' @param contrast The result of [mt_contrast()] for a forecast, or a named
 #'   list of such results.
 #' @param observed The result of [mt_contrast()] for observed data, or
-#'   `NULL`.
+#'   `NULL`. Without `contrast`, the observed gaps are drawn with their
+#'   Poisson intervals.
 #' @param levels Levels of the compared variable to show (default all).
 #' @return A ggplot object.
 #' @examples
@@ -383,8 +414,12 @@ mt_plot_pit <- function(backtest, target = c("rate", "life_expectancy", "asr"), 
 #'                    observed = mt_contrast(x, var = "sex", ref = "male", at = 30))
 #' }
 #' @export
-mt_plot_contrast <- function(contrast, observed = NULL, levels = NULL) {
+mt_plot_contrast <- function(contrast = NULL, observed = NULL, levels = NULL) {
   need_ggplot()
+  if (is.null(contrast)) {
+    if (is.null(observed)) mt_abort("Give `contrast`, `observed` or both.", class = "argument")
+    return(plot_contrast_observed(as.data.table(observed), levels))
+  }
   multi <- is.list(contrast) && !is.data.frame(contrast)
   tabs <- if (multi) contrast else list(contrast)
   if (multi && (is.null(names(tabs)) || any(!nzchar(names(tabs))))) {
@@ -426,5 +461,29 @@ mt_plot_contrast <- function(contrast, observed = NULL, levels = NULL) {
     ggplot2::labs(x = NULL, y = ylab, colour = NULL, fill = NULL,
                   subtitle = sprintf("Compared with %s; %sdashed: forecast median with interval", tab$ref[1],
                                      if (!is.null(obs)) "points: observed; " else "")) +
+    theme_mortensor()
+}
+
+# Observed gaps with their (Poisson) intervals
+plot_contrast_observed <- function(obs, levels = NULL) {
+  if (!all(c("level", "period", "q0.5") %in% names(obs))) {
+    mt_abort("`observed` must be a result of mt_contrast().", class = "argument")
+  }
+  if (!is.null(levels)) obs <- obs[level %in% levels]
+  qs <- grep("^q0", names(obs), value = TRUE)
+  lo <- grep("^q0[.]0", qs, value = TRUE)[1]
+  hi <- rev(grep("^q0[.]9", qs, value = TRUE))[1]
+  pvars <- setdiff(names(obs), c("level", "ref", "period", "mean", "p_positive", "quantity", "type", "at", "from",
+                                 "to", "ages", "standard", "per", "age", qs))
+  obs[, col := factor(level, levels = unique(level))]
+  pal <- if (looks_ordered(levels(obs$col))) "ordered" else "categorical"
+  p <- ggplot2::ggplot(obs, ggplot2::aes(x = period, y = q0.5, colour = col)) +
+    ggplot2::geom_linerange(ggplot2::aes(ymin = .data[[lo]], ymax = .data[[hi]]), alpha = 0.6) +
+    ggplot2::geom_point(size = 1)
+  if (length(pvars)) p <- p + ggplot2::facet_wrap(pvars)
+  p + scale_colour_mortensor(type = pal) +
+    ggplot2::labs(x = NULL, y = sprintf("%s in %s", if (obs$type[1] == "ratio") "Ratio" else "Difference",
+                                        gsub("_", " ", obs$quantity[1])), colour = NULL,
+                  subtitle = sprintf("Compared with %s; observed, with Poisson intervals", obs$ref[1])) +
     theme_mortensor()
 }

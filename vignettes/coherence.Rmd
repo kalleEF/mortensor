@@ -129,10 +129,12 @@ bt <- mt_compare(list(separate = lee_carter(),
                       wls = reconciled(lee_carter(), h, method = "wls"),
                       mint = reconciled(lee_carter(), h, method = "mint")),
                  xa, origins = 2010:2014, h = 5, n_draws = 200)
-bottom <- mt_strata(xa, h)[level == "bottom", label]
-rbind(cbind(level = "bottom series", mt_score_table(bt[label %in% bottom], metrics = c("crps", "cov95"))),
-      cbind(level = "totals", mt_score_table(bt[!label %in% bottom], metrics = c("crps", "cov95"))))
+mt_score_table(bt, metrics = c("crps", "cov95"), hierarchy = h)
 ```
+
+`hierarchy = h` scores the bottom series (sex by quintile), the
+aggregates (quintiles for both sexes, England by sex) and the total
+(England) separately.
 
 The bottom series are forecast about as well with every method. The
 totals lose a little accuracy and more coverage: their own models capture

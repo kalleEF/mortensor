@@ -25,10 +25,8 @@ mt_reconcile(
 \code{total}).}
 
 \item{method}{\code{"wls"} (default), \code{"mint"}, \code{"structural"}, \code{"ols"},
-\code{"bottom_up"} or \code{"proportional"} (with \code{fixed}). In a backtest on \code{\link[=mt_example_regions]{mt_example_regions()}} (Lee-Carter per
-stratum, 90 strata) WLS and structural scaling kept 95\% coverage of
-bottom and aggregate strata at 0.95-0.98 and improved the bottom-level
-CRPS; MinT with the draw covariance under-covered aggregates (0.88).}
+\code{"bottom_up"} or \code{"proportional"} (with \code{fixed}). The vignette
+"Coherent forecasts: totals and their parts" compares them.}
 
 \item{shrink}{Shrinkage intensity for \code{"mint"} (number between 0 and 1),
 or \code{"auto"}.}

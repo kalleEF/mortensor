@@ -26,6 +26,8 @@
 #' In backtests use `step_ungroup()` so that ungrouping, in particular in 2D,
 #' sees only the training window.
 #'
+#' @seealso [mt_plot_ungroup()] and [mt_ungroup_check()] for diagnostics.
+#'
 #' @param data An [mt_data] object.
 #' @param age Target age axis ([mt_axis]). By default the grid when it was
 #'   set (with [mt_set_grid()] or `step_grid()`) and is finer than the data,
@@ -40,13 +42,9 @@
 #'   `"natural_gompertz"` (natural spline with a log-linear tail) and `"gam"`
 #'   (2D tensor-product GAM of log group rates over age and year with a
 #'   Kannisto tail, package mgcv). All three preserve the exposure-weighted
-#'   group rates exactly. Median absolute log errors against single-year
-#'   rates (England & Wales men 1980-2011, 5-year groups to 90-100; and the
-#'   simulated [mt_example()] with deaths to 90+): PCLM 0.015/0.024 and
-#'   0.012/0.006 (ages 30-89/90+), `"hyman_kannisto"` 0.015/0.029 and
-#'   0.013/0.028, `"natural_gompertz"` 0.015/0.027 and 0.013/0.030, `"gam"`
-#'   0.015/0.031 and 0.012/0.031. PCLM is the most accurate in the open
-#'   interval; the spline methods are 5 to 10 times faster.
+#'   group rates exactly. The vignette "Ungrouping age groups: methods and
+#'   diagnostics" compares the methods on data with known single years;
+#'   [mt_plot_ungroup()] and [mt_ungroup_check()] check a result.
 #' @param exposure_method `"pclm"` or `"monotone"`.
 #' @param lambda Fixed smoothing parameter(s); `NULL` selects them by
 #'   `criterion`.

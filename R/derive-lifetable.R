@@ -73,12 +73,13 @@ lt_columns <- function(M, age, ax = NULL, open = "reciprocal", k = 10) {
 }
 
 # Probabilities of dying in closed intervals from rates; where the linear
-# formula exceeds 1, the constant-hazard value 1 - exp(-n m)
+# formula exceeds 1, the constant-hazard value 1 - exp(-n m). Missing rates
+# give missing probabilities (and life expectancies), not certain death.
 lt_qx <- function(M, nn, A) {
   Q <- nn * M / (1 + (nn - A) * M)
   hi <- is.finite(Q) & Q > 1 | is.finite(M) & M > 0 & !is.finite(Q)
   Q[hi] <- 1 - exp(-nn[hi] * M[hi])
-  Q[!is.finite(Q)] <- 1
+  Q[!is.finite(Q) & !is.na(M)] <- 1
   Q
 }
 

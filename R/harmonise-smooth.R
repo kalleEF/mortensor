@@ -32,17 +32,12 @@
 #' trends and from the starting level of forecasts; the last years are
 #' estimated from one side only. It also removes the year-to-year variation
 #' from which models such as Lee-Carter estimate the uncertainty of their
-#' period index, so their intervals become too narrow: in backtests on
-#' England & Wales men (origins 1996-2001, h = 10) the 95% coverage of
-#' Lee-Carter fell from 0.75 to 0.59 with the age-period GAM, and on the ONS
-#' deprivation data from 0.83 to 0.72. Combined with [calibrated()], which
-#' re-estimates the spread against the raw observations, the same smoothing
-#' gave the best Lee-Carter forecasts on England & Wales (CRPS 0.0646
-#' against 0.0687, 95% coverage 0.91), and an ensemble of Lee-Carter and
-#' `rwd(observation_noise = TRUE)` on rates smoothed over time with
-#' calibration the best overall (0.0562, 0.92). Smoothing over age alone
-#' changed little for large populations and helped for sparse
-#' cause-specific data (German Laender). Use [mt_smooth_check()] to see how
+#' period index, so their intervals become too narrow unless the spread is
+#' re-estimated against the raw observations ([calibrated()]). Smoothing
+#' over age alone changes little for large populations and helps for sparse
+#' data such as cause-specific rates of small regions. Whether smoothing
+#' improves a forecast is a question for a backtest; the vignette
+#' "Smoothing death rates" shows one. Use [mt_smooth_check()] to see how
 #' much was removed and [mt_plot_smooth()] to look at it. The 2D P-spline
 #' surface is slow for many ages and years (minutes per stratum); the 2D
 #' GAM takes about a second.
@@ -51,7 +46,8 @@
 #' @param dims 1 (over one direction, see `along`) or 2 (age-period
 #'   surface; `"pspline"` or `"gam"`).
 #' @param method `"pspline"` (Poisson P-splines, default), `"whittaker"` or
-#'   `"gam"` (package \pkg{mgcv}); see Details.
+#'   `"gam"` (package \pkg{mgcv}); see Details. With `dims = 1` and
+#'   `along = "period"` the default is `"whittaker"`.
 #' @param along For `dims = 1`: `"age"` or `"period"` (`"whittaker"` only).
 #' @param ages Range of ages that is smoothed, `c(lower, upper)`; other
 #'   ages keep their observed deaths and do not enter the fit. By default
@@ -82,8 +78,9 @@ mt_smooth <- function(data, dims = 1, lambda = NULL, criterion = c("bic", "aic")
                       ages = NULL, along = c("age", "period"), k = NULL) {
   check_class(data, "mt_data", "data")
   criterion <- match.arg(criterion)
-  method <- match.arg(method)
   along <- match.arg(along)
+  # smoothing over time in one direction is Whittaker smoothing
+  method <- if (missing(method) && dims == 1 && along == "period") "whittaker" else match.arg(method)
   check_number(dims, "dims", lower = 1, upper = 2, integerish = TRUE)
   if (dims == 2 && method == "whittaker") {
     mt_abort("Whittaker smoothing works in one direction; use dims = 1 with `along`, or method \"pspline\" or \"gam\".",

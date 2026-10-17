@@ -76,12 +76,12 @@ for your data.
 
 The penalized composite link model (`mt_ungroup()`, default) ungroups
 deaths as rates with the exposures as offset and keeps group totals
-exactly. On England & Wales (HMD) data grouped into 5-year groups its median
-absolute error of single-year log rates was 0.015 at ages 30-89 and 0.024 at
-90-100, close to the Poisson noise of the observed rates. The spline
-methods (`"hyman_kannisto"`, `"natural_gompertz"`, `"gam"`) were as
-accurate below 90, less accurate in the open interval, and 5 to 10 times
-faster. See "Data at different granularities: ungrouping HMD data".
+exactly. On England & Wales data grouped into 5-year groups, it and the
+spline methods (`"hyman_kannisto"`, `"natural_gompertz"`, `"gam"`) were
+almost as close to the known single years as the Poisson noise allows;
+they differed in the last, wide age group, where the PCLM was closest.
+Check your own result with `mt_plot_ungroup()` and `mt_ungroup_check()`;
+see "Ungrouping age groups: methods and diagnostics".
 
 ### Can I split the open interval 90+ into single years?
 
@@ -269,8 +269,8 @@ cause forecasts tend to be more pessimistic than forecasts of all causes
 (Wilmoth 1995), so compare the two before choosing. Reconciliation of
 deaths uses exposures of the forecast years; supply
 population projections as `exposure` when they are available. See
-"Coherent forecasts: what reconciliation changes", "Coherent forecasts by
-sex, region and cause" and "Causes of death by deprivation".
+"Coherent forecasts: totals and their parts" and the applied vignettes
+"Inequality in England" and "Differences between the German Laender".
 
 ### Will the gap between regions or deprivation groups keep growing?
 

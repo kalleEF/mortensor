@@ -42,6 +42,11 @@ test_that("life_expectancy works on arrays and checks `at`", {
   expect_equal(dim(e), c(3, 2))
   expect_true(all(e > 15 & e < 30))
   expect_error(life_expectancy(m, mt_grid(x)$age, at = 65.5), class = "mt_error_lifetable")
+  # a missing rate gives a missing life expectancy, not certain death
+  m[1, 3, 1] <- NA
+  e0 <- life_expectancy(m, mt_grid(x)$age)
+  expect_true(is.na(e0[3, 1]))
+  expect_false(anyNA(e0[-3, ]))
 })
 
 test_that("expected deaths use future exposures", {
@@ -128,4 +133,13 @@ test_that("observed inequality indices use the population weights of each year",
   }, 0)
   expect_equal(iq$mean, manual, tolerance = 0.05)
   expect_equal(nrow(iq), 3)
+})
+
+test_that("mt_inequality() leaves out levels not in `order`", {
+  x <- mt_example_regions(years = 2010:2012, regions = 2)
+  xa <- mt_aggregate_strata(x, mt_hierarchy(quintile = list(total = "all")))
+  a <- mt_inequality(x, "quintile", order = paste0("Q", 5:1), quantity = "asr")
+  b <- mt_inequality(xa, "quintile", order = paste0("Q", 5:1), quantity = "asr")
+  expect_equal(b$q0.5, a$q0.5, tolerance = 0.01)  # Poisson draws of the observed rates
+  expect_error(mt_inequality(x, "quintile", order = c("Q1", "Q9")), class = "mt_error_argument")
 })

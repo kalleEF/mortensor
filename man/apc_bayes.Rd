@@ -18,12 +18,11 @@ apc_bayes(
 \arguments{
 \item{age, period, cohort}{Prior for each effect: \code{"rw1"} or \code{"rw2"}. The
 defaults use first-order random walks for period and cohort: with
-second-order random walks the extrapolated trends made forecast intervals
-explode on French HMD data (ages 90-94, 15 years ahead: 90\% interval
-0.004-0.63 with RW2 against 0.11-0.17 with RW1, observed rate 0.165).
-First-order random walks carry the last period effect forward without a
-trend, so forecasts are biased when mortality keeps declining (see the
-vignette "Bayesian age-period-cohort models with bamp").}
+second-order random walks the extrapolated trends can make forecast
+intervals span orders of magnitude. First-order random walks carry the
+last period effect forward without a trend, so forecasts are biased when
+mortality keeps declining. The vignette "Bayesian age-period-cohort
+models with bamp" compares both.}
 
 \item{overdispersion}{Include cell-level overdispersion.}
 

@@ -8,10 +8,12 @@ Description: Tools to combine mortality and population data observed at
     different granularities (age groups, open age intervals, periods,
     population strata and causes) and to build probabilistic mortality
     forecasts from interchangeable parts: harmonisation and ungrouping with the
-    penalized composite link model, Lee-Carter, random walk with drift and
-    tensor (Tucker3) models, Bayesian age-period-cohort models through the
-    'bamp' package, ensembles, honest rolling-origin backtests with proper
-    scoring rules, and life tables computed from simulated paths.
+    penalized composite link model; models implemented directly (random walk
+    with drift, Lee-Carter, Li-Lee, Tucker3) or wrapped from 'demography',
+    'StMoMo', 'bamp' and 'forecast' behind one interface; ensembles of any
+    combination of them; coherent forecasts of totals and their parts;
+    honest rolling-origin backtests with proper scoring rules; and life
+    tables computed from simulated paths.
     Experimental software written largely with AI coding assistants
     ("vibe-coded"); use at your own risk and check results independently.
 License: GPL-3
