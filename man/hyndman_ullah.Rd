@@ -48,7 +48,9 @@ step. \code{smooth.demogdata()} works on single years of age; for age groups
 the smoothed values at the observed ages are used (a weaker smoothing).
 The smoothing settings (\code{smooth_args}, such as \code{k}, the number of knots)
 and the number of components can be chosen by forecast accuracy with
-\code{\link[=tuned]{tuned()}}.
+\code{\link[=tuned]{tuned()}}. When the default monotonic spline cannot be fitted (for
+example for age ranges that start in middle age), the rates are smoothed
+without the monotonicity constraint and the fit diagnostics say so.
 }
 \examples{
 if (requireNamespace("demography", quietly = TRUE)) {

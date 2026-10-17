@@ -80,7 +80,8 @@ the training data of the first forecast).}
 unless \code{exposure} is given; forecasts only) or \code{"rate"} (death rates of
 the ages in \code{ages}).}
 
-\item{periods}{Years shown (for the plot a range \code{c(first, last)}).}
+\item{periods}{Years shown (for the plot a range \code{c(first, last)}, or
+one year: then medians and intervals per stratum side by side).}
 
 \item{at}{Age for life expectancy.}
 

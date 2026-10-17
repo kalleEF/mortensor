@@ -34,6 +34,13 @@ Clean break: the 0.1.x interface is replaced (see `dev/revamp-plan.md`).
   smoothed without the constraint, noted in the fit diagnostics.
 * `mt_tune()`: standard errors also for a hold-out of a single stratum
   (blocks of test years).
+* `mt_plot_contrast()` draws gaps between strata over time (one or
+  several forecasts, with observed gaps); `mt_plot_compare(periods = )`
+  with one year shows medians and intervals per stratum side by side.
+* "Getting started" is one short pass through the main steps;
+  "Coherent forecasts: totals and their parts" (live, no longer
+  precomputed) explains bottom-up, reconciliation and fixed totals with
+  one figure each and a small backtest.
 
 ## Tuning and calibration
 

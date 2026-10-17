@@ -66,3 +66,14 @@ test_that("smoothing over time gives every age the same smoothness", {
   many <- order(rowSums(D), decreasing = TRUE)[1:10]
   expect_lt(mean(r[many]), 2 * mean(r))
 })
+
+test_that("mt_plot_contrast() draws gaps of one or several forecasts", {
+  skip_if_not_installed("ggplot2")
+  x <- mt_example(deaths = "single", years = 1995:2012)
+  fc <- mt_forecast(mt_fit(lee_carter(), x), h = 5, n_draws = 50, seed = 1)
+  cf <- mt_contrast(fc, var = "sex", ref = "male", at = 30)
+  expect_s3_class(mt_plot_contrast(cf, observed = mt_contrast(x, var = "sex", ref = "male", at = 30)), "ggplot")
+  expect_s3_class(mt_plot_contrast(list(a = cf, b = cf)), "ggplot")
+  expect_error(mt_plot_contrast(list(cf, cf)), class = "mt_error_argument")
+  expect_error(mt_plot_contrast(data.frame(a = 1)), class = "mt_error_argument")
+})

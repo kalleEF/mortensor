@@ -16,252 +16,119 @@ has_gg <- requireNamespace("ggplot2", quietly = TRUE)
 assistants ("vibe-coded"). Use it at your own risk and check results
 independently.*
 
-mortensor builds probabilistic mortality forecasts from data observed at
-different granularities. A forecast is assembled from interchangeable parts:
-
-1. **data** in their original resolution (`mt_data()`), prepared with
-   general steps: subsets of ages, years and strata (`mt_subset()`),
-   aggregation layers such as deprivation quintiles or cause groups
-   (`mt_group_levels()`), exposures from populations (`mt_as_exposure()`),
-2. **harmonisation** onto a modelling grid (`mt_ungroup()`, `mt_smooth()`,
-   `mt_regroup()`), bundled as a preprocessing pipeline (`mt_prep()`),
-3. a **model** (`lee_carter()`, `li_lee()`, `rwd()`, `tucker3()`,
-   `apc_bayes()`, ...), fitted with `mt_fit()` and forecast with
-   `mt_forecast()` as simulated paths,
-4. **derived quantities** computed path by path (`life_expectancy()`,
-   `prob_dying()`, `asr()`) and their decomposition by age, cause and
-   subgroup (`mt_decompose()`), and
-5. **evaluation** with rolling-origin backtests (`mt_backtest()`,
-   `mt_score()`).
-
-This vignette forecasts mortality in England by sex and deprivation.
+mortensor builds probabilistic mortality forecasts: simulated paths of
+future death rates, from which life expectancy, gaps between groups and
+other quantities follow with their uncertainty. Any model can be used,
+implemented in the package or wrapped from demography, StMoMo or bamp,
+and models can be combined. This vignette goes once through the main
+steps with one simple model; the other vignettes take one step at a time.
 
 ```{r}
 library(mortensor)
 library(data.table)
 ```
 
-## Data
+## 1. Data
 
-`ons_data` holds death registrations and mid-year populations by sex,
-5-year age group and decile of the Index of Multiple Deprivation (IMD),
-England 2001-2019, from an ONS ad hoc release (Source: Office for National
-Statistics licensed under the Open Government Licence v3.0). Decile 1 is the
-most deprived.
-
-```{r}
-head(ons_data[, 1:8])
-```
-
-`mt_data()` reads tables in long format, one row per cell: here the
-all-cause deaths and the mid-year populations, with sex and IMD decile as
-stratum variables (`by`). Age groups such as `"<1"`, `"01-04"` and `"90+"`
-are recognised. `mt_as_exposure()` takes the mid-year population as the
-person-years at risk:
+`ons_data` holds deaths and mid-year populations in England by sex,
+5-year age group and decile of the Index of Multiple Deprivation (decile 1
+most deprived), 2001-2019 (Source: Office for National Statistics,
+licensed under the Open Government Licence v3.0). `mt_data()` reads them,
+`mt_as_exposure()` takes the mid-year populations as person-years at risk,
+and `mt_group_levels()` combines the deciles into quintiles:
 
 ```{r}
 x <- mt_data(deaths = ons_data, population = ons_data, by = c("sex", "imd_decile"), age = "age_group",
              value = c(deaths = "all_causes", population = "population"))
 x <- mt_as_exposure(x, type = "midyear")
-```
-
-Deciles are combined to quintiles with `mt_group_levels()`, which adds an
-aggregation layer to any stratum variable (cause groups, regions,
-deprivation): deaths and exposures of deciles 1 and 2 are summed to quintile
-1, and so on. A function maps the deciles to the quintiles, and `name`
-labels the new layer:
-
-```{r}
 x <- mt_group_levels(x, "imd_decile", function(d) paste0("Q", ceiling(as.numeric(d) / 2)), name = "quintile")
 x
-mt_strata(x)
 ```
 
-The deciles are defined by the IMD version current at the time of
-registration, so areas move between deciles four times in this period
-(column `imd_version` of `ons_data`: 2004, 2007, 2010, 2015 and 2019).
-
-`mt_validate()` checks plausibility (deaths without exposure, rates above
-1, missing values, strata without deaths or exposures, levels that look
-like totals, gaps in the grid, and the sums of aggregate strata):
+`mt_validate()` checks the data for impossible values, gaps and
+inconsistent totals:
 
 ```{r}
 mt_validate(x)
 ```
 
-Observed life expectancy at birth shows the deprivation gradient:
+## 2. The past
+
+Life expectancy at birth by quintile, with Poisson intervals:
 
 ```{r}
-e0 <- life_expectancy(x)
-dcast(e0[period %in% c(2001, 2010, 2019)], sex + quintile ~ period, value.var = "q0.5")[
-  , lapply(.SD, function(v) if (is.numeric(v)) round(v, 1) else v)]
+mt_compare_forecasts(list(observed = x), periods = c(2001, 2019), strata = c("female.Q1", "female.Q5",
+                                                                              "male.Q1", "male.Q5"))
 ```
 
-On data, `life_expectancy()` describes the observed rates with Poisson
-intervals (columns `q0.025` and `q0.975`); the table shows the medians.
+## 3. A model and a forecast
 
-## Harmonisation
-
-The data have 5-year age groups (with `<1`, `1-4` and `90+`), and the grid
-is set to them, so models can be fitted directly. When single years of age
-are needed, `mt_ungroup()` estimates single-year deaths and exposures with
-the penalized composite link model; deaths are ungrouped as rates with the
-exposures as offset, and the estimates add up to the observed totals.
+Lee-Carter, fitted to each sex and quintile separately, as a simple
+example. `mt_forecast()` simulates 500 paths of future death rates:
 
 ```{r}
-xs <- mt_subset(x, periods = c(2019, 2019))
-u <- mt_ungroup(xs)
-u
+fit <- mt_fit(lee_carter(), x)
+fc <- mt_forecast(fit, h = 15, n_draws = 500, seed = 1)
+fc
 ```
 
-The grid keeps the open interval 90+ of the data: splitting it into single
-years would rest on its total alone.
+```{r, eval = has_gg, fig.height = 6}
+mt_plot_forecast(fc, ages = c("50-54", "70-74", "85-89"), strata = c("female.Q1", "female.Q5"))
+```
+
+## 4. Results
+
+Life expectancy is computed for every path, so its interval contains the
+uncertainty of all ages together:
 
 ```{r, eval = has_gg}
-mt_plot_ungroup(xs, u, period = 2019, strata = c("female.Q1", "female.Q5"))
+mt_plot_life_expectancy(fc, at = 0)
 ```
 
-In a forecasting pipeline, ungrouping is a preprocessing step
-(`mt_prep(step_ungroup())`), so that backtests refit it on every training
-window. Whether it improves forecasts is a question for the backtest below;
-here we model the 5-year groups.
-
-## Fitting and forecasting
-
-`lee_carter()` fits one model per stratum. `li_lee()` adds a common trend:
-with `common_by = "sex"` the five quintiles of each sex share one trend, and
-their deviations from it follow stationary processes, so the gaps between
-quintiles can neither vanish nor explode.
-
-```{r}
-fit_lc <- mt_fit(lee_carter(), x)
-fit_ll <- mt_fit(li_lee(common_by = "sex"), x)
-fc_ll <- mt_forecast(fit_ll, h = 15, n_draws = 500, seed = 1)
-fc_ll
-```
-
-The forecast holds 500 simulated paths per age, year and stratum.
-`mt_summarise()` returns means and quantiles:
-
-```{r}
-s <- mt_summarise(fc_ll)
-s[age == "70-74" & period %in% c(2020, 2034) & quintile %in% c("Q1", "Q5"),
-  .(sex, quintile, period, q0.025, q0.5, q0.975)]
-```
-
-```{r, eval = has_gg, fig.height = 7}
-mt_plot_forecast(fc_ll, ages = c("50-54", "70-74", "85-89"),
-                 strata = c("female.Q1", "female.Q5", "male.Q1", "male.Q5"))
-```
-
-## Derived quantities
-
-Life expectancy is computed for every path, so its interval reflects the
-joint uncertainty of all ages:
-
-```{r}
-e0_fc <- life_expectancy(fc_ll, at = 0)
-e0_fc[period %in% c(2020, 2034) & quintile %in% c("Q1", "Q5"), .(sex, quintile, period, q0.025, q0.5, q0.975)]
-```
+The gap between the least (Q5) and the most deprived quintile (Q1), also
+path by path:
 
 ```{r, eval = has_gg}
-mt_plot_life_expectancy(fc_ll, at = 65)
+gap <- mt_contrast(fc, var = "quintile", ref = "Q1", at = 0)
+mt_plot_contrast(gap, observed = mt_contrast(x, var = "quintile", ref = "Q1"), levels = "Q5")
 ```
 
-Because the draws are paths, differences between strata carry their own
-uncertainty. `mt_contrast()` computes the gap in life expectancy at birth
-between the least (Q5) and the most deprived quintile (Q1), path by path,
-for Li-Lee and for separate Lee-Carter models, and for the observed years
-(with Poisson intervals):
+Separate Lee-Carter models continue each quintile's own trend, so the
+female gap, which widened after 2011, keeps widening, with intervals that
+grow quickly. Whether that is plausible is a question of model choice
+("Choosing and combining models"); a model that pools the quintiles
+behaves differently.
+
+Other quantities work the same way: `asr()` (age-standardised rates),
+`prob_dying()`, `mt_inequality()` (slope and relative index of
+inequality), `mt_decompose()` (contributions of ages and causes to a gap).
+
+## 5. Was the model any good?
+
+A backtest fits the model to the years up to 2008, ..., 2014, forecasts
+five years from each, and scores the forecasts against the observed rates:
 
 ```{r}
-fc_lc <- mt_forecast(fit_lc, h = 15, n_draws = 500, seed = 1)
-gaps <- rbind(mt_contrast(fc_ll, var = "quintile", ref = "Q1", at = 0)[level == "Q5"][, model := "Li-Lee"],
-              mt_contrast(fc_lc, var = "quintile", ref = "Q1", at = 0)[level == "Q5"][, model := "Lee-Carter"])
-gaps[period %in% c(2020, 2034), .(model, sex, period, q0.025, q0.5, q0.975)]
-observed_gap <- mt_contrast(x, var = "quintile", ref = "Q1", at = 0)[level == "Q5"]
+bt <- mt_compare(list("Lee-Carter" = lee_carter()), x, origins = 2008:2014, h = 5, n_draws = 200)
+mt_score_table(bt, metrics = c("crps", "cov80", "cov95"))
 ```
 
-```{r, eval = has_gg}
-library(ggplot2)
-ggplot(gaps, aes(period)) +
-  geom_ribbon(aes(ymin = q0.025, ymax = q0.975, fill = model), alpha = 0.2) +
-  geom_line(aes(y = q0.5, colour = model), linetype = "dashed") +
-  geom_point(data = observed_gap, aes(y = q0.5), size = 0.8, alpha = 0.6) +
-  geom_vline(xintercept = 2019.5, linetype = "dotted", colour = "grey50") +
-  facet_wrap(~ sex) +
-  scale_colour_mortensor(type = "categorical") +
-  scale_fill_mortensor(type = "categorical") +
-  labs(x = NULL, y = "Gap in life expectancy at birth, Q5 - Q1 (years)", colour = NULL, fill = NULL,
-       subtitle = "Points: observed; dashed: forecast median with 95% interval") +
-  theme_mortensor()
-```
-
-The two models make different assumptions, and the data cannot decide
-between them. The observed gap was stable for men and widened for women,
-with a step in 2013, when the deciles switched to IMD 2015. Separate
-Lee-Carter models extrapolate each quintile's own trend, so the female gap
-keeps widening, with wide intervals. Li-Lee lets the quintiles deviate from
-a common trend only through stationary processes, so gaps return towards
-their average of the training years. Its forecasts also start from the
-fitted rates of 2019, which for women in Q1 are about 0.4 years of life
-expectancy above the observed ones. `li_lee(jump_off = "observed")` removes
-this step, but in backtests on these data it forecast worse (CRPS 0.071
-against 0.067).
-
-Other quantities work the same way, for example the probability of dying
-between ages 40 and 75 and age-standardised rates (European Standard
-Population 2013):
-
-```{r}
-prob_dying(fc_ll, from = 40, to = 75)[period == 2034 & quintile %in% c("Q1", "Q5"),
-                                      .(sex, quintile, q0.025, q0.5, q0.975)]
-asr(fc_ll)[period == 2034 & quintile %in% c("Q1", "Q5"), .(sex, quintile, q0.025, q0.5, q0.975)]
-```
-
-## Honest backtests
-
-`mt_backtest()` cuts the data at each forecast origin, refits the
-preprocessing and the model on the training window, and scores predictive
-draws against the observed deaths. Here the forecasts from origins 2008 to
-2014 are scored on 2009 to 2019.
-
-```{r}
-origins <- 2008:2014
-specs <- list(lee_carter(), li_lee(common_by = "sex"), rwd(),
-              ensemble(lc = lee_carter(), rw = rwd()))
-bt <- rbindlist(lapply(specs, function(sp) mt_backtest(sp, x, origins = origins, h = 5, n_draws = 200)))
-mt_score(bt, by = "model")
-```
-
-Lower CRPS and WIS are better; `cov50`, `cov80` and `cov95` are the shares
-of observations inside the central 50%, 80% and 95% intervals. Li-Lee is
-the most accurate; like Lee-Carter its intervals are too narrow, while the
-mixture of Lee-Carter and the random walk is close to nominal coverage at a
-small cost in accuracy.
-
-```{r, eval = has_gg}
-mt_plot_scores(bt, by = "horizon")
-mt_plot_coverage(bt)
-```
+The 95% intervals contained `r round(100 * mt_score(bt)$cov95)`% of the
+observed rates, fewer than 95%: Lee-Carter's intervals are too narrow on
+these data. "Backtesting and scores" explains the scores, "Tuning and
+calibration" how to widen the intervals.
 
 ## Where next
 
-* "Forecasting mortality by deprivation quintile": gaps between quintiles,
-  backtests by quintile, calibration of the intervals on the last ten
-  years.
-* "Coherent forecasts: what reconciliation changes": forecasts that add up
-  over strata (quintiles and sexes to England), method by method.
-* "Decomposing differences in life expectancy": the ages, causes and
-  subgroup composition behind gaps and changes, observed and forecast.
-* "Causes of death by deprivation": cause-specific forecasts that add up to
-  all causes, on the same ONS data.
-* "Coherent forecasts by sex, region and cause": the 16 German Laender, with
-  suppressed cells, pooling and smoothing of sparse cause-specific data.
-* "Your own data, from CSV to report": reading official exports with their
-  peculiarities, and a report from them.
-* "Data at different granularities: ungrouping HMD data": ungrouping and its
-  accuracy on HMD data with known single-year rates.
-* "Forecasting and backtesting with HMD data", "Bayesian age-period-cohort
-  models with bamp" and "Comparison with demography, bamp and StMoMo".
-* "Model reference" and "Frequently asked questions".
+| Step | Vignette |
+|---|---|
+| Your own tables | "Your own data, from CSV to report" |
+| Age groups and single years | "Data at different granularities" |
+| Smoothing | "Smoothing death rates" |
+| Where a forecast starts | "Where a forecast starts: the jump-off" |
+| Scores and backtests | "Backtesting and scores" |
+| Choosing settings, widening intervals | "Tuning and calibration" |
+| Models and ensembles | "Choosing and combining models", "Model reference" |
+| Totals and parts | "Coherent forecasts" |
+| What drives a gap | "Decomposing differences in life expectancy" |
+| Complete analyses | "Inequality in England", "Differences between German Laender" |

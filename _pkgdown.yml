@@ -63,6 +63,7 @@ reference:
       - life_expectancy
       - derived
       - mt_contrast
+      - mt_plot_contrast
       - mt_inequality
       - mt_decompose
       - mt_plot_decomposition

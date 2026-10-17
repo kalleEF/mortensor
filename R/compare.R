@@ -38,7 +38,8 @@
 #'   (summed over the ages, with the exposures of the last observed year
 #'   unless `exposure` is given; forecasts only) or `"rate"` (death rates of
 #'   the ages in `ages`).
-#' @param periods Years shown (for the plot a range `c(first, last)`).
+#' @param periods Years shown (for the plot a range `c(first, last)`, or
+#'   one year: then medians and intervals per stratum side by side).
 #' @param at Age for life expectancy.
 #' @param ages Age labels for `quantity = "rate"`.
 #' @param strata Stratum labels shown (default all).
@@ -207,10 +208,23 @@ mt_plot_compare <- function(forecasts, quantity = c("life_expectancy", "rate", "
     lab(hist)
     lab(fit)
   }
-  panel <- if (quantity == "rate") ggplot2::facet_wrap(ggplot2::vars(panel), scales = "free_y") else
-    if (length(unique(tab$label)) > 1) ggplot2::facet_wrap(ggplot2::vars(label))
   ylab <- switch(quantity, life_expectancy = sprintf("Life expectancy at age %s", at %||% first$age$lower[1]),
                  rate = "Death rate (log scale)", asr = "Age-standardised rate per 100,000")
+  if (length(periods) == 1) {
+    # one year: median and interval per stratum, one colour per forecast
+    lev <- unique(if (quantity == "rate") tab$panel else tab$label)
+    tab[, row := factor(if (quantity == "rate") panel else label, levels = rev(strata %||% lev))]
+    return(ggplot2::ggplot(tab, ggplot2::aes(x = med, y = row, colour = forecast)) +
+             ggplot2::geom_pointrange(ggplot2::aes(xmin = lo, xmax = hi), size = 0.25,
+                                      position = ggplot2::position_dodge(width = 0.7)) +
+             (if (quantity == "rate") ggplot2::scale_x_log10()) +
+             scale_colour_mortensor(type = "categorical") +
+             ggplot2::labs(x = sprintf("%s in %s", ylab, periods), y = NULL, colour = NULL,
+                           subtitle = sprintf("Median and %g%% interval", 100 * level)) +
+             theme_mortensor(legend = "right"))
+  }
+  panel <- if (quantity == "rate") ggplot2::facet_wrap(ggplot2::vars(panel), scales = "free_y") else
+    if (length(unique(tab$label)) > 1) ggplot2::facet_wrap(ggplot2::vars(label))
   p <- ggplot2::ggplot(tab, ggplot2::aes(x = period, colour = forecast, fill = forecast)) +
     ggplot2::geom_ribbon(ggplot2::aes(ymin = lo, ymax = hi), alpha = 0.15, colour = NA) +
     ggplot2::geom_line(ggplot2::aes(y = med), linetype = "dashed", linewidth = 0.6)
@@ -344,5 +358,73 @@ mt_plot_pit <- function(backtest, target = c("rate", "life_expectancy", "asr"), 
     ggplot2::facet_wrap(ggplot2::vars(model)) +
     ggplot2::labs(x = "PIT (share of forecast draws below the observed value)", y = "Density",
                   subtitle = "Calibrated forecasts give a flat histogram (dashed line)") +
+    theme_mortensor()
+}
+
+#' Plot gaps between strata over time
+#'
+#' Draws the result of [mt_contrast()] over time: forecast medians (dashed)
+#' with intervals and, if given, the observed gaps (points). Several
+#' forecasts (models, scenarios) can be compared as a named list, one
+#' colour each; otherwise the levels of the contrast get the colours. Other
+#' stratum variables (for example sex) give the panels.
+#'
+#' @param contrast The result of [mt_contrast()] for a forecast, or a named
+#'   list of such results.
+#' @param observed The result of [mt_contrast()] for observed data, or
+#'   `NULL`.
+#' @param levels Levels of the compared variable to show (default all).
+#' @return A ggplot object.
+#' @examples
+#' if (requireNamespace("ggplot2", quietly = TRUE)) {
+#'   x <- mt_example(deaths = "single", years = 1995:2012)
+#'   fc <- mt_forecast(mt_fit(lee_carter(), x), h = 10, n_draws = 100, seed = 1)
+#'   mt_plot_contrast(mt_contrast(fc, var = "sex", ref = "male", at = 30),
+#'                    observed = mt_contrast(x, var = "sex", ref = "male", at = 30))
+#' }
+#' @export
+mt_plot_contrast <- function(contrast, observed = NULL, levels = NULL) {
+  need_ggplot()
+  multi <- is.list(contrast) && !is.data.frame(contrast)
+  tabs <- if (multi) contrast else list(contrast)
+  if (multi && (is.null(names(tabs)) || any(!nzchar(names(tabs))))) {
+    mt_abort("Give several contrasts as a named list.", class = "argument")
+  }
+  tab <- rbindlist(lapply(seq_along(tabs), function(i) {
+    as.data.table(tabs[[i]])[, forecast := if (multi) names(tabs)[i] else ""]
+  }), fill = TRUE)
+  need <- c("level", "ref", "period", "q0.5", "quantity", "type")
+  if (!all(need %in% names(tab))) mt_abort("`contrast` must be a result of mt_contrast().", class = "argument")
+  lo <- grep("^q0\\.0", names(tab), value = TRUE)[1]
+  hi <- rev(grep("^q0\\.9", names(tab), value = TRUE))[1]
+  if (!is.null(levels)) tab <- tab[level %in% levels]
+  obs <- if (!is.null(observed)) as.data.table(observed)[if (is.null(levels)) TRUE else level %in% levels]
+  pvars <- setdiff(names(tab), c(need, "mean", lo, hi, grep("^q0", names(tab), value = TRUE), "p_positive",
+                                 "forecast", "at", "from", "to", "ages", "standard", "per", "age"))
+  tab[, col := if (multi) factor(forecast, levels = names(tabs)) else factor(level, levels = unique(level))]
+  if (!is.null(obs)) obs[, col := if (multi) NA else factor(level, levels = levels(tab$col))]
+  what <- gsub("_", " ", tab$quantity[1])
+  ylab <- sprintf("%s in %s", if (tab$type[1] == "ratio") "Ratio" else "Difference", what)
+  p <- ggplot2::ggplot(tab, ggplot2::aes(x = period, group = interaction(col, level))) +
+    ggplot2::geom_hline(yintercept = if (tab$type[1] == "ratio") 1 else 0, colour = "grey70") +
+    ggplot2::geom_ribbon(ggplot2::aes(ymin = .data[[lo]], ymax = .data[[hi]], fill = col), alpha = 0.15) +
+    ggplot2::geom_line(ggplot2::aes(y = q0.5, colour = col), linetype = "dashed", linewidth = 0.6)
+  if (!is.null(obs) && nrow(obs)) {
+    p <- p + if (multi) {
+      ggplot2::geom_point(data = obs, ggplot2::aes(x = period, y = q0.5), inherit.aes = FALSE, colour = "grey30",
+                          size = 0.9, alpha = 0.7)
+    } else {
+      ggplot2::geom_point(data = obs, ggplot2::aes(x = period, y = q0.5, colour = col), inherit.aes = FALSE,
+                          size = 0.9, alpha = 0.7)
+    }
+  }
+  if (length(pvars)) {
+    p <- p + ggplot2::facet_wrap(pvars)
+  }
+  pal <- if (multi) "categorical" else if (looks_ordered(levels(tab$col))) "ordered" else "categorical"
+  p + scale_colour_mortensor(type = pal) + scale_fill_mortensor(type = pal) +
+    ggplot2::labs(x = NULL, y = ylab, colour = NULL, fill = NULL,
+                  subtitle = sprintf("Compared with %s; %sdashed: forecast median with interval", tab$ref[1],
+                                     if (!is.null(obs)) "points: observed; " else "")) +
     theme_mortensor()
 }

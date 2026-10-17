@@ -118,8 +118,9 @@ change of the training data (rates only).
 standard error of the lowest (the one-standard-error rule of Hastie,
 Tibshirani and Friedman 2009, Section 7.10), so order \code{grid} from the
 simplest to the most complex setting. The standard error comes from the
-mean scores per origin and stratum; strata of the same origin are
-correlated, so it is approximate and tends to be too small. With few
+mean scores per origin and stratum (per test year for a hold-out of a
+single stratum); these blocks are correlated, so it is approximate and
+tends to be too small. With few
 test years, differences between settings are often within this error:
 the selection is then uncertain, and \code{scores} shows it.
 
