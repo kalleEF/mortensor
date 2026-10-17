@@ -77,3 +77,39 @@ test_that("calibrated ensembles, reconciled models and backtests work", {
   pr <- mt_forecast(fit, h = 2, n_draws = 20, seed = 1, predictive = TRUE)
   expect_lt(coherence_gap(pr, h), 1e-8)
 })
+
+test_that("calibrated() estimates factors by age band and on life expectancy", {
+  x <- mt_example(deaths = "single", years = 1985:2015)
+  fb <- mt_fit(calibrated(lee_carter(), years = 6, n_origins = 3, n_draws = 30, ages = c(60, 80)), x)
+  expect_identical(fb$calibration$band, c("<60", "60-80", "80+"))
+  fa <- mt_fit(calibrated(lee_carter(), years = 6, n_origins = 3, n_draws = 30), x)
+  expect_equal(sum(fb$calibration$cells), fa$calibration$cells)
+  fc <- mt_forecast(fb, h = 12, n_draws = 40, seed = 1)
+  expect_true(all(is.finite(fc$rates)))
+  # each band gets its own factor in the forecast
+  base <- mt_forecast(mt_fit(lee_carter(), x), h = 12, n_draws = 40, seed = 1)
+  ratio <- function(a) {
+    w <- function(r) stats::IQR(log(r))
+    w(fc$rates[a, 1, 1, ]) / w(base$rates[a, 1, 1, ])
+  }
+  expect_equal(ratio(10), fb$calibration$scale_h1[1], tolerance = 0.05)
+  expect_equal(ratio(60), fb$calibration$scale_h1[3], tolerance = 0.05)
+  expect_error(calibrated(rwd(), ages = c(80, 60)), class = "mt_error_argument")
+  expect_error(calibrated(rwd(), ages = 60, quantity = "asr"), class = "mt_error_argument")
+  fe <- mt_fit(calibrated(lee_carter(), years = 6, n_origins = 3, n_draws = 30, quantity = "life_expectancy"), x)
+  # one life expectancy per stratum and test year of each origin (6 + 4 + 2 years)
+  expect_equal(fe$calibration$scored, 2 * 12)
+  expect_match(fe$spec$label, "on life expectancy")
+})
+
+test_that("calibrated() reports intervals of the factors and damps the drift", {
+  x <- mt_example(deaths = "single", years = 1985:2015)
+  fit <- mt_fit(calibrated(lee_carter(), years = 6, n_origins = 3, n_draws = 30, n_boot = 5), x)
+  cal <- fit$calibration
+  expect_true(all(c("scale_h1_lo", "scale_h1_hi", "slope_lo", "slope_hi") %in% names(cal)))
+  expect_lte(cal$scale_h1_lo, cal$scale_h1_hi)
+  expect_output(print(summary(fit)), "spread factor .* \\(")
+  sh <- mortensor:::calibration_shift(c(0, 0.02), 1:20, "constant", TRUE, h_max = 8)
+  expect_equal(sh$b[8:20], rep(0.16, 13))
+  expect_warning(mt_fit(calibrated(rwd(), years = 3, n_origins = 1, n_draws = 20), x), class = "mt_warning_calibration")
+})

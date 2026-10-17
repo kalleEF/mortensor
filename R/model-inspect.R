@@ -40,7 +40,8 @@ mt_parameters <- function(fit) {
   out <- base_parameters(fit, sp)
   cal <- fit$calibration
   if (!is.null(cal)) {
-    out <- rbind(out, data.table(stratum = rep(paste("calibration:", cal$group), 3),
+    lab <- if (!is.null(cal$band)) paste0(cal$group, ", ", cal$band) else cal$group
+    out <- rbind(out, data.table(stratum = rep(paste("calibration:", lab), 3),
                                  parameter = rep(c("scale_h1", "slope", "drift"), each = nrow(cal)), index = "",
                                  value = c(cal$scale_h1, cal$slope, cal$drift)), fill = TRUE)
   }
@@ -236,8 +237,10 @@ print.summary.mt_fit <- function(x, ...) {
   }
   if (!is.null(x$calibration)) {
     cal <- x$calibration
-    cat(sprintf(paste("  calibration (%s): spread factor %.2f at horizon 1, x h^%.2f; drift %+.4f; inner CRPS",
-                      "%.4f -> %.4f, 95%% coverage %.2f -> %.2f\n"), cal$group, cal$scale_h1, cal$slope, cal$drift,
+    grp <- if (!is.null(cal$band) && any(cal$band != "all ages")) paste0(cal$group, ", ages ", cal$band) else cal$group
+    ci <- if (!is.null(cal$scale_h1_lo)) sprintf(" (%.2f-%.2f)", cal$scale_h1_lo, cal$scale_h1_hi) else ""
+    cat(sprintf(paste("  calibration (%s): spread factor %.2f%s at horizon 1, x h^%.2f; drift %+.4f; inner CRPS",
+                      "%.4f -> %.4f, 95%% coverage %.2f -> %.2f\n"), grp, cal$scale_h1, ci, cal$slope, cal$drift,
                 cal$crps_before, cal$crps_after, cal$cov95_before, cal$cov95_after), sep = "")
   }
   bad <- x$diagnostics[status != "ok" | nzchar(message)]
@@ -286,10 +289,12 @@ model_assumptions <- function(spec) {
          mt_spec_reconciled = paste("Base model reconciled draw by draw over the hierarchy;", spec$params$method,
                                     "projection on the deaths (or rates) scale."),
          mt_spec_calibrated = paste(model_assumptions(p$base), sprintf(paste(
-           "Calibrated: the spread%s of the draws is rescaled to minimise the %s of forecasts from %d origins in",
-           "the last %d training years."), if (p$bias) " and drift" else "",
+           "Calibrated: the spread%s of the draws%s is rescaled to minimise the %s of %s in forecasts from %d",
+           "origins in the last %d training years."), if (p$bias) " and drift" else "",
+           if (length(p$ages)) " (per age band)" else "",
            if (identical(p$target, "interval")) sprintf("%g%% interval score", 100 * p$level) else "CRPS",
-           p$n_origins, p$years)),
+           switch(p$quantity %||% "rate", rate = "log death rates", life_expectancy = "life expectancy at birth",
+                  asr = "the log ASR"), p$n_origins, p$years)),
          mt_spec_anchored = paste(model_assumptions(p$base), sprintf(paste(
            "Anchored: forecasts start at the observed level of the last %d training year(s), with offsets per",
            "age and stratum%s fading out over %s years."), p$years,

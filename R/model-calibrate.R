@@ -44,8 +44,33 @@
 #' window; it widens future intervals in proportion. The parameters are
 #' estimated from few overlapping forecasts (with the defaults, 5 origins and
 #' 30 forecast years, horizons 1 to 10), so they carry their own uncertainty,
-#' and they cannot anticipate changes after the window. Compare calibrated
-#' and uncalibrated models in an outer backtest.
+#' and they cannot anticipate changes after the window. `n_boot` refits them
+#' on forecasts (stratum x origin) resampled with replacement and reports
+#' 95% percentile intervals. Beyond the longest horizon of the window, the
+#' spread factor and the drift correction stay constant. The inner models are
+#' fitted to shorter series than the final model, which matters for models
+#' whose uncertainty depends on the length of the series (the drift of a
+#' random walk). Compare calibrated and uncalibrated models in an outer
+#' backtest.
+#'
+#' **Age bands.** With `ages` (break points, for example `c(50, 75)`), the
+#' factors are estimated separately for each age band, so that a model that
+#' is too narrow at old ages and too wide at young ages is corrected at
+#' both. Observed cells belong to the band of their lower age; use break
+#' points that are bounds of the observed age groups.
+#'
+#' **Quantity.** By default the log death rates of single cells are scored.
+#' Intervals of life expectancy and ASR also depend on how the ages move
+#' together, which the transformation keeps from the base model;
+#' `quantity = "life_expectancy"` (at birth) or `"asr"` scores these instead,
+#' per test year and stratum (fewer scored values, so the factors are less
+#' certain).
+#'
+#' **Tuning and calibration.** `calibrated()` keeps the model and its
+#' settings and rescales the width of its forecast distribution. Choosing
+#' settings (smoothing, number of components, fitting window) by forecast
+#' accuracy is tuning, done by [tuned()] and [mt_tune()]; the two combine
+#' as `calibrated(tuned(...))`.
 #'
 #' In backtests on England & Wales men (HMD via StMoMo, origins 1996-2001,
 #' h = 10), calibration raised the 95% coverage of [lee_carter()] from 0.75
@@ -77,10 +102,18 @@
 #' @param n_draws Draws per inner forecast.
 #' @param seed Random seed of the inner forecasts and of the simulated
 #'   observation noise.
+#' @param ages Break points between age bands with their own factors
+#'   (`NULL`: one set for all ages).
+#' @param quantity What is scored: `"rate"` (log death rates of the observed
+#'   cells), `"life_expectancy"` (at birth) or `"asr"`.
+#' @param n_boot Number of bootstrap refits for intervals of the factors (0:
+#'   none; each refit repeats the optimisation, not the inner forecasts).
 #' @return A model specification. The fitted object has a `calibration`
-#'   element: a `data.table` with one row per group (`scale_h1`, `slope`,
-#'   `drift`, the number of scored cells, and CRPS and coverage of the inner
-#'   forecasts before and after calibration).
+#'   element: a `data.table` with one row per group and age band
+#'   (`scale_h1`, `slope`, `drift`, the number of observed cells and of
+#'   scored values, the number of inner forecasts (stratum x origin), CRPS
+#'   and coverage of the inner forecasts before and after calibration, and
+#'   with `n_boot` the intervals `scale_h1_lo`, `scale_h1_hi`, ...).
 #' @references
 #' Gneiting T, Raftery AE, Westveld AH, Goldman T (2005). Calibrated
 #' probabilistic forecasting using ensemble model output statistics and
@@ -97,20 +130,36 @@
 #' fc <- mt_forecast(fit, h = 5, n_draws = 100, seed = 1)
 #' @export
 calibrated <- function(spec, years = 10, n_origins = 5, scale = c("horizon", "constant"), bias = FALSE,
-                       target = c("crps", "interval"), level = 0.95, by = NULL, n_draws = 100, seed = 1) {
+                       target = c("crps", "interval"), level = 0.95, by = NULL, n_draws = 100, seed = 1,
+                       ages = NULL, quantity = c("rate", "life_expectancy", "asr"), n_boot = 0) {
   check_class(spec, "mt_spec", "spec")
   scale <- match.arg(scale)
   target <- match.arg(target)
+  quantity <- match.arg(quantity)
   check_number(level, "level", lower = 0.5, upper = 0.99)
   check_number(years, "years", lower = 2, integerish = TRUE)
   check_number(n_origins, "n_origins", lower = 1, integerish = TRUE)
   check_number(n_draws, "n_draws", lower = 10, integerish = TRUE)
+  check_number(n_boot, "n_boot", lower = 0, integerish = TRUE)
   check_flag(bias, "bias")
+  if (!is.null(ages)) {
+    if (!is.numeric(ages) || anyNA(ages) || is.unsorted(ages, strictly = TRUE)) {
+      mt_abort("`ages` must be increasing break points between age bands, for example c(50, 75).",
+               class = "argument")
+    }
+    if (quantity != "rate") {
+      mt_abort("Age bands (`ages`) need `quantity = \"rate\"`: life expectancy and ASR combine all ages.",
+               class = "argument")
+    }
+  }
   if (n_origins > years - 1) n_origins <- years - 1
   new_mt_spec("calibrated", list(base = spec, years = years, n_origins = n_origins, scale = scale, bias = bias,
-                                 target = target, level = level, by = by, n_draws = n_draws, seed = seed),
+                                 target = target, level = level, by = by, n_draws = n_draws, seed = seed,
+                                 ages = ages, quantity = quantity, n_boot = n_boot),
               joint = spec$joint, min_periods = spec$min_periods + years, smooth = spec$smooth,
               label = paste0(spec$label, ", calibrated", if (length(by)) paste0(" by ", paste(by, collapse = " x ")),
+                             if (length(ages)) " by age band",
+                             if (quantity != "rate") sprintf(" on %s", gsub("_", " ", quantity)),
                              if (target == "interval") sprintf(" (%g%% interval)", 100 * level)))
 }
 
@@ -133,8 +182,8 @@ mt_fit.mt_spec_calibrated <- function(spec, data, prep = NULL, cores = 1, ...) {
   fit <- mt_fit(p$base, data, prep = prep, cores = cores, ...)
   bottom <- calibration_targets(fit)
   pieces <- par_lapply(origins, function(o) {
-    tryCatch(calibration_origin(p$base, data, o, last, prep, p$n_draws, p$seed + o, fit$strata$label[bottom]),
-             error = function(e) e)
+    tryCatch(calibration_origin(p$base, data, o, last, prep, p$n_draws, p$seed + o, fit$strata$label[bottom],
+                                p$quantity %||% "rate"), error = function(e) e)
   }, cores)
   bad <- vapply(pieces, inherits, logical(1), what = "error")
   if (any(bad)) {
@@ -143,6 +192,10 @@ mt_fit.mt_spec_calibrated <- function(spec, data, prep = NULL, cores = 1, ...) {
   }
   pieces <- unlist(pieces[!bad], recursive = FALSE)
   if (!length(pieces)) mt_abort("Every calibration origin failed.", class = "calibration")
+  if (sum(!bad) == 1) {
+    mt_warn(paste("The calibration rests on the forecasts of one origin: its horizons are not replicated and the",
+                  "factors are uncertain. Give a longer `years` or more `n_origins`."), class = "calibration")
+  }
   est <- estimate_calibration(pieces, fit$strata, p)
   fit$calibration <- est$table
   fit$calibration_theta <- est$theta
@@ -204,7 +257,7 @@ draw_noise <- function(fit, fc, n_draws) {
 
 # One inner origin: forecast draws of the rest of the window and the observed
 # cells they are scored against, per stratum
-calibration_origin <- function(spec, data, origin, last, prep, n_draws, seed, targets) {
+calibration_origin <- function(spec, data, origin, last, prep, n_draws, seed, targets, quantity = "rate") {
   train <- mt_window(data, to = origin)
   fit <- mt_fit(spec, train, prep = prep)
   last_fit <- max(fit$periods)
@@ -238,11 +291,59 @@ calibration_origin <- function(spec, data, origin, last, prep, n_draws, seed, ta
     o <- obs[sel]
     L <- log(pmax(R[used, , drop = FALSE], 1e-12))
     out[[length(out) + 1L]] <- list(
-      label = lab, L = L, m = row_quantiles(L, 0.5)[, 1], h = rep(fc$periods - origin, each = na)[used],
+      label = lab, origin = origin, L = L, m = row_quantiles(L, 0.5)[, 1],
+      h = rep(fc$periods - origin, each = na)[used],
       E = Eg, C = C, Ecell = Ecell, y = log(pmax(o$value, 0.5) / Ecell), noise = nz$noise(sf),
-      sd = nz$sd(sf)[rep(seq_len(na), np)[used], , drop = FALSE])
+      sd = nz$sd(sf)[rep(seq_len(na), np)[used], , drop = FALSE], obs_age = o$age_lo,
+      qg = if (quantity != "rate") quantity_groups(o, Ecell, quantity))
   }
   out
+}
+
+# Observed cells of complete age axes per test year, grouped by axis: column
+# j of K holds the cells of one year (sorted by age), qo its observed life
+# expectancy or log ASR
+quantity_groups <- function(o, Ecell, quantity) {
+  out <- list()
+  for (pp in sort(unique(o$period_lo))) {
+    k <- which(o$period_lo == pp)
+    k <- k[order(o$age_lo[k])]
+    lo <- o$age_lo[k]
+    hi <- o$age_hi[k]
+    if (length(k) < 2 || any(abs(hi[-length(hi)] - lo[-1]) > 1e-9)) next
+    key <- paste(lo, hi, collapse = ",")
+    if (is.null(out[[key]])) {
+      ax <- mt_axis(lo, hi, kind = "age")
+      out[[key]] <- list(K = NULL, qo = numeric(), ax = ax, quantity = quantity,
+                         w = if (quantity == "asr") standard_weights(ax, standard_population("esp2013")))
+    }
+    r_obs <- o$value[k] / Ecell[k]
+    g <- out[[key]]
+    qo <- if (quantity == "life_expectancy") life_expectancy(r_obs, g$ax) else log(sum(r_obs * g$w) / sum(g$w))
+    out[[key]]$K <- cbind(g$K, k)
+    out[[key]]$qo <- c(g$qo, qo)
+  }
+  unname(out)
+}
+
+# The cells of a piece in each age band (by the lower age of the observed
+# cell; grid cells follow the observed cell they belong to)
+split_bands <- function(piece, breaks) {
+  bo <- findInterval(piece$obs_age, breaks) + 1L
+  bg <- as.vector(Matrix::t(piece$C) %*% bo)
+  lapply(stats::setNames(sort(unique(bo)), band_labels(breaks)[sort(unique(bo))]), function(b) {
+    rows <- which(bo == b)
+    cols <- which(bg == b)
+    list(label = piece$label, origin = piece$origin, L = piece$L[cols, , drop = FALSE], m = piece$m[cols],
+         h = piece$h[cols], E = piece$E[cols], C = piece$C[rows, cols, drop = FALSE], Ecell = piece$Ecell[rows],
+         y = piece$y[rows], noise = piece$noise, sd = piece$sd[cols, , drop = FALSE], obs_age = piece$obs_age[rows])
+  })
+}
+
+band_labels <- function(breaks) {
+  if (!length(breaks)) return("all ages")
+  c(paste0("<", breaks[1]), if (length(breaks) > 1) paste0(breaks[-length(breaks)], "-", breaks[-1]),
+    paste0(breaks[length(breaks)], "+"))
 }
 
 # Stack the pieces of a group and draw the fixed random numbers of the
@@ -261,14 +362,37 @@ stack_pieces <- function(pieces, n_draws) {
   P$extra <- if (any(sd > 0)) matrix(exp(stats::rnorm(length(sd), 0, sd)), nrow(sd)) else 1
   P$U <- matrix(stats::runif(sum(N) * n_draws), sum(N))
   P$Z <- stats::qnorm(P$U)
+  # life expectancy or ASR: cell indices shifted to the stacked rows
+  off <- cumsum(c(0, N))
+  qg <- unlist(lapply(seq_along(pieces), function(i) {
+    lapply(pieces[[i]]$qg, function(g) {
+      g$K <- g$K + off[i]
+      g
+    })
+  }), recursive = FALSE)
+  if (length(qg)) P$qg <- qg
   P
 }
 
+# Forecasts and observations that are scored: log rates of the observed
+# cells, or life expectancy / log ASR per test year and stratum
+calibration_scored <- function(X, P) {
+  if (is.null(P$qg)) return(list(S = X, obs = P$y))
+  S <- do.call(rbind, lapply(P$qg, function(g) {
+    M <- matrix(exp(X[as.vector(g$K), , drop = FALSE]), nrow = nrow(g$K))
+    q <- if (g$quantity == "life_expectancy") lt_columns(M, g$ax)$ex[1, ] else log(colSums(M * g$w) / sum(g$w))
+    matrix(q, ncol(g$K))
+  }))
+  list(S = S, obs = unlist(lapply(P$qg, `[[`, "qo")))
+}
+
 # Spread factor and drift correction per grid cell; beyond the longest
-# horizon of the calibration window the spread factor stays constant
+# horizon of the calibration window both stay constant (the drift correction
+# is a level shift there, not extrapolated further)
 calibration_shift <- function(theta, h, scale, bias, h_max = Inf) {
-  s <- exp(theta[1] + if (scale == "horizon") theta[2] * log(pmin(h, h_max)) else 0)
-  b <- if (bias) theta[length(theta)] * h else 0
+  hc <- pmin(h, h_max)
+  s <- exp(theta[1] + if (scale == "horizon") theta[2] * log(hc) else 0)
+  b <- if (bias) theta[length(theta)] * hc else 0
   list(s = s, b = b)
 }
 
@@ -298,33 +422,51 @@ interval_score <- function(X, y, level) {
   mean(Q[, 2] - Q[, 1] + 2 / a * pmax(Q[, 1] - y, 0) + 2 / a * pmax(y - Q[, 2], 0))
 }
 
-calibration_fit <- function(P, scale, bias, target = "crps", level = 0.95) {
+calibration_fit <- function(P, scale, bias, target = "crps", level = 0.95, summary = TRUE) {
   k <- 1 + (scale == "horizon") + bias
   lower <- c(log(0.1), if (scale == "horizon") -1, if (bias) -0.05)
   upper <- c(log(20), if (scale == "horizon") 1, if (bias) 0.05)
   f <- function(theta) {
     if (any(theta < lower | theta > upper)) return(1e10)
-    X <- calibration_sample(theta, P, scale, bias)
-    if (target == "crps") mean(crps_rows(X, P$y)) else interval_score(X, P$y, level)
+    sc <- calibration_scored(calibration_sample(theta, P, scale, bias), P)
+    if (target == "crps") mean(crps_rows(sc$S, sc$obs)) else interval_score(sc$S, sc$obs, level)
   }
   theta <- if (k == 1) {
     stats::optimize(f, c(lower, upper))$minimum
   } else {
     stats::optim(rep(0, k), f, method = "Nelder-Mead", control = list(reltol = 1e-6, maxit = 300))$par
   }
+  if (!summary) return(list(theta = theta))
   summ <- function(th) {
-    X <- calibration_sample(th, P, scale, bias)
-    Q <- row_quantiles(X, c(0.025, 0.1, 0.9, 0.975))
-    c(crps = mean(crps_rows(X, P$y)), cov80 = mean(P$y >= Q[, 2] & P$y <= Q[, 3]),
-      cov95 = mean(P$y >= Q[, 1] & P$y <= Q[, 4]))
+    sc <- calibration_scored(calibration_sample(th, P, scale, bias), P)
+    Q <- row_quantiles(sc$S, c(0.025, 0.1, 0.9, 0.975))
+    c(crps = mean(crps_rows(sc$S, sc$obs)), cov80 = mean(sc$obs >= Q[, 2] & sc$obs <= Q[, 3]),
+      cov95 = mean(sc$obs >= Q[, 1] & sc$obs <= Q[, 4]), n = length(sc$obs))
   }
   b0 <- summ(rep(0, k))
   b1 <- summ(theta)
   list(theta = theta, table = data.table(
     scale_h1 = exp(theta[1]), slope = if (scale == "horizon") theta[2] else 0,
-    drift = if (bias) theta[k] else 0, cells = length(P$y), crps_before = b0[["crps"]],
+    drift = if (bias) theta[k] else 0, cells = length(P$y), scored = b0[["n"]], crps_before = b0[["crps"]],
     crps_after = b1[["crps"]], cov80_before = b0[["cov80"]], cov80_after = b1[["cov80"]],
     cov95_before = b0[["cov95"]], cov95_after = b1[["cov95"]]))
+}
+
+# Percentile intervals of the factors from refits on pieces (stratum x
+# origin) resampled with replacement
+calibration_boot <- function(pieces, p, n_draws) {
+  th <- t(vapply(seq_len(p$n_boot), function(r) {
+    gp <- pieces[sample.int(length(pieces), replace = TRUE)]
+    calibration_fit(stack_pieces(gp, n_draws), p$scale, p$bias, p$target %||% "crps", p$level %||% 0.95,
+                    summary = FALSE)$theta
+  }, numeric(1 + (p$scale == "horizon") + p$bias)))
+  if (nrow(th) == 1L && length(th) > 1L) th <- t(th)
+  q <- function(v) stats::quantile(v, c(0.025, 0.975), names = FALSE)
+  k <- ncol(th)
+  out <- data.table(scale_h1_lo = exp(q(th[, 1]))[1], scale_h1_hi = exp(q(th[, 1]))[2])
+  if (p$scale == "horizon") out[, `:=`(slope_lo = q(th[, 2])[1], slope_hi = q(th[, 2])[2])]
+  if (p$bias) out[, `:=`(drift_lo = q(th[, k])[1], drift_hi = q(th[, k])[2])]
+  out
 }
 
 estimate_calibration <- function(pieces, strata, p) {
@@ -337,11 +479,33 @@ estimate_calibration <- function(pieces, strata, p) {
     key <- do.call(paste, c(as.list(strata[match(labels, strata$label), p$by, with = FALSE]), sep = "."))
     groups <- c(groups, split(pieces, key))
   }
+  n_draws <- ncol(pieces[[1]]$L)
   res <- with_seed(p$seed, lapply(groups, function(gp) {
-    calibration_fit(stack_pieces(gp, ncol(gp[[1]]$L)), p$scale, p$bias, p$target %||% "crps", p$level %||% 0.95)
+    bands <- if (length(p$ages)) {
+      sub <- lapply(gp, split_bands, breaks = p$ages)
+      labs <- intersect(band_labels(p$ages), unlist(lapply(sub, names)))
+      stats::setNames(lapply(labs, function(b) Filter(Negate(is.null), lapply(sub, `[[`, b))), labs)
+    } else {
+      list("all ages" = gp)
+    }
+    lapply(bands, function(bp) {
+      r <- calibration_fit(stack_pieces(bp, n_draws), p$scale, p$bias, p$target %||% "crps", p$level %||% 0.95)
+      set(r$table, j = "forecasts", value = length(bp))
+      if ((p$n_boot %||% 0) > 0) r$table <- cbind(r$table, calibration_boot(bp, p, n_draws))
+      r
+    })
   }))
-  tab <- rbindlist(lapply(names(res), function(n) cbind(data.table(group = n), res[[n]]$table)))
-  list(table = tab, theta = lapply(res, `[[`, "theta"))
+  tab <- rbindlist(lapply(names(res), function(g) {
+    rbindlist(lapply(names(res[[g]]), function(b) cbind(data.table(group = g, band = b), res[[g]][[b]]$table)))
+  }), fill = TRUE)
+  list(table = tab, theta = lapply(res, function(r) lapply(r, `[[`, "theta")))
+}
+
+# Parameters of a group of strata by age band (the pooled ones for strata
+# outside the groups; fits from before age bands hold one vector per group)
+calibration_theta_of <- function(theta, key) {
+  th <- theta[[key]] %||% theta$all
+  if (is.numeric(th)) list("all ages" = th) else th
 }
 
 #' @export
@@ -350,16 +514,25 @@ mt_forecast.mt_fit_calibrated <- function(fit, h = 10, to = NULL, n_draws = 500,
   p <- fit$spec$params
   key <- if (is.null(p$by)) rep("all", nrow(fit$strata)) else
     do.call(paste, c(as.list(fit$strata[, p$by, with = FALSE]), sep = "."))
+  band <- band_labels(p$ages)[findInterval(fit$age$lower, p$ages) + 1L]
   transform <- function(arr, targets, fc) {
     d <- dim(arr)
     hh <- rep(seq_len(d[2]), each = d[1])
+    bb <- rep(band, d[2])
     for (s in targets) {
-      theta <- fit$calibration_theta[[key[s]]] %||% fit$calibration_theta$all
+      th <- calibration_theta_of(fit$calibration_theta, key[s])
       L <- matrix(log(pmax(arr[, , s, ], 1e-12)), ncol = d[4])
       if (anyNA(L)) next
       m <- row_quantiles(L, 0.5)[, 1]
-      sh <- calibration_shift(theta, hh, p$scale, p$bias, fit$calibration_hmax %||% Inf)
-      arr[, , s, ] <- exp(m + sh$b + sh$s * (L - m))
+      sv <- bv <- numeric(length(hh))
+      for (b in unique(bb)) {
+        i <- which(bb == b)
+        theta <- th[[b]] %||% th[[1]]
+        sh <- calibration_shift(theta, hh[i], p$scale, p$bias, fit$calibration_hmax %||% Inf)
+        sv[i] <- sh$s
+        bv[i] <- sh$b
+      }
+      arr[, , s, ] <- exp(m + bv + sv * (L - m))
     }
     arr
   }

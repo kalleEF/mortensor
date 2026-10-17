@@ -29,6 +29,17 @@ Clean break: the 0.1.x interface is replaced (see `dev/revamp-plan.md`).
   wrappers rebuilt the base model from its specification instead of the
   one the tuning chose. Fits now keep the specifications fitted underneath.
 * `summary()` of tuned fits shows the chosen settings.
+* `calibrated()`:
+  * `ages` estimates the spread factors (and drift) per age band, for
+    models too narrow at some ages and too wide at others;
+  * `quantity = "life_expectancy"` or `"asr"` calibrates the intervals of
+    these quantities, which also depend on how the ages move together;
+  * `n_boot` gives bootstrap intervals of the factors (forecasts of
+    stratum x origin resampled);
+  * the drift correction of `bias = TRUE` stays constant beyond the longest
+    horizon of the calibration window instead of growing further;
+  * a warning when the factors rest on the forecasts of one origin; the
+    table reports the numbers of inner forecasts and scored values.
 
 ## Function map
 

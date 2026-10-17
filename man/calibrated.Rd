@@ -14,7 +14,10 @@ calibrated(
   level = 0.95,
   by = NULL,
   n_draws = 100,
-  seed = 1
+  seed = 1,
+  ages = NULL,
+  quantity = c("rate", "life_expectancy", "asr"),
+  n_boot = 0
 )
 }
 \arguments{
@@ -40,12 +43,23 @@ calibrated(
 
 \item{seed}{Random seed of the inner forecasts and of the simulated
 observation noise.}
+
+\item{ages}{Break points between age bands with their own factors
+(\code{NULL}: one set for all ages).}
+
+\item{quantity}{What is scored: \code{"rate"} (log death rates of the observed
+cells), \code{"life_expectancy"} (at birth) or \code{"asr"}.}
+
+\item{n_boot}{Number of bootstrap refits for intervals of the factors (0:
+none; each refit repeats the optimisation, not the inner forecasts).}
 }
 \value{
 A model specification. The fitted object has a \code{calibration}
-element: a \code{data.table} with one row per group (\code{scale_h1}, \code{slope},
-\code{drift}, the number of scored cells, and CRPS and coverage of the inner
-forecasts before and after calibration).
+element: a \code{data.table} with one row per group and age band
+(\code{scale_h1}, \code{slope}, \code{drift}, the number of observed cells and of
+scored values, the number of inner forecasts (stratum x origin), CRPS
+and coverage of the inner forecasts before and after calibration, and
+with \code{n_boot} the intervals \code{scale_h1_lo}, \code{scale_h1_hi}, ...).
 }
 \description{
 Wraps any model specification so that the spread (and optionally the
@@ -94,8 +108,33 @@ spread factor above 1 means that the base model was too narrow in the
 window; it widens future intervals in proportion. The parameters are
 estimated from few overlapping forecasts (with the defaults, 5 origins and
 30 forecast years, horizons 1 to 10), so they carry their own uncertainty,
-and they cannot anticipate changes after the window. Compare calibrated
-and uncalibrated models in an outer backtest.
+and they cannot anticipate changes after the window. \code{n_boot} refits them
+on forecasts (stratum x origin) resampled with replacement and reports
+95\% percentile intervals. Beyond the longest horizon of the window, the
+spread factor and the drift correction stay constant. The inner models are
+fitted to shorter series than the final model, which matters for models
+whose uncertainty depends on the length of the series (the drift of a
+random walk). Compare calibrated and uncalibrated models in an outer
+backtest.
+
+\strong{Age bands.} With \code{ages} (break points, for example \code{c(50, 75)}), the
+factors are estimated separately for each age band, so that a model that
+is too narrow at old ages and too wide at young ages is corrected at
+both. Observed cells belong to the band of their lower age; use break
+points that are bounds of the observed age groups.
+
+\strong{Quantity.} By default the log death rates of single cells are scored.
+Intervals of life expectancy and ASR also depend on how the ages move
+together, which the transformation keeps from the base model;
+\code{quantity = "life_expectancy"} (at birth) or \code{"asr"} scores these instead,
+per test year and stratum (fewer scored values, so the factors are less
+certain).
+
+\strong{Tuning and calibration.} \code{calibrated()} keeps the model and its
+settings and rescales the width of its forecast distribution. Choosing
+settings (smoothing, number of components, fitting window) by forecast
+accuracy is tuning, done by \code{\link[=tuned]{tuned()}} and \code{\link[=mt_tune]{mt_tune()}}; the two combine
+as \code{calibrated(tuned(...))}.
 
 In backtests on England & Wales men (HMD via StMoMo, origins 1996-2001,
 h = 10), calibration raised the 95\% coverage of \code{\link[=lee_carter]{lee_carter()}} from 0.75
