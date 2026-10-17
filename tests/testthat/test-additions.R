@@ -12,7 +12,9 @@ test_that("smoothing over time and the age-period GAM work and are checked", {
   expect_true(all(c("mad_log", "dispersion", "trend_ratio", "correlation") %in% names(ck)))
   expect_true(all(ck$trend_ratio < 1))
   expect_error(mt_smooth(x, dims = 2, method = "whittaker"), class = "mt_error_argument")
-  expect_error(mt_smooth(x, along = "period"), class = "mt_error_argument")
+  # over time in one direction the default is Whittaker smoothing
+  expect_identical(attr(mt_smooth(x, along = "period"), "smooth")$method[1], "whittaker")
+  expect_error(mt_smooth(x, along = "period", method = "pspline"), class = "mt_error_argument")
   skip_if_not_installed("ggplot2")
   expect_s3_class(mt_plot_smooth(x, st), "ggplot")
 })

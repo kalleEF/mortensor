@@ -101,8 +101,8 @@ Causes of death are a stratum variable whose rates add up to all causes.
 `cause` names it. The total level (`"all"`) is left out because
 `mt_group_levels(total = "all")` records it in the data; without such a
 record (or a `hierarchy`), `mt_decompose()` stops rather than count all
-causes as one more cause. At ages 50 and over (as in "Causes of death by
-deprivation"):
+causes as one more cause. At ages 50 and over (as in "Inequality in
+England"):
 
 ```{r}
 causes <- names(ons_data)[-(1:7)]
@@ -123,7 +123,7 @@ mt_plot_decomposition(gc, by = "age", fill = "cause", comparisons = list(to = "Q
 
 Each age contribution is split over the causes in proportion to their
 rate differences (Riffe et al. 2024, eqs. 12-13). Of the gap in life
-expectancy at 50, respiratory diseases, lung cancer and ischaemic heart
+expectancy at 50, chronic lower respiratory diseases, lung cancer and ischaemic heart
 disease contribute most among the named causes, for both sexes, and the
 remaining causes together (`rest`) contribute a large share. Causes with
 higher rates in Q5 than in Q1 would have negative contributions.
@@ -165,8 +165,8 @@ quintiles are areas: people move between them, and areas change quintile
 with each IMD version. The condition of the radix version does not hold.
 The pooled version decomposes the life expectancy of the pooled rates of
 England (the quintiles weighted by their population at each age, as in
-published life tables; "current rates" in Vaupel's terms, which Riffe et
-al. use, against "current conditions" for the radix version). The rates of
+published life tables; "current rates" in Vaupel's terms, while the radix
+version of Riffe et al. describes "current conditions"). The rates of
 every quintile and age and the shares at every age are the parameters of a
 line-integral decomposition:
 
@@ -248,19 +248,15 @@ summary(g, by = NULL)[to == "Q5", .(sex, period, difference, difference_q0.025, 
 g_fit <- mt_decompose(fc, var = "quintile", ref = "Q1", periods = c(2019, 2035), observed = "fitted")
 summary(g_fit, by = NULL, change = c(2019, 2035))[to == "Q5", .(sex, period, from_value, to_value, difference,
                                                                 difference_q0.025, difference_q0.975)]
-ch <- summary(g_fit, by = "age", change = c(2019, 2035))[to == "Q5" & sex == "female"]
-ch[, band := cut(as.numeric(sub("[-+].*", "", age)), c(-1, 39, 59, 84, Inf),
-                 labels = c("0-39", "40-59", "60-84", "85+"))]
-ch[, .(change = round(sum(mean), 2)), by = band]
 ```
 
 Li-Lee forecasts a female gap of 4.6 years in 2035, against 6.5 observed in
 2019. Of this narrowing of 1.9 years, 0.8 years is the jump-off: the Li-Lee
 fit of 2019 already puts the gap at 5.7 years. The model's own narrowing,
-from the fitted 2019 gap, is 1.1 years (95% interval 0.03 to 2.0), 0.8 of
-it at ages 60 to 84, where the deviations of Q1 from the common trend
-return towards their average (see "Forecasting mortality by deprivation
-quintile"). `anchored()` moves the start towards the observed level but
+from the fitted 2019 gap, is 1.1 years (95% interval 0.03 to 2.0): the
+deviations of Q1 from the common trend return towards their average. The
+vignette "Inequality in England" shows that in 2010-2019 the gap did not
+behave like this, and that Li-Lee forecast it poorly. `anchored()` moves the start towards the observed level but
 fades out within ten years, so it does not change the gap in 2035.
 
 Two forecasts of the same year are compared by giving the second as `y`.

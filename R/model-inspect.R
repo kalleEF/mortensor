@@ -30,12 +30,18 @@
 mt_parameters <- function(fit) {
   check_class(fit, "mt_fit", "fit")
   sp <- fit$spec
-  # wrappers that keep the fit of their base model
-  while (inherits(sp, c("mt_spec_calibrated", "mt_spec_reconciled", "mt_spec_bootstrap"))) sp <- sp$params$base
+  # wrappers that keep the fit of their base model (the fitted base specs are
+  # stacked in inner_specs; tuned() fits the spec it chose)
+  inner <- fit$inner_specs
+  while (inherits(sp, c("mt_spec_recalibrated", "mt_spec_reconciled", "mt_spec_bootstrap", "mt_spec_anchored"))) {
+    sp <- if (length(inner)) inner[[1]] else sp$params$base
+    inner <- inner[-1]
+  }
   out <- base_parameters(fit, sp)
   cal <- fit$calibration
   if (!is.null(cal)) {
-    out <- rbind(out, data.table(stratum = rep(paste("calibration:", cal$group), 3),
+    lab <- if (!is.null(cal$band)) paste0(cal$group, ", ", cal$band) else cal$group
+    out <- rbind(out, data.table(stratum = rep(paste("calibration:", lab), 3),
                                  parameter = rep(c("scale_h1", "slope", "drift"), each = nrow(cal)), index = "",
                                  value = c(cal$scale_h1, cal$slope, cal$drift)), fill = TRUE)
   }
@@ -193,7 +199,7 @@ summary.mt_fit <- function(object, ...) {
                  deviance = if (!is.null(res) && nrow(res)) sum(res$residual^2) else NA_real_,
                  cells = if (!is.null(res)) nrow(res) else NA_integer_,
                  large_residuals = if (!is.null(res) && nrow(res)) mean(abs(res$residual) > 2) else NA_real_,
-                 calibration = object$calibration,
+                 calibration = object$calibration, tuning = object$tuning_choice,
                  anchor = if (!is.null(object$anchor)) stats::quantile(object$anchor$offset, c(0, 0.5, 1))),
             class = "summary.mt_fit")
 }
@@ -210,7 +216,7 @@ print.summary.mt_fit <- function(x, ...) {
       identical(s$type, "smooth") && (identical(s$args$along, "period") || identical(s$args$dims, 2))
     }, logical(1))
     if (any(over_time)) {
-      cat("    smoothing over time narrows forecast intervals; check coverage in a backtest (calibrated())\n")
+      cat("    smoothing over time narrows forecast intervals; check coverage in a backtest (recalibrated())\n")
     }
   }
   cat("  model and uncertainty:\n")
@@ -223,10 +229,18 @@ print.summary.mt_fit <- function(x, ...) {
     cat(sprintf("  jump-off offsets (log ratio observed / fitted): min %.3f, median %.3f, max %.3f\n", x$anchor[1],
                 x$anchor[2], x$anchor[3]))
   }
+  if (!is.null(x$tuning)) {
+    tu <- as.data.frame(x$tuning)
+    cat("  tuning (chosen settings and inner score):\n")
+    cat(paste0("    ", utils::capture.output(print(tu, row.names = FALSE, digits = 4)), collapse = "\n"), "\n",
+        sep = "")
+  }
   if (!is.null(x$calibration)) {
     cal <- x$calibration
-    cat(sprintf(paste("  calibration (%s): spread factor %.2f at horizon 1, x h^%.2f; drift %+.4f; inner CRPS",
-                      "%.4f -> %.4f, 95%% coverage %.2f -> %.2f\n"), cal$group, cal$scale_h1, cal$slope, cal$drift,
+    grp <- if (!is.null(cal$band) && any(cal$band != "all ages")) paste0(cal$group, ", ages ", cal$band) else cal$group
+    ci <- if (!is.null(cal$scale_h1_lo)) sprintf(" (%.2f-%.2f)", cal$scale_h1_lo, cal$scale_h1_hi) else ""
+    cat(sprintf(paste("  calibration (%s): spread factor %.2f%s at horizon 1, x h^%.2f; drift %+.4f; inner CRPS",
+                      "%.4f -> %.4f, 95%% coverage %.2f -> %.2f\n"), grp, cal$scale_h1, ci, cal$slope, cal$drift,
                 cal$crps_before, cal$crps_after, cal$cov95_before, cal$cov95_after), sep = "")
   }
   bad <- x$diagnostics[status != "ok" | nzchar(message)]
@@ -252,10 +266,10 @@ model_assumptions <- function(spec) {
                  "Noise variance from Poisson counts plus a common extra part; level variance partly pooled over",
                  "ages. Draws include level and drift uncertainty; predictive draws add the noise.")
          } else {
-           paste("Each age: log rate a random walk with drift, estimated from the year-to-year changes",
-                 if (!is.null(p$drift_window)) sprintf("of the last %d years", p$drift_window) else "",
-                 "; draws resample the observed changes (", p$innovations, ") and the drift. Noise of observed",
-                 "rates accumulates, so intervals are wide where deaths are few.")
+           paste0("Each age: log rate a random walk with drift, estimated from the year-to-year changes",
+                  if (!is.null(p$drift_window)) sprintf(" of the last %d years", p$drift_window) else "",
+                  "; draws resample the observed changes (", p$innovations, ") and the drift. Noise of observed ",
+                  "rates accumulates, so intervals are wide where deaths are few.")
          },
          mt_spec_multipop = paste(
            if (p$type == "li_lee") "Li-Lee: log m(x,t,i) = a(x,i) + B(x) K(t) + b(x,i) k(t,i)" else
@@ -265,6 +279,18 @@ model_assumptions <- function(spec) {
            "(|phi| <= 0.99), independent across strata, so deviations from the common trend stay bounded.",
            "Draws include the innovations and drift uncertainty of K and the AR(1) innovations;",
            "a, b and phi are fixed."),
+         mt_spec_coherent_fdm = paste(
+           "Product-ratio method with functional data models (Hyndman, Booth and Yasmeen 2013; demography):",
+           "rates smoothed over age; the geometric mean of the strata (per group of `common_by`) and the ratio",
+           "of each stratum to it are decomposed into principal components; the product's scores follow ARIMA",
+           "models, the ratios' scores stationary ARFIMA models, so deviations from the product stay bounded.",
+           "Draws simulate the scores and resample the model errors; predictive draws add Poisson and",
+           "extra-Poisson noise."),
+         mt_spec_stanmomo = paste(
+           "Bayesian stochastic mortality model fitted with Stan (StanMoMo; Barigou et al. 2023):", p$model,
+           "with", p$family, "likelihood and log link; period indexes random walks with drift, cohort effects",
+           "AR(2). Draws are posterior draws of the expected rates (parameters and future indexes);",
+           "predictive draws add Poisson and extra-Poisson noise."),
          mt_spec_apc_bayes = paste(
            "Bayesian age-period-cohort model (bamp; Schmid and Held 2007): logit rate = age + period + cohort",
            "effects with random-walk priors, binomial likelihood, each stratum fitted separately. Draws are",
@@ -274,11 +300,13 @@ model_assumptions <- function(spec) {
                                   "proportion to the weights; uncertainty of the components and their spread."),
          mt_spec_reconciled = paste("Base model reconciled draw by draw over the hierarchy;", spec$params$method,
                                     "projection on the deaths (or rates) scale."),
-         mt_spec_calibrated = paste(model_assumptions(p$base), sprintf(paste(
-           "Calibrated: the spread%s of the draws is rescaled to minimise the %s of forecasts from %d origins in",
-           "the last %d training years."), if (p$bias) " and drift" else "",
+         mt_spec_recalibrated = paste(model_assumptions(p$base), sprintf(paste(
+           "Calibrated: the spread%s of the draws%s is rescaled to minimise the %s of %s in forecasts from %d",
+           "origins in the last %d training years."), if (p$bias) " and drift" else "",
+           if (length(p$ages)) " (per age band)" else "",
            if (identical(p$target, "interval")) sprintf("%g%% interval score", 100 * p$level) else "CRPS",
-           p$n_origins, p$years)),
+           switch(p$quantity %||% "rate", rate = "log death rates", life_expectancy = "life expectancy at birth",
+                  asr = "the log ASR"), p$n_origins, p$years)),
          mt_spec_anchored = paste(model_assumptions(p$base), sprintf(paste(
            "Anchored: forecasts start at the observed level of the last %d training year(s), with offsets per",
            "age and stratum%s fading out over %s years."), p$years,

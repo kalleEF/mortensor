@@ -28,10 +28,12 @@ mt_forecast(
 is).}
 
 \item{predictive}{If \code{TRUE}, draws describe observable rates: for
-models of smooth rates, extra-Poisson noise (estimated from in-sample
-residuals) and Poisson variation of deaths given \code{exposure} are added,
-and zero counts are replaced by 0.5 as in the training data. Used by
-\code{\link[=mt_backtest]{mt_backtest()}}.}
+models of smooth rates, and for any model fitted to smoothed rates
+(\code{step_smooth()}), extra-Poisson noise (estimated from in-sample
+residuals of the raw rates) and Poisson variation of deaths given
+\code{exposure} are added;
+cells can have zero deaths (rate 0). Used by \code{\link[=mt_backtest]{mt_backtest()}}, which
+sums the deaths to the observed cells before taking logarithms.}
 
 \item{exposure}{Exposures for predictive draws: array \verb{[age, period, stratum]} or matrix \verb{[age, stratum]} (default: last training year).}
 

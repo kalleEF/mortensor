@@ -69,6 +69,8 @@ matrices_to_long <- function(D, E, ages, years) {
 #' `mt_from_hmd()` converts HMD tables in the layout returned by
 #' `HMDHFDplus::readHMDweb()` (columns `Year`, `Age`, `Female`, `Male`,
 #' `Total`, and `OpenInterval`) into an [mt_data] object with strata `sex`.
+#' Without column `OpenInterval`, an age written with `+` (`"110+"`) is the
+#' open interval.
 #' `mt_read_hmd()` downloads `Deaths_1x1` and `Exposures_1x1` for one country
 #' with \pkg{HMDHFDplus}; an HMD account is needed (<https://www.mortality.org>).
 #'
@@ -89,7 +91,7 @@ mt_from_hmd <- function(deaths, exposures, sexes = c("Female", "Male"), years = 
   conv <- function(x, nm) {
     x <- as.data.table(x)
     if (!is.null(years)) x <- x[x$Year %in% years]
-    open <- if ("OpenInterval" %in% names(x)) x$OpenInterval else rep(FALSE, nrow(x))
+    open <- if ("OpenInterval" %in% names(x)) x$OpenInterval else grepl("+", as.character(x$Age), fixed = TRUE)
     age <- suppressWarnings(as.numeric(gsub("\\+", "", as.character(x$Age))))
     rbindlist(lapply(sexes, function(s) {
       data.table(sex = tolower(s), year = x$Year, age_lo = age, age_hi = ifelse(open, Inf, age + 1),

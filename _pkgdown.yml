@@ -5,6 +5,12 @@ template:
     # Mermaid diagrams (function map, README): fenced ```mermaid blocks are
     # turned into diagrams in the browser
     in_header: |
+      <style>
+      /* Bootstrap's paragraph margin inside the labels makes mermaid size the
+         boxes too small, which clips their last line */
+      .mermaid-diagram p { margin: 0; }
+      .mermaid-diagram { margin: 1rem 0 1.5rem; }
+      </style>
       <script type="module">
       import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.esm.min.mjs";
       mermaid.initialize({ startOnLoad: false, securityLevel: "strict" });
@@ -46,6 +52,7 @@ reference:
     contents:
       - mt_regroup
       - mt_ungroup
+      - ungroup-diagnostics
       - mt_smooth
       - mt_smooth_check
       - mt_prep
@@ -57,6 +64,7 @@ reference:
       - life_expectancy
       - derived
       - mt_contrast
+      - mt_plot_contrast
       - mt_inequality
       - mt_decompose
       - mt_plot_decomposition
@@ -68,6 +76,7 @@ reference:
       - rwd
       - hyndman_ullah
       - stmomo
+      - stanmomo
       - arima_series
       - apc_bayes
       - apc_select
@@ -75,14 +84,16 @@ reference:
   - title: 6. Models for several populations and causes
     contents:
       - li_lee
+      - coherent_fdm
       - tucker3
       - cause_shares
   - title: 7. Combine models and make forecasts coherent
-    desc: Model wrappers (ensembles, reconciliation, calibration, jump-off, bootstrap, tuning) and hierarchies of strata.
+    desc: Model wrappers (ensembles, different models for groups of strata, reconciliation, calibration, jump-off, bootstrap, tuning) and hierarchies of strata.
     contents:
       - ensemble
+      - stratified
       - reconciled
-      - calibrated
+      - recalibrated
       - anchored
       - bootstrapped
       - mt_tune
@@ -105,10 +116,13 @@ reference:
       - mt_disaggregate
       - mt_shape_rates
       - mt_disaggregate_check
-  - title: 9. Evaluate
+  - title: 9. Evaluate and compare
+    desc: Rolling-origin backtests and scores; several models and forecasts side by side.
     contents:
       - mt_backtest
       - mt_score
+      - mt_compare
+      - mt_plot_design
   - title: 10. Report
     contents:
       - mt_plot
@@ -141,18 +155,28 @@ articles:
       - mortensor
       - own-data
       - articles/function-map
-  - title: Applications
+  - title: Concepts, one at a time
+    desc: Each article explains one step with a simple model and figures.
     contents:
-      - deprivation
-      - causes
-      - regions
-      - granularity-hmd
-      - forecasting-hmd
-      - bayesian-apc
-  - title: Methods and evidence
-    contents:
-      - models
+      - ungrouping
+      - smoothing
+      - jump-off
+      - backtesting
+      - tuning-recalibration
       - coherence
       - decomposition
+  - title: Models
+    desc: Which model to use, and how to combine several.
+    contents:
+      - model-choice
+      - models
+      - bayesian-apc
       - comparison
+  - title: Applications
+    desc: Complete analyses from the published tables to the reported results.
+    contents:
+      - inequality-england
+      - laender-germany
+  - title: Help
+    contents:
       - faq

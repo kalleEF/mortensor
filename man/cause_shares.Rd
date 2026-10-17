@@ -29,7 +29,8 @@ median cell; a residual that is zero almost everywhere would only add a
 degenerate coordinate).}
 
 \item{residual_noise}{Add in-sample residual variation of the ILR
-coordinates to the draws.}
+coordinates to the draws (in predictive draws split multinomially, the
+part beyond the multinomial variation).}
 }
 \value{
 A model specification.
@@ -56,9 +57,17 @@ the in-sample residual variation is added to the draws;
 }
 
 Shares of rare causes are noisy; smoothing the rates first
-(\code{prep = mt_prep(step_smooth())}) helps. In backtests on simulated cause
-data (\code{\link[=mt_example_causes]{mt_example_causes()}}), the 95\% coverage was 0.99 without smoothing
-and 0.94 to 0.97 with it.
+(\code{prep = mt_prep(step_smooth())}) can help.
+
+Predictive draws (\code{mt_forecast(predictive = TRUE)}) are the predictive
+draws of the total model; for models of smooth rates (such as
+\code{\link[=lee_carter]{lee_carter()}}) these are Poisson deaths, which are split between the
+causes (and the residual cause) multinomially by the share draws, so that
+the deaths of the causes add up to the all-cause deaths also in predictive
+draws. The residual variation of the shares added to these draws is then
+only the part beyond the multinomial variation. For total models of
+observed rates (\code{\link[=rwd]{rwd()}}, \code{\link[=arima_series]{arima_series()}}, \code{\link[=ets_series]{ets_series()}}), predictive
+draws are the draws.
 
 The data need a stratum variable \code{var} with the all-cause level
 \code{total_level} and the cause levels; other stratum variables (for example

@@ -24,7 +24,8 @@ the hierarchy variables). Cells are aggregated where all member strata
 observe the same age and period interval; other cells are dropped with a
 warning. Aggregate strata that are already in the data are kept as
 observed unless \code{replace = TRUE}; use \code{\link[=mt_validate]{mt_validate()}} with the hierarchy
-to check that they agree with the sums.
+to check that they agree with the sums. Members of \code{groups} that are not
+levels of the data give a warning; a group without any is an error.
 }
 \examples{
 x <- mt_example_regions(years = 2010:2014)

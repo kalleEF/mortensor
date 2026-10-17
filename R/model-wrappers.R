@@ -1,15 +1,33 @@
 #' Functional demographic model of Hyndman and Ullah (demography)
 #'
-#' Wrapper around `demography::fdm()` (Hyndman and Ullah 2007): log death
-#' rates are smoothed over age and decomposed into principal components whose
-#' scores are forecast with ARIMA or ETS models. Draws are simulated with
-#' `demography`'s `simulate()` method for functional forecasts (uncertainty
-#' of the coefficients and model error); predictive draws add the
-#' extra-Poisson and Poisson variation as for other models of smooth rates.
+#' Wrapper around `demography::fdm()` (Hyndman and Ullah 2007): the rates of
+#' each year are smoothed over age with `demography::smooth.demogdata()`
+#' (`smooth = TRUE`, by default monotonic regression splines above age 65,
+#' weighted by the exposures), the log rates are decomposed into a mean
+#' function and principal components, and the scores are forecast with
+#' ARIMA or ETS models. Draws are simulated with `demography`'s `simulate()`
+#' method for functional forecasts (uncertainty of the coefficients and
+#' resampled model errors); predictive draws add the extra-Poisson and
+#' Poisson variation of the raw deaths as for other models of smooth rates.
+#'
+#' Without smoothing, the model errors that `simulate()` resamples contain
+#' the observation noise, which predictive draws then add a second time:
+#' keep `smooth = TRUE` unless the rates were smoothed in a preprocessing
+#' step. `smooth.demogdata()` works on single years of age; for age groups
+#' the smoothed values at the observed ages are used (a weaker smoothing).
+#' The smoothing settings (`smooth_args`, such as `k`, the number of knots)
+#' and the number of components can be chosen by forecast accuracy with
+#' [tuned()]. When the default monotonic spline cannot be fitted (for
+#' example for age ranges that start in middle age), the rates are smoothed
+#' without the monotonicity constraint and the fit diagnostics say so.
 #'
 #' @param order Number of principal components.
 #' @param method Forecast method for the coefficients (`"arima"`, `"ets"`,
 #'   `"rwdrift"`, ...), passed to `forecast()`.
+#' @param smooth Smooth the rates of each year over age before the
+#'   decomposition.
+#' @param smooth_args List of arguments of `demography::smooth.demogdata()`
+#'   (for example `list(k = 20)` or `list(method = "spline")`).
 #' @param ... Further arguments of `demography::fdm()`.
 #' @return A model specification.
 #' @references
@@ -22,10 +40,13 @@
 #'   fc <- mt_forecast(mt_fit(hyndman_ullah(order = 2), x), h = 5, n_draws = 50, seed = 1)
 #' }
 #' @export
-hyndman_ullah <- function(order = 6, method = "arima", ...) {
+hyndman_ullah <- function(order = 6, method = "arima", smooth = TRUE, smooth_args = list(), ...) {
   need_pkg("demography", "for hyndman_ullah()")
-  new_mt_spec("fdm", list(order = order, method = method, args = list(...)), min_periods = 8,
-              label = "Functional demographic model")
+  check_flag(smooth, "smooth")
+  if (!is.list(smooth_args)) mt_abort("`smooth_args` must be a list.", class = "argument")
+  new_mt_spec("fdm", list(order = order, method = method, smooth = smooth, smooth_args = smooth_args,
+                          args = list(...)), min_periods = 8,
+              label = paste0("Functional demographic model", if (!smooth) " (unsmoothed)"))
 }
 
 #' @export
@@ -35,11 +56,44 @@ fit_model.mt_spec_fdm <- function(spec, D, E, ages, periods, ...) {
   dimnames(rates) <- dimnames(E) <- list(ages$lower, periods)
   dd <- demography::demogdata(data = rates, pop = E, ages = ages$lower, years = periods, type = "mortality",
                               label = "mortensor", name = "s")
+  if (!isFALSE(p$smooth)) dd <- fdm_smooth(dd, ages$lower, p$smooth_args)
   fit <- suppressWarnings(do.call(demography::fdm, c(list(dd, series = "s", order = min(p$order, nrow(D) - 1)),
                                                      p$args)))
   fv <- fit$fitted$y
   if (is.list(fv)) fv <- fv[[1]]
   list(fit = fit, method = p$method, fitted = exp(as.matrix(fv)))
+}
+
+# Smooth the rates of each year over age with demography::smooth.demogdata()
+# and keep the observed ages (the smoother returns single years of age)
+fdm_smooth <- function(dd, ages, args) {
+  try_smooth <- function(a) {
+    tryCatch(suppressWarnings(do.call(demography::smooth.demogdata, c(list(dd), a))), error = function(e) e)
+  }
+  sm <- try_smooth(args)
+  if (inherits(sm, "error") && is.null(args$b) && is.null(args$method)) {
+    # the monotonic spline above age b can fail to start; smooth without
+    # the constraint (a penalised regression spline)
+    first <- conditionMessage(sm)
+    sm <- try_smooth(c(args, list(b = 1e3)))
+    if (!inherits(sm, "error")) {
+      warning(sprintf("smooth.demogdata() failed (%s); smoothed without the monotonicity constraint.", first),
+              call. = FALSE)
+    }
+  }
+  if (inherits(sm, "error")) {
+    mt_abort(paste("smooth.demogdata() failed:", conditionMessage(sm), "Try other `smooth_args` or `smooth = FALSE`."),
+             class = "model", call = NULL)
+  }
+  keep <- match(ages, sm$age)
+  if (anyNA(keep)) {
+    mt_abort("smooth.demogdata() did not return every observed age.", class = "model", call = NULL)
+  }
+  r <- as.matrix(sm$rate[[1]])[keep, , drop = FALSE]
+  r[!is.finite(r) | r <= 0] <- as.matrix(dd$rate[[1]])[!is.finite(r) | r <= 0]
+  dimnames(r) <- dimnames(dd$rate[[1]])
+  dd$rate[[1]] <- r
+  dd
 }
 
 #' @export
@@ -60,7 +114,8 @@ simulate_model.mt_spec_fdm <- function(spec, fit, h, n_draws, ...) {
 #' initial exposures are approximated as central exposures plus half the
 #' deaths, and forecast death probabilities are converted to central rates
 #' (`m = -log(1 - q)`). Cohorts observed in fewer than `clip` cells get zero
-#' weight. Draws come from `simulate()` of the fitted model (period and
+#' weight; their fitted rates use the effect of the nearest estimated cohort.
+#' Draws come from `simulate()` of the fitted model (period and
 #' cohort indexes simulated as multivariate random walks with drift and
 #' ARIMA, respectively).
 #'
@@ -106,15 +161,26 @@ fit_model.mt_spec_stmomo <- function(spec, D, E, ages, periods, ...) {
   utils::capture.output(fit <- suppressWarnings(StMoMo::fit(mod, Dxt = Dx, Ext = Ex, ages = x, years = periods,
                                                             wxt = wxt, verbose = FALSE)))
   if (!isTRUE(fit$conv)) mt_abort("StMoMo fit did not converge.", class = "model_fit")
-  fv <- stats::fitted(fit, type = "rates")
+  fv <- stmomo_fitted(fit)
   list(fit = fit, logit = logit, gc_order = p$gc_order, fitted = if (logit) -log(1 - pmin(fv, 0.999)) else fv)
+}
+
+# Fitted rates; cohorts with zero weight (`clip`) have no estimated effect,
+# so their cells take the effect of the nearest estimated cohort
+stmomo_fitted <- function(fit) {
+  gc <- fit$gc
+  if (is.null(gc) || !anyNA(gc) || all(is.na(gc))) return(stats::fitted(fit, type = "rates"))
+  ok <- which(!is.na(gc))
+  gc[] <- gc[ok[vapply(seq_along(gc), function(i) which.min(abs(ok - i)), integer(1))]]
+  stats::predict(fit, years = fit$years, kt = fit$kt, gc = gc, type = "rates")
 }
 
 #' @export
 simulate_model.mt_spec_stmomo <- function(spec, fit, h, n_draws, ...) {
-  utils::capture.output(sim <- suppressWarnings(stats::simulate(fit$fit, nsim = n_draws, h = h,
+  # StMoMo's simulate() needs h >= 2; the first h years are kept
+  utils::capture.output(sim <- suppressWarnings(stats::simulate(fit$fit, nsim = n_draws, h = max(h, 2),
                                                                 gc.order = fit$gc_order)))
-  r <- sim$rates
+  r <- sim$rates[, seq_len(h), , drop = FALSE]
   if (fit$logit) r <- -log(1 - pmin(r, 0.999))
   array(as.numeric(r), c(dim(r)[1], h, n_draws))
 }

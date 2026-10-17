@@ -21,6 +21,16 @@ fit_kannisto <- function(mx, ages) {
   function(x) a * exp(b * x) / (1 + a * exp(b * x))
 }
 
+# Group of each fine cell by containment (groups sorted by age); NA for cells
+# in no group, such as cells in the gap of a missing group or above a closed
+# top group
+cell_groups <- function(x_lo, x_hi, g_lo, g_hi, omega) {
+  grp <- findInterval(x_lo + 1e-9, g_lo)
+  grp[grp == 0] <- NA
+  grp[!is.na(grp) & pmin(x_hi, omega) > pmin(g_hi, omega)[grp] + 1e-9] <- NA
+  grp
+}
+
 # One schedule: grouped rates -> rates on fine cells.
 #   m_g: group rates; g_lo, g_hi: group bounds (Inf open); x_lo, x_hi: fine cells;
 #   e: fine exposures (weights of the group-mean constraint); omega: maximum age
@@ -65,8 +75,7 @@ spline_disaggregate <- function(m_g, g_lo, g_hi, x_lo, x_hi, e, omega, method = 
     f <- stats::splinefun(pts, lp, method = "natural")
   }
   m <- exp(f(xm))
-  grp <- findInterval(x_lo, g_lo)
-  grp[grp == 0] <- NA
+  grp <- cell_groups(x_lo, x_hi, g_lo, g_hi, omega)
   w <- pmax(e, 1e-12)
   for (it in 1:15) {
     fac <- vapply(seq_len(ng), function(k) {
@@ -159,7 +168,7 @@ gam_disaggregate <- function(Ds, Es, g, omega, tail = "kannisto", tail_width = 2
     e <- Es[, p]
     Eg_p <- vapply(seq_len(nrow(o)), function(i) sum(e[o$a1[i]:o$a2[i]]), 0)
     m_g <- o$value / pmax(Eg_p, 1e-12)
-    grp <- findInterval(g$age$lower, o$age_lo)
+    grp <- cell_groups(g$age$lower, g$age$upper, o$age_lo, o$age_hi, omega)
     for (k in seq_len(nrow(o))) {
       i <- which(grp == k)
       if (length(i) && m_g[k] > 0) m[i] <- m[i] * m_g[k] / (sum(e[i] * m[i]) / sum(e[i]))
@@ -181,11 +190,15 @@ gam_disaggregate <- function(Ds, Es, g, omega, tail = "kannisto", tail_width = 2
 #'   from fine-resolution rates (`shape_rates`), exposure-weighted to 1
 #'   within each group. [mt_shape_rates()] estimates them from training data
 #'   at the finer resolution, constant (mean of the last years) or changing
-#'   over the forecast years (an age-period GAM extrapolated in time);
+#'   over the forecast years (an age-period GAM extrapolated in time); a
+#'   group whose shape rates are all 0 gets a flat shape;
 #' * `"hyman_kannisto"` or `"natural_gompertz"`: a spline through the group
 #'   rates of each draw (monotone Hyman spline with a Kannisto tail, or a
 #'   natural spline with a log-linear tail), corrected so that the
 #'   exposure-weighted mean of the fine rates equals each group rate.
+#'
+#' Missing group rates (for example of a stratum whose fit failed) give
+#' missing rates at the finer ages of that group.
 #'
 #' @param draws An [mt_draws] object on age groups.
 #' @param age The finer [mt_axis]; its cells must nest in the groups.
@@ -235,7 +248,9 @@ mt_disaggregate <- function(draws, age, exposure, method = c("hyman_kannisto", "
         e <- exposure[, t, s]
         r <- shape_rates[, min(t, dim(shape_rates)[2]), s]
         norm <- tapply(e * r, grp, sum) / tapply(e, grp, sum)
-        f <- as.vector(r / norm[as.character(grp)])
+        nk <- as.vector(norm[as.character(grp)])
+        # groups whose shape rates (or exposures) are all 0 get a flat shape
+        f <- ifelse(is.finite(nk) & nk > 0, r / nk, 1)
         out[, t, s, ] <- draws$rates[grp, t, s, ] * f
       }
     }
@@ -243,8 +258,14 @@ mt_disaggregate <- function(draws, age, exposure, method = c("hyman_kannisto", "
     for (s in seq_len(d[3])) {
       for (t in seq_len(d[2])) {
         for (j in seq_len(d[4])) {
-          out[, t, s, j] <- spline_disaggregate(draws$rates[, t, s, j], ga$lower, ga$upper, age$lower, age$upper,
-                                                exposure[, t, s], omega, method)
+          # missing group rates (for example a stratum whose fit failed) stay
+          # missing; the spline goes through the other groups
+          rg <- draws$rates[, t, s, j]
+          ok <- is.finite(rg)
+          if (sum(ok) < 2) next
+          fr <- spline_disaggregate(rg[ok], ga$lower[ok], ga$upper[ok], age$lower, age$upper, exposure[, t, s],
+                                    omega, method)
+          out[, t, s, j] <- ifelse(ok[grp], fr, NA_real_)
         }
       }
     }
@@ -257,6 +278,8 @@ mt_disaggregate <- function(draws, age, exposure, method = c("hyman_kannisto", "
   res$observed <- NULL
   res$fitted <- NULL
   res$exposure_last <- exposure[, 1, , drop = FALSE]
+  dimnames(res$exposure_last) <- list(age = age$labels, period = dimnames(exposure)[[2]][1],
+                                      stratum = dimnames(draws$rates)$stratum)
   res
 }
 

@@ -4,7 +4,7 @@ mt_abort <- function(message, class = NULL, ..., call = sys.call(-1)) {
   cond <- errorCondition(paste(message, collapse = "\n"),
                          class = c(if (!is.null(class)) paste0("mt_error_", class),
                                    "mt_error"),
-                         call = call, ...)
+                         call = tidy_call(call), ...)
   stop(cond)
 }
 
@@ -12,8 +12,18 @@ mt_warn <- function(message, class = NULL, ..., call = sys.call(-1)) {
   cond <- warningCondition(paste(message, collapse = "\n"),
                            class = c(if (!is.null(class)) paste0("mt_warning_", class),
                                      "mt_warning"),
-                           call = call, ...)
+                           call = tidy_call(call), ...)
   warning(cond)
+}
+
+# The call shown with a condition: calls made through do.call() carry the
+# function and the data themselves, which would be printed in full; such
+# calls are shortened to the function name, or dropped
+tidy_call <- function(call) {
+  if (!is.call(call)) return(call)
+  if (!is.name(call[[1]])) return(NULL)
+  if (sum(nchar(deparse(call, nlines = 20L))) > 300) return(as.call(list(call[[1]])))
+  call
 }
 
 mt_inform <- function(...) {

@@ -15,7 +15,8 @@ mt_backtest(
   seed = 1,
   cores = 1,
   score_estimated = FALSE,
-  quantities = NULL
+  quantities = NULL,
+  contrast = NULL
 )
 }
 \arguments{
@@ -35,7 +36,8 @@ equally often.}
 
 \item{n_origins}{Number of origins when \code{origins} is \code{NULL}.}
 
-\item{seed}{Random seed (forecast draws and the randomised PIT).}
+\item{seed}{Random seed (forecast draws and the randomised PIT); \code{NULL}
+for none.}
 
 \item{cores}{Cores used over origins (forked processes; 1 on Windows).}
 
@@ -44,24 +46,37 @@ example suppressed cells filled by \code{\link[=mt_fill_suppressed]{mt_fill_supp
 only observed cells are scored.}
 
 \item{quantities}{Derived quantities scored in addition to the rates:
-\code{"life_expectancy"} (at the first observed age, in years) and/or
+\code{"life_expectancy"} (at the first age of the grid, in years) and/or
 \code{"asr"} (age-standardised rate, European Standard Population 2013, on
-the log scale), computed from the predictive draws aggregated to the
-observed age groups of each stratum and test year (years with missing
-or suppressed cells are skipped). They are added as rows with \code{target}
+the log scale), computed from the predictive draws of deaths aggregated
+to the observed age groups of each stratum and test year, like the
+observed values. Years whose observed cells do not cover the full age
+range without gaps (missing, suppressed or estimated cells) are
+skipped. A zero ASR (no deaths at any age) is replaced by the smallest
+value that half a death gives. They are added as rows with \code{target}
 \code{"life_expectancy"} or \code{"asr"}; summarise them with
 \code{mt_score(..., target = )}.}
+
+\item{contrast}{Optional \code{c(var = , ref = )}: a stratum variable and its
+reference level. With \code{quantities}, the differences between every other
+level and the reference level (with the same values of the other
+stratum variables) are scored too, path by path: targets
+\code{"life_expectancy_gap"} (difference in years) and \code{"asr_gap"}
+(difference of log ASR, the log rate ratio). This checks forecasts of
+inequality, whose uncertainty depends on how the paths of the strata
+move together; the rows carry the stratum of the compared level.}
 }
 \value{
 An object of class \code{mt_backtest}: a \code{data.table} with one row per
 observed cell, origin and horizon: \code{model}, \code{prep} (the preprocessing
 steps, \code{"none"} without), \code{origin}, \code{horizon},
 stratum columns, \code{age_lo}, \code{age_hi}, \code{period}, \code{observed} (log rate),
-\code{median}, \code{mean}, quantiles, and the scores \code{crps}, \code{wis}, \code{ae}
-(absolute error of the median), \code{cov50}, \code{cov80}, \code{cov95}, \code{pit} and the
-MASE scale \code{scale} (mean absolute year-to-year change in the training
-data), and \code{target} (\code{"rate"}, or the derived quantity). Summarise with
-\code{\link[=mt_score]{mt_score()}}.
+the MASE scale \code{scale} (mean absolute year-to-year change in the
+training data), \code{target} (\code{"rate"}, or the derived quantity), the
+forecast \code{median} and \code{mean}, and the scores \code{crps}, \code{wis}, \code{ae}
+(absolute error of the median), \code{cov50}, \code{cov80}, \code{cov95} and \code{pit}
+(randomised for ties, as with zero deaths). Rows of derived quantities
+have no \code{age_lo}, \code{age_hi} and \code{scale}. Summarise with \code{\link[=mt_score]{mt_score()}}.
 }
 \description{
 For each forecast origin, the data are cut at the origin, the
@@ -77,6 +92,17 @@ as known) are summed to each observed cell, so models on single years of
 age can be scored against data in 5-year groups. Exposures of the test
 years are ungrouped if needed (no deaths of the test years are used for
 that).
+
+Data whose deaths were ungrouped beforehand with \code{\link[=mt_ungroup]{mt_ungroup()}}, and
+data smoothed with \code{\link[=mt_smooth]{mt_smooth()}}, are refused: the forecasts would be scored against
+estimates instead of observations, and an ungrouping or smoothing over
+time has seen the test years. Ungroup or smooth inside each fit instead
+(\code{prep = mt_prep(step_ungroup())}, \code{step_smooth()}). With
+\code{step_regroup()}, the test data are summed to the age groups of the fit.
+
+Observed log rates of cells without deaths use half a death, and so do
+the predictive draws, after their deaths have been summed to the observed
+cell.
 }
 \examples{
 x <- mt_example(deaths = "single", years = 1990:2012)

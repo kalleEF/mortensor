@@ -11,7 +11,7 @@ vignette: >
      Edit bayesian-apc.Rmd.orig and run dev/precompute-vignettes.R. -->
 
 ```{r setup, include = FALSE}
-knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width = 7, fig.height = 4.5,
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.cap = "", fig.width = 7, fig.height = 4.5,
                       fig.path = "apc-", dpi = 96, message = FALSE)
 ```
 
@@ -62,6 +62,7 @@ random walks for period and cohort (see "Choice of priors" below).
 
 ```{r}
 prep <- mt_prep(step_ungroup())
+set.seed(1)
 t0 <- proc.time()
 fit <- mt_fit(apc_bayes(mcmc = mcmc_control("fast")), x, prep = prep)
 (proc.time() - t0)[["elapsed"]]
@@ -69,15 +70,17 @@ fit$diagnostics
 ```
 
 Posterior medians and 90% credible intervals of the effects (logit scale,
-identified with bamp's convention):
+identified with bamp's convention), and the Gelman-Rubin statistics of the
+chains (`rhat`, below 1.1 when they have converged):
 
 ```{r}
 eff <- mt_parameters(fit)
 eff[, .N, by = .(stratum, parameter)]
+eff[parameter == "rhat", .(stratum, index, rhat = round(value, 3))]
 ```
 
 ```{r effects, fig.height = 5}
-ggplot2::ggplot(eff, ggplot2::aes(as.numeric(index), value, colour = stratum, fill = stratum)) +
+ggplot2::ggplot(eff[parameter != "rhat"], ggplot2::aes(as.numeric(index), value, colour = stratum, fill = stratum)) +
   ggplot2::geom_ribbon(ggplot2::aes(ymin = lower, ymax = upper), alpha = 0.2, colour = NA) +
   ggplot2::geom_line() +
   ggplot2::facet_wrap(~parameter, scales = "free") +
@@ -92,8 +95,8 @@ ggplot2::ggplot(eff, ggplot2::aes(as.numeric(index), value, colour = stratum, fi
 ```{r}
 fc <- mt_forecast(fit, h = 15, n_draws = 1000, seed = 1)
 fc
-mt_summarise(fc)[age %in% c("50", "70", "90") & period %in% c(2007, 2021),
-                 .(label, age, period, q0.05 = q0.1, q0.5, q0.95 = q0.9)]
+mt_summarise(fc, probs = c(0.05, 0.5, 0.95))[age %in% c("50", "70", "90") & period %in% c(2007, 2021),
+                                             .(label, age, period, q0.05, q0.5, q0.95)]
 ```
 
 ```{r forecast}
@@ -132,7 +135,7 @@ after the origin is missed.
 
 Second-order random walks for period and cohort extrapolate the most recent
 trends, and their uncertainty grows quickly with the horizon. For French
-women the 90% forecast interval of the death rate at ages 90-94 in 2021
+women the 90% forecast interval of the death rate at age 92 in 2021
 (15 years ahead) is compared below for both choices:
 
 ```{r}
@@ -150,7 +153,8 @@ rbindlist(lapply(names(fits), function(n) {
 ```
 
 With second-order random walks the interval spans two orders of magnitude,
-which is not useful for planning; with first-order random walks it is narrow
+and a few paths reach death rates above 1 (the warning), which is not
+useful for planning; with first-order random walks it is narrow
 but, as the backtest shows, biased when mortality keeps declining. Neither
 choice is right for every dataset. Rolling-origin backtests are the way to
 choose priors and the overdispersion term, and an ensemble with models that
@@ -158,9 +162,9 @@ carry a drift (`ensemble()`) is a way to combine the strengths.
 
 ## Practical notes
 
-* Runtime: about 1.5 minutes per stratum with `mcmc_control("fast")` for
-  13 age groups and 37 years on one machine; `"final"` lets bamp choose the
-  chain length and is several times slower.
+* Runtime: about 1.5 to 3 minutes per stratum with `mcmc_control("fast")`
+  for 13 age groups and 37 years, depending on the machine; `"final"` lets
+  bamp choose the chain length and is several times slower.
 * Heterogeneity terms (`"rw1+het"`, `"rw2+het"`) are not offered, because
   bamp 3.0.0 cannot forecast them.
 * bamp needs whole numbers: deaths and exposures are rounded, and the

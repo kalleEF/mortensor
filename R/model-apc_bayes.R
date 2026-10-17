@@ -30,12 +30,11 @@
 #'
 #' @param age,period,cohort Prior for each effect: `"rw1"` or `"rw2"`. The
 #'   defaults use first-order random walks for period and cohort: with
-#'   second-order random walks the extrapolated trends made forecast intervals
-#'   explode on French HMD data (ages 90-94, 15 years ahead: 90% interval
-#'   0.004-0.63 with RW2 against 0.11-0.17 with RW1, observed rate 0.165).
-#'   First-order random walks carry the last period effect forward without a
-#'   trend, so forecasts are biased when mortality keeps declining (see the
-#'   vignette "Bayesian age-period-cohort models with bamp").
+#'   second-order random walks the extrapolated trends can make forecast
+#'   intervals span orders of magnitude. First-order random walks carry the
+#'   last period effect forward without a trend, so forecasts are biased when
+#'   mortality keeps declining. The vignette "Bayesian age-period-cohort
+#'   models with bamp" compares both.
 #' @param overdispersion Include cell-level overdispersion.
 #' @param mcmc MCMC settings from [mcmc_control()].
 #' @param resolution `"observed"` or `"grid"`.

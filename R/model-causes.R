@@ -18,9 +18,17 @@
 #' 4. inverse ILR gives share draws, which multiply the all-cause draws.
 #'
 #' Shares of rare causes are noisy; smoothing the rates first
-#' (`prep = mt_prep(step_smooth())`) helps. In backtests on simulated cause
-#' data ([mt_example_causes()]), the 95% coverage was 0.99 without smoothing
-#' and 0.94 to 0.97 with it.
+#' (`prep = mt_prep(step_smooth())`) can help.
+#'
+#' Predictive draws (`mt_forecast(predictive = TRUE)`) are the predictive
+#' draws of the total model; for models of smooth rates (such as
+#' [lee_carter()]) these are Poisson deaths, which are split between the
+#' causes (and the residual cause) multinomially by the share draws, so that
+#' the deaths of the causes add up to the all-cause deaths also in predictive
+#' draws. The residual variation of the shares added to these draws is then
+#' only the part beyond the multinomial variation. For total models of
+#' observed rates ([rwd()], [arima_series()], [ets_series()]), predictive
+#' draws are the draws.
 #'
 #' The data need a stratum variable `var` with the all-cause level
 #' `total_level` and the cause levels; other stratum variables (for example
@@ -36,7 +44,8 @@
 #'   median cell; a residual that is zero almost everywhere would only add a
 #'   degenerate coordinate).
 #' @param residual_noise Add in-sample residual variation of the ILR
-#'   coordinates to the draws.
+#'   coordinates to the draws (in predictive draws split multinomially, the
+#'   part beyond the multinomial variation).
 #' @return A model specification.
 #' @references
 #' Egozcue JJ, Pawlowsky-Glahn V, Mateu-Figueras G, Barcelo-Vidal C (2003).
@@ -53,7 +62,8 @@ cause_shares <- function(total = lee_carter(), var = "cause", total_level = "all
   if (length(ranks) != 4) mt_abort("`ranks` needs four values.", class = "argument")
   new_mt_spec("cause_shares", list(total = total, var = var, total_level = total_level, ranks = ranks,
                                    residual = residual, residual_noise = residual_noise),
-              min_periods = max(total$min_periods, 6), label = sprintf("Cause shares (%s)", total$label))
+              min_periods = max(total$min_periods, 6), label = sprintf("Cause shares (%s)", total$label),
+              smooth = isTRUE(total$smooth))
 }
 
 #' @export
@@ -118,11 +128,21 @@ mt_fit.mt_spec_cause_shares <- function(spec, data, prep = NULL, cores = 1, ...)
   resid <- Z - Zhat
   B <- dec$U[[2]]
   dB <- diff(B)
-  share_fit <- list(dec = dec, V = V, resid_sd = apply(resid, c(1, 3, 4), stats::sd), B_last = B[nrow(B), ],
-                    B_mu = colMeans(dB), B_resid = t(dB) - colMeans(dB), residual_noise = p$residual_noise)
-  # in-sample fitted rates of all strata
   S_hat <- ilr_inverse_array(Zhat, V)
   tot_fitted <- total_fitted(fit_total)
+  resid_sd <- apply(resid, c(1, 3, 4), stats::sd)
+  # residual variation beyond multinomial sampling, for predictive draws that
+  # split deaths multinomially: the ILR coordinates of shares p estimated from
+  # N deaths have sampling variances sum_k V[k, c]^2 / (N p_k)
+  N <- array(NA_real_, dim(tot_fitted))
+  for (g in seq_len(ng)) N[, , g] <- pmax(tot_fitted[, , g] * md$E[, , tot_id[g]], 0.5)
+  inv <- array(matrix(1 / S_hat, ncol = dim(S_hat)[4]) %*% V^2, c(dim(N), ncol(V)))
+  samp <- apply(inv / as.vector(N), c(1, 3, 4), mean, na.rm = TRUE)
+  samp[!is.finite(samp)] <- 0
+  share_fit <- list(dec = dec, V = V, resid_sd = resid_sd, resid_sd_extra = sqrt(pmax(resid_sd^2 - samp, 0)),
+                    B_last = B[nrow(B), ], B_mu = colMeans(dB), B_resid = t(dB) - colMeans(dB),
+                    residual_noise = p$residual_noise, residual = use_residual)
+  # in-sample fitted rates of all strata
   fitted <- array(NA_real_, dim(m))
   for (g in seq_len(ng)) {
     fitted[, , tot_id[g]] <- tot_fitted[, , g]
@@ -138,8 +158,8 @@ mt_fit.mt_spec_cause_shares <- function(spec, data, prep = NULL, cores = 1, ...)
                  periods = md$periods, strata = st, omega = d$omega,
                  observed = if (is.null(raw_D)) m else raw_D / md$E, train_D = md$D, raw_D = raw_D, train_E = md$E,
                  exposure_last = md$E[, nt, , drop = FALSE],
-                 noise_sd = extra_noise_sd(list(smooth = TRUE, joint = TRUE), list(fitted = fitted), raw_D %||% md$D,
-                                           md$E)),
+                 noise_sd = extra_noise_sd(list(smooth = spec$smooth, joint = TRUE), list(fitted = fitted),
+                                           raw_D %||% md$D, md$E)),
             class = c("mt_fit_cause_shares", "mt_fit"))
 }
 
@@ -157,34 +177,75 @@ total_fitted <- function(fit) {
 mt_forecast.mt_fit_cause_shares <- function(fit, h = 10, to = NULL, n_draws = 500, seed = NULL, predictive = FALSE,
                                             exposure = NULL, ...) {
   last <- max(fit$periods)
-  if (!is.null(to)) h <- to - last
+  if (!is.null(to)) {
+    if (!missing(h)) mt_warn("Both `h` and `to` are given; `to` is used.", class = "argument")
+    h <- to - last
+  }
+  check_number(h, "h", lower = 1, integerish = TRUE)
+  check_number(n_draws, "n_draws", lower = 1, integerish = TRUE)
   f <- fit$fits
   sf <- f$shares
+  ns <- nrow(fit$strata)
+  E <- NULL
+  if (predictive) {
+    E <- expand_exposure(exposure %||% fit$exposure_last, c(length(fit$age), h, ns),
+                         list(fit$age$labels, as.character(last + seq_len(h)), fit$strata$label))
+  }
   arr <- with_seed(seed, {
-    tot <- mt_forecast(f$total, h = h, n_draws = n_draws)$rates
+    # predictive draws: those of the total model, whose deaths are split by
+    # the shares; implausible rates are reported below for all strata
+    tot <- withCallingHandlers(
+      mt_forecast(f$total, h = h, n_draws = n_draws, predictive = predictive,
+                  exposure = if (predictive) E[, , f$tot_id, drop = FALSE])$rates,
+      mt_warning_implausible = function(w) invokeRestart("muffleWarning"))
     U <- sf$dec$U
     na <- nrow(U[[1]])
     ng <- nrow(U[[3]])
     nc <- nrow(U[[4]])
     Bp <- rw_paths(sf$B_last, sf$B_mu, sf$B_resid, h, n_draws, "bootstrap", exp_out = FALSE)
-    out <- array(NA_real_, c(na, h, length(fit$strata$stratum), n_draws))
+    out <- array(NA_real_, c(na, h, ns, n_draws))
     for (j in seq_len(n_draws)) {
       Uj <- U
       Uj[[2]] <- t(matrix(Bp[, , j], ncol = h))
       Z <- tucker_reconstruct(sf$dec$G, Uj)
+      # deaths of the total in this draw, if they are counts (predictive draws of models of smooth rates)
+      Dt <- if (predictive) lapply(seq_len(ng), function(g) tot[, , g, j] * E[, , f$tot_id[g]]) else NULL
+      split <- predictive && all(vapply(Dt, function(d) all(abs(d - round(d)) < 1e-6, na.rm = TRUE), TRUE))
       if (sf$residual_noise) {
-        sdarr <- aperm(array(sf$resid_sd, c(na, ng, nc, h)), c(1, 4, 2, 3))
+        rsd <- if (split) sf$resid_sd_extra %||% sf$resid_sd else sf$resid_sd
+        sdarr <- aperm(array(rsd, c(na, ng, nc, h)), c(1, 4, 2, 3))
         Z <- Z + stats::rnorm(length(Z), 0, as.vector(sdarr))
       }
       Sj <- ilr_inverse_array(Z, sf$V)
       for (g in seq_len(ng)) {
         out[, , f$tot_id[g], j] <- tot[, , g, j]
-        for (k in seq_len(f$K)) out[, , f$part_id[g, k], j] <- tot[, , g, j] * Sj[, , g, k]
+        if (!split) {
+          for (k in seq_len(f$K)) out[, , f$part_id[g, k], j] <- tot[, , g, j] * Sj[, , g, k]
+          next
+        }
+        # multinomial split as successive binomial draws; without a residual
+        # cause, the last cause takes the remaining deaths
+        left <- round(Dt[[g]])
+        rest <- left
+        rest[] <- 1
+        for (k in seq_len(f$K)) {
+          sk <- Sj[, , g, k]
+          dk <- left
+          if (k < f$K || isTRUE(sf$residual)) {
+            q <- sk / rest
+            q[!is.finite(q)] <- 1
+            ok <- !is.na(left)
+            dk[ok] <- stats::rbinom(sum(ok), left[ok], pmin(pmax(q[ok], 0), 1))
+          }
+          out[, , f$part_id[g, k], j] <- dk / pmax(E[, , f$part_id[g, k]], 1e-12)
+          left <- left - dk
+          rest <- pmax(rest - sk, 0)
+        }
       }
     }
-    if (predictive) out <- predictive_rates(out, fit, exposure, list(smooth = TRUE))
     out
   })
+  check_draws_plausible(arr, fit$age, fit$strata, fit$spec$label)
   res <- new_mt_draws(arr, fit$age, last + seq_len(h), fit$strata, model = fit$spec$label, origin = last,
                       fit = fit, seed = seed)
   res$predictive <- predictive

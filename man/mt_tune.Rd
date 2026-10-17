@@ -3,7 +3,7 @@
 \name{mt_tune}
 \alias{mt_tune}
 \alias{tuned}
-\title{Tune model parameters on training data}
+\title{Tune model and preprocessing settings by forecast accuracy}
 \usage{
 mt_tune(
   spec_fun,
@@ -14,7 +14,10 @@ mt_tune(
   inner_h = 5,
   metric = "crps",
   n_draws = 100,
-  strategy = c("full", "two_stage")
+  strategy = c("full", "two_stage"),
+  target = c("rate", "life_expectancy", "asr"),
+  select = c("min", "one_se"),
+  by = NULL
 )
 
 tuned(
@@ -25,27 +28,32 @@ tuned(
   metric = "crps",
   n_draws = 100,
   label = "Tuned model",
-  strategy = c("full", "two_stage")
+  strategy = c("full", "two_stage"),
+  target = c("rate", "life_expectancy", "asr"),
+  select = c("min", "one_se"),
+  by = NULL
 )
 }
 \arguments{
-\item{spec_fun}{A function that returns a model specification from named
-arguments (for example \code{function(drift_window) rwd(drift_window)}).}
+\item{spec_fun}{A function that returns a model specification (or
+\code{list(spec = , prep = )}) from named arguments, for example
+\code{function(order) hyndman_ullah(order = order)}.}
 
-\item{grid}{A data frame of parameter combinations (columns match the
-arguments of \code{spec_fun}).}
+\item{grid}{A data frame of settings (columns match the arguments of
+\code{spec_fun}), ordered from the simplest to the most complex setting for
+\code{select = "one_se"}.}
 
 \item{data}{An \link{mt_data} object.}
 
-\item{prep}{Preprocessing pipeline.}
+\item{prep}{Preprocessing pipeline used by every candidate (when
+\code{spec_fun} returns specifications only).}
 
-\item{inner_origins}{Number of inner origins (the last years that leave
-\code{inner_h} years of test data).}
+\item{inner_origins}{Number of inner origins (\code{1} for a single hold-out).}
 
-\item{inner_h}{Horizon of the inner backtest.}
+\item{inner_h}{Horizon of the inner backtest (the number of years held
+out from each origin).}
 
-\item{metric}{Column of \code{\link[=mt_score]{mt_score()}} to minimise (\code{"crps"}, \code{"wis"},
-\code{"mae"}, \code{"mase"}).}
+\item{metric}{\code{"crps"}, \code{"wis"}, \code{"mae"}, \code{"rmse"} or \code{"mase"}.}
 
 \item{n_draws}{Draws per inner forecast.}
 
@@ -55,23 +63,90 @@ including the first and the last) and then the rows of \code{grid} within one
 step of the best coarse combination in every column. For large grids,
 such as Tucker ranks, this needs far fewer fits.}
 
+\item{target}{\code{"rate"}, \code{"life_expectancy"} or \code{"asr"}.}
+
+\item{select}{\code{"min"} or \code{"one_se"}.}
+
+\item{by}{Stratum variables: tune each group of strata separately.}
+
 \item{label}{Display name.}
 }
 \value{
-\code{mt_tune()}: a list with \code{scores} (one row per combination) and
-\code{best} (the chosen specification). \code{tuned()}: a model specification.
+\code{mt_tune()}: a list with \code{scores} (one row per setting and group:
+the settings, the score, its standard error \code{se} and whether it was
+\code{selected}), \code{by_horizon} (scores by forecast horizon), \code{best} (the
+chosen specification; with \code{by}, a list per group), \code{best_prep} (the
+preprocessing of the chosen setting), \code{chosen} and \code{origins}.
+\code{tuned()}: a model specification; its fit carries \code{tuning} (the scores)
+and \code{tuning_choice}.
 }
 \description{
-\code{mt_tune()} evaluates every combination of parameters in \code{grid} with an
-inner rolling-origin backtest on \code{data} and returns the scores and the best
-specification. \code{tuned()} wraps the same procedure into a model
-specification: each time it is fitted (for example at every origin of an
-outer \code{\link[=mt_backtest]{mt_backtest()}}), the tuning uses only the training data it
-receives, so the selection never sees the years being forecast.
+\code{mt_tune()} evaluates every combination of settings in \code{grid} by how well
+it forecasts the last years of \code{data} (an inner backtest) and returns the
+scores and the best specification. \code{tuned()} wraps the same procedure
+into a model specification: each time it is fitted (for example at every
+origin of an outer \code{\link[=mt_backtest]{mt_backtest()}}), the tuning uses only the training
+data it receives, so the selection never sees the years being forecast.
+The chosen model is then fitted to all training data.
+}
+\details{
+\strong{Design.} Each candidate is refitted at \code{inner_origins} consecutive
+origins and forecasts \code{inner_h} years from each; the last origin is
+\code{inner_h} years before the end of the data. \code{inner_origins = 1} is a
+single hold-out: fit to the years up to \code{T - inner_h} and forecast the
+last \code{inner_h} years (with \code{inner_h = 5} or \code{10}, the usual choice of
+smoothing and model parameters for \code{demography::fdm()}). Several origins
+average over more periods and make the choice depend less on the events
+of one period (Tashman 2000).
+
+\strong{What can be tuned.} \code{spec_fun} receives one row of \code{grid} as named
+arguments and returns a model specification, or \code{list(spec = , prep = )}
+to tune preprocessing together with the model: for example the smoothing
+parameter of \code{\link[=step_smooth]{step_smooth()}}, the fitting window of \code{\link[=step_window]{step_window()}} and
+the number of components of \code{\link[=hyndman_ullah]{hyndman_ullah()}}. Preprocessing is given
+either by \code{spec_fun} or as \code{prep}.
+
+\strong{Criterion.} \code{metric} is computed for \code{target}: the log death rates of
+the observed cells (\code{"rate"}), life expectancy at birth
+(\code{"life_expectancy"}, years) or the log age-standardised rate (\code{"asr"}),
+per test year and stratum. \code{"crps"} and \code{"wis"} score the whole forecast
+distribution; \code{"mae"} and \code{"rmse"} the error of the median (point
+accuracy); \code{"mase"} scales the absolute error by the mean year-to-year
+change of the training data (rates only).
+
+\strong{Selection.} \code{select = "min"} takes the lowest score. \code{select = "one_se"} takes the first row of \code{grid} whose score is within one
+standard error of the lowest (the one-standard-error rule of Hastie,
+Tibshirani and Friedman 2009, Section 7.10), so order \code{grid} from the
+simplest to the most complex setting. The standard error comes from the
+mean scores per origin and stratum (per test year for a hold-out of a
+single stratum); these blocks are correlated, so it is approximate and
+tends to be too small. With few
+test years, differences between settings are often within this error:
+the selection is then uncertain, and \code{scores} shows it.
+
+\strong{Groups.} With \code{by}, the strata are split by these stratum variables
+and each group is tuned and fitted on its own (for example women and men
+with their own number of components). A joint model such as \code{\link[=li_lee]{li_lee()}}
+then pools only within each group.
 }
 \examples{
 x <- mt_example(deaths = "single", years = 1990:2012)
 tn <- mt_tune(function(drift_window) rwd(drift_window = drift_window),
               data.frame(drift_window = c(5, 10, 20)), x, inner_origins = 2, inner_h = 3)
 tn$scores
+# a single hold-out of the last 5 years, tuning the smoothing too
+smoothed_lc <- function(lambda) {
+  list(spec = lee_carter(), prep = mt_prep(step_smooth(lambda = lambda)))
+}
+tn2 <- mt_tune(smoothed_lc, data.frame(lambda = c(1, 100)), x, inner_origins = 1, inner_h = 5,
+               metric = "rmse", n_draws = 50)
+tn2$scores
+}
+\references{
+Tashman LJ (2000). Out-of-sample tests of forecasting accuracy: an
+analysis and review. \emph{International Journal of Forecasting} 16(4):
+437-450.
+
+Hastie T, Tibshirani R, Friedman J (2009). \emph{The Elements of Statistical
+Learning}, 2nd edition. Springer, New York.
 }

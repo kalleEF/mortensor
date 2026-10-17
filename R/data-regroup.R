@@ -18,15 +18,29 @@
 #'   90+); `NULL` keeps the age intervals.
 #' @param period Target period axis, numeric lower bounds or the name of a
 #'   table; `NULL` keeps the periods.
+#' @param measures Tables to regroup (default: all). Regrouping only some
+#'   tables, for example `measures = "deaths"`, keeps the other tables and
+#'   the grid as they are: deaths in age groups with single-year exposures,
+#'   as in many official tables, for example to check ungrouping against
+#'   known single years.
 #' @return An `mt_data` object.
 #' @examples
 #' x <- mt_example()
 #' mt_regroup(x, age = c(30, seq(40, 90, 10)))
 #' mt_regroup(x, age = "deaths")
+#' xs <- mt_example(deaths = "single")
+#' mt_regroup(xs, age = c(30, seq(40, 90, 10)), measures = "deaths")
 #' @export
-mt_regroup <- function(data, age = NULL, period = NULL) {
+mt_regroup <- function(data, age = NULL, period = NULL, measures = NULL) {
   check_class(data, "mt_data", "data")
   g <- mt_grid(data)
+  if (!is.null(measures)) {
+    bad <- setdiff(measures, names(data$obs))
+    if (length(bad)) {
+      mt_abort(sprintf("`measures`: no table %s (tables: %s).", paste(bad, collapse = ", "),
+                       paste(names(data$obs), collapse = ", ")), class = "argument")
+    }
+  }
   if (is.character(age)) age <- table_axis(data, age, "age")
   if (is.character(period)) period <- table_axis(data, period, "period")
   if (is.numeric(age)) {
@@ -35,10 +49,13 @@ mt_regroup <- function(data, age = NULL, period = NULL) {
   if (is.numeric(period)) period <- period_groups(period, last_upper = max(g$period$upper))
   if (!is.null(age)) check_class(age, "mt_axis", "age")
   if (!is.null(period)) check_class(period, "mt_axis", "period")
-  for (m in names(data$obs)) {
+  for (m in measures %||% names(data$obs)) {
     data$obs[[m]] <- regroup_obs(data$obs[[m]], m, age, period, data$omega)
   }
   data$obs <- data$obs[vapply(data$obs, nrow, 1L) > 0L]
+  if (!is.null(measures) && !setequal(measures, names(data$obs))) {
+    return(mt_set_grid(data, age = g$age, period = g$period))
+  }
   all <- rbindlist(lapply(data$obs, function(o) o[, c("age_lo", "age_hi", "period_lo", "period_hi")]))
   new_age <- if (is.null(age)) g$age else axis_trim(age, min(all$age_lo), max(all$age_hi))
   new_period <- if (is.null(period)) g$period else axis_trim(period, min(all$period_lo), max(all$period_hi))

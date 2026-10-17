@@ -31,15 +31,13 @@
 #' recomputed, so the draws stay coherent. [mt_jump_off()] reports the step
 #' between the last observed or fitted year and the first forecast year.
 #'
-#' In backtests on England & Wales men (origins 1996-2001, h = 10),
-#' anchoring Lee-Carter to the last 3 years (`decay = 10`) lowered the CRPS
-#' of the first two forecast years from 0.040 to 0.032 and over all horizons
-#' from 0.0687 to 0.0639; the observed jump-off of the last year alone gave
-#' 0.0583, so for these data with large counts the last year is the better
-#' anchor. On the ONS deprivation data (h = 5), where the last observed
-#' rates of the quintiles are noisier, anchoring Li-Lee to 3 years improved
-#' the CRPS slightly (0.0654 against 0.0666), while the observed jump-off of
-#' one year made it worse (0.0709).
+#' Anchoring helps where the fitted rates of the last year are far from the
+#' observed level. With large counts the last observed year is a good
+#' anchor; where the last observed rates are noisy, several years are
+#' better. Where the model's own jump-off is already close to the observed
+#' level, anchoring changes little and can narrow the intervals of the
+#' first years too much. The vignette "Where a forecast starts: the
+#' jump-off" shows the effect in a backtest.
 #'
 #' @param spec A model specification.
 #' @param to `"observed"` or `"smoothed"`.
@@ -74,11 +72,8 @@ mt_fit.mt_spec_anchored <- function(spec, data, prep = NULL, cores = 1, ...) {
   fit <- mt_fit(p$base, data, prep = prep, cores = cores, ...)
   D <- if (p$to == "observed") fit$raw_D %||% fit$train_D else fit$train_D
   offset_of <- function(f) anchor_offsets(f, D, fit$train_E, p$years, p$shrink)
-  fit$anchor <- list(offset = offset_of(fit),
-                     components = if (!is.null(fit$components)) lapply(fit$components, offset_of))
-  fit$spec <- spec
-  class(fit) <- c("mt_fit_anchored", class(fit))
-  fit
+  wrap_fit(fit, spec, "mt_fit_anchored", list(anchor = list(
+    offset = offset_of(fit), components = if (!is.null(fit$components)) lapply(fit$components, offset_of))))
 }
 
 # Log ratio of observed to fitted deaths over the last `years` years per age
@@ -120,8 +115,10 @@ mt_forecast.mt_fit_anchored <- function(fit, h = 10, to = NULL, n_draws = 500, s
     offs <- fit$anchor$components
     for (s in targets) {
       if (!is.null(offs) && !is.null(comp)) {
-        for (k in unique(comp)) {
-          j <- which(comp == k)
+        # one component per draw, or per stratum and draw after reordering (reconciled())
+        cs <- if (is.matrix(comp)) comp[s, ] else comp
+        for (k in unique(cs)) {
+          j <- which(cs == k)
           arr[, , s, j] <- arr[, , s, j] * as.vector(exp(outer(offs[[k]][, s], w)))
         }
       } else {

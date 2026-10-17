@@ -29,7 +29,8 @@ set (with \code{\link[=mt_set_grid]{mt_set_grid()}} or \code{step_grid()}) and i
 otherwise single years of age from the lowest age to the start of the
 open interval.}
 
-\item{dims}{1 or 2.}
+\item{dims}{1 or 2 (for \code{method = "pclm"}; \code{"gam"} is always 2D, the
+other methods 1D).}
 
 \item{method}{Method for deaths: \code{"pclm"} (default); \code{"monotone"}
 (cumulative deaths interpolated by a monotone Hyman spline, counts only,
@@ -39,13 +40,9 @@ group rates with a Kannisto tail for the open interval),
 \code{"natural_gompertz"} (natural spline with a log-linear tail) and \code{"gam"}
 (2D tensor-product GAM of log group rates over age and year with a
 Kannisto tail, package mgcv). All three preserve the exposure-weighted
-group rates exactly. Median absolute log errors against single-year
-rates (England & Wales men 1980-2011, 5-year groups to 90-100; and the
-simulated \code{\link[=mt_example]{mt_example()}} with deaths to 90+): PCLM 0.015/0.024 and
-0.012/0.006 (ages 30-89/90+), \code{"hyman_kannisto"} 0.015/0.029 and
-0.013/0.028, \code{"natural_gompertz"} 0.015/0.027 and 0.013/0.030, \code{"gam"}
-0.015/0.031 and 0.012/0.031. PCLM is the most accurate in the open
-interval; the spline methods are 5 to 10 times faster.}
+group rates exactly. The vignette "Ungrouping age groups: methods and
+diagnostics" compares the methods on data with known single years;
+\code{\link[=mt_plot_ungroup]{mt_plot_ungroup()}} and \code{\link[=mt_ungroup_check]{mt_ungroup_check()}} check a result.}
 
 \item{exposure_method}{\code{"pclm"} or \code{"monotone"}.}
 
@@ -101,7 +98,11 @@ smooth age-period surface per stratum (two smoothing parameters).
 
 With \code{preserve_totals = TRUE}, the estimated deaths within each observed
 group are rescaled to the observed total, so aggregation reproduces the
-data exactly. Cells already observed at grid resolution are kept.
+data exactly. Cells already observed at grid resolution are kept. When
+deaths are ungrouped as rates and the grid starts with age 0 as its own
+interval, an observed first year of life is kept and left out of the fit,
+as in \code{\link[=mt_smooth]{mt_smooth()}}: infant mortality does not follow the age pattern of
+the following ages, and its peak would spill into ages 1-6.
 
 In backtests use \code{step_ungroup()} so that ungrouping, in particular in 2D,
 sees only the training window.
@@ -119,4 +120,7 @@ and penalized likelihood. \emph{Statistical Modelling} 7(3): 239-254.
 Rizzi S, Gampe J, Eilers PHC (2015). Efficient estimation of smooth
 distributions from coarsely grouped data. \emph{American Journal of
 Epidemiology} 182(2): 138-147. \doi{10.1093/aje/kwv020}
+}
+\seealso{
+\code{\link[=mt_plot_ungroup]{mt_plot_ungroup()}} and \code{\link[=mt_ungroup_check]{mt_ungroup_check()}} for diagnostics.
 }

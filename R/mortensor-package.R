@@ -23,7 +23,7 @@
 #'   [reconciled()] make forecasts add up draw by draw, [mt_order_strata()]
 #'   imposes orderings.
 #' * **Wrappers for any model**: [ensemble()], [reconciled()],
-#'   [calibrated()] (spread fitted to recent forecast errors), [anchored()]
+#'   [recalibrated()] (spread fitted to recent forecast errors), [anchored()]
 #'   (jump-off at the observed level), [bootstrapped()] and [tuned()].
 #' * **Evaluation**: [mt_backtest()] and [mt_score()], for rates, life
 #'   expectancy and age-standardised rates.
@@ -63,6 +63,7 @@ utils::globalVariables(c(
   "group", "mode", "time", "cell", "n_members", "symbol", "raw", "age_group", "cause_label", "idx",
   "group_", "new_", "n_", "first_", "members", "n", "s", ".value", "nxt", "u", "g", "n_lev", "sum_all", "var",
   "age_i", "effect", "q0.05", "q0.95", "residual", "p_positive", "ages", "panel", "age_f", "panel2", "col", "row",
+  "band", "ref", "noise", "density",
   "comparison", "xvar", "fvar", "max_residual", "q0.025", "q0.975", "forecast", "fitted", "prep", "V1",
-  "unit"
+  "unit", "loss", "selected", "se", "method", "col", "setting", "score", "part", "from", "to"
 ))

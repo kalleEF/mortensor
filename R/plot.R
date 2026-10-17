@@ -22,8 +22,6 @@
 #'   forecast (observed from `data` if given, otherwise from the training
 #'   data), with one panel per level of `facet` if given;
 #' * `mt_plot_rates()`: Lexis surface (age by period) of observed log rates;
-#' * `mt_plot_ungroup()`: grouped rates as steps and ungrouped single-year
-#'   rates for one period;
 #' * `mt_plot_coverage()`: empirical interval coverage by horizon from a
 #'   backtest, with the nominal levels.
 #'
@@ -41,8 +39,6 @@
 #'   (`log(death rate)`) instead of rates on a logarithmic axis.
 #' @param facet Stratum variable whose levels get one panel each (for
 #'   example `"sex"`), or `NULL`.
-#' @param ungrouped The [mt_ungroup()] result for `data`.
-#' @param period Year shown.
 #' @param backtest An [mt_backtest()] result.
 #' @return A ggplot object.
 #' @examples
@@ -188,21 +184,27 @@ mt_plot_age <- function(draws, periods = NULL, strata = NULL, levels = 0.95, col
   periods <- periods %||% max(draws$periods)
   strata <- check_strata_labels(strata %||% draws$strata$label, draws$strata$label)
   lay <- plot_layout(draws$strata, strata, colour)
-  probs <- c((1 - levels) / 2, 0.5, 1 - (1 - levels) / 2)
+  probs <- sort(unique(c((1 - levels) / 2, 0.5, 1 - (1 - levels) / 2)))
   s <- mt_summarise(draws, probs)[period %in% periods & label %in% strata]
-  names(s)[names(s) %in% qnames(probs)] <- c("lo", "med", "hi")
   s <- merge(s, lay$map, by = "label", sort = FALSE)
   s[, panel2 := if (lay$has_panel) paste(panel, period) else as.character(period)]
   tr <- if (log_values) log else identity
-  p <- ggplot2::ggplot(s, ggplot2::aes(x = age_lo, group = label)) +
-    ggplot2::geom_ribbon(ggplot2::aes(ymin = tr(lo), ymax = tr(hi), fill = col), alpha = 0.2) +
-    ggplot2::geom_line(ggplot2::aes(y = tr(med), colour = col), linewidth = 0.8)
+  p <- ggplot2::ggplot(s, ggplot2::aes(x = age_lo, group = label))
+  # one ribbon per level, the widest first
+  for (lv in sort(levels, decreasing = TRUE)) {
+    lo <- qnames((1 - lv) / 2)
+    hi <- qnames(1 - (1 - lv) / 2)
+    p <- p + ggplot2::geom_ribbon(ggplot2::aes(ymin = tr(.data[[lo]]), ymax = tr(.data[[hi]]), fill = col),
+                                  alpha = 0.2 / length(levels))
+  }
+  p <- p + ggplot2::geom_line(ggplot2::aes(y = tr(q0.5), colour = col), linewidth = 0.8)
   if (length(unique(s$panel2)) > 1) p <- p + ggplot2::facet_wrap(ggplot2::vars(panel2))
   if (!log_values) p <- p + ggplot2::scale_y_log10()
   p + plot_colours(lay) +
     ggplot2::labs(x = "Age", y = if (log_values) "log(death rate)" else "Death rate (log scale)",
                   colour = lay$name, fill = lay$name, title = draws$model,
-                  subtitle = sprintf("Forecast median and %s interval, %s", paste0(levels * 100, "%"),
+                  subtitle = sprintf("Forecast median and %s interval%s, %s",
+                                     paste0(levels * 100, "%", collapse = " and "), if (length(levels) > 1) "s" else "",
                                      paste(periods, collapse = ", "))) +
     theme_mortensor(legend = "right")
 }
@@ -270,35 +272,6 @@ mt_plot_rates <- function(data, strata = NULL) {
     ggplot2::scale_fill_viridis_c() +
     ggplot2::labs(x = NULL, y = "Age", fill = "log rate") +
     theme_mortensor(legend = "right")
-}
-
-#' @rdname mt_plot
-#' @export
-mt_plot_ungroup <- function(data, ungrouped, period = NULL, strata = NULL) {
-  need_ggplot()
-  g <- mt_grid(ungrouped)
-  period <- period %||% max(g$period$lower)
-  D <- mt_obs(data, "deaths")[period_lo == period]
-  E <- mt_obs(ungrouped, "exposure")[period_lo == period]
-  D[, exposure := vapply(seq_len(.N), function(i) {
-    sum(E$value[E$stratum == D$stratum[i] & E$age_lo >= D$age_lo[i] & E$age_hi <= D$age_hi[i]])
-  }, 0)]
-  D[, `:=`(rate = value / exposure, x_hi = pmin(age_hi, max(g$age$lower) + 1))]
-  U <- mt_obs(ungrouped, "deaths")[period_lo == period]
-  U <- merge(U, E[, list(stratum, age_lo, exposure = value)], by = c("stratum", "age_lo"))
-  U[, `:=`(rate = value / exposure, x = age_lo + 0.5)]
-  if (!is.null(strata)) {
-    D <- D[label %in% strata]
-    U <- U[label %in% strata]
-  }
-  ggplot2::ggplot() +
-    ggplot2::geom_segment(data = D, ggplot2::aes(x = age_lo, xend = x_hi, y = rate, yend = rate), colour = "grey40") +
-    ggplot2::geom_line(data = U, ggplot2::aes(x = x, y = rate), colour = "firebrick") +
-    ggplot2::facet_wrap(~label) +
-    ggplot2::scale_y_log10() +
-    ggplot2::labs(x = "Age", y = "Death rate (log scale)",
-                  title = sprintf("Grouped (grey) and ungrouped (red) rates, %s", period)) +
-    theme_mortensor()
 }
 
 #' @rdname mt_plot
@@ -444,8 +417,10 @@ mt_plot_shares <- function(draws, var = NULL, total_level = NULL, ages = NULL, g
     ggplot2::geom_line(ggplot2::aes(linetype = kind), linewidth = 0.6) +
     ggplot2::geom_vline(xintercept = draws$origin + 0.5, linetype = "dotted", colour = "grey50") +
     ggplot2::facet_wrap(~ group) +
-    ggplot2::scale_linetype_manual(values = c(observed = "solid", forecast = "dashed")) +
-    scale_colour_mortensor(type = "categorical") + scale_fill_mortensor(type = "categorical") +
+    ggplot2::scale_linetype_manual(values = c(observed = "solid", forecast = "dashed"),
+                                   guide = ggplot2::guide_legend(order = 2)) +
+    scale_colour_mortensor(type = "categorical", guide = ggplot2::guide_legend(order = 1)) +
+    scale_fill_mortensor(type = "categorical", guide = ggplot2::guide_legend(order = 1)) +
     ggplot2::labs(x = NULL, y = "Share of deaths", colour = NULL, fill = NULL, linetype = NULL, title = draws$model,
                   subtitle = "Solid: observed; dashed: forecast median with 95% interval") +
     theme_mortensor()
@@ -454,7 +429,7 @@ mt_plot_shares <- function(draws, var = NULL, total_level = NULL, ages = NULL, g
 #' @rdname mt_plot_more
 #' @export
 mt_plot_scores <- function(backtest, metric = "crps", by = c("horizon", "age", "model"),
-                           target = c("rate", "life_expectancy", "asr")) {
+                           target = c("rate", "life_expectancy", "asr", "life_expectancy_gap", "asr_gap")) {
   need_ggplot()
   by <- match.arg(by)
   target <- match.arg(target)

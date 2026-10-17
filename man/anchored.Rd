@@ -63,15 +63,13 @@ draw is anchored with the offset of the component it comes from. For
 recomputed, so the draws stay coherent. \code{\link[=mt_jump_off]{mt_jump_off()}} reports the step
 between the last observed or fitted year and the first forecast year.
 
-In backtests on England & Wales men (origins 1996-2001, h = 10),
-anchoring Lee-Carter to the last 3 years (\code{decay = 10}) lowered the CRPS
-of the first two forecast years from 0.040 to 0.032 and over all horizons
-from 0.0687 to 0.0639; the observed jump-off of the last year alone gave
-0.0583, so for these data with large counts the last year is the better
-anchor. On the ONS deprivation data (h = 5), where the last observed
-rates of the quintiles are noisier, anchoring Li-Lee to 3 years improved
-the CRPS slightly (0.0654 against 0.0666), while the observed jump-off of
-one year made it worse (0.0709).
+Anchoring helps where the fitted rates of the last year are far from the
+observed level. With large counts the last observed year is a good
+anchor; where the last observed rates are noisy, several years are
+better. Where the model's own jump-off is already close to the observed
+level, anchoring changes little and can narrow the intervals of the
+first years too much. The vignette "Where a forecast starts: the
+jump-off" shows the effect in a backtest.
 }
 \examples{
 x <- mt_example(deaths = "single", years = 1995:2019)

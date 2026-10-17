@@ -4,7 +4,13 @@
 \alias{hyndman_ullah}
 \title{Functional demographic model of Hyndman and Ullah (demography)}
 \usage{
-hyndman_ullah(order = 6, method = "arima", ...)
+hyndman_ullah(
+  order = 6,
+  method = "arima",
+  smooth = TRUE,
+  smooth_args = list(),
+  ...
+)
 }
 \arguments{
 \item{order}{Number of principal components.}
@@ -12,18 +18,39 @@ hyndman_ullah(order = 6, method = "arima", ...)
 \item{method}{Forecast method for the coefficients (\code{"arima"}, \code{"ets"},
 \code{"rwdrift"}, ...), passed to \code{forecast()}.}
 
+\item{smooth}{Smooth the rates of each year over age before the
+decomposition.}
+
+\item{smooth_args}{List of arguments of \code{demography::smooth.demogdata()}
+(for example \code{list(k = 20)} or \code{list(method = "spline")}).}
+
 \item{...}{Further arguments of \code{demography::fdm()}.}
 }
 \value{
 A model specification.
 }
 \description{
-Wrapper around \code{demography::fdm()} (Hyndman and Ullah 2007): log death
-rates are smoothed over age and decomposed into principal components whose
-scores are forecast with ARIMA or ETS models. Draws are simulated with
-\code{demography}'s \code{simulate()} method for functional forecasts (uncertainty
-of the coefficients and model error); predictive draws add the
-extra-Poisson and Poisson variation as for other models of smooth rates.
+Wrapper around \code{demography::fdm()} (Hyndman and Ullah 2007): the rates of
+each year are smoothed over age with \code{demography::smooth.demogdata()}
+(\code{smooth = TRUE}, by default monotonic regression splines above age 65,
+weighted by the exposures), the log rates are decomposed into a mean
+function and principal components, and the scores are forecast with
+ARIMA or ETS models. Draws are simulated with \code{demography}'s \code{simulate()}
+method for functional forecasts (uncertainty of the coefficients and
+resampled model errors); predictive draws add the extra-Poisson and
+Poisson variation of the raw deaths as for other models of smooth rates.
+}
+\details{
+Without smoothing, the model errors that \code{simulate()} resamples contain
+the observation noise, which predictive draws then add a second time:
+keep \code{smooth = TRUE} unless the rates were smoothed in a preprocessing
+step. \code{smooth.demogdata()} works on single years of age; for age groups
+the smoothed values at the observed ages are used (a weaker smoothing).
+The smoothing settings (\code{smooth_args}, such as \code{k}, the number of knots)
+and the number of components can be chosen by forecast accuracy with
+\code{\link[=tuned]{tuned()}}. When the default monotonic spline cannot be fitted (for
+example for age ranges that start in middle age), the rates are smoothed
+without the monotonicity constraint and the fit diagnostics say so.
 }
 \examples{
 if (requireNamespace("demography", quietly = TRUE)) {

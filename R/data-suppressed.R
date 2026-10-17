@@ -32,8 +32,9 @@
 #' case is reported.
 #'
 #' @param data An [mt_data] object in which some death cells are missing
-#'   (cells that other strata have; suppressed values are left out when the
-#'   data are read).
+#'   (cells that other strata have and that no observed cell of the stratum
+#'   overlaps, so a stratum reported in other age groups is not filled;
+#'   suppressed values are left out when the data are read).
 #' @param hierarchy An [mt_hierarchy()] that describes the published totals
 #'   in the data, or `NULL` when there are none.
 #' @param lower,upper Bounds of the suppressed counts.
@@ -83,10 +84,17 @@ mt_fill_suppressed <- function(data, hierarchy = NULL, lower = 0, upper = Inf, m
   cells <- unique(D[, c("age_lo", "age_hi", "period_lo", "period_hi")])
   cells[, cell := seq_len(.N)]
   Dk <- merge(D, cells, by = c("age_lo", "age_hi", "period_lo", "period_hi"))
-  # a cell that some strata have and others lack is missing (suppressed) there
+  # a cell that some strata have and others lack is missing (suppressed)
+  # there, unless an observed cell of the stratum overlaps it: then the
+  # stratum reports these ages and periods at another resolution
   Y <- matrix(NA_real_, nrow(cells), ns)
   Y[cbind(Dk$cell, Dk$stratum)] <- Dk$value
-  if (!anyNA(Y)) {
+  ov <- D[cells, on = c("age_lo<age_hi", "age_hi>age_lo", "period_lo<period_hi", "period_hi>period_lo"),
+          list(cell, stratum), nomatch = NULL, allow.cartesian = TRUE]
+  other_res <- matrix(FALSE, nrow(cells), ns)
+  other_res[cbind(ov$cell, ov$stratum)] <- TRUE
+  other_res <- other_res & is.na(Y)
+  if (!any(is.na(Y) & !other_res)) {
     attr(data, "fill") <- data.table(filled = 0L, missing = 0L, inconsistent = 0L, iterations = 0L, max_gap = 0)
     return(data)
   }
@@ -110,15 +118,20 @@ mt_fill_suppressed <- function(data, hierarchy = NULL, lower = 0, upper = Inf, m
   agg <- which(!hs$is_bottom)
   clip <- function(v) pmin(pmax(v, lower), upper)
   members <- lapply(seq_along(agg), function(i) b[hs$S[agg[i], ] > 0])
-  miss_b <- is.na(Y[, b, drop = FALSE])
+  miss_b <- is.na(Y[, b, drop = FALSE]) & !other_res[, b, drop = FALSE]
   colnames(miss_b) <- b
+  # rows where the known total and the members can be compared (no member at another resolution)
+  usable <- function(i) {
+    which(!is.na(Y[, agg[i]]) & rowSums(miss_b[, as.character(members[[i]]), drop = FALSE]) > 0 &
+            rowSums(other_res[, members[[i]], drop = FALSE]) == 0)
+  }
   est <- Y
   est[, b][miss_b] <- start[, b][miss_b]
   inconsistent <- 0L
   # constraints with a known total and missing members, and the cells concerned
   cons <- lapply(seq_along(agg), function(i) {
     mk <- miss_b[, as.character(members[[i]]), drop = FALSE]
-    rows <- which(!is.na(Y[, agg[i]]) & rowSums(mk) > 0)
+    rows <- usable(i)
     if (!length(rows)) return(NULL)
     known <- rowSums(ifelse(mk[rows, , drop = FALSE], 0, Y[rows, members[[i]], drop = FALSE]), na.rm = TRUE)
     resid <- Y[rows, agg[i]] - known
@@ -163,19 +176,20 @@ mt_fill_suppressed <- function(data, hierarchy = NULL, lower = 0, upper = Inf, m
   # missing aggregates as sums of their parts
   for (i in seq_along(agg)) {
     a <- agg[i]
-    rows <- which(is.na(Y[, a]))
+    rows <- which(is.na(Y[, a]) & !other_res[, a])
     if (length(rows)) est[rows, a] <- rowSums(est[rows, members[[i]], drop = FALSE])
   }
   gap <- 0
   for (i in seq_along(agg)) {
     a <- agg[i]
-    rows <- which(!is.na(Y[, a]) & rowSums(miss_b[, as.character(members[[i]]), drop = FALSE]) > 0)
+    rows <- usable(i)
     if (length(rows)) {
       s <- rowSums(est[rows, members[[i]], drop = FALSE])
       gap <- max(gap, abs(s - Y[rows, a]) / pmax(Y[rows, a], 1))
     }
   }
   out <- CJ(cell = cells$cell, stratum = seq_len(ns))
+  out <- out[!other_res[cbind(cell, stratum)]]
   out <- merge(out, cells, by = "cell")
   out[, value := est[cbind(cell, stratum)]]
   out <- merge(out, Dk[, c("cell", "stratum", "provenance")], by = c("cell", "stratum"), all.x = TRUE)

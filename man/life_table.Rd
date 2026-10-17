@@ -50,7 +50,12 @@ Gompertz line to the log rates of the last \code{k} closed single-year ages and
 integrates it from the start of the open interval to age 130;
 \code{"kannisto"} does the same with the Kannisto model, a line for the logit
 of the rates, whose hazard levels off at old ages (Thatcher, Kannisto and
-Vaupel 1998).
+Vaupel 1998);
+\item a rate of 0 in the open interval (no deaths, as in small populations)
+would give an infinite life expectancy: the last positive rate of the
+closed intervals is used for the open interval instead (column \code{mx}
+keeps the given rate). Only a schedule without any positive rate gives
+an infinite value.
 }
 }
 \examples{

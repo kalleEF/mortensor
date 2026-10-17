@@ -43,11 +43,15 @@ work: `claude/vigilant-albattani-2ssw1x` (plays the role of `dev-0.2`).
 | D1.16 | done | this branch | Applied reviews (`dev/review-applied-1.md`, `-2.md`, two independent agents in the roles of an epidemiologist and a demographer without coding experience) implemented: renames (`ensemble()`, `reconciled()`, `tuned()`, `bootstrapped()`, `mt_order_strata()`, `mt_parameters()`), per-variable additivity of hierarchies (regions x causes), bounded `mt_fill_suppressed()`, inspection (`summary()`, `residuals()`, `mt_plot_residuals()`, R-hat), observed indicators (`mt_observed()`), `mt_contrast()`, `mt_inequality()`, exposures matched by names, `mt_relabel()`, `step_window()`, `as_demogdata()`, `as_stmomodata()`, backtest origins with complete horizons, Model reference and CSV-to-report vignettes, FAQ tables, reference index by analysis step |
 | D1.17 | done | this branch | Stress tests with simulated defective data (`dev/stress-tests.R`, `dev/stress-tests.md`, `tests/testthat/test-robustness.R`): 31 scenarios; every scenario ends in a correct result or a message naming the cause and remedy; Lee-Carter robust to zero-death age groups (ridge fallback), plausibility warning for forecasts, pooled level variance in `rwd(observation_noise = TRUE)` |
 | D1.18 | done | this branch | Function map (`vignettes/articles/function-map.Rmd`, Mermaid diagrams rendered by pkgdown via a header script and natively on GitHub; overview in the README) |
-| D1.19 | done | this branch | `calibrated()`: recalibration of the spread (and optionally the drift) of any model's draws on the last 10 training years by minimum CRPS or interval score, nested in backtests; works with ensembles (per-draw observation noise), reconciled (bottom level, coherent) and bootstrapped models; validation check `calibration_ew` |
+| D1.19 | done | this branch | `recalibrated()`: recalibration of the spread (and optionally the drift) of any model's draws on the last 10 training years by minimum CRPS or interval score, nested in backtests; works with ensembles (per-draw observation noise), reconciled (bottom level, coherent) and bootstrapped models; validation check `calibration_ew` |
 | V4 | done | this branch | Vignettes on deprivation quintiles (ONS) and on the effect of reconciliation methods (ONS sex x quintile with totals), precomputed; regional vignette extended with forecasts for every Land by reconciliation method |
 | U0 | done | this branch | Review of the owner's earlier UK analysis (`uk_analysis.R`, methodology document, plots) and integration plan `dev/integration-plan-uk-analysis.md`: plot layout as standard, jump-off control, reconciliation with a fixed total, diagnostics; list of elements not to port. Package labelled experimental and vibe-coded (README, DESCRIPTION, package help, startup message); documentation rule in `CLAUDE.md` |
 | Q1 | done | this branch | Decomposition as post-processing (`dev/decomposition-plan.md`): `mt_decompose()` for observed data, forecast draws or both (comparisons between strata, years or objects); symmetric Arriaga with cause split, Horiuchi line integral, stepwise replacement, Kitagawa (crude rate), subgroup composition at the radix (Riffe, Tursun-zade and Trias Llimós 2024) or pooled; `summary()`, `mt_plot_decomposition()`; tests against DemoDecomp, LEdecomp and Table 1 of Riffe et al.; validation check `decomposition`; article on ONS data |
 | Q2 | done | this branch | Applied reviews 3 and 4 (`dev/review-applied-3.md`, `-4.md`) implemented: totals among causes and groups refused in `mt_decompose()`, `composition` required for `groups`, `observed = "fitted"`/`"poisson"`, `jump_off`, `pairing`, `summary(change = )`, export; life table `q` capped by `1 - exp(-n m)`; `mt_reconcile(method = "proportional")` and warnings of non-negative projections; corrected shrinkage in `anchored()`; smoothed data warned in `mt_fit()` and refused in `mt_backtest()`; `prep` and `unit` in scores; period axes with gaps; vignettes on all-cause forecasts implied by causes, forecast decompositions and calibration without smoothing |
+| Q3 | done | this branch | Tuning and recalibration review (`dev/tuning.md`): `hyndman_ullah(smooth = TRUE)` (smooth.demogdata); `mt_tune()`/`tuned()` with preprocessing in the grid, hold-out, life expectancy and ASR targets, RMSE, standard errors, one-SE rule, `by` groups (`mt_fit_split`); wrappers around `tuned()` fixed (spec stack); `recalibrated()` by age band, on life expectancy or ASR, bootstrap intervals, drift held beyond the window; validation check `tuning_ew`; CI lint fix for lintr 3.4 |
+| Q4 | done | this branch | Vignette restructure (`dev/vignette-plan.md`): one concept per vignette (smoothing, jump-off, backtesting, tuning and calibration, coherence, ungrouping with diagnostics), "Choosing and combining models", applied pipelines for England (inequality, causes) and the German Laender with every step chosen in a backtest; `coherent_fdm()` (demography product-ratio) with validation check `coherent_fdm_france`; `stratified()`; gap scores in backtests (`contrast`); `mt_score_table(hierarchy = )`; `mt_plot_ungroup()` types and `mt_ungroup_check()`; `mt_regroup(measures = )`; comparison helpers (`mt_compare()`, `mt_plot_compare()`, `mt_plot_contrast()`, ...); benchmark numbers moved from help pages to vignettes; fixes in StMoMo fitted values, life tables with missing rates, condition calls |
+| Q5 | done | this branch | Owner's decisions: `stanmomo()` (StanMoMo LC, RH, APC, CBD, M6; Poisson or NB; posterior draws of expected rates; convergence warnings) with validation check `stanmomo_ew`; `calibrated()` renamed `recalibrated()` (vignette "Tuning and recalibration"); `hyndman_ullah()` keeps smoothing by default |
+| Q6 | done | this branch | Review of the whole package (six reviewers, about 55 confirmed findings), fixed by area with regression tests (`tests/testthat/test-fix-*.R`): data adapters and suppression, ungrouping (age 0 kept out of the fit, group totals of spline methods), smoothing with missing cells, backtest floor after aggregation, quantity scores from deaths, ungrouped data refused in backtests, wrapper field stack (`reconciled(anchored())`), independent observation noise in reconciled draws, bottom-level exposures, per-stratum random number streams, `cause_shares()` predictive counts, observation noise for observed-rate models fitted to smoothed rates; documentation corrected; precomputed vignettes re-knitted |
 | U1 | done | this branch | Methods of the earlier UK analysis (plan 4.2-4.8): `mt_smooth(along = "period")` (Whittaker over time, GCV pooled per stratum), `mt_smooth(dims = 2, method = "gam")` (quasi-Poisson `te(age, year)`), `mt_smooth_check()`, `mt_plot_smooth()`; models fitted to smoothed rates take residuals, observation noise, MASE scale and copula from the raw deaths (`fit$raw_D`); `anchored()` and `mt_jump_off()`; `fixed` nodes in `mt_reconcile()`/`reconciled()` with non-negative projection, `mt_coherence()`, `mt_plot_coherence()`; `mt_backtest(quantities = )` and `mt_score(target = )` for life expectancy and ASR, `mt_plot_scores(by = "model")`; `lee_carter(adjust = , choose_period = )` (demography's `lca` adjustments and BMS period); `ensemble(top_k = )`; `mt_tune(strategy = "two_stage")`; tail options and diagnostics of disaggregation (`mt_shape_rates()`, `mt_disaggregate_check()`, `mt_plot_disaggregation()`); validation check `smoothing_jumpoff`; vignettes updated (HMD, deprivation, coherence, causes) |
 | V3 | done | this branch | Comparison vignette (fidelity and accuracy vs demography, bamp, StMoMo; stored results of `dev/compare-packages.R`, full run 2026-10-13); regional vignette on German Laender (precomputed); validation check `de_regions` |
 | D1.12 (HMD) | done | this branch | `mt_from_hmd()`, `mt_read_hmd()` (HMDHFDplus, credentials from `HMD_USER`/`HMD_PASSWORD`) |
@@ -136,7 +140,7 @@ work: `claude/vigilant-albattani-2ssw1x` (plays the role of `dev-0.2`).
   0.95/0.95. Defaults: WLS, copula for per-stratum models, none for joint
   models.
 
-- 2026-10-13: `calibrated()` in backtests (CRPS, 95% coverage). England &
+- 2026-10-13: `recalibrated()` in backtests (CRPS, 95% coverage). England &
   Wales men, origins 1996-2001, h = 10: Lee-Carter 0.0687/0.746, calibrated
   0.0657/0.877 (with drift 0.0653/0.877; interval target 0.0661/0.856);
   rwd() 0.0586/0.967, calibrated 0.0565/0.822; ensemble of both
@@ -163,7 +167,7 @@ work: `claude/vigilant-albattani-2ssw1x` (plays the role of `dev-0.2`).
   calibration 0.0646/0.914; ensemble smoothed over time and calibrated
   0.0562/0.917. Smoothing over time alone narrows the intervals of models
   with a period index (its random walk is fitted to a smoother series), so
-  smoothing is combined with `calibrated()`. ONS quintiles (origins
+  smoothing is combined with `recalibrated()`. ONS quintiles (origins
   2008-2014, h = 5): Li-Lee 0.0666/0.847, smoothed over time 0.0669/0.774;
   life expectancy at birth 0.336/0.81 against 0.348/0.61 years. The ONS
   rates vary around the smoothed trend no more than Poisson noise
@@ -202,6 +206,23 @@ work: `claude/vigilant-albattani-2ssw1x` (plays the role of `dev-0.2`).
   bottom-up give female Q1 e50 30.8 in 2034 against 31.7 observed in 2019;
   all-cause Lee-Carter 32.9 and Li-Lee 34.3 (cause forecasts more
   pessimistic, as in Wilmoth 1995).
+
+- 2026-10-17: Function map. On the website the diagrams were scaled down
+  to unreadable text (map 2 1812 px wide, README 1905 px, column 776 px)
+  and their last lines were clipped (Bootstrap `p` margin inside mermaid
+  HTML labels). Diagrams redrawn top-down within 776 px (map 2 853 px),
+  CSS reset in `_pkgdown.yml`; map 1 no longer sends `mt_smooth()` output
+  to models, `mt_prep()` points to `mt_fit()`. Checked by rendering the
+  built pages in Chromium with mermaid 10.9.1.
+
+- 2026-10-17: Tuning benchmark (`dev/tuning-benchmark.R`, `dev/tuning.md`).
+  Lee-Carter with its fitting window tuned by a 10-year hold-out: E&W CRPS
+  0.0573 against 0.0687, e30 0.29 against 0.47 years (window 15 at every
+  origin). fdm tuned over components and knots by the same hold-out: no
+  gain (E&W 0.0657 against 0.0641; France 0.104 against 0.096), choices
+  alternate between origins. Smoothing fdm narrows its intervals (95%
+  coverage 0.63 against 0.70). Tuned and calibrated fdm: 95% coverage
+  0.90/0.91 (rates), 0.87/0.80 (life expectancy).
 
 ## Open questions
 

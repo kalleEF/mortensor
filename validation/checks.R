@@ -88,7 +88,7 @@ checks$backtest_ew <- list(
 
 checks$calibration_ew <- list(
   suite = "quick",
-  description = paste("calibrated() on England & Wales men (as backtest_ew: origins 1996-2001, h = 10): Lee-Carter",
+  description = paste("recalibrated() on England & Wales men (as backtest_ew: origins 1996-2001, h = 10): Lee-Carter",
                       "with its spread recalibrated on the last 10 training years at each origin, against",
                       "Lee-Carter alone; CRPS, coverage and the ratio of the CRPS."),
   run = function() {
@@ -97,17 +97,42 @@ checks$calibration_ew <- list(
     ew <- mt_regroup(ew, age = single_ages(30, 100, open = FALSE))
     o <- 1996:2001
     lc <- mt_backtest(lee_carter(), ew, origins = o, h = 10, n_draws = 200)
-    cl <- mt_backtest(calibrated(lee_carter()), ew, origins = o, h = 10, n_draws = 200)
+    cl <- mt_backtest(recalibrated(lee_carter()), ew, origins = o, h = 10, n_draws = 200)
     data.frame(metric = c("lc_crps", "lc_cov95", "cal_crps", "cal_cov80", "cal_cov95", "crps_ratio_cal_lc"),
                value = c(mean(lc$crps), mean(lc$cov95), mean(cl$crps), mean(cl$cov80), mean(cl$cov95),
                          mean(cl$crps) / mean(lc$crps)))
+  })
+
+checks$tuning_ew <- list(
+  suite = "full",
+  description = paste("Tuning and recalibration on England & Wales men (as backtest_ew: origins 1996-2001, h = 10):",
+                      "hyndman_ullah() with 6 components against the number of components and the knots of the",
+                      "smoother chosen at each origin by a hold-out of the last 10 training years (RMSE, tuned()),",
+                      "and the tuned model calibrated (recalibrated(tuned())); CRPS, RMSE of the median and 95%",
+                      "coverage of the log rates."),
+  run = function() {
+    ew <- as_mt_data(mortensor:::pkg_data("EWMaleData", "StMoMo"))
+    ew <- mt_set_grid(ew, age = single_ages(30, 100, open = FALSE))
+    ew <- mt_regroup(ew, age = single_ages(30, 100, open = FALSE))
+    o <- 1996:2001
+    g <- expand.grid(k = c(10, 30), order = c(1, 2, 3, 6))[, c("order", "k")]
+    tu <- tuned(function(order, k) hyndman_ullah(order = order, smooth_args = list(k = k)), g, inner_origins = 1,
+                inner_h = 10, metric = "rmse", label = "tuned (hold-out)")
+    b0 <- mt_backtest(hyndman_ullah(), ew, origins = o, h = 10, n_draws = 200)
+    b1 <- mt_backtest(tu, ew, origins = o, h = 10, n_draws = 200)
+    b2 <- mt_backtest(recalibrated(tu), ew, origins = o, h = 10, n_draws = 200)
+    rmse <- function(b) sqrt(mean(b$ae^2))
+    data.frame(metric = c("fdm_crps", "fdm_rmse", "fdm_cov95", "tuned_crps", "tuned_rmse", "tuned_cov95",
+                          "tuned_cal_crps", "tuned_cal_cov95", "rmse_ratio_tuned_fdm"),
+               value = c(mean(b0$crps), rmse(b0), mean(b0$cov95), mean(b1$crps), rmse(b1), mean(b1$cov95),
+                         mean(b2$crps), mean(b2$cov95), rmse(b1) / rmse(b0)))
   })
 
 checks$smoothing_jumpoff <- list(
   suite = "quick",
   description = paste("Smoothing over time and jump-off control. England & Wales men (as backtest_ew, origins",
                       "1996-2001, h = 10): Lee-Carter fitted to rates smoothed by the age-period GAM, with and",
-                      "without calibrated() (smoothing alone narrows the intervals, because the period index is",
+                      "without recalibrated() (smoothing alone narrows the intervals, because the period index is",
                       "smooth); Lee-Carter anchored to the observed deaths of the last 3 years. ONS quintiles",
                       "(origins 2008-2014, h = 5): Li-Lee with and without anchoring."),
   run = function() {
@@ -118,7 +143,7 @@ checks$smoothing_jumpoff <- list(
     gam2d <- mt_prep(step_smooth(dims = 2, method = "gam"))
     lc <- mt_backtest(lee_carter(), ew, origins = o, h = 10, n_draws = 200)
     sm <- mt_backtest(lee_carter(), ew, origins = o, h = 10, n_draws = 200, prep = gam2d)
-    smc <- mt_backtest(calibrated(lee_carter()), ew, origins = o, h = 10, n_draws = 200, prep = gam2d)
+    smc <- mt_backtest(recalibrated(lee_carter()), ew, origins = o, h = 10, n_draws = 200, prep = gam2d)
     an <- mt_backtest(anchored(lee_carter(), years = 3, decay = 10), ew, origins = o, h = 10, n_draws = 200)
     x <- ons_quintiles()
     ll <- mt_backtest(li_lee(common_by = "sex"), x, origins = 2008:2014, h = 5, n_draws = 200)
@@ -158,6 +183,54 @@ checks$coverage_fdm <- list(
   suite = "full",
   description = "As coverage_lee_carter for hyndman_ullah() (functional demographic model, demography).",
   run = function() coverage_check(hyndman_ullah(order = 3), 10))
+
+checks$coherent_fdm_france <- list(
+  suite = "full",
+  description = paste("coherent_fdm() against hyndman_ullah() per sex on French women and men (HMD via demography),",
+                      "ages 30-99, 1950-2006: backtest from 1986, 1991 and 1996 (h = 10), and the female/male rate",
+                      "ratio at age 70 after 50 years relative to the last observed ratio (median over draws)."),
+  run = function() {
+    fr <- suppressWarnings(as_mt_data(mortensor:::pkg_data("fr.mort", "demography"), series = c("female", "male"),
+                                      years = 1950:2006))
+    fr <- mt_regroup(fr, age = 30:100)
+    fr <- mt_subset(fr, ages = c(30, 100))
+    org <- c(1986, 1991, 1996)
+    cf <- mt_backtest(coherent_fdm(order1 = 3, order2 = 2), fr, origins = org, h = 10, n_draws = 200)
+    sep <- mt_backtest(hyndman_ullah(order = 3), fr, origins = org, h = 10, n_draws = 200)
+    fc <- mt_forecast(mt_fit(coherent_fdm(order1 = 3, order2 = 2), fr), h = 50, n_draws = 200, seed = 1)
+    a70 <- which(fc$age$lower == 70)
+    ratio_end <- stats::median(fc$rates[a70, 50, "female", ] / fc$rates[a70, 50, "male", ])
+    ratio_obs <- mean(fc$observed[a70, 53:57, "female"] / fc$observed[a70, 53:57, "male"])
+    data.frame(metric = c("crps", "cov95", "crps_ratio_separate", "ratio_drift"),
+               value = c(mean(cf$crps), mean(cf$cov95), mean(cf$crps) / mean(sep$crps),
+                         abs(log(ratio_end / ratio_obs))))
+  })
+
+checks$stanmomo_ew <- list(
+  suite = "full",
+  description = paste("stanmomo() (StanMoMo, 4 chains of 2000 iterations) against lee_carter() on England & Wales men",
+                      "(HMD via StMoMo), single ages 55-89, 1971-2011: backtest from 1991, 1996 and 2001 (h = 10)",
+                      "of the Bayesian Lee-Carter and Renshaw-Haberman models; CRPS, 95% coverage, CRPS relative to",
+                      "lee_carter(), and the largest R-hat of the fits."),
+  run = function() {
+    ew <- as_mt_data(mortensor:::pkg_data("EWMaleData", "StMoMo"))
+    ew <- mt_regroup(mt_set_grid(ew, age = single_ages(55, 90, open = FALSE)), age = single_ages(55, 90, open = FALSE))
+    ew <- mt_subset(ew, periods = c(1971, 2011))
+    org <- c(1991, 1996, 2001)
+    set.seed(1)
+    bt <- mt_compare(list(lc = lee_carter(), stan_lc = stanmomo("lc", h_max = 10, cores = 4),
+                          stan_rh = stanmomo("rh", h_max = 10, cores = 4)), ew, origins = org, h = 10, n_draws = 300)
+    s <- mt_score(bt)
+    rhat <- vapply(c("lc", "rh"), function(m) {
+      f <- suppressWarnings(mt_fit(stanmomo(m, h_max = 10, cores = 4), ew))
+      f$fits[[1]]$rhat
+    }, 0)
+    crps <- function(m) s[model == m, crps]
+    data.frame(metric = c("stan_lc_crps", "stan_lc_cov95", "stan_lc_crps_ratio", "stan_rh_crps", "stan_rh_cov95",
+                          "rhat_lc", "rhat_rh"),
+               value = c(crps("stan_lc"), s[model == "stan_lc", cov95], crps("stan_lc") / crps("lc"),
+                         crps("stan_rh"), s[model == "stan_rh", cov95], rhat[["lc"]], rhat[["rh"]]))
+  })
 
 checks$cause_shares_coherence <- list(
   suite = "quick",

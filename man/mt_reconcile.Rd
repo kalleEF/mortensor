@@ -25,17 +25,15 @@ mt_reconcile(
 \code{total}).}
 
 \item{method}{\code{"wls"} (default), \code{"mint"}, \code{"structural"}, \code{"ols"},
-\code{"bottom_up"} or \code{"proportional"} (with \code{fixed}). In a backtest on \code{\link[=mt_example_regions]{mt_example_regions()}} (Lee-Carter per
-stratum, 90 strata) WLS and structural scaling kept 95\% coverage of
-bottom and aggregate strata at 0.95-0.98 and improved the bottom-level
-CRPS; MinT with the draw covariance under-covered aggregates (0.88).}
+\code{"bottom_up"} or \code{"proportional"} (with \code{fixed}). The vignette
+"Coherent forecasts: totals and their parts" compares them.}
 
 \item{shrink}{Shrinkage intensity for \code{"mint"} (number between 0 and 1),
 or \code{"auto"}.}
 
 \item{exposure}{Exposures \verb{[age, period, stratum]} or \verb{[age, stratum]} for
 the forecast years (default: last training year). Only bottom strata are
-used; aggregates are summed.}
+used, and they are enough; aggregates are summed.}
 
 \item{dependence}{\code{"empirical"} or \code{"none"} (keep the draws as they are).}
 
@@ -108,7 +106,11 @@ training year, and the stratum whose average year-to-year change of log
 rates was relatively large in that year receives a relatively high path.
 The marginal distribution of each stratum is unchanged.
 
-The one-variable interface with \code{var} and \code{total} is still accepted.
+The one-variable interface with \code{var} and \code{total} is still accepted. It
+reconciles deaths when the exposures of the parts add up to that of the
+total (sexes, regions) and rates when each part has the exposure of the
+total (causes of death) or there are no exposures; give a hierarchy with
+\code{additive} to choose.
 }
 \examples{
 x <- mt_example_regions(years = 2005:2019, regions = 3)

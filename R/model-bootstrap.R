@@ -49,22 +49,22 @@ mt_fit.mt_spec_bootstrap <- function(spec, data, prep = NULL, cores = 1, ...) {
   }))
   fits <- Filter(Negate(is.null), fits)
   if (!length(fits)) mt_abort("Every bootstrap refit failed.", class = "model_fit")
-  base$boot <- fits
-  base$spec <- spec
   base$diagnostics <- rbind(base$diagnostics,
                             data.table(stratum = "all", status = "ok",
                                        message = sprintf("%d of %d bootstrap refits succeeded", length(fits),
                                                          p$n_boot), seconds = NA_real_), fill = TRUE)
-  class(base) <- c("mt_fit_bootstrap", class(base))
-  base
+  # the fitted base spec goes on the stack of inner specs (mt_parameters(),
+  # observation noise), as for the other wrappers
+  wrap_fit(base, spec, "mt_fit_bootstrap", list(boot = fits))
 }
 
 resample_grid <- function(fit) {
   m <- fit$observed
   if (isTRUE(fit$spec$smooth)) {
-    f <- if (fit$spec$joint) fit$fits$fitted else NULL
+    # fitted rates of any fit (ensembles: weighted geometric mean of the components)
+    f <- tryCatch(stats::fitted(fit), error = function(e) NULL)
     for (s in seq_len(dim(m)[3])) {
-      fs <- if (fit$spec$joint) f[, , s] else fit$fits[[s]]$fitted
+      fs <- if (identical(dim(f), dim(m))) f[, , s]
       if (!is.null(fs) && !anyNA(fs)) m[, , s] <- fs
     }
   }

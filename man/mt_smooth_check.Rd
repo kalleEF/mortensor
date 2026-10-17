@@ -7,7 +7,15 @@
 \usage{
 mt_smooth_check(data, smoothed)
 
-mt_plot_smooth(data, smoothed, ages = NULL, strata = NULL, colour = NULL)
+mt_plot_smooth(
+  data,
+  smoothed,
+  ages = NULL,
+  strata = NULL,
+  colour = NULL,
+  along = c("period", "age"),
+  periods = NULL
+)
 }
 \arguments{
 \item{data}{The \link{mt_data} object before smoothing.}
@@ -19,6 +27,11 @@ mt_plot_smooth(data, smoothed, ages = NULL, strata = NULL, colour = NULL)
 \item{strata}{Stratum labels to show (default: all).}
 
 \item{colour}{Stratum variable that gives the colours.}
+
+\item{along}{\code{"period"} (rates over time, one panel per age) or \code{"age"}
+(rates over age, one panel per year in \code{periods}).}
+
+\item{periods}{Years shown with \code{along = "age"} (default: first and last).}
 }
 \value{
 \code{mt_smooth_check()}: a \code{data.table} with the stratum columns and
@@ -39,6 +52,10 @@ rates relative to that of the raw log rates (mean over ages); small
 values mean that smoothing removed most of the annual variation;
 \item \code{correlation}: correlation of raw and smoothed log rates.
 }
+
+The measures use the smoothed cells only (provenance \code{"smoothed"}), so
+ages left out of the smoothing (see \code{ages} in \code{\link[=mt_smooth]{mt_smooth()}}) do not
+dilute them.
 
 \code{mt_plot_smooth()} shows raw rates as points and smoothed rates as lines
 over time, one panel per age.

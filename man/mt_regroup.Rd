@@ -4,7 +4,7 @@
 \alias{mt_regroup}
 \title{Regroup data onto coarser age or period intervals}
 \usage{
-mt_regroup(data, age = NULL, period = NULL)
+mt_regroup(data, age = NULL, period = NULL, measures = NULL)
 }
 \arguments{
 \item{data}{An \link{mt_data} object.}
@@ -19,6 +19,12 @@ when the deaths of some years end with 85+ and others with 85-89 and
 
 \item{period}{Target period axis, numeric lower bounds or the name of a
 table; \code{NULL} keeps the periods.}
+
+\item{measures}{Tables to regroup (default: all). Regrouping only some
+tables, for example \code{measures = "deaths"}, keeps the other tables and
+the grid as they are: deaths in age groups with single-year exposures,
+as in many official tables, for example to check ungrouping against
+known single years.}
 }
 \value{
 An \code{mt_data} object.
@@ -36,4 +42,6 @@ data.
 x <- mt_example()
 mt_regroup(x, age = c(30, seq(40, 90, 10)))
 mt_regroup(x, age = "deaths")
+xs <- mt_example(deaths = "single")
+mt_regroup(xs, age = c(30, seq(40, 90, 10)), measures = "deaths")
 }

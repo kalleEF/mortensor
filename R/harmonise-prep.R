@@ -12,7 +12,7 @@
 #'   smoothed rates; residuals and observation noise refer to the raw
 #'   deaths. Smoothing over time (`along = "period"`, or `dims = 2`)
 #'   narrows the forecast intervals of models with a period index, so check
-#'   coverage in a backtest and consider [calibrated()];
+#'   coverage in a backtest and consider [recalibrated()];
 #' * `step_regroup(age, period)`: [mt_regroup()];
 #' * `step_grid(age, period)`: [mt_set_grid()];
 #' * `step_window(years)`: keeps the last `years` years of the training
@@ -23,7 +23,9 @@
 #'   example 2020-2022) are either replaced by log-linear interpolation of
 #'   the rates of the neighbouring periods (`"interpolate"`, deaths become
 #'   exposure times the interpolated rate) or removed (`"exclude"`, only at
-#'   the start or end of the data).
+#'   the start or end of the data). With `"interpolate"`, shock periods at
+#'   the start or end of the data, which have no neighbour on one side, are
+#'   removed, as in a backtest whose training window ends inside the shock.
 #'
 #' @param ... Steps, applied in order.
 #' @return An object of class `mt_prep`; `mt_prep_apply()` returns the
@@ -140,12 +142,21 @@ apply_shocks <- function(data, periods, action) {
     attr(out, "excluded_periods") <- yrs[hit]
     return(out)
   }
+  # shock periods at the start or end have no neighbour on one side: removed
+  edge <- hit & !(cumsum(!hit) > 0 & rev(cumsum(rev(!hit))) > 0)
+  if (all(hit)) mt_abort("All periods are shock periods; nothing is left to interpolate from.", class = "prep")
+  if (any(edge)) {
+    mt_inform(sprintf("Shock period(s) %s at the start or end of the data are removed, not interpolated.",
+                      paste(yrs[edge], collapse = ", ")))
+    keep <- yrs[!edge]
+    data <- mt_window(data, from = min(keep), to = max(keep))
+    out <- apply_shocks(data, periods, action)
+    attr(out, "excluded_periods") <- yrs[edge]
+    return(out)
+  }
   D <- mt_array(data, "deaths")
   E <- mt_array(data, "exposure")
   base <- which(!hit)
-  if (max(which(hit)) > max(base) || min(which(hit)) < min(base)) {
-    mt_abort("Shock periods at the start or end cannot be interpolated; use action = \"exclude\".", class = "prep")
-  }
   lr <- log(pmax(D, 0.5) / E)
   for (j in which(hit)) {
     lo <- max(base[base < j])

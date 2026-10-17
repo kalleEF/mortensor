@@ -61,7 +61,7 @@ Steps:
 smoothed rates; residuals and observation noise refer to the raw
 deaths. Smoothing over time (\code{along = "period"}, or \code{dims = 2})
 narrows the forecast intervals of models with a period index, so check
-coverage in a backtest and consider \code{\link[=calibrated]{calibrated()}};
+coverage in a backtest and consider \code{\link[=recalibrated]{recalibrated()}};
 \item \code{step_regroup(age, period)}: \code{\link[=mt_regroup]{mt_regroup()}};
 \item \code{step_grid(age, period)}: \code{\link[=mt_set_grid]{mt_set_grid()}};
 \item \code{step_window(years)}: keeps the last \code{years} years of the training
@@ -72,7 +72,9 @@ example after a change of trend; compare windows with \code{\link[=tuned]{tuned(
 example 2020-2022) are either replaced by log-linear interpolation of
 the rates of the neighbouring periods (\code{"interpolate"}, deaths become
 exposure times the interpolated rate) or removed (\code{"exclude"}, only at
-the start or end of the data).
+the start or end of the data). With \code{"interpolate"}, shock periods at
+the start or end of the data, which have no neighbour on one side, are
+removed, as in a backtest whose training window ends inside the shock.
 }
 }
 \examples{

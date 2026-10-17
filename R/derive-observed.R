@@ -144,8 +144,12 @@ quantity_paths <- function(x, quantity, ...) {
 #' @param x An [mt_draws] or [mt_data] object.
 #' @param var Ordered stratum variable (for example `"quintile"`).
 #' @param order Levels of `var` from rank 0 to rank 1 (default: their order
-#'   in the data). For deprivation, list the least deprived level first so
-#'   that a positive SII means higher values in more deprived groups.
+#'   in the data, without the total and the groups of a hierarchy stored in
+#'   `x` by [mt_aggregate_strata()], [reconciled()] or
+#'   `mt_group_levels(total = )`). For deprivation, list the least deprived
+#'   level first so that a positive SII means higher values in more deprived
+#'   groups. Levels not listed, such as the total of a hierarchy, are left
+#'   out.
 #' @inheritParams mt_contrast
 #' @return A `data.table` with the other stratum variables, `index` (`"sii"`
 #'   or `"rii"`), `period`, `mean` and quantiles.
@@ -161,12 +165,17 @@ quantity_paths <- function(x, quantity, ...) {
 mt_inequality <- function(x, var, order = NULL, quantity = c("asr", "life_expectancy", "prob_dying", "rate"),
                           probs = c(0.025, 0.5, 0.975), ...) {
   quantity <- match.arg(quantity)
+  h <- object_hierarchy(x)
   x <- as_draws(x)
   st <- x$strata
   if (!var %in% names(st)) mt_abort("`var` must be a stratum variable.", class = "argument")
-  order <- order %||% unique(st[[var]])
-  if (!setequal(order, unique(st[[var]]))) {
-    mt_abort(sprintf("`order` must list every level of `%s` once.", var), class = "argument")
+  if (is.null(order)) {
+    # totals and groups of a hierarchy are not levels of the gradient
+    hv <- if (!is.null(h)) h$vars[[var]]
+    order <- setdiff(unique(st[[var]]), c(hv$total, names(hv$groups)))
+  }
+  if (anyDuplicated(order) || !all(order %in% st[[var]]) || length(order) < 2) {
+    mt_abort(sprintf("`order` must list at least two levels of `%s`, each once.", var), class = "argument")
   }
   q <- quantity_paths(x, quantity, ...)
   # population weights per year: the exposures of each year for observed
@@ -182,7 +191,8 @@ mt_inequality <- function(x, var, order = NULL, quantity = c("asr", "life_expect
   key <- if (length(others)) do.call(paste, c(lapply(others, function(o) st[[o]]), sep = "\r")) else rep("", nrow(st))
   rows <- list()
   for (k in unique(key)) {
-    idx <- which(key == k)[order(match(st[[var]][key == k], order))]
+    sel <- which(key == k & st[[var]] %in% order)
+    idx <- sel[order(match(st[[var]][sel], order))]
     if (length(idx) < 2) next
     sii <- rii <- matrix(NA_real_, dim(q)[1], dim(q)[3])
     for (t in seq_len(dim(q)[1])) {

@@ -8,6 +8,80 @@ test_that("wrapped and multi-population models satisfy the contract", {
   for (m in c("apc", "cbd", "lc", "m6")) expect_mt_model(stmomo(m), n_draws = 10)
 })
 
+test_that("hyndman_ullah() smooths over age before the decomposition", {
+  skip_if_not_installed("demography")
+  skip_if_not_installed("forecast")
+  x <- mt_example(deaths = "single", years = 1995:2019)
+  fs <- mt_fit(hyndman_ullah(order = 3), x)
+  fr <- mt_fit(hyndman_ullah(order = 3, smooth = FALSE), x)
+  # smoothing removes year-to-year noise between adjacent ages
+  rough <- function(f) mean(abs(diff(f$fits[[1]]$fit$y$y[, 20], differences = 2)))
+  expect_lt(rough(fs), rough(fr))
+  expect_match(fr$spec$label, "unsmoothed")
+  # age groups keep their grid
+  xg <- mt_regroup(x, age = seq(min(mt_grid(x)$age$lower), 100, 5))
+  fg <- mt_fit(hyndman_ullah(order = 2, smooth_args = list(k = 10)), xg)
+  expect_identical(dim(fg$fits[[1]]$fitted), c(length(fg$age), 25L))
+  expect_true(all(is.finite(fg$fits[[1]]$fitted)))
+  expect_error(hyndman_ullah(smooth_args = 3), class = "mt_error_argument")
+})
+
+test_that("coherent_fdm() satisfies the contract and keeps strata together", {
+  skip_if_not_installed("demography")
+  skip_if_not_installed("forecast")
+  expect_mt_model(coherent_fdm(order1 = 2, order2 = 1), n_draws = 20)
+  x <- mt_example(deaths = "single", years = 1990:2019)
+  fit <- mt_fit(coherent_fdm(order1 = 2, order2 = 1), x)
+  expect_true(all(is.finite(stats::fitted(fit))))
+  fc <- mt_forecast(fit, h = 30, n_draws = 100, seed = 1)
+  a70 <- which(fc$age$lower == 70)
+  ratio <- stats::median(fc$rates[a70, 30, "female", ] / fc$rates[a70, 30, "male", ])
+  obs <- mean(fc$observed[a70, 26:30, "female"] / fc$observed[a70, 26:30, "male"])
+  expect_lt(abs(log(ratio / obs)), 0.2)
+  expect_match(model_assumptions(coherent_fdm()), "Product-ratio")
+  # groups of common_by and aggregates of a hierarchy
+  h <- mt_hierarchy(sex = "both")
+  xa <- mt_aggregate_strata(x, h)
+  fa <- mt_fit(coherent_fdm(order1 = 2, order2 = 1), xa)
+  expect_identical(fa$fits$groups[[1]]$pool, 1:2)
+  expect_error(mt_fit(coherent_fdm(common_by = "region"), x), class = "mt_error_model_fit")
+})
+
+test_that("StMoMo cohort models have fitted rates for clipped cohorts", {
+  skip_if_not_installed("StMoMo")
+  x <- mt_example(deaths = "single", years = 1990:2019)
+  x <- mt_regroup(mt_set_grid(x, age = single_ages(55, 90, open = FALSE)), age = single_ages(55, 90, open = FALSE))
+  fit <- mt_fit(stmomo("apc", clip = 3), x)
+  expect_true(anyNA(fit$fits[[1]]$fit$gc))
+  f <- stats::fitted(fit)
+  expect_false(anyNA(f))
+  e <- life_expectancy(f, fit$age)
+  expect_gt(min(e), 15)
+})
+
+test_that("stanmomo() satisfies the contract and reports convergence", {
+  skip_on_cran()
+  skip_if_not_installed("StanMoMo")
+  skip_if_not_installed("rstan")
+  x <- mt_example(deaths = "single", years = 2000:2019)
+  x <- mt_regroup(mt_set_grid(x, age = single_ages(60, 90, open = FALSE)), age = single_ages(60, 90, open = FALSE))
+  set.seed(1)
+  res <- suppressWarnings(expect_mt_model(stanmomo("lc", chains = 1, iter = 300, h_max = 5), data = x))
+  f <- res$fit$fits[[1]]
+  expect_true(is.finite(f$rhat))
+  # fitted rates are close to the observed rates
+  obs <- mt_array(x, "deaths")[, , 1] / mt_array(x, "exposure")[, , 1]
+  expect_lt(stats::median(abs(log(stats::fitted(res$fit)[, , 1] / obs))), 0.15)
+  expect_error(mt_forecast(res$fit, h = 6, n_draws = 10), class = "mt_error_argument")
+  # the cohort index of an APC fit reproduces the observed rates as well
+  set.seed(1)
+  fa <- suppressWarnings(mt_fit(stanmomo("apc", chains = 1, iter = 300, h_max = 3), mt_subset(x, sex == "female")))
+  expect_lt(stats::median(abs(log(stats::fitted(fa)[, , 1] / obs))), 0.15)
+  xg <- mt_example(years = 2000:2019)
+  fg <- tryCatch(mt_fit(stanmomo("apc", chains = 1, iter = 100), xg), error = function(e) e)
+  expect_true(inherits(fg, "mt_error_model_fit") || all(fg$diagnostics$status == "failed"))
+})
+
 test_that("StMoMo cohort models need single years of age", {
   skip_if_not_installed("StMoMo")
   x <- mortensor:::simulate_lc_dgp(n_t = 12)

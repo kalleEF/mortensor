@@ -31,8 +31,12 @@
 #' The period index follows a random walk with drift. Draws include the
 #' innovations and the uncertainty of the drift. With `bootstrap = TRUE` the
 #' parameters are re-estimated on `n_boot` Poisson resamples of the fitted
-#' deaths (semi-parametric bootstrap of Brouhns et al. 2005), which adds the
-#' uncertainty of `a` and `b`.
+#' deaths of the fitting period (semi-parametric bootstrap of Brouhns et al.
+#' 2005), which adds the uncertainty of `a` and `b`.
+#'
+#' Age groups without deaths in the fitting period get a constant rate (0.5
+#' deaths over the period) and no trend; with `adjust = "e0"` they enter the
+#' life tables at that rate.
 #'
 #' @param method `"poisson"` or `"svd"`.
 #' @param adjust Re-estimation of `k[t]` for `method = "svd"`: `"dt"`,
@@ -95,9 +99,10 @@ fit_model.mt_spec_lee_carter <- function(spec, D, E, ages, periods, ...) {
   if (sum(!zero) < 2) mt_abort("Fewer than two age groups with deaths.", class = "model_fit")
   fallback <- FALSE
   # Poisson estimates, or SVD estimates where the Poisson likelihood has no
-  # finite maximum (very sparse counts)
-  est_one <- function(D, E) {
-    if (p$method == "svd") return(lc_svd(D, E, adjust = p$adjust %||% "dt", ages = ages))
+  # finite maximum (very sparse counts). `fixed`: constant rates of the age
+  # groups left out of D (NA for the rows of D), for life tables over all ages
+  est_one <- function(D, E, fixed = NULL) {
+    if (p$method == "svd") return(lc_svd(D, E, adjust = p$adjust %||% "dt", ages = ages, fixed = fixed))
     tryCatch(lc_poisson(D, E), mt_error_model_fit = function(e) {
       fallback <<- TRUE
       tryCatch(lc_poisson(D, E, ridge = 1), mt_error_model_fit = function(e) lc_svd(D, E))
@@ -107,11 +112,13 @@ fit_model.mt_spec_lee_carter <- function(spec, D, E, ages, periods, ...) {
     if (!any(zero)) return(est_one(D, E))
     # age groups without any death: constant rate of 0.5 deaths over the
     # training years, no trend (the Poisson estimate would be minus infinity)
-    e <- est_one(D[!zero, , drop = FALSE], E[!zero, , drop = FALSE])
+    fixed <- rep(NA_real_, nrow(D))
+    fixed[zero] <- 0.5 / rowSums(E[zero, , drop = FALSE])
+    e <- est_one(D[!zero, , drop = FALSE], E[!zero, , drop = FALSE], fixed)
     a <- b <- numeric(nrow(D))
     a[!zero] <- e$a
     b[!zero] <- e$b
-    a[zero] <- log(0.5 / rowSums(E[zero, , drop = FALSE]))
+    a[zero] <- log(fixed[zero])
     e$a <- a
     e$b <- b
     e
@@ -119,8 +126,6 @@ fit_model.mt_spec_lee_carter <- function(spec, D, E, ages, periods, ...) {
   first <- 1L
   if (isTRUE(p$choose_period)) {
     first <- bms_start(D, E, est_one, p$min_years)
-    D_all <- D
-    E_all <- E
     D <- D[, first:ncol(D), drop = FALSE]
     E <- E[, first:ncol(E), drop = FALSE]
     zero <- rowSums(D) == 0
@@ -136,21 +141,20 @@ fit_model.mt_spec_lee_carter <- function(spec, D, E, ages, periods, ...) {
   }
   est$last_log_rate <- log_rates(D[, ncol(D)], E[, ncol(E)])
   est$fitted <- exp(est$a + outer(est$b, est$k))
-  if (first > 1L) {
-    # fitted rates only for the chosen period
-    est$fitted <- cbind(matrix(NA_real_, nrow(D), first - 1L), est$fitted)
-    est$first_year <- periods[first]
-    D <- D_all
-    E <- E_all
-  }
   est$jump_off <- p$jump_off
   if (isTRUE(p$bootstrap)) {
+    # resamples of the (chosen) fitting period
     fitted <- E * est$fitted
     est$boot <- lapply(seq_len(p$n_boot), function(i) {
       Db <- matrix(stats::rpois(length(fitted), fitted), nrow(fitted))
       tryCatch(fit_lc(Db, E), error = function(e) NULL)
     })
     est$boot <- Filter(Negate(is.null), est$boot)
+  }
+  if (first > 1L) {
+    # fitted rates only for the chosen period
+    est$fitted <- cbind(matrix(NA_real_, nrow(D), first - 1L), est$fitted)
+    est$first_year <- periods[first]
   }
   est
 }
@@ -186,7 +190,9 @@ lc_finish <- function(a, b, k) {
   list(a = a, b = b, k = k, dk = dk, drift = drift, sigma_k = sqrt(sum((dk - drift)^2) / max(length(dk) - 1, 1)))
 }
 
-lc_svd <- function(D, E, adjust = "dt", ages = NULL) {
+# `fixed`: for adjust = "e0" with rows of `ages` left out of D, their constant
+# rates (NA for the rows of D), so that life tables cover the whole age range
+lc_svd <- function(D, E, adjust = "dt", ages = NULL, fixed = NULL) {
   y <- log_rates(D, E)
   a <- rowMeans(y)
   s <- svd(y - a, nu = 1, nv = 1)
@@ -199,7 +205,13 @@ lc_svd <- function(D, E, adjust = "dt", ages = NULL) {
   # second stage: re-estimate k (Lee and Carter: total deaths; Booth et al.:
   # deaths by age; Lee and Miller: life expectancy)
   if (adjust == "e0" && is.null(ages)) adjust <- "dt"
-  if (adjust == "e0") e_obs <- life_expectancy(array(pmax(D, 0.5) / E, c(nrow(D), ncol(D), 1)), ages)[, 1]
+  all_ages <- function(m) {
+    if (is.null(fixed)) return(array(m, c(nrow(m), ncol(m), 1)))
+    out <- matrix(fixed, length(fixed), ncol(m))
+    out[is.na(fixed), ] <- m
+    array(out, c(nrow(out), ncol(out), 1))
+  }
+  if (adjust == "e0") e_obs <- life_expectancy(all_ages(pmax(D, 0.5) / E), ages)[, 1]
   for (t in seq_len(ncol(D))) {
     if (adjust == "none") break
     if (adjust == "dxt") {
@@ -216,14 +228,39 @@ lc_svd <- function(D, E, adjust = "dt", ages = NULL) {
     f <- if (adjust == "dt") {
       function(kt) sum(E[, t] * exp(a + b * kt)) - sum(D[, t])
     } else {
-      function(kt) life_expectancy(array(exp(a + b * kt), c(nrow(D), 1, 1)), ages)[1, 1] - e_obs[t]
+      function(kt) life_expectancy(all_ages(matrix(exp(a + b * kt))), ages)[1, 1] - e_obs[t]
     }
     rng <- k[t] + c(-1, 1) * (10 + 10 * abs(k[t]))
-    k[t] <- tryCatch(stats::uniroot(f, rng, extendInt = "yes", tol = 1e-10)$root, error = function(e) k[t])
+    # without a root in reach, total deaths keep the SVD index (with `b` of
+    # both signs the nearest root of total deaths can lie far off and makes
+    # the index erratic); life expectancy searches for the nearest root
+    k[t] <- tryCatch(stats::uniroot(f, rng, extendInt = "yes", tol = 1e-10)$root, error = function(e) {
+      if (adjust == "e0") nearest_root(f, k[t], 0.1 * (1 + abs(k[t]))) else k[t]
+    })
   }
   out <- lc_finish(a, b, k)
   out$method <- "svd"
   out
+}
+
+# Root of f nearest to x0, for f that is not monotone (life expectancy as a
+# function of k when b has both signs, with sparse counts): steps of growing
+# size in both directions until the sign changes; x0 if there is none
+nearest_root <- function(f, x0, step) {
+  f0 <- f(x0)
+  if (!is.finite(f0) || f0 == 0) return(x0)
+  prev <- c(x0, x0)
+  for (d in step * 2^(-4:12)) {
+    for (i in 1:2) {
+      x <- x0 + c(-1, 1)[i] * d
+      fx <- f(x)
+      if (is.finite(fx) && sign(fx) != sign(f0)) {
+        return(tryCatch(stats::uniroot(f, sort(c(prev[i], x)), tol = 1e-10)$root, error = function(e) x0))
+      }
+      prev[i] <- x
+    }
+  }
+  x0
 }
 
 lc_poisson <- function(D, E, init = NULL, maxit = 500, tol = 1e-8, ridge = 0) {

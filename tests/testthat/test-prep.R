@@ -20,7 +20,8 @@ test_that("step_shocks interpolates inside the data and excludes at the edges", 
   z <- mt_prep_apply(mt_prep(step_shocks(2007:2008, action = "exclude")), x)
   expect_equal(max(mt_grid(z)$period$lower), 2006)
   expect_error(mt_prep_apply(mt_prep(step_shocks(2005, action = "exclude")), x), class = "mt_error_prep")
-  expect_error(mt_prep_apply(mt_prep(step_shocks(2008)), x), class = "mt_error_prep")
+  # interpolation has no neighbour after the last year: the shock year is removed
+  expect_equal(max(mt_grid(mt_prep_apply(mt_prep(step_shocks(2008)), x))$period$lower), 2007)
   # the input object is not modified by reference
   expect_equal(unique(mt_obs(x)$provenance), "observed")
 })
