@@ -1,0 +1,21 @@
+flowchart TD
+  T["`**your tables**
+  deaths, populations`"]
+  D["`**mt_data**
+  any resolution, strata; prepared with mt_as_exposure(), mt_subset(), mt_regroup(), mt_validate(), ...`"]
+  S["`**model specification**
+  lee_carter(), li_lee(), rwd(), ensemble(), reconciled(), recalibrated(), ...`"]
+  F["`**mt_fit**`"]
+  P["`**mt_draws**
+  simulated future rates`"]
+  B["`**backtest scores**
+  mt_score()`"]
+  R["`**results**
+  life_expectancy(), asr(), mt_contrast(), mt_decompose(), plots, CSV`"]
+  T -- "mt_data()" --> D
+  D -- "mt_fit()" --> F
+  S --> F
+  F -- "mt_forecast()" --> P
+  D -- "mt_backtest()" --> B
+  P --> R
+  D -- "observed data" --> R

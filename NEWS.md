@@ -117,6 +117,10 @@ Vignettes:
 * "Bayesian age-period-cohort models with bamp": the effects plot leaves
   out the R-hat rows of `mt_parameters()`, which get their own table; the
   MCMC fits are seeded.
+* The README shows the function map as an image
+  (`man/figures/README-function-map.png`, drawn from
+  `dev/readme-diagram/function-map.mmd`), because the GitHub mobile app does
+  not draw Mermaid diagrams.
 
 ## StanMoMo, recalibration
 
