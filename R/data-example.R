@@ -136,7 +136,7 @@ mt_example_regions <- function(years = 1995:2019, regions = 4, ages = c("grouped
       kt <- kt - mean(kt)
       for (r in seq_len(regions)) {
         dev <- numeric(nt)
-        for (t in 2:nt) dev[t] <- 0.7 * dev[t - 1] + stats::rnorm(1, 0, 0.02)
+        for (t in seq_len(nt)[-1]) dev[t] <- 0.7 * dev[t - 1] + stats::rnorm(1, 0, 0.02)
         for (q in 1:5) {
           grad <- 0.12 * (q - 3) * (1 + 0.01 * (seq_len(nt) - 1))
           ax <- log(lvl * 2e-5 * exp(0.1 * a) + 3e-4)

@@ -174,7 +174,7 @@ and a demographer working through the vignettes on their own questions).
   their parts in proportion to their forecasts, draw by draw (top-down,
   Athanasopoulos, Ahmed and Hyndman 2009). Non-negative projections warn
   when more than 5% of the draws hold strata at zero or fixed nodes move;
-  `info$share_draws_with_zeros`. `mt_plot_coherence()` shows the range of
+  `$reconciliation$share_draws_with_zeros`. `mt_plot_coherence()` shows the range of
   the paths.
 * `anchored()`: the empirical Bayes shrinkage subtracted the sampling
   variance from the wrong term, so offsets of noisy cells were shrunk too
@@ -250,8 +250,8 @@ and a demographer working through the vignettes on their own questions).
 * Smoothing over time narrows the intervals of models with a period index;
   combined with `recalibrated()` it gave the best calibrated forecasts for
   England & Wales men (Lee-Carter on the GAM surface, calibrated: CRPS
-  0.0646, 95% coverage 0.91 against 0.0687 and 0.75). On the ONS quintiles,
-  whose noise is close to Poisson, smoothing did not help.
+  0.0646, 95% coverage 0.91 against 0.0687 and 0.75). On the ONS quintiles
+  smoothing over time made the forecasts worse.
 * `anchored()` moves the start of any model's forecast towards the observed
   level of the last `years` (default 3) per age and stratum, with empirical
   Bayes shrinkage of sparse cells and a linear fade over `decay` years;
@@ -276,7 +276,8 @@ and a demographer working through the vignettes on their own questions).
   Smith 2002); `ensemble(top_k = )` keeps the best components of the inner
   backtest; `mt_tune(strategy = "two_stage")` searches a coarse grid first.
 * Disaggregation: `tail` (`"kannisto"` or `"gompertz"`) and `tail_width`
-  for the open interval in `mt_ungroup()` and `mt_disaggregate()`,
+  for the open interval in `mt_ungroup(method = "gam")`; in
+  `mt_disaggregate()`,
   year-specific shapes from `mt_shape_rates()`, `mt_disaggregate_check()`
   and `mt_plot_disaggregation()`.
 * Vignettes: "Forecasting and backtesting with HMD data" (chosen period,

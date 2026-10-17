@@ -41,8 +41,8 @@ every model.
 
 ## One population, many models
 
-Men in England & Wales, single years of age 55-89 (and the open interval
-90+), 1971-2011 (Human Mortality Database, via StMoMo):
+Men in England & Wales, single years of age 55-90, 1971-2011 (Human
+Mortality Database, via StMoMo):
 
 
 ```r

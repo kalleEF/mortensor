@@ -82,9 +82,11 @@ read together with a score that also rewards narrow intervals.
 ### CRPS
 
 The continuous ranked probability score (CRPS) compares the whole
-forecast distribution with the observed value. It is the area between the
-forecast's cumulative distribution and a step at the observed value
-(Gneiting and Raftery 2007):
+forecast distribution with the observed value: it is the integral of the
+squared difference between the forecast's cumulative distribution and a
+step at the observed value (Gneiting and Raftery 2007). The figure shades
+the difference between the two curves; squared and summed over the axis, it
+gives the CRPS:
 
 ```{r, echo = FALSE, eval = has_gg, fig.height = 3}
 z <- seq(-0.6, 0.6, by = 0.002)
@@ -102,7 +104,7 @@ ggplot2::ggplot(fcs, ggplot2::aes(z)) +
   ggplot2::geom_text(data = lab, ggplot2::aes(x = -0.55, y = 0.9, label = text), hjust = 0, size = 3.5) +
   ggplot2::facet_wrap(ggplot2::vars(forecast)) +
   ggplot2::labs(x = "Forecast error of the log death rate", y = "Cumulative probability",
-                subtitle = "Green: forecast distribution; grey: observed value (0); shaded area: CRPS") +
+                subtitle = "Green: forecast distribution; grey: observed value (0); shaded: their difference") +
   theme_mortensor()
 ```
 
@@ -121,7 +123,7 @@ models in the same way.
 
 `mae` and `rmse` are the mean absolute and the root mean squared error of
 the forecast median: they ignore the intervals. `mase` divides the
-absolute error by the mean year-to-year change of the training data
+absolute error by the mean absolute year-to-year change of the training data
 (Hyndman and Koehler 2006): below 1, the forecast errs less than the
 typical change of a single year.
 
@@ -165,9 +167,9 @@ mt_plot_scores(bt)
 
 All three models get worse with the horizon, as they should. The
 random walk has wide intervals: its 95% coverage is close to nominal
-(0.92), and it over-covers at 50% and 80%. The 95% intervals of
-Lee-Carter and Li-Lee cover 0.83 and 0.85 of the observed rates, fewer
-with every year of horizon: they describe the uncertainty of a fixed
+(0.92), and its 50% and 80% intervals cover about as often as they
+should. The 95% intervals of Lee-Carter and Li-Lee cover 0.83 and 0.85 of
+the observed rates, fewer at longer horizons: they describe the uncertainty of a fixed
 trend, while the trend of English mortality changed after 2011. "Tuning and recalibration" shows how to widen
 intervals to the errors of recent forecasts, and "Choosing and combining
 models" how mixtures of models do.

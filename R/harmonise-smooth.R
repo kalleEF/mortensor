@@ -168,29 +168,50 @@ whittaker_smooth_obs <- function(data, g, lambda, pord) {
   Dm <- divided_differences(mid, pord)
   P <- crossprod(Dm)
   out <- D
+  sm <- array(FALSE, dim(D))
   diag_rows <- list()
   for (s in seq_len(dim(D)[3])) {
     for (j in seq_len(dim(D)[2])) {
-      y <- log(pmax(D[, j, s], 0.5) / E[, j, s])
-      w <- pmax(D[, j, s], 0.5)
+      # missing cells get weight 0: the fit uses the observed cells only
+      ok <- smooth_cells(D[, j, s], E[, j, s])
+      n_ok <- sum(ok)
+      if (n_ok <= pord) next
+      y <- ifelse(ok, log(pmax(D[, j, s], 0.5) / E[, j, s]), 0)
+      w <- ifelse(ok, pmax(D[, j, s], 0.5), 0)
       fit_l <- function(l) {
-        A <- diag(w) + l * P
+        A <- diag(w, na) + l * P
         z <- solve(A, w * y)
-        tr <- sum(diag(solve(A, diag(w))))
-        list(z = z, gcv = sum(w * (y - z)^2) / (na - tr)^2 * na)
+        tr <- sum(diag(solve(A, diag(w, na))))
+        list(z = z, gcv = sum(w * (y - z)^2) / (n_ok - tr)^2 * n_ok)
       }
       l <- lambda %||% 10^stats::optimize(function(ll) fit_l(10^ll)$gcv, c(-2, 8))$minimum
       z <- fit_l(l)$z
-      out[, j, s] <- E[, j, s] * exp(z)
+      out[ok, j, s] <- E[ok, j, s] * exp(z[ok])
+      sm[ok, j, s] <- TRUE
       diag_rows[[length(diag_rows) + 1L]] <- data.table(measure = "deaths", stratum = s, period = g$period$labels[j],
                                                         method = "whittaker", lambda_age = l)
     }
   }
-  obs <- data.table(stratum = rep(seq_len(dim(D)[3]), each = na * dim(D)[2]),
-                    a = rep(seq_len(na), dim(D)[2] * dim(D)[3]),
-                    p = rep(rep(seq_len(dim(D)[2]), each = na), dim(D)[3]),
-                    value = as.vector(out), provenance = "smoothed")
-  list(obs = grid_table(obs, g), diag = rbindlist(diag_rows))
+  list(obs = smoothed_obs(data, g, out, sm), diag = rbindlist(diag_rows))
+}
+
+# Cells that enter a smooth: observed deaths and positive exposures
+smooth_cells <- function(d, e) !is.na(d) & is.finite(e) & e > 0
+
+# The observed deaths on the grid with the smoothed values in the cells
+# marked in `sm` ([age, period, stratum]); no cells are added for missing
+# deaths, and cells that were not smoothed keep their value and provenance
+smoothed_obs <- function(data, g, out, sm) {
+  obs <- data$obs$deaths
+  idx <- obs_grid_index(obs, g, "deaths")
+  in_grid <- !is.na(idx$a1)
+  obs <- obs[in_grid]
+  k <- cbind(idx$a1[in_grid], idx$p1[in_grid], obs$stratum)
+  sel <- sm[k]
+  v <- out[k]
+  obs[sel, `:=`(value = v[sel], provenance = "smoothed")]
+  setorderv(obs, c("stratum", "period_lo", "age_lo"))
+  obs[]
 }
 
 gam_smooth_obs <- function(data, g) {
@@ -200,22 +221,22 @@ gam_smooth_obs <- function(data, g) {
   na <- dim(D)[1]
   age <- axis_midpoints(g$age, data$omega)
   out <- D
+  sm <- array(FALSE, dim(D))
   diag_rows <- list()
   for (s in seq_len(dim(D)[3])) {
     for (j in seq_len(dim(D)[2])) {
-      df <- data.frame(y = log(pmax(D[, j, s], 0.5) / E[, j, s]), w = pmax(D[, j, s], 0.5), age = age)
+      ok <- smooth_cells(D[, j, s], E[, j, s])
+      if (sum(ok) < 4) next
+      df <- data.frame(y = log(pmax(D[ok, j, s], 0.5) / E[ok, j, s]), w = pmax(D[ok, j, s], 0.5), age = age[ok])
       wts <- df$w / mean(df$w)
-      fit <- mgcv::gam(y ~ s(age, k = min(20, na - 1)), weights = wts, data = df, method = "REML")
-      out[, j, s] <- E[, j, s] * exp(stats::fitted(fit))
+      fit <- mgcv::gam(y ~ s(age, k = min(20, sum(ok) - 1)), weights = wts, data = df, method = "REML")
+      out[ok, j, s] <- E[ok, j, s] * exp(stats::fitted(fit))
+      sm[ok, j, s] <- TRUE
       diag_rows[[length(diag_rows) + 1L]] <- data.table(measure = "deaths", stratum = s, period = g$period$labels[j],
                                                         method = "gam", edf = sum(fit$edf))
     }
   }
-  obs <- data.table(stratum = rep(seq_len(dim(D)[3]), each = na * dim(D)[2]),
-                    a = rep(seq_len(na), dim(D)[2] * dim(D)[3]),
-                    p = rep(rep(seq_len(dim(D)[2]), each = na), dim(D)[3]),
-                    value = as.vector(out), provenance = "smoothed")
-  list(obs = grid_table(obs, g), diag = rbindlist(diag_rows))
+  list(obs = smoothed_obs(data, g, out, sm), diag = rbindlist(diag_rows))
 }
 
 # Whittaker smoothing over time per age, one smoothing parameter per stratum
@@ -228,40 +249,47 @@ whittaker_time_obs <- function(data, g, lambda, pord) {
   if (np <= pord + 1) mt_abort("Too few periods for smoothing over time.", class = "argument")
   P <- crossprod(diff(diag(np), differences = pord))
   out <- D
+  sm <- array(FALSE, dim(D))
   diag_rows <- list()
   for (s in seq_len(dim(D)[3])) {
-    Y <- log(pmax(D[, , s], 0.5) / E[, , s])
-    W <- pmax(D[, , s], 0.5)
-    Y <- matrix(Y, na)
+    # matrices [age, period], also with a single age group
+    Ds <- matrix(D[, , s], na, np)
+    Es <- matrix(E[, , s], na, np)
+    # missing cells get weight 0: the fit uses the observed cells only
+    O <- smooth_cells(Ds, Es)
+    Y <- ifelse(O, log(pmax(Ds, 0.5) / Es), 0)
+    W <- ifelse(O, pmax(Ds, 0.5), 0)
     # deaths as weights, scaled within each age: one smoothing parameter then
     # gives the same smoothness at every age (unscaled, ages with many deaths
     # were barely smoothed and ages with few deaths smoothed strongly)
-    W <- matrix(W, na)
-    W <- W / rowMeans(W)
-    ok <- rowSums(is.na(Y)) == 0
+    wm <- rowSums(W) / pmax(rowSums(O), 1)
+    W <- W / ifelse(wm > 0, wm, 1)
+    ok <- rowSums(O) > pord
+    if (!any(ok)) next
     fit_l <- function(l) {
       rss <- 0
       tr <- 0
       Z <- Y
       for (a in which(ok)) {
-        A <- diag(W[a, ]) + l * P
+        A <- diag(W[a, ], np) + l * P
         z <- solve(A, W[a, ] * Y[a, ])
         Z[a, ] <- z
         rss <- rss + sum(W[a, ] * (Y[a, ] - z)^2)
-        tr <- tr + sum(diag(solve(A, diag(W[a, ]))))
+        tr <- tr + sum(diag(solve(A, diag(W[a, ], np))))
       }
-      n <- sum(ok) * np
+      n <- sum(O[ok, ])
       list(Z = Z, gcv = n * rss / (n - tr)^2)
     }
     l <- lambda %||% 10^stats::optimize(function(ll) fit_l(10^ll)$gcv, c(-2, 6))$minimum
     Z <- fit_l(l)$Z
-    out[, , s][ok, ] <- (E[, , s] * exp(Z))[ok, ]
+    sel <- O & ok
+    Ds[sel] <- (Es * exp(Z))[sel]
+    out[, , s] <- Ds
+    sm[, , s] <- sel
     diag_rows[[length(diag_rows) + 1L]] <- data.table(measure = "deaths", stratum = s, method = "whittaker",
                                                       along = "period", lambda_period = l)
   }
-  obs <- data.table(stratum = rep(seq_len(dim(D)[3]), each = na * np), a = rep(seq_len(na), np * dim(D)[3]),
-                    p = rep(rep(seq_len(np), each = na), dim(D)[3]), value = as.vector(out), provenance = "smoothed")
-  list(obs = grid_table(obs, g), diag = rbindlist(diag_rows))
+  list(obs = smoothed_obs(data, g, out, sm), diag = rbindlist(diag_rows))
 }
 
 # Quasi-Poisson tensor-product P-spline surface te(age, year) per stratum,
@@ -307,6 +335,10 @@ gam2d_smooth_obs <- function(data, g, k = NULL) {
 #'   values mean that smoothing removed most of the annual variation;
 #' * `correlation`: correlation of raw and smoothed log rates.
 #'
+#' The measures use the smoothed cells only (provenance `"smoothed"`), so
+#' ages left out of the smoothing (see `ages` in [mt_smooth()]) do not
+#' dilute them.
+#'
 #' `mt_plot_smooth()` shows raw rates as points and smoothed rates as lines
 #' over time, one panel per age.
 #'
@@ -332,6 +364,16 @@ mt_smooth_check <- function(data, smoothed) {
   Ds <- mt_array(smoothed, "deaths")
   E <- mt_array(smoothed, "exposure")
   if (!identical(dim(D), dim(Ds))) mt_abort("`data` and `smoothed` must have the same strata.", class = "argument")
+  # only the smoothed cells (all cells when no cell is marked as smoothed)
+  so <- smoothed$obs$deaths
+  idx <- obs_grid_index(so, g, "deaths")
+  k <- !is.na(idx$a1) & so$provenance == "smoothed"
+  if (any(k)) {
+    sm <- array(FALSE, dim(Ds))
+    sm[cbind(idx$a1[k], idx$p1[k], so$stratum[k])] <- TRUE
+    D[!sm] <- NA
+    Ds[!sm] <- NA
+  }
   rows <- lapply(seq_len(dim(D)[3]), function(s) {
     lr <- log(pmax(D[, , s], 0.5) / E[, , s])
     ls <- log(pmax(Ds[, , s], 1e-10) / E[, , s])

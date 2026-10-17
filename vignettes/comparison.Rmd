@@ -162,9 +162,9 @@ demography's point forecasts to within
 absolute log difference); the simulated 80% intervals are
 `r fmt(100 * (1 - min(res$fidelity$fdm$width80_ratio_median)), 0)`% narrower than
 demography's analytic intervals at horizon 1 and nearly as wide at 20 years.
-The Bayesian APC forecasts of `apc_bayes()` differ from native bamp by less
-than two independent bamp runs differ from each other, so the wrapper adds
-no difference beyond Monte Carlo error.
+The Bayesian APC forecasts of `apc_bayes()` differ from native bamp by about
+as much as two independent bamp runs differ from each other, so the wrapper
+adds no difference beyond Monte Carlo error.
 
 **Accuracy.** Four observations hold across the data sets:
 
@@ -174,7 +174,7 @@ no difference beyond Monte Carlo error.
   smooth forecast, which the native intervals omit. This improves coverage
   most: bamp on the ONS data covers 0.79 of observed rates at 95% natively
   and 0.92 through `apc_bayes()`; the functional demographic model 0.76
-  against 0.83 (ONS) and 0.59 against 0.70 (France). The exceptions are
+  against 0.82 (ONS) and 0.59 against 0.70 (France). The exceptions are
   the functional demographic model on the ONS data, where both have the
   same CRPS (0.072), and `demography::lca()` on England & Wales men, whose
   least-squares fit with k adjusted to the observed deaths is more accurate
@@ -185,8 +185,9 @@ no difference beyond Monte Carlo error.
   on France, where the age pattern of mortality decline changed over the
   period and Lee-Carter extrapolates the old pattern.
 * Single structured models (Lee-Carter, `lca()`, functional demographic
-  model, StMoMo LC and CBD) have 95% intervals that cover 56% to 83% of the
-  observed rates, so they understate the uncertainty of real forecasts. On
+  model, StMoMo LC and CBD) have 95% intervals that cover 56% to 82% of the
+  observed rates on the three larger data sets, so they understate the
+  uncertainty of real forecasts. On
   the three larger data sets the random walk and the ensemble of Lee-Carter
   and random walk cover 92% to 98% (bamp's example has only 48 scored
   cells).

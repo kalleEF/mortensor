@@ -11,11 +11,11 @@ granularities: age groups and open age intervals, single or grouped periods,
 population strata and causes.
 
 mortensor has no preferred model. It implements common mortality models and
-wraps others from demography, StMoMo, bamp and forecast behind one interface:
+wraps others from demography, StMoMo, StanMoMo, bamp and forecast behind one interface:
 every model is fitted with `mt_fit()`, forecast with `mt_forecast()` and
 returns simulated paths of the same form. Models can therefore be compared in
 the same backtest and combined into ensembles of any composition, and the
-same steps (smoothing, jump-off, calibration, coherent totals) apply to all
+same steps (smoothing, jump-off, recalibration, coherent totals) apply to all
 of them.
 
 > **Caution: experimental, vibe-coded software. Use at your own risk.**
@@ -37,7 +37,7 @@ remotes::install_github("kalleEF/mortensor")
 
 Requires R >= 4.3.0. Hard dependencies are data.table and Matrix; models and
 data adapters that build on other packages (forecast, bamp, StMoMo,
-demography, ggplot2) use them when installed.
+StanMoMo, demography, ggplot2) use them when installed.
 
 ## What it does
 

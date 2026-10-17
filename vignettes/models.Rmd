@@ -35,7 +35,7 @@ stratum `i` (deaths divided by exposure), `D` deaths, `E` exposures.
 | Suppressed cells | raking (iterative proportional fitting; Deming and Stephan 1940) of the missing counts to published totals, within optional bounds | `mt_fill_suppressed()` |
 | Unknown ages | distributed over the age groups of the same stratum and year in proportion to the known deaths | `mt_data()` |
 | Ungrouping | penalised composite link model with exposures (Rizzi, Gampe and Eilers 2015) or spline methods | `mt_ungroup()`, `step_ungroup()` |
-| Smoothing | over age (Poisson P-splines, Currie, Durban and Eilers 2004; Whittaker; GAM), over time (Whittaker) or the age-period surface (P-splines; quasi-Poisson `te(age, year)` GAM, Wood 2017); age 0 is not smoothed; models are fitted to the smoothed rates, their observation noise, residuals and backtest scales come from the raw rates; smoothing over time narrows the intervals of models with a period index (check coverage, `recalibrated()`) | `mt_smooth()`, `step_smooth()`, `mt_smooth_check()` |
+| Smoothing | over age (Poisson P-splines; Whittaker; GAM), over time (Whittaker) or the age-period surface (P-splines, Currie, Durban and Eilers 2004; quasi-Poisson `te(age, year)` GAM, Wood 2017); age 0 is not smoothed; models are fitted to the smoothed rates, their observation noise, residuals and backtest scales come from the raw rates; smoothing over time narrows the intervals of models with a period index (check coverage, `recalibrated()`) | `mt_smooth()`, `step_smooth()`, `mt_smooth_check()` |
 | Zero deaths | models on log rates use 0.5 deaths in a cell without deaths | |
 
 All preprocessing steps given as `prep` are refitted on every training
@@ -228,7 +228,8 @@ Forecasts of all nodes of a hierarchy (bottom strata and their totals)
 are made to add up draw by draw: bottom-up sums, or projections of the
 base forecasts with weights from their variances (WLS), the shrunk
 covariance (MinT; Wickramasuriya, Athanasopoulos and Hyndman 2019), the
-structure (Hyndman et al. 2011) or equal weights (OLS). Parts that a
+structure (structural scaling; Athanasopoulos et al. 2017) or equal weights
+(OLS; Hyndman et al. 2011). Parts that a
 projection would make negative are held at zero and the rest projected
 again, so that `fixed` nodes (a trusted total) are kept; with fixed nodes,
 `"proportional"` instead scales their parts in proportion to their
@@ -318,6 +319,10 @@ with estimated (suppressed) deaths are not scored unless
 `score_estimated = TRUE`.
 
 ## References
+
+Athanasopoulos G, Hyndman RJ, Kourentzes N, Petropoulos F (2017).
+Forecasting with temporal hierarchies. *European Journal of Operational
+Research* 262(1): 60-74.
 
 Barigou K, Goffard P-O, Loisel S, Salhi Y (2023). Bayesian model averaging
 for mortality forecasting using leave-future-out validation. *International

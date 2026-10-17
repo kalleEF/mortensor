@@ -148,12 +148,13 @@ mt_score_table(bt, metrics = c("crps", "cov80", "cov95"))
 should be about 0.95. Without smoothing it is 0.83, with smoothing 0.64:
 the smoothed intervals are much too narrow. The CRPS, a score of the
 whole forecast distribution (lower is better), is also worse with
-smoothing (0.075 against 0.067). On these data, where the year-to-year
-variation is close to Poisson noise, smoothing over time does not help
-the forecast. It helps where counts are small (causes of death, small
+smoothing (0.075 against 0.067). On these data the year-to-year
+variation, although about twice Poisson noise, carries information about
+the uncertainty of the trend, and smoothing over time does not help the
+forecast. It helps where counts are small (causes of death, small
 areas), and then together with `recalibrated()`, which widens the
 intervals to the errors of recent forecasts (see "Tuning and
-calibration").
+recalibration").
 
 ## Summary
 

@@ -92,8 +92,8 @@ ggplot2::ggplot(eff, ggplot2::aes(as.numeric(index), value, colour = stratum, fi
 ```{r}
 fc <- mt_forecast(fit, h = 15, n_draws = 1000, seed = 1)
 fc
-mt_summarise(fc)[age %in% c("50", "70", "90") & period %in% c(2007, 2021),
-                 .(label, age, period, q0.05 = q0.1, q0.5, q0.95 = q0.9)]
+mt_summarise(fc, probs = c(0.05, 0.5, 0.95))[age %in% c("50", "70", "90") & period %in% c(2007, 2021),
+                                             .(label, age, period, q0.05, q0.5, q0.95)]
 ```
 
 ```{r forecast}
@@ -132,7 +132,7 @@ after the origin is missed.
 
 Second-order random walks for period and cohort extrapolate the most recent
 trends, and their uncertainty grows quickly with the horizon. For French
-women the 90% forecast interval of the death rate at ages 90-94 in 2021
+women the 90% forecast interval of the death rate at age 92 in 2021
 (15 years ahead) is compared below for both choices:
 
 ```{r}

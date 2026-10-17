@@ -40,10 +40,11 @@
 #'   [parse_age_labels()]); periods are years, ranges of years or financial
 #'   years (`"2001/02"`). Rows whose age or period is labelled as a total
 #'   (`"All ages"`, `"Total"`, `"Insgesamt"`) are left out with a warning.
-#'   Values of unknown age (`"Unknown"`, `"not stated"`, `"unbekannt"`) are
-#'   distributed over the age groups of the same stratum and period in
+#'   Values of unknown age (`"Unknown"`, `"not stated"`, `"unbekannt"`, `NA`)
+#'   are distributed over the age groups of the same stratum and period in
 #'   proportion to the known values, the usual practice of the Human
-#'   Mortality Database, with a warning. Leading and trailing spaces in
+#'   Mortality Database, with a warning. Rows of unknown period are left out
+#'   with a warning. Leading and trailing spaces in
 #'   stratum labels are removed; rows without a stratum label are left out.
 #'   A warning lists levels of a stratum variable that occur in one table
 #'   only (for example `"F"` in one table and `"female"` in another).
@@ -364,7 +365,14 @@ check_open_age <- function(out, measure) {
 
 interval_cols <- function(x, cols, kind, open = NULL) {
   if (length(cols) == 2L) {
-    return(list(lo = as.numeric(x[[cols[1]]]), hi = as.numeric(x[[cols[2]]])))
+    b <- lapply(cols, function(cl) {
+      v <- x[[cl]]
+      if (is.factor(v)) v <- as.character(v)   # the labels, not the factor codes
+      out <- suppressWarnings(as.numeric(v))
+      if (any(is.na(out) & !is.na(v))) mt_abort(sprintf("Column `%s` must hold numeric bounds.", cl), class = "obs")
+      out
+    })
+    return(list(lo = b[[1]], hi = b[[2]], unknown = is.na(b[[1]]) | is.na(b[[2]])))
   }
   if (length(cols) != 1L) mt_abort(sprintf("`%s` must name one or two columns.", kind), class = "obs")
   v <- x[[cols]]
@@ -377,7 +385,7 @@ interval_cols <- function(x, cols, kind, open = NULL) {
     if (any(abs(lo - round(lo)) > 1e-9, na.rm = TRUE)) {
       mt_abort(sprintf("Numeric %s values must be whole numbers (single years).", kind), class = "obs")
     }
-    return(list(lo = lo, hi = hi))
+    return(list(lo = lo, hi = hi, unknown = is.na(lo)))
   }
   u <- unique(v)
   # totals and unknown values are handled by the caller

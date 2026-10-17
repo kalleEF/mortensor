@@ -38,7 +38,8 @@
 #' variable forms its own group with its own product (for example the
 #' quintiles of each sex). If the data carry a hierarchy (see
 #' [mt_aggregate_strata()]), the product is computed from the bottom strata;
-#' aggregates get their own ratio to it.
+#' aggregates get their own ratio to it. Every group needs at least two
+#' strata ([hyndman_ullah()] models a single stratum).
 #'
 #' @param order1,order2 Number of principal components of the product and
 #'   of the ratios.
@@ -88,6 +89,13 @@ fit_model.mt_spec_coherent_fdm <- function(spec, D, E, ages, periods, strata = N
   }
   pool <- rep(TRUE, ns)
   if (!is.null(hierarchy) && !is.null(strata)) pool <- hierarchy_structure(strata, hierarchy)$is_bottom
+  pool_size <- vapply(seq_len(max(group)), function(g) if (any(group == g & pool)) sum(group == g & pool) else
+    sum(group == g), 1L)
+  if (any(pool_size < 2)) {
+    mt_abort(paste("coherent_fdm() needs at least two strata in every group: the product is their geometric mean,",
+                   "and the ratio of a single stratum to it is always one. Use hyndman_ullah() for a single",
+                   "stratum."), class = "model_data")
+  }
   rates <- lapply(seq_len(ns), function(s) {
     dd <- fdm_demogdata(pmax(D[, , s], 0.5) / E[, , s], E[, , s], ages, periods, "s")
     if (isTRUE(p$smooth)) dd <- fdm_smooth(dd, ages$lower, p$smooth_args)

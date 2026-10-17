@@ -253,7 +253,8 @@ mt_score_table(bt_c[cause == "all"], metrics = c("crps", "cov95"), targets = c("
 ```
 
 For the causes the three are close: the summed forecasts are slightly
-the most accurate, those scaled to Lee-Carter cover best (95% coverage
+the most accurate for the age-standardised rates but the least accurate
+for their gaps, and those scaled to Lee-Carter cover best (95% coverage
 0.95). For all causes the difference is large: the summed causes and the
 Li-Lee total both pull the gap back to its past level, and only the
 Lee-Carter total forecast it well (CRPS of the gap 0.13 against 0.33 and
@@ -300,7 +301,7 @@ dc <- mt_decompose(fc_c, var = "quintile", ref = "Q1", periods = c(2019, 2035), 
 mt_plot_decomposition(dc, by = "cause", comparisons = list(to = "Q5", sex = "female"))
 ```
 
-In 2019 the residual group, respiratory diseases, lung cancer and
+In 2019 the residual group, chronic lower respiratory diseases, lung cancer and
 ischaemic heart disease made up most of the female gap at 50. The
 forecast for 2035 gives dementia the largest contribution, but with an
 interval from below zero to about three years: it extrapolates the steep
@@ -314,7 +315,7 @@ This is the least reliable part of the result.
 | Data | deciles to quintiles | | `mt_data()`, `mt_group_levels()` | "Getting started" |
 | Totals | England and both sexes as sums | | `mt_hierarchy()`, `reconciled(method = "bottom_up")` | "Coherent forecasts" |
 | Model | Lee-Carter per quintile | best backtest of the gap | `mt_compare(contrast = )` | "Choosing and combining models" |
-| Smoothing | none | made every score worse | `step_smooth()` | "Smoothing death rates" |
+| Smoothing | none | made the rates and life expectancy worse | `step_smooth()` | "Smoothing death rates" |
 | Jump-off | the model's own | anchoring changed nothing | `anchored()` | "Where a forecast starts" |
 | Inequality | gap Q5 - Q1 and SII, path by path | | `mt_contrast()`, `mt_inequality()` | |
 | Causes | Li-Lee, scaled to a Lee-Carter all-cause forecast | best backtest of the all-cause gap | `stratified()`, `reconciled(method = "proportional", fixed = )` | "Coherent forecasts" |

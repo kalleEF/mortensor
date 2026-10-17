@@ -145,9 +145,9 @@ mt_ungroup_check(list("PCLM" = mt_ungroup(xe), "monotone" = mt_ungroup(xe, expos
 ```
 
 Below age 85 both methods err by 1-2%, which at ages 65-84 is more than
-the noise of the deaths. In the last group, 90-99, where the population
-falls steeply with age, the PCLM errs by about 6% and the monotone spline
-by about 16%. Splitting an **open** interval of
+the noise of the deaths. At ages 85 and over, where the population falls
+steeply with age, the PCLM errs by about 6% and the monotone spline by
+about 16%. Splitting an **open** interval of
 populations (for example 85+ into single years up to 100+) from its total
 alone is not reliable at all: use population data with a higher open age,
 which many statistical offices publish, or keep the open interval.

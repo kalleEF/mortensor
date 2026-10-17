@@ -26,7 +26,9 @@
 #' predictive draws add the observation noise. The variant is more accurate
 #' than the plain random walk where deaths are few, but over 5 to 10 years
 #' its intervals can be too narrow, because changes of trend exceed the
-#' uncertainty of a constant drift; the plain random walk is wider.
+#' uncertainty of a constant drift; the plain random walk is wider. With a
+#' `drift_window`, the model is fitted to the years of the window and fitted
+#' rates of earlier years are missing.
 #'
 #' @param drift_window Number of most recent years used for drift and
 #'   innovations (`NULL`: all years).
@@ -63,6 +65,8 @@ fit_model.mt_spec_rwd <- function(spec, D, E, ages, periods, ...) {
   if (isTRUE(spec$params$observation_noise)) {
     Dw <- D[, (nt - w + 1):nt, drop = FALSE]
     out <- c(out, local_level_fit(y, dy, mu, rowMeans(1 / pmax(Dw, 0.5)), weights = rowSums(Dw)))
+    # fitted rates of the years before the window are missing
+    out$fitted <- cbind(matrix(NA_real_, nrow(y), nt - w), out$fitted)
   }
   out
 }

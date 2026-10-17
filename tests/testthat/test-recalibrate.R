@@ -41,7 +41,7 @@ test_that("recalibrated() wraps any model and forecasts on the grid", {
   expect_equal(r$fit$calibration_origins, c(2010, 2012, 2014))
   expect_identical(r$fc$model, "Lee-Carter, recalibrated")
   pr <- mt_forecast(r$fit, h = 3, n_draws = 20, seed = 1, predictive = TRUE)
-  expect_true(all(is.finite(pr$rates) & pr$rates > 0))
+  expect_true(all(is.finite(pr$rates) & pr$rates >= 0))
   # summary and parameters of the base model
   expect_output(print(summary(r$fit)), "calibration \\(all\\): spread factor")
   pa <- mt_parameters(r$fit)

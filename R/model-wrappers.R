@@ -177,9 +177,10 @@ stmomo_fitted <- function(fit) {
 
 #' @export
 simulate_model.mt_spec_stmomo <- function(spec, fit, h, n_draws, ...) {
-  utils::capture.output(sim <- suppressWarnings(stats::simulate(fit$fit, nsim = n_draws, h = h,
+  # StMoMo's simulate() needs h >= 2; the first h years are kept
+  utils::capture.output(sim <- suppressWarnings(stats::simulate(fit$fit, nsim = n_draws, h = max(h, 2),
                                                                 gc.order = fit$gc_order)))
-  r <- sim$rates
+  r <- sim$rates[, seq_len(h), , drop = FALSE]
   if (fit$logit) r <- -log(1 - pmin(r, 0.999))
   array(as.numeric(r), c(dim(r)[1], h, n_draws))
 }

@@ -16,7 +16,12 @@
 #'   integrates it from the start of the open interval to age 130;
 #'   `"kannisto"` does the same with the Kannisto model, a line for the logit
 #'   of the rates, whose hazard levels off at old ages (Thatcher, Kannisto and
-#'   Vaupel 1998).
+#'   Vaupel 1998);
+#' * a rate of 0 in the open interval (no deaths, as in small populations)
+#'   would give an infinite life expectancy: the last positive rate of the
+#'   closed intervals is used for the open interval instead (column `mx`
+#'   keeps the given rate). Only a schedule without any positive rate gives
+#'   an infinite value.
 #' @references
 #' Thatcher AR, Kannisto V, Vaupel JW (1998). *The Force of Mortality at Ages
 #' 80 to 120*. Odense University Press.
@@ -57,19 +62,36 @@ lt_columns <- function(M, age, ax = NULL, open = "reciprocal", k = 10) {
   A <- if (is.null(ax)) nn / 2 else matrix(ax, na, ncol(M))
   Q <- lt_qx(M, nn, A)
   if (is_open) {
+    m_open <- open_rates(M)
     Q[na, ] <- 1
-    A[na, ] <- 1 / M[na, ]
+    A[na, ] <- 1 / m_open
   }
   P <- 1 - Q
   L <- rbind(1, apply(P, 2, cumprod))[seq_len(na), , drop = FALSE]
   Dx <- L * Q
   Lx <- nn * (L - Dx) + A * Dx
   if (is_open) {
-    Lx[na, ] <- if (open == "reciprocal") L[na, ] / M[na, ] else L[na, ] * gompertz_open_ex(M, age, k, open)
+    Lx[na, ] <- if (open == "reciprocal") L[na, ] / m_open else L[na, ] * gompertz_open_ex(M, age, k, open)
   }
   Tx <- apply(Lx, 2, function(z) rev(cumsum(rev(z))))
   if (is.null(dim(Tx))) Tx <- matrix(Tx, nrow = na)
   list(ax = A, qx = Q, lx = L, dx = Dx, Lx = Lx, Tx = Tx, ex = Tx / L)
+}
+
+# Rates of the open interval used in the life table: a rate of 0 (no
+# deaths) would make life expectancy infinite and is replaced by the last
+# positive rate of the closed intervals
+open_rates <- function(M) {
+  na <- nrow(M)
+  m <- M[na, ]
+  zero <- !is.na(m) & m <= 0
+  if (any(zero) && na > 1) {
+    m[zero] <- apply(M[-na, zero, drop = FALSE], 2, function(v) {
+      v <- v[!is.na(v) & v > 0]
+      if (length(v)) v[length(v)] else 0
+    })
+  }
+  m
 }
 
 # Probabilities of dying in closed intervals from rates; where the linear
@@ -115,7 +137,8 @@ gompertz_open_ex <- function(M, age, k, law = "gompertz") {
 #' @param probs Quantiles reported for draws.
 #' @param paths For draws, return the values of every path, an array
 #'   `[period, stratum, draw]`.
-#' @param ... Passed to the life-table calculation (`ax`, `open`, `k`).
+#' @param ... Passed to the life-table calculation (`ax`, `open`, `k`). A
+#'   rate of 0 in the open interval is replaced as in [life_table()].
 #' @return For arrays, an array without the age dimension. For draws, a
 #'   `data.table` with the mean and quantiles per stratum and period, computed
 #'   path by path.

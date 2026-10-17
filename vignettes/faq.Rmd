@@ -155,9 +155,8 @@ two combine as `recalibrated(tuned(...))`.
 
 ### Should I smooth the data before forecasting?
 
-Smoothing over age helps where cells hold few deaths (rare causes, small
-regions): on the German cause-specific data it improved the CRPS of the
-Laender. Smoothing over time removes the year-to-year noise from the fitted
+Smoothing over age can help where cells hold few deaths (rare causes,
+small regions); check it in a backtest, as the applied vignettes do. Smoothing over time removes the year-to-year noise from the fitted
 trends and from the start of the forecast, but also the variation from
 which models such as Lee-Carter estimate the uncertainty of their period
 index: alone, it made intervals too narrow in backtests (95% coverage of
@@ -166,8 +165,8 @@ there comes from `recalibrated()`, which re-estimates the spread against the
 raw observations: calibration alone gave a CRPS of 0.0657 and a coverage
 of 0.88 (against 0.0687 and 0.75); Whittaker smoothing over time added
 nothing to it, the age-period GAM a little (0.0646, coverage 0.91). On the
-ONS quintiles, whose noise is close to Poisson, smoothing over time did
-not help. Treat it as optional and check it in a backtest. Use smoothing
+ONS quintiles smoothing over time made the forecasts worse ("Smoothing
+death rates"). Treat it as optional and check it in a backtest. Use smoothing
 as a preprocessing step (`mt_prep(step_smooth(...))`), never on the data
 before fitting (`mt_backtest()` stops, `mt_fit()` warns), so that
 backtests refit it on each training window and models take their
@@ -289,8 +288,10 @@ of the rates) into contributions of ages and causes: between strata in one
 year (`var`, `ref`), between years (`periods`, which may combine an
 observed and a forecast year), or between two forecasts (`y`). With
 `groups`, it also separates the composition of a population of subgroups
-(for example deprivation quintiles or education groups) from the change of
-their mortality, as in Riffe, Tursun-zade and Trias Llimós (2024).
+from the change of their mortality: for groups defined at birth or for
+life, such as sex or education, as in Riffe, Tursun-zade and Trias Llimós
+(2024) (`composition = "radix"`); for areas such as deprivation quintiles,
+whose populations move between groups, with `composition = "pooled"`.
 Forecasts are decomposed draw by draw, so contributions have intervals;
 see "Decomposing differences in life expectancy".
 

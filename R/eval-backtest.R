@@ -22,17 +22,21 @@
 #' @param prep Preprocessing pipeline ([mt_prep()]).
 #' @param n_draws Number of draws per origin.
 #' @param n_origins Number of origins when `origins` is `NULL`.
-#' @param seed Random seed (forecast draws and the randomised PIT).
+#' @param seed Random seed (forecast draws and the randomised PIT); `NULL`
+#'   for none.
 #' @param score_estimated Score cells whose deaths were estimated (for
 #'   example suppressed cells filled by [mt_fill_suppressed()]); by default
 #'   only observed cells are scored.
 #' @param cores Cores used over origins (forked processes; 1 on Windows).
 #' @param quantities Derived quantities scored in addition to the rates:
-#'   `"life_expectancy"` (at the first observed age, in years) and/or
+#'   `"life_expectancy"` (at the first age of the grid, in years) and/or
 #'   `"asr"` (age-standardised rate, European Standard Population 2013, on
-#'   the log scale), computed from the predictive draws aggregated to the
-#'   observed age groups of each stratum and test year (years with missing
-#'   or suppressed cells are skipped). They are added as rows with `target`
+#'   the log scale), computed from the predictive draws of deaths aggregated
+#'   to the observed age groups of each stratum and test year, like the
+#'   observed values. Years whose observed cells do not cover the full age
+#'   range without gaps (missing, suppressed or estimated cells) are
+#'   skipped. A zero ASR (no deaths at any age) is replaced by the smallest
+#'   value that half a death gives. They are added as rows with `target`
 #'   `"life_expectancy"` or `"asr"`; summarise them with
 #'   `mt_score(..., target = )`.
 #' @param contrast Optional `c(var = , ref = )`: a stratum variable and its
@@ -43,15 +47,27 @@
 #'   (difference of log ASR, the log rate ratio). This checks forecasts of
 #'   inequality, whose uncertainty depends on how the paths of the strata
 #'   move together; the rows carry the stratum of the compared level.
+#' @details
+#' Data whose deaths were ungrouped beforehand with [mt_ungroup()], and
+#' data smoothed with [mt_smooth()], are refused: the forecasts would be scored against
+#' estimates instead of observations, and an ungrouping or smoothing over
+#' time has seen the test years. Ungroup or smooth inside each fit instead
+#' (`prep = mt_prep(step_ungroup())`, `step_smooth()`). With
+#' `step_regroup()`, the test data are summed to the age groups of the fit.
+#'
+#' Observed log rates of cells without deaths use half a death, and so do
+#' the predictive draws, after their deaths have been summed to the observed
+#' cell.
 #' @return An object of class `mt_backtest`: a `data.table` with one row per
 #'   observed cell, origin and horizon: `model`, `prep` (the preprocessing
 #'   steps, `"none"` without), `origin`, `horizon`,
 #'   stratum columns, `age_lo`, `age_hi`, `period`, `observed` (log rate),
-#'   `median`, `mean`, quantiles, and the scores `crps`, `wis`, `ae`
-#'   (absolute error of the median), `cov50`, `cov80`, `cov95`, `pit` and the
-#'   MASE scale `scale` (mean absolute year-to-year change in the training
-#'   data), and `target` (`"rate"`, or the derived quantity). Summarise with
-#'   [mt_score()].
+#'   the MASE scale `scale` (mean absolute year-to-year change in the
+#'   training data), `target` (`"rate"`, or the derived quantity), the
+#'   forecast `median` and `mean`, and the scores `crps`, `wis`, `ae`
+#'   (absolute error of the median), `cov50`, `cov80`, `cov95` and `pit`
+#'   (randomised for ties, as with zero deaths). Rows of derived quantities
+#'   have no `age_lo`, `age_hi` and `scale`. Summarise with [mt_score()].
 #' @examples
 #' x <- mt_example(deaths = "single", years = 1990:2012)
 #' bt <- mt_backtest(rwd(), x, origins = c(2005, 2007), h = 5, n_draws = 100)
@@ -70,26 +86,20 @@ mt_backtest <- function(spec, data, origins = NULL, h = 10, prep = NULL, n_draws
                    "and the smoother has seen the test years. Pass the raw data and smooth inside each fit:",
                    "prep = mt_prep(step_smooth(...))."), class = "smoothed_data")
   }
-  g <- mt_grid(data)
-  last <- max(g$period$lower)
-  if (is.null(origins)) {
-    origins <- seq(last - h - n_origins + 1, last - h)
-    first_ok <- min(g$period$lower) + spec$min_periods - 1
-    if (any(origins < first_ok)) {
-      origins <- origins[origins >= first_ok]
-      if (!length(origins)) {
-        mt_abort(sprintf(paste("The data are too short for %d origins with a full horizon of %d years; give",
-                               "`origins` or a shorter `h`."), n_origins, h), class = "backtest")
-      }
-      mt_warn(sprintf("Only %d origin(s) have a full horizon of %d years and enough training years.",
-                      length(origins), h), class = "backtest_origin")
-    }
+  # inner backtests of a fit (tuned(), ensemble()) see the data the fit was given
+  if (!isTRUE(.mt_state$fitting) && ungrouped_deaths(data)) {
+    mt_abort(paste("The deaths in `data` were ungrouped with mt_ungroup(): the forecasts would be scored against",
+                   "estimated cells instead of the observed age groups, and an ungrouping over time has seen the",
+                   "test years. Pass the grouped data and ungroup inside each fit: prep = mt_prep(step_ungroup())."),
+             class = "ungrouped_data")
   }
+  last <- max(mt_grid(data)$period$lower)
+  origins <- origins %||% backtest_origins(data, h, n_origins, spec$min_periods)
   origins <- origins[origins < last]
   if (!length(origins)) mt_abort("No origin leaves test data.", class = "backtest")
   one <- function(o) {
-    res <- tryCatch(backtest_origin(spec, data, o, h, prep, n_draws, seed + o, score_estimated, quantities,
-                                    contrast), error = function(e) e)
+    res <- tryCatch(backtest_origin(spec, data, o, h, prep, n_draws, if (is.null(seed)) NULL else seed + o,
+                                    score_estimated, quantities, contrast), error = function(e) e)
     if (inherits(res, "error")) {
       mt_warn(sprintf("Origin %s failed: %s", o, conditionMessage(res)), class = "backtest_origin")
       return(NULL)
@@ -102,6 +112,32 @@ mt_backtest <- function(spec, data, origins = NULL, h = 10, prep = NULL, n_draws
   out
 }
 
+# Default origins: the last `n_origins` years whose full horizon `h` is
+# observed and that leave `min_periods` training years
+backtest_origins <- function(data, h, n_origins, min_periods) {
+  cl <- sys.call(-1)
+  yrs <- mt_grid(data)$period$lower
+  last <- max(yrs)
+  origins <- seq(last - h - n_origins + 1, last - h)
+  first_ok <- min(yrs) + min_periods - 1
+  if (any(origins < first_ok)) {
+    origins <- origins[origins >= first_ok]
+    if (!length(origins)) {
+      mt_abort(sprintf(paste("The data are too short for %d origins with a full horizon of %d years; give",
+                             "`origins` or a shorter `h`."), n_origins, h), class = "backtest", call = cl)
+    }
+    mt_warn(sprintf("Only %d origin(s) have a full horizon of %d years and enough training years.",
+                    length(origins), h), class = "backtest_origin", call = cl)
+  }
+  origins
+}
+
+# Were the deaths of `data` ungrouped with mt_ungroup()?
+ungrouped_deaths <- function(data) {
+  ug <- attr(data, "ungroup")
+  !is.null(ug) && "measure" %in% names(ug) && any(ug$measure == "deaths")
+}
+
 backtest_origin <- function(spec, data, origin, h, prep, n_draws, seed, score_estimated = FALSE, quantities = NULL,
                             contrast = NULL) {
   train <- mt_window(data, to = origin)
@@ -109,7 +145,7 @@ backtest_origin <- function(spec, data, origin, h, prep, n_draws, seed, score_es
   last_fit <- max(fit$periods)
   to <- min(origin + h, max(mt_grid(data)$period$lower))
   test <- mt_window(data, from = last_fit + 1, to = to)
-  test <- mt_set_grid(test, age = fit$age)
+  test <- test_on_age_axis(test, fit$age)
   E_grid <- test_exposures(test, fit)
   fc <- mt_forecast(fit, to = to, n_draws = n_draws, seed = seed, predictive = TRUE, exposure = E_grid)
   D_draws <- fc$rates * as.vector(E_grid)
@@ -123,6 +159,7 @@ backtest_origin <- function(spec, data, origin, h, prep, n_draws, seed, score_es
   idx <- idx[ok]
   na <- length(gt$age)
   np <- length(gt$period)
+  ages <- c(gt$age$lower[1], gt$age$upper[na])
   probs <- wis_probs()
   rows <- list()
   qdraws <- list()
@@ -136,6 +173,7 @@ backtest_origin <- function(spec, data, origin, h, prep, n_draws, seed, score_es
     C <- build_operator(idx[sel], na, np)
     Ds <- matrix(D_draws[, , s, ], ncol = n_draws)
     Ecell <- as.numeric(C %*% as.vector(E_grid[, , s]))
+    # deaths summed to the observed cells, then floored like the observed deaths
     Dcell <- as.matrix(C %*% Ds)
     X <- log(pmax(Dcell, 0.5) / Ecell)
     o <- obs[sel]
@@ -148,7 +186,7 @@ backtest_origin <- function(spec, data, origin, h, prep, n_draws, seed, score_es
                  scale = scale, target = "rate"),
       sc)
     if (length(quantities)) {
-      qr <- quantity_scores(X, o, Ecell, quantities, probs)
+      qr <- quantity_scores(Dcell, o, Ecell, quantities, probs, ages)
       if (!is.null(qr)) {
         rows[[length(rows) + 1L]] <- quantity_rows(qr, spec, prep, origin, s)
         qdraws[[as.character(s)]] <- qr
@@ -209,7 +247,8 @@ contrast_quantity_scores <- function(qdraws, strata, contrast, probs) {
     qr <- qdraws[[as.character(r[1])]]
     if (length(r) != 1 || is.null(qr)) next
     qs <- qdraws[[s]]
-    j <- match(paste(qs$period, qs$target), paste(qr$period, qr$target))
+    # the same year, quantity and first age on both sides
+    j <- match(paste(qs$period, qs$target, qs$at), paste(qr$period, qr$target, qr$at))
     k <- which(!is.na(j))
     if (!length(k)) next
     gaps <- lapply(k, function(m) {
@@ -224,18 +263,22 @@ contrast_quantity_scores <- function(qdraws, strata, contrast, probs) {
   out
 }
 
-# Scores of derived quantities per test year from the draws of log rates X
-# at the observed cells o (complete age axes only)
-quantity_scores <- function(X, o, Ecell, quantities, probs) {
+# Scores of derived quantities per test year from the draws of deaths Dcell
+# at the observed cells o, treated like the observed deaths (no floor per
+# cell). Only years whose cells cover the full age range `ages` (lowest
+# age, upper end) without gaps are scored
+quantity_scores <- function(Dcell, o, Ecell, quantities, probs, ages) {
+  same <- function(a, b) a == b || abs(a - b) < 1e-9
   out <- list()
   for (pp in sort(unique(o$period_lo))) {
     k <- which(o$period_lo == pp)
     k <- k[order(o$age_lo[k])]
     lo <- o$age_lo[k]
     hi <- o$age_hi[k]
-    if (length(k) < 2 || any(abs(hi[-length(hi)] - lo[-1]) > 1e-9)) next
+    if (length(k) < 2 || !same(lo[1], ages[1]) || !same(hi[length(hi)], ages[2]) ||
+        any(abs(hi[-length(hi)] - lo[-1]) > 1e-9)) next
     ax <- mt_axis(lo, hi, kind = "age")
-    R <- exp(X[k, , drop = FALSE])
+    R <- Dcell[k, , drop = FALSE] / Ecell[k]
     r_obs <- o$value[k] / Ecell[k]
     for (q in quantities) {
       if (q == "life_expectancy") {
@@ -243,17 +286,36 @@ quantity_scores <- function(X, o, Ecell, quantities, probs) {
         qo <- as.vector(life_expectancy(array(r_obs, c(length(k), 1, 1)), ax))
       } else {
         w <- standard_weights(ax, standard_population("esp2013"))
-        qd <- log(colSums(R * w) / sum(w))
-        qo <- log(sum(r_obs * w) / sum(w))
+        # no deaths at any age: the smallest ASR that half a death gives
+        floor_asr <- min((0.5 * w / Ecell[k])[w > 0]) / sum(w)
+        qd <- log(pmax(colSums(R * w) / sum(w), floor_asr))
+        qo <- log(max(sum(r_obs * w) / sum(w), floor_asr))
       }
-      out[[length(out) + 1L]] <- list(period = pp, target = q, observed = qo, draws = qd,
+      out[[length(out) + 1L]] <- list(period = pp, target = q, at = lo[1], observed = qo, draws = qd,
                                       scores = score_samples(matrix(qd, 1), qo, probs))
     }
   }
   if (!length(out)) return(NULL)
   list(period = vapply(out, `[[`, 0, "period"), target = vapply(out, `[[`, "", "target"),
-       observed = vapply(out, `[[`, 0, "observed"), draws = lapply(out, `[[`, "draws"),
-       scores = rbindlist(lapply(out, `[[`, "scores")))
+       at = vapply(out, `[[`, 0, "at"), observed = vapply(out, `[[`, 0, "observed"),
+       draws = lapply(out, `[[`, "draws"), scores = rbindlist(lapply(out, `[[`, "scores")))
+}
+
+# The test data on the age axis of the fit. Cells finer than the age groups
+# of the fit (preprocessing with step_regroup()) are summed to them; a group
+# that contains an estimated cell counts as estimated
+test_on_age_axis <- function(test, age) {
+  res <- tryCatch(mt_set_grid(test, age = age), mt_error_grid = function(e) NULL)
+  if (!is.null(res)) return(res)
+  d <- test$obs$deaths
+  est <- if (is.null(d)) d else d[provenance == "estimated"]
+  test <- mt_regroup(test, age = age)
+  if (!is.null(est) && nrow(est)) {
+    ia <- axis_locate(age, est$age_lo, est$age_hi)
+    hit <- paste(est$stratum, age$lower[ia], est$period_lo)
+    test$obs$deaths[paste(stratum, age_lo, period_lo) %in% hit, provenance := "estimated"]
+  }
+  mt_set_grid(test, age = age)
 }
 
 # Exposures of the forecast periods on the grid (ungrouped if needed; deaths not used)
@@ -380,11 +442,7 @@ mt_score <- function(backtest, by = "model",
   }
   if (!nrow(bt)) mt_abort(sprintf("The backtest holds no scores for target \"%s\".", target), class = "argument")
   rates_only <- identical(target, "rate")
-  # the same model with different preprocessing is scored separately
-  if ("model" %in% by && "prep" %in% names(bt) && !"prep" %in% by &&
-      bt[, data.table::uniqueN(prep), by = model][, any(V1 > 1)]) {
-    by <- c(by, "prep")
-  }
+  by <- score_by(bt, by)
   out <- bt[, list(crps = mean(crps), wis = mean(wis), mae = mean(ae), rmse = sqrt(mean(ae^2)),
                    mase = if (rates_only) mean(ae / scale, na.rm = TRUE) else NA_real_,
                    cov50 = mean(cov50), cov80 = mean(cov80), cov95 = mean(cov95), pit_mean = mean(pit), n = .N),
@@ -392,6 +450,16 @@ mt_score <- function(backtest, by = "model",
   out[, unit := switch(target, rate = "log rate", life_expectancy = "years", asr = "log rate (ASR)",
                        life_expectancy_gap = "years (difference)", asr_gap = "log rate ratio (ASR)")]
   out[]
+}
+
+# Grouping columns of the scores: the same model with different
+# preprocessing is scored separately
+score_by <- function(bt, by) {
+  if ("model" %in% by && "prep" %in% names(bt) && !"prep" %in% by &&
+      bt[, data.table::uniqueN(prep), by = model][, any(V1 > 1)]) {
+    by <- c(by, "prep")
+  }
+  by
 }
 
 # Short description of a preprocessing pipeline for backtest tables

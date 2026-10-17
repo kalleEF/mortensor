@@ -19,7 +19,7 @@ independently.*
 mortensor builds probabilistic mortality forecasts: simulated paths of
 future death rates, from which life expectancy, gaps between groups and
 other quantities follow with their uncertainty. Any model can be used,
-implemented in the package or wrapped from demography, StMoMo or bamp,
+implemented in the package or wrapped from demography, StMoMo, StanMoMo or bamp,
 and models can be combined. This vignette goes once through the main
 steps with one simple model; the other vignettes take one step at a time.
 
@@ -116,7 +116,7 @@ mt_score_table(bt, metrics = c("crps", "cov80", "cov95"))
 The 95% intervals contained `r round(100 * mt_score(bt)$cov95)`% of the
 observed rates, fewer than 95%: Lee-Carter's intervals are too narrow on
 these data. "Backtesting and scores" explains the scores, "Tuning and
-calibration" how to widen the intervals.
+recalibration" how to widen the intervals.
 
 ## Where next
 
@@ -131,4 +131,4 @@ calibration" how to widen the intervals.
 | Models and ensembles | "Choosing and combining models", "Model reference" |
 | Totals and parts | "Coherent forecasts" |
 | What drives a gap | "Decomposing differences in life expectancy" |
-| Complete analyses | "Inequality in England", "Differences between German Laender" |
+| Complete analyses | "Inequality in England", "Differences between the German Laender" |

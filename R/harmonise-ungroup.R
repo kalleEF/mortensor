@@ -21,7 +21,11 @@
 #'
 #' With `preserve_totals = TRUE`, the estimated deaths within each observed
 #' group are rescaled to the observed total, so aggregation reproduces the
-#' data exactly. Cells already observed at grid resolution are kept.
+#' data exactly. Cells already observed at grid resolution are kept. When
+#' deaths are ungrouped as rates and the grid starts with age 0 as its own
+#' interval, an observed first year of life is kept and left out of the fit,
+#' as in [mt_smooth()]: infant mortality does not follow the age pattern of
+#' the following ages, and its peak would spill into ages 1-6.
 #'
 #' In backtests use `step_ungroup()` so that ungrouping, in particular in 2D,
 #' sees only the training window.
@@ -33,7 +37,8 @@
 #'   set (with [mt_set_grid()] or `step_grid()`) and is finer than the data,
 #'   otherwise single years of age from the lowest age to the start of the
 #'   open interval.
-#' @param dims 1 or 2.
+#' @param dims 1 or 2 (for `method = "pclm"`; `"gam"` is always 2D, the
+#'   other methods 1D).
 #' @param method Method for deaths: `"pclm"` (default); `"monotone"`
 #'   (cumulative deaths interpolated by a monotone Hyman spline, counts only,
 #'   1D, ignores exposures); or rate-based spline methods, which
@@ -91,6 +96,10 @@ mt_ungroup <- function(data, age = NULL, dims = 1,
   exposure_method <- match.arg(exposure_method)
   criterion <- match.arg(criterion)
   check_number(dims, "dims", lower = 1, upper = 2, integerish = TRUE)
+  if (dims == 2 && method %in% c("monotone", "hyman_kannisto", "natural_gompertz")) {
+    mt_warn(sprintf("dims = 2 is ignored by method = \"%s\", which works per stratum and period.", method),
+            class = "ungroup_dims")
+  }
   g <- mt_grid(data)
   if (!is.null(age)) {
     check_class(age, "mt_axis", "age")
@@ -99,7 +108,7 @@ mt_ungroup <- function(data, age = NULL, dims = 1,
     g$age <- single_year_grid(data)
   }
   ctl <- list(lambda = lambda, criterion = criterion, kr = kr, deg = deg, pord = pord,
-              lambda_range = lambda_range, preserve_totals = preserve_totals)
+              lambda_range = lambda_range, preserve_totals = preserve_totals, infant = TRUE)
   diag_rows <- list()
   if (!is.null(data$obs$exposure) && needs_ungroup(data$obs$exposure, g)) {
     res <- ungroup_counts_1d(data$obs$exposure, g, data$omega, ctl, exposure_method, "exposure")
@@ -115,7 +124,8 @@ mt_ungroup <- function(data, age = NULL, dims = 1,
         mt_abort(sprintf("method = \"%s\" needs exposures on the grid.", method), class = "ungroup")
       }
       res <- list(obs = ungroup_rates_spline(data$obs$deaths, E, g, data$omega, method, tail, tail_width),
-                  diag = data.table(measure = "deaths", stratum = NA_integer_, period = "all", method = method))
+                  diag = data.table(measure = "deaths", stratum = NA_integer_, period = "all", method = method,
+                                    at_bound = FALSE))
     } else if (!is.null(E) && !needs_ungroup(E, g)) {
       res <- ungroup_rates(data$obs$deaths, E, g, data$omega, ctl, dims)
     } else {
@@ -132,9 +142,9 @@ mt_ungroup <- function(data, age = NULL, dims = 1,
     diag_rows <- c(diag_rows, list(res$diag))
   }
   dg <- rbindlist(diag_rows, fill = TRUE)
-  if (nrow(dg) && any(dg$at_bound)) {
+  if (nrow(dg) && any(dg$at_bound %in% TRUE)) {
     mt_warn(sprintf("The smoothing parameter is at the boundary of the search range in %d of %d fits.",
-                    sum(dg$at_bound), nrow(dg)), class = "lambda_bound")
+                    sum(dg$at_bound %in% TRUE), nrow(dg)), class = "lambda_bound")
   }
   data$grid <- g
   attr(data, "ungroup") <- dg
@@ -202,7 +212,9 @@ ungroup_counts_1d <- function(obs, g, omega, ctl, method, measure) {
   list(obs = grid_table(rbindlist(out), g), diag = rbindlist(dg))
 }
 
-# Deaths as rates with grid exposures as offset
+# Deaths as rates with grid exposures as offset. With ctl$infant, age 0
+# observed as its own grid cell is kept and left out of the fit (fine axis and
+# basis from age 1), as in mt_smooth()
 ungroup_rates <- function(D, E, g, omega, ctl, dims) {
   idx <- obs_grid_index(D, g, "deaths")
   D <- cbind(D, idx)[!is.na(a1)]
@@ -211,6 +223,18 @@ ungroup_rates <- function(D, E, g, omega, ctl, dims) {
   xa <- (fa$lower + fa$upper) / 2
   n_open <- sum(fa$grid == length(g$age) & fa$open)
   bas <- pclm_basis(xa, min(fa$lower), max(fa$upper), ctl$kr, ctl$deg, ctl$pord)
+  sep0 <- isTRUE(ctl$infant) && g$age$lower[1] == 0 && g$age$upper[1] == 1 && length(g$age) > 3
+  if (sep0) {
+    k1 <- fa$grid > 1L
+    fa1 <- list(lower = fa$lower[k1], upper = fa$upper[k1], grid = fa$grid[k1], open = fa$open)
+    bas1 <- pclm_basis(xa[k1], min(fa1$lower), max(fa1$upper), ctl$kr, ctl$deg, ctl$pord)
+  }
+  # rows of age 0 set aside: only when age 0 is never part of a wider cell
+  infant <- function(o) {
+    inf <- sep0 & o$a1 == 1L & o$a2 == 1L & o$p1 == o$p2
+    if (all(inf) || any(o$a1 == 1L & !inf)) inf[] <- FALSE
+    inf
+  }
   out <- list()
   dg <- list()
   for (s in unique(D$stratum)) {
@@ -222,9 +246,15 @@ ungroup_rates <- function(D, E, g, omega, ctl, dims) {
       for (p in sort(unique(Ds$p1))) {
         o <- Ds[p1 == p]
         e_grid <- Earr[, p, s]
-        r <- ungroup_rate_block(o, list(e_grid), fa, bas$B, list(bas$P), ctl, omega, n_open)
-        out[[length(out) + 1L]] <- data.table(stratum = s, a = r$a, p = p, value = r$deaths,
-                                              provenance = r$provenance)
+        inf <- infant(o)
+        if (any(inf)) {
+          r <- ungroup_rate_block(o[!inf], list(e_grid), fa1, bas1$B, list(bas1$P), ctl, omega, n_open)
+        } else {
+          r <- ungroup_rate_block(o, list(e_grid), fa, bas$B, list(bas$P), ctl, omega, n_open)
+        }
+        out[[length(out) + 1L]] <- data.table(stratum = s, a = c(o$a1[inf], r$a), p = p,
+                                              value = c(o$value[inf], r$deaths),
+                                              provenance = c(o$provenance[inf], r$provenance))
         dg[[length(dg) + 1L]] <- data.table(measure = "deaths", stratum = s, period = g$period$labels[p],
                                             method = paste0(ctl$method_label %||% "pclm_rate", "_1d"),
                                             lambda_age = r$fit$lambda[1],
@@ -235,11 +265,15 @@ ungroup_rates <- function(D, E, g, omega, ctl, dims) {
       ps <- seq(min(Ds$p1), max(Ds$p2))
       xp <- (g$period$lower[ps] + g$period$upper[ps]) / 2
       bp <- pclm_basis(xp, g$period$lower[min(ps)], g$period$upper[max(ps)], ctl$kr, ctl$deg, ctl$pord)
-      B2 <- kronecker(bp$B, bas$B)
-      pen <- list(kronecker(diag(ncol(bp$B)), bas$P), kronecker(bp$P, diag(ncol(bas$B))))
-      r <- ungroup_rate_block(Ds, lapply(ps, function(p) Earr[, p, s]), fa, B2, pen, ctl, omega, n_open, ps)
-      out[[length(out) + 1L]] <- data.table(stratum = s, a = r$a, p = r$p, value = r$deaths,
-                                            provenance = r$provenance)
+      inf <- infant(Ds)
+      fb <- if (any(inf)) list(fa = fa1, bas = bas1) else list(fa = fa, bas = bas)
+      B2 <- kronecker(bp$B, fb$bas$B)
+      pen <- list(kronecker(diag(ncol(bp$B)), fb$bas$P), kronecker(bp$P, diag(ncol(fb$bas$B))))
+      r <- ungroup_rate_block(Ds[!inf], lapply(ps, function(p) Earr[, p, s]), fb$fa, B2, pen, ctl, omega, n_open,
+                              ps)
+      out[[length(out) + 1L]] <- data.table(stratum = s, a = c(Ds$a1[inf], r$a), p = c(Ds$p1[inf], r$p),
+                                            value = c(Ds$value[inf], r$deaths),
+                                            provenance = c(Ds$provenance[inf], r$provenance))
       dg[[length(dg) + 1L]] <- data.table(measure = "deaths", stratum = s, period = "all",
                                           method = paste0(ctl$method_label %||% "pclm_rate", "_2d"),
                                           lambda_age = r$fit$lambda[1],
@@ -292,8 +326,10 @@ ungroup_rate_block <- function(o, e_list, fa, B, pen, ctl, omega, n_open, ps = N
   dm <- matrix(deaths_f, nf, length(ps))
   dgrid <- rowsum(dm, fa$grid)
   covered <- rowsum(matrix(as.numeric(Matrix::colSums(C) > 0), nf, length(ps)), fa$grid) > 0
-  a <- rep(seq_len(ng), length(ps))
-  p <- rep(ps, each = ng)
+  # grid cells of the fine axis (from age 1 when age 0 is set aside)
+  ga <- sort(unique(fa$grid))
+  a <- rep(ga, length(ps))
+  p <- rep(ps, each = length(ga))
   keep <- as.vector(covered)
   prov <- rep(ctl$provenance %||% "pclm", length(a))
   vals <- as.vector(dgrid)

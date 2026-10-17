@@ -122,7 +122,8 @@ mt_fit.mt_spec <- function(spec, data, prep = NULL, cores = 1, ...) {
     # matrices [age, period] also with a single age group
     slice <- function(A, s) array(A[, , s], dim(A)[1:2], dimnames(A)[1:2])
     one <- function(s) run(function() fit_model(spec, slice(md$D, s), slice(md$E, s), md$age, md$periods))
-    res <- par_lapply(seq_len(nrow(st)), one, cores)
+    # one random number stream per stratum, so that results do not depend on `cores`
+    res <- par_lapply(seq_len(nrow(st)), one, cores, streams = TRUE)
     fits <- lapply(res, `[[`, "fit")
     diagnostics <- data.table(stratum = st$label, status = vapply(res, `[[`, "", "status"),
                               message = vapply(res, `[[`, "", "message"),
@@ -174,12 +175,16 @@ extra_noise_sd <- function(spec, fits, D, E) {
   out <- matrix(0, dim(D)[1], dim(D)[3])
   if (!isTRUE(spec$smooth)) return(out)
   fitted <- if (spec$joint) fits$fitted else NULL
+  na <- dim(D)[1]
   for (s in seq_len(dim(D)[3])) {
     f <- if (spec$joint) fitted[, , s] else fits[[s]]$fitted
     if (is.null(f)) next
-    r <- log_rates(D[, , s], E[, , s]) - log(f)
+    # matrices [age, period] also with a single age group
+    f <- matrix(f, na)
+    Es <- matrix(E[, , s], na)
+    r <- log_rates(matrix(D[, , s], na), Es) - log(f)
     r[!is.finite(r)] <- NA
-    pois <- rowMeans(1 / pmax(f * E[, , s], 0.5), na.rm = TRUE)
+    pois <- rowMeans(1 / pmax(f * Es, 0.5), na.rm = TRUE)
     n <- rowSums(!is.na(r))
     v <- rowSums((r - rowMeans(r, na.rm = TRUE))^2, na.rm = TRUE) / pmax(n - 1, 1) - pois
     v[n < 3 | !is.finite(v)] <- 0
@@ -272,12 +277,49 @@ describe_missing <- function(D, E, g, strata) {
   paste(msg, collapse = " ")
 }
 
-par_lapply <- function(x, f, cores = 1) {
+# lapply(), in forked processes with cores > 1. With `streams = TRUE`, task i
+# runs with the i-th of independent L'Ecuyer-CMRG random number streams
+# started from one draw of the caller's generator, so results follow
+# set.seed() and do not depend on `cores`; the caller's generator continues
+# after that one draw.
+par_lapply <- function(x, f, cores = 1, streams = FALSE) {
+  if (streams) {
+    seeds <- rng_streams(length(x))
+    g <- f
+    f <- function(i) with_stream(seeds[[i]], g(x[[i]]))
+    x <- seq_along(x)
+  }
   if (cores > 1 && .Platform$OS.type == "unix") {
     parallel::mclapply(x, f, mc.cores = cores, mc.set.seed = TRUE)
   } else {
     lapply(x, f)
   }
+}
+
+# n independent L'Ecuyer-CMRG streams (as parallel::clusterSetRNGStream())
+# from one draw of the current generator, which is otherwise left as it was
+rng_streams <- function(n) {
+  seed <- sample.int(.Machine$integer.max, 1L)
+  old <- get(".Random.seed", envir = globalenv())
+  on.exit(assign(".Random.seed", old, envir = globalenv()))
+  set.seed(seed, kind = "L'Ecuyer-CMRG")
+  s <- get(".Random.seed", envir = globalenv())
+  out <- vector("list", n)
+  for (i in seq_len(n)) {
+    out[[i]] <- s
+    s <- parallel::nextRNGStream(s)
+  }
+  out
+}
+
+# Evaluate `expr` with the random number state `seed` (from rng_streams());
+# the caller's state is restored afterwards
+with_stream <- function(seed, expr) {
+  env <- globalenv()
+  old <- if (exists(".Random.seed", envir = env, inherits = FALSE)) get(".Random.seed", envir = env) else NULL
+  on.exit(if (is.null(old)) rm(".Random.seed", envir = env) else assign(".Random.seed", old, envir = env))
+  assign(".Random.seed", seed, envir = env)
+  expr
 }
 
 #' @export
@@ -304,9 +346,9 @@ print.mt_fit <- function(x, ...) {
 #'   is).
 #' @param predictive If `TRUE`, draws describe observable rates: for
 #'   models of smooth rates, extra-Poisson noise (estimated from in-sample
-#'   residuals) and Poisson variation of deaths given `exposure` are added,
-#'   and zero counts are replaced by 0.5 as in the training data. Used by
-#'   [mt_backtest()].
+#'   residuals) and Poisson variation of deaths given `exposure` are added;
+#'   cells can have zero deaths (rate 0). Used by [mt_backtest()], which
+#'   sums the deaths to the observed cells before taking logarithms.
 #' @param exposure Exposures for predictive draws: array `[age, period,
 #'   stratum]` or matrix `[age, stratum]` (default: last training year).
 #' @param ... Passed to methods.
@@ -372,7 +414,9 @@ check_draws_plausible <- function(arr, age, strata, label) {
   invisible()
 }
 
-# Observed-rate draws: extra-Poisson noise (smooth models) and Poisson deaths given exposures
+# Observed-rate draws: extra-Poisson noise (smooth models) and Poisson deaths given exposures.
+# Cells may have zero deaths (rate 0); scores that take logarithms floor the
+# deaths after summing them to the observed cells, not per grid cell
 predictive_rates <- function(arr, fit, exposure, spec) {
   d <- dim(arr)
   E <- expand_exposure(exposure %||% fit$exposure_last, d, dimnames(arr))
@@ -383,7 +427,7 @@ predictive_rates <- function(arr, fit, exposure, spec) {
     ok <- !is.na(mu)
     deaths <- array(NA_real_, d)
     deaths[ok] <- stats::rpois(sum(ok), mu[ok])
-    arr <- pmax(deaths, 0.5) / as.vector(E)
+    arr <- deaths / pmax(as.vector(E), 1e-12)
   }
   arr
 }

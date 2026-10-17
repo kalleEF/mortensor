@@ -8,15 +8,19 @@
 #'   list on the same data and origins and returns one backtest whose
 #'   `model` column holds the names (in the order given). An element can be
 #'   a model specification or `list(spec = , prep = )` with its own
-#'   preprocessing.
+#'   preprocessing. Without `origins`, the default origins of
+#'   [mt_backtest()] are chosen once for all models, with enough training
+#'   years for the model that needs the most.
 #' * `mt_score_table()` gives the mean scores of a backtest for every
 #'   target it holds side by side: log death rates without suffix, life
 #'   expectancy with `_le` (years), the age-standardised rate with `_asr`,
 #'   and differences between strata (`contrast` in [mt_backtest()]) with
-#'   `_le_gap` and `_asr_gap`.
+#'   `_le_gap` and `_asr_gap`. The same model with different preprocessing
+#'   gets one row per pipeline (column `prep`, as in [mt_score()]).
 #' * `mt_compare_forecasts()` gives one quantity of several forecasts
 #'   (`mt_draws`) or observed data (`mt_data`, with Poisson intervals) as
-#'   "median (lower-upper)", one column per forecast.
+#'   "median (lower-upper)", one column per forecast (empty where a
+#'   forecast has no value for the periods shown).
 #' * `mt_plot_compare()` draws the same quantity of several forecasts in
 #'   one figure, one colour per forecast: medians (dashed), intervals,
 #'   fitted values (solid) and the observed values (points). With `periods`
@@ -77,6 +81,12 @@ mt_compare <- function(specs, data, origins = NULL, h = 10, n_draws = 200, quant
   nm <- names(specs) %||% rep("", length(specs))
   nm[!nzchar(nm)] <- vapply(items[!nzchar(nm)], function(it) it$spec$label, "")
   if (anyDuplicated(nm)) mt_abort("The names of `specs` must be unique.", class = "argument")
+  check_class(data, "mt_data", "data")
+  # the same origins for every model: enough training years for each
+  if (is.null(origins)) {
+    origins <- backtest_origins(data, h, list(...)[["n_origins"]] %||% 5,
+                                max(vapply(items, function(it) it$spec$min_periods, 0)))
+  }
   res <- lapply(seq_along(items), function(i) {
     bt <- mt_backtest(items[[i]]$spec, data, origins = origins, h = h, prep = items[[i]]$prep, n_draws = n_draws,
                       quantities = quantities, ...)
@@ -124,6 +134,9 @@ mt_score_table <- function(backtest, metrics = c("crps", "cov95"), targets = NUL
   }
   have <- if ("target" %in% names(bt)) unique(bt$target) else "rate"
   targets <- targets %||% intersect(c("rate", "life_expectancy", "asr", "life_expectancy_gap", "asr_gap"), have)
+  # the rows of mt_score(), the same for every target (with `prep` when a
+  # model was backtested with several pipelines)
+  by <- score_by(bt, by)
   suffix <- c(rate = "", life_expectancy = "_le", asr = "_asr", life_expectancy_gap = "_le_gap", asr_gap = "_asr_gap")
   tabs <- lapply(targets, function(tg) {
     s <- mt_score(backtest, by = by, target = tg)
@@ -133,7 +146,7 @@ mt_score_table <- function(backtest, metrics = c("crps", "cov95"), targets = NUL
     setnames(s, metrics, paste0(metrics, suffix[[tg]]))
     s
   })
-  out <- Reduce(function(a, b) merge(a, b, by = by, sort = FALSE), tabs)
+  out <- Reduce(function(a, b) merge(a, b, by = by, sort = FALSE, all = TRUE), tabs)
   num <- setdiff(names(out), by)
   out[, (num) := lapply(.SD, signif, digits), .SDcols = num]
   out[]
@@ -154,6 +167,8 @@ mt_compare_forecasts <- function(forecasts, quantity = c("life_expectancy", "asr
   keys <- c("label", if ("age" %in% names(tab)) "age", "period")
   if (!wide) return(tab[, c("forecast", keys, "med", "lo", "hi", "value"), with = FALSE][])
   out <- dcast(tab, stats::as.formula(paste(paste(keys, collapse = " + "), "~ forecast")), value.var = "value")
+  # a forecast without values for the periods shown keeps an empty column
+  for (f in setdiff(levels(tab$forecast), names(out))) set(out, j = f, value = NA_character_)
   setcolorder(out, c(keys, levels(tab$forecast)))
   out[]
 }
@@ -240,9 +255,13 @@ mt_plot_compare <- function(forecasts, quantity = c("life_expectancy", "rate", "
   ylab <- switch(quantity, life_expectancy = sprintf("Life expectancy at age %s", at %||% first$age$lower[1]),
                  rate = "Death rate (log scale)", asr = "Age-standardised rate per 100,000")
   if (length(periods) == 1) {
-    # one year: median and interval per stratum, one colour per forecast
+    # one year: median and interval per stratum (and age), one colour per forecast
     lev <- unique(if (quantity == "rate") tab$panel else tab$label)
-    tab[, row := factor(if (quantity == "rate") panel else label, levels = rev(strata %||% lev))]
+    if (!is.null(strata)) {
+      first <- if (quantity == "rate") tab$label[match(lev, tab$panel)] else lev
+      lev <- lev[order(match(first, strata))]
+    }
+    tab[, row := factor(if (quantity == "rate") panel else label, levels = rev(lev))]
     return(ggplot2::ggplot(tab, ggplot2::aes(x = med, y = row, colour = forecast)) +
              ggplot2::geom_pointrange(ggplot2::aes(xmin = lo, xmax = hi), size = 0.25,
                                       position = ggplot2::position_dodge(width = 0.7)) +
@@ -318,7 +337,9 @@ compare_values <- function(m, age, quantity, at = NULL, ages = NULL) {
 #' @param h Horizon.
 #' @param tune The result of [mt_tune()].
 #' @param backtest An [mt_backtest()] result.
-#' @param target `"rate"`, `"life_expectancy"` or `"asr"`.
+#' @param target `"rate"`, `"life_expectancy"`, `"asr"`,
+#'   `"life_expectancy_gap"` or `"asr_gap"` (see `quantities` and `contrast`
+#'   in [mt_backtest()]).
 #' @param bins Number of histogram bins.
 #' @return A ggplot object.
 #' @examples
@@ -430,8 +451,9 @@ mt_plot_contrast <- function(contrast = NULL, observed = NULL, levels = NULL) {
   }), fill = TRUE)
   need <- c("level", "ref", "period", "q0.5", "quantity", "type")
   if (!all(need %in% names(tab))) mt_abort("`contrast` must be a result of mt_contrast().", class = "argument")
-  lo <- grep("^q0\\.0", names(tab), value = TRUE)[1]
-  hi <- rev(grep("^q0\\.9", names(tab), value = TRUE))[1]
+  qb <- quantile_bounds(names(tab))
+  lo <- qb[1]
+  hi <- qb[2]
   if (!is.null(levels)) tab <- tab[level %in% levels]
   obs <- if (!is.null(observed)) as.data.table(observed)[if (is.null(levels)) TRUE else level %in% levels]
   pvars <- setdiff(names(tab), c(need, "mean", lo, hi, grep("^q0", names(tab), value = TRUE), "p_positive",
@@ -471,8 +493,9 @@ plot_contrast_observed <- function(obs, levels = NULL) {
   }
   if (!is.null(levels)) obs <- obs[level %in% levels]
   qs <- grep("^q0", names(obs), value = TRUE)
-  lo <- grep("^q0[.]0", qs, value = TRUE)[1]
-  hi <- rev(grep("^q0[.]9", qs, value = TRUE))[1]
+  qb <- quantile_bounds(qs)
+  lo <- qb[1]
+  hi <- qb[2]
   pvars <- setdiff(names(obs), c("level", "ref", "period", "mean", "p_positive", "quantity", "type", "at", "from",
                                  "to", "ages", "standard", "per", "age", qs))
   obs[, col := factor(level, levels = unique(level))]
@@ -486,4 +509,13 @@ plot_contrast_observed <- function(obs, levels = NULL) {
                                         gsub("_", " ", obs$quantity[1])), colour = NULL,
                   subtitle = sprintf("Compared with %s; observed, with Poisson intervals", obs$ref[1])) +
     theme_mortensor()
+}
+
+# The lowest and the highest quantile columns (q0.025, q0.1, ...) of a table
+quantile_bounds <- function(nms) {
+  qs <- grep("^q[0-9.]+$", nms, value = TRUE)
+  p <- suppressWarnings(as.numeric(substring(qs, 2)))
+  qs <- qs[!is.na(p)]
+  p <- p[!is.na(p)]
+  c(qs[which.min(p)], qs[which.max(p)])
 }

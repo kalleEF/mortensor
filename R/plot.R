@@ -184,21 +184,27 @@ mt_plot_age <- function(draws, periods = NULL, strata = NULL, levels = 0.95, col
   periods <- periods %||% max(draws$periods)
   strata <- check_strata_labels(strata %||% draws$strata$label, draws$strata$label)
   lay <- plot_layout(draws$strata, strata, colour)
-  probs <- c((1 - levels) / 2, 0.5, 1 - (1 - levels) / 2)
+  probs <- sort(unique(c((1 - levels) / 2, 0.5, 1 - (1 - levels) / 2)))
   s <- mt_summarise(draws, probs)[period %in% periods & label %in% strata]
-  names(s)[names(s) %in% qnames(probs)] <- c("lo", "med", "hi")
   s <- merge(s, lay$map, by = "label", sort = FALSE)
   s[, panel2 := if (lay$has_panel) paste(panel, period) else as.character(period)]
   tr <- if (log_values) log else identity
-  p <- ggplot2::ggplot(s, ggplot2::aes(x = age_lo, group = label)) +
-    ggplot2::geom_ribbon(ggplot2::aes(ymin = tr(lo), ymax = tr(hi), fill = col), alpha = 0.2) +
-    ggplot2::geom_line(ggplot2::aes(y = tr(med), colour = col), linewidth = 0.8)
+  p <- ggplot2::ggplot(s, ggplot2::aes(x = age_lo, group = label))
+  # one ribbon per level, the widest first
+  for (lv in sort(levels, decreasing = TRUE)) {
+    lo <- qnames((1 - lv) / 2)
+    hi <- qnames(1 - (1 - lv) / 2)
+    p <- p + ggplot2::geom_ribbon(ggplot2::aes(ymin = tr(.data[[lo]]), ymax = tr(.data[[hi]]), fill = col),
+                                  alpha = 0.2 / length(levels))
+  }
+  p <- p + ggplot2::geom_line(ggplot2::aes(y = tr(q0.5), colour = col), linewidth = 0.8)
   if (length(unique(s$panel2)) > 1) p <- p + ggplot2::facet_wrap(ggplot2::vars(panel2))
   if (!log_values) p <- p + ggplot2::scale_y_log10()
   p + plot_colours(lay) +
     ggplot2::labs(x = "Age", y = if (log_values) "log(death rate)" else "Death rate (log scale)",
                   colour = lay$name, fill = lay$name, title = draws$model,
-                  subtitle = sprintf("Forecast median and %s interval, %s", paste0(levels * 100, "%"),
+                  subtitle = sprintf("Forecast median and %s interval%s, %s",
+                                     paste0(levels * 100, "%", collapse = " and "), if (length(levels) > 1) "s" else "",
                                      paste(periods, collapse = ", "))) +
     theme_mortensor(legend = "right")
 }

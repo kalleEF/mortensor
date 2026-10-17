@@ -145,10 +145,11 @@ assumptions:
 
 * For the Laender, the coherent fdm and the ensemble are the most accurate
   (CRPS of the rates 0.082, against 0.089 for Li-Lee and 0.091 for
-  Lee-Carter); the intervals of the ensemble cover best (95% coverage of
-  life expectancy 1.00, coherent fdm 0.68).
-* For the totals (East, West and Germany), the ensemble is the most
-  accurate.
+  Lee-Carter); the ensemble's intervals cover the rates best (95%
+  coverage 0.88), while those of the coherent fdm are too narrow (life
+  expectancy 0.68).
+* For the totals (East, West and Germany), the ensemble forecasts the
+  rates most accurately.
 * The East-West gap is forecast best by Lee-Carter (CRPS 0.11), the
   ensemble second (0.14); the intervals of Li-Lee and the coherent fdm
   covered the observed gap in only 40% and 50% of the cases.

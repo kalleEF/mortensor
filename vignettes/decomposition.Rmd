@@ -123,7 +123,7 @@ mt_plot_decomposition(gc, by = "age", fill = "cause", comparisons = list(to = "Q
 
 Each age contribution is split over the causes in proportion to their
 rate differences (Riffe et al. 2024, eqs. 12-13). Of the gap in life
-expectancy at 50, respiratory diseases, lung cancer and ischaemic heart
+expectancy at 50, chronic lower respiratory diseases, lung cancer and ischaemic heart
 disease contribute most among the named causes, for both sexes, and the
 remaining causes together (`rest`) contribute a large share. Causes with
 higher rates in Q5 than in Q1 would have negative contributions.
@@ -165,8 +165,8 @@ quintiles are areas: people move between them, and areas change quintile
 with each IMD version. The condition of the radix version does not hold.
 The pooled version decomposes the life expectancy of the pooled rates of
 England (the quintiles weighted by their population at each age, as in
-published life tables; "current rates" in Vaupel's terms, which Riffe et
-al. use, against "current conditions" for the radix version). The rates of
+published life tables; "current rates" in Vaupel's terms, while the radix
+version of Riffe et al. describes "current conditions"). The rates of
 every quintile and age and the shares at every age are the parameters of a
 line-integral decomposition:
 

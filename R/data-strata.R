@@ -69,6 +69,12 @@ mt_group_levels <- function(data, var, groups, other = NULL, total = NULL, keep 
     mt_abort("`groups` must be a named list of levels or a function.", class = "argument")
   }
   groups <- lapply(groups, as.character)
+  if (!is.null(total)) total <- as.character(total)
+  if (!is.null(other)) other <- as.character(other)
+  keep <- as.character(keep)
+  if (length(total) > 1L || length(other) > 1L) {
+    mt_abort("`total` and `other` must be single levels.", class = "argument")
+  }
   listed <- unlist(groups, use.names = FALSE)
   unknown <- setdiff(c(listed, total, keep), levels_all)
   if (length(unknown)) {
@@ -83,8 +89,13 @@ mt_group_levels <- function(data, var, groups, other = NULL, total = NULL, keep 
     unlisted <- intersect(unlisted, keep)
     if (is.null(total) && length(rest)) groups[[other]] <- rest
   }
-  for (l in unlisted) groups[[l]] <- l
-  if (!is.null(total)) groups[[total]] <- total
+  # an unlisted level named like a group joins that group (mt_relabel(x, "sex", c(F = "female")) with an
+  # existing level "female")
+  for (l in unlisted) groups[[l]] <- c(groups[[l]], l)
+  if (!is.null(total)) {
+    if (total %in% names(groups)) mt_abort("A group cannot be named like the `total` level.", class = "argument")
+    groups[[total]] <- total
+  }
   out <- regroup_strata(data, var, groups, additive)
   if (!is.null(total) && !is.null(other)) {
     out <- add_remainder(out, var, total, setdiff(names(groups), total), other, additive)
@@ -150,7 +161,8 @@ add_remainder <- function(x, var, total, parts, other, additive) {
 #'
 #' Gives levels of a stratum variable new labels, for example sex codes
 #' `"1"` and `"2"` as `"male"` and `"female"`. Levels mapped to the same new
-#' label are combined (see [mt_group_levels()]).
+#' label, or to the label of a level that is kept, are combined (see
+#' [mt_group_levels()]).
 #'
 #' @param data An [mt_data] object.
 #' @param var Stratum variable.
