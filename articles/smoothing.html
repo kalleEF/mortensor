@@ -97,8 +97,10 @@ groups, 2001-2019 (ONS, Open Government Licence):</p>
 <ul>
 <li>
 <strong>over age</strong>, each year separately (Poisson P-splines):
-removes noise between neighbouring ages, keeps every year as
-observed;</li>
+removes noise between neighbouring ages, keeps every year as observed;
+the open interval 90+ is expanded into single years, and its exposure is
+split over them by a PCLM of the exposures, as in
+<code><a href="../reference/mt_ungroup.html">mt_ungroup()</a></code>;</li>
 <li>
 <strong>over time</strong>, each age separately (weighted Whittaker
 smoothing of the log rates, with the deaths as weights): removes the
@@ -148,10 +150,10 @@ most of the annual variation was removed.</li>
 <span><span class="va">chk</span><span class="op">[</span>, <span class="fu">.</span><span class="op">(</span>dispersion <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">dispersion</span><span class="op">)</span>, <span class="fl">2</span><span class="op">)</span>, trend_ratio <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">trend_ratio</span><span class="op">)</span>, <span class="fl">3</span><span class="op">)</span><span class="op">)</span>, by <span class="op">=</span> <span class="va">method</span><span class="op">]</span></span>
 <span><span class="co">#&gt;                method dispersion trend_ratio</span></span>
 <span><span class="co">#&gt;                &lt;char&gt;      &lt;num&gt;       &lt;num&gt;</span></span>
-<span><span class="co">#&gt; 1:           over age       1.44       0.872</span></span>
+<span><span class="co">#&gt; 1:           over age       1.49       0.873</span></span>
 <span><span class="co">#&gt; 2:          over time       1.94       0.167</span></span>
 <span><span class="co">#&gt; 3: age-period surface       3.27       0.046</span></span></code></pre></div>
-<p>Over age, the dispersion is 1.4: around the spline, the deaths of
+<p>Over age, the dispersion is 1.5: around the spline, the deaths of
 neighbouring age groups vary a little more than Poisson noise. Over time
 the observed deaths vary about twice as much as Poisson noise around the
 trend (1.9), and around the surface more than three times as much (3.3):

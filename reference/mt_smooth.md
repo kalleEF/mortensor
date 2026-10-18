@@ -121,6 +121,11 @@ Methods and directions:
   and overdispersion estimated, so that year-to-year variation beyond
   Poisson noise is not taken for signal.
 
+With `"pspline"`, an open age interval of the grid is expanded into
+single years up to `omega` and its exposure is split by the PCLM of the
+exposures, as in [`mt_ungroup()`](mt_ungroup.md) (`open_split = "pclm"`,
+Rizzi, Gampe and Eilers 2015).
+
 The Whittaker smoother minimises
 `sum(w (y - z)^2) + lambda sum((D z)^2)` for log rates `y`, weights `w`
 and differences `D` of order `pord` (divided differences over age, so
@@ -178,20 +183,20 @@ s <- mt_smooth(x)
 head(attr(s, "smooth"))
 #>    measure stratum period     method lambda_age lambda_period       ed
 #>     <char>   <int> <char>     <char>      <num>         <num>    <num>
-#> 1:  deaths       1   2001 pspline_1d   86243.51            NA 5.733140
-#> 2:  deaths       1   2002 pspline_1d   55791.61            NA 6.265619
-#> 3:  deaths       1   2003 pspline_1d   27949.37            NA 7.219266
-#> 4:  deaths       2   2001 pspline_1d  100867.89            NA 5.537980
-#> 5:  deaths       2   2002 pspline_1d   23050.92            NA 7.560283
-#> 6:  deaths       2   2003 pspline_1d   89578.26            NA 5.670093
+#> 1:  deaths       1   2001 pspline_1d   61501.32            NA 6.073524
+#> 2:  deaths       1   2002 pspline_1d   29356.92            NA 7.071097
+#> 3:  deaths       1   2003 pspline_1d   23158.84            NA 7.425411
+#> 4:  deaths       2   2001 pspline_1d   91819.37            NA 5.632183
+#> 5:  deaths       2   2002 pspline_1d   20711.87            NA 7.711462
+#> 6:  deaths       2   2003 pspline_1d   76056.64            NA 5.855391
 #>    max_rel_diff at_bound open_iterations open_converged
 #>           <num>   <lgcl>           <int>         <lgcl>
-#> 1:    0.1999760    FALSE              11           TRUE
-#> 2:    0.2327082    FALSE              10           TRUE
-#> 3:    0.2063522    FALSE              11           TRUE
-#> 4:    0.2269536    FALSE               9           TRUE
-#> 5:    0.2456730    FALSE              10           TRUE
-#> 6:    0.2109345    FALSE              10           TRUE
+#> 1:    0.1938111    FALSE              NA             NA
+#> 2:    0.2021510    FALSE              NA             NA
+#> 3:    0.1978243    FALSE              NA             NA
+#> 4:    0.2241836    FALSE              NA             NA
+#> 5:    0.2471245    FALSE              NA             NA
+#> 6:    0.2149863    FALSE              NA             NA
 xt <- mt_example(deaths = "single", years = 2000:2015)
 st <- mt_smooth(xt, along = "period", method = "whittaker")
 mt_smooth_check(xt, st)

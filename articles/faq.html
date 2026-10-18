@@ -179,7 +179,16 @@ they have no published source. Check your own result with
 inside the interval. <code><a href="../reference/mt_ungroup.html">mt_ungroup()</a></code> warns when it
 extrapolates. Prefer a grid whose open interval starts where the data’s
 does, or data with a higher open age (for example exposures to 100+ with
-deaths to 90+, where the exposures carry the age pattern).</p>
+deaths to 90+, where the exposures carry the age pattern). When the grid
+itself has an open interval (for example 100+),
+<code><a href="../reference/mt_ungroup.html">mt_ungroup()</a></code> splits its exposure over single years up to
+the maximum age <code>omega</code> by the PCLM of the exposures
+(<code>open_split = "pclm"</code>, default), as Rizzi, Gampe and Eilers
+(2015) ungroup grouped exposures; <code>open_split = "stationary"</code>
+uses the weights of a stationary population with the fitted rates, a
+method of this package. On French data the rate of 100+ was too high by
+0.12 to 0.15 on the log scale with either split (see
+<code><a href="../reference/mt_ungroup.html">?mt_ungroup</a></code>).</p>
 </div>
 </div>
 <div class="section level2">
@@ -247,25 +256,46 @@ the trend</td>
 <tr class="even">
 <td>Cohort effects (for example generations born around 1925-1945)</td>
 <td>
-<code><a href="../reference/apc_bayes.html">apc_bayes()</a></code>, <code>stmomo("apc")</code>
+<code><a href="../reference/apc_bayes.html">apc_bayes()</a></code>, <code>stmomo("apc")</code>; at older ages
+<code>stmomo("m7")</code> or <code>stmomo("plat")</code>
 </td>
 <td>age-period models attribute cohort patterns to period trends</td>
 </tr>
 <tr class="odd">
+<td>Cause-specific mortality such as cancer, in 5-year age groups</td>
+<td><code><a href="../reference/nordpred_apc.html">nordpred_apc()</a></code></td>
+<td>the Nordpred age-period-cohort model (Møller et al. 2003) damps the
+trend in later periods; its intervals contain the uncertainty of the
+coefficients only, so use it for point projections or recalibrate
+it</td>
+</tr>
+<tr class="even">
 <td>Trend change in the recent past</td>
 <td>
-<code>step_window(years)</code> with a backtest of several
-windows</td>
-<td>a shorter fitting period follows the recent trend</td>
+<code>step_window(years)</code> with a backtest of several windows;
+<code><a href="../reference/p_splines.html">p_splines()</a></code>
+</td>
+<td>a shorter fitting period follows the recent trend; P-splines
+continue the trend of the last years of each age</td>
+</tr>
+<tr class="odd">
+<td>Smooth age patterns, forecasts that keep the past age pattern and
+pace of change</td>
+<td><code><a href="../reference/cp_splines.html">cp_splines()</a></code></td>
+<td>constrained P-splines (Camarda 2019) keep the forecast rates of
+ageing and of change within their past ranges; the intervals contain the
+uncertainty of the fit only</td>
 </tr>
 <tr class="even">
 <td>Long horizons, as mortality falls most at ever older ages</td>
 <td>
-<code>lee_carter(rotate = TRUE)</code>, <code><a href="../reference/coda.html">coda()</a></code>
+<code>lee_carter(rotate = TRUE)</code>, <code><a href="../reference/coda.html">coda()</a></code>,
+<code><a href="../reference/bohk_rau.html">bohk_rau()</a></code>
 </td>
 <td>the rotation moves the age pattern of decline to older ages as life
 expectancy rises (Li, Lee and Gerland 2013); CoDa forecasts the
-distribution of deaths by age (Oeppen 2008)</td>
+distribution of deaths by age (Oeppen 2008); the improvements of each
+age follow their own trend (Bohk-Ewald and Rau 2017)</td>
 </tr>
 </tbody>
 </table>
@@ -288,13 +318,23 @@ recalibration”). The plain random walk is wider, because year-to-year
 changes of observed rates contain observation noise twice; the local
 level model with drift,
 <code>arima_series(order = c(0, 1, 1), drift = TRUE)</code>, separates
-the noise from the trend (Harvey 1989). Mixtures of models
-(<code><a href="../reference/ensemble.html">ensemble()</a></code>) widen the intervals where the models disagree,
-and the negative binomial family of <code><a href="../reference/stanmomo.html">stanmomo()</a></code> allows for
-overdispersion. <code><a href="../reference/recalibrated.html">recalibrated()</a></code> rescales the spread of any
-model’s draws to its forecast errors in the last years of the training
-data (by default ten); on England &amp; Wales men it raised the 95%
-coverage of Lee-Carter from 0.63 to 0.85. Check calibration with
+the noise from the trend (Harvey 1989). Some models leave out sources of
+uncertainty by design: the draws of <code><a href="../reference/cp_splines.html">cp_splines()</a></code> contain
+the uncertainty of the fit only (Camarda 2019 notes narrow intervals),
+those of <code><a href="../reference/nordpred_apc.html">nordpred_apc()</a></code> the uncertainty of the coefficients
+only (95% coverage 0.11 in the package’s validation on England &amp;
+Wales men), and the intervals of life expectancy of
+<code><a href="../reference/p_splines.html">p_splines()</a></code> are narrow (coverage 0.40 at age 30 in the same
+validation). The draws of <code><a href="../reference/bohk_rau.html">bohk_rau()</a></code> apply one quantile of
+the improvements to all ages and years, as in Bohk-Ewald and Rau (2017);
+<code>draws = "samples"</code> gives much narrower intervals of life
+expectancy. Mixtures of models (<code><a href="../reference/ensemble.html">ensemble()</a></code>) widen the
+intervals where the models disagree, and the negative binomial family of
+<code><a href="../reference/stanmomo.html">stanmomo()</a></code> allows for overdispersion.
+<code><a href="../reference/recalibrated.html">recalibrated()</a></code> rescales the spread of any model’s draws to
+its forecast errors in the last years of the training data (by default
+ten); on England &amp; Wales men it raised the 95% coverage of
+Lee-Carter from 0.63 to 0.85. Check calibration with
 <code><a href="../reference/mt_backtest.html">mt_backtest()</a></code> and <code><a href="../reference/mt_plot.html">mt_plot_coverage()</a></code>.</p>
 </div>
 <div class="section level3">
@@ -306,9 +346,9 @@ differ by less than these scores vary between origins.
 chance, horizon by horizon, with the Diebold-Mariano test (Diebold and
 Mariano 1995). By default the long-run variance of the loss differences
 is the equal-weighted cosine estimate with fixed-smoothing critical
-values (Lazarus et al. 2018; Coroneo and Iacone 2020), which allows for
-the overlap of forecasts from neighbouring origins and keeps the size of
-the test nearly correct with few origins:</p>
+values (Lazarus et al. 2018), which allows for the overlap of forecasts
+from neighbouring origins and keeps the size of the test nearly correct
+with few origins:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">bt</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_compare.html">mt_compare</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>lc <span class="op">=</span> <span class="fu"><a href="../reference/lee_carter.html">lee_carter</a></span><span class="op">(</span><span class="op">)</span>, rw <span class="op">=</span> <span class="fu"><a href="../reference/rwd.html">rwd</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span>, <span class="va">data</span>, origins <span class="op">=</span> <span class="fl">1995</span><span class="op">:</span><span class="fl">2009</span>, h <span class="op">=</span> <span class="fl">5</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/mt_dm_test.html">mt_dm_test</a></span><span class="op">(</span><span class="va">bt</span>, ref <span class="op">=</span> <span class="st">"lc"</span><span class="op">)</span></span></code></pre></div>
@@ -319,9 +359,13 @@ informative tests. <code>varestimator = "acf"</code> gives the test of
 <code><a href="https://pkg.robjhyndman.com/forecast/reference/dm.test.html" class="external-link">forecast::dm.test()</a></code> with the small-sample correction of
 Harvey, Leybourne and Newbold (1997); with 7 overlapping origins it
 rejected a true null hypothesis in 10% to 19% of simulated samples at
-the nominal 5% level (see <code><a href="../reference/mt_dm_test.html">?mt_dm_test</a></code>). A non-significant
-difference means that the backtest cannot tell the models apart; they
-may still differ.</p>
+the nominal 5% level (see <code><a href="../reference/mt_dm_test.html">?mt_dm_test</a></code>).
+<code>varestimator = "daniell"</code> gives the fixed-smoothing test of
+Coroneo and Iacone (2020) with a Daniell-kernel estimate: it has more
+degrees of freedom, and its size was close to 5% for horizons up to 2
+and too large beyond (15% at <code>h = 5</code> with 7 origins). A
+non-significant difference means that the backtest cannot tell the
+models apart; they may still differ.</p>
 </div>
 <div class="section level3">
 <h3 id="how-do-i-choose-smoothing-and-model-parameters-by-forecast-accuracy">How do I choose smoothing and model parameters by forecast
@@ -395,19 +439,20 @@ forecast year include the step; <code><a href="../reference/mt_decompose.html">m
 rates?<a class="anchor" aria-label="anchor" href="#what-is-the-difference-between-predictive-draws-and-forecast-rates"></a>
 </h3>
 <p>For models of expected rates (Lee-Carter, Li-Lee, CoDa, Tucker3, FDM,
-StMoMo, StanMoMo, Bayesian APC), <code><a href="../reference/mt_forecast.html">mt_forecast()</a></code> returns
-draws of the expected death rates by default, and
-<code>predictive = TRUE</code> draws the deaths given these rates and
-the exposures, which is what an observed future rate will show. The
-deaths are Poisson, the observation model of the Poisson Lee-Carter
-model (Brouhns, Denuit and Vermunt 2002), or negative binomial for
-<code>stanmomo(family = "nb")</code>; no other observation noise is
-added. Models of observed rates (<code><a href="../reference/rwd.html">rwd()</a></code>,
-<code><a href="../reference/arima_series.html">arima_series()</a></code>, <code><a href="../reference/arima_series.html">ets_series()</a></code>) forecast
-observed rates directly, and <code>predictive</code> adds nothing unless
-they were fitted to smoothed rates. Backtests use predictive draws
-because they are compared with observed rates. For life expectancy and
-other summaries of the underlying mortality, use the default draws.</p>
+P-splines and CP-splines, Bohk-Ewald and Rau, StMoMo, StanMoMo, Bayesian
+APC, Nordpred), <code><a href="../reference/mt_forecast.html">mt_forecast()</a></code> returns draws of the expected
+death rates by default, and <code>predictive = TRUE</code> draws the
+deaths given these rates and the exposures, which is what an observed
+future rate will show. The deaths are Poisson, the observation model of
+the Poisson Lee-Carter model (Brouhns, Denuit and Vermunt 2002), or
+negative binomial for <code>stanmomo(family = "nb")</code>; no other
+observation noise is added. Models of observed rates
+(<code><a href="../reference/rwd.html">rwd()</a></code>, <code><a href="../reference/arima_series.html">arima_series()</a></code>,
+<code><a href="../reference/arima_series.html">ets_series()</a></code>) forecast observed rates directly, and
+<code>predictive</code> adds nothing unless they were fitted to smoothed
+rates. Backtests use predictive draws because they are compared with
+observed rates. For life expectancy and other summaries of the
+underlying mortality, use the default draws.</p>
 </div>
 <div class="section level3">
 <h3 id="how-do-i-handle-small-populations-and-zero-deaths">How do I handle small populations and zero deaths?<a class="anchor" aria-label="anchor" href="#how-do-i-handle-small-populations-and-zero-deaths"></a>
@@ -528,10 +573,15 @@ growing?<a class="anchor" aria-label="anchor" href="#will-the-gap-between-region
 stratum extrapolate each stratum’s trend, so gaps can widen without
 bound. <code><a href="../reference/li_lee.html">li_lee()</a></code> and <code><a href="../reference/coherent_fdm.html">coherent_fdm()</a></code> let strata
 deviate from a common trend only through stationary processes, so gaps
-return towards their past level; so does
-<code>coda(coherent = TRUE)</code> for the distribution of deaths by
-age. Backtests over a few years rarely separate the two; the choice is
-an assumption to state.</p>
+return towards their past level; <code><a href="../reference/coherent_fdm.html">coherent_fdm()</a></code> weights
+recent years more in its principal components (<code>beta = 0.05</code>,
+as in Hyndman, Booth and Yasmeen 2013), so that level is weighted
+towards recent years. In <code>coda(coherent = TRUE)</code> the point
+forecasts of the deviations from the common trend level off
+(ARIMA(1,1,0) models; Bergeron-Boucher et al. 2017): the point forecasts
+of the distributions of deaths by age do not diverge, and their
+intervals widen with the horizon. Backtests over a few years rarely tell
+these models apart; the choice is an assumption to state.</p>
 </div>
 <div class="section level3">
 <h3 id="which-ages-and-causes-explain-a-gap-and-how-much-is-composition">Which ages and causes explain a gap, and how much is
@@ -610,8 +660,11 @@ of strata. One-dimensional PCLM ungrouping takes about two seconds per
 stratum for 30 years of single ages; the two-dimensional version is much
 slower. <code><a href="../reference/apc_bayes.html">apc_bayes()</a></code> runs MCMC chains: with
 <code>mcmc_control("fast")</code> from about ten seconds (8 age groups,
-10 years) to one or two minutes per stratum (19 age groups, 14
-years).</p>
+10 years) to one or two minutes per stratum (19 age groups, 14 years).
+<code><a href="../reference/bohk_rau.html">bohk_rau()</a></code> takes about 6 seconds per stratum for 71 ages
+and 36 years. <code><a href="../reference/cp_splines.html">cp_splines()</a></code> refits the constrained forecast
+for each of its <code>n_boot</code> bootstrap samples (100 by default),
+so forecasts with many draws take time.</p>
 </div>
 <div class="section level3">
 <h3 id="where-do-the-validation-numbers-come-from">Where do the validation numbers come from?<a class="anchor" aria-label="anchor" href="#where-do-the-validation-numbers-come-from"></a>
@@ -626,9 +679,16 @@ the models on four data sets.</p>
 <div class="section level2">
 <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a>
 </h2>
+<p>Bergeron-Boucher M-P, Canudas-Romo V, Oeppen J, Vaupel JW (2017).
+Coherent forecasts of mortality with compositional data analysis.
+<em>Demographic Research</em> 37(17): 527-566. <a href="doi:10.4054/DemRes.2017.37.17" class="uri">doi:10.4054/DemRes.2017.37.17</a>.</p>
+<p>Bohk-Ewald C, Rau R (2017). Probabilistic mortality forecasting with
+varying age-specific survival improvements. <em>Genus</em> 73(1): 1. <a href="doi:10.1186/s41118-016-0017-8" class="uri">doi:10.1186/s41118-016-0017-8</a>.</p>
 <p>Brouhns N, Denuit M, Vermunt JK (2002). A Poisson log-bilinear
 regression approach to the construction of projected lifetables.
 <em>Insurance: Mathematics and Economics</em> 31(3): 373-393.</p>
+<p>Camarda CG (2019). Smooth constrained mortality forecasting.
+<em>Demographic Research</em> 41(38): 1091-1130. <a href="doi:10.4054/DemRes.2019.41.38" class="uri">doi:10.4054/DemRes.2019.41.38</a>.</p>
 <p>Coroneo L, Iacone F (2020). Comparing predictive accuracy in small
 samples using fixed-smoothing asymptotics. <em>Journal of Applied
 Econometrics</em> 35(4): 391-409. <a href="doi:10.1002/jae.2756" class="uri">doi:10.1002/jae.2756</a>.</p>
@@ -640,6 +700,9 @@ the Kalman Filter</em>. Cambridge University Press.</p>
 <p>Harvey D, Leybourne S, Newbold P (1997). Testing the equality of
 prediction mean squared errors. <em>International Journal of
 Forecasting</em> 13(2): 281-291.</p>
+<p>Hyndman RJ, Booth H, Yasmeen F (2013). Coherent mortality
+forecasting: the product-ratio method with functional time series
+models. <em>Demography</em> 50(1): 261-283. <a href="doi:10.1007/s13524-012-0145-5" class="uri">doi:10.1007/s13524-012-0145-5</a>.</p>
 <p>Lazarus E, Lewis DJ, Stock JH, Watson MW (2018). HAR inference:
 recommendations for practice. <em>Journal of Business &amp; Economic
 Statistics</em> 36(4): 541-559.</p>
@@ -649,6 +712,10 @@ method for forecasting mortality. <em>Demography</em> 38(4):
 <p>Li N, Lee R, Gerland P (2013). Extending the Lee-Carter method to
 model the rotation of age patterns of mortality decline for long-term
 projections. <em>Demography</em> 50(6): 2037-2051. <a href="doi:10.1007/s13524-013-0232-2" class="uri">doi:10.1007/s13524-013-0232-2</a>.</p>
+<p>Møller B, Fekjær H, Hakulinen T, Sigvaldason H, Storm HH, Talbäck M,
+Haldorsen T (2003). Prediction of cancer incidence in the Nordic
+countries: empirical comparison of different approaches. <em>Statistics
+in Medicine</em> 22(17): 2751-2766. <a href="doi:10.1002/sim.1481" class="uri">doi:10.1002/sim.1481</a>.</p>
 <p>Oeppen J (2008). Coherent forecasting of multiple-decrement life
 tables: a test using Japanese cause of death data. CODAWORK’08,
 Universitat de Girona.</p>
@@ -656,6 +723,9 @@ Universitat de Girona.</p>
 Probabilistic forecast reconciliation: properties, evaluation and score
 optimisation. <em>European Journal of Operational Research</em> 306(2):
 693-706. <a href="doi:10.1016/j.ejor.2022.07.040" class="uri">doi:10.1016/j.ejor.2022.07.040</a>.</p>
+<p>Rizzi S, Gampe J, Eilers PHC (2015). Efficient estimation of smooth
+distributions from coarsely grouped data. <em>American Journal of
+Epidemiology</em> 182(2): 138-147. <a href="doi:10.1093/aje/kwv020" class="uri">doi:10.1093/aje/kwv020</a>.</p>
 <p>Riffe T, Tursun-zade R, Trias Llimós S (2024). Arriaga meets
 Kitagawa. Life expectancy decomposition with population subgroups. MPIDR
 Working Paper WP-2024-029. <a href="doi:10.4054/MPIDR-WP-2024-029" class="uri">doi:10.4054/MPIDR-WP-2024-029</a>.</p>

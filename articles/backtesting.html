@@ -203,7 +203,7 @@ intervals are too narrow.</p>
 <span><span class="co">#&gt;          model   crps  rmse cov80 cov95 crps_le rmse_le cov80_le cov95_le</span></span>
 <span><span class="co">#&gt;         &lt;fctr&gt;  &lt;num&gt; &lt;num&gt; &lt;num&gt; &lt;num&gt;   &lt;num&gt;   &lt;num&gt;    &lt;num&gt;    &lt;num&gt;</span></span>
 <span><span class="co">#&gt; 1: random walk 0.0850 0.180 0.803 0.915   0.293   0.503    0.603    0.820</span></span>
-<span><span class="co">#&gt; 2:  Lee-Carter 0.0683 0.139 0.617 0.793   0.293   0.508    0.620    0.814</span></span>
+<span><span class="co">#&gt; 2:  Lee-Carter 0.0683 0.139 0.618 0.793   0.293   0.508    0.620    0.814</span></span>
 <span><span class="co">#&gt; 3:      Li-Lee 0.0671 0.132 0.642 0.810   0.338   0.603    0.611    0.806</span></span></code></pre></div>
 <p>The columns without suffix score the log death rates of all cells;
 the columns with <code>_le</code> score life expectancy at birth (in
@@ -240,15 +240,16 @@ Forecasts from neighbouring origins overlap in their test years, so the
 differences between origins are autocorrelated. By default the test
 estimates their variance with the equal-weighted cosine (EWC) estimator
 and takes critical values from a t distribution with few degrees of
-freedom (Lazarus et al. 2018; Coroneo and Iacone 2020). The older
-version, with the autocovariances up to lag <code>h - 1</code> and the
-small-sample correction of Harvey, Leybourne and Newbold (1997), rejects
-a true null hypothesis too often with few overlapping origins: in
-simulations with seven origins, in 10% to 19% of the samples at the
-nominal 5% level, and in 27% with the fallback to lag 0 of
-<code><a href="https://pkg.robjhyndman.com/forecast/reference/dm.test.html" class="external-link">forecast::dm.test()</a></code> (see <code><a href="../reference/mt_dm_test.html">?mt_dm_test</a></code>;
-<code>varestimator = "acf"</code> gives that version without the
-fallback).</p>
+freedom (Lazarus et al. 2018). <code>varestimator = "daniell"</code>
+gives the fixed-smoothing test of Coroneo and Iacone (2020) with a
+Daniell-kernel estimate. The older version, with the autocovariances up
+to lag <code>h - 1</code> and the small-sample correction of Harvey,
+Leybourne and Newbold (1997), rejects a true null hypothesis too often
+with few overlapping origins: in simulations with seven origins, in 10%
+to 19% of the samples at the nominal 5% level, and in 27% with the
+fallback to lag 0 of <code><a href="https://pkg.robjhyndman.com/forecast/reference/dm.test.html" class="external-link">forecast::dm.test()</a></code> (see
+<code><a href="../reference/mt_dm_test.html">?mt_dm_test</a></code>; <code>varestimator = "acf"</code> gives that
+version without the fallback).</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">dm</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_dm_test.html">mt_dm_test</a></span><span class="op">(</span><span class="va">bt</span>, ref <span class="op">=</span> <span class="st">"Li-Lee"</span><span class="op">)</span></span>
 <span><span class="va">dm</span><span class="op">[</span><span class="va">target</span> <span class="op">==</span> <span class="st">"rate"</span>, <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">model</span>, <span class="va">horizon</span>, <span class="va">mean_diff</span>, <span class="va">statistic</span>, <span class="va">df</span>, <span class="va">p_value</span><span class="op">)</span><span class="op">]</span></span>

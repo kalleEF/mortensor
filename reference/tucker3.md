@@ -2,19 +2,14 @@
 
 Joint model of the array of log rates `[age, period, stratum]`: the
 three-way extension of the Lee-Carter model of Russolillo, Giordano and
-Haberman (2011). As in Lee-Carter, the mean log rate over the years of
-each age and stratum, `a[x, i]`, is removed (`centre = TRUE`), and the
-centred array is decomposed by a Tucker3 decomposition
-`X - a = G x1 A x2 B x3 C` with ranks `ranks = c(age, period, stratum)`:
-age factors `A`, period factors `B` and stratum factors `C` linked by
-the core array `G`. The period factors (columns of `B`) are forecast and
-the rates rebuilt with `a`, `A`, `C` and `G` fixed.
+Haberman (2011). Status: published, with the deviations listed below;
+section and equation numbers refer to that paper.
 
 ## Usage
 
 ``` r
 tucker3(
-  ranks = c(3, 3, 2),
+  ranks = c(2, 2, 2),
   transform = c("log", "coda"),
   ts = c("rwd", "arima", "ets"),
   residual_noise = FALSE,
@@ -28,12 +23,13 @@ tucker3(
 
 - ranks:
 
-  Tucker ranks for age, period and stratum, or `"bic"` / `"aic"` to
-  choose them by an information criterion on the training data
-  (`n log(RSS / n)` plus the penalty times the number of parameters of
-  the factor matrices and the core; ranks up to 6 for age and period and
-  up to 4 for strata). For selection by forecast accuracy use
-  [`tuned()`](mt_tune.md).
+  Tucker ranks for age, period and stratum (default `c(2, 2, 2)`,
+  Russolillo et al. 2011, Section 3.2), or `"bic"` / `"aic"` to choose
+  them by an information criterion on the training data
+  (package-specific: `n log(RSS / n)` plus the penalty times the number
+  of parameters of the factor matrices and the core; ranks up to 6 for
+  age and period and up to 4 for strata). For selection by forecast
+  accuracy use [`tuned()`](mt_tune.md).
 
 - transform:
 
@@ -68,37 +64,62 @@ A model specification.
 
 ## Details
 
-The following parts are choices of this package without a published
-source:
+**Model (Section 2, eq. 7-8).** As in Lee-Carter, the mean log rate over
+the years of each age and stratum, `a[x, i]`, is removed
+(`centre = TRUE`), and the centred array is decomposed by a Tucker3
+decomposition `X - a = G x1 A x2 B x3 C` with ranks
+`ranks = c(age, period, stratum)`: column-wise orthonormal age factors
+`A`, period factors `B` and stratum factors `C`, linked by the core
+array `G`, estimated by least squares. Ranks `c(1, 1, 1)` give eq. (7),
+`log m[x, t, i] - a[x, i] = b[x] k[t] c[i]` (one period index for all
+strata); the default `c(2, 2, 2)` is the model of the application
+(Section 3.2, ten European countries). The squared core elements over
+the sum of squares of the centred array are the shares of variation of
+each combination of components (Table 4); their sum is the fit
+(`fit$fits$fit_pct`, `core_pct`).
 
-- estimation by higher-order orthogonal iteration (HOOI; De Lathauwer,
-  De Moor and Vandewalle 2000), least squares on the log rates;
+**Forecasts.** The paper proposes a time-series model for the period
+index, as in Lee-Carter, and leaves its form open (Section 3.2.2). Here
+the period factors (columns of `B`) follow a multivariate random walk
+with drift, as `k[t]` of Lee and Carter (1992); draws resample the joint
+year-to-year changes, which keeps their correlation, and include the
+uncertainty of the drift (`ts = "rwd"`). ARIMA or ETS models per column
+(`ts = "arima"`, `"ets"`, package forecast) are alternatives. The rates
+are rebuilt with `a`, `A`, `C` and `G` fixed. Draws carry the
+uncertainty of the forecast period factors only. With fewer period
+factors than independent trends in the data, the strata share their
+forecast uncertainty and intervals are too narrow: on simulated
+Lee-Carter data with Poisson deaths and an own random walk in each of 10
+strata (the package's coverage benchmark), 95% intervals covered about
+74% with the default ranks and 95% with `ranks = c(1, 10, 10)`.
+Predictive draws (`mt_forecast(predictive = TRUE)`) add Poisson
+variation of the deaths given the rates and the exposures, and no other
+observation noise. If intervals are too narrow on real data, that is a
+property of the model (see [`recalibrated()`](recalibrated.md),
+[`ensemble()`](ensemble.md), or overdispersed models such as
+`stanmomo(family = "nb")`).
 
-- the forecast of the period factors: a multivariate random walk with
-  drift (bootstrap of joint year-to-year changes, which keeps their
-  correlation), or ARIMA/ETS models per column (`ts = "arima"`, `"ets"`,
-  package forecast);
+**Deviations from the paper.**
 
-- the ranks (default `c(3, 3, 2)`) and their choice by an information
-  criterion (`ranks = "bic"`, `"aic"`);
+- Estimation: the paper fits the model by alternating least squares
+  (footnote 3; Kiers' Tucker3 program for Matlab, Appendix); here by
+  higher-order orthogonal iteration (HOOI; De Lathauwer, De Moor and
+  Vandewalle 2000), an alternating least-squares algorithm for the same
+  criterion. The paper also rotates the solution to simple structure,
+  which leaves the fitted values unchanged; signs are fixed so that the
+  largest entry of each factor is positive.
 
-- zero deaths are replaced by 0.5 before taking logarithms.
+- Centring: the text and eq. (7) centre over the years; the Matlab
+  session in the Appendix also centres across the age groups. The
+  package follows eq. (7), because the term removed by centring across
+  ages varies over the years and the paper gives no forecast for it.
 
-The model is experimental: compare it with established models such as
-[`li_lee()`](li_lee.md) in a backtest before using it.
-
-Draws carry the uncertainty of the forecast period factors; the other
-factors are fixed. With fewer period factors than independent trends in
-the data, the strata share their forecast uncertainty and intervals are
-too narrow: on simulated Lee-Carter data with Poisson deaths and an own
-random walk in each of 10 strata (the package's coverage benchmark), 95%
-intervals covered about 75% with the default ranks and 95% with
-`ranks = c(1, 10, 10)`. Predictive draws
-(`mt_forecast(predictive = TRUE)`) add Poisson variation of the deaths
-given the rates and the exposures, and no other observation noise. If
-intervals are too narrow on real data, that is a property of the model
-(see [`recalibrated()`](recalibrated.md), [`ensemble()`](ensemble.md),
-or overdispersed models such as `stanmomo(family = "nb")`).
+- Package-specific (reference unknown): the forecast model of the period
+  factors (see above), the choice of the ranks by an information
+  criterion (`ranks = "bic"`, `"aic"`), and the replacement of zero
+  deaths by 0.5 before taking logarithms. The paper's data end with the
+  closed age group 95-99; an open age interval is treated like the other
+  age groups.
 
 **Deprecated:** `transform = "coda"` (centred log-ratio transformed
 life-table deaths in place of log rates, with an auxiliary random walk
@@ -108,7 +129,9 @@ without a published source; it still works and warns (class
 several strata), the published compositional model.
 
 Ranks are reduced to the array dimensions where needed, so the model
-also runs with one stratum or one age group.
+also runs with one stratum or one age group. The model is experimental:
+compare it with established models such as [`li_lee()`](li_lee.md) in a
+backtest before using it.
 
 ## References
 
@@ -133,6 +156,8 @@ Review* 51(3): 455-500.
 
 ``` r
 x <- mt_example(deaths = "single")
-fit <- mt_fit(tucker3(ranks = c(3, 3, 2)), x)
+fit <- mt_fit(tucker3(), x)
+fit$fits$fit_pct
+#> [1] 79.90136
 fc <- mt_forecast(fit, h = 5, n_draws = 100, seed = 1)
 ```

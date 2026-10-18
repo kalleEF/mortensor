@@ -109,8 +109,8 @@ u <- list(PCLM = mt_ungroup(x), "PCLM, rescaled" = mt_ungroup(x, preserve_totals
 mt_ungroup_check(u)
 #>            method at_bound max_rel_gap
 #>            <fctr>    <num>       <num>
-#> 1:           PCLM        0  0.06695389
-#> 2: PCLM, rescaled        0  0.06695389
+#> 1:           PCLM        0  0.06689987
+#> 2: PCLM, rescaled        0  0.06689987
 if (requireNamespace("ggplot2", quietly = TRUE)) {
   mt_plot_ungroup(x, u, strata = "female")
   mt_plot_ungroup(x, u, type = "time", strata = "female")

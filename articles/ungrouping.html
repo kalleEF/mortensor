@@ -141,6 +141,13 @@ methods <code>"hyman_kannisto"</code>, <code>"natural_gompertz"</code>
 and <code>"gam"</code> are deprecated: they are heuristics of this
 package without a published source, and they still work with a
 warning.</p>
+<p>Here the grid ends at age 99. When it ends with an open interval (for
+example 100+), the PCLM of the rates expands that interval into single
+years up to <code>omega</code> and splits its exposure over them by a
+PCLM of the exposures (<code>open_split = "pclm"</code>, as Rizzi et
+al. 2015 ungroup grouped exposures).
+<code>open_split = "stationary"</code> uses the weights of a stationary
+population instead, a method specific to this package.</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">u</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="st">"PCLM"</span> <span class="op">=</span> <span class="fu"><a href="../reference/mt_ungroup.html">mt_ungroup</a></span><span class="op">(</span><span class="va">x</span><span class="op">)</span>, <span class="st">"monotone"</span> <span class="op">=</span> <span class="fu"><a href="../reference/mt_ungroup.html">mt_ungroup</a></span><span class="op">(</span><span class="va">x</span>, method <span class="op">=</span> <span class="st">"monotone"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 </div>

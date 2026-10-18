@@ -1,0 +1,194 @@
+# Smooth constrained mortality forecasting (CP-splines)
+
+`cp_splines()` is the CP-spline model of Camarda (2019): the
+two-dimensional P-spline model of [`p_splines()`](p_splines.md), with
+coefficients of its own for the first year of life, whose forecast is
+constrained to age patterns and time trends like those of the fitting
+years. The code is written from the paper; the author's R code
+(supplementary material) was used to check details and results.
+
+## Usage
+
+``` r
+cp_splines(
+  level_ageing = 0.95,
+  level_change = 0.5,
+  kappa = 10000,
+  n_boot = 100,
+  lambda = NULL,
+  criterion = c("bic", "aic"),
+  pord = 2,
+  deg = 3,
+  ndx = NULL,
+  lambda_range = c(1e-04, 1e+06),
+  infant = TRUE
+)
+```
+
+## Arguments
+
+- level_ageing, level_change:
+
+  Levels of the central ranges of the rates of ageing and of change over
+  the data years that bound the forecast (95% and 50% in Camarda 2019).
+
+- kappa:
+
+  Weight of the asymmetric penalties, one value or one per constraint
+  (ageing, change); `1e4` in Camarda (2019).
+
+- n_boot:
+
+  Number of bootstrap samples (1000 in Camarda 2019). Each needs a
+  forecast fit, so forecasts with many draws take time.
+
+- lambda:
+
+  Smoothing parameters over age and years, `c(age, year)`; `NULL`
+  (default) selects them by `criterion`.
+
+- criterion:
+
+  `"bic"` (default) or `"aic"`.
+
+- pord:
+
+  Order of the difference penalties, over age and years (one value for
+  both).
+
+- deg:
+
+  Degree of the B-splines, over age and years.
+
+- ndx:
+
+  Numbers of intervals between knots over age and years; `NULL` gives
+  about one knot per five years (see Details).
+
+- lambda_range:
+
+  Search range of the smoothing parameters (the default of
+  MortalitySmooth). A selected value at an end of the range gives a
+  warning (class `mt_warning_lambda_bound`) when the criterion improves
+  by more than 1 two decades beyond it.
+
+- infant:
+
+  Give the first year of life its own coefficients (Camarda 2019,
+  section 3.1).
+
+## Value
+
+A model specification.
+
+## Details
+
+The model has five steps (Camarda 2019, sections 3.1 to 3.2.2):
+
+1.  A two-dimensional P-spline model is fitted to the data years
+    ([`p_splines()`](p_splines.md), smoothing parameters by BIC). The
+    first year of life gets a row of coefficients of its own, penalised
+    over years but not connected over age with the following ages
+    (section 3.1).
+
+2.  At every age and data year, two derivatives of the fitted log rates
+    are computed from the derivatives of the B-splines: over age, the
+    rate of ageing, and over years, the rate of change (eq. 14-17).
+
+3.  Bounds per age: the central range with `level_ageing` (default 95%)
+    of the rates of ageing over the data years, and the central range
+    with `level_change` (default 50%, the interquartile range) of the
+    rates of change (empirical quantiles).
+
+4.  The forecast fit (the basis over years extended over the forecast
+    years with weight 0, as in [`p_splines()`](p_splines.md)) adds
+    asymmetric penalties: where a derivative in a forecast year lies
+    outside its bounds, its squared distance to the bound is penalised
+    with weight `kappa` (eq. 18-20). The cells outside their bounds are
+    found again at every step of the scoring algorithm. Forecast age
+    patterns thus keep the shape of the fitted ones, and the change of
+    each age over time stays within the range of its past change.
+
+5.  Uncertainty comes from a residual bootstrap (section 3.2.2). The
+    deviance residuals of the fit of step 1 are resampled with
+    replacement. With the observed deaths, each resampled residual gives
+    bootstrap deaths: the value at which the observed deaths have that
+    deviance residual (eq. 22). Steps 2 to 4 are repeated on every
+    bootstrap sample, with the smoothing parameters, levels and `kappa`
+    of the fit.
+
+Each draw is the forecast of one bootstrap sample; the `n_boot` samples
+are used in turn when `n_draws` is larger. The draws thus carry the
+uncertainty of the fit only: the forecast has no innovations, and
+Camarda (2019) notes that the intervals are often narrower than those of
+other methods. Draws describe the expected rates; predictive draws
+(`mt_forecast(predictive = TRUE)`) add Poisson variation of the deaths,
+the observation model of the fit (the paper gives no method for
+prediction intervals of observed rates). With `n_boot = 0` every draw is
+the forecast of the data.
+
+The grid needs the first year of life as its own age group for step 1 to
+give it coefficients of its own (`infant = TRUE` and at least four age
+groups); otherwise all ages share the surface. Ages and missing cells
+are treated as in [`p_splines()`](p_splines.md). The bounds are ranges
+over the data years, so the model needs at least 10 of them.
+
+**Package-specific choices (reference unknown).** As in
+[`p_splines()`](p_splines.md): cell ages, the knot spacing for age
+groups and the search of the smoothing parameters (the paper minimises
+the BIC; the author's code searches a grid over ranges set for its
+data). The knots lie on the range of the data without margins, as in the
+author's code. The basis over years of the forecast is that of the fit
+extended on the same knot spacing, as the paper describes, with the
+knots placed as in [`p_splines()`](p_splines.md); the author's code
+builds a new basis over the data and forecast years with one knot per
+five years (for French women, ages 0-100, 1950-2001, this changes the
+log rates forecast to 2021 by at most 0.001). The rate of ageing at age
+0 is the difference of the log rates of the first two age groups divided
+by the distance between their cell ages (the author's code: single years
+of age). Cells without deaths have the deviance residual `-sqrt(2 mu)`
+(with 0 log 0 = 0), and their bootstrap deaths are `r^2 / 2` for a
+negative resampled residual `r` and 0 for a positive one, the limit of
+eq. 22; the author's code gives these cells a residual drawn from the
+other cells. The scoring algorithm with asymmetric penalties stops when
+no coefficient changes by more than 1e-4 (relative to its size where
+that exceeds 1), after at most 100 steps, as in the author's code
+(relative changes).
+
+## References
+
+Camarda CG (2019). Smooth constrained mortality forecasting.
+*Demographic Research* 41(38): 1091-1130.
+[doi:10.4054/DemRes.2019.41.38](https://doi.org/10.4054/DemRes.2019.41.38)
+
+Currie ID, Durban M, Eilers PHC (2004). Smoothing and forecasting
+mortality rates. *Statistical Modelling* 4(4): 279-298.
+[doi:10.1191/1471082X04st080oa](https://doi.org/10.1191/1471082X04st080oa)
+
+## See also
+
+[`p_splines()`](p_splines.md) for the unconstrained forecast.
+
+## Examples
+
+``` r
+# \donttest{
+x <- mt_example(deaths = "single", years = 1995:2012)
+fit <- mt_fit(cp_splines(n_boot = 20), x)
+fc <- mt_forecast(fit, h = 10, n_draws = 20, seed = 1)
+mt_parameters(fit)
+#>      stratum    parameter  index         value
+#>       <char>       <char> <char>         <num>
+#>   1:  female   lambda_age         2.336936e+00
+#>   2:  female  lambda_year         1.271399e+04
+#>   3:  female           ed         3.335615e+01
+#>   4:  female          bic         1.864823e+03
+#>   5:  female   dispersion         1.306579e+00
+#>  ---                                          
+#> 574:    male change_upper     96 -5.069629e-03
+#> 575:    male change_upper     97 -4.510031e-03
+#> 576:    male change_upper     98 -3.910327e-03
+#> 577:    male change_upper     99 -3.387716e-03
+#> 578:    male change_upper   100+ -3.022713e-03
+# }
+```

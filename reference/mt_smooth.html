@@ -180,7 +180,11 @@ additive model with a tensor-product P-spline <code>te(age, year)</code> and the
 exposures as offset (<code>"gam"</code>; Wood 2017), smoothing parameters by REML
 and overdispersion estimated, so that year-to-year variation beyond
 Poisson noise is not taken for signal.</p></li>
-</ul><p>The Whittaker smoother minimises <code>sum(w (y - z)^2) + lambda sum((D z)^2)</code>
+</ul><p>With <code>"pspline"</code>, an open age interval of the grid is expanded into
+single years up to <code>omega</code> and its exposure is split by the PCLM of the
+exposures, as in <code><a href="mt_ungroup.html">mt_ungroup()</a></code> (<code>open_split = "pclm"</code>, Rizzi, Gampe and
+Eilers 2015).</p>
+<p>The Whittaker smoother minimises <code>sum(w (y - z)^2) + lambda sum((D z)^2)</code>
 for log rates <code>y</code>, weights <code>w</code> and differences <code>D</code> of order <code>pord</code>
 (divided differences over age, so that groups of different widths are
 smoothed on the age scale). Its smoothing parameter is chosen for every
@@ -229,20 +233,20 @@ Edinburgh Mathematical Society</em> 41: 63-75.</p>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="va">s</span>, <span class="st">"smooth"</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    measure stratum period     method lambda_age lambda_period       ed</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     &lt;char&gt;   &lt;int&gt; &lt;char&gt;     &lt;char&gt;      &lt;num&gt;         &lt;num&gt;    &lt;num&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1:  deaths       1   2001 pspline_1d   86243.51            NA 5.733140</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2:  deaths       1   2002 pspline_1d   55791.61            NA 6.265619</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3:  deaths       1   2003 pspline_1d   27949.37            NA 7.219266</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4:  deaths       2   2001 pspline_1d  100867.89            NA 5.537980</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 5:  deaths       2   2002 pspline_1d   23050.92            NA 7.560283</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 6:  deaths       2   2003 pspline_1d   89578.26            NA 5.670093</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1:  deaths       1   2001 pspline_1d   61501.32            NA 6.073524</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2:  deaths       1   2002 pspline_1d   29356.92            NA 7.071097</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3:  deaths       1   2003 pspline_1d   23158.84            NA 7.425411</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4:  deaths       2   2001 pspline_1d   91819.37            NA 5.632183</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5:  deaths       2   2002 pspline_1d   20711.87            NA 7.711462</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6:  deaths       2   2003 pspline_1d   76056.64            NA 5.855391</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    max_rel_diff at_bound open_iterations open_converged</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>           &lt;num&gt;   &lt;lgcl&gt;           &lt;int&gt;         &lt;lgcl&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1:    0.1999760    FALSE              11           TRUE</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2:    0.2327082    FALSE              10           TRUE</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3:    0.2063522    FALSE              11           TRUE</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4:    0.2269536    FALSE               9           TRUE</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 5:    0.2456730    FALSE              10           TRUE</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 6:    0.2109345    FALSE              10           TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1:    0.1938111    FALSE              NA             NA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2:    0.2021510    FALSE              NA             NA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3:    0.1978243    FALSE              NA             NA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4:    0.2241836    FALSE              NA             NA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5:    0.2471245    FALSE              NA             NA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6:    0.2149863    FALSE              NA             NA</span>
 <span class="r-in"><span><span class="va">xt</span> <span class="op">&lt;-</span> <span class="fu"><a href="mt_example.html">mt_example</a></span><span class="op">(</span>deaths <span class="op">=</span> <span class="st">"single"</span>, years <span class="op">=</span> <span class="fl">2000</span><span class="op">:</span><span class="fl">2015</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">st</span> <span class="op">&lt;-</span> <span class="fu">mt_smooth</span><span class="op">(</span><span class="va">xt</span>, along <span class="op">=</span> <span class="st">"period"</span>, method <span class="op">=</span> <span class="st">"whittaker"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="mt_smooth_check.html">mt_smooth_check</a></span><span class="op">(</span><span class="va">xt</span>, <span class="va">st</span><span class="op">)</span></span></span>

@@ -195,8 +195,11 @@ keeps their composition and never sets a part to zero:</p>
 <p>England keeps the life expectancy of its own model; its parts move
 towards it. The intervals of the bottom series widen (women in Q1, men
 in Q5), because they now carry the uncertainty of England’s own
-forecast. With WLS some bottom forecasts had to be held at zero in 10%
-of the draws (the warning above).</p>
+forecast. With WLS, the projection would make some bottom forecasts
+negative. The non-negative reconciliation of Wickramasuriya, Turlach and
+Hyndman (2020) then minimises the same weighted distance with all bottom
+forecasts at zero or above; in 10% of the draws some bottom forecasts
+end at zero (the warning above).</p>
 </div>
 <div class="section level2">
 <h2 id="does-coherence-cost-accuracy">Does coherence cost accuracy?<a class="anchor" aria-label="anchor" href="#does-coherence-cost-accuracy"></a>
@@ -311,6 +314,9 @@ optimisation. <em>European Journal of Operational Research</em> 306(2):
 forecast reconciliation for hierarchical and grouped time series through
 trace minimization. <em>Journal of the American Statistical
 Association</em> 114(526): 804-819.</p>
+<p>Wickramasuriya SL, Turlach BA, Hyndman RJ (2020). Optimal
+non-negative forecast reconciliation. <em>Statistics and Computing</em>
+30: 1167-1182.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

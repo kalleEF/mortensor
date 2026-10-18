@@ -107,11 +107,10 @@ quintile and Q1 path by path (`contrast`, “Backtesting and scores”):
 bt <- mt_compare(cand, xa, origins = 2010:2014, h = 5, n_draws = 200, quantities = "life_expectancy",
                  contrast = c(var = "quintile", ref = "Q1"))
 #> Warning in report_fit_problems(diagnostics, spec$label, classes): Li-Lee
-#> (common by sex): warnings in 18 stratum/strata, for example female.Q1: Li-Lee:
-#> the AR(1) coefficient of the stratum index is bounded at |phi| = 0.99 in 1
-#> stratum/strata (female.Q4): their deviations from the common trend are close to
-#> a unit root and revert very slowly; coherence may not suit them. (see the
-#> diagnostics of the fit).
+#> (common by sex): Li-Lee: the AR(1) coefficient of the stratum index is bounded
+#> at |phi| = 0.99 in 1 stratum/strata (female.Q4): their deviations from the
+#> common trend are close to a unit root and revert very slowly; coherence may not
+#> suit them. (diagnostics of 18 stratum/strata of the fit).
 mt_score_table(bt, metrics = c("crps", "cov95"), targets = c("rate", "life_expectancy"), hierarchy = h)
 #>                model     level   crps cov95 crps_le cov95_le
 #>  1:       Lee-Carter    bottom 0.0672 0.793   0.330    0.772
@@ -123,9 +122,9 @@ mt_score_table(bt, metrics = c("crps", "cov95"), targets = c("rate", "life_expec
 #>  7:           Li-Lee    bottom 0.0678 0.801   0.391    0.760
 #>  8:           Li-Lee aggregate 0.0563 0.729   0.392    0.691
 #>  9:           Li-Lee     total 0.0480 0.662   0.376    0.720
-#> 10:     coherent fdm    bottom 0.0711 0.748   0.415    0.524
-#> 11:     coherent fdm aggregate 0.0610 0.639   0.404    0.440
-#> 12:     coherent fdm     total 0.0549 0.486   0.382    0.400
+#> 10:     coherent fdm    bottom 0.0707 0.763   0.406    0.528
+#> 11:     coherent fdm aggregate 0.0608 0.651   0.399    0.480
+#> 12:     coherent fdm     total 0.0545 0.498   0.380    0.400
 #> 13: Lee-Carter + fdm    bottom 0.0657 0.861   0.323    0.860
 #> 14: Lee-Carter + fdm aggregate 0.0536 0.753   0.325    0.589
 #> 15: Lee-Carter + fdm     total 0.0437 0.528   0.348    0.320
@@ -138,7 +137,7 @@ mt_score_table(bt[quintile == "Q5" & sex != "both"], metrics = c("crps", "cov95"
 #> 1:       Lee-Carter       0.219         1.00
 #> 2:              fdm       0.372         0.90
 #> 3:           Li-Lee       0.777         0.04
-#> 4:     coherent fdm       0.672         0.18
+#> 4:     coherent fdm       0.683         0.16
 #> 5: Lee-Carter + fdm       0.277         0.98
 ```
 
@@ -164,7 +163,7 @@ forecasts each quintile independently
 are), so the deviations of its draws partly cancel in the totals. The
 gap separates the models clearly: Li-Lee and the coherent fdm forecast
 it worst, and their intervals covered the observed gap in only 4% and
-18% of the cases, because in 2010-2019 the female gap did not return to
+16% of the cases, because in 2010-2019 the female gap did not return to
 its past level. Lee-Carter forecast the gap best, with intervals that
 covered it in every case, the ensemble of Lee-Carter and fdm second. The
 pipeline continues with Lee-Carter, chosen for the quantity of the
@@ -317,24 +316,21 @@ cand_c <- list("summed" = reconciled(ll, hc, method = "bottom_up"),
 bt_c <- mt_compare(cand_c, xc, origins = c(2010, 2012, 2014), h = 5, n_draws = 200,
                    quantities = c("life_expectancy", "asr"), contrast = c(var = "quintile", ref = "Q1"))
 #> Warning in report_fit_problems(diagnostics, spec$label, classes): Li-Lee
-#> (common by sex, cause): warnings in 130 stratum/strata, for example
-#> female.Q1.lung_cancer: Li-Lee: the AR(1) coefficient of the stratum index is
+#> (common by sex, cause): Li-Lee: the AR(1) coefficient of the stratum index is
 #> bounded at |phi| = 0.99 in 1 stratum/strata (female.Q1.ihd): their deviations
 #> from the common trend are close to a unit root and revert very slowly;
-#> coherence may not suit them. (see the diagnostics of the fit).
+#> coherence may not suit them. (diagnostics of 130 stratum/strata of the fit).
 
 #> Warning in report_fit_problems(diagnostics, spec$label, classes): Li-Lee
-#> (common by sex, cause): warnings in 130 stratum/strata, for example
-#> female.Q1.lung_cancer: Li-Lee: the AR(1) coefficient of the stratum index is
+#> (common by sex, cause): Li-Lee: the AR(1) coefficient of the stratum index is
 #> bounded at |phi| = 0.99 in 1 stratum/strata (female.Q1.ihd): their deviations
 #> from the common trend are close to a unit root and revert very slowly;
-#> coherence may not suit them. (see the diagnostics of the fit).
+#> coherence may not suit them. (diagnostics of 130 stratum/strata of the fit).
 #> Warning in report_fit_problems(diagnostics, spec$label, classes): Li-Lee
-#> (common by sex, cause): warnings in 120 stratum/strata, for example
-#> female.Q1.lung_cancer: Li-Lee: the AR(1) coefficient of the stratum index is
+#> (common by sex, cause): Li-Lee: the AR(1) coefficient of the stratum index is
 #> bounded at |phi| = 0.99 in 1 stratum/strata (female.Q1.ihd): their deviations
 #> from the common trend are close to a unit root and revert very slowly;
-#> coherence may not suit them. (see the diagnostics of the fit).
+#> coherence may not suit them. (diagnostics of 120 stratum/strata of the fit).
 ```
 
 The warnings come from Li-Lee: for women in Q1, the deviation of
@@ -381,11 +377,10 @@ it well (CRPS of the gap 0.15 against 0.33 and 0.50).
 
 fc_c <- mt_forecast(mt_fit(cand_c[["scaled to Lee-Carter total"]], xc), to = 2035, n_draws = 1000, seed = 1)
 #> Warning in report_fit_problems(diagnostics, spec$label, classes): Li-Lee
-#> (common by sex, cause): warnings in 120 stratum/strata, for example
-#> female.Q1.lung_cancer: Li-Lee: the AR(1) coefficient of the stratum index is
+#> (common by sex, cause): Li-Lee: the AR(1) coefficient of the stratum index is
 #> bounded at |phi| = 0.99 in 1 stratum/strata (female.Q1.ihd): their deviations
 #> from the common trend are close to a unit root and revert very slowly;
-#> coherence may not suit them. (see the diagnostics of the fit).
+#> coherence may not suit them. (diagnostics of 120 stratum/strata of the fit).
 #> Warning in check_draws_plausible(arr, fit$age, fit$strata, fit$spec$label): By
 #> cause (all: Lee-Carter; other: Li-Lee (common by sex, cause)): forecast death
 #> rates above 1 in 0.6% of the draws (strata female.Q1.dementia,

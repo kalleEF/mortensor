@@ -127,17 +127,38 @@ expectancy rises (Li, Lee and Gerland 2013)</td>
 2007)</td>
 </tr>
 <tr class="odd">
-<td>Lee-Carter, CBD, APC, Renshaw-Haberman, M6, M7, M8</td>
+<td>P-splines</td>
+<td><code><a href="../reference/p_splines.html">p_splines()</a></code></td>
+<td>mortensor</td>
+<td>a smooth surface of the log rates over age and year, extended over
+the forecast years (Currie, Durban and Eilers 2004)</td>
+</tr>
+<tr class="even">
+<td>Constrained P-splines</td>
+<td><code><a href="../reference/cp_splines.html">cp_splines()</a></code></td>
+<td>mortensor</td>
+<td>the P-spline forecast, with the rates of ageing and of change of
+each age kept within their past range (Camarda 2019)</td>
+</tr>
+<tr class="odd">
+<td>Rates of mortality improvement</td>
+<td><code><a href="../reference/bohk_rau.html">bohk_rau()</a></code></td>
+<td>mortensor</td>
+<td>a Bayesian trend of the yearly improvement of each age, from
+smoothed rates (Bohk-Ewald and Rau 2017)</td>
+</tr>
+<tr class="even">
+<td>Lee-Carter, CBD, APC, Renshaw-Haberman, M6, M7, M8, Plat</td>
 <td>
 <code>stmomo("lc")</code>, <code>"cbd"</code>, <code>"apc"</code>,
 <code>"rh"</code>, <code>"m6"</code>, <code>"m7"</code>,
-<code>"m8"</code>
+<code>"m8"</code>, <code>"plat"</code>
 </td>
 <td>StMoMo</td>
-<td>generalised age-period-cohort models (Cairns et al. 2009; Villegas
-et al. 2018)</td>
+<td>generalised age-period-cohort models (Cairns et al. 2009; Plat 2009;
+Villegas et al. 2018)</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>Bayesian Lee-Carter, RH, APC, CBD, M6</td>
 <td>
 <code>stanmomo("lc")</code>, <code>"rh"</code>, …</td>
@@ -145,14 +166,14 @@ et al. 2018)</td>
 <td>the StMoMo models fitted with Stan, with posterior uncertainty of
 all parameters (Barigou et al. 2023)</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>Bayesian APC</td>
 <td><code><a href="../reference/apc_bayes.html">apc_bayes()</a></code></td>
 <td>bamp</td>
 <td>age, period and cohort effects with random-walk priors (Schmid and
 Held 2007)</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>Time series per age</td>
 <td>
 <code><a href="../reference/arima_series.html">arima_series()</a></code>, <code><a href="../reference/arima_series.html">ets_series()</a></code>
@@ -160,13 +181,13 @@ Held 2007)</td>
 <td>forecast</td>
 <td>a separate ARIMA or exponential smoothing model for each age</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>Tensor decomposition</td>
 <td><code><a href="../reference/tucker3.html">tucker3()</a></code></td>
 <td>mortensor</td>
 <td>age, period and stratum factors</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>Several populations</td>
 <td>
 <code><a href="../reference/li_lee.html">li_lee()</a></code>, <code>coda(coherent = TRUE)</code>,
@@ -176,7 +197,7 @@ Held 2007)</td>
 <td>strata pooled around a common trend, or causes of death as
 shares</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>Coherent functional demographic model</td>
 <td><code><a href="../reference/coherent_fdm.html">coherent_fdm()</a></code></td>
 <td>demography</td>
@@ -207,15 +228,19 @@ uncertainty of every model.</p>
 <span>               <span class="st">"APC"</span> <span class="op">=</span> <span class="fu"><a href="../reference/stmomo.html">stmomo</a></span><span class="op">(</span><span class="st">"apc"</span><span class="op">)</span>,</span>
 <span>               <span class="st">"M6"</span> <span class="op">=</span> <span class="fu"><a href="../reference/stmomo.html">stmomo</a></span><span class="op">(</span><span class="st">"m6"</span><span class="op">)</span>,</span>
 <span>               <span class="st">"M7"</span> <span class="op">=</span> <span class="fu"><a href="../reference/stmomo.html">stmomo</a></span><span class="op">(</span><span class="st">"m7"</span><span class="op">)</span>,</span>
+<span>               <span class="st">"Plat"</span> <span class="op">=</span> <span class="fu"><a href="../reference/stmomo.html">stmomo</a></span><span class="op">(</span><span class="st">"plat"</span><span class="op">)</span>,</span>
 <span>               <span class="st">"CoDa"</span> <span class="op">=</span> <span class="fu"><a href="../reference/coda.html">coda</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>               <span class="st">"P-splines"</span> <span class="op">=</span> <span class="fu"><a href="../reference/p_splines.html">p_splines</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>               <span class="st">"CP-splines"</span> <span class="op">=</span> <span class="fu"><a href="../reference/cp_splines.html">cp_splines</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>               <span class="st">"Bohk-Rau"</span> <span class="op">=</span> <span class="fu"><a href="../reference/bohk_rau.html">bohk_rau</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>               <span class="st">"Bayesian APC"</span> <span class="op">=</span> <span class="fu"><a href="../reference/apc_bayes.html">apc_bayes</a></span><span class="op">(</span>mcmc <span class="op">=</span> <span class="fu"><a href="../reference/mcmc_control.html">mcmc_control</a></span><span class="op">(</span><span class="st">"fast"</span><span class="op">)</span><span class="op">)</span>,</span>
 <span>               <span class="st">"Bayesian RH"</span> <span class="op">=</span> <span class="fu"><a href="../reference/stanmomo.html">stanmomo</a></span><span class="op">(</span><span class="st">"rh"</span>, h_max <span class="op">=</span> <span class="fl">20</span>, cores <span class="op">=</span> <span class="fl">4</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span>  <span class="co"># the MCMC samplers of bamp and Stan draw their seeds from R</span></span>
 <span><span class="va">fc</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span><span class="va">models</span>, <span class="kw">function</span><span class="op">(</span><span class="va">m</span><span class="op">)</span> <span class="fu"><a href="../reference/mt_forecast.html">mt_forecast</a></span><span class="op">(</span><span class="fu"><a href="../reference/mt_fit.html">mt_fit</a></span><span class="op">(</span><span class="va">m</span>, <span class="va">ew</span><span class="op">)</span>, h <span class="op">=</span> <span class="fl">20</span>, n_draws <span class="op">=</span> <span class="fl">500</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Warning in report_fit_problems(diagnostics, spec$label, classes): Functional</span></span>
-<span><span class="co">#&gt; demographic model: warnings in 1 stratum/strata, for example male:</span></span>
-<span><span class="co">#&gt; smooth.demogdata() failed (initial parameters not feasible); smoothed without</span></span>
-<span><span class="co">#&gt; the monotonicity constraint. (see the diagnostics of the fit).</span></span></code></pre></div>
+<span><span class="co">#&gt; demographic model: smooth.demogdata() failed (initial parameters not feasible);</span></span>
+<span><span class="co">#&gt; smoothed without the monotonicity constraint. (diagnostics of 1 stratum/strata</span></span>
+<span><span class="co">#&gt; of the fit).</span></span></code></pre></div>
 <p>The warning comes from fdm: its default smoothing over age, a spline
 that must increase above age 65
 (<code><a href="https://pkg.robjhyndman.com/demography/reference/smooth.demogdata.html" class="external-link">demography::smooth.demogdata()</a></code>), could not be fitted to
@@ -232,27 +257,40 @@ again.</p>
 <span><span class="co">#&gt;                 CBD              APC               M6               M7</span></span>
 <span><span class="co">#&gt; 1: 27.5 (26.6-28.3) 27.4 (26.6-28.1) 27.2 (26.3-28.0) 27.5 (26.6-28.3)</span></span>
 <span><span class="co">#&gt; 2: 28.7 (27.6-29.7) 28.4 (27.4-29.5) 28.1 (26.8-29.0) 28.8 (27.7-29.9)</span></span>
-<span><span class="co">#&gt;                CoDa     Bayesian APC      Bayesian RH</span></span>
-<span><span class="co">#&gt; 1: 27.7 (26.6-28.9) 26.5 (25.4-27.5) 27.5 (26.4-28.3)</span></span>
-<span><span class="co">#&gt; 2: 29.4 (27.7-30.8) 26.7 (25.0-28.1) 28.5 (26.9-29.8)</span></span></code></pre></div>
+<span><span class="co">#&gt;                Plat             CoDa        P-splines       CP-splines</span></span>
+<span><span class="co">#&gt; 1: 27.0 (26.1-27.8) 27.9 (26.1-29.0) 28.5 (27.7-29.3) 27.3 (27.1-27.5)</span></span>
+<span><span class="co">#&gt; 2: 27.9 (26.6-28.9) 29.7 (27.8-30.9) 30.6 (28.3-32.1) 28.4 (28.2-28.6)</span></span>
+<span><span class="co">#&gt;            Bohk-Rau     Bayesian APC      Bayesian RH</span></span>
+<span><span class="co">#&gt; 1: 28.1 (27.5-28.2) 26.6 (25.4-27.6) 27.5 (26.5-28.4)</span></span>
+<span><span class="co">#&gt; 2: 29.9 (29.1-30.1) 26.7 (25.1-28.2) 28.5 (27.1-29.8)</span></span></code></pre></div>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/mt_compare.html">mt_plot_compare</a></span><span class="op">(</span><span class="va">fc</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"random walk"</span>, <span class="st">"Lee-Carter"</span>, <span class="st">"fdm"</span>, <span class="st">"APC"</span>, <span class="st">"Bayesian APC"</span><span class="op">)</span><span class="op">]</span>, data <span class="op">=</span> <span class="va">ew</span><span class="op">)</span></span></code></pre></div>
 <p><img src="model-choice-plot-models-1.png"></p>
 <p>All models forecast a further rise, at different paces and with
-different uncertainty. By 2031 the medians range from 26.7 to 29.4
+different uncertainty. By 2031 the medians range from 26.7 to 30.6
 years:</p>
 <ul>
 <li>
+<strong>P-splines</strong>, <strong>Bohk-Rau</strong>,
 <strong>CoDa</strong> and <strong>fdm</strong> give the highest
-forecasts (29.4 and 29.2 years); fdm has the narrowest interval, CoDa
-one of the widest.</li>
+forecasts (30.6, 29.9, 29.7 and 29.2 years). The P-spline surface
+continues the trend of each age over the last years and has the widest
+interval (28.3-32.1). The interval of Bohk-Rau is narrow, and its median
+lies close to its upper bound (29.1-30.1): the forecast improvements are
+limited to 3.5% a year (the upper limit of the paper), which cuts off
+the upper part of the distribution.</li>
 <li>The period models (<strong>random walk</strong>,
 <strong>Lee-Carter</strong>, <strong>CBD</strong>) and
 <strong>M7</strong> agree closely, at about 28.7 years.</li>
 <li>The cohort models <strong>APC</strong> and <strong>M6</strong> are
-lower (28.4 and 28.1 years); the <strong>Bayesian RH</strong> (StanMoMo:
-Lee-Carter with a cohort effect, fitted with Stan) lies between them and
-the period models (28.5 years).</li>
+lower (28.4 and 28.1 years), and <strong>Plat</strong> is lower still
+(27.9 years); the <strong>Bayesian RH</strong> (StanMoMo: Lee-Carter
+with a cohort effect, fitted with Stan) lies between them and the period
+models (28.5 years).</li>
+<li>
+<strong>CP-splines</strong> forecast 28.4 years with the narrowest
+interval of all (28.2-28.6). Their draws carry the uncertainty of the
+fit only, without innovations of the trend.</li>
 <li>The <strong>Bayesian APC</strong> barely moves. Its default priors
 are first-order random walks for period and cohort
 (<code>period = "rw1"</code>), which carry the last period effect
@@ -281,23 +319,34 @@ years):</p>
 <span><span class="co">#&gt;  5:          APC 0.0393 0.947   0.261    1.000</span></span>
 <span><span class="co">#&gt;  6:           M6 0.0316 0.981   0.184    1.000</span></span>
 <span><span class="co">#&gt;  7:           M7 0.0523 0.816   0.374    0.800</span></span>
-<span><span class="co">#&gt;  8:         CoDa 0.0457 0.838   0.257    1.000</span></span>
-<span><span class="co">#&gt;  9: Bayesian APC 0.0715 0.678   0.568    0.667</span></span>
-<span><span class="co">#&gt; 10:  Bayesian RH 0.0461 0.874   0.282    1.000</span></span></code></pre></div>
+<span><span class="co">#&gt;  8:         Plat 0.0531 0.833   0.351    0.967</span></span>
+<span><span class="co">#&gt;  9:         CoDa 0.0497 0.875   0.321    0.767</span></span>
+<span><span class="co">#&gt; 10:    P-splines 0.0565 0.628   0.352    0.400</span></span>
+<span><span class="co">#&gt; 11:   CP-splines 0.0624 0.359   0.497    0.100</span></span>
+<span><span class="co">#&gt; 12:     Bohk-Rau 0.0337 0.682   0.108    0.867</span></span>
+<span><span class="co">#&gt; 13: Bayesian APC 0.0736 0.690   0.586    0.667</span></span>
+<span><span class="co">#&gt; 14:  Bayesian RH 0.0455 0.901   0.278    1.000</span></span></code></pre></div>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/mt_plot_more.html">mt_plot_scores</a></span><span class="op">(</span><span class="va">bt</span>, by <span class="op">=</span> <span class="st">"model"</span>, target <span class="op">=</span> <span class="st">"life_expectancy"</span><span class="op">)</span></span></code></pre></div>
 <p><img src="model-choice-plot-scores-1.png"></p>
 <ul>
 <li>
-<strong>M6</strong> and <strong>APC</strong> forecast the rates best
-(CRPS 0.032 and 0.039), M6 also life expectancy, and their intervals
-covered the observed values (95% coverage of the rates 0.98 and
-0.95).</li>
+<strong>M6</strong> forecast the rates best (CRPS 0.032), followed
+by <strong>Bohk-Rau</strong> (0.034) and <strong>APC</strong> (0.039).
+The intervals of M6 and APC covered the observed values (95% coverage of
+the rates 0.98 and 0.95).</li>
 <li>
-<strong>CoDa</strong> comes next for the rates (0.046) and forecast
-life expectancy as well as APC (0.257 against 0.261 years).</li>
-<li>The <strong>Bayesian RH</strong> follows closely (0.046); its 95%
-intervals covered 0.87 of the observed rates.</li>
+<strong>Bohk-Rau</strong> forecast life expectancy best by far (CRPS
+0.108 years, against 0.184 for M6), but its intervals are too narrow:
+they covered 0.68 of the observed rates and 0.87 of the observed values
+of life expectancy.</li>
+<li>The <strong>Bayesian RH</strong> follows APC for the rates (0.0455);
+its 95% intervals covered 0.90 of the observed rates.</li>
+<li>
+<strong>CoDa</strong> forecast the rates (0.050) and life expectancy
+(0.321 years) less accurately than the cohort models; its intervals
+covered 0.88 of the rates and 0.77 of the values of life
+expectancy.</li>
 <li>The period models and the random walk lie close together; the random
 walk forecast the single rates slightly better than Lee-Carter and CBD.
 The intervals of Lee-Carter and CBD are too narrow for the rates (95%
@@ -305,7 +354,16 @@ coverage 0.69 and 0.71): their draws add only the Poisson variation of
 the deaths to the forecast rates. Those of the random walk, which
 forecasts the observed rates themselves, cover 0.97.
 <strong>M7</strong>, CBD with a cohort effect, forecast the rates more
-accurately than CBD (0.052 against 0.057), but not life expectancy.</li>
+accurately than CBD (0.052 against 0.057), but not life expectancy.
+<strong>Plat</strong> forecast the rates about as accurately as M7
+(0.053) and life expectancy slightly better than both (0.351
+years).</li>
+<li>
+<strong>P-splines</strong> forecast the rates about as accurately as
+Lee-Carter (0.0565 against 0.0571), with intervals that are too narrow
+(95% coverage 0.63). <strong>CP-splines</strong> were less accurate
+(0.062), and their intervals covered only 0.36 of the observed rates and
+0.10 of the values of life expectancy.</li>
 <li>
 <strong>fdm</strong> forecast life expectancy fairly accurately, but
 its intervals are far too narrow (95% coverage 0.46 for the rates and
@@ -326,41 +384,58 @@ other data, a period model may forecast best.</p>
 differs from that of a reference model by more than the origins vary
 (Diebold and Mariano 1995). By default the variance of the mean
 difference is the equal-weighted cosine estimate, with critical values
-from a t distribution (Lazarus, Lewis, Stock and Watson 2018; Coroneo
-and Iacone 2020), so that the test keeps its nominal size with few
-origins whose test years overlap. Three origins are too few: the test
-would have one degree of freedom. A second backtest of the five fastest
-models from 16 origins (1991-2006), five years ahead, tests life
-expectancy at 55 against M6:</p>
+from a t distribution (Lazarus, Lewis, Stock and Watson 2018), so that
+the test keeps its nominal size with few origins whose test years
+overlap. Three origins are too few: the test would have one degree of
+freedom. A second backtest from 16 origins (1991-2006), five years
+ahead, tests life expectancy at 55 against Bohk-Rau, the most accurate
+model for life expectancy above. To save time it leaves out fdm, CBD, M7
+and the Bayesian models of bamp and Stan:</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">fast</span> <span class="op">&lt;-</span> <span class="va">models</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"random walk"</span>, <span class="st">"Lee-Carter"</span>, <span class="st">"APC"</span>, <span class="st">"M6"</span>, <span class="st">"CoDa"</span><span class="op">)</span><span class="op">]</span></span>
+<code class="sourceCode R"><span><span class="va">fast</span> <span class="op">&lt;-</span> <span class="va">models</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"random walk"</span>, <span class="st">"Lee-Carter"</span>, <span class="st">"APC"</span>, <span class="st">"M6"</span>, <span class="st">"Plat"</span>, <span class="st">"CoDa"</span>, <span class="st">"P-splines"</span>, <span class="st">"CP-splines"</span>, <span class="st">"Bohk-Rau"</span><span class="op">)</span><span class="op">]</span></span>
 <span><span class="va">bt_dm</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_compare.html">mt_compare</a></span><span class="op">(</span><span class="va">fast</span>, <span class="va">ew</span>, origins <span class="op">=</span> <span class="fl">1991</span><span class="op">:</span><span class="fl">2006</span>, h <span class="op">=</span> <span class="fl">5</span>, n_draws <span class="op">=</span> <span class="fl">200</span>, quantities <span class="op">=</span> <span class="st">"life_expectancy"</span><span class="op">)</span></span>
-<span><span class="va">dm</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_dm_test.html">mt_dm_test</a></span><span class="op">(</span><span class="va">bt_dm</span>, ref <span class="op">=</span> <span class="st">"M6"</span>, targets <span class="op">=</span> <span class="st">"life_expectancy"</span><span class="op">)</span></span>
+<span><span class="va">dm</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_dm_test.html">mt_dm_test</a></span><span class="op">(</span><span class="va">bt_dm</span>, ref <span class="op">=</span> <span class="st">"Bohk-Rau"</span>, targets <span class="op">=</span> <span class="st">"life_expectancy"</span><span class="op">)</span></span>
 <span><span class="va">dm</span><span class="op">[</span><span class="va">horizon</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"1"</span>, <span class="st">"5"</span>, <span class="st">"all"</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">model</span>, <span class="va">horizon</span>, <span class="va">df</span>, <span class="va">score</span>, <span class="va">score_ref</span>, <span class="va">mean_diff</span>, <span class="va">p_value</span><span class="op">)</span><span class="op">]</span></span>
-<span><span class="co">#&gt;           model horizon df      score  score_ref  mean_diff    p_value</span></span>
-<span><span class="co">#&gt;  1: random walk       1  2 0.09724537 0.08185772 0.01538766 0.04709528</span></span>
-<span><span class="co">#&gt;  2: random walk       5  2 0.33916424 0.18850382 0.15066042 0.02335147</span></span>
-<span><span class="co">#&gt;  3: random walk     all  2 0.20274758 0.12847414 0.07427344 0.02945383</span></span>
-<span><span class="co">#&gt;  4:  Lee-Carter       1  2 0.09869128 0.08185772 0.01683356 0.12919591</span></span>
-<span><span class="co">#&gt;  5:  Lee-Carter       5  2 0.33400346 0.18850382 0.14549963 0.04916992</span></span>
-<span><span class="co">#&gt;  6:  Lee-Carter     all  2 0.20342037 0.12847414 0.07494623 0.05835174</span></span>
-<span><span class="co">#&gt;  7:         APC       1  2 0.10308853 0.08185772 0.02123081 0.02510482</span></span>
-<span><span class="co">#&gt;  8:         APC       5  2 0.22542556 0.18850382 0.03692174 0.14707349</span></span>
-<span><span class="co">#&gt;  9:         APC     all  2 0.15659917 0.12847414 0.02812503 0.05495459</span></span>
-<span><span class="co">#&gt; 10:        CoDa       1  2 0.09290433 0.08185772 0.01104661 0.04062320</span></span>
-<span><span class="co">#&gt; 11:        CoDa       5  2 0.24122606 0.18850382 0.05272224 0.15010093</span></span>
-<span><span class="co">#&gt; 12:        CoDa     all  2 0.15784842 0.12847414 0.02937428 0.08623775</span></span></code></pre></div>
-<p>A positive <code>mean_diff</code> means a higher CRPS than M6, so a
-less accurate forecast. M6 had the lowest mean CRPS at each horizon
-shown, but with 16 origins the test has 2 degrees of freedom
-(<code>df</code>) and finds only large and consistent differences. On
-average over the five horizons, the difference is significant at the 5%
-level only against the random walk (p = 0.029); against Lee-Carter and
-APC the p-values are 0.058 and 0.055, against CoDa 0.086. One year ahead
-it is significant against the random walk, APC and CoDa (p from 0.025 to
-0.047), five years ahead against the random walk and Lee-Carter (p =
-0.023 and 0.049). Forecasts from neighbouring origins share test years,
-which the test allows for. The version of
+<span><span class="co">#&gt;           model horizon df      score  score_ref    mean_diff     p_value</span></span>
+<span><span class="co">#&gt;  1: random walk       1  2 0.09724537 0.09099150  0.006253872 0.157400614</span></span>
+<span><span class="co">#&gt;  2: random walk       5  2 0.33916424 0.11117290  0.227991344 0.010672063</span></span>
+<span><span class="co">#&gt;  3: random walk     all  2 0.20274758 0.09241699  0.110330596 0.017752259</span></span>
+<span><span class="co">#&gt;  4:  Lee-Carter       1  2 0.09869128 0.09099150  0.007699773 0.029304835</span></span>
+<span><span class="co">#&gt;  5:  Lee-Carter       5  2 0.33400346 0.11117290  0.222830559 0.008694245</span></span>
+<span><span class="co">#&gt;  6:  Lee-Carter     all  2 0.20342037 0.09241699  0.111003388 0.017919348</span></span>
+<span><span class="co">#&gt;  7:         APC       1  2 0.10308853 0.09099150  0.012097025 0.139017394</span></span>
+<span><span class="co">#&gt;  8:         APC       5  2 0.22542556 0.11117290  0.114252662 0.006023920</span></span>
+<span><span class="co">#&gt;  9:         APC     all  2 0.15659917 0.09241699  0.064182182 0.010681374</span></span>
+<span><span class="co">#&gt; 10:          M6       1  2 0.08185772 0.09099150 -0.009133784 0.240459083</span></span>
+<span><span class="co">#&gt; 11:          M6       5  2 0.18850382 0.11117290  0.077330925 0.082025317</span></span>
+<span><span class="co">#&gt; 12:          M6     all  2 0.12847414 0.09241699  0.036057156 0.057652444</span></span>
+<span><span class="co">#&gt; 13:        Plat       1  2 0.08671621 0.09099150 -0.004275289 0.510662864</span></span>
+<span><span class="co">#&gt; 14:        Plat       5  2 0.32694266 0.11117290  0.215769759 0.008177062</span></span>
+<span><span class="co">#&gt; 15:        Plat     all  2 0.19160430 0.09241699  0.099187312 0.009181521</span></span>
+<span><span class="co">#&gt; 16:        CoDa       1  2 0.15954209 0.09099150  0.068550585 0.095605371</span></span>
+<span><span class="co">#&gt; 17:        CoDa       5  2 0.25731151 0.11117290  0.146138611 0.016253603</span></span>
+<span><span class="co">#&gt; 18:        CoDa     all  2 0.19907843 0.09241699  0.106661448 0.005195717</span></span>
+<span><span class="co">#&gt; 19:   P-splines       1  2 0.13070078 0.09099150  0.039709277 0.008357861</span></span>
+<span><span class="co">#&gt; 20:   P-splines       5  2 0.39054479 0.11117290  0.279371893 0.050576023</span></span>
+<span><span class="co">#&gt; 21:   P-splines     all  2 0.24080913 0.09241699  0.148392140 0.051245330</span></span>
+<span><span class="co">#&gt; 22:  CP-splines       1  2 0.10823133 0.09099150  0.017239831 0.041965892</span></span>
+<span><span class="co">#&gt; 23:  CP-splines       5  2 0.42735305 0.11117290  0.316180154 0.006180024</span></span>
+<span><span class="co">#&gt; 24:  CP-splines     all  2 0.24483804 0.09241699  0.152421054 0.017647085</span></span>
+<span><span class="co">#&gt;           model horizon df      score  score_ref    mean_diff     p_value</span></span></code></pre></div>
+<p>A positive <code>mean_diff</code> means a higher CRPS than Bohk-Rau,
+so a less accurate forecast. With 16 origins the test has 2 degrees of
+freedom (<code>df</code>) and finds only large and consistent
+differences. Bohk-Rau had the lowest mean CRPS five years ahead and on
+average over the five horizons. On average, the difference is
+significant at the 5% level against the random walk, Lee-Carter, APC,
+Plat, CoDa and CP-splines (p from 0.005 to 0.018), but not against M6 (p
+= 0.058) and P-splines (p = 0.051). Five years ahead it is significant
+against the same six models (p from 0.006 to 0.016), and again not
+against M6 (p = 0.082) and P-splines (p = 0.051). One year ahead, M6 and
+Plat had a lower mean CRPS than Bohk-Rau (p = 0.24 and 0.51), and the
+difference is significant only against Lee-Carter, P-splines and
+CP-splines (p from 0.008 to 0.042). Forecasts from neighbouring origins
+share test years, which the test allows for. The version of
 <code><a href="https://pkg.robjhyndman.com/forecast/reference/dm.test.html" class="external-link">forecast::dm.test()</a></code> (<code>varestimator = "acf"</code>,
 with the correction of Harvey, Leybourne and Newbold 1997) is an option;
 with few overlapping origins it rejects too often when the models are
@@ -409,20 +484,24 @@ the single models:</p>
 <span><span class="co">#&gt;  5:                                           APC 0.0393 0.947   0.261    1.000</span></span>
 <span><span class="co">#&gt;  6:                                            M6 0.0316 0.981   0.184    1.000</span></span>
 <span><span class="co">#&gt;  7:                                            M7 0.0523 0.816   0.374    0.800</span></span>
-<span><span class="co">#&gt;  8:                                          CoDa 0.0457 0.838   0.257    1.000</span></span>
-<span><span class="co">#&gt;  9:                                  Bayesian APC 0.0715 0.678   0.568    0.667</span></span>
-<span><span class="co">#&gt; 10:                                   Bayesian RH 0.0461 0.874   0.282    1.000</span></span>
-<span><span class="co">#&gt; 11: equal: Lee-Carter, fdm, APC, M6, Bayesian APC 0.0448 0.943   0.324    1.000</span></span>
-<span><span class="co">#&gt; 12:                     CRPS weights, best 3 of 6 0.0354 0.980   0.238    1.000</span></span></code></pre></div>
+<span><span class="co">#&gt;  8:                                          Plat 0.0531 0.833   0.351    0.967</span></span>
+<span><span class="co">#&gt;  9:                                          CoDa 0.0497 0.875   0.321    0.767</span></span>
+<span><span class="co">#&gt; 10:                                     P-splines 0.0565 0.628   0.352    0.400</span></span>
+<span><span class="co">#&gt; 11:                                    CP-splines 0.0624 0.359   0.497    0.100</span></span>
+<span><span class="co">#&gt; 12:                                      Bohk-Rau 0.0337 0.682   0.108    0.867</span></span>
+<span><span class="co">#&gt; 13:                                  Bayesian APC 0.0736 0.690   0.586    0.667</span></span>
+<span><span class="co">#&gt; 14:                                   Bayesian RH 0.0455 0.901   0.278    1.000</span></span>
+<span><span class="co">#&gt; 15: equal: Lee-Carter, fdm, APC, M6, Bayesian APC 0.0426 0.952   0.298    1.000</span></span>
+<span><span class="co">#&gt; 16:                     CRPS weights, best 3 of 6 0.0354 0.980   0.238    1.000</span></span></code></pre></div>
 <ul>
 <li>The <strong>equal-weight ensemble</strong> is more accurate than the
-average of its components (CRPS of the rates 0.045 against 0.051), and
+average of its components (CRPS of the rates 0.043 against 0.051), and
 its intervals cover. This always holds: the CRPS is a convex function of
 the forecast distribution, so the CRPS of a mixture is never larger than
 the weighted mean of the CRPS of its components. It includes the weak
 Bayesian APC, which pulls it behind APC and M6.</li>
 <li>The <strong>CRPS-weighted ensemble</strong> comes close to M6, the
-best single model (CRPS of the rates 0.035 against 0.032), without
+best single model for the rates (CRPS 0.035 against 0.032), without
 knowing beforehand which model that would be: its weights were estimated
 anew at each origin from the years before it.</li>
 </ul>
@@ -465,13 +544,16 @@ averaging for mortality forecasting using leave-future-out validation.
 <p>Bergeron-Boucher M-P, Canudas-Romo V, Oeppen J, Vaupel JW (2017).
 Coherent forecasts of mortality with compositional data analysis.
 <em>Demographic Research</em> 37(17): 527-566.</p>
+<p>Bohk-Ewald C, Rau R (2017). Probabilistic mortality forecasting with
+varying age-specific survival improvements. <em>Genus</em> 73(1): 1.</p>
 <p>Cairns AJG, Blake D, Dowd K, Coughlan GD, Epstein D, Ong A, Balevich
 I (2009). A quantitative comparison of stochastic mortality models using
 data from England and Wales and the United States. <em>North American
 Actuarial Journal</em> 13(1): 1-35.</p>
-<p>Coroneo L, Iacone F (2020). Comparing predictive accuracy in small
-samples using fixed-smoothing asymptotics. <em>Journal of Applied
-Econometrics</em> 35(4): 391-409.</p>
+<p>Camarda CG (2019). Smooth constrained mortality forecasting.
+<em>Demographic Research</em> 41(38): 1091-1130.</p>
+<p>Currie ID, Durban M, Eilers PHC (2004). Smoothing and forecasting
+mortality rates. <em>Statistical Modelling</em> 4(4): 279-298.</p>
 <p>Diebold FX, Mariano RS (1995). Comparing predictive accuracy.
 <em>Journal of Business &amp; Economic Statistics</em> 13(3):
 253-263.</p>
@@ -496,6 +578,8 @@ projections. <em>Demography</em> 50(6): 2037-2051.</p>
 <p>Oeppen J (2008). Coherent forecasting of multiple-decrement life
 tables: a test using Japanese cause of death data. CODAWORK’08,
 Universitat de Girona.</p>
+<p>Plat R (2009). On stochastic mortality modeling. <em>Insurance:
+Mathematics and Economics</em> 45(3): 393-404.</p>
 <p>Schmid VJ, Held L (2007). Bayesian age-period-cohort modeling and
 prediction - BAMP. <em>Journal of Statistical Software</em> 21(8):
 1-15.</p>

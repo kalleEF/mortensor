@@ -30,7 +30,10 @@ x <- mt_group_levels(x, "imd_decile", function(d) paste0("Q", ceiling(as.numeric
 directions:
 
 - **over age**, each year separately (Poisson P-splines): removes noise
-  between neighbouring ages, keeps every year as observed;
+  between neighbouring ages, keeps every year as observed; the open
+  interval 90+ is expanded into single years, and its exposure is split
+  over them by a PCLM of the exposures, as in
+  [`mt_ungroup()`](../reference/mt_ungroup.md);
 - **over time**, each age separately (weighted Whittaker smoothing of
   the log rates, with the deaths as weights): removes the year-to-year
   variation, keeps the age pattern of every year;
@@ -81,12 +84,12 @@ chk <- rbindlist(lapply(names(sm), function(n) mt_smooth_check(x, sm[[n]])[, met
 chk[, .(dispersion = round(mean(dispersion), 2), trend_ratio = round(mean(trend_ratio), 3)), by = method]
 #>                method dispersion trend_ratio
 #>                <char>      <num>       <num>
-#> 1:           over age       1.44       0.872
+#> 1:           over age       1.49       0.873
 #> 2:          over time       1.94       0.167
 #> 3: age-period surface       3.27       0.046
 ```
 
-Over age, the dispersion is 1.4: around the spline, the deaths of
+Over age, the dispersion is 1.5: around the spline, the deaths of
 neighbouring age groups vary a little more than Poisson noise. Over time
 the observed deaths vary about twice as much as Poisson noise around the
 trend (1.9), and around the surface more than three times as much (3.3):

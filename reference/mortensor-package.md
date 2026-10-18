@@ -21,16 +21,18 @@ The package is organised in layers:
   refit them on every training window.
 
 - **Models**: [`rwd()`](rwd.md), [`lee_carter()`](lee_carter.md),
+  [`p_splines()`](p_splines.md), [`cp_splines()`](cp_splines.md),
   [`arima_series()`](arima_series.md),
   [`ets_series()`](arima_series.md),
   [`hyndman_ullah()`](hyndman_ullah.md),
-  [`coherent_fdm()`](coherent_fdm.md), [`stmomo()`](stmomo.md),
-  [`stanmomo()`](stanmomo.md), [`li_lee()`](li_lee.md),
-  [`coda()`](coda.md), [`apc_bayes()`](apc_bayes.md) (package bamp), the
-  experimental [`tucker3()`](tucker3.md) and
-  [`coda_causes()`](coda_causes.md), and [`ensemble()`](ensemble.md),
-  fitted with [`mt_fit()`](mt_fit.md) (optionally tuned with
-  [`tuned()`](mt_tune.md)) and forecast with
+  [`coherent_fdm()`](coherent_fdm.md), [`stmomo()`](stmomo.md)
+  (including the Plat model), [`stanmomo()`](stanmomo.md),
+  [`li_lee()`](li_lee.md), [`coda()`](coda.md),
+  [`bohk_rau()`](bohk_rau.md), [`nordpred_apc()`](nordpred_apc.md),
+  [`apc_bayes()`](apc_bayes.md) (package bamp), the experimental
+  [`tucker3()`](tucker3.md) and [`coda_causes()`](coda_causes.md), and
+  [`ensemble()`](ensemble.md), fitted with [`mt_fit()`](mt_fit.md)
+  (optionally tuned with [`tuned()`](mt_tune.md)) and forecast with
   [`mt_forecast()`](mt_forecast.md) as simulated paths
   ([mt_draws](mt_draws.md)). [`product_ratio()`](product_ratio.md) and
   [`cause_shares()`](cause_shares.md) are deprecated. The article

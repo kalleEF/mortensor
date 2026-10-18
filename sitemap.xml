@@ -37,11 +37,13 @@
 <url><loc>/reference/axis_widths.html</loc></url>
 <url><loc>/reference/benchmark_coverage.html</loc></url>
 <url><loc>/reference/benchmark_ungroup_ew.html</loc></url>
+<url><loc>/reference/bohk_rau.html</loc></url>
 <url><loc>/reference/bootstrapped.html</loc></url>
 <url><loc>/reference/cause_shares.html</loc></url>
 <url><loc>/reference/coda.html</loc></url>
 <url><loc>/reference/coda_causes.html</loc></url>
 <url><loc>/reference/coherent_fdm.html</loc></url>
+<url><loc>/reference/cp_splines.html</loc></url>
 <url><loc>/reference/de_deaths.html</loc></url>
 <url><loc>/reference/derived.html</loc></url>
 <url><loc>/reference/ensemble.html</loc></url>
@@ -115,8 +117,10 @@
 <url><loc>/reference/mt_ungroup.html</loc></url>
 <url><loc>/reference/mt_validate.html</loc></url>
 <url><loc>/reference/new_mt_spec.html</loc></url>
+<url><loc>/reference/nordpred_apc.html</loc></url>
 <url><loc>/reference/obs_grid_index.html</loc></url>
 <url><loc>/reference/ons_data.html</loc></url>
+<url><loc>/reference/p_splines.html</loc></url>
 <url><loc>/reference/parse_age_labels.html</loc></url>
 <url><loc>/reference/pclm_basis.html</loc></url>
 <url><loc>/reference/pclm_fit.html</loc></url>

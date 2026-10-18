@@ -144,9 +144,33 @@ the bounds</td>
 (<code>preserve_totals = FALSE</code>)</td>
 <td>Eilers (2007); Rizzi, Gampe and Eilers (2015); Rizzi et al. (2019);
 defaults of the ungroup package</td>
-<td>published, deviations: in 2D both smoothing parameters are chosen by
-BIC (ungroup fixes them); an open age interval of the grid is split with
-stationary-population weights (package-specific, default)</td>
+<td>published, deviations: cubic B-spline basis (the paper uses one
+coefficient per age and allows B-splines); smoothing parameter by BIC,
+the default of the ungroup package (the paper: AIC,
+<code>criterion = "aic"</code>); an open group of counts ends at
+<code>omega</code> without the paper’s group with 0 counts beyond the
+maximum age; iterations stop at a relative change of the coefficients
+below 1e-6 or of the penalised deviance below 1e-8, with step halving
+(the paper: coefficients below 1e-6); in 2D both smoothing parameters
+are chosen by BIC (ungroup fixes them)</td>
+</tr>
+<tr class="even">
+<td>
+<code>mt_ungroup(open_split = "pclm")</code> (default)</td>
+<td>the exposure of an open age interval of the grid split over single
+years up to <code>omega</code> by the PCLM of the exposures of all grid
+cells, with a group of 0 counts of 15 years beyond <code>omega</code>,
+as the paper ungroups grouped exposures</td>
+<td>Rizzi, Gampe and Eilers (2015)</td>
+<td>published</td>
+</tr>
+<tr class="odd">
+<td><code>mt_ungroup(open_split = "stationary")</code></td>
+<td>the exposure of an open age interval of the grid split over single
+years up to <code>omega</code> with stationary-population weights of the
+fitted rates, iterated with the fit</td>
+<td>none</td>
+<td>package-specific, opt-in</td>
 </tr>
 <tr class="even">
 <td><code>mt_ungroup(preserve_totals = TRUE)</code></td>
@@ -165,7 +189,8 @@ stationary-population weights (package-specific, default)</td>
 </tr>
 <tr class="even">
 <td><code>mt_ungroup(method = "hyman_kannisto", "natural_gompertz", "gam")</code></td>
-<td>spline heuristics with parametric tails</td>
+<td>spline heuristics with parametric tails (Kannisto tails fitted by
+least squares to log rates)</td>
 <td>none</td>
 <td>package-specific, deprecated</td>
 </tr>
@@ -192,8 +217,12 @@ extrapolated GAM surface</td>
 <tr class="odd">
 <td><code>mt_smooth(method = "pspline")</code></td>
 <td>Poisson P-splines over age, or age and time, smoothing parameters by
-BIC</td>
-<td>Currie, Durban and Eilers (2004)</td>
+BIC; an open age interval of the grid expanded into single years up to
+<code>omega</code>, its exposure split as
+<code>mt_ungroup(open_split = "pclm")</code>
+</td>
+<td>Currie, Durban and Eilers (2004); Rizzi, Gampe and Eilers (2015) for
+the split</td>
 <td>published</td>
 </tr>
 <tr class="even">
@@ -282,10 +311,19 @@ the Lee-Carter index</td>
 </tr>
 <tr class="even">
 <td><code>lee_carter(rotate = TRUE)</code></td>
-<td>rotation of the age pattern of decline as life expectancy rises</td>
+<td>rotation of the age pattern of decline towards an ultimate pattern
+(flat below 65) as life expectancy at birth rises from 80 to 102
+(weights of eq. 2, exponent 0.5); the index solved again so that life
+expectancy at birth is kept</td>
 <td>Li, Lee and Gerland (2013); Sevcikova et al. (2016)</td>
-<td>published, deviations: the path of life expectancy is that of the
-unrotated draws (MortCast takes it from a separate model)</td>
+<td>published, deviations: weights from the life expectancy of each
+stratum (the paper: both sexes combined, with the coherent forecasts of
+Li and Lee 2005); every draw rotated with its own path (the paper: the
+median path); rates change from the jump-off year, from the fitted rates
+of the last year with <code>jump_off = "fitted"</code>
+(package-specific); the open interval closed with <code>L = l / m</code>
+(the paper extends it to age 130 with a logistic model); <code>b</code>
+from age 65 scaled as in MortCast (not specified in the paper)</td>
 </tr>
 <tr class="odd">
 <td><code>lee_carter(bootstrap = TRUE)</code></td>
@@ -327,6 +365,52 @@ likelihood; Harvey 1989)</td>
 </td>
 </tr>
 <tr class="even">
+<td><code><a href="../reference/p_splines.html">p_splines()</a></code></td>
+<td>two-dimensional Poisson P-spline surface of the log rates over age
+and year, smoothing parameters by BIC; forecast by extending the basis
+over years with weight 0 in the forecast years, so that the penalty
+extrapolates the coefficients; draws from the normal approximation of
+the coefficients (covariance of the penalised likelihood); missing cells
+get weight 0</td>
+<td>Currie, Durban and Eilers (2004); MortalitySmooth 2.3.4
+(Camarda)</td>
+<td>published, deviations: for age groups, knots about five years of age
+apart, counted in the single years that the cells span
+(package-specific); the smoothing parameters by a grid search with steps
+of 1 on the log10 scale and a continuous search (MortalitySmooth: two
+grid searches with steps of 2 and 0.5); with
+<code>overdispersion = TRUE</code>, the dispersion stays in the penalty
+of the forecast fit and scales the covariance (MortalitySmooth’s
+<code><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict()</a></code> refits without it and scales the standard
+errors)</td>
+</tr>
+<tr class="odd">
+<td>
+<code>p_splines(infant = TRUE)</code>,
+<code><a href="../reference/cp_splines.html">cp_splines()</a></code>
+</td>
+<td>coefficients of their own for the first year of life, penalised over
+years only</td>
+<td>Camarda (2019)</td>
+<td>published</td>
+</tr>
+<tr class="even">
+<td><code><a href="../reference/cp_splines.html">cp_splines()</a></code></td>
+<td>P-spline forecast held by asymmetric penalties within the central
+95% range of the past rates of ageing and the central 50% range of the
+past rates of change of each age; residual bootstrap of the deviance
+residuals</td>
+<td>Camarda (2019)</td>
+<td>published, deviations: 100 bootstrap samples by default
+(<code>n_boot</code>; the paper: 1000); the basis over years of the fit
+extended over the forecast years, as the paper describes (the author’s
+code builds a new basis over all years); cell ages, knots and the search
+of the smoothing parameters as in <code><a href="../reference/p_splines.html">p_splines()</a></code>, the rate of
+ageing at age 0 for age groups and the bootstrap deaths of cells without
+deaths are package-specific; predictive draws add Poisson deaths (the
+paper gives no prediction intervals of observed rates)</td>
+</tr>
+<tr class="odd">
 <td>
 <code><a href="../reference/arima_series.html">arima_series()</a></code>, <code><a href="../reference/arima_series.html">ets_series()</a></code>
 </td>
@@ -336,65 +420,116 @@ or given by <code>order</code>
 <td>Hyndman and Khandakar (2008)</td>
 <td>published</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>arima_series(order = c(0, 1, 1), drift = TRUE)</code></td>
 <td>local level model with drift in its reduced form, maximum
 likelihood</td>
 <td>Harvey (1989)</td>
 <td>published</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code><a href="../reference/hyndman_ullah.html">hyndman_ullah()</a></code></td>
 <td>functional demographic model</td>
 <td>Hyndman and Ullah (2007), via demography</td>
 <td>published; smoothing without the monotonicity constraint where the
 monotonic spline cannot be fitted is a package-specific safeguard</td>
 </tr>
-<tr class="odd">
-<td><code><a href="../reference/coherent_fdm.html">coherent_fdm()</a></code></td>
-<td>product-ratio method with functional data models</td>
-<td>Hyndman, Booth and Yasmeen (2013), via demography</td>
-<td>published</td>
-</tr>
 <tr class="even">
+<td><code><a href="../reference/coherent_fdm.html">coherent_fdm()</a></code></td>
+<td>product-ratio method with functional data models: smoothed rates,
+geometric mean as product, weighted principal components
+(<code>beta = 0.05</code>), ARIMA scores of the product, stationary
+ARFIMA scores of the ratios</td>
+<td>Hyndman, Booth and Yasmeen (2013), via demography</td>
+<td>published, deviations: the fractional differencing parameter of the
+ratios in [0, 0.5) (demography’s default; the paper names -0.5 &lt; d
+&lt; 0.5); intervals by simulated paths (the paper: analytic variances
+for rates); ratios of each path rescaled to multiply to one and
+aggregates of a hierarchy outside the product (package-specific).
+<code>weighted = FALSE</code> is the unweighted default of
+<code><a href="https://pkg.robjhyndman.com/demography/reference/coherentfdm.html" class="external-link">demography::coherentfdm()</a></code>
+</td>
+</tr>
+<tr class="odd">
 <td><code><a href="../reference/product_ratio.html">product_ratio()</a></code></td>
 <td>product-ratio method with Lee-Carter components</td>
 <td>none</td>
 <td>package-specific, deprecated: use <code><a href="../reference/coherent_fdm.html">coherent_fdm()</a></code>
 </td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code><a href="../reference/li_lee.html">li_lee()</a></code></td>
 <td>augmented common factor model</td>
 <td>Li and Lee (2005); Lee and Carter (1992)</td>
 <td>published, deviations: AR(1) processes without intercept; their
 coefficient bounded at 0.99 (package-specific safeguard, warns)</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code><a href="../reference/coda.html">coda()</a></code></td>
-<td>compositional Lee-Carter model of life-table deaths, and its
-coherent version</td>
-<td>Oeppen (2008); Bergeron-Boucher et al. (2017);
-MortalityForecast</td>
-<td>published, deviations: the log rate of the open age interval is
-regressed on the indexes</td>
+<td>compositional Lee-Carter model of life-table deaths: index
+ARIMA(0,1,1) with drift, its first forecast step corrected to the drift;
+observed jump-off; draws by a bootstrap of the residuals and of the
+index paths; rates from age 80 by a Kannisto model extended to age 120;
+zeros replaced multiplicatively; coherent version with a common
+component from the mean death rates of the strata and ARIMA(1,1,0)
+deviations without drift</td>
+<td>Oeppen (2008); Bergeron-Boucher et al. (2017) and their
+supplementary code</td>
+<td>published, deviations: draws centred on the point forecast part by
+part, as in the authors’ code (the paper shifts the bounds of life
+expectancy); <code>ceiling(sqrt(n_draws))</code> refits (the paper: 100
+refits with 100 paths each); <code>a_x = n / 2</code> at age 0 (the
+authors’ code: 0.06); without single ages from 80 to at least 89, the
+package-specific treatment of <code>open = "regression"</code>; an
+imputed share of at most 1/2 per year and a pooled Kannisto fit for
+years without one are package safeguards</td>
+</tr>
+<tr class="even">
+<td><code>coda(order = , order_dev = )</code></td>
+<td>other ARIMA models of the indexes, for example the random walk with
+drift (<code>order = c(0, 1, 0)</code>) and AR(1) deviations with a mean
+(<code>order_dev = c(1, 0, 0)</code>)</td>
+<td>Lee and Carter (1992); Li and Lee (2005)</td>
+<td>published</td>
 </tr>
 <tr class="odd">
-<td><code><a href="../reference/coda_causes.html">coda_causes()</a></code></td>
-<td>multiple-decrement CoDa model for causes of death</td>
-<td>Oeppen (2008), abstract only</td>
-<td>package reading of a published idea; experimental</td>
+<td><code>coda(open = "regression")</code></td>
+<td>the log rate of an open age interval regressed on the indexes; a
+closed age range ends with the survivors as a part (also the default
+where the age groups are not single years from 80)</td>
+<td>none</td>
+<td>package-specific</td>
 </tr>
 <tr class="even">
+<td><code><a href="../reference/coda_causes.html">coda_causes()</a></code></td>
+<td>multiple-decrement CoDa model for causes of death: the deaths by age
+and cause of each year as one composition, cause rates by eq. (7)</td>
+<td>Oeppen (2008)</td>
+<td>published, deviations: one component and the index model of
+<code><a href="../reference/coda.html">coda()</a></code> by default (Oeppen: two components and ARIMA(0,2,2)
+for Japan, <code>rank = 2, order = c(0, 2, 2)</code>); jump-off and
+draws of <code><a href="../reference/coda.html">coda()</a></code> (Oeppen gives point forecasts only); zeros
+replaced multiplicatively (Oeppen: light smoothing with an unstated
+parameter); the open interval as <code>coda(open = "regression")</code>,
+a residual cause for deaths the listed causes leave unexplained, and
+predictive draws that split Poisson all-cause deaths multinomially
+between the causes (package-specific); experimental</td>
+</tr>
+<tr class="odd">
 <td><code><a href="../reference/tucker3.html">tucker3()</a></code></td>
-<td>three-way Lee-Carter model: Tucker3 decomposition of the centred log
-rates</td>
+<td>three-way Lee-Carter model: Tucker3 decomposition of the log rates
+centred over the years, ranks <code>c(2, 2, 2)</code>, least
+squares</td>
 <td>Russolillo, Giordano and Haberman (2011); De Lathauwer, De Moor and
 Vandewalle (2000)</td>
-<td>published, deviations: HOOI estimation, the forecasts of the period
-factors and the ranks are the package’s; experimental</td>
+<td>published, deviations: estimation by HOOI (the same least-squares
+criterion); centring over the years only, as eq. (7) (the paper’s Matlab
+session also centres across ages); the forecast of the period factors
+(multivariate random walk with drift; the paper leaves the model open),
+<code>ranks = "bic"</code> or <code>"aic"</code> and 0.5 deaths in empty
+cells are package-specific; experimental</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>
 <code>tucker3(residual_noise = TRUE)</code>,
 <code>tucker3(transform = "coda")</code>
@@ -407,7 +542,7 @@ observation noise twice), <code>"coda"</code> deprecated: use
 <code><a href="../reference/coda.html">coda()</a></code>
 </td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code><a href="../reference/cause_shares.html">cause_shares()</a></code></td>
 <td>Tucker model of log-ratio coordinates of cause shares</td>
 <td>none</td>
@@ -415,16 +550,71 @@ observation noise twice), <code>"coda"</code> deprecated: use
 <code><a href="../reference/coda_causes.html">coda_causes()</a></code>
 </td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code><a href="../reference/stmomo.html">stmomo()</a></code></td>
 <td>GAPC models LC, CBD, APC, RH, M6, M7, M8</td>
 <td>Villegas, Kaishev and Millossovich (2018); Cairns et al. (2009)</td>
 <td>published (StMoMo); <code>"rh"</code> is StMoMo’s version with a
 cohort effect without age modulation; initial exposures of the
-logit-link models approximated as central exposures plus half the deaths
-(package-specific)</td>
+logit-link models approximated as central exposures plus half the
+deaths, as <code><a href="https://rdrr.io/pkg/StMoMo/man/central2initial.html" class="external-link">StMoMo::central2initial()</a></code>, and forecast
+probabilities converted to rates with <code>m = -log(1 - q)</code>;
+cohorts observed in fewer than <code>clip</code> cells get zero weight
+(<code><a href="https://rdrr.io/pkg/StMoMo/man/genWeightMat.html" class="external-link">StMoMo::genWeightMat()</a></code>), and their fitted rates take the
+effect of the nearest estimated cohort (package-specific)</td>
+</tr>
+<tr class="odd">
+<td><code>stmomo("plat")</code></td>
+<td>reduced Plat model (period indexes for level and slope, cohort
+effect without level, linear and quadratic trend) with the logit link,
+period indexes forecast as a multivariate random walk with drift and the
+cohort index as ARIMA(2,0,0) with a constant</td>
+<td>Plat (2009); Villegas, Kaishev and Millossovich (2018), the
+vignette’s code</td>
+<td>published; the vignette’s logit link with initial exposures replaces
+Plat’s log link with Poisson deaths, and the full model with a third
+period term for all ages is not offered</td>
 </tr>
 <tr class="even">
+<td><code><a href="../reference/bohk_rau.html">bohk_rau()</a></code></td>
+<td>rates of mortality improvement of smoothed rates by age, with an
+exponential (default) or linear trend over time in a hierarchical
+Bayesian model; forecast improvements limited to 0.5-3.5% a year; draws
+from the quantiles of the forecast improvements</td>
+<td>Bohk-Ewald and Rau (2017); Currie, Durban and Eilers (2004) for the
+smoothing</td>
+<td>published, deviations: an MCMC sampler of this package (the paper
+uses JAGS); forecast improvements outside the limits set to the limits
+(the paper: implausible forecasts excluded “by setting thresholds”); the
+origin of the time index, the floor of negative improvements in the
+least-squares values of the exponential model, the knots of the P-spline
+surface, age 0 smoothed over time only, and forecast improvements kept
+below 1 are package-specific; convergence to reference populations is
+not implemented</td>
+</tr>
+<tr class="odd">
+<td><code>bohk_rau(draws = "samples")</code></td>
+<td>each draw is one posterior predictive path of the improvements</td>
+<td>none</td>
+<td>package-specific, opt-in</td>
+</tr>
+<tr class="even">
+<td><code><a href="../reference/nordpred_apc.html">nordpred_apc()</a></code></td>
+<td>age-period-cohort model of 5-year age groups and periods with a
+power-5 (default) or log link; drift projected with cut trend;
+prediction base chosen by goodness of fit; recent or average trend
+chosen by a test</td>
+<td>Møller et al. (2003); documentation of the R package nordpred
+1.1</td>
+<td>published (point projections agree with nordpred); annual data
+summed to 5-year periods and annual rates interpolated between the
+period midpoints, draws from the asymptotic normal distribution of the
+coefficients, the last cut of the trend beyond five future periods
+(nordpred: at most five), and the prediction base chosen with the log
+link when <code>link = "log"</code> (nordpred: the power link) are
+package-specific</td>
+</tr>
+<tr class="odd">
 <td><code><a href="../reference/stanmomo.html">stanmomo()</a></code></td>
 <td>Bayesian GAPC models with a Poisson or negative binomial
 likelihood</td>
@@ -432,7 +622,7 @@ likelihood</td>
 (2007)</td>
 <td>published</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code><a href="../reference/apc_bayes.html">apc_bayes()</a></code></td>
 <td>Bayesian APC model with random-walk priors, fitted where the deaths
 were observed</td>
@@ -440,25 +630,25 @@ were observed</td>
 <td>published; the mapping of draws of age groups to the grid by shape
 factors is package-specific</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code><a href="../reference/apc_select.html">apc_select()</a></code></td>
 <td>choice of the random-walk orders by DIC</td>
 <td>Spiegelhalter et al. (2002)</td>
 <td>published</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>zero deaths</td>
 <td>0.5 deaths in cells without deaths in models of log rates</td>
 <td>none</td>
 <td>package-specific convention</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code><a href="../reference/mt_order_strata.html">mt_order_strata()</a></code></td>
 <td>keeps an ordering between strata path by path</td>
 <td>none</td>
 <td>package-specific</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>predictive draws (<code>mt_forecast(predictive = TRUE)</code>,
 backtests)</td>
 <td>Poisson deaths given the model’s rates; posterior negative binomial
@@ -532,15 +722,22 @@ covariances of the base draws (the papers use in-sample residuals)</td>
 </tr>
 <tr class="odd">
 <td>non-negativity</td>
-<td>negatives held at zero, the rest projected again</td>
-<td>related to Wickramasuriya, Turlach and Hyndman (2020)</td>
-<td>package-specific heuristic</td>
+<td>for draws with negative bottom values, the quadratic program of the
+reconciliation with non-negative bottom values, solved by block
+principal pivoting</td>
+<td>Wickramasuriya, Turlach and Hyndman (2020)</td>
+<td>published; infeasibilities below 1e-10 of the largest base forecast
+of the draw count as zero (the paper: 1e-12)</td>
 </tr>
 <tr class="even">
 <td><code>fixed =</code></td>
 <td>nodes kept unchanged (immutable forecasts)</td>
 <td>Zhang et al. (2023)</td>
-<td>published, approximated by a near-zero variance</td>
+<td>published, approximated by a near-zero variance (1e-10 of the
+largest); with <code>"mint"</code> the other nodes get their covariance
+conditional on the fixed nodes, so that the fixed nodes are equality
+constraints of the weighted least-squares problem, also in the
+non-negative quadratic program</td>
 </tr>
 <tr class="odd">
 <td><code>method = "proportional"</code></td>
@@ -551,11 +748,19 @@ forecasts below each fixed node</td>
 </tr>
 <tr class="even">
 <td><code>method = "energy_score"</code></td>
-<td>score-optimal reconciliation</td>
+<td>score-optimal reconciliation: free <code>d</code> and
+<code>G</code>, total energy score, Adam with the paper’s settings from
+OLS reconciliation</td>
 <td>Panagiotelis et al. (2023); ProbReco</td>
-<td>published, deviations: estimated per age; observation noise in the
-training forecasts; draws of each step taken without replacement;
-rescaling before the optimisation</td>
+<td>published, deviations: one <code>d</code> and <code>G</code> per
+age; inner models on expanding windows at <code>n_origins</code> origins
+(the paper: rolling windows of the final length at consecutive origins);
+horizons 1 to <code>horizon</code> in one objective (the paper: one
+horizon); observation noise in the training forecasts; 50 draws per step
+from a fixed set of inner draws, without replacement (the paper: 250,
+simulated afresh); ProbReco’s stopping rule on the steps (the paper: on
+the gradients); rescaling before the optimisation and negative bottom
+values set to zero in the forecast (package-specific)</td>
 </tr>
 <tr class="odd">
 <td><code>dependence = "empirical"</code></td>
@@ -675,13 +880,32 @@ the training data</td>
 <tr class="even">
 <td><code><a href="../reference/mt_dm_test.html">mt_dm_test()</a></code></td>
 <td>Diebold-Mariano test of one loss per origin: equal-weighted cosine
-variance with fixed-smoothing t critical values (default); the test of
-<code><a href="https://pkg.robjhyndman.com/forecast/reference/dm.test.html" class="external-link">forecast::dm.test()</a></code> with the correction of Harvey,
-Leybourne and Newbold for <code>varestimator = "acf"</code> (or Bartlett
-weights, <code>"bartlett"</code>)</td>
-<td>Diebold and Mariano (1995); Lazarus et al. (2018); Coroneo and
-Iacone (2020); Harvey, Leybourne and Newbold (1997)</td>
-<td>published</td>
+variance with <code>0.4 T^(2/3)</code> cosine terms and fixed-smoothing
+t critical values (default)</td>
+<td>Diebold and Mariano (1995); Lazarus et al. (2018)</td>
+<td>published (the EWC test of a single restriction applied to the mean
+loss difference)</td>
+</tr>
+<tr class="odd">
+<td><code>mt_dm_test(varestimator = "daniell")</code></td>
+<td>fixed-smoothing test with the Daniell-kernel periodogram estimate,
+<code>floor(T^(1/3))</code> frequencies, t with twice as many degrees of
+freedom</td>
+<td>Coroneo and Iacone (2020)</td>
+<td>published; simulated size at nominal 5%: 4.9% to 6.0% at
+<code>h</code> 1-2 and 7.6% to 15.3% at <code>h</code> 3-5 with 7
+origins, 4.8% to 13.8% with 15 or 16 origins (oversized where test years
+overlap)</td>
+</tr>
+<tr class="even">
+<td><code>mt_dm_test(varestimator = "acf", "bartlett")</code></td>
+<td>the test of <code><a href="https://pkg.robjhyndman.com/forecast/reference/dm.test.html" class="external-link">forecast::dm.test()</a></code> with the correction of
+Harvey, Leybourne and Newbold (sum of the autocovariances, or Bartlett
+weights)</td>
+<td>Diebold and Mariano (1995); Harvey, Leybourne and Newbold
+(1997)</td>
+<td>published; no test (in place of lag 0) when the variance estimate is
+not positive</td>
 </tr>
 </tbody>
 </table>
@@ -735,11 +959,14 @@ exceeds 1; the last positive rate for an open interval with a rate of
 </tr>
 <tr class="even">
 <td><code>life_table(open = "gompertz", "kannisto")</code></td>
-<td>closure of the open interval by a Gompertz or Kannisto curve</td>
+<td>closure of the open interval by a Gompertz or Kannisto hazard fitted
+by maximum likelihood with binomial deaths of those reaching each
+age</td>
 <td>Thatcher, Kannisto and Vaupel (1998)</td>
-<td>published, deviations: fitted by least squares to the log rates
-(Gompertz) or their logits (Kannisto) of the last <code>k</code> ages;
-the source fits by maximum likelihood</td>
+<td>published (reproduces their fitted parameters); the last
+<code>k</code> single-year ages (10 by default; the source: 80-98);
+without <code>exposure</code>, the numbers at risk are those of the life
+table (package-specific choice for schedules without counts)</td>
 </tr>
 <tr class="odd">
 <td>

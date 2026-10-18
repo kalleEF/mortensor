@@ -143,7 +143,7 @@ bt <- mt_compare(list("Lee-Carter" = lee_carter()), x, origins = 2008:2014, h = 
 mt_score_table(bt, metrics = c("crps", "cov80", "cov95"))
 #>         model   crps cov80 cov95
 #>        <fctr>  <num> <num> <num>
-#> 1: Lee-Carter 0.0683 0.617 0.793
+#> 1: Lee-Carter 0.0683 0.618 0.793
 ```
 
 The 95% intervals contained 79% of the observed rates, fewer than 95%:

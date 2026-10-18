@@ -77,18 +77,36 @@ with <code>rotate = TRUE</code> also the ultimate pattern <code>b_ultimate</code
 <code>K</code>, its drift and standard deviation), and per stratum the deviations
 <code>a</code>, <code>b</code>, <code>k</code> and their AR(1) coefficient <code>phi</code> and standard deviation;</p></li>
 <li><p><code><a href="coda.html">coda()</a></code>: the centre <code>a</code> (geometric mean distribution of life-table
-deaths), the loadings <code>b</code>, the index <code>k</code> with its drift and standard
-deviation, the share of variation explained by the first component and
-the parameters of the open age interval; the coherent model gives per
-group of <code>common_by</code> the common <code>a</code>, <code>B</code>, <code>K</code> and per stratum <code>a</code>, <code>b</code>,
-<code>k</code> and their AR(1) parameters. <code><a href="coda_causes.html">coda_causes()</a></code>: per group, as
-<code><a href="coda.html">coda()</a></code>, with parts by age and cause;</p></li>
+deaths), the loadings <code>b</code>, the index <code>k</code> with the order (<code>order_k</code>),
+coefficients (<code>arima_k</code>) and innovation standard deviation (<code>sd_k</code>) of
+its ARIMA model, the share of variation explained by the component, the
+parameters of the open age interval (<code>a_open</code>, <code>b_open</code>) or of the
+Kannisto model of each year (<code>kannisto_a</code>, <code>kannisto_b</code>); the coherent
+model gives per group of <code>common_by</code> the common <code>a</code>, <code>B</code>, <code>K</code> (with
+<code>order_K</code>, <code>arima_K</code>, <code>sd_K</code>) and per stratum <code>a</code>, <code>b</code>, <code>k</code> and the
+ARIMA model of <code>k</code>. <code><a href="coda_causes.html">coda_causes()</a></code>: per group, as <code><a href="coda.html">coda()</a></code>, with parts
+by age and cause (<code>b1</code>, <code>k1</code>, <code>b2</code>, <code>k2</code>, ... with several components);</p></li>
 <li><p><code><a href="rwd.html">rwd()</a></code>: drift and innovation standard deviation per age (and, with
 <code>observation_noise = TRUE</code>, the variances of level and noise);</p></li>
 <li><p><code><a href="apc_bayes.html">apc_bayes()</a></code>: posterior medians and 90% intervals of the age, period
 and cohort effects (logit scale, bamp's identification), and the
 Gelman-Rubin statistics (<code>rhat</code>, values below 1.1 indicate convergence)
-of the identified quantities.</p></li>
+of the identified quantities;</p></li>
+<li><p><code><a href="p_splines.html">p_splines()</a></code>, <code><a href="cp_splines.html">cp_splines()</a></code>: the smoothing parameters over age
+(<code>lambda_age</code>) and years (<code>lambda_year</code>), the effective dimension
+(<code>ed</code>), the criterion (<code>bic</code> or <code>aic</code>) and the dispersion (deviance
+divided by the number of cells minus the effective dimension); for
+<code><a href="cp_splines.html">cp_splines()</a></code> also the bounds of the rates of ageing and of change per
+age (<code>ageing_lower</code>, <code>ageing_upper</code>, <code>change_lower</code>, <code>change_upper</code>).</p></li>
+<li><p><code><a href="bohk_rau.html">bohk_rau()</a></code>: posterior medians and 90% intervals of the curve
+parameters <code>b1</code> and <code>b2</code> by age and of the variance and hyperparameters,
+the least-squares values <code>theta1</code>, <code>theta2</code> (exponential core model) and
+the Gelman-Rubin statistics (<code>rhat</code>);</p></li>
+<li><p><code><a href="nordpred_apc.html">nordpred_apc()</a></code>: estimates and 90% Wald intervals of the age, period
+and cohort effects (cohorts by central year of birth) and of the drift,
+the projected drift, the number of periods fitted, the choice of the
+recent trend and the p-values of the goodness of fit and of the test for
+the recent trend.</p></li>
 </ul><p>Fits of wrapped packages (StMoMo, demography) keep the original fitted
 object in <code>fit$fits[[i]]</code>, where the methods of those packages apply.</p>
 <p>Wrappers return the parameters of the model they wrap (<code><a href="recalibrated.html">recalibrated()</a></code>

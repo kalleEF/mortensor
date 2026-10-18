@@ -145,14 +145,14 @@ mt_compare_forecasts(fc, periods = 2050)
 #> Key: <label, period>
 #>     label period       Lee-Carter Lee-Carter, rotated             CoDa
 #>    <char>  <num>           <char>              <char>           <char>
-#> 1: female   2050 91.4 (87.8-94.2)    91.4 (87.8-94.2) 94.1 (89.2-97.6)
-#> 2:   male   2050 85.1 (82.3-87.6)    85.1 (82.3-87.6) 88.8 (82.6-93.1)
+#> 1: female   2050 91.4 (87.8-94.2)    91.4 (87.8-94.2) 94.6 (93.8-95.3)
+#> 2:   male   2050 85.1 (82.3-87.6)    85.1 (82.3-87.6) 89.2 (85.6-92.3)
 mt_compare_forecasts(fc, quantity = "lifespan_variation", periods = 2050, digits = 2)
 #> Key: <label, period>
-#>     label period        Lee-Carter Lee-Carter, rotated              CoDa
-#>    <char>  <num>            <char>              <char>            <char>
-#> 1: female   2050  7.64 (7.05-8.53)    7.55 (6.92-8.50)  6.40 (5.44-8.10)
-#> 2:   male   2050 9.51 (8.76-10.29)   9.42 (8.61-10.27) 7.74 (6.10-10.05)
+#>     label period        Lee-Carter Lee-Carter, rotated             CoDa
+#>    <char>  <num>            <char>              <char>           <char>
+#> 1: female   2050  7.64 (7.05-8.53)    7.55 (6.92-8.50) 6.15 (5.86-6.47)
+#> 2:   male   2050 9.51 (8.76-10.29)   9.42 (8.61-10.27) 7.58 (6.37-9.01)
 ```
 
 ``` r
@@ -171,10 +171,12 @@ mt_plot_compare(fc, quantity = "lifespan_variation", data = x)
   childhood, where few deaths are left, to ages 15-64; that changes the
   spread of the ages at death little. For men it starts when their
   forecast life expectancy passes 80, after 2015.
-- **CoDa** forecasts a higher life expectancy (94 years for women in
-  2050. and a faster fall of e-dagger (to 6.4 years), with wider
-        intervals. It extrapolates the past concentration of deaths at
-        old ages directly.
+- **CoDa** forecasts a higher life expectancy (94.6 years for women and
+  89.2 for men in 2050) and a faster fall of e-dagger (to 6.15 years for
+  women and 7.6 for men). It extrapolates the past concentration of
+  deaths at old ages directly. For men its intervals are wider than
+  those of Lee-Carter. For women they narrow towards the end of the
+  forecast and are narrower than those of Lee-Carter in 2050.
 
 Lee-Carter starts from the fitted rates of 2006 (the default
 `jump_off = "fitted"`), so its first year lies below the observed
@@ -186,10 +188,10 @@ Gaps between strata work path by path, as for life expectancy:
 
 mt_contrast(fc[["CoDa"]], var = "sex", ref = "female", quantity = "lifespan_variation")[
   period %in% c(2030, 2050), list(level, ref, period, q0.025, q0.5, q0.975)]
-#>     level    ref period      q0.025     q0.5   q0.975
-#>    <char> <char>  <num>       <num>    <num>    <num>
-#> 1:   male female   2030 -0.06372031 1.836470 3.713047
-#> 2:   male female   2050 -0.95058901 1.304217 3.871743
+#>     level    ref period    q0.025     q0.5   q0.975
+#>    <char> <char>  <num>     <num>    <num>    <num>
+#> 1:   male female   2030 0.6219860 1.898914 3.047744
+#> 2:   male female   2050 0.2134672 1.426234 2.848197
 ```
 
 ## Which forecast was right in the past?
@@ -218,16 +220,16 @@ merge(obs, mt_compare_forecasts(fc_past, quantity = "lifespan_variation", period
 #> 2:   male 11.542134   2006 11.99 (11.68-12.26) 11.99 (11.68-12.26)
 #>                   CoDa
 #>                 <char>
-#> 1:   8.90 (7.61-10.65)
-#> 2: 11.92 (10.60-13.07)
+#> 1:    8.99 (8.55-9.45)
+#> 2: 12.05 (11.68-12.25)
 ```
 
 For women, all three forecasts of 2006 were below the observed 9.6 years
-(Lee-Carter 9.2, CoDa 8.9), and their intervals contain it. For men, all
-were above the observed 11.5 years (12.0 and 11.9): the interval of
-Lee-Carter missed it, the wider one of CoDa contained it. The rotation
-changed the forecast for women by 0.02 years and not at all for men,
-whose life expectancy stayed below 80.
+(Lee-Carter 9.2, CoDa 9.0); the intervals of Lee-Carter contain it, that
+of CoDa (8.55-9.45) does not. For men, all were above the observed 11.5
+years (Lee-Carter 11.99, CoDa 12.05), and none of the intervals contains
+it. The rotation changed the forecast for women by 0.02 years and not at
+all for men, whose life expectancy stayed below 80.
 
 One period of one country is a small test.
 [`mt_backtest()`](../reference/mt_backtest.md) scores the forecast rates

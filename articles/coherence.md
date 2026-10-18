@@ -145,8 +145,11 @@ mt_compare_forecasts(fixed, periods = 2035, strata = c("both.England", "female.E
 England keeps the life expectancy of its own model; its parts move
 towards it. The intervals of the bottom series widen (women in Q1, men
 in Q5), because they now carry the uncertainty of England’s own
-forecast. With WLS some bottom forecasts had to be held at zero in 10%
-of the draws (the warning above).
+forecast. With WLS, the projection would make some bottom forecasts
+negative. The non-negative reconciliation of Wickramasuriya, Turlach and
+Hyndman (2020) then minimises the same weighted distance with all bottom
+forecasts at zero or above; in 10% of the draws some bottom forecasts
+end at zero (the warning above).
 
 ## Does coherence cost accuracy?
 
@@ -263,3 +266,6 @@ Wickramasuriya SL, Athanasopoulos G, Hyndman RJ (2019). Optimal forecast
 reconciliation for hierarchical and grouped time series through trace
 minimization. *Journal of the American Statistical Association*
 114(526): 804-819.
+
+Wickramasuriya SL, Turlach BA, Hyndman RJ (2020). Optimal non-negative
+forecast reconciliation. *Statistics and Computing* 30: 1167-1182.

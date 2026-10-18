@@ -44,6 +44,37 @@
 <h2 class="pkg-version" data-toc-text="0.1.9000" id="mortensor-019000-development-of-020">mortensor 0.1.9000 (development of 0.2.0)<a class="anchor" aria-label="anchor" href="#mortensor-019000-development-of-020"></a></h2>
 <p>Clean break: the 0.1.x interface is replaced (see <code>dev/revamp-plan.md</code>).</p>
 <div class="section level3">
+<h3 id="methods-checked-against-the-full-papers-new-published-models-0-1-9000">Methods checked against the full papers; new published models<a class="anchor" aria-label="anchor" href="#methods-checked-against-the-full-papers-new-published-models-0-1-9000"></a></h3>
+<p>Work package E4. The full texts of papers that were earlier available only as abstracts were read (sources and access in <code>dev/methods-audit.md</code>), and the implementations follow them. Results change.</p>
+<p>Corrected to the papers:</p>
+<ul><li>
+<code><a href="../reference/coda.html">coda()</a></code> follows Bergeron-Boucher et al. (2017): the time index is ARIMA(0,1,1) with drift (the random walk is <code>order = c(0, 1, 0)</code>), the common component of the coherent model comes from the mean death rates, deviations are ARIMA(1,1,0), rates from age 80 are a Kannisto model to age 120 (<code>open = "auto"</code>; the regression of the open interval is <code>open = "regression"</code>), and intervals come from the paper’s residual bootstrap. Fitted values and point forecasts reproduce the authors’ code to 1e-9. 95% coverage on England &amp; Wales men 0.888 (0.981 before); on French women the coherent model is more accurate (CRPS 0.0743 against 0.0764; open interval 0.039 against 0.062).</li>
+<li>
+<code><a href="../reference/coda_causes.html">coda_causes()</a></code> has <code>rank</code>, <code>order</code> and <code>drift</code> (Oeppen 2008 used rank 2 and ARIMA(0,2,2)); <code><a href="../reference/tucker3.html">tucker3()</a></code> uses the ranks of Russolillo, Giordano and Haberman (2011), c(2, 2, 2), and reports their fit measure.</li>
+<li>Non-negative reconciliation is the algorithm of Wickramasuriya, Turlach and Hyndman (2020); the former heuristic, which could miss the optimum, is removed. With MinT and fixed nodes, the other nodes take covariances conditional on the fixed nodes. Results agree with a quadratic program to 4e-10.</li>
+<li>
+<code>life_table(open = "kannisto"/"gompertz")</code> fits the closure by maximum likelihood, as Thatcher, Kannisto and Vaupel (1998); their published parameters are reproduced within 0.11%, the former least-squares fit was off by up to 82%.</li>
+<li>
+<code><a href="../reference/coherent_fdm.html">coherent_fdm()</a></code> uses weighted principal components (<code>weighted = TRUE, beta = 0.05</code>), as Hyndman, Booth and Yasmeen (2013): CRPS on France 0.0550 against 0.0596, 95% coverage 0.802 against 0.760.</li>
+<li>
+<code>mt_ungroup(open_split = "pclm")</code> (default): the exposure of an open grid interval is split by the PCLM of the exposures, as Rizzi, Gampe and Eilers (2015); the stationary split is <code>open_split = "stationary"</code>.</li>
+<li>
+<code><a href="../reference/mt_dm_test.html">mt_dm_test()</a></code>: the equal-weighted cosine variance is that of Lazarus et al. (2018); <code>varestimator = "daniell"</code> gives the test of Coroneo and Iacone (2020), oversized with overlapping test years.</li>
+</ul><p>New published models:</p>
+<ul><li>
+<code><a href="../reference/p_splines.html">p_splines()</a></code>: two-dimensional Poisson P-spline forecasting (Currie, Durban and Eilers 2004), adapted from MortalitySmooth 2.3.4, whose fitted and forecast rates it reproduces to 1e-11. On England &amp; Wales men CRPS 0.035 against 0.071 for Lee-Carter; its life-expectancy intervals are narrow (95% coverage 0.40).</li>
+<li>
+<code><a href="../reference/cp_splines.html">cp_splines()</a></code>: smooth constrained mortality forecasting (Camarda 2019), P-spline forecasts with asymmetric penalties on the rates of ageing and of change; reproduces the author’s code to 2e-11. On French women CRPS 0.066 against 0.085 for Lee-Carter; its intervals hold fit uncertainty only, as in the paper.</li>
+<li>
+<code><a href="../reference/bohk_rau.html">bohk_rau()</a></code>: varying age-specific survival improvements (Bohk-Ewald and Rau 2017), Bayesian, with the paper’s forecast limits and quantile draws. On England &amp; Wales men CRPS 0.045 (linear core 0.043) against 0.071 for Lee-Carter, 95% coverage of life expectancy at 30 0.90.</li>
+<li>
+<code>stmomo("plat")</code>: the Plat (2009) model as specified in the StMoMo vignette (Villegas, Kaishev and Millossovich 2018); CRPS 3% below Lee-Carter at ages 55-89.</li>
+<li>
+<code><a href="../reference/nordpred_apc.html">nordpred_apc()</a></code>: the Nordpred age-period-cohort model with a power link and cut trend (Møller et al. 2003), written for mortensor; projections agree with the nordpred package to 3e-8. Its draws hold coefficient uncertainty only and are far too narrow (95% coverage 0.11).</li>
+</ul><p>Fixes: quantiles of draws are interpolated as <code>a + w (b - a)</code>, so tied draws no longer give a median above the upper quantile; errors of rejected candidate models of the forecast package no longer appear in knitted documents with <code><a href="../reference/coherent_fdm.html">coherent_fdm()</a></code>.</p>
+<p>Documentation: <code>dev/generalisation-plan.md</code> plans experimental generalisations of the deprecated package methods, grounded in verified literature.</p>
+</div>
+<div class="section level3">
 <h3 id="published-methods-as-defaults-audit-of-package-specific-methods-0-1-9000">Published methods as defaults (audit of package-specific methods)<a class="anchor" aria-label="anchor" href="#published-methods-as-defaults-audit-of-package-specific-methods-0-1-9000"></a></h3>
 <p>Every method was checked against its published source (<code>dev/methods-audit.md</code>; article “Methods and sources”). Defaults are now the published methods; package-specific options are labelled “package-specific (reference unknown)” in their help pages; package inventions with a published counterpart in the package are deprecated (they work and warn with class <code>mt_warning_deprecated</code>). Results change.</p>
 <p>Predictive draws:</p>
@@ -73,7 +104,7 @@
 <code><a href="../reference/mt_fill_suppressed.html">mt_fill_suppressed()</a></code>: cells without a total get the truncated-Poisson mean.</li>
 </ul><p>Evaluation and derived quantities:</p>
 <ul><li>
-<code>mt_dm_test(varestimator = "ewc")</code> by default: the fixed-smoothing test with the equal-weighted cosine variance and t critical values (Lazarus et al. 2018; Coroneo and Iacone 2020). In simulations under the null (help page; check <code>dm_size</code>), the HLN-corrected test (<code>"acf"</code>) rejected in 10-19% of samples at nominal 5% with 7 overlapping origins and horizons 2-5, the EWC test in 4.8-7.4% with 7-16 origins. p-values are larger: random walk against Li-Lee at horizon 1, 0.049 against 0.00015.</li>
+<code>mt_dm_test(varestimator = "ewc")</code> by default: the fixed-smoothing test with the equal-weighted cosine variance and t critical values (Lazarus et al. 2018). In simulations under the null (help page; check <code>dm_size</code>), the HLN-corrected test (<code>"acf"</code>) rejected in 10-19% of samples at nominal 5% with 7 overlapping origins and horizons 2-5, the EWC test in 4.8-7.4% with 7-16 origins. p-values are larger: random walk against Li-Lee at horizon 1, 0.049 against 0.00015.</li>
 <li>
 <code><a href="../reference/derived.html">asr()</a></code> standardises directly on the age groups of the standard (Eurostat 2013) with <code>asr_groups()</code> and <code>asr_columns()</code>; the former even split of standard weights over finer ages (<code>age_groups = "grid"</code>) gave ASRs 1.8-11% too high on French single ages.</li>
 <li>

@@ -3,19 +3,20 @@
 Wrapper around StMoMo (Villegas, Kaishev and Millossovich 2018):
 age-period-cohort (`"apc"`), Cairns-Blake-Dowd (`"cbd"`, logit link),
 Renshaw-Haberman (`"rh"`), M6, M7 and M8 (`"m6"`, `"m7"`, `"m8"`, logit
-link) and Lee-Carter (`"lc"`). `"rh"` is StMoMo's Renshaw-Haberman model
-with `cohortAgeFun = "1"` (the default of StMoMo's `rh()`):
-`log m(x,t) = a(x) + b(x) k(t) + g(t - x)`, a cohort effect without age
-modulation, not the original 2006 specification of the Renshaw-Haberman
-model, whose cohort effect is modulated by a second age function. Models
-are fitted per stratum with real ages (the lower bounds of single-year
-intervals; models with a cohort effect need single years of age), deaths
-and central exposures; for the logit-link models initial exposures are
-approximated as central exposures plus half the deaths, and forecast
-death probabilities are converted to central rates (`m = -log(1 - q)`).
-Cohorts observed in fewer than `clip` cells get zero weight; their
-fitted rates use the effect of the nearest estimated cohort. Draws come
-from [`simulate()`](https://rdrr.io/r/stats/simulate.html) of the fitted
+link), the Plat model (`"plat"`, logit link) and Lee-Carter (`"lc"`).
+`"rh"` is StMoMo's Renshaw-Haberman model with `cohortAgeFun = "1"` (the
+default of StMoMo's `rh()`): `log m(x,t) = a(x) + b(x) k(t) + g(t - x)`,
+a cohort effect without age modulation, not the original 2006
+specification of the Renshaw-Haberman model, whose cohort effect is
+modulated by a second age function. Models are fitted per stratum with
+real ages (the lower bounds of single-year intervals; models with a
+cohort effect need single years of age), deaths and central exposures;
+for the logit-link models initial exposures are approximated as central
+exposures plus half the deaths, and forecast death probabilities are
+converted to central rates (`m = -log(1 - q)`). Cohorts observed in
+fewer than `clip` cells get zero weight; their fitted rates use the
+effect of the nearest estimated cohort. Draws come from
+[`simulate()`](https://rdrr.io/r/stats/simulate.html) of the fitted
 model (period indexes simulated as a multivariate random walk with
 drift, the cohort index as an ARIMA process). Predictive draws
 (`mt_forecast(predictive = TRUE)`) add Poisson variation of the deaths
@@ -25,7 +26,7 @@ given the rates and the exposures, and no other observation noise.
 
 ``` r
 stmomo(
-  model = c("apc", "cbd", "rh", "m6", "m7", "m8", "lc"),
+  model = c("apc", "cbd", "rh", "m6", "m7", "m8", "plat", "lc"),
   clip = 3,
   gc_order = NULL,
   xc = NULL
@@ -36,7 +37,7 @@ stmomo(
 
 - model:
 
-  `"apc"`, `"cbd"`, `"rh"`, `"m6"`, `"m7"`, `"m8"` or `"lc"`.
+  `"apc"`, `"cbd"`, `"rh"`, `"m6"`, `"m7"`, `"m8"`, `"plat"` or `"lc"`.
 
 - clip:
 
@@ -44,8 +45,8 @@ stmomo(
 
 - gc_order:
 
-  ARIMA order for the cohort index. Default: `c(2, 0, 0)` for M7,
-  `c(1, 1, 0)` for the other cohort models.
+  ARIMA order for the cohort index. Default: `c(2, 0, 0)` for M7 and the
+  Plat model, `c(1, 1, 0)` for the other cohort models.
 
 - xc:
 
@@ -79,7 +80,30 @@ the mean of `(x - xbar)^2`:
 The CBD family is meant for older ages (StMoMo's examples use ages 55 to
 89). For M7 the cohort index is forecast with ARIMA(2,0,0) with a
 non-zero mean, as in the StMoMo vignette, since its constraints remove
-any trend; the other cohort models use ARIMA(1,1,0) with drift.
+any trend; the other cohort models use ARIMA(1,1,0) with drift, except
+the Plat model.
+
+**Plat model.** Plat (2009) combines the CBD model with features of the
+Lee-Carter model. `"plat"` is the reduced Plat model for older ages as
+the StMoMo vignette defines it (Villegas, Kaishev and Millossovich 2018,
+Section 4): `logit q(x,t) = a(x) + k1(t) + (xbar - x) k2(t) + g(t - x)`,
+built with
+[`StMoMo::StMoMo()`](https://rdrr.io/pkg/StMoMo/man/StMoMo.html) from
+the vignette's age functions (`1` and `xbar - x`, `xbar` the mean age of
+the data) and its constraint function. The constraints centre both
+period indexes and remove the level, the linear and the quadratic trend
+from the cohort effect (regression of the cohort effect on the year of
+birth and its square, as in Haberman and Renshaw 2011). The period
+indexes are forecast with a multivariate random walk with drift and the
+cohort index with ARIMA(2,0,0) with a non-zero mean (the vignette's
+Table 3). The vignette uses the logit link with initial exposures for
+all its models; Plat (2009) uses the log link with Poisson deaths, and
+for all ages adds a third period term `(xbar - x)+ k3(t)`, which he
+suggests dropping when only older ages are of interest. The full model
+with that term is not offered. In the vignette's 50-year forecasts for
+England and Wales men aged 55-89, the rates of this model increase,
+which the vignette calls implausible: the central trend is linked to the
+estimated cohort effect.
 
 ## References
 
@@ -87,6 +111,14 @@ Cairns AJG, Blake D, Dowd K, Coughlan GD, Epstein D, Ong A, Balevich I
 (2009). A quantitative comparison of stochastic mortality models using
 data from England and Wales and the United States. *North American
 Actuarial Journal* 13(1): 1-35.
+
+Haberman S, Renshaw A (2011). A comparative study of parametric
+mortality projection models. *Insurance: Mathematics and Economics*
+48(1): 35-55.
+
+Plat R (2009). On stochastic mortality modeling. *Insurance: Mathematics
+and Economics* 45(3): 393-404.
+[doi:10.1016/j.insmatheco.2009.08.006](https://doi.org/10.1016/j.insmatheco.2009.08.006)
 
 Villegas AM, Kaishev VK, Millossovich P (2018). StMoMo: an R package for
 stochastic mortality modeling. *Journal of Statistical Software* 84(3):
@@ -101,5 +133,6 @@ if (requireNamespace("StMoMo", quietly = TRUE)) {
   old <- mt_regroup(mt_set_grid(x, age = single_ages(55, 89, open = FALSE)),
                     age = single_ages(55, 89, open = FALSE))
   fc7 <- mt_forecast(mt_fit(stmomo("m7"), old), h = 5, n_draws = 50, seed = 1)
+  fcp <- mt_forecast(mt_fit(stmomo("plat"), old), h = 5, n_draws = 50, seed = 1)
 }
 ```

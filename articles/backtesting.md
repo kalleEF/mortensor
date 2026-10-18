@@ -147,7 +147,7 @@ mt_score_table(bt, metrics = c("crps", "rmse", "cov80", "cov95"))
 #>          model   crps  rmse cov80 cov95 crps_le rmse_le cov80_le cov95_le
 #>         <fctr>  <num> <num> <num> <num>   <num>   <num>    <num>    <num>
 #> 1: random walk 0.0850 0.180 0.803 0.915   0.293   0.503    0.603    0.820
-#> 2:  Lee-Carter 0.0683 0.139 0.617 0.793   0.293   0.508    0.620    0.814
+#> 2:  Lee-Carter 0.0683 0.139 0.618 0.793   0.293   0.508    0.620    0.814
 #> 3:      Li-Lee 0.0671 0.132 0.642 0.810   0.338   0.603    0.611    0.806
 ```
 
@@ -188,12 +188,14 @@ forecast count once. Forecasts from neighbouring origins overlap in
 their test years, so the differences between origins are autocorrelated.
 By default the test estimates their variance with the equal-weighted
 cosine (EWC) estimator and takes critical values from a t distribution
-with few degrees of freedom (Lazarus et al. 2018; Coroneo and Iacone
-2020). The older version, with the autocovariances up to lag `h - 1` and
-the small-sample correction of Harvey, Leybourne and Newbold (1997),
-rejects a true null hypothesis too often with few overlapping origins:
-in simulations with seven origins, in 10% to 19% of the samples at the
-nominal 5% level, and in 27% with the fallback to lag 0 of
+with few degrees of freedom (Lazarus et al. 2018).
+`varestimator = "daniell"` gives the fixed-smoothing test of Coroneo and
+Iacone (2020) with a Daniell-kernel estimate. The older version, with
+the autocovariances up to lag `h - 1` and the small-sample correction of
+Harvey, Leybourne and Newbold (1997), rejects a true null hypothesis too
+often with few overlapping origins: in simulations with seven origins,
+in 10% to 19% of the samples at the nominal 5% level, and in 27% with
+the fallback to lag 0 of
 [`forecast::dm.test()`](https://pkg.robjhyndman.com/forecast/reference/dm.test.html)
 (see [`?mt_dm_test`](../reference/mt_dm_test.md); `varestimator = "acf"`
 gives that version without the fallback).

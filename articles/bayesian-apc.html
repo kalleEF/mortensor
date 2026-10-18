@@ -126,11 +126,11 @@ below).</p>
 <span><span class="va">t0</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/proc.time.html" class="external-link">proc.time</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_fit.html">mt_fit</a></span><span class="op">(</span><span class="fu"><a href="../reference/apc_bayes.html">apc_bayes</a></span><span class="op">(</span>mcmc <span class="op">=</span> <span class="fu"><a href="../reference/mcmc_control.html">mcmc_control</a></span><span class="op">(</span><span class="st">"fast"</span><span class="op">)</span><span class="op">)</span>, <span class="va">x</span>, prep <span class="op">=</span> <span class="va">prep</span><span class="op">)</span></span>
 <span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/proc.time.html" class="external-link">proc.time</a></span><span class="op">(</span><span class="op">)</span> <span class="op">-</span> <span class="va">t0</span><span class="op">)</span><span class="op">[[</span><span class="st">"elapsed"</span><span class="op">]</span><span class="op">]</span></span>
-<span><span class="co">#&gt; [1] 434.274</span></span>
+<span><span class="co">#&gt; [1] 174.176</span></span>
 <span><span class="va">fit</span><span class="op">$</span><span class="va">diagnostics</span></span>
 <span><span class="co">#&gt;    stratum status                              message seconds</span></span>
-<span><span class="co">#&gt; 1:  female     ok                                      190.194</span></span>
-<span><span class="co">#&gt; 2:    male     ok exposures rounded (max change 0.002) 239.661</span></span></code></pre></div>
+<span><span class="co">#&gt; 1:  female     ok                                       86.849</span></span>
+<span><span class="co">#&gt; 2:    male     ok exposures rounded (max change 0.002)  83.735</span></span></code></pre></div>
 <p>Posterior medians and 90% credible intervals of the effects (logit
 scale, identified with bamp’s convention), and the Gelman-Rubin
 statistics of the chains (<code>rhat</code>, below 1.1 when they have
@@ -178,18 +178,18 @@ converged):</p>
 <span><span class="fu"><a href="../reference/mt_draws.html">mt_summarise</a></span><span class="op">(</span><span class="va">fc</span>, probs <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.05</span>, <span class="fl">0.5</span>, <span class="fl">0.95</span><span class="op">)</span><span class="op">)</span><span class="op">[</span><span class="va">age</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"50"</span>, <span class="st">"70"</span>, <span class="st">"90"</span><span class="op">)</span> <span class="op">&amp;</span> <span class="va">period</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2007</span>, <span class="fl">2021</span><span class="op">)</span>,</span>
 <span>                                             <span class="fu">.</span><span class="op">(</span><span class="va">label</span>, <span class="va">age</span>, <span class="va">period</span>, <span class="va">q0.05</span>, <span class="va">q0.5</span>, <span class="va">q0.95</span><span class="op">)</span><span class="op">]</span></span>
 <span><span class="co">#&gt;      label age period       q0.05        q0.5       q0.95</span></span>
-<span><span class="co">#&gt;  1: female  50   2007 0.002257623 0.002393671 0.002543068</span></span>
-<span><span class="co">#&gt;  2: female  70   2007 0.009699085 0.010254864 0.010822629</span></span>
-<span><span class="co">#&gt;  3: female  90   2007 0.120647363 0.126351490 0.132154003</span></span>
-<span><span class="co">#&gt;  4: female  50   2021 0.001763904 0.002211449 0.002846412</span></span>
-<span><span class="co">#&gt;  5: female  70   2021 0.008130765 0.010071201 0.012649136</span></span>
-<span><span class="co">#&gt;  6: female  90   2021 0.088873804 0.107825822 0.131404948</span></span>
-<span><span class="co">#&gt;  7:   male  50   2007 0.005140687 0.005372657 0.005617216</span></span>
-<span><span class="co">#&gt;  8:   male  70   2007 0.022088867 0.023065805 0.024034113</span></span>
-<span><span class="co">#&gt;  9:   male  90   2007 0.168497845 0.174350720 0.180495570</span></span>
-<span><span class="co">#&gt; 10:   male  50   2021 0.003872457 0.004650815 0.005599225</span></span>
-<span><span class="co">#&gt; 11:   male  70   2021 0.018795157 0.022284004 0.026558336</span></span>
-<span><span class="co">#&gt; 12:   male  90   2021 0.139414638 0.160807701 0.185718141</span></span></code></pre></div>
+<span><span class="co">#&gt;  1: female  50   2007 0.002259379 0.002394504 0.002534089</span></span>
+<span><span class="co">#&gt;  2: female  70   2007 0.009697106 0.010255217 0.010848307</span></span>
+<span><span class="co">#&gt;  3: female  90   2007 0.120724664 0.126541096 0.132544486</span></span>
+<span><span class="co">#&gt;  4: female  50   2021 0.001747114 0.002235568 0.002807592</span></span>
+<span><span class="co">#&gt;  5: female  70   2021 0.008095578 0.010091633 0.012536412</span></span>
+<span><span class="co">#&gt;  6: female  90   2021 0.088792365 0.108159643 0.130020288</span></span>
+<span><span class="co">#&gt;  7:   male  50   2007 0.005146784 0.005378449 0.005609954</span></span>
+<span><span class="co">#&gt;  8:   male  70   2007 0.022102181 0.023077429 0.024021848</span></span>
+<span><span class="co">#&gt;  9:   male  90   2007 0.168777913 0.174621869 0.180458248</span></span>
+<span><span class="co">#&gt; 10:   male  50   2021 0.003918034 0.004646483 0.005575017</span></span>
+<span><span class="co">#&gt; 11:   male  70   2021 0.018993049 0.022185004 0.025871436</span></span>
+<span><span class="co">#&gt; 12:   male  90   2021 0.140376355 0.160219495 0.181994444</span></span></code></pre></div>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/mt_plot.html">mt_plot_forecast</a></span><span class="op">(</span><span class="va">fc</span>, ages <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"45"</span>, <span class="st">"65"</span>, <span class="st">"80"</span>, <span class="st">"95"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <p><img src="apc-forecast-1.png"></p>
@@ -210,14 +210,14 @@ for Lee-Carter:</p>
 <span>  <span class="fu"><a href="../reference/mt_backtest.html">mt_backtest</a></span><span class="op">(</span><span class="fu"><a href="../reference/apc_bayes.html">apc_bayes</a></span><span class="op">(</span>mcmc <span class="op">=</span> <span class="fu"><a href="../reference/mcmc_control.html">mcmc_control</a></span><span class="op">(</span><span class="st">"fast"</span><span class="op">)</span><span class="op">)</span>, <span class="va">x</span>, origins <span class="op">=</span> <span class="fl">1996</span>, h <span class="op">=</span> <span class="fl">10</span>, prep <span class="op">=</span> <span class="va">prep</span>, n_draws <span class="op">=</span> <span class="fl">500</span><span class="op">)</span>,</span>
 <span>  <span class="fu"><a href="../reference/mt_backtest.html">mt_backtest</a></span><span class="op">(</span><span class="fu"><a href="../reference/lee_carter.html">lee_carter</a></span><span class="op">(</span><span class="op">)</span>, <span class="va">x</span>, origins <span class="op">=</span> <span class="fl">1996</span>, h <span class="op">=</span> <span class="fl">10</span>, prep <span class="op">=</span> <span class="va">prep</span>, n_draws <span class="op">=</span> <span class="fl">500</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/proc.time.html" class="external-link">proc.time</a></span><span class="op">(</span><span class="op">)</span> <span class="op">-</span> <span class="va">t0</span><span class="op">)</span><span class="op">[[</span><span class="st">"elapsed"</span><span class="op">]</span><span class="op">]</span></span>
-<span><span class="co">#&gt; [1] 202.424</span></span>
+<span><span class="co">#&gt; [1] 128.733</span></span>
 <span><span class="fu"><a href="../reference/mt_score.html">mt_score</a></span><span class="op">(</span><span class="va">bt</span>, by <span class="op">=</span> <span class="st">"model"</span><span class="op">)</span></span>
 <span><span class="co">#&gt;                  model       crps        wis        mae       rmse     mase</span></span>
-<span><span class="co">#&gt; 1: Bayesian APC (bamp) 0.06675355 0.06103062 0.08732000 0.11264479 3.771998</span></span>
-<span><span class="co">#&gt; 2:          Lee-Carter 0.03655757 0.03298065 0.04972644 0.06585924 2.068951</span></span>
+<span><span class="co">#&gt; 1: Bayesian APC (bamp) 0.06667538 0.06065096 0.08814156 0.11342976 3.805169</span></span>
+<span><span class="co">#&gt; 2:          Lee-Carter 0.03647788 0.03292307 0.04943503 0.06570118 2.060429</span></span>
 <span><span class="co">#&gt;        cov50     cov80     cov95  pit_mean   n     unit</span></span>
-<span><span class="co">#&gt; 1: 0.2269231 0.4538462 0.6538462 0.2331418 260 log rate</span></span>
-<span><span class="co">#&gt; 2: 0.3961538 0.6423077 0.8000000 0.5187710 260 log rate</span></span></code></pre></div>
+<span><span class="co">#&gt; 1: 0.2230769 0.4576923 0.6576923 0.2305616 260 log rate</span></span>
+<span><span class="co">#&gt; 2: 0.4000000 0.6346154 0.8000000 0.5169664 260 log rate</span></span></code></pre></div>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/mt_plot.html">mt_plot_coverage</a></span><span class="op">(</span><span class="va">bt</span><span class="op">)</span></span></code></pre></div>
 <p><img src="apc-coverage-1.png"></p>
@@ -247,14 +247,14 @@ French women the 90% forecast interval of the death rate at age 92 in
 <span>  <span class="fu"><a href="https://rdrr.io/pkg/data.table/man/data.table.html" class="external-link">data.table</a></span><span class="op">(</span>priors <span class="op">=</span> <span class="va">n</span>, q0.05 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/quantile.html" class="external-link">quantile</a></span><span class="op">(</span><span class="va">r</span>, <span class="fl">0.05</span><span class="op">)</span>, q0.5 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/median.html" class="external-link">median</a></span><span class="op">(</span><span class="va">r</span><span class="op">)</span>, q0.95 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/quantile.html" class="external-link">quantile</a></span><span class="op">(</span><span class="va">r</span>, <span class="fl">0.95</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="op">}</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label):</span></span>
-<span><span class="co">#&gt; Bayesian APC (bamp): forecast death rates above 1 in 4.5% of the draws (strata</span></span>
-<span><span class="co">#&gt; female; ages 79, 83, 84, 87). The model is unstable here, often because of</span></span>
+<span><span class="co">#&gt; Bayesian APC (bamp): forecast death rates above 1 in 5.1% of the draws (strata</span></span>
+<span><span class="co">#&gt; female; ages 74, 78, 79, 83). The model is unstable here, often because of</span></span>
 <span><span class="co">#&gt; sparse counts or a steep trend extrapolated far ahead; consider wider age</span></span>
 <span><span class="co">#&gt; groups (mt_regroup()), pooling (li_lee(common_by = )), smoothing</span></span>
 <span><span class="co">#&gt; (step_smooth()) or an ensemble.</span></span>
-<span><span class="co">#&gt;                       priors      q0.05       q0.5     q0.95</span></span>
-<span><span class="co">#&gt; 1: rw2 / rw1 / rw1 (default) 0.11382336 0.13833203 0.1620052</span></span>
-<span><span class="co">#&gt; 2:           rw2 / rw2 / rw2 0.00344156 0.07503599 0.6547470</span></span></code></pre></div>
+<span><span class="co">#&gt;                       priors       q0.05      q0.5     q0.95</span></span>
+<span><span class="co">#&gt; 1: rw2 / rw1 / rw1 (default) 0.115328333 0.1379173 0.1685105</span></span>
+<span><span class="co">#&gt; 2:           rw2 / rw2 / rw2 0.003988779 0.0900675 0.6683334</span></span></code></pre></div>
 <p>With second-order random walks the interval spans two orders of
 magnitude, and a few paths reach death rates above 1 (the warning),
 which is not useful for planning; with first-order random walks it is
@@ -268,7 +268,7 @@ a way to combine the strengths.</p>
 <h2 id="practical-notes">Practical notes<a class="anchor" aria-label="anchor" href="#practical-notes"></a>
 </h2>
 <ul>
-<li>Runtime: about 1.5 to 4 minutes per stratum with
+<li>Runtime: about 1.4 to 4 minutes per stratum with
 <code>mcmc_control("fast")</code> for 13 age groups and 37 years,
 depending on the machine and its load; <code>"final"</code> lets bamp
 choose the chain length and is several times slower.</li>

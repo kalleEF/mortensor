@@ -15,7 +15,8 @@ life_table(
   open = c("reciprocal", "gompertz", "kannisto"),
   k = 10,
   radix = 1e+05,
-  omega = 110
+  omega = 110,
+  exposure = NULL
 )
 ```
 
@@ -52,10 +53,18 @@ life_table(
   the default `omega` of [`mt_data()`](mt_data.md)); ignored with
   `open = "reciprocal"`.
 
+- exposure:
+
+  Optional person-years of the age intervals, which weight the
+  maximum-likelihood fit of a Gompertz or Kannisto closure with the
+  observed numbers at risk; by default the numbers of the life table.
+
 ## Value
 
 A `data.table` with `age_lo`, `age_hi`, `n`, `mx`, `ax`, `qx`, `lx`,
-`dx`, `Lx`, `Tx`, `ex`.
+`dx`, `Lx`, `Tx`, `ex`. With a Gompertz or Kannisto closure, the
+attribute `"tail"` holds the fitted `a` and `b`, the ages of the fit and
+whether it converged.
 
 ## Details
 
@@ -73,17 +82,29 @@ A `data.table` with `age_lo`, `age_hi`, `n`, `mx`, `ax`, `qx`, `lx`,
   infant mortality is below 0.01 years;
 
 - open interval: `"reciprocal"` (default) uses `L = l / m` (Preston,
-  Heuveline and Guillot 2001). `"gompertz"` fits a Gompertz line (log
-  rate linear in age) by least squares to the log rates of the last `k`
-  closed single-year ages; `"kannisto"` fits the Kannisto model, a line
-  for the logit of the rates whose hazard levels off at old ages
-  (Thatcher, Kannisto and Vaupel 1998), by least squares to the logits
-  of the same rates. Thatcher, Kannisto and Vaupel (1998) and the Human
-  Mortality Database fit these models by maximum likelihood to deaths
-  and exposures instead, which needs the counts. The fitted rates are
-  applied year by year from the start of the open interval to `omega`,
-  and the survivors at `omega` are closed with `L = l / m` at the fitted
-  rate there;
+  Heuveline and Guillot 2001). `"gompertz"` and `"kannisto"` close the
+  table with the Gompertz hazard `mu(x) = a exp(b x)` or the Kannisto
+  hazard `mu(x) = a exp(b x) / (1 + a exp(b x))`, whose logit is linear
+  in age and which levels off at old ages (Thatcher, Kannisto and Vaupel
+  1998, chapter 2). They are fitted as in Thatcher, Kannisto and Vaupel
+  (1998, chapter 6), by maximum likelihood with binomial deaths: of the
+  `N` persons who reach age `x`, `d` die before `x + 1` with probability
+  `q = 1 - exp(-H)`, where `H` is the integral of the hazard over the
+  year. The fit uses the last `k` closed single-year ages. `N` and `d`
+  are the survivors and deaths of the life table itself, the numbers of
+  a stationary population with these rates, unless `exposure` gives the
+  observed person-years `E` (then `d = m E` and `N = E + (1 - a) d`).
+  Thatcher et al. fit observed numbers, at ages 80 to 98; the life-table
+  numbers are a package-specific choice for schedules without counts
+  (reference unknown). For the cohorts born in 1871-1880 the life-table
+  numbers are the observed ones, and the fit reproduces the published
+  parameters (their Appendix D) from their probabilities of dying (Table
+  6.1). Earlier versions of mortensor fitted least squares to the log or
+  logit rates. The fitted hazard is applied year by year from the start
+  of the open interval to `omega` (survival `exp(-H)` and person-years
+  `l (1 - exp(-H)) / H` in each year), and the survivors at `omega` are
+  closed with `L = l / H` at the integrated hazard of the following
+  year;
 
 - a rate of 0 in the open interval (no deaths, as in small populations)
   would give an infinite life expectancy: the last positive rate of the
@@ -119,4 +140,10 @@ lt[age_lo %in% c(30, 65, 100)]
 #> 1: 99964.93 4973452.39 49.734524
 #> 2: 86940.42 1596839.74 18.242981
 #> 3:  3312.26    3312.26  2.268452
+# Kannisto closure fitted by maximum likelihood to ages 90-99
+lk <- life_table(m, single_ages(30, 100), open = "kannisto")
+attr(lk, "tail")
+#>         law            a         b age_from age_to converged
+#>      <char>        <num>     <num>    <num>  <num>    <lgcl>
+#> 1: kannisto 1.045127e-06 0.1338894       90    100      TRUE
 ```

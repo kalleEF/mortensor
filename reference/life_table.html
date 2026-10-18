@@ -63,7 +63,8 @@ ones of Preston, Heuveline and Guillot (2001):</p>
 <span>  open <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"reciprocal"</span>, <span class="st">"gompertz"</span>, <span class="st">"kannisto"</span><span class="op">)</span>,</span>
 <span>  k <span class="op">=</span> <span class="fl">10</span>,</span>
 <span>  radix <span class="op">=</span> <span class="fl">1e+05</span>,</span>
-<span>  omega <span class="op">=</span> <span class="fl">110</span></span>
+<span>  omega <span class="op">=</span> <span class="fl">110</span>,</span>
+<span>  exposure <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -101,11 +102,19 @@ interval).</p></dd>
 (default 110, the default <code>omega</code> of <code><a href="mt_data.html">mt_data()</a></code>); ignored with
 <code>open = "reciprocal"</code>.</p></dd>
 
+
+<dt id="arg-exposure">exposure<a class="anchor" aria-label="anchor" href="#arg-exposure"></a></dt>
+<dd><p>Optional person-years of the age intervals, which weight
+the maximum-likelihood fit of a Gompertz or Kannisto closure with the
+observed numbers at risk; by default the numbers of the life table.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>A <code>data.table</code> with <code>age_lo</code>, <code>age_hi</code>, <code>n</code>, <code>mx</code>, <code>ax</code>, <code>qx</code>,
-<code>lx</code>, <code>dx</code>, <code>Lx</code>, <code>Tx</code>, <code>ex</code>.</p>
+<code>lx</code>, <code>dx</code>, <code>Lx</code>, <code>Tx</code>, <code>ex</code>. With a Gompertz or Kannisto closure, the
+attribute <code>"tail"</code> holds the fitted <code>a</code> and <code>b</code>, the ages of the fit and
+whether it converged.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
@@ -122,17 +131,28 @@ Andreev and Kingkade (2015), which depend on sex and on the infant
 death rate and are not implemented here. The effect on e0 at low
 infant mortality is below 0.01 years;</p></li>
 <li><p>open interval: <code>"reciprocal"</code> (default) uses <code>L = l / m</code> (Preston,
-Heuveline and Guillot 2001). <code>"gompertz"</code> fits a Gompertz line (log
-rate linear in age) by least squares to the log rates of the last <code>k</code>
-closed single-year ages; <code>"kannisto"</code> fits the Kannisto model, a line
-for the logit of the rates whose hazard levels off at old ages
-(Thatcher, Kannisto and Vaupel 1998), by least squares to the logits
-of the same rates. Thatcher, Kannisto and Vaupel (1998) and the Human
-Mortality Database fit these models by maximum likelihood to deaths
-and exposures instead, which needs the counts. The fitted rates are
-applied year by year from the start of the open interval to <code>omega</code>,
-and the survivors at <code>omega</code> are closed with <code>L = l / m</code> at the fitted
-rate there;</p></li>
+Heuveline and Guillot 2001). <code>"gompertz"</code> and <code>"kannisto"</code> close the
+table with the Gompertz hazard <code>mu(x) = a exp(b x)</code> or the Kannisto
+hazard <code>mu(x) = a exp(b x) / (1 + a exp(b x))</code>, whose logit is linear in
+age and which levels off at old ages (Thatcher, Kannisto and Vaupel
+1998, chapter 2). They are fitted as in Thatcher, Kannisto and Vaupel
+(1998, chapter 6), by maximum likelihood with binomial deaths: of the
+<code>N</code> persons who reach age <code>x</code>, <code>d</code> die before <code>x + 1</code> with probability
+<code>q = 1 - exp(-H)</code>, where <code>H</code> is the integral of the hazard over the
+year. The fit uses the last <code>k</code> closed single-year ages. <code>N</code> and <code>d</code>
+are the survivors and deaths of the life table itself, the numbers of a
+stationary population with these rates, unless <code>exposure</code> gives the
+observed person-years <code>E</code> (then <code>d = m E</code> and <code>N = E + (1 - a) d</code>).
+Thatcher et al. fit observed numbers, at ages 80 to 98; the life-table
+numbers are a package-specific choice for schedules without counts
+(reference unknown). For the cohorts born in 1871-1880 the life-table
+numbers are the observed ones, and the fit reproduces the published
+parameters (their Appendix D) from their probabilities of dying (Table
+6.1). Earlier versions of mortensor fitted least squares to the log or
+logit rates. The fitted hazard is applied year by year from the start
+of the open interval to <code>omega</code> (survival <code>exp(-H)</code> and person-years
+<code>l (1 - exp(-H)) / H</code> in each year), and the survivors at <code>omega</code> are
+closed with <code>L = l / H</code> at the integrated hazard of the following year;</p></li>
 <li><p>a rate of 0 in the open interval (no deaths, as in small populations)
 would give an infinite life expectancy: the last positive rate of the
 closed intervals is used for the open interval instead (column <code>mx</code>
@@ -165,6 +185,12 @@ Modeling Population Processes</em>. Blackwell.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1: 99964.93 4973452.39 49.734524</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2: 86940.42 1596839.74 18.242981</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 3:  3312.26    3312.26  2.268452</span>
+<span class="r-in"><span><span class="co"># Kannisto closure fitted by maximum likelihood to ages 90-99</span></span></span>
+<span class="r-in"><span><span class="va">lk</span> <span class="op">&lt;-</span> <span class="fu">life_table</span><span class="op">(</span><span class="va">m</span>, <span class="fu"><a href="mt_axis.html">single_ages</a></span><span class="op">(</span><span class="fl">30</span>, <span class="fl">100</span><span class="op">)</span>, open <span class="op">=</span> <span class="st">"kannisto"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="va">lk</span>, <span class="st">"tail"</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>         law            a         b age_from age_to converged</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>      &lt;char&gt;        &lt;num&gt;     &lt;num&gt;    &lt;num&gt;  &lt;num&gt;    &lt;lgcl&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1: kannisto 1.045127e-06 0.1338894       90    100      TRUE</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

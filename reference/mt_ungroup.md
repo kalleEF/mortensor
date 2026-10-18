@@ -22,6 +22,7 @@ mt_ungroup(
   pord = 2,
   lambda_range = c(0.01, 1e+08),
   preserve_totals = FALSE,
+  open_split = c("pclm", "stationary"),
   tail = c("kannisto", "gompertz"),
   tail_width = 2
 )
@@ -90,6 +91,13 @@ mt_ungroup(
   Rescale the estimates to the observed group totals after the fit
   (default `FALSE`, the published PCLM); see Details.
 
+- open_split:
+
+  Split of the exposure of an open interval of the grid when deaths are
+  ungrouped as rates: `"pclm"` (default, the PCLM of the exposures,
+  Rizzi, Gampe and Eilers 2015) or `"stationary"` (package-specific
+  stationary-population weights); see Details.
+
 - tail, tail_width:
 
   For the deprecated `method = "gam"`: the parametric curve that takes
@@ -140,18 +148,73 @@ rates between the two settings is about 0.002 with `dims = 1` and 0.008
 with `dims = 2`.
 
 **Open age interval.** For counts (exposures, or deaths without
-exposures), an open last group is expanded into single years up to
-`omega` (see [`mt_data()`](mt_data.md)) and the PCLM spreads its total
-over them, as with a last interval of width `omega` minus its lower
-bound in the ungroup package. For rates, an open interval of the *grid*
-(for example 100+) is expanded into single years up to `omega` as well,
-and its exposure is split over these years with stationary-population
-weights `l(x) = exp(-cumsum(m(x)))` implied by the fitted rates;
-starting from rates that rise by 10% per year of age, the weights and
-the fit are iterated until no weight changes by more than 1e-6 (at most
-50 iterations; the smoothing parameters are selected again once the
-weights have converged). This treatment of the open interval is specific
-to mortensor (reference unknown).
+exposures), an open last group is expanded into single years up to the
+maximum age `omega` (see [`mt_data()`](mt_data.md)) and the PCLM spreads
+its total over them, as with a last interval of width `omega` minus its
+lower bound in the ungroup package. For rates, an open interval of the
+*grid* (for example 100+) is expanded into single years up to `omega` as
+well, and its exposure is split over these years (`open_split`):
+
+- `"pclm"` (default): by the PCLM of the exposures of all grid cells,
+  with a group of 0 counts of 15 years beyond `omega`, as Rizzi, Gampe
+  and Eilers (2015) ungroup grouped exposures (their maximum age 115 and
+  a group 115-130 with 0 counts); the estimates enter the composite link
+  of the rates;
+
+- `"stationary"`: with stationary-population weights
+  `l(x) = exp(-cumsum(m(x)))` implied by the fitted rates; starting from
+  rates that rise by 10% per year of age, the weights and the fit are
+  iterated until no weight changes by more than 1e-6 (at most 50
+  iterations; the smoothing parameters are selected again once the
+  weights have converged). This treatment is specific to mortensor
+  (reference unknown); it was the default up to E3.
+
+On French women and men (1997-2006, deaths in 5-year groups and 90+,
+grid open at 100+), the rate of 100+ was too high by 0.14 (women) and
+0.15 (men) on the log scale with `"stationary"` and by 0.12 and 0.15
+with `"pclm"`; the median absolute log error at 90-99 was 0.020 and
+0.022 with `"stationary"`, 0.019 and 0.022 with `"pclm"`. On data
+simulated with the exposures of a stationary population above 100
+([`mt_example()`](mt_example.md)), `"stationary"` was closer (median
+absolute log error at 90+ 0.006, against 0.009 with `"pclm"`), because
+that generator has the stationary exposures this option assumes.
+
+**Relation to Rizzi, Gampe and Eilers (2015).** As in the paper, the
+observed counts are Poisson with means composed from a latent
+distribution `exp(B beta)` (times the exposures for rates), estimated by
+penalised likelihood with a second-order difference penalty on the
+coefficients weighted by `lambda` (their penalised log-likelihood with
+`lambda / 2`, by iteratively reweighted least squares), and the
+effective dimension is the trace of the hat matrix. The departures:
+
+- basis: the paper uses one coefficient per fine cell (`B` the identity)
+  and allows a B-spline basis; here `B` is a cubic B-spline basis, as in
+  Eilers (2007) and the ungroup package;
+
+- smoothing parameter: the paper minimises AIC over a grid of
+  `log10 lambda`; the default here is BIC, the default of the ungroup
+  package, minimised by golden-section search on `log10 lambda` within
+  `lambda_range`. `criterion = "aic"` gives the paper's criterion;
+
+- open last interval of counts: the paper sets a maximum age (115) and
+  adds a group with 0 counts beyond it (115-130); here the open group
+  ends at `omega` without such a group. On French women in 2006 with
+  exposures in 5-year groups and 90+, adding a group with 0 counts of 15
+  years beyond `omega = 110` changed the median absolute log error of
+  the rates at 90-109 from 0.19 (too low) to 0.66 (too high); with
+  exposures in single years to 89 and 90+, from 0.57 to 0.14. The split
+  of a wide open group from its total is weakly identified either way;
+
+- exposures: as in the paper, they enter the composite link, and grouped
+  exposures are ungrouped by the PCLM first; the open interval of the
+  grid as described above (`"pclm"` follows the paper);
+
+- iterations: the paper iterates until the coefficients change by less
+  than 1e-6; here the iterations stop when the largest change is below
+  1e-6 relative to the coefficients or the penalised deviance changes by
+  less than 1e-8 relative, with step halving when it rises;
+
+- in 2D (Rizzi et al. 2019) see Defaults below.
 
 When the deaths are grouped more coarsely than the exposures at old ages
 (for example deaths 90+ and single-year exposures), the rates within the
@@ -165,13 +228,13 @@ at ages 30-89). The errors were within 0.1 on the log scale up to age
 101, but the rates were too high by 0.3-0.4 at ages 104-109, because the
 latent curve continues the rise of the rates below 90 while the observed
 rates rise more slowly at the highest ages. With a grid open at 100+
-(exposures 100+, expanded with the stationary weights), the rate of 100+
-was too high by 0.14 on the log scale (median over 1997-2006). With the
-exposures also grouped at 90+, the error at 90-109 was 0.19 (rates too
-low). With `dims = 2` (1997-2006, ages 30 and over) and smoothing
-parameters chosen by BIC, the error at 90-109 was 1.4: BIC chose very
-small smoothing parameters (the large counts vary more than Poisson
-noise) and the rates inside the wide last group oscillated; with
+(exposures 100+), the rate of 100+ was too high by 0.14 on the log scale
+(median over 1997-2006, see above). With the exposures also grouped in
+5-year groups and 90+, the error at 90-109 was 0.19 (rates too low).
+With `dims = 2` (1997-2006, ages 30 and over) and smoothing parameters
+chosen by BIC, the error at 90-109 was 1.4: BIC chose very small
+smoothing parameters (the large counts vary more than Poisson noise) and
+the rates inside the wide last group oscillated; with
 `lambda = c(100, 10)` fixed it was 0.05. Treat ungrouped rates inside a
 wide open group as extrapolations, prefer data with a higher open age,
 check the smoothing parameters (attribute `"ungroup"`) and the result
@@ -238,20 +301,20 @@ u
 head(attr(u, "ungroup"))
 #>    measure stratum period       method lambda_age lambda_period       ed
 #>     <char>   <int> <char>       <char>      <num>         <num>    <num>
-#> 1:  deaths       1   2010 pclm_rate_1d  19447.249            NA 6.451766
-#> 2:  deaths       1   2011 pclm_rate_1d  27566.341            NA 6.086601
-#> 3:  deaths       1   2012 pclm_rate_1d   7102.732            NA 7.544341
-#> 4:  deaths       1   2013 pclm_rate_1d   2338.435            NA 8.834245
-#> 5:  deaths       1   2014 pclm_rate_1d   1881.138            NA 9.095807
-#> 6:  deaths       2   2010 pclm_rate_1d  18038.560            NA 6.841414
+#> 1:  deaths       1   2010 pclm_rate_1d  18319.323            NA 6.511396
+#> 2:  deaths       1   2011 pclm_rate_1d  27689.910            NA 6.082495
+#> 3:  deaths       1   2012 pclm_rate_1d   7709.080            NA 7.443061
+#> 4:  deaths       1   2013 pclm_rate_1d   2190.986            NA 8.906068
+#> 5:  deaths       1   2014 pclm_rate_1d   1862.519            NA 9.109098
+#> 6:  deaths       2   2010 pclm_rate_1d  18106.191            NA 6.839731
 #>    max_rel_diff at_bound open_iterations open_converged
 #>           <num>   <lgcl>           <int>         <lgcl>
-#> 1:   0.05825207    FALSE               9           TRUE
-#> 2:   0.06299358    FALSE               7           TRUE
-#> 3:   0.04600249    FALSE               8           TRUE
-#> 4:   0.06614142    FALSE               8           TRUE
-#> 5:   0.02673991    FALSE               8           TRUE
-#> 6:   0.04517666    FALSE               4           TRUE
+#> 1:   0.05830036    FALSE              NA             NA
+#> 2:   0.06314078    FALSE              NA             NA
+#> 3:   0.04830307    FALSE              NA             NA
+#> 4:   0.06514775    FALSE              NA             NA
+#> 5:   0.02661996    FALSE              NA             NA
+#> 6:   0.04527347    FALSE              NA             NA
 # rescaled to the observed group totals (post-hoc step of the package)
 ut <- mt_ungroup(x, preserve_totals = TRUE)
 ```

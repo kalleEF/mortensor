@@ -34,13 +34,17 @@ ensembles also `component`, for fits by groups also `group`.
   AR(1) coefficient `phi` and standard deviation;
 
 - [`coda()`](coda.md): the centre `a` (geometric mean distribution of
-  life-table deaths), the loadings `b`, the index `k` with its drift and
-  standard deviation, the share of variation explained by the first
-  component and the parameters of the open age interval; the coherent
-  model gives per group of `common_by` the common `a`, `B`, `K` and per
-  stratum `a`, `b`, `k` and their AR(1) parameters.
+  life-table deaths), the loadings `b`, the index `k` with the order
+  (`order_k`), coefficients (`arima_k`) and innovation standard
+  deviation (`sd_k`) of its ARIMA model, the share of variation
+  explained by the component, the parameters of the open age interval
+  (`a_open`, `b_open`) or of the Kannisto model of each year
+  (`kannisto_a`, `kannisto_b`); the coherent model gives per group of
+  `common_by` the common `a`, `B`, `K` (with `order_K`, `arima_K`,
+  `sd_K`) and per stratum `a`, `b`, `k` and the ARIMA model of `k`.
   [`coda_causes()`](coda_causes.md): per group, as [`coda()`](coda.md),
-  with parts by age and cause;
+  with parts by age and cause (`b1`, `k1`, `b2`, `k2`, ... with several
+  components);
 
 - [`rwd()`](rwd.md): drift and innovation standard deviation per age
   (and, with `observation_noise = TRUE`, the variances of level and
@@ -49,7 +53,26 @@ ensembles also `component`, for fits by groups also `group`.
 - [`apc_bayes()`](apc_bayes.md): posterior medians and 90% intervals of
   the age, period and cohort effects (logit scale, bamp's
   identification), and the Gelman-Rubin statistics (`rhat`, values below
-  1.1 indicate convergence) of the identified quantities.
+  1.1 indicate convergence) of the identified quantities;
+
+- [`p_splines()`](p_splines.md), [`cp_splines()`](cp_splines.md): the
+  smoothing parameters over age (`lambda_age`) and years
+  (`lambda_year`), the effective dimension (`ed`), the criterion (`bic`
+  or `aic`) and the dispersion (deviance divided by the number of cells
+  minus the effective dimension); for [`cp_splines()`](cp_splines.md)
+  also the bounds of the rates of ageing and of change per age
+  (`ageing_lower`, `ageing_upper`, `change_lower`, `change_upper`).
+
+- [`bohk_rau()`](bohk_rau.md): posterior medians and 90% intervals of
+  the curve parameters `b1` and `b2` by age and of the variance and
+  hyperparameters, the least-squares values `theta1`, `theta2`
+  (exponential core model) and the Gelman-Rubin statistics (`rhat`);
+
+- [`nordpred_apc()`](nordpred_apc.md): estimates and 90% Wald intervals
+  of the age, period and cohort effects (cohorts by central year of
+  birth) and of the drift, the projected drift, the number of periods
+  fitted, the choice of the recent trend and the p-values of the
+  goodness of fit and of the test for the recent trend.
 
 Fits of wrapped packages (StMoMo, demography) keep the original fitted
 object in `fit$fits[[i]]`, where the methods of those packages apply.

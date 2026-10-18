@@ -194,6 +194,6 @@ tn2 <- mt_tune(smoothed_lc, data.frame(lambda = c(1, 100)), x, inner_origins = 1
 tn2$scores
 #>    lambda       rmse          se selected
 #>     <num>      <num>       <num>   <lgcl>
-#> 1:      1 0.06944312 0.008422793    FALSE
-#> 2:    100 0.06816706 0.008884341     TRUE
+#> 1:      1 0.06993299 0.008076431    FALSE
+#> 2:    100 0.06808111 0.008657170     TRUE
 ```

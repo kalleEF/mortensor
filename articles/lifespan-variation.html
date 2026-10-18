@@ -241,14 +241,14 @@ al. 2017).</li>
 <span><span class="co">#&gt; Key: &lt;label, period&gt;</span></span>
 <span><span class="co">#&gt;     label period       Lee-Carter Lee-Carter, rotated             CoDa</span></span>
 <span><span class="co">#&gt;    &lt;char&gt;  &lt;num&gt;           &lt;char&gt;              &lt;char&gt;           &lt;char&gt;</span></span>
-<span><span class="co">#&gt; 1: female   2050 91.4 (87.8-94.2)    91.4 (87.8-94.2) 94.1 (89.2-97.6)</span></span>
-<span><span class="co">#&gt; 2:   male   2050 85.1 (82.3-87.6)    85.1 (82.3-87.6) 88.8 (82.6-93.1)</span></span>
+<span><span class="co">#&gt; 1: female   2050 91.4 (87.8-94.2)    91.4 (87.8-94.2) 94.6 (93.8-95.3)</span></span>
+<span><span class="co">#&gt; 2:   male   2050 85.1 (82.3-87.6)    85.1 (82.3-87.6) 89.2 (85.6-92.3)</span></span>
 <span><span class="fu"><a href="../reference/mt_compare.html">mt_compare_forecasts</a></span><span class="op">(</span><span class="va">fc</span>, quantity <span class="op">=</span> <span class="st">"lifespan_variation"</span>, periods <span class="op">=</span> <span class="fl">2050</span>, digits <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Key: &lt;label, period&gt;</span></span>
-<span><span class="co">#&gt;     label period        Lee-Carter Lee-Carter, rotated              CoDa</span></span>
-<span><span class="co">#&gt;    &lt;char&gt;  &lt;num&gt;            &lt;char&gt;              &lt;char&gt;            &lt;char&gt;</span></span>
-<span><span class="co">#&gt; 1: female   2050  7.64 (7.05-8.53)    7.55 (6.92-8.50)  6.40 (5.44-8.10)</span></span>
-<span><span class="co">#&gt; 2:   male   2050 9.51 (8.76-10.29)   9.42 (8.61-10.27) 7.74 (6.10-10.05)</span></span></code></pre></div>
+<span><span class="co">#&gt;     label period        Lee-Carter Lee-Carter, rotated             CoDa</span></span>
+<span><span class="co">#&gt;    &lt;char&gt;  &lt;num&gt;            &lt;char&gt;              &lt;char&gt;           &lt;char&gt;</span></span>
+<span><span class="co">#&gt; 1: female   2050  7.64 (7.05-8.53)    7.55 (6.92-8.50) 6.15 (5.86-6.47)</span></span>
+<span><span class="co">#&gt; 2:   male   2050 9.51 (8.76-10.29)   9.42 (8.61-10.27) 7.58 (6.37-9.01)</span></span></code></pre></div>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/mt_compare.html">mt_plot_compare</a></span><span class="op">(</span><span class="va">fc</span>, quantity <span class="op">=</span> <span class="st">"lifespan_variation"</span>, data <span class="op">=</span> <span class="va">x</span><span class="op">)</span></span></code></pre></div>
 <p><img src="lifespan-variation_files/figure-html/plot-forecast-1.png" class="r-plt" alt="" width="672"></p>
@@ -265,14 +265,12 @@ childhood, where few deaths are left, to ages 15-64; that changes the
 spread of the ages at death little. For men it starts when their
 forecast life expectancy passes 80, after 2015.</li>
 <li>
-<strong>CoDa</strong> forecasts a higher life expectancy (94 years
-for women in
-<ol start="2050" style="list-style-type: decimal">
-<li>and a faster fall of e-dagger (to 6.4 years), with wider intervals.
-It extrapolates the past concentration of deaths at old ages
-directly.</li>
-</ol>
-</li>
+<strong>CoDa</strong> forecasts a higher life expectancy (94.6 years
+for women and 89.2 for men in 2050) and a faster fall of e-dagger (to
+6.15 years for women and 7.6 for men). It extrapolates the past
+concentration of deaths at old ages directly. For men its intervals are
+wider than those of Lee-Carter. For women they narrow towards the end of
+the forecast and are narrower than those of Lee-Carter in 2050.</li>
 </ul>
 <p>Lee-Carter starts from the fitted rates of 2006 (the default
 <code>jump_off = "fitted"</code>), so its first year lies below the
@@ -281,10 +279,10 @@ observed e-dagger; CoDa starts from the observed deaths.</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/mt_contrast.html">mt_contrast</a></span><span class="op">(</span><span class="va">fc</span><span class="op">[[</span><span class="st">"CoDa"</span><span class="op">]</span><span class="op">]</span>, var <span class="op">=</span> <span class="st">"sex"</span>, ref <span class="op">=</span> <span class="st">"female"</span>, quantity <span class="op">=</span> <span class="st">"lifespan_variation"</span><span class="op">)</span><span class="op">[</span></span>
 <span>  <span class="va">period</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2030</span>, <span class="fl">2050</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">level</span>, <span class="va">ref</span>, <span class="va">period</span>, <span class="va">q0.025</span>, <span class="va">q0.5</span>, <span class="va">q0.975</span><span class="op">)</span><span class="op">]</span></span>
-<span><span class="co">#&gt;     level    ref period      q0.025     q0.5   q0.975</span></span>
-<span><span class="co">#&gt;    &lt;char&gt; &lt;char&gt;  &lt;num&gt;       &lt;num&gt;    &lt;num&gt;    &lt;num&gt;</span></span>
-<span><span class="co">#&gt; 1:   male female   2030 -0.06372031 1.836470 3.713047</span></span>
-<span><span class="co">#&gt; 2:   male female   2050 -0.95058901 1.304217 3.871743</span></span></code></pre></div>
+<span><span class="co">#&gt;     level    ref period    q0.025     q0.5   q0.975</span></span>
+<span><span class="co">#&gt;    &lt;char&gt; &lt;char&gt;  &lt;num&gt;     &lt;num&gt;    &lt;num&gt;    &lt;num&gt;</span></span>
+<span><span class="co">#&gt; 1:   male female   2030 0.6219860 1.898914 3.047744</span></span>
+<span><span class="co">#&gt; 2:   male female   2050 0.2134672 1.426234 2.848197</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="which-forecast-was-right-in-the-past">Which forecast was right in the past?<a class="anchor" aria-label="anchor" href="#which-forecast-was-right-in-the-past"></a>
@@ -307,14 +305,15 @@ observed e-dagger; CoDa starts from the observed deaths.</p>
 <span><span class="co">#&gt; 2:   male 11.542134   2006 11.99 (11.68-12.26) 11.99 (11.68-12.26)</span></span>
 <span><span class="co">#&gt;                   CoDa</span></span>
 <span><span class="co">#&gt;                 &lt;char&gt;</span></span>
-<span><span class="co">#&gt; 1:   8.90 (7.61-10.65)</span></span>
-<span><span class="co">#&gt; 2: 11.92 (10.60-13.07)</span></span></code></pre></div>
+<span><span class="co">#&gt; 1:    8.99 (8.55-9.45)</span></span>
+<span><span class="co">#&gt; 2: 12.05 (11.68-12.25)</span></span></code></pre></div>
 <p>For women, all three forecasts of 2006 were below the observed 9.6
-years (Lee-Carter 9.2, CoDa 8.9), and their intervals contain it. For
-men, all were above the observed 11.5 years (12.0 and 11.9): the
-interval of Lee-Carter missed it, the wider one of CoDa contained it.
-The rotation changed the forecast for women by 0.02 years and not at all
-for men, whose life expectancy stayed below 80.</p>
+years (Lee-Carter 9.2, CoDa 9.0); the intervals of Lee-Carter contain
+it, that of CoDa (8.55-9.45) does not. For men, all were above the
+observed 11.5 years (Lee-Carter 11.99, CoDa 12.05), and none of the
+intervals contains it. The rotation changed the forecast for women by
+0.02 years and not at all for men, whose life expectancy stayed below
+80.</p>
 <p>One period of one country is a small test. <code><a href="../reference/mt_backtest.html">mt_backtest()</a></code>
 scores the forecast rates and life expectancy over many origins; for
 lifespan variation, repeat the comparison above from several

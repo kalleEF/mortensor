@@ -121,10 +121,15 @@ Models for one population
 
 - [`lee_carter()`](lee_carter.md) : Lee-Carter model
 - [`rwd()`](rwd.md) : Random walk with drift on log death rates
+- [`p_splines()`](p_splines.md) : Two-dimensional P-spline model
+- [`cp_splines()`](cp_splines.md) : Smooth constrained mortality
+  forecasting (CP-splines)
 - [`hyndman_ullah()`](hyndman_ullah.md) : Functional demographic model
   of Hyndman and Ullah (demography)
 - [`coda()`](coda.md) : Compositional data (CoDa) model of life-table
   deaths
+- [`bohk_rau()`](bohk_rau.md) : Bohk-Ewald and Rau model of age-specific
+  rates of mortality improvement
 - [`stmomo()`](stmomo.md) : Generalised age-period-cohort models
   (StMoMo)
 - [`stanmomo()`](stanmomo.md) : Bayesian stochastic mortality models in
@@ -136,6 +141,8 @@ Models for one population
 - [`apc_select()`](apc_select.md) : Choose the random-walk orders of a
   Bayesian APC model by DIC
 - [`mcmc_control()`](mcmc_control.md) : MCMC settings for apc_bayes()
+- [`nordpred_apc()`](nordpred_apc.md) : Nordpred age-period-cohort model
+  with a power link
 
 ## 
 

@@ -186,7 +186,7 @@ mt_score_table(bt_lc, metrics = c("crps", "cov95"))
 #>       model   crps cov95 crps_le cov95_le
 #>      <fctr>  <num> <num>   <num>    <num>
 #> 1:   fitted 0.0683 0.793   0.293    0.814
-#> 2: observed 0.0789 0.760   0.310    0.789
+#> 2: observed 0.0789 0.761   0.310    0.789
 ```
 
 Lee-Carter reproduces the last observed year closely, so the observed

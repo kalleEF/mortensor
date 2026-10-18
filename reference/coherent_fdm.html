@@ -60,7 +60,9 @@ functional data models of the demography package: for a group of strata
 <span>  smooth <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  smooth_args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  K <span class="op">=</span> <span class="fl">100</span>,</span>
-<span>  drange <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">0.5</span><span class="op">)</span></span>
+<span>  drange <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">0.5</span><span class="op">)</span>,</span>
+<span>  weighted <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  beta <span class="op">=</span> <span class="fl">0.05</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -95,6 +97,14 @@ the decomposition (see <code><a href="hyndman_ullah.html">hyndman_ullah()</a></c
 <dd><p>Range of the fractional differencing parameter of the
 ARFIMA models of the ratios (<code>c(0, 0.5)</code>: stationary).</p></dd>
 
+
+<dt id="arg-weighted-beta">weighted, beta<a class="anchor" aria-label="anchor" href="#arg-weighted-beta"></a></dt>
+<dd><p>Weighted principal components of the product and of
+the ratios, with geometrically decaying weights <code>beta (1 - beta)^i</code> of
+the years (Hyndman, Booth and Yasmeen 2013: <code>beta = 0.05</code>).
+<code>weighted = FALSE</code> gives the unweighted decomposition, the default of
+<code><a href="https://pkg.robjhyndman.com/demography/reference/coherentfdm.html" class="external-link">demography::coherentfdm()</a></code>.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
@@ -110,20 +120,46 @@ forecast with ARIMA models, so it carries the common trend;</p></li>
 functional demographic model whose scores are forecast with stationary
 ARFIMA models, so the differences between the strata stay bounded and
 revert towards their recent level.</p></li>
-</ul><p>Forecasts of the strata are products of the two. This is the original
-method of <code><a href="https://pkg.robjhyndman.com/demography/reference/coherentfdm.html" class="external-link">demography::coherentfdm()</a></code>; <code><a href="li_lee.html">li_lee()</a></code> is a related model with
-a common Lee-Carter factor. The Lee-Carter version <code><a href="product_ratio.html">product_ratio()</a></code> is
-deprecated in its favour.</p>
+</ul><p>Forecasts of the strata are products of the two. This is the method of
+<code><a href="https://pkg.robjhyndman.com/demography/reference/coherentfdm.html" class="external-link">demography::coherentfdm()</a></code> and <code>forecast()</code> for its result; <code><a href="li_lee.html">li_lee()</a></code>
+is a related model with a common Lee-Carter factor. The Lee-Carter
+version <code><a href="product_ratio.html">product_ratio()</a></code> is deprecated in its favour.</p>
 <p>Draws simulate the product and each ratio (uncertainty of the scores and
 resampled model errors, as <code><a href="https://rdrr.io/r/stats/simulate.html" class="external-link">simulate()</a></code> for functional forecasts in
 demography) and multiply them; the ratios of each path are rescaled so
-that they multiply to one, as in <code><a href="https://pkg.robjhyndman.com/demography/reference/forecast.fdmpr.html" class="external-link">demography::forecast.fdmpr()</a></code>.
+that they multiply to one, as <code>forecast()</code> in demography does for the
+point forecasts.</p>
+<p><strong>Relation to the paper.</strong> As in Hyndman, Booth and Yasmeen (2013,
+Sections 2.1-2.4): the rates of each stratum are smoothed over age first
+(weighted penalised regression splines, monotone above age 65, through
+<code><a href="https://pkg.robjhyndman.com/demography/reference/smooth.demogdata.html" class="external-link">demography::smooth.demogdata()</a></code>); the product is the geometric mean of
+the smoothed rates of the group (their Eq. 3), and every stratum has a
+ratio model (their Eq. 4; they note that J - 1 ratio models would
+suffice); the scores of the product are forecast with ARIMA models
+chosen by the algorithm of Hyndman and Khandakar (2008), those of the
+ratios with stationary ARFIMA models (orders by the same algorithm,
+maximum likelihood); there is no jump-off adjustment; <code>order1 = order2 = 6</code> are the numbers of components of their applications. The principal
+components are weighted, with weight <code>beta (1 - beta)^i</code> for the year <code>i</code>
+years before the last and <code>beta = 0.05</code> as in their applications
+(Section 2.2 and Discussion); <code><a href="https://pkg.robjhyndman.com/demography/reference/coherentfdm.html" class="external-link">demography::coherentfdm()</a></code> does not
+weight them by default (<code>weighted = FALSE</code>). The departures:</p><ul><li><p>the fractional differencing parameter of the ratio models lies in
+<code>drange = c(0, 0.5)</code> (the default of demography); the paper names
+<code>-0.5 &lt; d &lt; 0.5</code> as the stationary range;</p></li>
+<li><p>prediction intervals come from simulated paths with resampled model
+errors; the paper gives analytic variances for the rates (their Eq. 8)
+and simulates for life expectancy. Predictive draws add Poisson deaths
+in place of the observational variance of their Eq. 8;</p></li>
+<li><p>the ratios of each simulated path are rescaled to multiply to one, and
+with a hierarchy (see below) the aggregates get a ratio but do not
+enter the product. Both are package-specific (reference unknown);
+demography rescales the point forecasts in the same way, and the paper
+states the constraint for the observed ratios.
 Predictive draws (<code>mt_forecast(predictive = TRUE)</code>) add Poisson variation
 of the deaths given the rates and the exposures, and no other observation
 noise. If intervals are too narrow on real data, that is a property of the
 model (see <code><a href="recalibrated.html">recalibrated()</a></code>, <code><a href="ensemble.html">ensemble()</a></code>, or
-overdispersed models such as <code>stanmomo(family = "nb")</code>).</p>
-<p>With <code>common_by</code> (for example <code>"sex"</code>), each level of that stratum
+overdispersed models such as <code>stanmomo(family = "nb")</code>).</p></li>
+</ul><p>With <code>common_by</code> (for example <code>"sex"</code>), each level of that stratum
 variable forms its own group with its own product (for example the
 quintiles of each sex). If the data carry a hierarchy (see
 <code><a href="mt_aggregate_strata.html">mt_aggregate_strata()</a></code>), the product is computed from the bottom strata;
@@ -135,6 +171,9 @@ strata (<code><a href="hyndman_ullah.html">hyndman_ullah()</a></code> models a s
     <p>Hyndman RJ, Booth H, Yasmeen F (2013). Coherent mortality forecasting: the
 product-ratio method with functional time series models. <em>Demography</em>
 50(1): 261-283. <a href="https://doi.org/10.1007/s13524-012-0145-5" class="external-link">doi:10.1007/s13524-012-0145-5</a></p>
+<p>Hyndman RJ, Khandakar Y (2008). Automatic time series forecasting: the
+forecast package for R. <em>Journal of Statistical Software</em> 27(3): 1-22.
+<a href="https://doi.org/10.18637/jss.v027.i03" class="external-link">doi:10.18637/jss.v027.i03</a></p>
     </div>
 
     <div class="section level2">

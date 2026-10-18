@@ -183,22 +183,37 @@ diagonal and <code>"mint"</code> gives nearly the result of <code>"wls"</code>; 
 where a joint model (for example <code><a href="li_lee.html">li_lee()</a></code>) simulates correlated
 strata.</p>
 <p><strong>Non-negative forecasts.</strong> Projections can make bottom values negative
-where the base forecasts disagree strongly. Such values are held at zero
-and the remaining bottom strata of the draw are projected again, until
-none is negative; the aggregates are recomputed from the bottom series,
-so the result is coherent and non-negative, and fixed nodes are kept.
-This iteration is a package-specific heuristic. Wickramasuriya, Turlach
-and Hyndman (2020) solve the quadratic program of the reconciliation with
-non-negativity constraints; the heuristic approximates its solution
-without guaranteeing the optimum. A warning reports when more than 5% of
-the draws needed this, because the distributions of the affected strata
-(often small causes) are then truncated at zero.</p>
+where the base forecasts disagree strongly. For the draws where this
+happens, the bottom values <code>b</code> are those of the non-negative
+reconciliation of Wickramasuriya, Turlach and Hyndman (2020): they
+minimise the same weighted distance <code>(y - S b)' W^-1 (y - S b)</code> subject to
+<code>b &gt;= 0</code> (their Eq. 3), and the aggregates are their sums. The quadratic
+program is solved exactly by their block principal pivoting algorithm
+(their Algorithm 3.1: all infeasible values exchanged while their number
+falls, at most 3 times without a fall, then one value at a time),
+started from the unconstrained solution, with the projection above for
+each set of bottom values held at zero. Infeasibilities below 1e-10 times
+the largest absolute base forecast of the draw count as zero (the paper
+uses 1e-12 in absolute terms). Draws without negative values keep the
+unconstrained solution, which is then the optimum. A warning reports when
+more than 5% of the draws have bottom values at zero, because the
+distributions of the affected strata (often small causes) are then
+truncated at zero. Earlier versions of mortensor held negative values at
+zero and projected the rest again, a heuristic without a guaranteed
+optimum; it was removed.</p>
 <p><strong>Fixed nodes.</strong> <code>fixed</code> keeps the forecasts of some nodes, as in the
 reconciliation with immutable forecasts of Zhang, Kang, Panagiotelis and
-Li (2023). The package approximates it by giving the fixed nodes a
-near-zero variance in <code>W</code> (1e-10 times the largest variance), so that the
-projection leaves them almost unchanged and the other strata absorb the
-whole gap.</p>
+Li (2023). The package gives the fixed nodes a near-zero variance in <code>W</code>
+(1e-10 times the largest variance); with <code>"mint"</code> the other nodes get
+their covariance conditional on the fixed nodes. The projection is then
+the weighted least-squares solution with the fixed nodes as equality
+constraints, up to a relative change of the fixed nodes of about 1e-9,
+and the other strata absorb the whole gap. With negative bottom values,
+the same weights enter the non-negative quadratic program, so the fixed
+nodes are kept as equality constraints there as well, as long as
+non-negative parts can add up to them. When they cannot (a fixed node
+below zero, or a node fixed together with parts whose forecasts do not
+add up to it), the fixed nodes move, with a warning.</p>
 <p><strong>Proportional.</strong> <code>"proportional"</code> keeps the <code>fixed</code> nodes and scales the
 bottom strata below each of them by one factor per draw, so that they add
 up to the fixed node; nodes between them are recomputed as sums. This is

@@ -145,12 +145,12 @@ mt_score_table(bt, metrics = c("crps", "cov95"), targets = c("rate", "life_expec
 #>  4:                    Li-Lee    bottom 0.0901 0.812   0.396    0.765
 #>  5:                    Li-Lee aggregate 0.0654 0.732   0.366    0.683
 #>  6:                    Li-Lee     total 0.0507 0.589   0.346    0.533
-#>  7:              coherent fdm    bottom 0.0819 0.822   0.281    0.667
-#>  8:              coherent fdm aggregate 0.0594 0.706   0.252    0.544
-#>  9:              coherent fdm     total 0.0461 0.448   0.238    0.333
-#> 10: Lee-Carter + coherent fdm    bottom 0.0817 0.852   0.302    0.780
-#> 11: Lee-Carter + coherent fdm aggregate 0.0585 0.751   0.284    0.614
-#> 12: Lee-Carter + coherent fdm     total 0.0443 0.485   0.296    0.333
+#>  7:              coherent fdm    bottom 0.0825 0.825   0.303    0.619
+#>  8:              coherent fdm aggregate 0.0603 0.709   0.280    0.464
+#>  9:              coherent fdm     total 0.0480 0.467   0.277    0.267
+#> 10: Lee-Carter + coherent fdm    bottom 0.0821 0.855   0.316    0.780
+#> 11: Lee-Carter + coherent fdm aggregate 0.0592 0.750   0.303    0.561
+#> 12: Lee-Carter + coherent fdm     total 0.0454 0.481   0.322    0.267
 ```
 
 ``` r
@@ -159,8 +159,8 @@ mt_score_table(bt[region == "East" & sex != "both"], metrics = c("crps", "cov95"
 #>                        model crps_le_gap cov95_le_gap
 #> 1:                Lee-Carter      0.0749        1.000
 #> 2:                    Li-Lee      0.1580        0.333
-#> 3:              coherent fdm      0.1560        0.367
-#> 4: Lee-Carter + coherent fdm      0.0797        1.000
+#> 3:              coherent fdm      0.1480        0.400
+#> 4: Lee-Carter + coherent fdm      0.0768        1.000
 ```
 
 ``` r
@@ -176,11 +176,13 @@ coherent fdm hold the gaps near their recent level, with women in the
 East slightly behind again. The backtest decides between these
 assumptions:
 
-- For the Laender, the coherent fdm and the ensemble are the most
-  accurate (CRPS of the rates 0.082, against 0.090 for Li-Lee and 0.092
-  for Lee-Carter); the ensemble’s intervals cover the rates best (95%
-  coverage 0.85). The intervals of life expectancy are too narrow for
-  every model (95% coverage 0.67 to 0.78).
+- For the Laender, the ensemble and the coherent fdm are the most
+  accurate (CRPS of the rates 0.0821 and 0.0825, against 0.090 for
+  Li-Lee and 0.092 for Lee-Carter); the coherent fdm forecasts their
+  life expectancy best (CRPS 0.303 years, ensemble 0.316). The
+  ensemble’s intervals cover the rates best (95% coverage 0.855). The
+  intervals of life expectancy are too narrow for every model (95%
+  coverage 0.62 to 0.78).
 - For the totals (East, West and Germany), the ensemble forecasts the
   rates most accurately, but all intervals are too narrow there (95%
   coverage of the rates of Germany 0.31 to 0.59). Lee-Carter forecasts
@@ -188,13 +190,14 @@ assumptions:
   in the totals: its intervals of life expectancy for Germany covered
   none of the 15 observed values.
 - The East-West gap is forecast best by Lee-Carter and the ensemble
-  (CRPS 0.075 and 0.080), whose intervals covered every observed gap;
-  those of Li-Lee and the coherent fdm covered it in only 33% and 37% of
+  (CRPS 0.075 and 0.077), whose intervals covered every observed gap;
+  those of Li-Lee and the coherent fdm covered it in only 33% and 40% of
   the cases.
 
-The ensemble of Lee-Carter and the coherent fdm is the most accurate for
-the Laender and second to Lee-Carter for the gap. No single model does
-as well on both, so the pipeline continues with the ensemble.
+The ensemble of Lee-Carter and the coherent fdm forecasts the rates of
+the Laender as accurately as the coherent fdm alone, and the gap almost
+as accurately as Lee-Carter. No single model does as well on both, so
+the pipeline continues with the ensemble.
 
 ### Jump-off
 
@@ -210,20 +213,20 @@ bt_anchor <- mt_compare(list("+ anchored" = bu(anchored(ens))), xh, origins = c(
 bt_steps <- rbind(bt[model == "Lee-Carter + coherent fdm"], bt_anchor)
 mt_score_table(bt_steps[sex != "both"], metrics = c("crps", "cov95"))
 #>                        model   crps cov95 crps_le cov95_le crps_le_gap
-#> 1: Lee-Carter + coherent fdm 0.0767 0.823   0.302    0.741      0.1050
-#> 2:                + anchored 0.0853 0.809   0.299    0.732      0.0974
+#> 1: Lee-Carter + coherent fdm 0.0772 0.826   0.317    0.727       0.103
+#> 2:                + anchored 0.0844 0.818   0.312    0.725       0.102
 #>    cov95_le_gap
 #> 1:        0.998
 #> 2:        0.998
 ```
 
-Anchoring made the forecasts of the rates worse (CRPS 0.085 against
+Anchoring made the forecasts of the rates worse (CRPS 0.084 against
 0.077): the observed rates of a single year carry their random variation
 into every forecast year, and those of small Laender are noisy. It made
-the forecasts of life expectancy slightly more accurate (0.299 against
-0.302) and those of the East-West gap more accurate (0.097 against
-0.105). The question concerns life expectancy and the gap, so the
-pipeline uses it.
+the forecasts of life expectancy slightly more accurate (0.312 against
+0.317) and left those of the East-West gap nearly unchanged (0.102
+against 0.103). The question concerns life expectancy and the gap, so
+the pipeline uses it; the gain is small.
 
 ## Forecasts to 2035
 
@@ -264,19 +267,19 @@ mt_plot_contrast(gap, observed = gap_obs, levels = "East")
 gap[level == "East" & period %in% c(2025, 2035),
     .(sex, period, gap = sprintf("%.2f (%.2f to %.2f)", q0.5, q0.025, q0.975))]
 #>       sex period                    gap
-#> 1: female   2025   0.03 (-0.27 to 0.88)
-#> 2: female   2035   0.03 (-0.34 to 1.59)
-#> 3:   male   2025 -1.15 (-1.54 to -0.46)
-#> 4:   male   2035  -1.04 (-1.66 to 0.29)
-#> 5:   both   2025  -0.59 (-0.79 to 0.01)
-#> 6:   both   2035  -0.51 (-0.79 to 0.63)
+#> 1: female   2025  -0.06 (-0.33 to 0.88)
+#> 2: female   2035  -0.05 (-0.34 to 1.59)
+#> 3:   male   2025 -1.14 (-1.54 to -0.46)
+#> 4:   male   2035  -1.03 (-1.66 to 0.29)
+#> 5:   both   2025  -0.62 (-0.80 to 0.01)
+#> 6:   both   2035  -0.55 (-0.79 to 0.63)
 ```
 
 In 2035, women in the East are forecast to live about as long as those
-in the West (0.03 years longer, 95% interval -0.34 to 1.59), men 1.0
-years less (-1.66 to 0.29). The forecast continues the slow narrowing of
-the male gap (1.15 years in 2025), but the gap most likely does not
-close by 2035.
+in the West (0.05 years less, 95% interval -0.34 to 1.59), men 1.0 years
+less (-1.66 to 0.29). The forecast continues the slow narrowing of the
+male gap (1.14 years in 2025), but the gap most likely does not close by
+2035.
 
 Which ages make up the gap of men in 2019 and in 2035 (“Decomposing
 differences in life expectancy”):
@@ -300,8 +303,8 @@ the contributions are small and uncertain.
 | Suppressed cells | raking to Land and national totals | all totals matched | [`mt_fill_suppressed()`](../reference/mt_fill_suppressed.md) | “Your own data” |
 | Hierarchy | Laender, East and West, Germany; sexes |  | [`mt_hierarchy()`](../reference/mt_hierarchy.md), [`mt_aggregate_strata()`](../reference/mt_aggregate_strata.md) | “Coherent forecasts” |
 | Coherence | bottom-up sums of the Laender |  | `reconciled(method = "bottom_up")` | “Coherent forecasts” |
-| Model | ensemble of Lee-Carter and coherent fdm | most accurate for the Laender, second for the gap | [`ensemble()`](../reference/ensemble.md), [`coherent_fdm()`](../reference/coherent_fdm.md), `mt_compare(contrast = )` | “Choosing and combining models” |
-| Jump-off | observed rates of the last year (Lee and Miller 2001) | better life expectancy and gap, worse rates | [`anchored()`](../reference/anchored.md) | “Where a forecast starts” |
+| Model | ensemble of Lee-Carter and coherent fdm | most accurate for the rates of the Laender, second for the gap | [`ensemble()`](../reference/ensemble.md), [`coherent_fdm()`](../reference/coherent_fdm.md), `mt_compare(contrast = )` | “Choosing and combining models” |
+| Jump-off | observed rates of the last year (Lee and Miller 2001) | slightly better life expectancy, gap nearly unchanged, worse rates | [`anchored()`](../reference/anchored.md) | “Where a forecast starts” |
 | Gap | East - West, path by path |  | [`mt_contrast()`](../reference/mt_contrast.md), [`mt_decompose()`](../reference/mt_decompose.md) | “Decomposing differences” |
 
 ## References
