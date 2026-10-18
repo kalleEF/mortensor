@@ -7,6 +7,9 @@
 # smoothed over age with smooth.demogdata() before the decomposition, and
 # forecasts are simulated paths (product and ratios simulated independently,
 # rescaled path by path so that the ratios of each group multiply to one).
+# The principal components are weighted (weight = TRUE, beta = 0.05 of
+# ftsa's ftsm()), as in Hyndman, Booth and Yasmeen (2013); demography does
+# not weight them by default.
 
 #' Coherent functional demographic model (product-ratio, demography)
 #'
@@ -22,15 +25,45 @@
 #'   ARFIMA models, so the differences between the strata stay bounded and
 #'   revert towards their recent level.
 #'
-#' Forecasts of the strata are products of the two. This is the original
-#' method of `demography::coherentfdm()`; [li_lee()] is a related model with
-#' a common Lee-Carter factor. The Lee-Carter version [product_ratio()] is
-#' deprecated in its favour.
+#' Forecasts of the strata are products of the two. This is the method of
+#' `demography::coherentfdm()` and `forecast()` for its result; [li_lee()]
+#' is a related model with a common Lee-Carter factor. The Lee-Carter
+#' version [product_ratio()] is deprecated in its favour.
 #'
 #' Draws simulate the product and each ratio (uncertainty of the scores and
 #' resampled model errors, as `simulate()` for functional forecasts in
 #' demography) and multiply them; the ratios of each path are rescaled so
-#' that they multiply to one, as in `demography::forecast.fdmpr()`.
+#' that they multiply to one, as `forecast()` in demography does for the
+#' point forecasts.
+#'
+#' **Relation to the paper.** As in Hyndman, Booth and Yasmeen (2013,
+#' Sections 2.1-2.4): the rates of each stratum are smoothed over age first
+#' (weighted penalised regression splines, monotone above age 65, through
+#' `demography::smooth.demogdata()`); the product is the geometric mean of
+#' the smoothed rates of the group (their Eq. 3), and every stratum has a
+#' ratio model (their Eq. 4; they note that J - 1 ratio models would
+#' suffice); the scores of the product are forecast with ARIMA models
+#' chosen by the algorithm of Hyndman and Khandakar (2008), those of the
+#' ratios with stationary ARFIMA models (orders by the same algorithm,
+#' maximum likelihood); there is no jump-off adjustment; `order1 = order2 =
+#' 6` are the numbers of components of their applications. The principal
+#' components are weighted, with weight `beta (1 - beta)^i` for the year `i`
+#' years before the last and `beta = 0.05` as in their applications
+#' (Section 2.2 and Discussion); `demography::coherentfdm()` does not
+#' weight them by default (`weighted = FALSE`). The departures:
+#'
+#' * the fractional differencing parameter of the ratio models lies in
+#'   `drange = c(0, 0.5)` (the default of demography); the paper names
+#'   `-0.5 < d < 0.5` as the stationary range;
+#' * prediction intervals come from simulated paths with resampled model
+#'   errors; the paper gives analytic variances for the rates (their Eq. 8)
+#'   and simulates for life expectancy. Predictive draws add Poisson deaths
+#'   in place of the observational variance of their Eq. 8;
+#' * the ratios of each simulated path are rescaled to multiply to one, and
+#'   with a hierarchy (see below) the aggregates get a ratio but do not
+#'   enter the product. Both are package-specific (reference unknown);
+#'   demography rescales the point forecasts in the same way, and the paper
+#'   states the constraint for the observed ratios.
 #' Predictive draws (`mt_forecast(predictive = TRUE)`) add Poisson variation
 #' of the deaths given the rates and the exposures, and no other observation
 #' noise. If intervals are too narrow on real data, that is a property of the
@@ -54,11 +87,20 @@
 #' @param K Number of most recent years used to forecast the ratios.
 #' @param drange Range of the fractional differencing parameter of the
 #'   ARFIMA models of the ratios (`c(0, 0.5)`: stationary).
+#' @param weighted,beta Weighted principal components of the product and of
+#'   the ratios, with geometrically decaying weights `beta (1 - beta)^i` of
+#'   the years (Hyndman, Booth and Yasmeen 2013: `beta = 0.05`).
+#'   `weighted = FALSE` gives the unweighted decomposition, the default of
+#'   `demography::coherentfdm()`.
 #' @return A model specification.
 #' @references
 #' Hyndman RJ, Booth H, Yasmeen F (2013). Coherent mortality forecasting: the
 #' product-ratio method with functional time series models. *Demography*
 #' 50(1): 261-283. \doi{10.1007/s13524-012-0145-5}
+#'
+#' Hyndman RJ, Khandakar Y (2008). Automatic time series forecasting: the
+#' forecast package for R. *Journal of Statistical Software* 27(3): 1-22.
+#' \doi{10.18637/jss.v027.i03}
 #' @examples
 #' if (requireNamespace("demography", quietly = TRUE)) {
 #'   x <- mt_example(deaths = "single", years = 1990:2019)
@@ -67,14 +109,17 @@
 #' }
 #' @export
 coherent_fdm <- function(order1 = 6, order2 = 6, common_by = NULL, smooth = TRUE, smooth_args = list(), K = 100,
-                         drange = c(0, 0.5)) {
+                         drange = c(0, 0.5), weighted = TRUE, beta = 0.05) {
   need_pkg("demography", "for coherent_fdm()")
   check_flag(smooth, "smooth")
+  check_flag(weighted, "weighted")
+  check_number(beta, "beta", lower = 1e-6, upper = 1)
   if (!is.list(smooth_args)) mt_abort("`smooth_args` must be a list.", class = "argument")
   label <- if (is.null(common_by)) "Coherent fdm" else
     sprintf("Coherent fdm (product by %s)", paste(common_by, collapse = ", "))
   new_mt_spec("coherent_fdm", list(order1 = order1, order2 = order2, common_by = common_by, smooth = smooth,
-                                   smooth_args = smooth_args, K = K, drange = drange),
+                                   smooth_args = smooth_args, K = K, drange = drange, weighted = weighted,
+                                   beta = beta),
               joint = TRUE, min_periods = 8, label = label)
 }
 
@@ -107,13 +152,17 @@ fit_model.mt_spec_coherent_fdm <- function(spec, D, E, ages, periods, strata = N
   })
   order1 <- min(p$order1, dim(D)[1] - 1)
   order2 <- min(p$order2, dim(D)[1] - 1)
+  # weighted principal components (Hyndman, Booth and Yasmeen 2013); specs
+  # saved before the argument existed were unweighted
+  weighted <- isTRUE(p$weighted)
   groups <- lapply(seq_len(max(group)), function(g) {
     use <- which(group == g & pool)
     if (!length(use)) use <- which(group == g)
     prod <- exp(Reduce(`+`, lapply(rates[use], log)) / length(use))
     Eg <- Reduce(`+`, lapply(use, function(s) E[, , s]))
     fit_p <- suppressWarnings(demography::fdm(fdm_demogdata(prod, Eg, ages, periods, "product"),
-                                              series = "product", order = order1))
+                                              series = "product", order = order1, weight = weighted,
+                                              beta = p$beta))
     list(fit = fit_p, pool = use)
   })
   ratios <- lapply(seq_len(ns), function(s) {
@@ -122,7 +171,7 @@ fit_model.mt_spec_coherent_fdm <- function(spec, D, E, ages, periods, strata = N
     r <- rates[[s]] / prod_obs
     r[r > 1e9] <- NA
     suppressWarnings(demography::fdm(fdm_demogdata(r, E[, , s], ages, periods, "ratio"), series = "ratio",
-                                     order = order2))
+                                     order = order2, weight = weighted, beta = p$beta))
   })
   fitted <- array(NA_real_, dim(D))
   for (s in seq_len(ns)) {

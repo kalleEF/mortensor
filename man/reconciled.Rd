@@ -112,6 +112,38 @@ the observation noise of the bottom strata. In the forecast, bottom
 values below zero are set to zero and the aggregates are their sums.
 The estimates and a table of the training are in the fit (see Value).
 
+As in the paper (Section 6, Algorithm 1), \eqn{d} and \eqn{G} are free
+(no constraint such as \eqn{G S = I}), the objective is the total energy
+score with exponent 1 estimated from pairs of base draws (their Eq. 5),
+and Adam starts from OLS reconciliation with their settings (\code{eta = 0.001}, \code{beta1 = 0.9}, \code{beta2 = 0.999}, \code{epsilon = 1e-8}, their Section
+7). The gradient is written out analytically; ProbReco differentiates the
+same estimate automatically (the validation check \code{scoreopt_probreco}
+reproduces its path). The departures from the paper:
+\itemize{
+\item training forecasts: Algorithm 1 refits the base models on rolling
+windows of the length of the final fit at consecutive origins (250
+one-step forecasts in their simulations), and the objective (their Eq.
+4) is that of one horizon. Here the inner models use all training years
+up to each of \code{n_origins} origins (expanding windows, shorter than the
+final fit), and the forecasts of horizons 1 to \code{horizon} enter one
+objective, so that one \eqn{d} and \eqn{G} serve all horizons;
+\item one \eqn{d} and \eqn{G} per age: every age is a hierarchy of its own;
+\item the score includes the observation noise of the bottom strata, so it
+is the score of the predictive distribution of the deaths or rates;
+\item \code{draws_per_step} is 50 by default (the paper uses 250 draws per score
+in its simulations), and the draws come from a fixed set of inner draws
+(see below);
+\item stopping: the paper stops when the change in all gradients is less
+than 10\% of \code{eta}; ProbReco and mortensor stop when no parameter moves
+by more than \code{tol} (1e-4, 10\% of the default \code{eta}) in a step, or after
+\code{max_iter} steps (500, the default of ProbReco);
+\item the rescaling before the optimisation and the bottom values set to
+zero in the forecast are package-specific (reference unknown). The
+paper does not treat negative values; the non-negative quadratic
+program of the projection methods (see \code{\link[=mt_reconcile]{mt_reconcile()}}) does not apply
+to the map \eqn{S (d + G \hat y)}.
+}
+
 Two details differ from ProbReco. (1) Each step estimates the energy
 score from two samples of \code{draws_per_step} base draws of every training
 forecast, which ProbReco simulates independently. Here they are taken

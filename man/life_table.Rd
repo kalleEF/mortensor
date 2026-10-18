@@ -11,7 +11,8 @@ life_table(
   open = c("reciprocal", "gompertz", "kannisto"),
   k = 10,
   radix = 1e+05,
-  omega = 110
+  omega = 110,
+  exposure = NULL
 )
 }
 \arguments{
@@ -31,10 +32,16 @@ interval).}
 \item{omega}{Age up to which a Gompertz or Kannisto tail is applied
 (default 110, the default \code{omega} of \code{\link[=mt_data]{mt_data()}}); ignored with
 \code{open = "reciprocal"}.}
+
+\item{exposure}{Optional person-years of the age intervals, which weight
+the maximum-likelihood fit of a Gompertz or Kannisto closure with the
+observed numbers at risk; by default the numbers of the life table.}
 }
 \value{
 A \code{data.table} with \code{age_lo}, \code{age_hi}, \code{n}, \code{mx}, \code{ax}, \code{qx},
-\code{lx}, \code{dx}, \code{Lx}, \code{Tx}, \code{ex}.
+\code{lx}, \code{dx}, \code{Lx}, \code{Tx}, \code{ex}. With a Gompertz or Kannisto closure, the
+attribute \code{"tail"} holds the fitted \code{a} and \code{b}, the ages of the fit and
+whether it converged.
 }
 \description{
 Period life table for single or grouped ages with an open last interval.
@@ -56,17 +63,28 @@ Andreev and Kingkade (2015), which depend on sex and on the infant
 death rate and are not implemented here. The effect on e0 at low
 infant mortality is below 0.01 years;
 \item open interval: \code{"reciprocal"} (default) uses \code{L = l / m} (Preston,
-Heuveline and Guillot 2001). \code{"gompertz"} fits a Gompertz line (log
-rate linear in age) by least squares to the log rates of the last \code{k}
-closed single-year ages; \code{"kannisto"} fits the Kannisto model, a line
-for the logit of the rates whose hazard levels off at old ages
-(Thatcher, Kannisto and Vaupel 1998), by least squares to the logits
-of the same rates. Thatcher, Kannisto and Vaupel (1998) and the Human
-Mortality Database fit these models by maximum likelihood to deaths
-and exposures instead, which needs the counts. The fitted rates are
-applied year by year from the start of the open interval to \code{omega},
-and the survivors at \code{omega} are closed with \code{L = l / m} at the fitted
-rate there;
+Heuveline and Guillot 2001). \code{"gompertz"} and \code{"kannisto"} close the
+table with the Gompertz hazard \verb{mu(x) = a exp(b x)} or the Kannisto
+hazard \verb{mu(x) = a exp(b x) / (1 + a exp(b x))}, whose logit is linear in
+age and which levels off at old ages (Thatcher, Kannisto and Vaupel
+1998, chapter 2). They are fitted as in Thatcher, Kannisto and Vaupel
+(1998, chapter 6), by maximum likelihood with binomial deaths: of the
+\code{N} persons who reach age \code{x}, \code{d} die before \code{x + 1} with probability
+\code{q = 1 - exp(-H)}, where \code{H} is the integral of the hazard over the
+year. The fit uses the last \code{k} closed single-year ages. \code{N} and \code{d}
+are the survivors and deaths of the life table itself, the numbers of a
+stationary population with these rates, unless \code{exposure} gives the
+observed person-years \code{E} (then \verb{d = m E} and \verb{N = E + (1 - a) d}).
+Thatcher et al. fit observed numbers, at ages 80 to 98; the life-table
+numbers are a package-specific choice for schedules without counts
+(reference unknown). For the cohorts born in 1871-1880 the life-table
+numbers are the observed ones, and the fit reproduces the published
+parameters (their Appendix D) from their probabilities of dying (Table
+6.1). Earlier versions of mortensor fitted least squares to the log or
+logit rates. The fitted hazard is applied year by year from the start
+of the open interval to \code{omega} (survival \code{exp(-H)} and person-years
+\code{l (1 - exp(-H)) / H} in each year), and the survivors at \code{omega} are
+closed with \code{L = l / H} at the integrated hazard of the following year;
 \item a rate of 0 in the open interval (no deaths, as in small populations)
 would give an infinite life expectancy: the last positive rate of the
 closed intervals is used for the open interval instead (column \code{mx}
@@ -78,6 +96,9 @@ an infinite value.
 m <- 3e-4 + 2e-5 * exp(0.1 * (30:100))
 lt <- life_table(m, single_ages(30, 100))
 lt[age_lo \%in\% c(30, 65, 100)]
+# Kannisto closure fitted by maximum likelihood to ages 90-99
+lk <- life_table(m, single_ages(30, 100), open = "kannisto")
+attr(lk, "tail")
 }
 \references{
 Andreev EM, Kingkade WW (2015). Average age at death in infancy and

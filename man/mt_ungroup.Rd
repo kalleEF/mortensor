@@ -17,6 +17,7 @@ mt_ungroup(
   pord = 2,
   lambda_range = c(0.01, 1e+08),
   preserve_totals = FALSE,
+  open_split = c("stationary", "pclm"),
   tail = c("kannisto", "gompertz"),
   tail_width = 2
 )
@@ -60,6 +61,11 @@ penalty.}
 
 \item{preserve_totals}{Rescale the estimates to the observed group totals
 after the fit (default \code{FALSE}, the published PCLM); see Details.}
+
+\item{open_split}{Split of the exposure of an open interval of the grid
+when deaths are ungrouped as rates: \code{"stationary"} (default,
+package-specific stationary-population weights) or \code{"pclm"} (the PCLM
+of the exposures, Rizzi, Gampe and Eilers 2015); see Details.}
 
 \item{tail, tail_width}{For the deprecated \code{method = "gam"}: the parametric
 curve that takes over from the GAM above the start of the last age group
@@ -115,18 +121,66 @@ single-year log rates between the two settings is about 0.002 with
 \code{dims = 1} and 0.008 with \code{dims = 2}.
 
 \strong{Open age interval.} For counts (exposures, or deaths without
-exposures), an open last group is expanded into single years up to
-\code{omega} (see \code{\link[=mt_data]{mt_data()}}) and the PCLM spreads its total over them, as
-with a last interval of width \code{omega} minus its lower bound in the
-ungroup package. For rates, an open interval of the \emph{grid} (for example
-100+) is expanded into single years up to \code{omega} as well, and its
-exposure is split over these years with stationary-population weights
-\code{l(x) = exp(-cumsum(m(x)))} implied by the fitted rates; starting from
-rates that rise by 10\% per year of age, the weights and the fit are
-iterated until no weight changes by more than 1e-6 (at most 50
-iterations; the smoothing parameters are selected again once the weights
-have converged). This treatment of the open interval is specific to
-mortensor (reference unknown).
+exposures), an open last group is expanded into single years up to the
+maximum age \code{omega} (see \code{\link[=mt_data]{mt_data()}}) and the PCLM spreads its total over
+them, as with a last interval of width \code{omega} minus its lower bound in
+the ungroup package. For rates, an open interval of the \emph{grid} (for
+example 100+) is expanded into single years up to \code{omega} as well, and
+its exposure is split over these years (\code{open_split}):
+\itemize{
+\item \code{"stationary"} (default): with stationary-population weights \code{l(x) = exp(-cumsum(m(x)))} implied by the fitted rates; starting from rates
+that rise by 10\% per year of age, the weights and the fit are iterated
+until no weight changes by more than 1e-6 (at most 50 iterations; the
+smoothing parameters are selected again once the weights have
+converged). This treatment is specific to mortensor (reference
+unknown);
+\item \code{"pclm"}: by the PCLM of the exposures of all grid cells, with a group
+of 0 counts of 15 years beyond \code{omega}, as Rizzi, Gampe and Eilers
+(2015) ungroup grouped exposures (their maximum age 115 and a group
+115-130 with 0 counts); the estimates enter the composite link of the
+rates.
+}
+
+On French women and men (1997-2006, deaths in 5-year groups and 90+,
+grid open at 100+), the rate of 100+ was too high by 0.14 (women) and
+0.15 (men) on the log scale with \code{"stationary"} and by 0.12 and 0.15 with
+\code{"pclm"}; the median absolute log error at 90-99 was 0.020 and 0.022
+with \code{"stationary"}, 0.019 and 0.022 with \code{"pclm"}. On data simulated
+with the exposures of a stationary population above 100 (\code{\link[=mt_example]{mt_example()}}),
+\code{"stationary"} was closer (median absolute log error at 90+ 0.006,
+against 0.009 with \code{"pclm"}).
+
+\strong{Relation to Rizzi, Gampe and Eilers (2015).} As in the paper, the
+observed counts are Poisson with means composed from a latent
+distribution \verb{exp(B beta)} (times the exposures for rates), estimated by
+penalised likelihood with a second-order difference penalty on the
+coefficients weighted by \code{lambda} (their penalised log-likelihood with
+\code{lambda / 2}, by iteratively reweighted least squares), and the effective
+dimension is the trace of the hat matrix. The departures:
+\itemize{
+\item basis: the paper uses one coefficient per fine cell (\code{B} the identity)
+and allows a B-spline basis; here \code{B} is a cubic B-spline basis, as in
+Eilers (2007) and the ungroup package;
+\item smoothing parameter: the paper minimises AIC over a grid of \verb{log10 lambda}; the default here is BIC, the default of the ungroup package,
+minimised by golden-section search on \verb{log10 lambda} within
+\code{lambda_range}. \code{criterion = "aic"} gives the paper's criterion;
+\item open last interval of counts: the paper sets a maximum age (115) and
+adds a group with 0 counts beyond it (115-130); here the open group
+ends at \code{omega} without such a group. On French women in 2006 with
+exposures in 5-year groups and 90+, adding a group with 0 counts of 15
+years beyond \code{omega = 110} changed the median absolute log error of the
+rates at 90-109 from 0.19 (too low) to 0.66 (too high); with exposures
+in single years to 89 and 90+, from 0.57 to 0.14. The split of a wide
+open group from its total is weakly identified either way;
+\item exposures: as in the paper, they enter the composite link, and grouped
+exposures are ungrouped by the PCLM first; the open interval of the
+grid as described above (\code{"pclm"} follows the paper);
+\item iterations: the paper iterates until the coefficients change by less
+than 1e-6; here the iterations stop when the largest change is below
+1e-6 relative to the coefficients or the penalised deviance changes by
+less than 1e-8 relative, with step halving when it rises;
+\item in 2D (Rizzi et al. 2019) see Defaults below.
+}
 
 When the deaths are grouped more coarsely than the exposures at old ages
 (for example deaths 90+ and single-year exposures), the rates within the
@@ -140,10 +194,10 @@ rates at ages 90-109 against the single-year rates was 0.09 with
 scale up to age 101, but the rates were too high by 0.3-0.4 at ages
 104-109, because the latent curve continues the rise of the rates below
 90 while the observed rates rise more slowly at the highest ages. With a grid
-open at 100+ (exposures 100+, expanded with the stationary weights), the
-rate of 100+ was too high by 0.14 on the log scale (median over
-1997-2006). With the exposures also grouped at 90+, the error at 90-109
-was 0.19 (rates too low). With \code{dims = 2} (1997-2006, ages 30 and over)
+open at 100+ (exposures 100+), the rate of 100+ was too high by 0.14 on
+the log scale (median over 1997-2006, see above). With the exposures also
+grouped in 5-year groups and 90+, the error at 90-109 was 0.19 (rates too
+low). With \code{dims = 2} (1997-2006, ages 30 and over)
 and smoothing parameters chosen by BIC, the error at 90-109 was 1.4: BIC
 chose very small smoothing parameters (the large counts vary more than
 Poisson noise) and the rates inside the wide last group oscillated; with

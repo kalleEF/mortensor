@@ -11,7 +11,7 @@ mt_dm_test(
   targets = NULL,
   by = NULL,
   alternative = c("two.sided", "less", "greater"),
-  varestimator = c("ewc", "acf", "bartlett")
+  varestimator = c("ewc", "daniell", "acf", "bartlett")
 )
 }
 \arguments{
@@ -39,16 +39,18 @@ values.}
 score than \code{ref}, that is, it is more accurate) or \code{"greater"}.}
 
 \item{varestimator}{\code{"ewc"} (equal-weighted cosine estimate with
-fixed-smoothing t critical values, default), \code{"acf"} (sum of the
-autocovariances, as \code{forecast::dm.test()}) or \code{"bartlett"} (Bartlett
-weights, as \code{forecast::dm.test()}). See Variance estimators.}
+fixed-smoothing t critical values, default), \code{"daniell"} (Daniell-kernel
+periodogram estimate with fixed-smoothing t critical values, Coroneo and
+Iacone 2020), \code{"acf"} (sum of the autocovariances, as
+\code{forecast::dm.test()}) or \code{"bartlett"} (Bartlett weights, as
+\code{forecast::dm.test()}). See Variance estimators.}
 }
 \value{
 A \code{data.table} with one row per model (other than \code{ref}), value
 of \code{by}, target, metric and horizon: \code{model}, \code{ref}, the \code{by} columns,
 \code{target}, \code{metric}, \code{horizon} (a factor: the horizons, then \code{"all"}),
 \code{n_origins} (number of losses tested), \code{lag} (largest autocovariance
-lag used; \code{NA} for \code{"ewc"}), \code{df} (degrees of freedom of the t
+lag used; \code{NA} for \code{"ewc"} and \code{"daniell"}), \code{df} (degrees of freedom of the t
 distribution), \code{score} and \code{score_ref} (mean loss over the origins),
 \code{mean_diff} (\code{score - score_ref}; negative when the model is more
 accurate), \code{statistic} and \code{p_value}.
@@ -57,13 +59,15 @@ accurate), \code{statistic} and \code{p_value}.
 Tests whether models of a backtest differ in their expected score with
 the Diebold-Mariano test (Diebold and Mariano 1995). By default the
 long-run variance is the equal-weighted cosine (EWC) estimate with
-fixed-smoothing critical values from a t distribution (Lazarus, Lewis,
-Stock and Watson 2018; for the Diebold-Mariano test, Coroneo and Iacone
-2020); the version of \code{forecast::dm.test()}, with the small-sample
-correction of Harvey, Leybourne and Newbold (1997), is an option. It
-complements \code{\link[=mt_score_table]{mt_score_table()}}, which shows the mean scores: the test
-says whether a difference is larger than the variation between forecast
-origins.
+fixed-smoothing critical values from a t distribution, as Lazarus, Lewis,
+Stock and Watson (2018) recommend for tests of a single restriction; the
+Diebold-Mariano statistic is such a test, of the mean loss difference.
+The fixed-smoothing test of Coroneo and Iacone (2020) for the
+Diebold-Mariano test, with a Daniell-kernel periodogram estimate, and
+the version of \code{forecast::dm.test()}, with the small-sample correction of
+Harvey, Leybourne and Newbold (1997), are options. It complements
+\code{\link[=mt_score_table]{mt_score_table()}}, which shows the mean scores: the test says whether a
+difference is larger than the variation between forecast origins.
 }
 \details{
 The test uses one loss per forecast origin, the time index of a
@@ -92,10 +96,23 @@ the order of the origins) and \code{dbar} their mean:
 \itemize{
 \item \code{"ewc"} (default): \code{Lambda_j = sqrt(2 / T) * sum_t (d_t - dbar) * cos(pi * j * (t - 1/2) / T)} for \verb{j = 1, ..., nu}, the long-run
 variance \code{Omega = mean(Lambda_j^2)}, the statistic \code{sqrt(T) * dbar / sqrt(Omega)} and p-values from the t distribution with \code{nu} degrees of
-freedom, \code{nu = max(1, floor(0.4 * T^(2/3)))} as Lazarus et al. (2018)
-recommend for the EWC test (1 for up to 11 origins, 2 for 12 to 20,
-3 for 21 to 31). The estimate does not use the horizon, so there is a
-test for every horizon with at least 2 origins; \code{lag} is \code{NA}.
+freedom, \code{nu = 0.4 * T^(2/3)} cosine terms as Lazarus et al. (2018)
+recommend for the EWC test, rounded down and at least 1 (1 for up to 11
+origins, 2 for 12 to 20, 3 for 21 to 31). There is no further
+small-sample correction. The estimate does not use the horizon, so
+there is a test for every horizon with at least 2 origins; \code{lag} is
+\code{NA}.
+\item \code{"daniell"}: the weighted periodogram estimate with the Daniell kernel
+of Coroneo and Iacone (2020, Eq. 8), \verb{Omega = (1 / m) * sum_j I_j} for
+the first \code{m} Fourier frequencies \code{lambda_j = 2 * pi * j / T}, with
+\verb{I_j = |sum_t d_t exp(-i lambda_j t)|^2 / T}, and p-values from the t
+distribution with \verb{2 m} degrees of freedom (their Eq. 9). \code{m = floor(T^(1/3))}, at least 1, as in their simulations and application
+(Section 5: the best combination of size and power in a preliminary
+study): 1 for up to 7 origins, 2 for 8 to 26. \code{lag} is \code{NA}. Coroneo
+and Iacone (2020) also propose the Bartlett-kernel estimate with
+bandwidth \code{floor(T^(1/2))} and fixed-b critical values given as a
+polynomial for two quantiles, which give no p-values; it is not
+implemented. They do not use the equal-weighted cosine estimate.
 \item \code{"acf"}: the test of \code{forecast::dm.test(e1, e2, h = h, power = 1)} with
 \code{e1} and \code{e2} the losses per origin: the variance is the sum of the
 autocovariances up to lag \code{h - 1}, the statistic has the correction of
@@ -132,8 +149,15 @@ origins. The EWC test rejected in 4.9\% to 7.2\% of the samples with 7
 origins and in 4.8\% to 7.0\% with 15 or 16 origins (\code{h} from 1 to 5). Its
 size is nearly correct, but with few origins it has few degrees of
 freedom and low power: with 7 origins (\code{nu = 1}) it finds only large
-and consistent differences. More origins, or origins spaced \code{h} years
-apart, which avoid overlapping test years, give more informative tests.
+and consistent differences. The \code{"daniell"} test of Coroneo and Iacone
+(2020) has more degrees of freedom (2 with 7 origins, 4 with 8 to 26)
+and rejected in 4.9\%, 6.0\%, 7.6\%, 10.5\% and 15.3\% of the samples with 7
+origins at \code{h} from 1 to 5, and in 4.8\% to 13.8\% with 15 or 16 origins:
+its size is close to 5\% for \code{h} up to 2, where test years overlap little,
+and too large beyond. Coroneo and Iacone (2020) studied one-step
+forecasts with 40 or 120 origins. More origins, or origins spaced \code{h}
+years apart, which avoid overlapping test years, give more informative
+tests.
 The p-values are not adjusted for the number of tests (models, targets,
 horizons); see \code{\link[stats:p.adjust]{stats::p.adjust()}}.
 }

@@ -583,7 +583,9 @@ checks$dm_size <- list(
   description = paste("Size of mt_dm_test() at nominal 5% under the null: loss differences of forecasts h years",
                       "ahead from n consecutive origins simulated as a moving average of order h - 1 with mean",
                       "zero (2000 replicates for each n in 7, 16 and h in 1, 3, 5). Rejection rates of the default",
-                      "fixed-smoothing (EWC) test, and of the HLN-corrected test (varestimator = 'acf', info)."),
+                      "fixed-smoothing (EWC) test, of the Daniell-kernel test of Coroneo and Iacone (2020;",
+                      "varestimator = 'daniell') at h = 1 and over all h (info), and of the HLN-corrected test",
+                      "(varestimator = 'acf', info)."),
   run = function() {
     set.seed(5)
     grid <- expand.grid(n = c(7, 16), h = c(1, 3, 5))
@@ -597,7 +599,9 @@ checks$dm_size <- list(
     }
     ewc <- mapply(size, grid$n, grid$h, MoreArgs = list(ve = "ewc"))
     acf <- mapply(size, grid$n, grid$h, MoreArgs = list(ve = "acf"))
-    data.frame(metric = c("ewc_size_max", "ewc_size_min", "acf_size_max"), value = c(max(ewc), min(ewc), max(acf)))
+    dan <- mapply(size, grid$n, grid$h, MoreArgs = list(ve = "daniell"))
+    data.frame(metric = c("ewc_size_max", "ewc_size_min", "acf_size_max", "daniell_size_h1_max", "daniell_size_max"),
+               value = c(max(ewc), min(ewc), max(acf), max(dan[grid$h == 1]), max(dan)))
   })
 
 checks$stmomo_cbd_ew <- list(
@@ -648,6 +652,85 @@ fr_life_tables <- function() {
        male_1987_single = list(m = fr$rate$male[, "1987"], age = single_ages(0, 110)),
        female_1950_5y = grouped("female", 1950, seq(0, 100, 5)))
 }
+
+checks$lifetable_thatcher <- list(
+  suite = "quick",
+  description = paste("Kannisto and Gompertz closures of life_table() fitted by maximum likelihood as in Thatcher,",
+                      "Kannisto and Vaupel (1998): from the probabilities of dying at ages 80-98 of the cohorts born",
+                      "in 1871-1880 (their Table 6.1, four decimals), for which the life-table survivors are the",
+                      "numbers reaching each age, the fitted a and b against their Appendix D (Tables 5 and 1);",
+                      "largest relative differences, and those of the former least-squares fit (info)."),
+  run = function() {
+    q <- list(male = c(0.1224, 0.1326, 0.1452, 0.1565, 0.1702, 0.1822, 0.1965, 0.2116, 0.2276, 0.2424, 0.2580,
+                       0.2749, 0.2907, 0.3073, 0.3253, 0.3434, 0.3571, 0.3691, 0.3817),
+              female = c(0.0987, 0.1074, 0.1180, 0.1291, 0.1409, 0.1520, 0.1653, 0.1787, 0.1926, 0.2070, 0.2225,
+                         0.2354, 0.2524, 0.2687, 0.2867, 0.3050, 0.3228, 0.3358, 0.3504))
+    pub <- list(kannisto = list(male = c(3.39306e-05, 1.04287e-01), female = c(2.31232e-05, 1.05869e-01)),
+                gompertz = list(male = c(2.17126e-04, 7.97629e-02), female = c(1.22095e-04, 8.41400e-02)))
+    out <- list()
+    for (law in names(pub)) {
+      da <- db <- la <- lb <- 0
+      for (sx in names(q)) {
+        m <- c(q[[sx]] / (1 - q[[sx]] / 2), 0.6)
+        tl <- attr(life_table(m, single_ages(80, 99), open = law, k = 19), "tail")
+        da <- max(da, abs(tl$a / pub[[law]][[sx]][1] - 1))
+        db <- max(db, abs(tl$b / pub[[law]][[sx]][2] - 1))
+        # the former fit: least squares on the log (logit) rates at mid-year
+        y <- if (law == "kannisto") stats::qlogis(m[1:19]) else log(m[1:19])
+        cf <- stats::coef(stats::lm(y ~ I(80:98 + 0.5)))
+        la <- max(la, abs(exp(cf[[1]]) / pub[[law]][[sx]][1] - 1))
+        lb <- max(lb, abs(cf[[2]] / pub[[law]][[sx]][2] - 1))
+      }
+      out[[law]] <- data.frame(metric = paste0(law, c("_max_rel_diff_a", "_max_rel_diff_b", "_ls_rel_diff_a",
+                                                      "_ls_rel_diff_b")), value = c(da, db, la, lb))
+    }
+    do.call(rbind, out)
+  })
+
+checks$reconcile_nonneg <- list(
+  suite = "quick",
+  description = paste("Non-negative reconciliation (Wickramasuriya, Turlach and Hyndman 2020): on 400 random",
+                      "base forecasts of a hierarchy of 8 bottom series (total, 3 groups) with aggregates too low,",
+                      "diagonal or full weights and 0, 1 or 2 fixed nodes, the largest difference (relative to",
+                      "the largest base forecast) between the block principal pivoting solution and",
+                      "quadprog::solve.QP() of their Eq. 3 (fixed nodes as equality constraints), the largest",
+                      "relative change of a fixed node, and the mean number of exchanges (info)."),
+  run = function() {
+    if (!requireNamespace("quadprog", quietly = TRUE)) return(data.frame(metric = "skipped", value = 1))
+    groups <- list(1:3, 4:5, 6:8)
+    sagg <- rbind(rep(1, 8), t(vapply(groups, function(g) replace(numeric(8), g, 1), numeric(8))))
+    S <- rbind(sagg, diag(8))
+    Ut <- cbind(diag(4), -sagg)
+    b <- 5:12
+    set.seed(11)
+    diff_qp <- diff_fixed <- 0
+    its <- integer()
+    for (i in 1:400) {
+      y <- as.vector(S %*% (stats::rgamma(8, 2) * 10)) * exp(stats::rnorm(12, 0, 0.6))
+      y[1:4] <- y[1:4] * stats::runif(4, 0.2, 1)
+      full <- i %% 2 == 0
+      Lam <- if (full) crossprod(matrix(stats::rnorm(144), 12)) / 12 + diag(stats::runif(12, 0.5, 2)) else
+        diag(stats::runif(12, 0.5, 3))
+      keep <- list(integer(), 1L, c(2L, 9L))[[i %% 3 + 1]]
+      W <- mortensor:::keep_weights(if (full) Lam else diag(Lam), keep)
+      x0 <- mortensor:::project_rows(matrix(y, 1), W, Ut)
+      if (all(x0[, b] >= 0)) next
+      nn <- mortensor:::nnls_reconcile(matrix(y, 1), W, Ut, b, x0)
+      its <- c(its, nn$iterations)
+      li <- solve(Lam)
+      A <- diag(8)
+      b0 <- numeric(8)
+      if (length(keep)) {
+        A <- cbind(t(S[keep, , drop = FALSE]), A)
+        b0 <- c(y[keep], b0)
+      }
+      ref <- quadprog::solve.QP(t(S) %*% li %*% S, as.vector(t(S) %*% li %*% y), A, b0, meq = length(keep))$solution
+      diff_qp <- max(diff_qp, max(abs(nn$X[1, b] - pmax(ref, 0))) / max(abs(y)))
+      if (length(keep)) diff_fixed <- max(diff_fixed, max(abs((S %*% nn$X[1, b])[keep] / y[keep] - 1)))
+    }
+    data.frame(metric = c("max_rel_diff_quadprog", "max_rel_change_fixed", "cases", "mean_iterations"),
+               value = c(diff_qp, diff_fixed, length(its), mean(its)))
+  })
 
 checks$lifespan_reference <- list(
   suite = "quick",

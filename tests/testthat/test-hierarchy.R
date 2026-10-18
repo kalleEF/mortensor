@@ -151,3 +151,94 @@ test_that("reconciled() warns when the exposures of the totals do not match the 
                             mt_hierarchy(sex = "both", region = "all"))
   expect_no_warning(mt_fit(reconciled(lee_carter(), mt_hierarchy(sex = "both", region = "all")), xr))
 })
+
+# A small hierarchy (total, three groups, eight bottom series) for the
+# quadratic programs of the reconciliation
+small_hierarchy <- function() {
+  groups <- list(1:3, 4:5, 6:8)
+  sagg <- rbind(rep(1, 8), t(vapply(groups, function(g) replace(numeric(8), g, 1), numeric(8))))
+  list(S = rbind(sagg, diag(8)), Ut = cbind(diag(4), -sagg), b = 5:12, agg = 1:4)
+}
+
+# Bottom values of the quadratic program of Wickramasuriya, Turlach and
+# Hyndman (2020), Eq. (3), by quadprog; nodes in `keep` as equality constraints
+qp_bottom <- function(y, Lam, S, keep = integer()) {
+  li <- solve(Lam)
+  nb <- ncol(S)
+  A <- diag(nb)
+  b0 <- numeric(nb)
+  if (length(keep)) {
+    A <- cbind(t(S[keep, , drop = FALSE]), A)
+    b0 <- c(y[keep], b0)
+  }
+  quadprog::solve.QP(t(S) %*% li %*% S, as.vector(t(S) %*% li %*% y), A, b0, meq = length(keep))$solution
+}
+
+test_that("non-negative reconciliation solves the quadratic program of Wickramasuriya et al. (2020)", {
+  skip_if_not_installed("quadprog")
+  hs <- small_hierarchy()
+  set.seed(3)
+  n_neg <- 0
+  for (i in 1:60) {
+    y <- as.vector(hs$S %*% (stats::rgamma(8, 2) * 10)) * exp(stats::rnorm(12, 0, 0.6))
+    y[hs$agg] <- y[hs$agg] * stats::runif(4, 0.2, 1)
+    full <- i %% 2 == 0
+    Lam <- if (full) {
+      crossprod(matrix(stats::rnorm(144), 12)) / 12 + diag(stats::runif(12, 0.5, 2))
+    } else {
+      diag(stats::runif(12, 0.5, 3))
+    }
+    W <- if (full) Lam else diag(Lam)
+    keep <- list(integer(), 1L, c(2L, 9L))[[i %% 3 + 1]]
+    Wk <- mortensor:::keep_weights(W, keep)
+    x0 <- mortensor:::project_rows(matrix(y, 1), Wk, hs$Ut)
+    if (all(x0[, hs$b] >= 0)) {
+      # without negative values the projection is the optimum of the program
+      expect_equal(as.vector(x0[, hs$b]), qp_bottom(y, Lam, hs$S, keep), tolerance = 1e-7)
+      next
+    }
+    n_neg <- n_neg + 1
+    nn <- mortensor:::nnls_reconcile(matrix(y, 1), Wk, hs$Ut, hs$b, x0)
+    expect_true(nn$converged)
+    ref <- pmax(qp_bottom(y, Lam, hs$S, keep), 0)
+    expect_lt(max(abs(nn$X[, hs$b] - ref)) / max(abs(y)), 1e-8)
+    expect_true(all(nn$X[, hs$b] >= -1e-10 * max(abs(y))))
+    expect_equal(as.vector(nn$X), as.vector(hs$S %*% nn$X[1, hs$b]), tolerance = 1e-10)
+    expect_equal(nn$held[1, ], nn$X[1, hs$b] == 0)
+    # fixed nodes are kept as equality constraints
+    if (length(keep)) expect_lt(max(abs(nn$X[1, keep] / y[keep] - 1)), 1e-7)
+  }
+  expect_gt(n_neg, 20)
+})
+
+test_that("non-negative reconciliation of forecast draws is the optimum of every draw", {
+  skip_if_not_installed("quadprog")
+  x <- mt_example_regions(years = 2005:2019, regions = 2)
+  h <- h3()
+  xa <- mt_aggregate_strata(x, h)
+  fc <- mt_forecast(mt_fit(lee_carter(), xa), h = 2, n_draws = 30, seed = 1)
+  tot <- which(fc$strata$label == "both.all.all")
+  low <- fc
+  # aggregates over regions or quintiles far below the sums of their parts
+  st <- fc$strata
+  agg <- which(st$region == "all" | st$quintile == "all")
+  low$rates[, , agg, ] <- 0.3 * low$rates[, , agg, ]
+  hs <- mortensor:::hierarchy_structure(fc$strata, h)
+  E <- mortensor:::expand_exposure(fc$exposure_last, dim(fc$rates), dimnames(fc$rates), hs)
+  for (fx in list(NULL, "total")) {
+    rc <- suppressWarnings(mt_reconcile(low, h, method = "wls", fixed = fx))
+    expect_gt(rc$reconciliation$share_set_to_zero, 0)
+    # rates are floored at 1e-12, which matters only for aggregates of zeros
+    expect_lt(coherence_gap(rc, h), 1e-4)
+    # the age with most zeros: the bottom deaths of each draw solve the
+    # quadratic program with the variances of the base draws as weights and
+    # the fixed total as an equality constraint
+    a <- which.max(apply(rc$rates[, 1, hs$bottom, ] <= 1e-12, 1, sum))
+    Y <- t(low$rates[a, 1, , ] * E[a, 1, ])
+    Lam <- diag(pmax(apply(Y, 2, stats::var), 1e-20))
+    Xb <- t(rc$rates[a, 1, hs$bottom, ] * E[a, 1, hs$bottom])
+    keep <- if (is.null(fx)) integer() else tot
+    ref <- t(apply(Y, 1, function(y) pmax(qp_bottom(y, Lam, hs$S, keep), 0)))
+    expect_lt(max(abs(Xb - ref)) / max(abs(Y)), 1e-7)
+  }
+})
