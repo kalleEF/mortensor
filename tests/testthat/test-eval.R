@@ -51,8 +51,8 @@ test_that("interval calibration on the simulation benchmark", {
   skip_if(!identical(Sys.getenv("MORTENSOR_SLOW_TESTS"), "true"), "slow benchmark")
   # the generator is the Lee-Carter model with Poisson deaths and one period
   # index per stratum (10 strata): Tucker3 needs period and stratum ranks 10
-  # to describe it (with the default ranks c(3, 3, 2) the 95% coverage is
-  # about 0.75)
+  # to describe it (with the default ranks c(2, 2, 2) the 95% coverage is
+  # about 0.74)
   for (sp in list(lee_carter(), tucker3(ranks = c(1, 10, 10)))) {
     s <- attr(mortensor:::benchmark_coverage(sp, n_rep = 6), "summary")
     expect_gt(s$cov95_mean, 0.90)
