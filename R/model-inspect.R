@@ -21,7 +21,16 @@
 #' * [apc_bayes()]: posterior medians and 90% intervals of the age, period
 #'   and cohort effects (logit scale, bamp's identification), and the
 #'   Gelman-Rubin statistics (`rhat`, values below 1.1 indicate convergence)
-#'   of the identified quantities.
+#'   of the identified quantities;
+#' * [bohk_rau()]: posterior medians and 90% intervals of the curve
+#'   parameters `b1` and `b2` by age and of the variance and hyperparameters,
+#'   the least-squares values `theta1`, `theta2` (exponential core model) and
+#'   the Gelman-Rubin statistics (`rhat`);
+#' * [nordpred_apc()]: estimates and 90% Wald intervals of the age, period
+#'   and cohort effects (cohorts by central year of birth) and of the drift,
+#'   the projected drift, the number of periods fitted, the choice of the
+#'   recent trend and the p-values of the goodness of fit and of the test for
+#'   the recent trend.
 #'
 #' Fits of wrapped packages (StMoMo, demography) keep the original fitted
 #' object in `fit$fits[[i]]`, where the methods of those packages apply.
@@ -146,6 +155,8 @@ base_parameters <- function(fit, sp) {
     }))
     return(rbind(common, own))
   }
+  if (inherits(sp, "mt_spec_bohk_rau")) return(bohk_rau_parameters(fit))
+  if (inherits(sp, "mt_spec_nordpred")) return(nordpred_parameters(fit))
   if (inherits(sp, "mt_spec_apc_bayes")) {
     e <- apc_effects(fit)
     e <- e[, list(stratum, parameter = effect, index = as.character(index), value = q0.5, lower = q0.05,
@@ -160,6 +171,77 @@ base_parameters <- function(fit, sp) {
   }
   mt_abort(sprintf(paste("mt_parameters() has no method for %s; the fitted objects are in `fit$fits` (for",
                          "wrapped packages, use their own methods)."), sp$label), class = "argument")
+}
+
+# bohk_rau(): posterior medians and 90% intervals of the curve parameters by
+# age and of the scalar parameters; theta of the exponential core model; the
+# Gelman-Rubin statistics (value only)
+bohk_rau_parameters <- function(fit) {
+  lab <- fit$strata$label
+  ages <- fit$age$labels
+  q <- function(x) {
+    if (is.matrix(x)) t(apply(x, 1, stats::quantile, c(0.5, 0.05, 0.95))) else
+      matrix(stats::quantile(x, c(0.5, 0.05, 0.95)), 1)
+  }
+  row <- function(s, parameter, index, x) {
+    v <- q(x)
+    data.table(stratum = s, parameter = parameter, index = as.character(index), value = v[, 1], lower = v[, 2],
+               upper = v[, 3])
+  }
+  rbindlist(lapply(seq_along(fit$fits), function(s) {
+    f <- fit$fits[[s]]
+    if (is.null(f)) return(NULL)
+    smp <- f$samples
+    scal <- intersect(c("sigma", "sigma1", "sigma2", "mu1", "mu2", "omega1", "omega2", "r"), names(smp))
+    rbind(row(lab[s], "b1", ages, smp$b1), row(lab[s], "b2", ages, smp$b2),
+          rbindlist(lapply(scal, function(v) row(lab[s], v, "", smp[[v]]))),
+          if (!is.null(smp$theta)) {
+            data.table(stratum = lab[s], parameter = rep(c("theta1", "theta2"), each = length(ages)),
+                       index = rep(ages, 2), value = as.vector(smp$theta), lower = NA_real_, upper = NA_real_)
+          },
+          data.table(stratum = lab[s], parameter = "rhat", index = names(smp$rhat), value = unname(smp$rhat),
+                     lower = NA_real_, upper = NA_real_))
+  }))
+}
+
+# nordpred_apc(): estimates with 90% Wald intervals of the age, period and
+# cohort effects (cohorts labelled by the central year of birth) and the
+# drift, the projected drift, and the choices of the fit
+nordpred_parameters <- function(fit) {
+  lab <- fit$strata$label
+  rbindlist(lapply(seq_along(fit$fits), function(s) {
+    f <- fit$fits[[s]]
+    if (is.null(f)) return(NULL)
+    se <- sqrt(diag(f$vcov))
+    nm <- names(f$coef)
+    na <- f$n_age
+    np <- f$n_periods
+    eff <- function(prefix, levels, index, parameter) {
+      v <- numeric(length(levels))
+      e <- numeric(length(levels))
+      i <- match(paste0(prefix, levels), nm)
+      v[!is.na(i)] <- f$coef[i[!is.na(i)]]
+      e[!is.na(i)] <- se[i[!is.na(i)]]
+      data.table(stratum = lab[s], parameter = parameter, index = as.character(index), value = v,
+                 lower = v - 1.645 * e, upper = v + 1.645 * e)
+    }
+    # central year of birth of cohort k: the cells of the oldest age group in
+    # the first period fitted (k = 1), then 5 years per cohort
+    k <- seq_len(na + np - 1L)
+    birth <- f$first_years[1] - f$age_lower[f$rows][na] + 5 * (k - 1L)
+    i_d <- match("drift", nm)
+    drift <- f$coef[[i_d]]
+    proj <- if (f$recent) drift - f$coef[[match(paste0("period", np - 1L), nm)]] else drift
+    rbind(eff("age", seq_len(na), f$age_labels[f$rows], "age"),
+          data.table(stratum = lab[s], parameter = "drift", index = "", value = drift,
+                     lower = drift - 1.645 * se[[i_d]], upper = drift + 1.645 * se[[i_d]]),
+          eff("period", seq_len(np), f$period_labels, "period"),
+          eff("cohort", k, birth, "cohort"),
+          data.table(stratum = lab[s], parameter = c("drift_projected", "n_periods", "recent", "gof_p_value",
+                                                    "recent_p_value"), index = "",
+                     value = c(proj, np, as.numeric(f$recent), f$gof_p, f$p_recent), lower = NA_real_,
+                     upper = NA_real_))
+  }))
 }
 
 #' Fitted rates, residuals and summaries of fitted models
@@ -368,6 +450,44 @@ model_assumptions <- function(spec) {
            } else {
              "predictive draws add Poisson variation of the deaths given the rates."
            }),
+         mt_spec_bohk_rau = paste(
+           "Rates of mortality improvement rho(x,t) = 1 - m(x,t+1) / m(x,t) of the",
+           if (isTRUE(p$smooth)) "rates smoothed with 2D P-splines" else "observed rates",
+           "(Bohk-Ewald and Rau 2017); each age follows",
+           if (p$core == "exponential") "a curve exp(b1(x) + b2(x) log t)" else "a linear trend b1(x) + b2(x) t",
+           "with normal noise, the curves tied together by a hierarchical prior; posterior and future",
+           "improvements sampled by MCMC.",
+           if (!is.null(p$limits)) sprintf("Forecast improvements are limited to %g-%g.", p$limits[1], p$limits[2]),
+           "Rates start from the last", if (isTRUE(p$smooth)) "smoothed" else "observed",
+           "rates and fall by the improvements;",
+           if (p$draws == "quantiles") {
+             paste("draw j applies the same quantile of the improvements at every age and year (the paper's",
+                   "method), so draws are comonotone across ages and years.")
+           } else {
+             "every draw is one posterior predictive path (package-specific)."
+           },
+           "Predictive draws add Poisson variation of the deaths given the rates. Convergence to reference",
+           "populations is not implemented."),
+         mt_spec_nordpred = paste(
+           "Nordpred (Moller et al. 2003): age-period-cohort model of 5-year age groups and 5-year periods (annual",
+           "data summed to periods ending with the last year), Poisson deaths with",
+           if (p$link == "power5") "rates (age + drift + period + cohort)^5;" else "log link;",
+           "the drift (or the slope of the last 10 years) is projected and cut by",
+           paste0(round(100 * p$cut_trend), "%", collapse = ", "), "in the future periods. Annual rates are",
+           "interpolated between the midpoints of the periods (package-specific). Draws take the coefficients from",
+           "their asymptotic normal distribution (package-specific): they hold no variation of future period",
+           "effects and no overdispersion, so intervals are narrow. Predictive draws add Poisson variation of the",
+           "deaths given the rates."),
+         mt_spec_stmomo = if (identical(p$model, "plat")) {
+           paste("Reduced Plat model (Plat 2009) as defined in the StMoMo vignette (Villegas et al. 2018): logit",
+                 "q(x,t) = a(x) + k1(t) + (xbar - x) k2(t) + g(t - x); period indexes a multivariate random walk",
+                 "with drift, cohort index", sprintf("ARIMA(%s)", paste(p$gc_order, collapse = ",")),
+                 "with a constant; draws from",
+                 "StMoMo's simulate() (index uncertainty, parameters fixed). Predictive draws add Poisson",
+                 "variation of the deaths given the rates.")
+         } else {
+           paste(spec$label, "- see the help page of its constructor for the model and its uncertainty.")
+         },
          mt_spec_apc_bayes = paste(
            "Bayesian age-period-cohort model (bamp; Schmid and Held 2007): logit rate = age + period + cohort",
            "effects with random-walk priors, binomial likelihood, each stratum fitted separately. Draws are",

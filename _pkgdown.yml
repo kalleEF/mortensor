@@ -53,12 +53,14 @@ reference:
       - rwd
       - hyndman_ullah
       - coda
+      - bohk_rau
       - stmomo
       - stanmomo
       - arima_series
       - apc_bayes
       - apc_select
       - mcmc_control
+      - nordpred_apc
   - title: 6. Models for several populations and causes
     contents:
       - li_lee

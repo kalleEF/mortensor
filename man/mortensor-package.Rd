@@ -21,7 +21,8 @@ estimates single-year data with the penalized composite link model,
 backtests refit them on every training window.
 \item \strong{Models}: \code{\link[=rwd]{rwd()}}, \code{\link[=lee_carter]{lee_carter()}}, \code{\link[=arima_series]{arima_series()}}, \code{\link[=ets_series]{ets_series()}},
 \code{\link[=hyndman_ullah]{hyndman_ullah()}}, \code{\link[=coherent_fdm]{coherent_fdm()}}, \code{\link[=stmomo]{stmomo()}}, \code{\link[=stanmomo]{stanmomo()}},
-\code{\link[=li_lee]{li_lee()}}, \code{\link[=coda]{coda()}}, \code{\link[=apc_bayes]{apc_bayes()}} (package bamp), the experimental
+\code{\link[=li_lee]{li_lee()}}, \code{\link[=coda]{coda()}}, \code{\link[=bohk_rau]{bohk_rau()}}, \code{\link[=nordpred_apc]{nordpred_apc()}}, \code{\link[=apc_bayes]{apc_bayes()}}
+(package bamp), the experimental
 \code{\link[=tucker3]{tucker3()}} and \code{\link[=coda_causes]{coda_causes()}}, and \code{\link[=ensemble]{ensemble()}}, fitted with \code{\link[=mt_fit]{mt_fit()}}
 (optionally tuned with \code{\link[=tuned]{tuned()}}) and forecast with \code{\link[=mt_forecast]{mt_forecast()}} as
 simulated paths (\link{mt_draws}). \code{\link[=product_ratio]{product_ratio()}} and \code{\link[=cause_shares]{cause_shares()}}
