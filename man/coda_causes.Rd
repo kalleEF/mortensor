@@ -8,7 +8,10 @@ coda_causes(
   var = "cause",
   total_level = "all",
   jump_off = c("observed", "fitted"),
-  residual = "auto"
+  residual = "auto",
+  rank = 1,
+  order = c(0, 1, 1),
+  drift = TRUE
 )
 }
 \arguments{
@@ -23,6 +26,11 @@ the last year) or \code{"fitted"} (from the fitted deaths).}
 covered by the listed causes: \code{TRUE}, \code{FALSE}, or \code{"auto"} (added when
 the listed causes leave more than 0.1\% of all-cause mortality
 unexplained in the median cell).}
+
+\item{rank}{Number of components (1 by default; Oeppen 2008 used 2 for
+Japan).}
+
+\item{order, drift}{ARIMA order and drift of each index, as in \code{\link[=coda]{coda()}}.}
 }
 \value{
 A model specification.
@@ -31,54 +39,67 @@ A model specification.
 \code{coda_causes()} forecasts death rates by cause with the multiple-decrement
 form of the compositional Lee-Carter model, which Oeppen (2008) proposed
 and tested on Japanese causes of death. Causes add up to all causes in
-every draw. The model is experimental.
+every draw. The model is experimental. Status: published, with the
+deviations listed below; section numbers refer to Oeppen (2008).
 }
 \details{
-Only the abstract of Oeppen (2008) is published. This function implements
-the natural multiple-decrement form of \code{\link[=coda]{coda()}}:
+\strong{Model (Sections 3, 6 and 8.3).} In each group (the strata that differ
+only in \code{var}, for example one group per sex):
 \enumerate{
-\item in each group (the strata that differ only in \code{var}, for example one
-group per sex), the cause-specific rates \code{m[x, c]} add up to all-cause
-rates \code{m[x]}, which give life-table deaths \code{d[x]} with radix 1
-(\code{\link[=life_table]{life_table()}} conventions); the deaths are split by cause,
-\verb{d[x, c] = d[x] m[x, c] / m[x]} (multiple-decrement life table);
-\item the composition is the joint distribution of the deaths \code{d[x, c]} over
-age and cause, plus the survivors at the upper bound of a closed age
-range;
-\item as in \code{\link[=coda]{coda()}}, the composition is centred by its closed geometric
-mean over the years and transformed by the centred log-ratio; the first
-component of a singular value decomposition gives \verb{b[x, c] k[t]}, and
-\code{k[t]} follows a random walk with drift;
+\item the cause-specific rates \code{m[x, c]} add up to all-cause rates \code{m[x]},
+which give life-table deaths \code{d[x]} with radix 1 (\code{\link[=life_table]{life_table()}}
+conventions); the deaths are split by cause, \verb{d[x, c] = d[x] m[x, c] / m[x]} (relations of the multiple-decrement life table, eq. 1 and 7);
+\item the array of deaths by age and cause of each year is unfolded into one
+composition (Section 6), plus the survivors at the upper bound of a
+closed age range;
+\item the compositions are centred by their closed geometric mean over the
+years and transformed by the centred log-ratio; the first \code{rank}
+components of a singular value decomposition give \verb{sum_j b_j[x, c] k_j[t]} (Section 3, steps 1-7);
 \item forecast deaths \code{d[x, c]} give all-cause rates from the all-cause
 life-table deaths \verb{d[x] = sum_c d[x, c]}, and cause-specific rates
-\verb{m[x, c] = m[x] d[x, c] / d[x]}.
+\verb{m[x, c] = m[x] d[x, c] / d[x]} (eq. 7, Section 8.3).
 }
 
 The causes add up to the all-cause rates in every draw, and the strata of
 \code{total_level} get their sum. If the listed causes leave part of the
 all-cause deaths unexplained (\code{residual}), that part is a residual cause
 inside the model and counts towards the all-cause rates; it is not a
-stratum of the output.
+stratum of the output (package-specific).
 
-One index \code{k[t]} drives all ages and causes, so the causes cannot follow
-different trends beyond the pattern \code{b[x, c]}. The extensions of
-Kjærgaard, Ergemen, Kallestrup-Lamb, Oeppen and Lindahl-Jacobsen (2019)
-are not implemented. In a backtest on \code{\link[=mt_example_causes]{mt_example_causes()}} the model was
-less accurate than the deprecated \code{\link[=cause_shares]{cause_shares()}}; compare it with
+\strong{Indexes and rank.} For Japanese women 1951-1990, Oeppen (2008, Sections
+6 and 7) uses two components and selects ARIMA(0,2,2) models for the
+indexes by AICc; Section 3 notes, for the Lee-Carter model, that one
+component is usually adequate for advanced economies and that its index
+can be forecast by a simple ARIMA model such as the random walk with drift.
+These choices belong to one data set; the defaults here are one component
+and the index model of \code{\link[=coda]{coda()}}, ARIMA(0,1,1) with drift (Bergeron-Boucher
+et al. 2017, with Oeppen as co-author). \verb{rank = 2, order = c(0, 2, 2)}
+gives Oeppen's specification for Japan. With several components, each
+index has its own ARIMA model, independent of the others (the paper does
+not say how the second index was forecast).
+
+\strong{Deviations from the paper.} Oeppen (2008) gives point forecasts only:
+the jump-off (forecasts start from the observed deaths of the last year,
+\code{jump_off = "observed"}) and the draws (bootstrap of the residuals and of
+the index paths, centred on the point forecast) are those of \code{\link[=coda]{coda()}}
+(Bergeron-Boucher et al. 2017, Appendices B and G). Oeppen (2008, Section
+3) replaces zero counts by lightly smoothing the deaths of each year with
+a penalised histogram smoother whose smoothing parameter is not given;
+here zero counts are replaced multiplicatively in the composition of each
+year (Bergeron-Boucher et al. 2017, Appendix C; see \code{\link[=coda]{coda()}}). How the
+death rate of the open age interval follows from the forecast deaths is
+not stated; here the all-cause log rate of an open interval is regressed
+on the indexes and split by cause through the composition
+(package-specific, as \code{open = "regression"} of \code{\link[=coda]{coda()}}).
+
+Draws are expected rates. Predictive draws (\code{mt_forecast(predictive = TRUE)}) draw Poisson all-cause deaths given the all-cause rates and
+exposures and split them multinomially between the causes by the cause
+shares of the draw, so that the causes also add up to all causes in
+predictive draws; no other observation noise is added (package-specific).
+
+The extensions of Kjærgaard, Ergemen, Kallestrup-Lamb, Oeppen and
+Lindahl-Jacobsen (2019) are not implemented. Compare the model with
 \code{\link[=reconciled]{reconciled()}} separate models in a backtest before using it.
-
-Jump-off, the open age interval and zero deaths are treated as in
-\code{\link[=coda]{coda()}}: the all-cause log rate of an open interval is regressed on
-\code{k[t]} (its split by cause comes from the composition), and zero rates of
-a cause are replaced by half its smallest positive rate in the group (as
-\code{replace.zeros()} of the R package MortalityForecast). Draws are expected
-rates. Predictive draws (\code{mt_forecast(predictive = TRUE)}) draw Poisson
-all-cause deaths given the all-cause rates and exposures and split them
-multinomially between the causes by the cause shares of the draw, so that
-the causes also add up to all causes in predictive draws; no other
-observation noise is added. If intervals are too narrow on real data,
-that is a property of the model (see \code{\link[=recalibrated]{recalibrated()}}, \code{\link[=ensemble]{ensemble()}}, or
-overdispersed models such as \code{stanmomo(family = "nb")}).
 }
 \examples{
 x <- mt_example_causes(years = 2005:2019)
@@ -88,7 +109,7 @@ fc <- mt_forecast(fit, h = 5, n_draws = 50, seed = 1)
 \references{
 Oeppen J (2008). Coherent forecasting of multiple-decrement life tables:
 a test using Japanese cause of death data. CODAWORK'08, Universitat de
-Girona.
+Girona. \url{https://hdl.handle.net/10256/742}
 
 Bergeron-Boucher M-P, Canudas-Romo V, Oeppen J, Vaupel JW (2017).
 Coherent forecasts of mortality with compositional data analysis.

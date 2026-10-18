@@ -10,12 +10,15 @@
 #'   `K`, its drift and standard deviation), and per stratum the deviations
 #'   `a`, `b`, `k` and their AR(1) coefficient `phi` and standard deviation;
 #' * [coda()]: the centre `a` (geometric mean distribution of life-table
-#'   deaths), the loadings `b`, the index `k` with its drift and standard
-#'   deviation, the share of variation explained by the first component and
-#'   the parameters of the open age interval; the coherent model gives per
-#'   group of `common_by` the common `a`, `B`, `K` and per stratum `a`, `b`,
-#'   `k` and their AR(1) parameters. [coda_causes()]: per group, as
-#'   [coda()], with parts by age and cause;
+#'   deaths), the loadings `b`, the index `k` with the order (`order_k`),
+#'   coefficients (`arima_k`) and innovation standard deviation (`sd_k`) of
+#'   its ARIMA model, the share of variation explained by the component, the
+#'   parameters of the open age interval (`a_open`, `b_open`) or of the
+#'   Kannisto model of each year (`kannisto_a`, `kannisto_b`); the coherent
+#'   model gives per group of `common_by` the common `a`, `B`, `K` (with
+#'   `order_K`, `arima_K`, `sd_K`) and per stratum `a`, `b`, `k` and the
+#'   ARIMA model of `k`. [coda_causes()]: per group, as [coda()], with parts
+#'   by age and cause (`b1`, `k1`, `b2`, `k2`, ... with several components);
 #' * [rwd()]: drift and innovation standard deviation per age (and, with
 #'   `observation_noise = TRUE`, the variances of level and noise);
 #' * [apc_bayes()]: posterior medians and 90% intervals of the age, period
