@@ -175,7 +175,8 @@ stmomo <- function(model = c("apc", "cbd", "rh", "m6", "m7", "m8", "lc"), clip =
     mt_abort("`gc_order` must be an ARIMA order c(p, d, q).", class = "argument")
   }
   gc_order <- gc_order %||% if (model == "m7") c(2, 0, 0) else c(1, 1, 0)
-  new_mt_spec("stmomo", list(model = model, clip = clip, gc_order = gc_order, xc = xc), min_periods = 8,
+  params <- c(list(model = model, clip = clip, gc_order = gc_order), if (model == "m8") list(xc = xc))
+  new_mt_spec("stmomo", params, min_periods = 8,
               label = sprintf("StMoMo %s%s", toupper(model), if (is.null(xc)) "" else sprintf(" (xc = %g)", xc)))
 }
 

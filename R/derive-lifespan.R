@@ -54,11 +54,17 @@
 #' years squared; `cv`, `entropy` and `gini` have no unit.
 #'
 #' The discrete formulas treat everyone dying in an interval as dying at age
-#' `x + a_x`: the variance leaves out the spread within the intervals (about
-#' `n^2 / 12` for deaths spread evenly over an interval of width `n`). With
-#' single years of age this lowers the standard deviation of the age at
-#' death by less than 0.05 years; in 5-year age groups by about 0.1 to 0.2
-#' years, and the open interval adds to it when it starts at 85 or 90. Use
+#' `x + a_x`, so `var`, `sd`, `cv` and `gini` leave out the spread of the
+#' ages at death within each interval (about `n^2 / 12` years squared for
+#' deaths spread evenly over `n` years). Compared with ages at death spread
+#' evenly within closed intervals and exponentially in the open one, for
+#' French life tables (HMD) the standard deviation is lower by less than
+#' 0.01 years with single years of age to 110+, by up to 0.14 years with
+#' 5-year groups to 100+, by 0.3 to 0.6 years with an open interval from 90
+#' and by 1 to 2 years with one from 85 (Gini coefficient: up to 0.002 lower
+#' with 5-year groups to 100+, 0.016 with 85+). `edagger`, `entropy`
+#' and `iqr` are not affected by the open interval (remaining life
+#' expectancy does not change within an interval of constant hazard). Use
 #' single years of age up to 100 or more where possible (for example from
 #' [mt_ungroup()]).
 #'

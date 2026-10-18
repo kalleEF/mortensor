@@ -41,24 +41,28 @@
 #' `rotate = TRUE` rotates the age pattern of decline as life expectancy
 #' rises (Li, Lee and Gerland 2013). In long-lived populations the decline
 #' of mortality slows down at young ages and speeds up at old ages, which a
-#' fixed `b[x]` does not capture over long horizons. For each path and year,
-#' the life expectancy at birth `e0` of the unrotated forecast gives the
+#' fixed `b[x]` does not capture over long horizons. For each path and year
+#' `t`, the life expectancy at birth `e0` of the unrotated forecast gives the
 #' weight `w = (0.5 (1 + sin(pi / 2 (2 u - 1))))^power` with
 #' `u = (e0 - e0_start) / (e0_end - e0_start)`; `w` is 0 below `e0_start` and
-#' 1 from `e0_end`. The age pattern of that year is `B[x] = (1 - w) b[x] +
+#' 1 from `e0_end`. The age pattern of that year is `B[x, t] = (1 - w) b[x] +
 #' w bu[x]`. The ultimate pattern `bu` has the mean of `b` over ages 15-64 at
 #' all ages below 65; from age 65 it keeps the shape of `b`, scaled so that
 #' the first age group from 65 equals that mean; it sums to 1 like `b`. The
 #' index is then solved again, path by path and year by year, so that the
 #' rotated rates have the same life expectancy at birth as the unrotated
 #' ones: rotation changes the age pattern of the forecast, not its life
-#' expectancy at birth. Rates change from the jump-off year,
-#' `log m[x, t] = log m[x, T] + B[x] (k*[t] - k[T])`, so the jump-off rates
-#' stay as they are. Fitted rates, and paths with `e0` below `e0_start`, are
-#' unchanged. In MortCast (Sevcikova et al. 2016) the path of life
-#' expectancy comes from a separate model (bayesLife); here it is that of
-#' the Lee-Carter draws. Rotation needs ages from 0 (life expectancy at
-#' birth) with age groups starting at 15 and 65, and an open last age group.
+#' expectancy at birth. Decline thus moves from young ages to the ages where
+#' `bu` exceeds `b`. Where `b` at 65 is already above its mean over ages
+#' 15-64 (as for French women), it moves mostly to ages 15-64. Rates change
+#' from the jump-off year `T`, `log m[x, t] = log m[x, T] + B[x, t] (k*[t] -
+#' k[T])`, so the jump-off rates stay as they are. Fitted rates, and paths
+#' with `e0` below `e0_start`, are unchanged. In MortCast (Sevcikova et al.
+#' 2016) the path of life expectancy comes from a separate model
+#' (bayesLife); here it is that of the Lee-Carter draws. Rotation needs ages
+#' from 0 (life expectancy at birth) with age groups starting at 15 and 65.
+#' With a closed last age group, a warning notes that life expectancy is
+#' then truncated at the highest age.
 #'
 #' @param method `"poisson"` or `"svd"`.
 #' @param adjust Re-estimation of `k[t]` for `method = "svd"`: `"dt"`,

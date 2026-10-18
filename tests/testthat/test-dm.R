@@ -53,7 +53,7 @@ test_that("mt_dm_test() equals forecast::dm.test() on the losses per origin", {
   }
 })
 
-test_that("mt_dm_test() uses lags by the spacing of origins and falls back to lag 0 with few origins", {
+test_that("mt_dm_test() uses lags by the spacing of origins and gives no test with too few origins", {
   skip_if_not_installed("forecast")
   # origins 2 years apart: forecasts 3 years ahead overlap at one lag
   bt <- fake_backtest(origins = seq(1970, 2010, by = 2), horizons = c(1, 3))
@@ -62,13 +62,12 @@ test_that("mt_dm_test() uses lags by the spacing of origins and falls back to la
   e1 <- origin_losses(bt, "b", h = 3)
   e2 <- origin_losses(bt, "a", h = 3)
   expect_equal(r$statistic[2], unname(forecast::dm.test(e1, e2, h = 2, power = 1)$statistic), tolerance = 1e-10)
-  # 4 origins and horizons up to 5: lag 0 with a warning
+  # 4 origins and horizons up to 5: no test where the lags cannot be estimated
   bt <- fake_backtest(origins = 2000:2003, horizons = 1:5)
   expect_warning(r <- mt_dm_test(bt), class = "mt_warning_dm")
-  expect_identical(r$lag, c(0L, 1L, 2L, 0L, 0L, 0L))
-  e1 <- origin_losses(bt, "b", h = 5)
-  e2 <- origin_losses(bt, "a", h = 5)
-  expect_equal(r$statistic[5], unname(forecast::dm.test(e1, e2, h = 1, power = 1)$statistic), tolerance = 1e-10)
+  expect_identical(r$lag, c(0L, 1L, 2L, NA, NA, NA))
+  expect_true(all(is.na(r$p_value[4:6])))
+  expect_false(anyNA(r$p_value[1:3]))
   # identical losses: no test
   bt <- fake_backtest(origins = 2000:2009, horizons = 1)
   bt[model == "b", crps := bt[model == "a", crps]]

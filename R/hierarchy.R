@@ -840,7 +840,7 @@ shrink_cov <- function(X, shrink = "auto") {
 #' fit <- mt_fit(reconciled(lee_carter(), h, method = "wls"), mt_aggregate_strata(x, h))
 #' fc <- mt_forecast(fit, h = 5, n_draws = 50, seed = 1)
 #' \donttest{
-#' # score-optimal reconciliation, trained on forecasts from 2011 to 2017
+#' # score-optimal reconciliation, trained on forecasts of 2012-2019 from 4 origins
 #' es <- reconciled(lee_carter(), h, method = "energy_score", years = 8, n_origins = 4, horizon = 3,
 #'                  control = list(max_iter = 200))
 #' fit_es <- mt_fit(es, mt_aggregate_strata(x, h))

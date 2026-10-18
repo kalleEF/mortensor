@@ -14,8 +14,9 @@
 #' * per horizon `h`: the mean score over the cells of each origin at that
 #'   horizon gives one loss per origin and model. The differences between
 #'   the losses of a model and of `ref` form a series over the origins,
-#'   tested with the autocovariances up to lag `h - 1` (forecasts `h` years
-#'   ahead from consecutive origins share test years and errors).
+#'   tested with the autocovariances up to lag `h - 1` (the errors of
+#'   forecasts `h` years ahead from consecutive origins build up over
+#'   overlapping years).
 #' * overall (`horizon = "all"`): the mean of these per-horizon losses over
 #'   all horizons gives one loss per origin, tested with the largest horizon
 #'   `H` (lags up to `H - 1`). Only origins scored at every horizon enter.
@@ -34,11 +35,12 @@
 #' With few origins the test has little power: a backtest with 6 origins
 #' finds only large and consistent differences. When the number of origins
 #' `T` is not larger than the number of lags needed (`T <= h` for
-#' consecutive origins), or the variance estimate is not positive, the test
-#' falls back to lag 0 (column `lag`) with a warning of class
-#' `mt_warning_dm`. Loss differences of overlapping test years are mostly
-#' positively correlated, so these p-values are usually too small. For long
-#' horizons, use more origins or origins spaced `h` years apart. The p-values
+#' consecutive origins), there is no test (`statistic` and `p_value` are
+#' `NA`, with a warning of class `mt_warning_dm`): lag 0 would ignore the
+#' correlation of overlapping test years and give too small p-values. For
+#' long horizons, use more origins or origins spaced `h` years apart. When
+#' the variance estimate with lags up to `h - 1` is not positive, the test
+#' uses lag 0, as `forecast::dm.test()` does, with the same warning. The p-values
 #' are not adjusted for the number of tests (models, targets, horizons); see
 #' [stats::p.adjust()].
 #'
@@ -79,7 +81,7 @@
 #' @seealso [mt_compare()], [mt_score_table()], [mt_score()].
 #' @examples
 #' x <- mt_example(deaths = "single", years = 1990:2012)
-#' bt <- mt_compare(list(rw = rwd(), lc = lee_carter()), x, origins = 2001:2007, h = 3, n_draws = 50)
+#' bt <- mt_compare(list(rw = rwd(), lc = lee_carter()), x, origins = 2001:2007, h = 3, n_draws = 30)
 #' mt_dm_test(bt)
 #' @export
 mt_dm_test <- function(backtest, ref = NULL, metrics = "crps", targets = NULL, by = NULL,
@@ -224,18 +226,17 @@ dm_series <- function(e1, e2, origin, h, alternative, varestimator) {
 
 # Diebold-Mariano statistic with the correction of Harvey, Leybourne and
 # Newbold (1997) for the loss differences `d` and `h` steps (lags 0 to
-# h - 1), as forecast::dm.test(). Falls back to lag 0 when there are too few
-# losses for the lags (`fallback = "origins"`) or the variance estimate is
-# not positive (`"variance"`); NA without a variance (`"none"`)
+# h - 1), as forecast::dm.test(). NA when there are too few losses for the
+# lags (`fallback = "origins"`) or no variance (`"none"`); lag 0 when the
+# variance estimate is not positive (`"variance"`), as forecast::dm.test()
 dm_stat <- function(d, h, alternative = "two.sided", varestimator = "acf") {
   n <- length(d)
   na <- list(lag = NA_integer_, statistic = NA_real_, p_value = NA_real_, fallback = "none")
   if (n < 2 || anyNA(d)) return(na)
   fallback <- ""
-  if (h >= n) {
-    fallback <- "origins"
-    h <- 1L
-  }
+  # too few origins for the autocovariances of overlapping test years: no
+  # test (lag 0 would understate the variance and give too small p-values)
+  if (h >= n) return(utils::modifyList(na, list(fallback = "origins")))
   v <- dm_variance(d, h, varestimator)
   # a constant difference leaves only rounding error in the variance
   tiny <- (1e-8 * max(abs(d)))^2 / n
@@ -277,9 +278,8 @@ dm_warn_fallbacks <- function(out) {
   h_none <- horizons("none")
   msg <- c(
     if (!is.null(h_orig)) {
-      sprintf(paste("Too few origins for the autocovariances up to lag h - 1 at horizon(s) %s: lag 0 was used",
-                    "(column `lag`). Losses of overlapping test years are correlated, so these p-values are too",
-                    "small; use more origins or origins spaced h years apart."), h_orig)
+      sprintf(paste("No test at horizon(s) %s: too few origins for the autocovariances up to lag h - 1 of",
+                    "overlapping test years. Use more origins or origins spaced h years apart."), h_orig)
     },
     if (!is.null(h_var)) {
       sprintf(paste("The variance estimate with lags up to h - 1 was not positive at horizon(s) %s: lag 0 was",
