@@ -25,7 +25,9 @@ quantities, see \code{quantities} in \code{\link[=mt_backtest]{mt_backtest()}}),
 \value{
 A \code{data.table} with the mean CRPS, WIS and absolute error, the
 root mean squared error of the median (\code{rmse}), MASE
-(mean of absolute error over the scale; rates only), empirical coverage
+(mean of absolute error over the scale, the mean absolute year-to-year
+change of the training data, as the mean absolute scaled error of
+Hyndman and Koehler 2006; rates only), empirical coverage
 of the 50\%, 80\% and 95\% intervals, mean PIT, the number of scored
 cells and the \code{unit} of CRPS, WIS and absolute error (log rates, or
 years for life expectancy). Backtests of the same model with different
@@ -38,4 +40,8 @@ Summarise backtest scores
 x <- mt_example(deaths = "single", years = 1990:2012)
 bt <- mt_backtest(rwd(), x, origins = 2007, h = 5, n_draws = 100)
 mt_score(bt, by = c("model", "horizon"))
+}
+\references{
+Hyndman RJ, Koehler AB (2006). Another look at measures of forecast
+accuracy. \emph{International Journal of Forecasting} 22(4): 679-688.
 }

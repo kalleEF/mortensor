@@ -25,8 +25,8 @@ mt_smooth(
 \item{dims}{1 (over one direction, see \code{along}) or 2 (age-period
 surface; \code{"pspline"} or \code{"gam"}).}
 
-\item{lambda}{Fixed smoothing parameter(s); \code{NULL} selects them by
-\code{criterion}.}
+\item{lambda}{Fixed smoothing parameter(s) of the P-splines or the
+Whittaker smoother; \code{NULL} selects them.}
 
 \item{criterion}{\code{"bic"} or \code{"aic"}.}
 
@@ -35,7 +35,8 @@ surface; \code{"pspline"} or \code{"gam"}).}
 \item{deg, pord}{Degree of the B-splines and order of the difference
 penalty.}
 
-\item{lambda_range}{Search range for the smoothing parameters.}
+\item{lambda_range}{Search range of the smoothing parameters of the
+P-splines and the Whittaker smoother (in both directions).}
 
 \item{method}{\code{"pspline"} (Poisson P-splines, default), \code{"whittaker"} or
 \code{"gam"} (package \pkg{mgcv}); see Details. With \code{dims = 1} and
@@ -54,7 +55,12 @@ of the following ages).}
 }
 \value{
 An \code{mt_data} object with smoothed deaths; diagnostics as attribute
-\code{"smooth"}.
+\code{"smooth"}, one row per fit, with the smoothing parameter, the effective
+degrees of freedom (\code{edf}, or \code{ed} for P-splines) and, for the Whittaker
+smoother, \code{at_bound} when the selected parameter is at an end of
+\code{lambda_range} before the fit reached its limit there (interpolation at
+the lower end, a polynomial of degree \code{pord - 1} at the upper end); such
+fits are also reported with a warning.
 }
 \description{
 Smooths death rates over age, over time or over both, with the exposures
@@ -64,23 +70,24 @@ fit and stay missing (only the 2D GAM predicts them). Deaths and
 exposures must be available on the grid (use \code{\link[=mt_ungroup]{mt_ungroup()}} first for
 grouped data). In a forecasting
 pipeline, use it as a preprocessing step (\code{mt_prep(step_smooth(...))}):
-models are then fitted to the smoothed rates, while the observation noise
-of their predictive draws, residuals and backtest scales come from the
-rates before smoothing ("smooth input, raw residuals").
+models are then fitted to the smoothed rates, while their residuals,
+observed rates, backtest scales and jump-off offsets come from the deaths
+before smoothing ("smooth input, raw residuals"). Predictive draws add
+Poisson deaths given the model's rates, as without smoothing.
 }
 \details{
 Methods and directions:
 \itemize{
 \item \verb{dims = 1, along = "age"} (default): each year separately over age,
-with Poisson P-splines (\code{"pspline"}), Whittaker smoothing of log rates
-with the deaths as weights (\code{"whittaker"}), or a Gaussian additive
-model of log rates with the deaths as weights (\code{"gam"});
-\item \verb{dims = 1, along = "period"}: each age separately over time, Whittaker
-smoothing of log rates with the deaths as weights and one smoothing
-parameter per stratum (generalised cross-validation pooled over ages).
-The weights are scaled within each age, so the parameter gives the same
-smoothness at every age; ages with many deaths are not left
-unsmoothed;
+with Poisson P-splines and the exposures as offset (\code{"pspline"}; the
+one-dimensional case of Currie, Durban and Eilers 2004), the weighted
+Whittaker smoother of log rates with the deaths as weights
+(\code{"whittaker"}; Whittaker 1923; Eilers 2003), or a quasi-Poisson
+additive model \code{s(age)} with the exposures as offset (\code{"gam"}; Wood
+2017), smoothing parameter by REML and overdispersion estimated;
+\item \verb{dims = 1, along = "period"}: each age separately over time, the
+weighted Whittaker smoother of log rates with the deaths as weights
+(the approximate inverse variances of the log rates);
 \item \code{dims = 2}: the age-period surface, with a Poisson P-spline surface
 (\code{"pspline"}; Currie, Durban and Eilers 2004) or a quasi-Poisson
 additive model with a tensor-product P-spline \code{te(age, year)} and the
@@ -88,6 +95,24 @@ exposures as offset (\code{"gam"}; Wood 2017), smoothing parameters by REML
 and overdispersion estimated, so that year-to-year variation beyond
 Poisson noise is not taken for signal.
 }
+
+The Whittaker smoother minimises \verb{sum(w (y - z)^2) + lambda sum((D z)^2)}
+for log rates \code{y}, weights \code{w} and differences \code{D} of order \code{pord}
+(divided differences over age, so that groups of different widths are
+smoothed on the age scale). Its smoothing parameter is chosen for every
+fit separately, by generalised cross-validation within \code{lambda_range}:
+for each year (over age) or for each age (over time) and stratum. Over
+time, with deaths as weights, ages whose year-to-year variation is large
+relative to their Poisson noise (typically ages with many deaths) are
+smoothed little or not at all, and ages with few deaths may be smoothed to
+a straight line of the log rates. The P-spline fits choose their
+smoothing parameters by \code{criterion} within \code{lambda_range}.
+
+Where a method needs one age per cell (the Whittaker smoother over age
+and the GAMs), an open last interval such as 90+ is placed at its lower
+bound plus half the width of the interval below it (92.5 after 85-89), a
+convention of this package. The P-splines instead expand the open
+interval into single years up to \code{omega}, as \code{\link[=mt_ungroup]{mt_ungroup()}} does.
 
 Smoothing over time removes year-to-year fluctuations from the fitted
 trends and from the starting level of forecasts; the last years are
@@ -115,6 +140,12 @@ mt_smooth_check(xt, st)
 Currie ID, Durban M, Eilers PHC (2004). Smoothing and forecasting
 mortality rates. \emph{Statistical Modelling} 4(4): 279-298.
 
+Eilers PHC (2003). A perfect smoother. \emph{Analytical Chemistry} 75(14):
+3631-3636.
+
+Whittaker ET (1923). On a new method of graduation. \emph{Proceedings of the
+Edinburgh Mathematical Society} 41: 63-75.
+
 Wood SN (2017). \emph{Generalized Additive Models: An Introduction with R}
-(2nd ed.). Chapman and Hall/CRC.
+(2nd ed.). CRC Press.
 }

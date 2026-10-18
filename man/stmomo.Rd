@@ -33,7 +33,10 @@ A model specification.
 Wrapper around \pkg{StMoMo} (Villegas, Kaishev and Millossovich 2018):
 age-period-cohort (\code{"apc"}), Cairns-Blake-Dowd (\code{"cbd"}, logit link),
 Renshaw-Haberman (\code{"rh"}), M6, M7 and M8 (\code{"m6"}, \code{"m7"}, \code{"m8"}, logit
-link) and Lee-Carter (\code{"lc"}). Models are fitted per stratum with real
+link) and Lee-Carter (\code{"lc"}). \code{"rh"} is StMoMo's Renshaw-Haberman model
+with \code{cohortAgeFun = "1"} (the default of StMoMo's \code{rh()}): \verb{log m(x,t) = a(x) + b(x) k(t) + g(t - x)}, a cohort effect without age modulation, not
+the original 2006 specification of the Renshaw-Haberman model, whose
+cohort effect is modulated by a second age function. Models are fitted per stratum with real
 ages (the lower bounds of single-year intervals; models with a cohort
 effect need single years of age), deaths and central exposures; for the
 logit-link models initial exposures are approximated as central exposures
@@ -42,7 +45,8 @@ central rates (\code{m = -log(1 - q)}). Cohorts observed in fewer than \code{cli
 cells get zero weight; their fitted rates use the effect of the nearest
 estimated cohort. Draws come from \code{simulate()} of the fitted model (period
 indexes simulated as a multivariate random walk with drift, the cohort
-index as an ARIMA process).
+index as an ARIMA process). Predictive draws (\code{mt_forecast(predictive = TRUE)}) add Poisson variation of the deaths given the rates and the
+exposures, and no other observation noise.
 }
 \details{
 M6, M7 and M8 are the cohort extensions of the CBD model of Cairns et al.

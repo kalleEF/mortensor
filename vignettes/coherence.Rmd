@@ -91,9 +91,13 @@ mt_plot_compare(fc, periods = 2035, strata = c("female.Q1", "female.Q5", "male.Q
 ```
 
 Life expectancy at birth in 2035 for some of the strata. The medians move
-little; the intervals change more. Sums of parts whose paths are only
-partly dependent vary less than the totals' own models, so the totals get
-narrower intervals under every method; MinT narrows them most.
+little; the intervals change more. Separate models draw their paths
+independently, and the reconciliation does not reorder them
+(`dependence = "none"`, the default). Sums of independent parts vary less
+than the totals' own forecasts, so the totals get much narrower intervals
+under every method. WLS and MinT give almost the same result: MinT
+estimates how the strata move together from the base draws, and the draws
+of separate models do not move together.
 
 ## Keeping a trusted total
 
@@ -116,7 +120,9 @@ mt_compare_forecasts(fixed, periods = 2035, strata = c("both.England", "female.E
 ```
 
 England keeps the life expectancy of its own model; its parts move
-towards it.
+towards it. The intervals of the bottom series widen (women in Q1, men in
+Q5), because they now carry the uncertainty of England's own forecast. With WLS some bottom forecasts had
+to be held at zero in 10% of the draws (the warning above).
 
 ## Does coherence cost accuracy?
 
@@ -136,14 +142,19 @@ mt_score_table(bt, metrics = c("crps", "cov95"), hierarchy = h)
 aggregates (quintiles for both sexes, England by sex) and the total
 (England) separately.
 
-The bottom series are forecast about as well with every method. The
-totals lose a little accuracy and more coverage: their own models capture
-common movements of the quintiles in their trends, which sums of parts
-reproduce only as far as the dependence between the parts is reproduced.
-By default, `reconciled()` reorders the paths of separately fitted parts
-so that they move together as they did in the training years
-(`dependence = "empirical"`, Clark et al. 2004); joint models such as
-`li_lee()` tie the parts together in the model itself.
+The bottom series are forecast about as well with every method (CRPS
+0.067-0.068), and their coverage falls a little with WLS and MinT (0.77
+against 0.79). The totals lose accuracy and much coverage: the 95%
+intervals of England contain 0.37-0.42 of the observed rates after
+reconciliation, against 0.67 with its own model. The model of England
+captures the common movements of the quintiles in its trend; sums of
+parts with independent draws do not reproduce them, so their intervals
+are too narrow. Joint models such as `li_lee()` tie the parts together in
+the model itself. `dependence = "empirical"` reorders the paths of
+separately fitted parts so that they move together as they did in the
+training years. This reordering is specific to this package, related to
+the Schaake shuffle (Clark et al. 2004); it is used only when chosen, and
+a backtest should check its effect.
 
 ## Reconciliation learnt from past forecasts
 
@@ -165,8 +176,8 @@ fit$reconcile$scoreopt$table   # in-sample energy score with OLS and after the o
 
 Each fit takes about 20 seconds on these data, so the code is not run
 here. In a backtest from 2011 to 2014 (validation check `scoreopt_ons`),
-the method was less accurate than WLS at every level: CRPS 22% higher for
-the bottom series, 26% for the aggregates and 32% for England. The
+the method was less accurate than WLS at every level: CRPS 21% higher for
+the bottom series, 23% for the aggregates and 26% for England. The
 training forecasts were too high in 2006-2011 and the correction learnt
 from them pushed the forecasts down, while mortality improvement stalled
 after 2011. With few, overlapping training forecasts and one parameter per
@@ -178,9 +189,10 @@ it.
 
 * **Bottom-up** with a joint model of the parts keeps the detailed
   forecasts and needs no forecasts of the totals.
-* **WLS** is a robust default for reconciling separate forecasts;
-  **MinT** gives the narrowest intervals, which a backtest should
-  confirm.
+* **WLS** for reconciling separate forecasts. With separate models, whose
+  draws are independent, **MinT** gives about the same result, and the
+  intervals of the totals are too narrow; check their coverage in a
+  backtest.
 * **fixed** with **proportional** for a trusted total, for example causes
   of death that must add up to an all-cause forecast.
 * **energy_score** only with long training histories, after a backtest

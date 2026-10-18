@@ -28,7 +28,7 @@ interval; default the first age).}
 \item{paths}{For draws, return the values of every path, an array
 \verb{[period, stratum, draw]}.}
 
-\item{...}{Passed to the life-table calculation (\code{ax}, \code{open}, \code{k}). A
+\item{...}{Passed to the life-table calculation (\code{ax}, \code{open}, \code{k}, \code{omega}). A
 rate of 0 in the open interval is replaced as in \code{\link[=life_table]{life_table()}}.}
 }
 \value{
@@ -37,10 +37,15 @@ For arrays, an array without the age dimension. For draws, a
 path by path.
 }
 \description{
-Life expectancy from rates or forecast draws
+Life expectancy of the period life table of \code{\link[=life_table]{life_table()}} (Preston,
+Heuveline and Guillot 2001), for draws path by path.
 }
 \examples{
 x <- mt_example(deaths = "single")
 m <- mt_array(x, "deaths") / mt_array(x, "exposure")
 life_expectancy(m, mt_grid(x)$age, at = 65)[1:3, ]
+}
+\references{
+Preston SH, Heuveline P, Guillot M (2001). \emph{Demography: Measuring and
+Modeling Population Processes}. Blackwell.
 }

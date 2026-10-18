@@ -85,19 +85,19 @@ the settings were mostly noise of the held-out years.
 
 `recalibrated()` refits the model at several origins within the last ten
 training years, compares the forecasts with what was observed, and
-rescales the spread of the draws around their median by a factor that
-can grow with the horizon. The factor minimises the CRPS of these recent
-forecasts:
+rescales the spread of the draws around their median by one factor for
+all horizons. The factor minimises the CRPS of these recent forecasts.
+The closest published method is the member-by-member post-processing of
+ensemble forecasts (Van Schaeybroeck and Vannitsem 2015):
 
 ```{r}
 fit_cal <- mt_fit(recalibrated(lee_carter()), ew)
-fit_cal$calibration[, .(scale_h1, slope, crps_before, crps_after, cov95_before, cov95_after)]
+fit_cal$calibration[, .(scale_h1, crps_before, crps_after, cov95_before, cov95_after)]
 ```
 
-The factor at horizon 1 (`scale_h1`) is about 2.7: Lee-Carter's
-intervals were far too narrow in the last decade. The factor changes
-little with the horizon (`slope` near 0, the factor is `scale_h1 * h^slope`).
-Within the window, recalibration raised the 95% coverage from 0.67 to 0.93.
+The factor (`scale_h1`) is 2.6: Lee-Carter's intervals were far too
+narrow in the last decade. Within the window, recalibration raised the
+95% coverage from 0.48 to 0.88 and lowered the CRPS from 0.076 to 0.069.
 
 ## Both together, checked in a backtest
 
@@ -118,26 +118,36 @@ mt_score_table(bt, metrics = c("crps", "cov95"))
 mt_plot_coverage(bt)
 ```
 
-The tuned window makes the forecasts more accurate: CRPS 0.057 against
-0.069 for the rates, 0.29 against 0.47 years for life expectancy at 30
+The tuned window makes the forecasts more accurate: CRPS 0.058 against
+0.071 for the rates, 0.29 against 0.47 years for life expectancy at 30
 (`_le`). Recalibration widens the intervals: the 95% coverage of the rates
-rises from 0.75 to 0.88, and from 0.73 to 0.83 for the tuned model,
-whose recent errors were smaller, so its intervals widen less. The
-coverage of life expectancy is high for all versions: errors of single
-ages partly cancel in life expectancy. Tuning and recalibration answer
-different questions and combine: the tuned and recalibrated version has the
-lowest CRPS of the rates (0.056).
+rises from 0.63 to 0.85, and from 0.66 to 0.81 for the tuned model,
+whose recent errors were smaller, so its intervals widen less. All
+versions remain below the nominal level, and their coverage falls with
+the horizon: the base model is too narrow by more at long horizons, and
+one factor for all horizons does not correct that. The coverage of life
+expectancy is high for all versions: errors of single ages partly cancel
+in life expectancy. Tuning and recalibration answer different questions
+and combine: the tuned and recalibrated version has the lowest CRPS of
+the rates (0.056).
 
 ## Options
 
 * `recalibrated(by = "sex")`: separate factors for groups of strata (with
   joint models, contrasts between the groups then get wider intervals);
-* `recalibrated(ages = c(50, 75))`: separate factors for age bands;
-* `recalibrated(quantity = "life_expectancy")`: recalibrate the intervals of
-  life expectancy instead of single rates;
 * `recalibrated(n_boot = 50)`: bootstrap intervals of the factors, which
   rest on few forecasts;
 * `tuned(..., by = "sex")`: tune and fit groups of strata separately.
+
+Further options of `recalibrated()` are specific to this package
+(reference unknown):
+
+* `scale = "horizon"`: a factor that changes with the horizon as a power
+  law, `scale_h1 * h^slope`;
+* `bias = TRUE`: a correction of the drift;
+* `ages = c(50, 75)`: separate factors for age bands;
+* `quantity = "life_expectancy"`: recalibrate the intervals of life
+  expectancy instead of single rates.
 
 ## Summary
 
@@ -146,3 +156,9 @@ lowest CRPS of the rates (0.056).
 | Which settings forecast best? | `mt_tune()`, `tuned()` | the forecast |
 | How wide should the intervals be? | `recalibrated()` | the width of the intervals |
 | Did it help? | `mt_compare()`, `mt_score_table()` | nothing; it checks |
+
+## References
+
+Van Schaeybroeck B, Vannitsem S (2015). Ensemble post-processing using
+member-by-member approaches: theoretical aspects. *Quarterly Journal of
+the Royal Meteorological Society* 141(688): 807-818.

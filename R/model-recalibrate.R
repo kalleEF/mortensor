@@ -11,22 +11,59 @@
 #' 2. the draws are transformed per cell on the log scale,
 #'    \deqn{\log m^* = \tilde m + b\,h + s(h)\,(\log m - \tilde m),}
 #'    where \eqn{\tilde m} is the median of the draws in the cell, \eqn{h} the
-#'    horizon, \eqn{s(h) = s_1 h^{\gamma}} a spread factor (`scale =
-#'    "horizon"`; \eqn{\gamma = 0} for `scale = "constant"`), constant
-#'    beyond the longest horizon of the window, and \eqn{b} a correction of
-#'    the drift per year (`bias = TRUE`);
+#'    horizon, \eqn{s(h)} a spread factor, one value \eqn{s_1} for all
+#'    horizons (`scale = "constant"`, default) or \eqn{s_1 h^{\gamma}}
+#'    (`scale = "horizon"`), held constant beyond the longest horizon of the
+#'    window, and \eqn{b} a correction of the drift per year (`bias = TRUE`);
 #' 3. \eqn{s_1}, \eqn{\gamma} and \eqn{b} minimise the mean CRPS (or the
 #'    interval score, `target`) of the log death rates in the window, with
-#'    Poisson (and the model's extra-Poisson) variation of the observed
-#'    deaths, as in [mt_backtest()]. Draws of an ensemble get the observation
+#'    the Poisson (or the model's negative binomial) variation of the
+#'    observed deaths, as in [mt_backtest()]. Draws of an ensemble get the observation
 #'    noise of the component they come from.
 #'
 #' The final model is fitted on all training data and its forecasts are
-#' transformed with the estimated parameters. This is minimum-CRPS
-#' estimation of a location-scale recalibration (Gneiting et al. 2005)
-#' applied to simulated paths: ranks within each cell are kept, so paths stay
-#' paths, and derived quantities such as life expectancy can be computed
-#' from the calibrated draws.
+#' transformed with the estimated parameters. Ranks within each cell are
+#' kept, so paths stay paths, and derived quantities such as life expectancy
+#' can be computed from the calibrated draws.
+#'
+#' **Published methods.** The closest published method is the
+#' member-by-member post-processing of ensemble forecasts (Van Schaeybroeck
+#' and Vannitsem 2015), which shifts every member of an ensemble and
+#' rescales its deviation from the ensemble mean, with parameters for each
+#' lead time estimated by maximum likelihood or minimum CRPS. Here each
+#' simulated path is rescaled around the median of the draws of each cell,
+#' on the log scale, with one spread factor for all horizons (`scale =
+#' "constant"`) estimated by minimum CRPS on inner rolling-origin forecasts.
+#' Minimum-CRPS estimation follows ensemble model output statistics (EMOS,
+#' Gneiting et al. 2005), which fits a parametric predictive distribution
+#' instead of transforming the draws.
+#'
+#' **Package-specific options** (reference unknown): the power law of the
+#' spread factor over the horizon (`scale = "horizon"`), the correction of
+#' the drift (`bias = TRUE`), separate factors for age bands (`ages`) and
+#' calibration on life expectancy or the age-standardised rate (`quantity`).
+#'
+#' **Estimation.** The parameters are bounded: \eqn{s_1} between 0.1 and 20,
+#' \eqn{\gamma} between -1 and 1, and \eqn{b} between -0.05 and 0.05 (log
+#' rate per year). With one parameter (`scale = "constant"`, `bias = FALSE`)
+#' \eqn{\log s_1} is found by [stats::optimize()] within its bounds;
+#' otherwise the parameters are found by Nelder-Mead ([stats::optim()],
+#' relative tolerance 1e-6, at most 300 iterations), started at
+#' \eqn{s_1 = 1}, \eqn{\gamma = 0}, \eqn{b = 0}, with values outside the
+#' bounds rejected. The observation noise of the scored forecasts is
+#' simulated once (common random numbers), so the score is a deterministic
+#' function of the parameters.
+#'
+#' **Long horizons.** The parameters are estimated on horizons 1 to
+#' \eqn{h_{max}}, the distance from the first origin to the last training
+#' year (10 years with the defaults). Beyond \eqn{h_{max}} the spread factor
+#' and the drift correction are held at their values at \eqn{h_{max}}. A
+#' forecast more than twice as long as \eqn{h_{max}} gives a warning (class
+#' `mt_warning_recalibrate`), because nothing in the training data shows how
+#' the spread of the model is wrong at such horizons. With the defaults this
+#' concerns forecasts of more than 20 years (`mt_forecast()` forecasts 10 by
+#' default); give a longer `years` for long projections, or accept the
+#' constant factor.
 #'
 #' The wrapper works with any specification, including [ensemble()],
 #' [bootstrapped()] and joint models. For [reconciled()] models the bottom
@@ -46,22 +83,20 @@
 #' 30 forecast years, horizons 1 to 10), so they carry their own uncertainty,
 #' and they cannot anticipate changes after the window. `n_boot` refits them
 #' on forecasts (stratum x origin) resampled with replacement and reports
-#' 95% percentile intervals. Beyond the longest horizon of the window, the
-#' spread factor and the drift correction stay constant. The inner models are
-#' fitted to shorter series than the final model, which matters for models
-#' whose uncertainty depends on the length of the series (the drift of a
-#' random walk). Compare calibrated and uncalibrated models in an outer
-#' backtest.
+#' 95% percentile intervals. The inner models are fitted to shorter series
+#' than the final model, which matters for models whose uncertainty depends
+#' on the length of the series (the drift of a random walk). Compare
+#' calibrated and uncalibrated models in an outer backtest.
 #'
-#' **Age bands.** With `ages` (break points, for example `c(50, 75)`), the
-#' factors are estimated separately for each age band, so that a model that
-#' is too narrow at old ages and too wide at young ages is corrected at
-#' both. Observed cells belong to the band of their lower age; use break
-#' points that are bounds of the observed age groups.
+#' **Age bands** (package-specific). With `ages` (break points, for example
+#' `c(50, 75)`), the factors are estimated separately for each age band, so
+#' that a model that is too narrow at old ages and too wide at young ages is
+#' corrected at both. Observed cells belong to the band of their lower age;
+#' use break points that are bounds of the observed age groups.
 #'
-#' **Quantity.** By default the log death rates of single cells are scored.
-#' Intervals of life expectancy and ASR also depend on how the ages move
-#' together, which the transformation keeps from the base model;
+#' **Quantity** (package-specific). By default the log death rates of single
+#' cells are scored. Intervals of life expectancy and ASR also depend on how
+#' the ages move together, which the transformation keeps from the base model;
 #' `quantity = "life_expectancy"` (at birth) or `"asr"` scores these instead,
 #' per test year and stratum (fewer scored values, so the factors are less
 #' certain).
@@ -87,9 +122,11 @@
 #' @param years Length of the calibration window (the last observed years).
 #' @param n_origins Number of origins in the window (evenly spaced from
 #'   `years` to 2 years before the end of the training data).
-#' @param scale `"horizon"` (spread factor \eqn{s_1 h^{\gamma}}) or
-#'   `"constant"`.
-#' @param bias Estimate a correction of the drift (log rate per year).
+#' @param scale `"constant"` (default: one spread factor \eqn{s_1} for all
+#'   horizons) or `"horizon"` (spread factor \eqn{s_1 h^{\gamma}},
+#'   package-specific).
+#' @param bias Estimate a correction of the drift (log rate per year;
+#'   package-specific).
 #' @param target `"crps"` or `"interval"` (interval score at `level`).
 #' @param level Level of the central interval for `target = "interval"`.
 #' @param by Stratum variables with separate calibration parameters.
@@ -109,6 +146,11 @@
 #'   and coverage of the inner forecasts before and after calibration, and
 #'   with `n_boot` the intervals `scale_h1_lo`, `scale_h1_hi`, ...).
 #' @references
+#' Van Schaeybroeck B, Vannitsem S (2015). Ensemble post-processing using
+#' member-by-member approaches: theoretical aspects. *Quarterly Journal of
+#' the Royal Meteorological Society* 141(688): 807-818.
+#' \doi{10.1002/qj.2397}
+#'
 #' Gneiting T, Raftery AE, Westveld AH, Goldman T (2005). Calibrated
 #' probabilistic forecasting using ensemble model output statistics and
 #' minimum CRPS estimation. *Monthly Weather Review* 133(5): 1098-1118.
@@ -123,7 +165,7 @@
 #' fit$calibration
 #' fc <- mt_forecast(fit, h = 5, n_draws = 100, seed = 1)
 #' @export
-recalibrated <- function(spec, years = 10, n_origins = 5, scale = c("horizon", "constant"), bias = FALSE,
+recalibrated <- function(spec, years = 10, n_origins = 5, scale = c("constant", "horizon"), bias = FALSE,
                        target = c("crps", "interval"), level = 0.95, by = NULL, n_draws = 100, seed = 1,
                        ages = NULL, quantity = c("rate", "life_expectancy", "asr"), n_boot = 0) {
   check_class(spec, "mt_spec", "spec")
@@ -207,8 +249,9 @@ calibration_targets <- function(fit) {
   if (is.null(hs)) seq_len(nrow(fit$strata)) else hs$bottom
 }
 
-# Does the predictive distribution add Poisson and extra-Poisson noise to the
-# rate draws (models of smooth rates), or are the draws observed rates?
+# Does the predictive distribution add Poisson (or negative binomial) deaths
+# to the rate draws (models of expected rates), or are the draws observed
+# rates?
 spec_adds_noise <- function(spec) {
   if (inherits(spec, "mt_spec_ensemble")) return(any(vapply(spec$params$components, spec_adds_noise, TRUE)))
   if (!is.null(spec$params$base) && inherits(spec$params$base, "mt_spec")) return(spec_adds_noise(spec$params$base))
@@ -224,15 +267,17 @@ fit_adds_noise <- function(fit) {
   spec_adds_noise(specs[[length(specs)]]) || isTRUE(fit$smoothed_input)
 }
 
-# Observation noise of each draw: whether Poisson noise is added
-# (`noise(s)`: one flag per draw for stratum s) and the extra-Poisson sd by
-# age (`sd(s)`: ages x draws). Draws of an ensemble follow the component
-# they come from (`fc$component`: one per draw, or [stratum, draw] after
-# reordering; without it, draws are allocated to the components in
-# proportion to the weights); strata of a fit split into groups
-# (stratified(), tuned(by = )) follow the fit of their group.
+# Observation noise of each draw: whether deaths are drawn given the rates
+# (`noise(s)`: one flag per draw for stratum s) and the size of their
+# negative binomial distribution (`size(s)`: one per draw; Inf for Poisson).
+# The sizes are those of the posterior draws of `fc` (stanmomo(family =
+# "nb")), paired by position, or else drawn from the posterior of the fit.
+# Draws of an ensemble follow the component they come from (`fc$component`:
+# one per draw, or [stratum, draw] after reordering; without it, draws are
+# allocated to the components in proportion to the weights); strata of a fit
+# split into groups (stratified(), tuned(by = )) follow the fit of their
+# group.
 draw_noise <- function(fit, fc, n_draws) {
-  na <- length(fit$age)
   comps <- fit$components
   if (!is.null(comps)) {
     parts <- lapply(comps, draw_noise, fc = NULL, n_draws = n_draws)
@@ -247,10 +292,10 @@ draw_noise <- function(fit, fc, n_draws) {
       out <- logical(n_draws)
       for (j in unique(ks)) out[ks == j] <- parts[[j]]$noise(s)[ks == j]
       out
-    }, sd = function(s) {
+    }, size = function(s) {
       ks <- of(s)
-      out <- matrix(0, na, n_draws)
-      for (j in unique(ks)) out[, ks == j] <- parts[[j]]$sd(s)[, ks == j, drop = FALSE]
+      out <- rep(Inf, n_draws)
+      for (j in unique(ks)) out[ks == j] <- parts[[j]]$size(s)[ks == j]
       out
     }))
   }
@@ -261,13 +306,26 @@ draw_noise <- function(fit, fc, n_draws) {
       pos[fit$groups[[g]]] <- seq_along(fit$groups[[g]])
     }
     parts <- lapply(fit$group_fits, draw_noise, fc = NULL, n_draws = n_draws)
-    return(list(noise = function(s) parts[[grp[s]]]$noise(pos[s]), sd = function(s) parts[[grp[s]]]$sd(pos[s])))
+    return(list(noise = function(s) parts[[grp[s]]]$noise(pos[s]),
+                size = function(s) parts[[grp[s]]]$size(pos[s])))
   }
   flag <- fit_adds_noise(fit)
-  sd <- fit$noise_sd
-  list(noise = function(s) rep(flag, n_draws), sd = function(s) {
-    matrix(if (flag && !is.null(sd)) sd[, s] else 0, na, n_draws)
+  size <- if (!is.null(fc$nb_size) && ncol(fc$nb_size) == n_draws) fc$nb_size else sample_nb_size(fit, n_draws)
+  list(noise = function(s) rep(flag, n_draws), size = function(s) {
+    if (flag && !is.null(size)) size[s, ] else rep(Inf, n_draws)
   })
+}
+
+# Sizes of the negative binomial distribution of the deaths [stratum, draw]
+# drawn from the posterior of fits with that likelihood (stanmomo(family =
+# "nb")); NULL for other models
+sample_nb_size <- function(fit, n_draws) {
+  if (isTRUE(fit$spec$joint) || !is.list(fit$fits)) return(NULL)
+  post <- lapply(fit$fits, function(f) if (is.list(f) && !inherits(f, "mt_fit")) f$nb_size)
+  if (all(vapply(post, is.null, logical(1)))) return(NULL)
+  do.call(rbind, lapply(post, function(p) {
+    if (is.null(p)) rep(Inf, n_draws) else p[sample.int(length(p), n_draws, replace = TRUE)]
+  }))
 }
 
 # One inner origin: forecast draws of the rest of the window and the observed
@@ -311,7 +369,7 @@ calibration_origin <- function(spec, data, origin, last, prep, n_draws, seed, ta
       label = lab, origin = origin, L = L, m = row_quantiles(L, 0.5)[, 1],
       h = rep(fc$periods - origin, each = na)[used],
       E = Eg, C = C, Ecell = Ecell, y = log(pmax(o$value, 0.5) / Ecell), noise = nz$noise(sf),
-      sd = nz$sd(sf)[rep(seq_len(na), np)[used], , drop = FALSE], obs_age = o$age_lo,
+      size = nz$size(sf), obs_age = o$age_lo,
       qg = if (quantity != "rate") quantity_groups(o, Ecell, quantity))
   }
   out
@@ -331,13 +389,17 @@ quantity_groups <- function(o, Ecell, quantity) {
     key <- paste(lo, hi, collapse = ",")
     if (is.null(out[[key]])) {
       ax <- mt_axis(lo, hi, kind = "age")
-      out[[key]] <- list(K = NULL, qo = numeric(), ax = ax, quantity = quantity,
-                         w = if (quantity == "asr") standard_weights(ax, standard_population("esp2013")))
+      out[[key]] <- list(K = NULL, E = NULL, qo = numeric(), ax = ax, quantity = quantity,
+                         standard = if (quantity == "asr") standard_population("esp2013"))
     }
     r_obs <- o$value[k] / Ecell[k]
     g <- out[[key]]
-    qo <- if (quantity == "life_expectancy") life_expectancy(r_obs, g$ax) else log(sum(r_obs * g$w) / sum(g$w))
+    # ASR by direct standardisation on the standard's age groups with the
+    # exposures of the test year, as in mt_backtest()
+    qo <- if (quantity == "life_expectancy") life_expectancy(r_obs, g$ax) else
+      log(asr_columns(matrix(r_obs), g$ax, g$standard, Ecell[k], per = 1))
     out[[key]]$K <- cbind(g$K, k)
+    out[[key]]$E <- cbind(g$E, Ecell[k])
     out[[key]]$qo <- c(g$qo, qo)
   }
   unname(out)
@@ -353,7 +415,7 @@ split_bands <- function(piece, breaks) {
     cols <- which(bg == b)
     list(label = piece$label, origin = piece$origin, L = piece$L[cols, , drop = FALSE], m = piece$m[cols],
          h = piece$h[cols], E = piece$E[cols], C = piece$C[rows, cols, drop = FALSE], Ecell = piece$Ecell[rows],
-         y = piece$y[rows], noise = piece$noise, sd = piece$sd[cols, , drop = FALSE], obs_age = piece$obs_age[rows])
+         y = piece$y[rows], noise = piece$noise, size = piece$size, obs_age = piece$obs_age[rows])
   })
 }
 
@@ -375,8 +437,10 @@ stack_pieces <- function(pieces, n_draws) {
   P$pois <- do.call(rbind, lapply(seq_along(pieces), function(i) {
     matrix(pieces[[i]]$noise, N[i], n_draws, byrow = TRUE)
   }))
-  sd <- do.call(rbind, lapply(pieces, `[[`, "sd"))
-  P$extra <- if (any(sd > 0)) matrix(exp(stats::rnorm(length(sd), 0, sd)), nrow(sd)) else 1
+  # negative binomial size per observed cell and draw (Inf: Poisson)
+  P$size <- do.call(rbind, lapply(seq_along(pieces), function(i) {
+    matrix(pieces[[i]]$size %||% Inf, N[i], n_draws, byrow = TRUE)
+  }))
   P$U <- matrix(stats::runif(sum(N) * n_draws), sum(N))
   P$Z <- stats::qnorm(P$U)
   # life expectancy or ASR: cell indices shifted to the stacked rows
@@ -397,7 +461,8 @@ calibration_scored <- function(X, P) {
   if (is.null(P$qg)) return(list(S = X, obs = P$y))
   S <- do.call(rbind, lapply(P$qg, function(g) {
     M <- matrix(exp(X[as.vector(g$K), , drop = FALSE]), nrow = nrow(g$K))
-    q <- if (g$quantity == "life_expectancy") lt_columns(M, g$ax)$ex[1, ] else log(colSums(M * g$w) / sum(g$w))
+    q <- if (g$quantity == "life_expectancy") lt_columns(M, g$ax)$ex[1, ] else
+      log(asr_columns(M, g$ax, g$standard, g$E, per = 1))
     matrix(q, ncol(g$K))
   }))
   list(S = S, obs = unlist(lapply(P$qg, `[[`, "qo")))
@@ -416,13 +481,18 @@ calibration_shift <- function(theta, h, scale, bias, h_max = Inf) {
 # Log rates of the observed cells under parameters theta, with observation noise
 calibration_sample <- function(theta, P, scale, bias) {
   sh <- calibration_shift(theta, P$h, scale, bias)
-  Mu <- exp(P$m + sh$b + sh$s * (P$L - P$m)) * P$E * P$extra
+  Mu <- exp(P$m + sh$b + sh$s * (P$L - P$m)) * P$E
   Lam <- as.matrix(P$C %*% Mu)
   D <- Lam
-  small <- P$pois & Lam < 50
-  large <- P$pois & !small
+  # negative binomial deaths (finite size): an observed cell that sums grid
+  # cells gets the size that matches the variance of the sum
+  V2 <- if (any(is.finite(P$size))) as.matrix(P$C %*% Mu^2) / P$size else 0
+  nb <- P$pois & V2 > 0
+  small <- P$pois & !nb & Lam < 50
+  large <- P$pois & !nb & !small
   D[small] <- stats::qpois(P$U[small], Lam[small])
   D[large] <- pmax(Lam[large] + sqrt(Lam[large]) * P$Z[large], 0)
+  if (any(nb)) D[nb] <- stats::qnbinom(P$U[nb], size = Lam[nb]^2 / V2[nb], mu = Lam[nb])
   log(pmax(D, 0.5) / P$Ecell)
 }
 
@@ -529,6 +599,16 @@ calibration_theta_of <- function(theta, key) {
 mt_forecast.mt_fit_recalibrated <- function(fit, h = 10, to = NULL, n_draws = 500, seed = NULL, predictive = FALSE,
                                           exposure = NULL, ...) {
   p <- fit$spec$params
+  hmax <- fit$calibration_hmax %||% Inf
+  h_fc <- if (is.null(to)) h else to - max(fit$periods)
+  if (is.numeric(h_fc) && length(h_fc) == 1 && is.finite(hmax) && h_fc > 2 * hmax) {
+    mt_warn(sprintf(paste("The forecast reaches %d years ahead, more than twice the longest horizon of the",
+                          "calibration (%d years); the %s of horizon %d %s used beyond it. Give a longer `years`",
+                          "to calibrate longer horizons."), as.integer(h_fc), as.integer(hmax),
+                    if (isTRUE(p$bias)) "spread factor and the drift correction" else "spread factor",
+                    as.integer(hmax), if (isTRUE(p$bias)) "are" else "is"),
+            class = "recalibrate")
+  }
   key <- if (is.null(p$by)) rep("all", nrow(fit$strata)) else
     do.call(paste, c(as.list(fit$strata[, p$by, with = FALSE]), sep = "."))
   band <- band_labels(p$ages)[findInterval(fit$age$lower, p$ages) + 1L]
@@ -622,8 +702,9 @@ unwrap_fit <- function(fit, cls) {
   base
 }
 
-# Poisson and extra-Poisson noise of the base model added to rate draws.
-# Cells can have zero deaths (rate 0), as in predictive_rates()
+# Observation noise of the base model added to rate draws: Poisson (or
+# negative binomial) deaths given the rates and exposures, divided by the
+# exposures. Cells can have zero deaths (rate 0), as in predictive_rates()
 add_observation_noise <- function(arr, base_fit, fc, targets, E) {
   d <- dim(arr)
   nz <- draw_noise(base_fit, fc, d[4])
@@ -631,9 +712,8 @@ add_observation_noise <- function(arr, base_fit, fc, targets, E) {
     R <- arr[, , s, ]
     if (anyNA(R) || !any(nz$noise(s))) next
     Es <- as.vector(E[, , s])
-    sd <- array(nz$sd(s)[rep(seq_len(d[1]), d[2]), ], d[c(1, 2, 4)])
-    mu <- R * exp(stats::rnorm(length(R), 0, sd)) * Es
-    D <- stats::rpois(length(mu), mu) / pmax(Es, 1e-12)
+    mu <- R * Es
+    D <- r_deaths(mu, rep(nz$size(s), each = d[1] * d[2])) / pmax(Es, 1e-12)
     k <- rep(nz$noise(s), each = d[1] * d[2])
     R[k] <- D[k]
     arr[, , s, ] <- R

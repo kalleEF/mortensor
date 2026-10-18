@@ -10,7 +10,7 @@ reconciled(
   method = c("wls", "mint", "structural", "ols", "bottom_up", "proportional",
     "energy_score"),
   shrink = "auto",
-  dependence = c("auto", "empirical", "none"),
+  dependence = c("none", "empirical", "auto"),
   fixed = NULL,
   years = 10,
   n_origins = 5,
@@ -22,21 +22,25 @@ reconciled(
 \arguments{
 \item{spec}{Base model specification (fitted to all strata).}
 
-\item{hierarchy}{An \code{\link[=mt_hierarchy]{mt_hierarchy()}}.}
+\item{hierarchy}{An \code{\link[=mt_hierarchy]{mt_hierarchy()}}. When the data hold the aggregate
+strata, their exposures are compared with those the hierarchy implies,
+with a warning (class \code{mt_warning_hierarchy_exposure}) when they differ,
+for example causes of death declared without \code{additive = "rates"}.}
 
 \item{method}{A method of \code{\link[=mt_reconcile]{mt_reconcile()}}, or \code{"energy_score"}
 (score-optimal reconciliation, see Details).}
 
 \item{shrink}{See \code{\link[=mt_reconcile]{mt_reconcile()}}.}
 
-\item{dependence}{\code{"auto"} (default: \code{"none"} for models fitted jointly
-across strata, whose draws already carry their dependence, such as
-\code{\link[=li_lee]{li_lee()}} and \code{\link[=tucker3]{tucker3()}}; \code{"empirical"} for models fitted per stratum),
-\code{"empirical"} or \code{"none"}. With \code{"empirical"} the paths of the strata
-are reordered before reconciliation (see \code{\link[=mt_reconcile]{mt_reconcile()}}), so that
-aggregates keep the observed co-movement of the strata; the observation
-noise of predictive draws is independent across cells, as for models
-without a hierarchy.}
+\item{dependence}{\code{"none"} (default: the draws are reconciled as they
+are), \code{"empirical"} or \code{"auto"} (the same as \code{"none"}, kept for
+compatibility). With \code{"empirical"} the paths of separately fitted strata
+are reordered before reconciliation by a package-specific method (see
+\code{\link[=mt_reconcile]{mt_reconcile()}}). Draws of joint models such as \code{\link[=li_lee]{li_lee()}} and
+\code{\link[=tucker3]{tucker3()}}, which carry the dependence between strata, are never
+reordered (\code{"empirical"} then gives a warning and is ignored). The
+observation noise of predictive draws is independent across cells
+either way.}
 
 \item{fixed}{Strata whose forecasts are kept (see \code{\link[=mt_reconcile]{mt_reconcile()}}); not
 with \code{"energy_score"}.}
@@ -76,12 +80,12 @@ added with \code{\link[=mt_aggregate_strata]{mt_aggregate_strata()}} before fitt
 forecasts every node; exposures for the forecast (\code{exposure} of
 \code{\link[=mt_forecast]{mt_forecast()}}) can then be given for the bottom strata only, and those
 of the aggregates are their sums. Predictive draws (used by backtests)
-are coherent as well: the observation noise of the base model (Poisson
-and extra-Poisson variation for models of smooth rates, none for models
-of observed rates such as \code{\link[=rwd]{rwd()}}; for \code{\link[=ensemble]{ensemble()}} and \code{\link[=stratified]{stratified()}}
-models that of the component or group each draw comes from) is drawn for
-the bottom strata only, independently per cell, and the aggregates are
-their sums.
+are coherent as well: given the reconciled rates, the Poisson variation
+of the deaths of the bottom strata is drawn independently per cell and
+draw (none for models of observed rates such as \code{\link[=rwd]{rwd()}}; for \code{\link[=ensemble]{ensemble()}}
+and \code{\link[=stratified]{stratified()}} models as for the component or group each draw comes
+from; negative binomial for \code{stanmomo(family = "nb")}), and the
+aggregates are the sums of the bottom strata.
 }
 \details{
 Whether coherence costs accuracy, and which method and base model work
@@ -107,6 +111,23 @@ of the predictive distribution the forecast gives: reconciled draws plus
 the observation noise of the bottom strata. In the forecast, bottom
 values below zero are set to zero and the aggregates are their sums.
 The estimates and a table of the training are in the fit (see Value).
+
+Two details differ from ProbReco. (1) Each step estimates the energy
+score from two samples of \code{draws_per_step} base draws of every training
+forecast, which ProbReco simulates independently. Here they are taken
+from the \code{n_draws} inner draws without replacement when there are at
+least \code{2 * draws_per_step} of them, and otherwise from two disjoint
+random halves, so that a draw is never paired with itself (such pairs
+would contribute a distance of zero to the score). (2) Before the
+optimisation, the bottom values are divided by their mean observed value
+and every node, as an input, by its own mean observed value; the
+estimates are transformed back afterwards. This leaves the optimum
+unchanged, but Adam moves every parameter by steps of about \code{eta}, so the
+rescaling changes the path of the optimisation, and since it stops after
+\code{max_iter} steps or when the steps fall below \code{tol}, also the estimates,
+relative to ProbReco, which optimises on the original scale. The
+rescaling is package-specific; it makes the steps comparable across ages
+and between small and large nodes.
 
 The method has many parameters and few training forecasts. \eqn{G} has
 one parameter per bottom stratum and node at each age (20 x 54 for 2

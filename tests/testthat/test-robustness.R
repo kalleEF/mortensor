@@ -129,11 +129,15 @@ test_that("suppressed cells need totals or bounds and respect bounds", {
   expect_true(all(mt_obs(y)[provenance == "estimated"]$value <= 2))
   d2 <- d[1:3, ]
   x2 <- suppressWarnings(mt_data(deaths = d2, exposure = d2, by = "region"))
+  # no published total: the Poisson mean of the expected deaths (30 and 10
+  # at the pooled rate 0.1) truncated to the bounds
+  tmean <- function(l, k) sum(k * stats::dpois(k, l)) / sum(stats::dpois(k, l))
   z <- mt_fill_suppressed(x2, lower = 1, upper = 4)
   v <- mt_obs(z)[provenance == "estimated"]$value
-  expect_equal(v, c(4, 4))
+  expect_equal(v, c(tmean(30, 1:4), tmean(10, 1:4)), tolerance = 1e-10)
+  expect_true(all(v >= 1 & v <= 4))
   z2 <- mt_fill_suppressed(x2, lower = 1, upper = 40)
-  expect_equal(mt_obs(z2)[provenance == "estimated"]$value, c(30, 10))
+  expect_equal(mt_obs(z2)[provenance == "estimated"]$value, c(tmean(30, 1:40), tmean(10, 1:40)), tolerance = 1e-10)
 })
 
 test_that("smoothing leaves age 0 alone and respects group widths", {

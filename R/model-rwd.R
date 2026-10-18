@@ -12,29 +12,38 @@
 #' * `"gaussian"`: independent normal innovations per age with the
 #'   estimated variance, and normal drift uncertainty.
 #'
-#' Zero death counts are replaced by 0.5 before taking logs.
+#' Zero death counts are replaced by 0.5 before taking logs. The draws
+#' describe observed rates, so predictive draws add nothing.
 #'
-#' With `observation_noise = TRUE` the log rate is a random walk with drift
-#' observed with noise (a local level model with drift). Year-to-year
-#' changes of observed rates then contain the noise of two years, and a
-#' plain random walk accumulates it at every step, which makes its
-#' intervals for observed rates too wide when deaths are few or rates
-#' fluctuate. The variances are estimated per age from the variance and
-#' first autocovariance of the changes (the noise variance is the Poisson
-#' part, one over the deaths, plus an extra part common to all ages), the
-#' level is Kalman filtered, and the forecast draws are paths of the level;
-#' predictive draws add the observation noise. The variant is more accurate
-#' than the plain random walk where deaths are few, but over 5 to 10 years
-#' its intervals can be too narrow, because changes of trend exceed the
-#' uncertainty of a constant drift; the plain random walk is wider. With a
-#' `drift_window`, the model is fitted to the years of the window and fitted
-#' rates of earlier years are missing.
+#' **Deprecated: `observation_noise = TRUE`.** This variant treats the log
+#' rate as a random walk with drift observed with noise (a local level
+#' model with drift), with variances estimated by a moment estimator of this
+#' package without a published source: from the variance and first
+#' autocovariance of the year-to-year changes, the noise variance as the
+#' Poisson part (one over the deaths) plus an extra part common to all ages,
+#' clamped to at most 0.45 times the variance of the changes, the level
+#' variance to at least 0.1 times it, and shrunk towards the median of the
+#' ages with a prior standard deviation of three times that median; the
+#' level is Kalman filtered and the draws are paths of the level, to which
+#' predictive draws add Poisson variation of the deaths. It still works and
+#' warns (class `mt_warning_deprecated`). The published equivalent is the
+#' local level model with drift fitted by maximum likelihood (Harvey 1989),
+#' whose reduced form for the observed log rates is ARIMA(0,1,1) with drift:
+#' `arima_series(order = c(0, 1, 1), drift = TRUE)`. With a `drift_window`,
+#' the variant is fitted to the years of the window and fitted rates of
+#' earlier years are missing.
 #'
 #' @param drift_window Number of most recent years used for drift and
 #'   innovations (`NULL`: all years).
 #' @param innovations `"bootstrap"` or `"gaussian"`.
-#' @param observation_noise Model the log rates as a random walk plus noise.
+#' @param observation_noise Deprecated: model the log rates as a random walk
+#'   plus noise (see Details); use `arima_series(order = c(0, 1, 1), drift =
+#'   TRUE)`.
 #' @return A model specification.
+#' @references
+#' Harvey AC (1989). *Forecasting, Structural Time Series Models and the
+#' Kalman Filter*. Cambridge University Press.
+#' @seealso [arima_series()].
 #' @examples
 #' x <- mt_example(deaths = "single")
 #' fc <- mt_forecast(mt_fit(rwd(drift_window = 15), x), h = 5, n_draws = 100, seed = 1)
@@ -43,6 +52,11 @@ rwd <- function(drift_window = NULL, innovations = c("bootstrap", "gaussian"), o
   innovations <- match.arg(innovations)
   if (!is.null(drift_window)) check_number(drift_window, "drift_window", lower = 3, integerish = TRUE)
   check_flag(observation_noise, "observation_noise")
+  if (observation_noise) {
+    mt_warn(paste("rwd(observation_noise = TRUE) is deprecated: its variance estimator has no published source.",
+                  "Use arima_series(order = c(0, 1, 1), drift = TRUE), the local level model with drift fitted by",
+                  "maximum likelihood."), class = "deprecated")
+  }
   new_mt_spec("rwd", list(drift_window = drift_window, innovations = innovations,
                           observation_noise = observation_noise),
               min_periods = if (observation_noise) 6 else 3,

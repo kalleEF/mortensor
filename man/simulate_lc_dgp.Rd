@@ -2,7 +2,7 @@
 % Please edit documentation in R/validation.R
 \name{simulate_lc_dgp}
 \alias{simulate_lc_dgp}
-\title{Simulated Lee-Carter-type data for calibration checks}
+\title{Simulated Lee-Carter data for calibration checks}
 \usage{
 simulate_lc_dgp(
   n_t = 40,
@@ -10,7 +10,7 @@ simulate_lc_dgp(
   pop = 2e+05,
   sd_k = 0.02,
   drift = -0.015,
-  sd_obs = 0.03
+  sd_obs = 0
 )
 }
 \arguments{
@@ -19,14 +19,22 @@ simulate_lc_dgp(
 \item{seed}{Random seed.}
 
 \item{pop}{Population at age 30 per stratum.}
+
+\item{sd_k, drift}{Standard deviation and drift of the random walk \code{k_t}.}
+
+\item{sd_obs}{Standard deviation of iid noise on the log rates (0: none,
+the Lee-Carter model with Poisson deaths).}
 }
 \value{
 An \link{mt_data} object.
 }
 \description{
-The generator of the 0.1 review: \verb{log m = a_x + b_x k_t + shift_g + e},
-with \code{k_t} a random walk with drift (-0.015, sd 0.02) per stratum, iid
-noise e (sd 0.03), 5-year age groups 30-34 ... 90-94 and 10 strata
-(2 sexes x 5 deprivation quintiles). Deaths are Poisson.
+The Lee-Carter model with Poisson deaths (Brouhns, Denuit and Vermunt
+2002): \verb{log m = a_x + b_x k_t + shift_g}, deaths Poisson with mean
+\code{m * exposure}, with \code{k_t} a random walk with drift (-0.015, sd 0.02) per
+stratum, 5-year age groups 30-34 ... 90-94 and 10 strata (2 sexes x 5
+deprivation quintiles). \code{sd_obs > 0} adds iid normal noise to the log
+rates before the Poisson draw (the generator of the 0.1 review used 0.03),
+for studies of misspecified models.
 }
 \keyword{internal}

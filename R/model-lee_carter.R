@@ -31,12 +31,35 @@
 #' The period index follows a random walk with drift. Draws include the
 #' innovations and the uncertainty of the drift. With `bootstrap = TRUE` the
 #' parameters are re-estimated on `n_boot` Poisson resamples of the fitted
-#' deaths of the fitting period (semi-parametric bootstrap of Brouhns et al.
-#' 2005), which adds the uncertainty of `a` and `b`.
+#' deaths of the fitting period (semi-parametric bootstrap with fitted deaths
+#' of Renshaw and Haberman 2008), which adds the uncertainty of `a` and `b`.
+#' The bootstrap of Brouhns, Denuit and Van Keilegom (2005) resamples the
+#' observed deaths instead: `bootstrapped(lee_carter(), type = "data")`
+#' ([bootstrapped()]).
 #'
 #' Age groups without deaths in the fitting period get a constant rate (0.5
 #' deaths over the period) and no trend; with `adjust = "e0"` they enter the
 #' life tables at that rate.
+#'
+#' **Safeguards of this package for sparse counts.** Where the Poisson
+#' likelihood has no finite maximum (`method = "poisson"` with very few
+#' deaths), the fit falls back to two package-specific estimators (reference
+#' unknown), each with a warning (class `mt_warning_model_fit`; within
+#' [mt_fit()] it is reported with the stratum): first to the Poisson fit with
+#' a ridge penalty that shrinks `b` towards equal shares `1 / n_ages`, and
+#' if that also fails to the SVD estimates (`method = "svd"` with `adjust =
+#' "dt"`). Their forecasts are not those of the Poisson Lee-Carter model;
+#' wider age groups ([mt_regroup()]) or pooling ([li_lee()]) avoid them.
+#'
+#' Draws describe the expected rates. Predictive draws
+#' (`mt_forecast(predictive = TRUE)`) add Poisson variation of the deaths
+#' given the rates and the exposures, the observation model of the Poisson
+#' Lee-Carter model (Brouhns, Denuit and Vermunt 2002); no other observation
+#' noise is added. If intervals are too narrow on real data, that is a
+#' property of the model: see [recalibrated()], [ensemble()], or
+#' overdispersed models such as `stanmomo("lc", family = "nb")`
+#' ([stanmomo()]; negative binomial Lee-Carter model of Delwarde, Denuit and
+#' Partrat 2007).
 #'
 #' `rotate = TRUE` rotates the age pattern of decline as life expectancy
 #' rises (Li, Lee and Gerland 2013). In long-lived populations the decline
@@ -74,7 +97,8 @@
 #' @param min_years `choose_period` considers fitting periods of more than
 #'   `min_years` years (`minperiod` of `demography::lca()`).
 #' @param jump_off `"fitted"` (forecasts start from the fitted rates of the
-#'   last year) or `"observed"` (from the observed rates of the last year).
+#'   last year) or `"observed"` (from the observed rates of the last year;
+#'   Lee and Miller 2001).
 #' @param bootstrap Semi-parametric bootstrap of the parameters.
 #' @param n_boot Number of bootstrap fits.
 #' @param rotate Rotate the age pattern of decline `b` towards an ultimate
@@ -102,9 +126,17 @@
 #' method for forecasting mortality. *Demography* 38(4): 537-549.
 #' \doi{10.1353/dem.2001.0036}
 #'
+#' Delwarde A, Denuit M, Partrat C (2007). Negative binomial version of the
+#' Lee-Carter model for mortality forecasting. *Applied Stochastic Models in
+#' Business and Industry* 23(5): 385-401.
+#'
 #' Brouhns N, Denuit M, Van Keilegom I (2005). Bootstrapping the Poisson
 #' log-bilinear model for mortality forecasting. *Scandinavian Actuarial
 #' Journal* 2005(3): 212-224.
+#'
+#' Renshaw AE, Haberman S (2008). On simulation-based approaches to risk
+#' measurement in mortality with specific reference to Poisson Lee-Carter
+#' modelling. *Insurance: Mathematics and Economics* 42(2): 797-816.
 #'
 #' Li N, Lee R, Gerland P (2013). Extending the Lee-Carter method to model
 #' the rotation of age patterns of mortality decline for long-term
@@ -179,15 +211,23 @@ fit_model.mt_spec_lee_carter <- function(spec, D, E, ages, periods, ...) {
   if (isTRUE(p$rotate)) rotation_check(ages)
   zero <- rowSums(D) == 0
   if (sum(!zero) < 2) mt_abort("Fewer than two age groups with deaths.", class = "model_fit")
-  fallback <- FALSE
-  # Poisson estimates, or SVD estimates where the Poisson likelihood has no
-  # finite maximum (very sparse counts). `fixed`: constant rates of the age
-  # groups left out of D (NA for the rows of D), for life tables over all ages
+  fallback <- character()
+  # Poisson estimates; where the Poisson likelihood has no finite maximum
+  # (very sparse counts) the package's safeguards: a ridge penalty on b, then
+  # SVD estimates (`fallback` records which). `fixed`: constant rates of the
+  # age groups left out of D (NA for the rows of D), for life tables over all
+  # ages
   est_one <- function(D, E, fixed = NULL) {
     if (p$method == "svd") return(lc_svd(D, E, adjust = p$adjust %||% "dt", ages = ages, fixed = fixed))
     tryCatch(lc_poisson(D, E), mt_error_model_fit = function(e) {
-      fallback <<- TRUE
-      tryCatch(lc_poisson(D, E, ridge = 1), mt_error_model_fit = function(e) lc_svd(D, E))
+      tryCatch({
+        out <- lc_poisson(D, E, ridge = 1)
+        fallback <<- c(fallback, "ridge")
+        out
+      }, mt_error_model_fit = function(e) {
+        fallback <<- c(fallback, "svd")
+        lc_svd(D, E)
+      })
     })
   }
   fit_lc <- function(D, E) {
@@ -212,14 +252,22 @@ fit_model.mt_spec_lee_carter <- function(spec, D, E, ages, periods, ...) {
     E <- E[, first:ncol(E), drop = FALSE]
     zero <- rowSums(D) == 0
   }
+  # fallbacks of the final fit only (not of the candidate periods)
+  fallback <- character()
   est <- fit_lc(D, E)
   if (any(zero)) {
     mt_warn(sprintf(paste("No deaths in age group(s) %s in the training years: constant rate (0.5 deaths in all",
                           "years), no trend."), paste(ages$labels[zero], collapse = ", ")), class = "sparse")
   }
-  if (fallback) {
-    mt_warn(paste("The Poisson likelihood has no finite maximum (sparse counts); the age pattern of change b",
-                  "is shrunk towards equal shares (ridge penalty)."), class = "sparse")
+  if ("ridge" %in% fallback) {
+    mt_warn(paste("The Poisson likelihood of the Lee-Carter model has no finite maximum (sparse counts); fitted",
+                  "with a ridge penalty that shrinks the age pattern of change b towards equal shares (a",
+                  "safeguard of this package without a published source)."), class = "model_fit")
+  }
+  if ("svd" %in% fallback) {
+    mt_warn(paste("The Poisson likelihood of the Lee-Carter model has no finite maximum (sparse counts), also with",
+                  "a ridge penalty; the SVD estimates (method = \"svd\", adjust = \"dt\") are used instead (a",
+                  "safeguard of this package)."), class = "model_fit")
   }
   est$last_log_rate <- log_rates(D[, ncol(D)], E[, ncol(E)])
   est$fitted <- exp(est$a + outer(est$b, est$k))

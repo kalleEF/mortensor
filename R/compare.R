@@ -16,7 +16,18 @@
 #'   expectancy with `_le` (years), the age-standardised rate with `_asr`,
 #'   and differences between strata (`contrast` in [mt_backtest()]) with
 #'   `_le_gap` and `_asr_gap`. The same model with different preprocessing
-#'   gets one row per pipeline (column `prep`, as in [mt_score()]).
+#'   gets one row per pipeline (column `prep`, as in [mt_score()]). With
+#'   several models, only the cells that every model scored enter (the
+#'   same origin, horizon, stratum, age group, year and target, as in
+#'   [mt_dm_test()]), with a warning of class `mt_warning_backtest` when
+#'   cells are left out: where a model failed at an origin or in a stratum,
+#'   the scores of the other models for those cells would otherwise enter
+#'   their means only, and the means would refer to different targets.
+#'   `common = FALSE` scores every model on its own cells; a target of
+#'   which no cell was scored by every model (for example with different
+#'   age groups) is always scored so. The CRPS depends on the number of
+#'   draws (see [mt_backtest()]); compare models
+#'   backtested with the same `n_draws`, as `mt_compare()` does.
 #' * `mt_compare_forecasts()` gives one quantity of several forecasts
 #'   (`mt_draws`) or observed data (`mt_data`, with Poisson intervals) as
 #'   "median (lower-upper)", one column per forecast (empty where a
@@ -41,9 +52,12 @@
 #' @param hierarchy Optional [mt_hierarchy()]: scores are then given
 #'   separately for the bottom series, the aggregates and the grand total
 #'   (column `level`).
+#' @param common Score only the cells that every model scored (default
+#'   `TRUE`); `FALSE` scores every model on its own cells.
 #' @param forecasts A named list of [mt_draws] objects or [mt_data] objects
 #'   (observed values).
-#' @param quantity `"life_expectancy"`, `"asr"` (per 100,000), `"deaths"`
+#' @param quantity `"life_expectancy"`, `"asr"` (per 100,000, European
+#'   Standard Population 2013, see [asr()]), `"deaths"`
 #'   (summed over the ages, with the exposures of the last observed year
 #'   unless `exposure` is given; forecasts only), `"rate"` (death rates of
 #'   the ages in `ages`) or `"lifespan_variation"` (the index `measure` of
@@ -101,6 +115,36 @@ mt_compare <- function(specs, data, origins = NULL, h = 10, n_draws = 200, quant
   out[]
 }
 
+# Rows of the cells that every model of a backtest scored (models as in
+# mt_dm_test(): "model (prep)" when a model has several pipelines), with a
+# warning when cells are left out
+common_cells <- function(bt) {
+  if (!all(c("model", "origin", "horizon") %in% names(bt))) return(bt)
+  who <- dm_model_units(bt)
+  n_units <- length(attr(who, "levels"))
+  if (n_units < 2) return(bt)
+  keys <- intersect(c("origin", "horizon", "stratum", "age_lo", "age_hi", "period", "target"), names(bt))
+  cell <- do.call(paste, c(unname(as.list(bt[, keys, with = FALSE])), sep = "\r"))
+  cnt <- data.table(cell = cell, unit = as.vector(who))[, list(n = data.table::uniqueN(unit)), by = "cell"]
+  keep <- cnt$n[match(cell, cnt$cell)] == n_units
+  if (all(keep)) return(bt)
+  # a target without any cell scored by every model (for example different
+  # age groups with step_regroup()) keeps the cells of each model
+  tg <- if ("target" %in% names(bt)) bt[["target"]] else rep("rate", nrow(bt))
+  none <- setdiff(unique(tg), unique(tg[keep]))
+  keep[tg %in% none] <- TRUE
+  msg <- c(if (!all(keep)) {
+    sprintf(paste("The models did not score the same cells: %d of %d rows, of cells not scored by every model,",
+                  "are left out so that the models are compared on the same cells (common = FALSE scores every",
+                  "model on its own cells)."), sum(!keep), length(keep))
+  }, if (length(none)) {
+    sprintf(paste("No cell of target(s) %s was scored by every model (different age groups?); these targets are",
+                  "scored on the cells of each model."), paste(none, collapse = ", "))
+  })
+  mt_warn(msg, class = "backtest", call = NULL)
+  bt[keep]
+}
+
 # Level of each backtest row in a hierarchy: "total" where every variable is
 # at its total, "aggregate" where some variable is at its total or a group,
 # "bottom" otherwise
@@ -127,14 +171,16 @@ spec_and_prep <- function(x) {
 #' @rdname mt_compare
 #' @export
 mt_score_table <- function(backtest, metrics = c("crps", "cov95"), targets = NULL, by = "model", digits = 3,
-                           hierarchy = NULL) {
+                           hierarchy = NULL, common = TRUE) {
+  check_flag(common, "common")
   bt <- as.data.table(backtest)
+  if (common) bt <- common_cells(bt)
   if (!is.null(hierarchy)) {
     bt <- copy(bt)
     bt[, level := factor(score_levels(bt, hierarchy), c("bottom", "aggregate", "total"))]
     if (!"level" %in% by) by <- c(by, "level")
-    backtest <- bt
   }
+  backtest <- bt
   have <- if ("target" %in% names(bt)) unique(bt$target) else "rate"
   targets <- targets %||% intersect(c("rate", "life_expectancy", "asr", "life_expectancy_gap", "asr_gap"), have)
   # the rows of mt_score(), the same for every target (with `prep` when a
@@ -243,7 +289,8 @@ mt_plot_compare <- function(forecasts, quantity = c("life_expectancy", "rate", "
     if (!inherits(f, "mt_draws") || is.null(f$fitted)) return(NULL)
     fr <- f$fitted
     dimnames(fr) <- list(f$age$labels, as.character(f$observed_periods), f$strata$label)
-    h <- compare_values(fr, f$age, quantity, at, ages, measure)
+    E <- if (quantity == "asr" && identical(dim(f$train_E), dim(fr))) f$train_E
+    h <- compare_values(fr, f$age, quantity, at, ages, measure, E)
     if (is.null(h)) NULL else h[, forecast := names(forecasts)[i] %||% f$model]
   }), fill = TRUE)
   if (nrow(fit)) fit[, forecast := factor(forecast, levels = levels(tab$forecast))]
@@ -306,7 +353,22 @@ mt_plot_compare <- function(forecasts, quantity = c("life_expectancy", "rate", "
 compare_history <- function(draws, quantity, at = NULL, ages = NULL, data = NULL, measure = "edagger") {
   o <- observed_rates(draws, data)
   if (is.null(o)) return(NULL)
-  compare_values(o, draws$age, quantity, at, ages, measure)
+  E <- if (quantity == "asr") observed_exposures(draws, data, o)
+  compare_values(o, draws$age, quantity, at, ages, measure, E)
+}
+
+# Exposures [age, period, stratum] that go with observed_rates(): of `data`
+# or of the training data of the draws; NULL if there are none
+observed_exposures <- function(draws, data, o) {
+  if (is.null(data)) {
+    E <- draws$train_E
+    if (is.null(E) || !identical(dim(E), dim(o))) return(NULL)
+    dimnames(E) <- dimnames(o)
+    return(E)
+  }
+  y <- mt_regroup(mt_set_grid(data, age = draws$age), age = draws$age)
+  E <- mt_array(y, "exposure")
+  E[, dimnames(o)[[2]], dimnames(o)[[3]], drop = FALSE]
 }
 
 # One index of lifespan variation for quantity = "lifespan_variation"
@@ -317,8 +379,9 @@ check_compare_measure <- function(quantity, measure) {
   measure
 }
 
-# A quantity of a rate array [age, period, stratum] (point values)
-compare_values <- function(m, age, quantity, at = NULL, ages = NULL, measure = "edagger") {
+# A quantity of a rate array [age, period, stratum] (point values); E: the
+# exposures of the same cells (age-standardised rates)
+compare_values <- function(m, age, quantity, at = NULL, ages = NULL, measure = "edagger", E = NULL) {
   dn <- dimnames(m)
   if (quantity == "rate") {
     d <- dim(m)
@@ -333,9 +396,8 @@ compare_values <- function(m, age, quantity, at = NULL, ages = NULL, measure = "
   } else if (quantity == "lifespan_variation") {
     lifespan_variation(m, measure, age, at = at)
   } else {
-    w <- standard_weights(age, standard_population("esp2013"))
     M <- matrix(m, nrow = dim(m)[1])
-    array(colSums(M * w) / sum(w) * 1e5, dim(m)[-1])
+    array(asr_columns(M, age, standard_population("esp2013"), E, 1e5), dim(m)[-1])
   }
   data.table(label = rep(dn[[3]], each = length(dn[[2]])), period = rep(as.numeric(dn[[2]]), length(dn[[3]])),
              value = as.vector(v))

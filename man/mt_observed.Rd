@@ -14,8 +14,8 @@ mt_observed(data, n_draws = 500, seed = 1)
 \item{seed}{Random seed (default 1, so that results are reproducible).}
 }
 \value{
-An \code{mt_draws} object with the observed periods; draw 1 holds the
-observed rates.
+An \code{mt_draws} object with the observed periods (element
+\code{observed}: the observed rates; \code{exposure}: the exposures).
 }
 \description{
 Turns observed deaths and exposures into an \link{mt_draws} object whose paths
@@ -24,6 +24,21 @@ for draws then also describe the past, with intervals for the observed
 rates: \code{\link[=life_expectancy]{life_expectancy()}}, \code{\link[=asr]{asr()}}, \code{\link[=prob_dying]{prob_dying()}}, \code{\link[=mt_contrast]{mt_contrast()}},
 \code{\link[=mt_inequality]{mt_inequality()}}. The derived quantities accept an \link{mt_data} object
 directly and call \code{mt_observed()} with its defaults.
+}
+\details{
+The draws are a parametric bootstrap: Poisson counts with the observed
+deaths as their means, divided by the exposures (treated as known). The
+intervals of derived quantities therefore describe the Poisson variation
+of the counts around the observed values. A cell without deaths has mean
+zero and gets no variation, and the observed counts stand in for their
+unknown expected values, so intervals for small populations, with many
+cells of few or no deaths, are too narrow.
+
+With \code{n_draws = 1}, the one draw holds the observed rates (for point
+values, as in \code{\link[=mt_decompose]{mt_decompose()}}). Otherwise every draw is a Poisson draw,
+and the observed rates are kept in the element \code{observed}: the observed
+value is not one of the draws, so that means and quantiles describe the
+bootstrap distribution alone.
 }
 \examples{
 x <- mt_example(deaths = "single", years = 2015:2019)

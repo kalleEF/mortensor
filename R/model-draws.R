@@ -104,6 +104,13 @@ life_expectancy_draws <- function(x, at = NULL, probs = c(0.025, 0.1, 0.5, 0.9, 
 #' Multiplies rate draws by exposures and optionally adds Poisson noise, so
 #' that the result describes observable death counts.
 #'
+#' Predictive draws (`mt_forecast(predictive = TRUE)`) already contain the
+#' variation of the observed deaths (Poisson given the rates, or negative
+#' binomial for `stanmomo(family = "nb")`): for them no noise is added,
+#' whatever `noise`, and the result is their deaths. Give the exposures
+#' that were used for the forecast (its `exposure`); other exposures rescale
+#' the deaths and the result is then not a count.
+#'
 #' @param draws An [mt_draws] object.
 #' @param exposure Future exposures: an [mt_data] object with exposures
 #'   (for example a population projection converted with
@@ -111,7 +118,8 @@ life_expectancy_draws <- function(x, at = NULL, probs = c(0.025, 0.1, 0.5, 0.9, 
 #'   `[age, stratum]` (used for every period) with dimnames, as
 #'   [mt_array()] returns. Ages, years and strata are matched by their
 #'   labels. Default: the exposures of the last training year.
-#' @param noise Add Poisson noise.
+#' @param noise Add Poisson noise (draws of expected rates only; ignored for
+#'   predictive draws, which contain it).
 #' @param seed Random seed.
 #' @return An array `[age, period, stratum, draw]` of deaths.
 #' @examples
@@ -124,7 +132,8 @@ mt_deaths <- function(draws, exposure = NULL, noise = TRUE, seed = NULL) {
   d <- dim(draws$rates)
   E <- expand_exposure(exposure %||% draws$exposure_last, d, dimnames(draws$rates))
   mu <- draws$rates * as.vector(E)
-  if (!noise) return(mu)
+  # predictive draws already hold drawn deaths: no second Poisson draw
+  if (!noise || isTRUE(draws$predictive)) return(mu)
   with_seed(seed, array(stats::rpois(length(mu), mu), dim(mu), dimnames(mu)))
 }
 

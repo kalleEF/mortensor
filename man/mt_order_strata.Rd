@@ -28,6 +28,14 @@ the mean observed ratio of the last \code{years} training years (bounded to
 0.02-0.98), applied path by path
 and reported as the share of adjusted cells.
 }
+\details{
+This is a post-hoc adjustment of this package without a published source
+(reference unknown): it changes the draws and leaves the fitted model as
+it is, so the adjusted draws no longer follow the model's distribution. Models
+that keep strata together by construction are \code{\link[=li_lee]{li_lee()}},
+\code{\link[=coherent_fdm]{coherent_fdm()}} and \code{coda(coherent = TRUE)} (\code{\link[=coda]{coda()}}); \code{\link[=reconciled]{reconciled()}}
+makes totals and their parts coherent.
+}
 \examples{
 x <- mt_example(deaths = "single")
 fc <- mt_forecast(mt_fit(rwd(), x), h = 10, n_draws = 50, seed = 1)

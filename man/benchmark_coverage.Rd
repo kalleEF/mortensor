@@ -10,7 +10,8 @@ benchmark_coverage(
   h = 10,
   n_draws = 300,
   n_train = 30,
-  prep = NULL
+  prep = NULL,
+  sd_obs = 0
 )
 }
 \arguments{
@@ -23,6 +24,10 @@ benchmark_coverage(
 \item{n_draws}{Draws per forecast.}
 
 \item{n_train}{Training years.}
+
+\item{prep}{Optional \code{\link[=mt_prep]{mt_prep()}} pipeline.}
+
+\item{sd_obs}{Noise of the generator (see \code{\link[=simulate_lc_dgp]{simulate_lc_dgp()}}).}
 }
 \value{
 A \code{data.table} with coverage by horizon and a summary list in

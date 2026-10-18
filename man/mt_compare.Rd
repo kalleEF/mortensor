@@ -23,7 +23,8 @@ mt_score_table(
   targets = NULL,
   by = "model",
   digits = 3,
-  hierarchy = NULL
+  hierarchy = NULL,
+  common = TRUE
 )
 
 mt_compare_forecasts(
@@ -79,10 +80,14 @@ the training data of the first forecast).}
 separately for the bottom series, the aggregates and the grand total
 (column \code{level}).}
 
+\item{common}{Score only the cells that every model scored (default
+\code{TRUE}); \code{FALSE} scores every model on its own cells.}
+
 \item{forecasts}{A named list of \link{mt_draws} objects or \link{mt_data} objects
 (observed values).}
 
-\item{quantity}{\code{"life_expectancy"}, \code{"asr"} (per 100,000), \code{"deaths"}
+\item{quantity}{\code{"life_expectancy"}, \code{"asr"} (per 100,000, European
+Standard Population 2013, see \code{\link[=asr]{asr()}}), \code{"deaths"}
 (summed over the ages, with the exposures of the last observed year
 unless \code{exposure} is given; forecasts only), \code{"rate"} (death rates of
 the ages in \code{ages}) or \code{"lifespan_variation"} (the index \code{measure} of
@@ -130,7 +135,18 @@ target it holds side by side: log death rates without suffix, life
 expectancy with \verb{_le} (years), the age-standardised rate with \verb{_asr},
 and differences between strata (\code{contrast} in \code{\link[=mt_backtest]{mt_backtest()}}) with
 \verb{_le_gap} and \verb{_asr_gap}. The same model with different preprocessing
-gets one row per pipeline (column \code{prep}, as in \code{\link[=mt_score]{mt_score()}}).
+gets one row per pipeline (column \code{prep}, as in \code{\link[=mt_score]{mt_score()}}). With
+several models, only the cells that every model scored enter (the
+same origin, horizon, stratum, age group, year and target, as in
+\code{\link[=mt_dm_test]{mt_dm_test()}}), with a warning of class \code{mt_warning_backtest} when
+cells are left out: where a model failed at an origin or in a stratum,
+the scores of the other models for those cells would otherwise enter
+their means only, and the means would refer to different targets.
+\code{common = FALSE} scores every model on its own cells; a target of
+which no cell was scored by every model (for example with different
+age groups) is always scored so. The CRPS depends on the number of
+draws (see \code{\link[=mt_backtest]{mt_backtest()}}); compare models
+backtested with the same \code{n_draws}, as \code{mt_compare()} does.
 \item \code{mt_compare_forecasts()} gives one quantity of several forecasts
 (\code{mt_draws}) or observed data (\code{mt_data}, with Poisson intervals) as
 "median (lower-upper)", one column per forecast (empty where a

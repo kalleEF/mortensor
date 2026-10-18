@@ -7,11 +7,25 @@
 #' [mt_inequality()]. The derived quantities accept an [mt_data] object
 #' directly and call `mt_observed()` with its defaults.
 #'
+#' The draws are a parametric bootstrap: Poisson counts with the observed
+#' deaths as their means, divided by the exposures (treated as known). The
+#' intervals of derived quantities therefore describe the Poisson variation
+#' of the counts around the observed values. A cell without deaths has mean
+#' zero and gets no variation, and the observed counts stand in for their
+#' unknown expected values, so intervals for small populations, with many
+#' cells of few or no deaths, are too narrow.
+#'
+#' With `n_draws = 1`, the one draw holds the observed rates (for point
+#' values, as in [mt_decompose()]). Otherwise every draw is a Poisson draw,
+#' and the observed rates are kept in the element `observed`: the observed
+#' value is not one of the draws, so that means and quantiles describe the
+#' bootstrap distribution alone.
+#'
 #' @param data An [mt_data] object with deaths and exposures on the grid.
 #' @param n_draws Number of draws.
 #' @param seed Random seed (default 1, so that results are reproducible).
-#' @return An `mt_draws` object with the observed periods; draw 1 holds the
-#'   observed rates.
+#' @return An `mt_draws` object with the observed periods (element
+#'   `observed`: the observed rates; `exposure`: the exposures).
 #' @examples
 #' x <- mt_example(deaths = "single", years = 2015:2019)
 #' life_expectancy(x, at = 65)
@@ -21,9 +35,11 @@ mt_observed <- function(data, n_draws = 500, seed = 1) {
   md <- model_inputs(data, list(min_periods = 1, label = "Observed rates", consecutive = FALSE))
   D <- md$D
   E <- md$E
-  arr <- with_seed(seed, array(stats::rpois(length(D) * n_draws, rep(as.vector(D), n_draws)),
-                               c(dim(D), n_draws)))
-  arr[, , , 1] <- D
+  arr <- if (n_draws == 1) {
+    array(D, c(dim(D), 1L))
+  } else {
+    with_seed(seed, array(stats::rpois(length(D) * n_draws, rep(as.vector(D), n_draws)), c(dim(D), n_draws)))
+  }
   arr <- arr / as.vector(E)
   fit <- list(observed = D / E, periods = md$periods, train_D = D, train_E = E,
               exposure_last = E[, length(md$periods), , drop = FALSE])
@@ -59,12 +75,17 @@ as_draws <- function(x) {
 #' @param type `"difference"` (level minus reference) or `"ratio"`.
 #' @param probs Quantile levels.
 #' @param ... Arguments of the quantity: `at` for life expectancy,
-#'   `standard` and `per` for `asr()`, `from` and `to` for `prob_dying()`,
+#'   `standard`, `per`, `exposure` and `age_groups` for `asr()`, `from` and
+#'   `to` for `prob_dying()`,
 #'   `age` (an age label) for `"rate"`, `measure` (one index, default
 #'   `"edagger"`) and `at` for [lifespan_variation()].
 #' @return A `data.table` with the other stratum variables, `level`, `ref`,
 #'   `period`, `mean`, quantiles and `p_positive`, the share of paths with
-#'   a positive difference (or a ratio above 1).
+#'   a positive difference (or a ratio above 1). For forecasts this is the
+#'   predictive probability of a positive difference under the model. For
+#'   observed data it is the share of the Poisson bootstrap draws (see
+#'   [mt_observed()]) with a positive difference, which is neither a
+#'   p-value nor a posterior probability.
 #' @examples
 #' x <- mt_example(deaths = "single", years = 2001:2015)
 #' fc <- mt_forecast(mt_fit(lee_carter(), x), h = 5, n_draws = 100, seed = 1)
@@ -116,7 +137,8 @@ quantity_paths <- function(x, quantity, ...) {
            e <- life_expectancy(x$rates, x$age, at = a$at)
            e
          },
-         asr = asr(x, standard = a$standard %||% "esp2013", per = a$per %||% 1e5, paths = TRUE),
+         asr = asr(x, standard = a$standard %||% "esp2013", per = a$per %||% 1e5, exposure = a$exposure,
+                   age_groups = a$age_groups %||% "standard", paths = TRUE),
          lifespan_variation = {
            ms <- check_compare_measure("lifespan_variation", a$measure %||% "edagger")
            lifespan_variation(x, measure = ms, at = a$at, paths = TRUE)
@@ -138,11 +160,18 @@ quantity_paths <- function(x, quantity, ...) {
 #' Slope and relative index of inequality, path by path
 #'
 #' Summarises a gradient over the ordered levels of a stratum variable (for
-#' example deprivation quintiles) by a regression of the quantity on the
-#' relative rank of each level in the population, weighted by population
-#' size: the slope index of inequality (SII) is the difference between the
-#' fitted values at the top (rank 1) and the bottom (rank 0) of the
-#' population, the relative index of inequality (RII) their ratio. The
+#' example deprivation quintiles) by a linear regression of the quantity on
+#' the relative rank of each level in the population, weighted by
+#' population size (Mackenbach and Kunst 1997). Moreno-Betancur et al.
+#' (2015) define the slope and the relative index of inequality as
+#' parameters of a regression of the outcome on the relative rank: the
+#' difference and the ratio of the expected outcomes at the two ends of the
+#' rank scale. Here, with the linear regression (identity link), the slope
+#' index of inequality (SII) is the fitted value at the top (rank 1) minus
+#' that at the bottom (rank 0), the slope; the relative index of inequality
+#' (RII) is the ratio of the fitted values of the same linear regression at
+#' rank 1 and rank 0, `(b0 + b1) / b0` with intercept `b0` and slope `b1`
+#' (not the exponentiated slope of a regression with a log link). The
 #' relative rank of a level is the midpoint of its cumulative population
 #' share, with the levels ordered as in `order`. Computed path by path, with
 #' the population shares of the exposures of each year for observed rates
@@ -165,6 +194,10 @@ quantity_paths <- function(x, quantity, ...) {
 #' socio-economic inequalities in health: an overview of available measures
 #' illustrated with two examples from Europe. *Social Science & Medicine*
 #' 44(6): 757-771.
+#'
+#' Moreno-Betancur M, Latouche A, Menvielle G, Kunst AE, Rey G (2015).
+#' Relative index of inequality and slope index of inequality: a structured
+#' regression framework for estimation. *Epidemiology* 26(4): 518-527.
 #' @examples
 #' x <- mt_example_regions(years = 2010:2019, regions = 2)
 #' mt_inequality(x, "quintile", order = paste0("Q", 5:1), quantity = "asr")

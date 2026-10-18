@@ -48,14 +48,15 @@ only observed cells are scored.}
 \item{quantities}{Derived quantities scored in addition to the rates:
 \code{"life_expectancy"} (at the first age of the grid, in years) and/or
 \code{"asr"} (age-standardised rate, European Standard Population 2013, on
-the log scale), computed from the predictive draws of deaths aggregated
-to the observed age groups of each stratum and test year, like the
-observed values. Years whose observed cells do not cover the full age
-range without gaps (missing, suppressed or estimated cells) are
-skipped. A zero ASR (no deaths at any age) is replaced by the smallest
-value that half a death gives. They are added as rows with \code{target}
-\code{"life_expectancy"} or \code{"asr"}; summarise them with
-\code{mt_score(..., target = )}.}
+the log scale; direct standardisation on the age groups of the
+standard with the exposures of the test year, see \code{\link[=asr]{asr()}}), computed
+from the predictive draws of deaths aggregated to the observed age
+groups of each stratum and test year, like the observed values. Years
+whose observed cells do not cover the full age range without gaps
+(missing, suppressed or estimated cells) are skipped. A zero ASR (no
+deaths at any age) is replaced by the smallest value that half a death
+gives. They are added as rows with \code{target} \code{"life_expectancy"} or
+\code{"asr"}; summarise them with \code{mt_score(..., target = )}.}
 
 \item{contrast}{Optional \code{c(var = , ref = )}: a stratum variable and its
 reference level. With \code{quantities}, the differences between every other
@@ -75,15 +76,16 @@ the MASE scale \code{scale} (mean absolute year-to-year change in the
 training data), \code{target} (\code{"rate"}, or the derived quantity), the
 forecast \code{median} and \code{mean}, and the scores \code{crps}, \code{wis}, \code{ae}
 (absolute error of the median), \code{cov50}, \code{cov80}, \code{cov95} and \code{pit}
-(randomised for ties, as with zero deaths). Rows of derived quantities
+(randomised for ties). Rows of derived quantities
 have no \code{age_lo}, \code{age_hi} and \code{scale}. Summarise with \code{\link[=mt_score]{mt_score()}}.
 }
 \description{
 For each forecast origin, the data are cut at the origin, the
 preprocessing pipeline and the model are fitted on the
 training window only, and predictive draws for the next \code{h} years are
-compared with the observations. Nothing after the origin enters the fit,
-including ungrouping and smoothing (they are part of \code{prep}).
+compared with the observations (rolling-origin evaluation; Tashman
+2000). Nothing after the origin enters the fit, including ungrouping and
+smoothing (they are part of \code{prep}).
 }
 \details{
 Evaluation happens at the resolution of the observed deaths: grid draws of
@@ -100,12 +102,53 @@ time has seen the test years. Ungroup or smooth inside each fit instead
 (\code{prep = mt_prep(step_ungroup())}, \code{step_smooth()}). With
 \code{step_regroup()}, the test data are summed to the age groups of the fit.
 
-Observed log rates of cells without deaths use half a death, and so do
-the predictive draws, after their deaths have been summed to the observed
-cell.
+The log rate of an observed cell is \code{log(max(D, 0.5) / E)}: a cell
+without deaths counts as half a death, so that its log rate is finite (a
+convention of this package; reference unknown). The predictive draws of
+deaths are first summed from the grid to the observed cell and then
+floored in the same way, so that draws and observations are treated
+alike; a floor per grid cell would put the draws of a grouped cell with
+few deaths above the observation.
+
+Strata without forecast draws at an origin (the model failed in them or
+gave missing rates) are not scored, with a warning of class
+\code{mt_warning_backtest}. Compare models on the cells all of them scored
+(\code{\link[=mt_score_table]{mt_score_table()}} does so for \code{\link[=mt_compare]{mt_compare()}} results).
+
+Scores (see \code{\link[=mt_score]{mt_score()}} for their summaries): the CRPS is the
+empirical-CDF estimator from the draws (Grimit et al. 2006), the mean
+absolute difference between the draws and the observation minus half the
+mean absolute difference between pairs of draws. It is the CRPS of the
+empirical distribution of the draws, which exceeds that of the
+predictive distribution by about \verb{E|X - X'| / (2 n_draws)} on average,
+so compare models backtested with the same \code{n_draws}. The weighted
+interval score uses the 23 quantiles of the COVID-19 forecast hubs
+(Bracher et al. 2021); the PIT is randomised where draws equal the
+observation (Czado, Gneiting and Held 2009), as with zero deaths.
 }
 \examples{
 x <- mt_example(deaths = "single", years = 1990:2012)
 bt <- mt_backtest(rwd(), x, origins = c(2005, 2007), h = 5, n_draws = 100)
 mt_score(bt)
+}
+\references{
+Bracher J, Ray EL, Gneiting T, Reich NG (2021). Evaluating epidemic
+forecasts in an interval format. \emph{PLoS Computational Biology} 17(2):
+e1008618. \doi{10.1371/journal.pcbi.1008618}
+
+Czado C, Gneiting T, Held L (2009). Predictive model assessment for count
+data. \emph{Biometrics} 65(4): 1254-1261.
+
+Gneiting T, Raftery AE (2007). Strictly proper scoring rules, prediction,
+and estimation. \emph{Journal of the American Statistical Association}
+102(477): 359-378. \doi{10.1198/016214506000001437}
+
+Grimit EP, Gneiting T, Berrocal VJ, Johnson NA (2006). The continuous
+ranked probability score for circular variables and its application to
+mesoscale forecast ensemble verification. \emph{Quarterly Journal of the Royal
+Meteorological Society} 132: 2925-2942.
+
+Tashman LJ (2000). Out-of-sample tests of forecasting accuracy: an
+analysis and review. \emph{International Journal of Forecasting} 16(4):
+437-450.
 }

@@ -24,7 +24,7 @@ test_that("Tucker, share and score plots build", {
   for (by in c("horizon", "age")) expect_silent(ggplot2::ggplot_build(mt_plot_scores(bt, "wis", by)))
   expect_error(mt_plot_scores(bt, "nope"), class = "mt_error_argument")
   xc <- mt_example_causes()
-  fc <- mt_forecast(mt_fit(cause_shares(ranks = c(2, 2, 2, 2)), xc), h = 3, n_draws = 20, seed = 1)
+  fc <- mt_forecast(mt_fit(suppressWarnings(cause_shares(ranks = c(2, 2, 2, 2))), xc), h = 3, n_draws = 20, seed = 1)
   p <- mt_plot_shares(fc)
   expect_silent(ggplot2::ggplot_build(p))
   dd <- apply(mt_deaths(fc, noise = FALSE), c(2, 3, 4), sum)

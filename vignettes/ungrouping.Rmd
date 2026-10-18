@@ -20,8 +20,8 @@ are two ways to bring the two together:
 * **regroup** everything to the age groups of the deaths
   (`mt_regroup(x, age = "deaths")`) and model the groups; nothing is
   estimated, but the age detail is lost;
-* **ungroup** the deaths: estimate single-year deaths that add up to the
-  observed groups (`mt_ungroup()`).
+* **ungroup** the deaths: estimate single-year deaths from the observed
+  groups (`mt_ungroup()`).
 
 This vignette compares the ungrouping methods, shows the diagnostics that
 check a result, and the consequence for a forecast. The test case is data
@@ -46,20 +46,19 @@ deaths). HMD data downloaded directly are read with `mt_read_hmd()`.
 
 | `method` | Idea | Needs exposures |
 |---|---|---|
-| `"pclm"` (default) | penalized composite link model (Eilers 2007; Rizzi et al. 2015): a smooth rate schedule whose expected deaths add up to the groups; the exposures enter as offset | yes (or ungroups counts) |
-| `"hyman_kannisto"` | monotone spline of the log group rates, Kannisto curve for the last group | yes |
-| `"natural_gompertz"` | natural spline of the log group rates, log-linear (Gompertz) last group | yes |
-| `"gam"` | smooth surface of the log group rates over age and year (mgcv), Kannisto tail | yes |
-| `"monotone"` | monotone spline of the cumulative deaths, counts only | no |
+| `"pclm"` (default) | penalized composite link model (Eilers 2007; Rizzi et al. 2015): a smooth rate schedule whose expected deaths, summed over each group, are fitted to the group totals; the exposures enter as offset | yes (or ungroups counts) |
+| `"monotone"` | monotone cubic interpolation of the cumulative deaths (Hyman 1983), counts only | no |
 
 With `dims = 2`, the PCLM estimates a smooth surface over age and year
-instead of each year separately. All methods except `"monotone"` estimate
-rates, so the irregular sizes of birth cohorts stay in the exposures.
+instead of each year separately. The PCLM estimates rates, so the
+irregular sizes of birth cohorts stay in the exposures; the monotone
+spline splits the counts and does not use the exposures. The methods
+`"hyman_kannisto"`, `"natural_gompertz"` and `"gam"` are deprecated: they
+are heuristics of this package without a published source, and they still
+work with a warning.
 
 ```{r}
-u <- list("PCLM" = mt_ungroup(x),
-          "Hyman spline" = mt_ungroup(x, method = "hyman_kannisto"),
-          "natural spline" = mt_ungroup(x, method = "natural_gompertz"))
+u <- list("PCLM" = mt_ungroup(x), "monotone" = mt_ungroup(x, method = "monotone"))
 ```
 
 ## Diagnostic 1: do the estimates pass through the groups?
@@ -71,9 +70,10 @@ single-year rates in 2011:
 mt_plot_ungroup(x, u, period = 2011)
 ```
 
-All three pass through the steps and agree except in the last group, where
-nothing in the data says how the rates rise between ages 90 and 99: there
-the methods differ by their assumptions about the shape of the tail.
+Both pass through the steps and agree up to age 90. In the last group
+nothing in the data says how the rates rise between ages 90 and 99: the
+PCLM continues the rise of the rates below 90, while the monotone spline of
+the cumulative deaths lets the rates rise and then fall towards 99.
 
 ## Diagnostic 2: errors against the known single years
 
@@ -81,29 +81,35 @@ the methods differ by their assumptions about the shape of the tail.
 band. `mae_log` is the median absolute log error (close to the relative
 error for small values). The known rates contain Poisson noise, so even
 perfect estimates would not reach zero: `noise_log` is the error that
-perfect estimates would have. `bias_log` is the median signed error.
+perfect estimates would have. `bias_log` is the median signed error, and
+`max_rel_gap` the largest relative difference between the estimated and
+the observed group totals.
 
 ```{r}
 mt_ungroup_check(u, reference = ew)
 ```
 
-In every age band the errors of all three methods exceed the noise floor
-by at most 0.4 percentage points: the ungrouped rates are almost as
-close to the observed single years as the true rates would be. Where the
-methods differ shows in the log ratio of the estimated to the known rates
-by age, with its range over the years (coloured) and the range of the
-Poisson noise (grey):
+In every age band the errors of the PCLM exceed the noise floor by at
+most 0.3 percentage points: its rates are almost as close to the observed
+single years as the true rates would be. The PCLM does not reproduce each
+group total exactly; here it misses them by up to 2.6%. The monotone
+spline reproduces the totals exactly, but its errors exceed the noise floor
+by 1.1 and 1.4 percentage points at ages 45-64 and 65-84 and by 5.3 points
+at 85 and over: it splits the deaths without the exposures, so the
+irregular sizes of birth cohorts within a group end up in the rates. Where
+the methods differ shows in the log ratio of the estimated to the known
+rates by age, with its range over the years (coloured) and the range of
+the Poisson noise (grey):
 
 ```{r, eval = has_gg}
 mt_plot_ungroup(x, u, type = "error", reference = ew)
 ```
 
-Up to age 95 the estimates scatter within the noise band. At the top of
-the last group (ages 95-99) the methods go in different directions: the
-Hyman spline with its Kannisto tail underestimates the rates at 99 by
-about 9%, the natural spline overestimates them by about 9%, the PCLM by
-about 7%. An open or wide last group is where ungrouping is least
-reliable, and where methods should be compared.
+Up to age 95 the PCLM estimates scatter within the noise band; at the top
+of the last group they overestimate the rates at 99 by about 7%. The
+monotone spline falls far below the known rates above age 95. An open or
+wide last group is where ungrouping is least reliable, and where methods
+should be compared.
 
 ## Diagnostic 3: stability over time
 
@@ -122,13 +128,19 @@ mt_plot_ungroup(xr, u_time, type = "time", reference = ew)
 ```
 
 The lines are the ungrouped rates at four ages, the points the known rates.
-Both versions follow the year-to-year movements of the group totals,
-because the estimates are scaled to the observed deaths of each group and
-year (`preserve_totals = TRUE`). For these large counts the difference
-between 1D and 2D is small; it matters more for small populations, where
-the 2D surface borrows strength from neighbouring years. Inside backtests,
-ungrouping in 2D must see only the training years: use
-`step_ungroup(dims = 2)` in the preprocessing.
+Both versions follow the trend of the known rates. For these large counts
+the difference between 1D and 2D is small; it matters more for small
+populations, where the 2D surface borrows strength from neighbouring
+years. The 2D surface misses the group totals by more (up to 7.0%,
+against 1.8% in 1D), because it also smooths over the years.
+
+The estimates are the fitted values of the PCLM, as published. With
+`preserve_totals = TRUE`, `mt_ungroup()` rescales the estimates within
+each group to the observed total after the fit. This rescaling is
+specific to this package (reference unknown): it creates steps at the group
+boundaries, and in 2D it puts the year-to-year noise of every group back
+onto the smooth surface. Inside backtests, ungrouping in 2D must see only
+the training years: use `step_ungroup(dims = 2)` in the preprocessing.
 
 ## Grouped exposures
 
@@ -170,22 +182,24 @@ mt_compare_forecasts(fc, periods = c(2021, 2031), digits = 2)
 mt_plot_compare(fc, quantity = "rate", ages = c("92", "95"), periods = 2001:2031)
 ```
 
-Forecasts from the PCLM estimates and from the known single years give the
-same life expectancy at 30 to two decimals. The forecast from the age
-groups is 0.4 years higher: its life table assumes that the deaths of each
-group fall in the middle of the group, which overstates survival where
-mortality rises steeply within a group, above all in the 10-year group
-90-99. The single-year rates at 92 and 95 forecast from the PCLM estimates
-follow those from the known rates closely; a model of the groups has no
-rates for single ages at all (the figure shows only the two single-year
-forecasts). Ungrouping is worth its assumptions where single ages are
-needed: for life tables of wide groups, for cohort models, or for results
-at exact ages.
+Forecasts from the PCLM estimates and from the known single years give
+life expectancies at 30 within 0.01 years of each other. The forecast from
+the age groups is 0.4 years higher: its life table assumes that the deaths
+of each group fall in the middle of the group, which overstates survival
+where mortality rises steeply within a group, above all in the 10-year
+group 90-99. The single-year rates at 92 and 95 forecast from the PCLM
+estimates follow those from the known rates closely; a model of the groups
+has no rates for single ages at all (the figure shows only the two
+single-year forecasts). Ungrouping is worth its assumptions where single
+ages are needed: for life tables of wide groups, for cohort models, or for
+results at exact ages.
 
 ## Summary
 
 * Ungroup deaths as rates, with the exposures on the target grid as offset
-  (`mt_ungroup()`, PCLM by default).
+  (`mt_ungroup()`, PCLM by default). The estimates are the fitted values
+  of the PCLM; `preserve_totals = TRUE` rescales them to the group totals
+  (a step of this package).
 * Check every result: `mt_plot_ungroup()` (profile, errors, stability over
   time) and `mt_ungroup_check()` (fit diagnostics, and errors where single
   years are known).
@@ -198,6 +212,9 @@ at exact ages.
 
 Eilers PHC (2007). Ill-posed problems with counts, the composite link model
 and penalized likelihood. *Statistical Modelling* 7(3): 239-254.
+
+Hyman JM (1983). Accurate monotonicity preserving cubic interpolation.
+*SIAM Journal on Scientific and Statistical Computing* 4(4): 645-654.
 
 Rizzi S, Gampe J, Eilers PHC (2015). Efficient estimation of smooth
 distributions from coarsely grouped data. *American Journal of

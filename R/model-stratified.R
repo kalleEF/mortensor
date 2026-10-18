@@ -10,8 +10,15 @@
 #' method = "proportional", fixed = all_cause_labels)`.
 #'
 #' Joint models (for example [li_lee()]) are joint within their group only;
-#' the draws of different groups are independent (inside [reconciled()] the
-#' empirical reordering then restores the co-movement of the training years).
+#' the draws of different groups are independent, so sums over strata of
+#' different groups have narrower intervals than they would if the groups
+#' moved together. [reconciled()] keeps the draws as they are by default
+#' (`dependence = "none"`). Its `dependence = "empirical"` reorders the
+#' paths of every stratum so that their ranks follow the changes of a
+#' resampled training year: a package-specific heuristic (see
+#' [mt_reconcile()]) that imposes a rank dependence taken from the training
+#' data without a model of it, and that also replaces the dependence within
+#' joint groups.
 #' Each group is fitted and forecast as if it were the whole data, so
 #' backtests, [anchored()], [recalibrated()] and [reconciled()] work as for
 #' any model.

@@ -168,11 +168,12 @@ mt_plot_scores(bt)
 All three models get worse with the horizon, as they should. The
 random walk has wide intervals: its 95% coverage is close to nominal
 (0.92), and its 50% and 80% intervals cover about as often as they
-should. The 95% intervals of Lee-Carter and Li-Lee cover 0.83 and 0.85 of
-the observed rates, fewer at longer horizons: they describe the uncertainty of a fixed
-trend, while the trend of English mortality changed after 2011. "Tuning and recalibration" shows how to widen
-intervals to the errors of recent forecasts, and "Choosing and combining
-models" how mixtures of models do.
+should. The 95% intervals of Lee-Carter and Li-Lee cover 0.79 and 0.81
+of the observed rates, fewer at longer horizons: they describe the
+uncertainty of a fixed trend and the Poisson noise of the deaths, while
+the trend of English mortality changed after 2011. "Tuning and
+recalibration" shows how to widen intervals to the errors of recent
+forecasts, and "Choosing and combining models" how mixtures of models do.
 
 ## Is the difference larger than chance?
 
@@ -181,30 +182,38 @@ Diebold-Mariano test (Diebold and Mariano 1995) asks whether two models
 differ in accuracy by more than the origins vary. `mt_dm_test()` computes
 it for each horizon from the mean score of each origin, so the many cells
 of one forecast count once. Forecasts from neighbouring origins overlap
-in their test years, which the test allows for (autocovariances up to lag
-`h - 1`), and it uses the small-sample correction of Harvey, Leybourne and
-Newbold (1997):
+in their test years, so the differences between origins are
+autocorrelated. By default the test estimates their variance with the
+equal-weighted cosine (EWC) estimator and takes critical values from a t
+distribution with few degrees of freedom (Lazarus et al. 2018; Coroneo
+and Iacone 2020). The older version, with the autocovariances up to lag
+`h - 1` and the small-sample correction of Harvey, Leybourne and Newbold
+(1997), rejects a true null hypothesis too often with few overlapping
+origins: in simulations with seven origins, in 10% to 19% of the samples
+at the nominal 5% level, and in 27% with the fallback to lag 0 of
+`forecast::dm.test()` (see `?mt_dm_test`; `varestimator = "acf"` gives
+that version without the fallback).
 
 ```{r}
 dm <- mt_dm_test(bt, ref = "Li-Lee")
-dm[target == "rate", list(model, horizon, mean_diff, statistic, p_value)]
+dm[target == "rate", list(model, horizon, mean_diff, statistic, df, p_value)]
 ```
 
 A positive `mean_diff` means a higher CRPS than Li-Lee, so a less
 accurate forecast. Li-Lee forecast the rates more accurately than the
-random walk at every horizon (p below 0.02). Li-Lee and Lee-Carter differ
-by less than 4% of their CRPS, with p-values from 0.5 to 0.8: this
-backtest cannot tell them apart.
+random walk at every horizon, with p-values from 0.007 to 0.14 (0.07 over
+all horizons). Li-Lee and Lee-Carter differ little, with p-values from
+0.57 to 0.94: this backtest cannot tell them apart.
 
 ```{r}
 dm[target == "life_expectancy", list(model, horizon, mean_diff, statistic, p_value)]
 ```
 
-For life expectancy, Lee-Carter was more accurate than Li-Lee one year
-ahead (p = 0.03); at longer horizons the differences are within chance.
-With seven origins the test has six degrees of freedom and detects only
-large and consistent differences. The row `"all"` averages over the
-horizons.
+For life expectancy, the random walk and Lee-Carter were more accurate
+than Li-Lee at every horizon, but no difference is significant (p-values
+from 0.19 to 0.54). With seven origins the test has one degree of freedom
+(`df`) and detects only large and consistent differences. The row `"all"`
+averages over the horizons.
 
 ## How far to trust a backtest
 
@@ -223,6 +232,10 @@ Bracher J, Ray EL, Gneiting T, Reich NG (2021). Evaluating epidemic
 forecasts in an interval format. *PLoS Computational Biology* 17(2):
 e1008618.
 
+Coroneo L, Iacone F (2020). Comparing predictive accuracy in small
+samples using fixed-smoothing asymptotics. *Journal of Applied
+Econometrics* 35(4): 391-409.
+
 Diebold FX, Mariano RS (1995). Comparing predictive accuracy. *Journal of
 Business & Economic Statistics* 13(3): 253-263.
 
@@ -240,6 +253,10 @@ prediction mean squared errors. *International Journal of Forecasting*
 
 Hyndman RJ, Koehler AB (2006). Another look at measures of forecast
 accuracy. *International Journal of Forecasting* 22(4): 679-688.
+
+Lazarus E, Lewis DJ, Stock JH, Watson MW (2018). HAR inference:
+recommendations for practice. *Journal of Business & Economic
+Statistics* 36(4): 541-559.
 
 Tashman LJ (2000). Out-of-sample tests of forecasting accuracy: an
 analysis and review. *International Journal of Forecasting* 16(4):

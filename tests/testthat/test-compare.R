@@ -12,6 +12,24 @@ test_that("mt_compare() backtests named models and mt_score_table() puts targets
   expect_error(mt_compare(list(1), x), class = "mt_error_argument")
 })
 
+test_that("mt_score_table() compares models on the cells all of them scored", {
+  x <- mt_example(deaths = "single", years = 1995:2010)
+  bt <- mt_compare(list(a = rwd(), b = lee_carter()), x, origins = 2006, h = 3, n_draws = 20)
+  # model b has no scores for men
+  part <- bt[!(model == "b" & sex == "male")]
+  expect_warning(tab <- mt_score_table(part, metrics = c("crps", "n")), class = "mt_warning_backtest")
+  fem <- bt[model == "a" & sex == "female"]
+  expect_equal(tab$n, rep(nrow(fem), 2))
+  expect_equal(tab[model == "a"]$crps, signif(mean(fem$crps), 3))
+  expect_no_warning(own <- mt_score_table(part, metrics = "n", common = FALSE))
+  expect_equal(own$n, c(nrow(bt[model == "a"]), nrow(fem)))
+  expect_no_warning(mt_score_table(bt))
+  # no cell in common (other age groups): every model on its own cells
+  dis <- data.table::copy(bt)[model == "b", age_lo := age_lo + 0.5]
+  expect_warning(tab2 <- mt_score_table(dis, metrics = "n"), class = "mt_warning_backtest")
+  expect_equal(tab2$n, c(nrow(bt[model == "a"]), nrow(bt[model == "b"])))
+})
+
 test_that("mt_compare_forecasts() tabulates one quantity of several forecasts", {
   x <- mt_example(deaths = "single", years = 1990:2010)
   fc <- list(rw = mt_forecast(mt_fit(rwd(), x), h = 5, n_draws = 50, seed = 1),
@@ -54,17 +72,37 @@ test_that("mt_plot_smooth() compares smoothers and mt_plot_pit() shows calibrati
   expect_s3_class(mt_plot_pit(bt), "ggplot")
 })
 
-test_that("smoothing over time gives every age the same smoothness", {
+test_that("smoothing over time is the weighted Whittaker smoother with GCV per age", {
   x <- mt_example(deaths = "single", years = 1995:2015)
   s <- mt_smooth(x, along = "period", method = "whittaker")
+  dg <- attr(s, "smooth")
+  # one smoothing parameter per age and stratum
+  expect_identical(nrow(dg), 2L * length(mt_grid(x)$age))
+  expect_true(all(c("age", "lambda_period", "edf", "at_bound") %in% names(dg)))
   D <- mt_array(x, "deaths")[, , 1]
   E <- mt_array(x, "exposure")[, , 1]
   S <- mt_array(s, "deaths")[, , 1]
-  rough <- function(M) apply(log(M / E), 1, function(v) mean(abs(diff(v, differences = 2))))
-  r <- rough(S) / rough(pmax(D, 0.5))
-  # the ages with the most deaths are smoothed about as much as the others
-  many <- order(rowSums(D), decreasing = TRUE)[1:10]
-  expect_lt(mean(r[many]), 2 * mean(r))
+  # each age: (W + lambda P) z = W y with the deaths as weights and lambda by GCV
+  P <- crossprod(diff(diag(21), differences = 2))
+  gcv <- function(l, y, w) {
+    A <- diag(w) + l * P
+    z <- solve(A, w * y)
+    21 * sum(w * (y - z)^2) / (21 - sum(diag(solve(A, diag(w)))))^2
+  }
+  for (a in c(1, 30, 60)) {
+    y <- log(pmax(D[a, ], 0.5) / E[a, ])
+    w <- pmax(D[a, ], 0.5)
+    l <- dg[stratum == 1]$lambda_period[a]
+    expect_equal(as.vector(log(S[a, ] / E[a, ])), as.vector(solve(diag(w) + l * P, w * y)), tolerance = 1e-8)
+    grid <- 10^seq(-2, 8, 0.25)
+    expect_lte(gcv(l, y, w), min(vapply(grid, gcv, 0, y = y, w = w)) * (1 + 1e-4))
+  }
+  # lambda_range is honoured in both directions
+  sr <- suppressWarnings(mt_smooth(x, along = "period", lambda_range = c(10, 100)), classes = "mt_warning_lambda_bound")
+  expect_true(all(attr(sr, "smooth")$lambda_period >= 10 - 1e-6 & attr(sr, "smooth")$lambda_period <= 100 + 1e-6))
+  sa <- suppressWarnings(mt_smooth(mt_window(x, from = 2013), method = "whittaker", lambda_range = c(10, 100)),
+                         classes = "mt_warning_lambda_bound")
+  expect_true(all(attr(sa, "smooth")$lambda_age >= 10 - 1e-6 & attr(sa, "smooth")$lambda_age <= 100 + 1e-6))
 })
 
 test_that("mt_plot_contrast() draws gaps of one or several forecasts", {

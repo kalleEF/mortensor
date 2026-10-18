@@ -1,17 +1,12 @@
-#' Coherent multi-population models
+#' Li-Lee coherent multi-population model
 #'
-#' Joint models for several strata (for example women and men, or regions)
-#' whose forecasts do not diverge in the long run:
-#'
-#' * `li_lee()` (Li and Lee 2005): `log m[x,t,i] = a[x,i] + B[x] K[t] +
-#'   b[x,i] k[t,i]`. The common factor `B K` is a Lee-Carter model of the
-#'   pooled rates (sum of deaths over sum of exposures); the stratum factors
-#'   `b k` are fitted to the residuals.
-#' * `product_ratio()` (Hyndman, Booth and Yasmeen 2013): the geometric mean
-#'   of the stratum rates (product) is modelled with a Lee-Carter-type
-#'   factor, and the ratios of each stratum to the product with factors whose
-#'   scores are stationary. This is a Lee-Carter-type version of the method;
-#'   the original uses functional data models.
+#' Joint model for several strata (for example women and men, or regions)
+#' whose forecasts do not diverge in the long run (Li and Lee 2005):
+#' `log m[x,t,i] = a[x,i] + B[x] K[t] + b[x,i] k[t,i]`. The common factor
+#' `B K` is a Lee-Carter model of the pooled rates (sum of deaths over sum of
+#' exposures, SVD with `K` refitted to the total deaths of each year); the
+#' stratum factors `b k` are the first `ratio_order` components of an SVD of
+#' the residuals of each stratum.
 #'
 #' With `common_by` (for example `"sex"`), `li_lee()` fits one common factor
 #' per level of that stratum variable (women and men each with their own
@@ -20,13 +15,33 @@
 #' hierarchy (see [mt_aggregate_strata()]), the common factors are estimated
 #' from the bottom strata only, so aggregates are not counted twice.
 #'
-#' In both models the common period index follows a random walk with drift
-#' (with drift uncertainty) and the stratum-specific scores follow AR(1)
-#' processes without drift, so the differences between strata stay bounded.
-#' Draws include the innovations of all indexes; predictive draws add
-#' extra-Poisson and Poisson variation.
+#' The common period index follows a random walk with drift (with drift
+#' uncertainty) and the stratum-specific indexes `k[t,i]` follow AR(1)
+#' processes, so the differences between strata stay bounded. Two choices
+#' of this package differ from Li and Lee (2005), who model `k[t,i]` as an
+#' AR(1) process with a constant:
 #'
-#' @param ratio_order Number of stratum-specific (ratio) factors.
+#' * the AR(1) processes have no constant (intercept): the coefficient is
+#'   the least-squares estimate through the origin, and the stratum indexes
+#'   revert to zero, their mean over the fitting period;
+#' * the AR(1) coefficient is bounded to `|phi| <= 0.99`, a package-specific
+#'   safeguard against unit roots and explosive deviations (reference
+#'   unknown). A warning (class `mt_warning_li_lee`) names the strata where
+#'   the bound binds; their deviations then revert very slowly, and the
+#'   assumption of coherence may not suit them.
+#'
+#' Draws include the innovations of all indexes and the drift uncertainty of
+#' the common index; `a`, `B`, `b` and the AR(1) coefficients are fixed.
+#' Predictive draws (`mt_forecast(predictive = TRUE)`) add Poisson variation
+#' of the deaths given the rates and the exposures, and no other observation
+#' noise. If intervals are too narrow on real data, that is a property of
+#' the model (see [recalibrated()], [ensemble()], or
+#' overdispersed models such as `stanmomo(family = "nb")`).
+#'
+#' `product_ratio()`, a Lee-Carter version of the product-ratio method, is
+#' deprecated; use [coherent_fdm()].
+#'
+#' @param ratio_order Number of stratum-specific factors.
 #' @param jump_off `"fitted"` (forecasts start from the fitted rates of the
 #'   last year) or `"observed"` (forecasts are multiplied by the ratio of
 #'   observed to fitted rates in the last year, per age and stratum; Lee and
@@ -34,19 +49,19 @@
 #'   year can be far from the observed ones; the observed jump-off then
 #'   avoids a step between the last observed and the first forecast year.
 #' @param common_by Stratum variable(s) defining groups with their own common
-#'   factor (`li_lee()` only).
+#'   factor.
 #' @return A model specification.
 #' @references
 #' Li N, Lee R (2005). Coherent mortality forecasts for a group of
 #' populations: an extension of the Lee-Carter method. *Demography* 42(3):
 #' 575-594. \doi{10.1353/dem.2005.0021}
 #'
+#' Lee RD, Carter LR (1992). Modeling and forecasting U.S. mortality.
+#' *Journal of the American Statistical Association* 87(419): 659-671.
+#'
 #' Lee R, Miller T (2001). Evaluating the performance of the Lee-Carter
 #' method for forecasting mortality. *Demography* 38(4): 537-549.
-#'
-#' Hyndman RJ, Booth H, Yasmeen F (2013). Coherent mortality forecasting: the
-#' product-ratio method with functional time series models. *Demography*
-#' 50(1): 261-283.
+#' @seealso [coherent_fdm()] for the product-ratio method.
 #' @examples
 #' x <- mt_example(deaths = "single")
 #' fc <- mt_forecast(mt_fit(li_lee(), x), h = 10, n_draws = 100, seed = 1)
@@ -61,9 +76,45 @@ li_lee <- function(ratio_order = 1, common_by = NULL, jump_off = c("fitted", "ob
                              if (jump_off == "observed") ", observed jump-off" else ""))
 }
 
-#' @rdname li_lee
+#' Lee-Carter version of the product-ratio method (deprecated)
+#'
+#' **Deprecated.** `product_ratio()` replaces the functional data models of
+#' the product-ratio method of Hyndman, Booth and Yasmeen (2013) by
+#' Lee-Carter-type factors; this combination is a method of this package
+#' without a published source. Use [coherent_fdm()], the published
+#' product-ratio method. `product_ratio()` still works and warns (class
+#' `mt_warning_deprecated`).
+#'
+#' The geometric mean of the stratum rates (product) is modelled with a
+#' Lee-Carter-type factor (SVD of its log rates, period index a random walk
+#' with drift), and the ratio of each stratum to the product with factors
+#' whose indexes follow AR(1) processes without constant, bounded to
+#' `|phi| <= 0.99` (see [li_lee()]). Predictive draws add Poisson variation
+#' of the deaths given the rates and the exposures.
+#'
+#' @inheritParams li_lee
+#' @param ratio_order Number of stratum-specific (ratio) factors.
+#' @return A model specification.
+#' @references
+#' Hyndman RJ, Booth H, Yasmeen F (2013). Coherent mortality forecasting: the
+#' product-ratio method with functional time series models. *Demography*
+#' 50(1): 261-283.
+#'
+#' Lee R, Miller T (2001). Evaluating the performance of the Lee-Carter
+#' method for forecasting mortality. *Demography* 38(4): 537-549.
+#' @seealso [coherent_fdm()], [li_lee()].
+#' @examples
+#' sp <- suppressWarnings(product_ratio())
+#' # the published method:
+#' if (requireNamespace("demography", quietly = TRUE)) {
+#'   x <- mt_example(deaths = "single", years = 1990:2019)
+#'   fit <- mt_fit(coherent_fdm(order1 = 2, order2 = 1), x)
+#' }
 #' @export
 product_ratio <- function(ratio_order = 1, jump_off = c("fitted", "observed")) {
+  mt_warn(paste("product_ratio() is deprecated: this Lee-Carter version of the product-ratio method has no",
+                "published source. Use coherent_fdm(), the product-ratio method of Hyndman, Booth and Yasmeen",
+                "(2013)."), class = "deprecated")
   jump_off <- match.arg(jump_off)
   new_mt_spec("multipop", list(type = "product_ratio", ratio_order = ratio_order, jump_off = jump_off), joint = TRUE,
               min_periods = 8,
@@ -105,6 +156,16 @@ fit_model.mt_spec_multipop <- function(spec, D, E, ages, periods, strata = NULL,
     ar <- lapply(seq_len(r), function(j) ar1_fit(k[, j]))
     list(a = a, b = b, k = k, ar = ar)
   })
+  if (p$type == "li_lee") {
+    bound <- vapply(strata_fits, function(st) any(vapply(st$ar, `[[`, logical(1), "bounded")), logical(1))
+    if (any(bound)) {
+      who <- if (!is.null(strata$label)) strata$label[bound] else which(bound)
+      mt_warn(sprintf(paste("Li-Lee: the AR(1) coefficient of the stratum index is bounded at |phi| = 0.99 in %d",
+                            "stratum/strata (%s): their deviations from the common trend are close to a unit root",
+                            "and revert very slowly; coherence may not suit them."), sum(bound),
+                      paste(utils::head(who, 5), collapse = ", ")), class = "li_lee")
+    }
+  }
   fitted <- array(NA_real_, dim(D))
   for (s in seq_len(ns)) {
     st <- strata_fits[[s]]
@@ -129,12 +190,14 @@ lc_from_log <- function(y) {
   lc_finish(a, b, k)
 }
 
+# AR(1) without constant, least squares through the origin; the coefficient
+# is bounded to |phi| <= 0.99 (a package safeguard; `bounded` reports it)
 ar1_fit <- function(k) {
   n <- length(k)
-  phi <- sum(k[-1] * k[-n]) / sum(k[-n]^2)
-  phi <- max(min(phi, 0.99), -0.99)
+  phi_ls <- sum(k[-1] * k[-n]) / sum(k[-n]^2)
+  phi <- max(min(phi_ls, 0.99), -0.99)
   e <- k[-1] - phi * k[-n]
-  list(phi = phi, sigma = sqrt(sum(e^2) / max(n - 2, 1)), last = k[n])
+  list(phi = phi, sigma = sqrt(sum(e^2) / max(n - 2, 1)), last = k[n], bounded = isTRUE(abs(phi_ls) > 0.99))
 }
 
 #' @export
@@ -178,6 +241,13 @@ simulate_model.mt_spec_multipop <- function(spec, fit, h, n_draws, ...) {
 #' the mean observed ratio of the last `years` training years (bounded to
 #' 0.02-0.98), applied path by path
 #' and reported as the share of adjusted cells.
+#'
+#' This is a post-hoc adjustment of this package without a published source
+#' (reference unknown): it changes the draws and leaves the fitted model as
+#' it is, so the adjusted draws no longer follow the model's distribution. Models
+#' that keep strata together by construction are [li_lee()],
+#' [coherent_fdm()] and `coda(coherent = TRUE)` ([coda()]); [reconciled()]
+#' makes totals and their parts coherent.
 #'
 #' @param draws An [mt_draws] object.
 #' @param var Stratum variable that distinguishes the pair (for example

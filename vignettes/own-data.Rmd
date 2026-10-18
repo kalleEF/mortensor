@@ -126,11 +126,11 @@ mt_inequality(x, "Quintil", order = paste0("Q", 5:1), quantity = "life_expectanc
 Three candidates are compared in a backtest with three forecast origins
 and five years ahead: Lee-Carter per stratum; Li-Lee with a common trend
 per sex, which keeps the quintiles from diverging; and an ensemble of
-Lee-Carter and random walks that are robust to small counts.
+Lee-Carter and the random walk with drift per age.
 
 ```{r}
 cand <- list("Lee-Carter" = lee_carter(), "Li-Lee" = li_lee(common_by = "Geschlecht"),
-             "Lee-Carter + random walk" = ensemble(lc = lee_carter(), rw = rwd(observation_noise = TRUE)))
+             "Lee-Carter + random walk" = ensemble(lc = lee_carter(), rw = rwd()))
 bt <- mt_compare(cand, x, origins = 2012:2014, h = 5, n_draws = 200)
 scores <- mt_score_table(bt, metrics = c("crps", "cov95"))
 scores

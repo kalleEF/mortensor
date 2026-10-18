@@ -32,7 +32,8 @@ or \code{"lifespan_variation"}.}
 \item{probs}{Quantile levels.}
 
 \item{...}{Arguments of the quantity: \code{at} for life expectancy,
-\code{standard} and \code{per} for \code{asr()}, \code{from} and \code{to} for \code{prob_dying()},
+\code{standard}, \code{per}, \code{exposure} and \code{age_groups} for \code{asr()}, \code{from} and
+\code{to} for \code{prob_dying()},
 \code{age} (an age label) for \code{"rate"}, \code{measure} (one index, default
 \code{"edagger"}) and \code{at} for \code{\link[=lifespan_variation]{lifespan_variation()}}.}
 }
@@ -42,11 +43,18 @@ or \code{"rii"}), \code{period}, \code{mean} and quantiles.
 }
 \description{
 Summarises a gradient over the ordered levels of a stratum variable (for
-example deprivation quintiles) by a regression of the quantity on the
-relative rank of each level in the population, weighted by population
-size: the slope index of inequality (SII) is the difference between the
-fitted values at the top (rank 1) and the bottom (rank 0) of the
-population, the relative index of inequality (RII) their ratio. The
+example deprivation quintiles) by a linear regression of the quantity on
+the relative rank of each level in the population, weighted by
+population size (Mackenbach and Kunst 1997). Moreno-Betancur et al.
+(2015) define the slope and the relative index of inequality as
+parameters of a regression of the outcome on the relative rank: the
+difference and the ratio of the expected outcomes at the two ends of the
+rank scale. Here, with the linear regression (identity link), the slope
+index of inequality (SII) is the fitted value at the top (rank 1) minus
+that at the bottom (rank 0), the slope; the relative index of inequality
+(RII) is the ratio of the fitted values of the same linear regression at
+rank 1 and rank 0, \code{(b0 + b1) / b0} with intercept \code{b0} and slope \code{b1}
+(not the exponentiated slope of a regression with a log link). The
 relative rank of a level is the midpoint of its cumulative population
 share, with the levels ordered as in \code{order}. Computed path by path, with
 the population shares of the exposures of each year for observed rates
@@ -61,4 +69,8 @@ Mackenbach JP, Kunst AE (1997). Measuring the magnitude of
 socio-economic inequalities in health: an overview of available measures
 illustrated with two examples from Europe. \emph{Social Science & Medicine}
 44(6): 757-771.
+
+Moreno-Betancur M, Latouche A, Menvielle G, Kunst AE, Rey G (2015).
+Relative index of inequality and slope index of inequality: a structured
+regression framework for estimation. \emph{Epidemiology} 26(4): 518-527.
 }

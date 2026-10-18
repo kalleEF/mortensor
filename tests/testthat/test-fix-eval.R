@@ -100,7 +100,8 @@ test_that("backtests with step_regroup() regroup the test data to the fit", {
 
 test_that("mt_compare() uses the same default origins for every model", {
   x <- mt_example(deaths = "single", years = 2006:2015)
-  expect_warning(bt <- mt_compare(list(rw = rwd(), rwn = rwd(observation_noise = TRUE)), x, h = 3, n_draws = 20),
+  rwn <- suppressWarnings(rwd(observation_noise = TRUE))
+  expect_warning(bt <- mt_compare(list(rw = rwd(), rwn = rwn), x, h = 3, n_draws = 20),
                  class = "mt_warning_backtest_origin")
   o <- bt[, list(origins = paste(sort(unique(origin)), collapse = ",")), by = model]
   expect_equal(o$origins[1], o$origins[2])
@@ -126,6 +127,21 @@ test_that("mt_backtest() works without a seed", {
   x <- mt_example(deaths = "single", years = 1995:2010)
   expect_no_warning(bt <- mt_backtest(rwd(), x, origins = c(2005, 2007), h = 2, n_draws = 20, seed = NULL))
   expect_setequal(unique(bt$origin), c(2005, 2007))
+})
+
+test_that("mt_backtest() warns when strata without draws are not scored", {
+  x <- mt_example(deaths = "single", years = 1995:2010)
+  forecast_orig <- mortensor::mt_forecast
+  # a model that fails for men at origin 2007 (missing rates)
+  local_mocked_bindings(mt_forecast = function(fit, ...) {
+    fc <- forecast_orig(fit, ...)
+    if (max(fit$periods) == 2007) fc$rates[, , fc$strata$label == "male", ] <- NA
+    fc
+  })
+  expect_warning(bt <- mt_backtest(rwd(), x, origins = c(2005, 2007), h = 2, n_draws = 20),
+                 class = "mt_warning_backtest")
+  expect_setequal(unique(bt[origin == 2007]$sex), "female")
+  expect_setequal(unique(bt[origin == 2005]$sex), c("female", "male"))
 })
 
 test_that("mt_backtest() refuses data with ungrouped deaths", {

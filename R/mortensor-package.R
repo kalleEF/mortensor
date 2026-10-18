@@ -11,12 +11,14 @@
 #'   estimates single-year data with the penalized composite link model,
 #'   [mt_smooth()] smooths rates; [mt_prep()] bundles these steps so that
 #'   backtests refit them on every training window.
-#' * **Models**: [rwd()], [lee_carter()], [tucker3()], [arima_series()],
-#'   [ets_series()], [hyndman_ullah()], [stmomo()], [li_lee()], [product_ratio()],
-#'   [apc_bayes()] (package bamp), [cause_shares()] for coherent multi-cause
-#'   forecasts and [ensemble()], fitted with [mt_fit()] (optionally tuned
-#'   with [tuned()]) and forecast with [mt_forecast()] as simulated paths
-#'   ([mt_draws]).
+#' * **Models**: [rwd()], [lee_carter()], [arima_series()], [ets_series()],
+#'   [hyndman_ullah()], [coherent_fdm()], [stmomo()], [stanmomo()],
+#'   [li_lee()], [coda()], [apc_bayes()] (package bamp), the experimental
+#'   [tucker3()] and [coda_causes()], and [ensemble()], fitted with [mt_fit()]
+#'   (optionally tuned with [tuned()]) and forecast with [mt_forecast()] as
+#'   simulated paths ([mt_draws]). [product_ratio()] and [cause_shares()]
+#'   are deprecated. The article "Methods and sources" lists the published
+#'   source of every method.
 #' * **Hierarchies**: [mt_hierarchy()] describes crossed or nested strata
 #'   (for example sex x region x deprivation quintile with their totals),
 #'   [mt_aggregate_strata()] adds the aggregates, [mt_reconcile()] and

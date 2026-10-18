@@ -1,11 +1,16 @@
-#' Coherent multi-cause forecasts with cause shares
+#' Coherent multi-cause forecasts with cause shares (deprecated)
+#'
+#' **Deprecated.** `cause_shares()` is a method of this package without a
+#' published source (a Tucker4 decomposition of isometric log-ratio
+#' coordinates of cause shares). Use [reconciled()] with a hierarchy of
+#' causes (separate models made coherent), or [coda_causes()], the
+#' multiple-decrement compositional model of Oeppen (2008).
+#' `cause_shares()` still works and warns (class `mt_warning_deprecated`).
 #'
 #' Forecasts all-cause mortality with any model (`total`) and the shares of
 #' the causes in all-cause mortality with a compositional tensor model, so
 #' that cause-specific forecasts add up to the all-cause forecast in every
-#' draw (a Tucker4 decomposition of isometric log-ratio coordinates; an
-#' experimental method without a published application to mortality, so
-#' compare it with [reconciled()] separate models in a backtest):
+#' draw:
 #'
 #' 1. shares of each cause (and of a residual cause, the part of all-cause
 #'    mortality not covered by the listed causes) per age, year and group;
@@ -21,8 +26,9 @@
 #' (`prep = mt_prep(step_smooth())`) can help.
 #'
 #' Predictive draws (`mt_forecast(predictive = TRUE)`) are the predictive
-#' draws of the total model; for models of smooth rates (such as
-#' [lee_carter()]) these are Poisson deaths, which are split between the
+#' draws of the total model; for models of expected rates (such as
+#' [lee_carter()]) these are Poisson deaths given the rates (no other
+#' observation noise is added), which are split between the
 #' causes (and the residual cause) multinomially by the share draws, so that
 #' the deaths of the causes add up to the all-cause deaths also in predictive
 #' draws. The residual variation of the shares added to these draws is then
@@ -51,13 +57,18 @@
 #' Egozcue JJ, Pawlowsky-Glahn V, Mateu-Figueras G, Barcelo-Vidal C (2003).
 #' Isometric logratio transformations for compositional data analysis.
 #' *Mathematical Geology* 35(3): 279-300.
+#' @seealso [reconciled()], [coda_causes()].
 #' @examples
 #' x <- mt_example_causes(years = 2010:2019)
-#' fit <- mt_fit(cause_shares(total = lee_carter(), ranks = c(2, 2, 2, 2)), x)
+#' fit <- mt_fit(suppressWarnings(cause_shares(total = lee_carter(), ranks = c(2, 2, 2, 2))), x)
 #' fc <- mt_forecast(fit, h = 5, n_draws = 50, seed = 1)
+#' # the replacement:
+#' fit2 <- mt_fit(coda_causes(), x)
 #' @export
 cause_shares <- function(total = lee_carter(), var = "cause", total_level = "all", ranks = c(3, 3, 2, 2),
                          residual = "auto", residual_noise = TRUE) {
+  mt_warn(paste("cause_shares() is deprecated: it is a method of this package without a published source. Use",
+                "reconciled() with a hierarchy of causes, or coda_causes()."), class = "deprecated")
   check_class(total, "mt_spec", "total")
   if (length(ranks) != 4) mt_abort("`ranks` needs four values.", class = "argument")
   new_mt_spec("cause_shares", list(total = total, var = var, total_level = total_level, ranks = ranks,
@@ -157,9 +168,7 @@ mt_fit.mt_spec_cause_shares <- function(spec, data, prep = NULL, cores = 1, ...)
   structure(list(spec = spec, prep = prep, fits = fits, diagnostics = diagnostics, age = md$age,
                  periods = md$periods, strata = st, omega = d$omega,
                  observed = if (is.null(raw_D)) m else raw_D / md$E, train_D = md$D, raw_D = raw_D, train_E = md$E,
-                 exposure_last = md$E[, nt, , drop = FALSE],
-                 noise_sd = extra_noise_sd(list(smooth = spec$smooth, joint = TRUE), list(fitted = fitted),
-                                           raw_D %||% md$D, md$E)),
+                 exposure_last = md$E[, nt, , drop = FALSE]),
             class = c("mt_fit_cause_shares", "mt_fit"))
 }
 

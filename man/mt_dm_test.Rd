@@ -11,7 +11,7 @@ mt_dm_test(
   targets = NULL,
   by = NULL,
   alternative = c("two.sided", "less", "greater"),
-  varestimator = c("acf", "bartlett")
+  varestimator = c("ewc", "acf", "bartlett")
 )
 }
 \arguments{
@@ -38,25 +38,32 @@ values.}
 \item{alternative}{\code{"two.sided"}, \code{"less"} (the model has a lower expected
 score than \code{ref}, that is, it is more accurate) or \code{"greater"}.}
 
-\item{varestimator}{\code{"acf"} (sum of the autocovariances, default) or
-\code{"bartlett"} (Bartlett weights), as in \code{forecast::dm.test()}.}
+\item{varestimator}{\code{"ewc"} (equal-weighted cosine estimate with
+fixed-smoothing t critical values, default), \code{"acf"} (sum of the
+autocovariances, as \code{forecast::dm.test()}) or \code{"bartlett"} (Bartlett
+weights, as \code{forecast::dm.test()}). See Variance estimators.}
 }
 \value{
 A \code{data.table} with one row per model (other than \code{ref}), value
 of \code{by}, target, metric and horizon: \code{model}, \code{ref}, the \code{by} columns,
 \code{target}, \code{metric}, \code{horizon} (a factor: the horizons, then \code{"all"}),
 \code{n_origins} (number of losses tested), \code{lag} (largest autocovariance
-lag used), \code{score} and \code{score_ref} (mean loss over the origins),
+lag used; \code{NA} for \code{"ewc"}), \code{df} (degrees of freedom of the t
+distribution), \code{score} and \code{score_ref} (mean loss over the origins),
 \code{mean_diff} (\code{score - score_ref}; negative when the model is more
-accurate), \code{statistic} (Diebold-Mariano statistic with the correction
-of Harvey et al.) and \code{p_value}.
+accurate), \code{statistic} and \code{p_value}.
 }
 \description{
 Tests whether models of a backtest differ in their expected score with
-the Diebold-Mariano test (Diebold and Mariano 1995) and the small-sample
-correction of Harvey, Leybourne and Newbold (1997). It complements
-\code{\link[=mt_score_table]{mt_score_table()}}, which shows the mean scores: the test says whether a
-difference is larger than the variation between forecast origins.
+the Diebold-Mariano test (Diebold and Mariano 1995). By default the
+long-run variance is the equal-weighted cosine (EWC) estimate with
+fixed-smoothing critical values from a t distribution (Lazarus, Lewis,
+Stock and Watson 2018; for the Diebold-Mariano test, Coroneo and Iacone
+2020); the version of \code{forecast::dm.test()}, with the small-sample
+correction of Harvey, Leybourne and Newbold (1997), is an option. It
+complements \code{\link[=mt_score_table]{mt_score_table()}}, which shows the mean scores: the test
+says whether a difference is larger than the variation between forecast
+origins.
 }
 \details{
 The test uses one loss per forecast origin, the time index of a
@@ -66,49 +73,93 @@ they are averaged first:
 \itemize{
 \item per horizon \code{h}: the mean score over the cells of each origin at that
 horizon gives one loss per origin and model. The differences between
-the losses of a model and of \code{ref} form a series over the origins,
-tested with the autocovariances up to lag \code{h - 1} (the errors of
-forecasts \code{h} years ahead from consecutive origins build up over
-overlapping years).
+the losses of a model and of \code{ref} form a series over the origins. The
+errors of forecasts \code{h} years ahead from consecutive origins build up
+over overlapping years, so the differences are autocorrelated.
 \item overall (\code{horizon = "all"}): the mean of these per-horizon losses over
-all horizons gives one loss per origin, tested with the largest horizon
-\code{H} (lags up to \code{H - 1}). Only origins scored at every horizon enter.
+all horizons gives one loss per origin. Only origins scored at every
+horizon enter.
 }
 
 Only cells scored for both models enter (the same origin, horizon,
-stratum, age group, year and target). The statistic, its variance (sum of
-autocovariances, or Bartlett weights with \code{varestimator = "bartlett"}),
-the correction factor and the t distribution with \code{T - 1} degrees of
-freedom (\code{T} origins) are those of \code{forecast::dm.test(e1, e2, h = h, power = 1)} with \code{e1} and \code{e2} the losses per origin (scores are not
-negative, so the loss is the score itself). With origins spaced \code{s}
-years apart (for example \code{origins = seq(1981, 2001, by = 10)}), test years
-overlap only up to lag \code{ceiling(h / s) - 1}, which is used instead; with
-unequal spacing the smallest gap counts.
-
-With few origins the test has little power: a backtest with 6 origins
-finds only large and consistent differences. When the number of origins
-\code{T} is not larger than the number of lags needed (\code{T <= h} for
-consecutive origins), there is no test (\code{statistic} and \code{p_value} are
-\code{NA}, with a warning of class \code{mt_warning_dm}): lag 0 would ignore the
-correlation of overlapping test years and give too small p-values. For
-long horizons, use more origins or origins spaced \code{h} years apart. When
-the variance estimate with lags up to \code{h - 1} is not positive, the test
-uses lag 0, as \code{forecast::dm.test()} does, with the same warning. The p-values
-are not adjusted for the number of tests (models, targets, horizons); see
-\code{\link[stats:p.adjust]{stats::p.adjust()}}.
+stratum, age group, year and target). Scores are not negative, so the
+loss is the score itself.
 }
+\section{Variance estimators}{
+
+With \code{d_t} the loss differences of the \code{T} origins (\verb{t = 1, ..., T}, in
+the order of the origins) and \code{dbar} their mean:
+\itemize{
+\item \code{"ewc"} (default): \code{Lambda_j = sqrt(2 / T) * sum_t (d_t - dbar) * cos(pi * j * (t - 1/2) / T)} for \verb{j = 1, ..., nu}, the long-run
+variance \code{Omega = mean(Lambda_j^2)}, the statistic \code{sqrt(T) * dbar / sqrt(Omega)} and p-values from the t distribution with \code{nu} degrees of
+freedom, \code{nu = max(1, floor(0.4 * T^(2/3)))} as Lazarus et al. (2018)
+recommend for the EWC test (1 for up to 11 origins, 2 for 12 to 20,
+3 for 21 to 31). The estimate does not use the horizon, so there is a
+test for every horizon with at least 2 origins; \code{lag} is \code{NA}.
+\item \code{"acf"}: the test of \code{forecast::dm.test(e1, e2, h = h, power = 1)} with
+\code{e1} and \code{e2} the losses per origin: the variance is the sum of the
+autocovariances up to lag \code{h - 1}, the statistic has the correction of
+Harvey et al. (1997), and p-values come from the t distribution with
+\code{T - 1} degrees of freedom. With origins spaced \code{s} years apart (for
+example \code{origins = seq(1981, 2001, by = 10)}), test years overlap only
+up to lag \code{ceiling(h / s) - 1}, which is used instead; with unequal
+spacing the smallest gap counts. When \code{T} is not larger than the
+number of lags needed (\code{T <= h} for consecutive origins), or when the
+variance estimate is not positive, there is no test (\code{statistic} and
+\code{p_value} are \code{NA}, with a warning of class \code{mt_warning_dm});
+\code{forecast::dm.test()} falls back to lag 0 in the second case, which
+rejects a true null hypothesis about half the time.
+\item \code{"bartlett"}: as \code{"acf"} with Bartlett weights \code{1 - k / h} for the
+autocovariances at lags \verb{k = 1, ..., h - 1}, as in \code{forecast::dm.test()}.
+}
+}
+
+\section{Size and power with few origins}{
+
+Backtests have few origins, and with consecutive origins the test years
+of horizons above 1 overlap. In a simulation under the null hypothesis
+(20,000 series of loss differences that are sums of \code{h} consecutive
+independent normal errors, a moving average of order \code{h - 1} as for
+forecasts \code{h} years ahead from consecutive origins), the \code{"acf"} test at
+the nominal 5\% level rejected in 10\% (\code{h = 2}), 16\% (\code{h = 3}) and 19\%
+(\code{h = 5}) of the samples with 7 origins, and in 16\% to 17\% with 15 or
+16 origins at \code{h = 5}; \code{"bartlett"} in 10\% to 15\% with 7 origins. Their
+p-values are too small with few overlapping origins. The fallback to lag
+0 of \code{forecast::dm.test()}, needed in 4\% of the samples with 7 origins
+at \code{h = 3} and in 22\% at \code{h = 5}, rejected in 39\% to 55\% of them, so
+that the test with the fallback rejected in 27\% at \code{h = 5} with 7
+origins. The EWC test rejected in 4.9\% to 7.2\% of the samples with 7
+origins and in 4.8\% to 7.0\% with 15 or 16 origins (\code{h} from 1 to 5). Its
+size is nearly correct, but with few origins it has few degrees of
+freedom and low power: with 7 origins (\code{nu = 1}) it finds only large
+and consistent differences. More origins, or origins spaced \code{h} years
+apart, which avoid overlapping test years, give more informative tests.
+The p-values are not adjusted for the number of tests (models, targets,
+horizons); see \code{\link[stats:p.adjust]{stats::p.adjust()}}.
+}
+
 \examples{
 x <- mt_example(deaths = "single", years = 1990:2012)
 bt <- mt_compare(list(rw = rwd(), lc = lee_carter()), x, origins = 2001:2007, h = 3, n_draws = 30)
 mt_dm_test(bt)
+# the version of forecast::dm.test()
+mt_dm_test(bt, varestimator = "acf")
 }
 \references{
+Coroneo L, Iacone F (2020). Comparing predictive accuracy in small
+samples using fixed-smoothing asymptotics. \emph{Journal of Applied
+Econometrics} 35(4): 391-409. \doi{10.1002/jae.2756}
+
 Diebold FX, Mariano RS (1995). Comparing predictive accuracy. \emph{Journal of
 Business & Economic Statistics} 13(3): 253-263.
 
 Harvey D, Leybourne S, Newbold P (1997). Testing the equality of
 prediction mean squared errors. \emph{International Journal of Forecasting}
 13(2): 281-291.
+
+Lazarus E, Lewis DJ, Stock JH, Watson MW (2018). HAR inference:
+recommendations for practice. \emph{Journal of Business & Economic
+Statistics} 36(4): 541-559.
 }
 \seealso{
 \code{\link[=mt_compare]{mt_compare()}}, \code{\link[=mt_score_table]{mt_score_table()}}, \code{\link[=mt_score]{mt_score()}}.

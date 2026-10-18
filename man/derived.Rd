@@ -20,7 +20,9 @@ asr(
   standard = "esp2013",
   probs = c(0.025, 0.1, 0.5, 0.9, 0.975),
   paths = FALSE,
-  per = 1e+05
+  per = 1e+05,
+  exposure = NULL,
+  age_groups = c("standard", "grid")
 )
 
 yll(
@@ -49,10 +51,19 @@ strata path by path).}
 
 \item{per}{Rates per \code{per} persons (age-standardised rates).}
 
-\item{exposure}{Future exposures for \code{yll()} (see \code{\link[=mt_deaths]{mt_deaths()}}).}
+\item{exposure}{Exposures (see \code{\link[=mt_deaths]{mt_deaths()}}): for \code{yll()} the future
+exposures that give the deaths; for \code{asr()} the exposures that weight
+the rates within each standard age group (default: those of each
+observed year for observed data, of the last training year for
+forecasts).}
 
-\item{reference_ex}{Reference remaining life expectancy per grid age, or
-\code{NULL} for the forecast's own.}
+\item{age_groups}{\code{"standard"} (default: direct standardisation on the
+age groups of the standard population) or \code{"grid"} (the standard
+weights shared among the grid cells, specific to this package). See
+Age-standardised rates.}
+
+\item{reference_ex}{Reference remaining life expectancy at the start of
+each grid interval, or \code{NULL} for the forecast's own.}
 }
 \value{
 A \code{data.table} with stratum columns, \code{period}, \code{mean} and
@@ -68,21 +79,87 @@ object) the paths are Poisson draws of the observed death counts (see
 \itemize{
 \item \code{prob_dying()}: probability of dying between ages \code{from} and \code{to} (for
 example the SDG indicator 3.4.1 uses 30 to 70), \code{1 - l(to) / l(from)}
-from the period life table;
+from the period life table of \code{\link[=life_table]{life_table()}} (Preston, Heuveline and
+Guillot 2001);
 \item \code{asr()}: age-standardised death rate per \code{per} persons (default
-100,000) with weights of a standard population, restricted to the ages
-of the grid and renormalised (columns \code{ages}, \code{standard} and \code{per}
-state this; an ASR for ages 50+ is per 100,000 of the standard
-population aged 50+);
-\item \code{yll()}: years of life lost, deaths times a reference remaining life
-expectancy at each age (by default the forecast's own period life
-expectancy at the interval midpoint, approximated by the value at the
-start of the interval).
+100,000), by direct standardisation with the weights of a standard
+population (see Age-standardised rates);
+\item \code{yll()}: years of life lost, the deaths of each age interval times the
+remaining life expectancy at the average age at death in the interval
+(see Years of life lost).
 }
 }
+\section{Age-standardised rates}{
+
+By default (\code{age_groups = "standard"}) the rates are first combined to
+the age groups of the standard population, as for the European Standard
+Population (Eurostat 2013): the rate of a standard age group is the sum
+of the deaths divided by the sum of the exposures of the grid cells in
+it, that is the mean of their rates weighted by their exposures. The ASR
+is the mean of these rates weighted by the standard population. The
+exposures are those of each observed year for observed data and, for
+forecasts, \code{exposure} (default: the exposures of the last training year,
+as in \code{\link[=mt_deaths]{mt_deaths()}}). Rates of a group without exposures (all zero, or
+draws that hold none) are averaged with equal weights.
+
+Grid cells wider than the standard groups (for example 0-4 for the groups
+0 and 1-4 of the ESP 2013, or an open interval 90+ for the groups 90-94
+and 95+) take the sum of the weights of the standard groups they cover:
+rates and weights are combined over the smallest age groups that are
+unions both of grid cells and of standard groups. Only the ages of the
+grid enter, and the weights are renormalised to them (columns \code{ages},
+\code{standard} and \code{per} state this; an ASR for ages 50+ is per 100,000 of
+the standard population aged 50+); a standard group that the grid covers
+only in part enters with the covered share of its weight.
+
+\code{age_groups = "grid"} instead shares the weight of each standard group
+evenly among the grid cells within it (the weight of the open standard
+group equally among the grid cells it covers) and weights the rates of
+the grid cells with these shares. This is specific to this package
+(reference unknown). Where the grid is finer than the standard groups,
+every cell of a group gets the same weight, although the older cells of
+a group have higher death rates and, at older ages, fewer persons, so the
+ASR is higher than with the standard's age groups: by 1.8\% to 3.6\% for
+French rates on single years of age to 100+ (HMD, 1950-2006, ESP 2013),
+and by more when the grid extends to higher ages, over which the weight
+of the open standard group 95+ is then spread evenly (up to 11\% with
+single years to 110+). On a grid of the standard's age groups (or
+coarser) both give the same value.
+}
+
+\section{Years of life lost}{
+
+\code{yll()} multiplies the deaths of each age interval by the remaining life
+expectancy at the average age at death in the interval, \code{x + a_x},
+interpolated linearly between the values at the start and at the end of
+the interval, \code{e_x + a_x / n_x * (e_(x+n) - e_x)} (as for e-dagger in
+\code{\link[=lifespan_variation]{lifespan_variation()}}); the last interval uses its \code{e_x}. With the life
+expectancy of the forecast's own period life table (default) these are
+the period expected years of life lost of Murray (1994). With
+\code{reference_ex}, the remaining life expectancy of a standard life table at
+the start of each grid interval, interpolated in the same way with the
+\code{a_x} of the forecast's life table, they are the standard expected years
+of life lost of the same paper. Neither discounting nor age weighting is
+applied. The deaths are rates times \code{exposure} (default: the exposures of
+the last training year), without Poisson noise.
+}
+
 \examples{
 x <- mt_example(deaths = "single")
 fc <- mt_forecast(mt_fit(lee_carter(), x), h = 5, n_draws = 100, seed = 1)
 prob_dying(fc, from = 30, to = 70)
 asr(fc)
+yll(fc)
+}
+\references{
+Eurostat (2013). Revision of the European Standard Population: report of
+Eurostat's task force. Methodologies and Working papers. Publications
+Office of the European Union, Luxembourg. \doi{10.2785/11470}
+
+Murray CJL (1994). Quantifying the burden of disease: the technical
+basis for disability-adjusted life years. \emph{Bulletin of the World Health
+Organization} 72(3): 429-445.
+
+Preston SH, Heuveline P, Guillot M (2001). \emph{Demography: Measuring and
+Modeling Population Processes}. Blackwell.
 }

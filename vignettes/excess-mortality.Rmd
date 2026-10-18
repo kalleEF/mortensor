@@ -18,12 +18,13 @@ Excess deaths are the deaths observed in a period of crisis (a heatwave,
 an epidemic, a war) minus the deaths expected without it. The expected
 deaths are not observed; they come from a model of the years before the
 crisis, the *baseline*. `mt_excess()` fits any mortality model of the
-package to the baseline years, forecasts the later years with the
-observed exposures, and compares the observed deaths with each simulated
-path of expected deaths. The intervals therefore contain the uncertainty
-of the baseline trend and the random variation of the death counts. The
-WHO estimates of the excess mortality of the COVID-19 pandemic follow
-this approach with their own baseline model (Msemburi et al. 2023).
+package to the baseline years, forecasts the later years with the observed
+exposures, and compares the observed deaths with each simulated path of
+expected deaths. The intervals therefore contain the uncertainty of the
+baseline trend and the random variation of the death counts: they are
+prediction intervals for the realised excess under the baseline model. The
+WHO estimates of the excess mortality of the COVID-19 pandemic follow this
+approach with their own baseline model (Msemburi et al. 2023).
 
 The results are
 
@@ -51,7 +52,7 @@ ex[, list(period, observed, expected_q0.5, excess_q0.025, excess_q0.5, excess_q0
 ```
 
 `by = character()` sums women and men. In 2003, about 15,000 more people
-died than expected (95% interval 5,600 to 25,400), 2.8% more than
+died than expected (95% interval 6,600 to 24,200), 2.9% more than
 expected. Fouillet et al. (2006) counted about 15,000 excess deaths
 between 1 and 20 August 2003 against the mortality of 2000-2002, so the
 rest of the year was close to the baseline.
@@ -111,7 +112,7 @@ rbindlist(lapply(names(base), function(b) {
 }))[, list(baseline, excess_q0.025, excess_q0.5, excess_q0.975, p_score_q0.5)]
 ```
 
-The medians agree within 900 deaths. Li-Lee, whose common factor ties the
+The medians agree within 800 deaths. Li-Lee, whose common factor ties the
 trends of women and men together, gives the widest interval of the sum:
 when the trend errors of the parts are correlated, they do not cancel in
 the total. Report the baseline model and years with the results, and
@@ -177,8 +178,8 @@ mt_excess(lee_carter(), germany, baseline = c(2010, 2019), by = character(), cum
 ```
 
 The excess rose from about 26,000 in 2020 to 101,000 in 2022 and fell
-afterwards; from 2020 to 2022 it summed to 183,000, with a wide interval
-(73,000 to 285,000). The interval is wide because the expected deaths of
+afterwards; from 2020 to 2022 it summed to 185,000, with a wide interval
+(80,000 to 292,000). The interval is wide because the expected deaths of
 2022 are a forecast three years beyond a baseline of ten years.
 
 Summing separate models of the 32 strata (Land by sex) instead gives a
@@ -221,7 +222,7 @@ interval of the excess should contain the true excess in 95% of cases.
 The validation suite of the package checks this on simulated data
 (`mt_example()`, a Lee-Carter baseline, deaths at ages 70 and older
 raised by 10% in two years, 20 replicates): the intervals contained zero
-where there was no shock in 97.5% of the cases, and the injected deaths in
+where there was no shock in 98% of the cases, and the injected deaths in
 98% of the cases where there was one. On real data, the coverage depends
 on how well the baseline model forecasts the years of the shock; a
 backtest of the baseline model on years without a shock

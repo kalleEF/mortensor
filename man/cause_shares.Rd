@@ -2,7 +2,7 @@
 % Please edit documentation in R/model-causes.R
 \name{cause_shares}
 \alias{cause_shares}
-\title{Coherent multi-cause forecasts with cause shares}
+\title{Coherent multi-cause forecasts with cause shares (deprecated)}
 \usage{
 cause_shares(
   total = lee_carter(),
@@ -36,14 +36,18 @@ part beyond the multinomial variation).}
 A model specification.
 }
 \description{
+\strong{Deprecated.} \code{cause_shares()} is a method of this package without a
+published source (a Tucker4 decomposition of isometric log-ratio
+coordinates of cause shares). Use \code{\link[=reconciled]{reconciled()}} with a hierarchy of
+causes (separate models made coherent), or \code{\link[=coda_causes]{coda_causes()}}, the
+multiple-decrement compositional model of Oeppen (2008).
+\code{cause_shares()} still works and warns (class \code{mt_warning_deprecated}).
+}
+\details{
 Forecasts all-cause mortality with any model (\code{total}) and the shares of
 the causes in all-cause mortality with a compositional tensor model, so
 that cause-specific forecasts add up to the all-cause forecast in every
-draw (a Tucker4 decomposition of isometric log-ratio coordinates; an
-experimental method without a published application to mortality, so
-compare it with \code{\link[=reconciled]{reconciled()}} separate models in a backtest):
-}
-\details{
+draw:
 \enumerate{
 \item shares of each cause (and of a residual cause, the part of all-cause
 mortality not covered by the listed causes) per age, year and group;
@@ -60,8 +64,9 @@ Shares of rare causes are noisy; smoothing the rates first
 (\code{prep = mt_prep(step_smooth())}) can help.
 
 Predictive draws (\code{mt_forecast(predictive = TRUE)}) are the predictive
-draws of the total model; for models of smooth rates (such as
-\code{\link[=lee_carter]{lee_carter()}}) these are Poisson deaths, which are split between the
+draws of the total model; for models of expected rates (such as
+\code{\link[=lee_carter]{lee_carter()}}) these are Poisson deaths given the rates (no other
+observation noise is added), which are split between the
 causes (and the residual cause) multinomially by the share draws, so that
 the deaths of the causes add up to the all-cause deaths also in predictive
 draws. The residual variation of the shares added to these draws is then
@@ -75,11 +80,16 @@ sex) define the groups.
 }
 \examples{
 x <- mt_example_causes(years = 2010:2019)
-fit <- mt_fit(cause_shares(total = lee_carter(), ranks = c(2, 2, 2, 2)), x)
+fit <- mt_fit(suppressWarnings(cause_shares(total = lee_carter(), ranks = c(2, 2, 2, 2))), x)
 fc <- mt_forecast(fit, h = 5, n_draws = 50, seed = 1)
+# the replacement:
+fit2 <- mt_fit(coda_causes(), x)
 }
 \references{
 Egozcue JJ, Pawlowsky-Glahn V, Mateu-Figueras G, Barcelo-Vidal C (2003).
 Isometric logratio transformations for compositional data analysis.
 \emph{Mathematical Geology} 35(3): 279-300.
+}
+\seealso{
+\code{\link[=reconciled]{reconciled()}}, \code{\link[=coda_causes]{coda_causes()}}.
 }

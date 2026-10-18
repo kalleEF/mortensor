@@ -7,28 +7,47 @@
 #' exposures must be available on the grid (use [mt_ungroup()] first for
 #' grouped data). In a forecasting
 #' pipeline, use it as a preprocessing step (`mt_prep(step_smooth(...))`):
-#' models are then fitted to the smoothed rates, while the observation noise
-#' of their predictive draws, residuals and backtest scales come from the
-#' rates before smoothing ("smooth input, raw residuals").
+#' models are then fitted to the smoothed rates, while their residuals,
+#' observed rates, backtest scales and jump-off offsets come from the deaths
+#' before smoothing ("smooth input, raw residuals"). Predictive draws add
+#' Poisson deaths given the model's rates, as without smoothing.
 #'
 #' Methods and directions:
 #'
 #' * `dims = 1, along = "age"` (default): each year separately over age,
-#'   with Poisson P-splines (`"pspline"`), Whittaker smoothing of log rates
-#'   with the deaths as weights (`"whittaker"`), or a Gaussian additive
-#'   model of log rates with the deaths as weights (`"gam"`);
-#' * `dims = 1, along = "period"`: each age separately over time, Whittaker
-#'   smoothing of log rates with the deaths as weights and one smoothing
-#'   parameter per stratum (generalised cross-validation pooled over ages).
-#'   The weights are scaled within each age, so the parameter gives the same
-#'   smoothness at every age; ages with many deaths are not left
-#'   unsmoothed;
+#'   with Poisson P-splines and the exposures as offset (`"pspline"`; the
+#'   one-dimensional case of Currie, Durban and Eilers 2004), the weighted
+#'   Whittaker smoother of log rates with the deaths as weights
+#'   (`"whittaker"`; Whittaker 1923; Eilers 2003), or a quasi-Poisson
+#'   additive model `s(age)` with the exposures as offset (`"gam"`; Wood
+#'   2017), smoothing parameter by REML and overdispersion estimated;
+#' * `dims = 1, along = "period"`: each age separately over time, the
+#'   weighted Whittaker smoother of log rates with the deaths as weights
+#'   (the approximate inverse variances of the log rates);
 #' * `dims = 2`: the age-period surface, with a Poisson P-spline surface
 #'   (`"pspline"`; Currie, Durban and Eilers 2004) or a quasi-Poisson
 #'   additive model with a tensor-product P-spline `te(age, year)` and the
 #'   exposures as offset (`"gam"`; Wood 2017), smoothing parameters by REML
 #'   and overdispersion estimated, so that year-to-year variation beyond
 #'   Poisson noise is not taken for signal.
+#'
+#' The Whittaker smoother minimises `sum(w (y - z)^2) + lambda sum((D z)^2)`
+#' for log rates `y`, weights `w` and differences `D` of order `pord`
+#' (divided differences over age, so that groups of different widths are
+#' smoothed on the age scale). Its smoothing parameter is chosen for every
+#' fit separately, by generalised cross-validation within `lambda_range`:
+#' for each year (over age) or for each age (over time) and stratum. Over
+#' time, with deaths as weights, ages whose year-to-year variation is large
+#' relative to their Poisson noise (typically ages with many deaths) are
+#' smoothed little or not at all, and ages with few deaths may be smoothed to
+#' a straight line of the log rates. The P-spline fits choose their
+#' smoothing parameters by `criterion` within `lambda_range`.
+#'
+#' Where a method needs one age per cell (the Whittaker smoother over age
+#' and the GAMs), an open last interval such as 90+ is placed at its lower
+#' bound plus half the width of the interval below it (92.5 after 85-89), a
+#' convention of this package. The P-splines instead expand the open
+#' interval into single years up to `omega`, as [mt_ungroup()] does.
 #'
 #' Smoothing over time removes year-to-year fluctuations from the fitted
 #' trends and from the starting level of forecasts; the last years are
@@ -58,15 +77,30 @@
 #'   of the following ages).
 #' @param k Basis dimensions of the tensor-product smooth for `dims = 2`,
 #'   `method = "gam"`: ages and years (default: up to 10 each).
+#' @param lambda Fixed smoothing parameter(s) of the P-splines or the
+#'   Whittaker smoother; `NULL` selects them.
+#' @param lambda_range Search range of the smoothing parameters of the
+#'   P-splines and the Whittaker smoother (in both directions).
 #' @inheritParams mt_ungroup
 #' @return An `mt_data` object with smoothed deaths; diagnostics as attribute
-#'   `"smooth"`.
+#'   `"smooth"`, one row per fit, with the smoothing parameter, the effective
+#'   degrees of freedom (`edf`, or `ed` for P-splines) and, for the Whittaker
+#'   smoother, `at_bound` when the selected parameter is at an end of
+#'   `lambda_range` before the fit reached its limit there (interpolation at
+#'   the lower end, a polynomial of degree `pord - 1` at the upper end); such
+#'   fits are also reported with a warning.
 #' @references
 #' Currie ID, Durban M, Eilers PHC (2004). Smoothing and forecasting
 #' mortality rates. *Statistical Modelling* 4(4): 279-298.
 #'
+#' Eilers PHC (2003). A perfect smoother. *Analytical Chemistry* 75(14):
+#' 3631-3636.
+#'
+#' Whittaker ET (1923). On a new method of graduation. *Proceedings of the
+#' Edinburgh Mathematical Society* 41: 63-75.
+#'
 #' Wood SN (2017). *Generalized Additive Models: An Introduction with R*
-#' (2nd ed.). Chapman and Hall/CRC.
+#' (2nd ed.). CRC Press.
 #' @examples
 #' x <- mt_example(years = 2001:2003, deaths = "single")
 #' s <- mt_smooth(x)
@@ -121,9 +155,9 @@ mt_smooth <- function(data, dims = 1, lambda = NULL, criterion = c("bic", "aic")
   }
   if (method %in% c("whittaker", "gam")) {
     res <- if (method == "whittaker" && along == "period") {
-      whittaker_time_obs(data, g, lambda, pord)
+      whittaker_time_obs(data, g, lambda, pord, lambda_range)
     } else if (method == "whittaker") {
-      whittaker_smooth_obs(data, g, lambda, pord)
+      whittaker_smooth_obs(data, g, lambda, pord, lambda_range)
     } else if (dims == 2) {
       gam2d_smooth_obs(data, g, k)
     } else {
@@ -158,16 +192,36 @@ divided_differences <- function(x, k) {
   M
 }
 
-whittaker_smooth_obs <- function(data, g, lambda, pord) {
+# Weighted Whittaker smoother (Whittaker 1923; Eilers 2003) of one series y
+# with weights w (0 for cells left out) and penalty matrix P of differences
+# of order pord: the solution of (W + lambda P) z = W y, with lambda chosen
+# by generalised cross-validation, n RSS / (n - ED)^2 with ED the trace of
+# the hat matrix, on a log10 scale within lambda_range unless fixed.
+# at_bound: the selected value is at an end of the range although the fit
+# has not reached its limit there (ED = n, interpolation, at the lower end;
+# ED = pord, a polynomial, at the upper end), so the range constrained it
+whittaker_fit <- function(y, w, P, lambda = NULL, lambda_range = c(1e-2, 1e8), pord = 2) {
+  n <- sum(w > 0)
+  m <- length(y)
+  fit_l <- function(l) {
+    A <- diag(w, m) + l * P
+    z <- solve(A, w * y)
+    ed <- sum(diag(solve(A, diag(w, m))))
+    list(z = z, ed = ed, gcv = n * sum(w * (y - z)^2) / max(n - ed, 1e-8)^2)
+  }
+  lr <- log10(lambda_range)
+  ll <- if (is.null(lambda)) stats::optimize(function(v) fit_l(10^v)$gcv, lr)$minimum else NA_real_
+  f <- fit_l(if (is.null(lambda)) 10^ll else lambda)
+  at_bound <- !is.na(ll) && (ll < lr[1] + 0.1 && f$ed < n - 0.1 || ll > lr[2] - 0.1 && f$ed > pord + 0.1)
+  list(z = f$z, lambda = if (is.null(lambda)) 10^ll else lambda, edf = f$ed, at_bound = at_bound)
+}
+
+whittaker_smooth_obs <- function(data, g, lambda, pord, lambda_range) {
   D <- mt_array(data, "deaths")
   E <- mt_array(data, "exposure")
-  na <- dim(D)[1]
-  # divided differences at the interval midpoints, so that age groups of
+  # divided differences at the representative ages, so that age groups of
   # different widths are smoothed on the age scale
-  mid <- axis_midpoints(g$age)
-  n <- length(mid)
-  if (is_open(g$age) && n > 1) mid[n] <- g$age$lower[n] + (g$age$upper[n - 1] - g$age$lower[n - 1]) / 2
-  Dm <- divided_differences(mid, pord)
+  Dm <- divided_differences(cell_ages(g$age$lower, g$age$upper), pord)
   P <- crossprod(Dm)
   out <- D
   sm <- array(FALSE, dim(D))
@@ -176,25 +230,28 @@ whittaker_smooth_obs <- function(data, g, lambda, pord) {
     for (j in seq_len(dim(D)[2])) {
       # missing cells get weight 0: the fit uses the observed cells only
       ok <- smooth_cells(D[, j, s], E[, j, s])
-      n_ok <- sum(ok)
-      if (n_ok <= pord) next
+      if (sum(ok) <= pord) next
       y <- ifelse(ok, log(pmax(D[, j, s], 0.5) / E[, j, s]), 0)
       w <- ifelse(ok, pmax(D[, j, s], 0.5), 0)
-      fit_l <- function(l) {
-        A <- diag(w, na) + l * P
-        z <- solve(A, w * y)
-        tr <- sum(diag(solve(A, diag(w, na))))
-        list(z = z, gcv = sum(w * (y - z)^2) / (n_ok - tr)^2 * n_ok)
-      }
-      l <- lambda %||% 10^stats::optimize(function(ll) fit_l(10^ll)$gcv, c(-2, 8))$minimum
-      z <- fit_l(l)$z
-      out[ok, j, s] <- E[ok, j, s] * exp(z[ok])
+      f <- whittaker_fit(y, w, P, lambda, lambda_range, pord)
+      out[ok, j, s] <- E[ok, j, s] * exp(f$z[ok])
       sm[ok, j, s] <- TRUE
       diag_rows[[length(diag_rows) + 1L]] <- data.table(measure = "deaths", stratum = s, period = g$period$labels[j],
-                                                        method = "whittaker", lambda_age = l)
+                                                        method = "whittaker", lambda_age = f$lambda, edf = f$edf,
+                                                        at_bound = f$at_bound)
     }
   }
+  warn_whittaker_bound(diag_rows)
   list(obs = smoothed_obs(data, g, out, sm), diag = rbindlist(diag_rows))
+}
+
+warn_whittaker_bound <- function(diag_rows) {
+  b <- vapply(diag_rows, function(r) isTRUE(r$at_bound), logical(1))
+  if (any(b)) {
+    mt_warn(sprintf(paste("The smoothing parameter is at the boundary of `lambda_range` in %d of %d Whittaker fits",
+                          "before the fit reached its limit (interpolation or a polynomial); widen `lambda_range` or",
+                          "fix `lambda`."), sum(b), length(b)), class = "lambda_bound", call = NULL)
+  }
 }
 
 # Cells that enter a smooth: observed deaths and positive exposures
@@ -216,11 +273,12 @@ smoothed_obs <- function(data, g, out, sm) {
   obs[]
 }
 
+# Quasi-Poisson GAM s(age) per stratum and year, exposures as offset, REML
 gam_smooth_obs <- function(data, g) {
   need_pkg("mgcv", "for method = \"gam\"")
   D <- mt_array(data, "deaths")
   E <- mt_array(data, "exposure")
-  age <- axis_midpoints(g$age, data$omega)
+  age <- cell_ages(g$age$lower, g$age$upper)
   out <- D
   sm <- array(FALSE, dim(D))
   diag_rows <- list()
@@ -228,21 +286,22 @@ gam_smooth_obs <- function(data, g) {
     for (j in seq_len(dim(D)[2])) {
       ok <- smooth_cells(D[, j, s], E[, j, s])
       if (sum(ok) < 4) next
-      df <- data.frame(y = log(pmax(D[ok, j, s], 0.5) / E[ok, j, s]), w = pmax(D[ok, j, s], 0.5), age = age[ok])
-      wts <- df$w / mean(df$w)
-      fit <- mgcv::gam(y ~ s(age, k = min(20, sum(ok) - 1)), weights = wts, data = df, method = "REML")
-      out[ok, j, s] <- E[ok, j, s] * exp(stats::fitted(fit))
+      df <- data.frame(d = D[ok, j, s], e = E[ok, j, s], age = age[ok])
+      fit <- mgcv::gam(d ~ s(age, k = min(20, sum(ok) - 1)) + offset(log(e)), family = stats::quasipoisson(),
+                       data = df, method = "REML")
+      out[ok, j, s] <- stats::fitted(fit)
       sm[ok, j, s] <- TRUE
       diag_rows[[length(diag_rows) + 1L]] <- data.table(measure = "deaths", stratum = s, period = g$period$labels[j],
-                                                        method = "gam", edf = sum(fit$edf))
+                                                        method = "gam", edf = sum(fit$edf), dispersion = fit$scale)
     }
   }
   list(obs = smoothed_obs(data, g, out, sm), diag = rbindlist(diag_rows))
 }
 
-# Whittaker smoothing over time per age, one smoothing parameter per stratum
-# chosen by generalised cross-validation pooled over the ages
-whittaker_time_obs <- function(data, g, lambda, pord) {
+# Weighted Whittaker smoothing over time, each age and stratum separately
+# with its own smoothing parameter (generalised cross-validation); the
+# deaths are the weights, as over age
+whittaker_time_obs <- function(data, g, lambda, pord, lambda_range) {
   D <- mt_array(data, "deaths")
   E <- mt_array(data, "exposure")
   na <- dim(D)[1]
@@ -253,43 +312,21 @@ whittaker_time_obs <- function(data, g, lambda, pord) {
   sm <- array(FALSE, dim(D))
   diag_rows <- list()
   for (s in seq_len(dim(D)[3])) {
-    # matrices [age, period], also with a single age group
-    Ds <- matrix(D[, , s], na, np)
-    Es <- matrix(E[, , s], na, np)
-    # missing cells get weight 0: the fit uses the observed cells only
-    O <- smooth_cells(Ds, Es)
-    Y <- ifelse(O, log(pmax(Ds, 0.5) / Es), 0)
-    W <- ifelse(O, pmax(Ds, 0.5), 0)
-    # deaths as weights, scaled within each age: one smoothing parameter then
-    # gives the same smoothness at every age (unscaled, ages with many deaths
-    # were barely smoothed and ages with few deaths smoothed strongly)
-    wm <- rowSums(W) / pmax(rowSums(O), 1)
-    W <- W / ifelse(wm > 0, wm, 1)
-    ok <- rowSums(O) > pord
-    if (!any(ok)) next
-    fit_l <- function(l) {
-      rss <- 0
-      tr <- 0
-      Z <- Y
-      for (a in which(ok)) {
-        A <- diag(W[a, ], np) + l * P
-        z <- solve(A, W[a, ] * Y[a, ])
-        Z[a, ] <- z
-        rss <- rss + sum(W[a, ] * (Y[a, ] - z)^2)
-        tr <- tr + sum(diag(solve(A, diag(W[a, ], np))))
-      }
-      n <- sum(O[ok, ])
-      list(Z = Z, gcv = n * rss / (n - tr)^2)
+    for (a in seq_len(na)) {
+      # missing cells get weight 0: the fit uses the observed cells only
+      ok <- smooth_cells(D[a, , s], E[a, , s])
+      if (sum(ok) <= pord) next
+      y <- ifelse(ok, log(pmax(D[a, , s], 0.5) / E[a, , s]), 0)
+      w <- ifelse(ok, pmax(D[a, , s], 0.5), 0)
+      f <- whittaker_fit(y, w, P, lambda, lambda_range, pord)
+      out[a, ok, s] <- E[a, ok, s] * exp(f$z[ok])
+      sm[a, ok, s] <- TRUE
+      diag_rows[[length(diag_rows) + 1L]] <- data.table(measure = "deaths", stratum = s, age = g$age$labels[a],
+                                                        method = "whittaker", along = "period",
+                                                        lambda_period = f$lambda, edf = f$edf, at_bound = f$at_bound)
     }
-    l <- lambda %||% 10^stats::optimize(function(ll) fit_l(10^ll)$gcv, c(-2, 6))$minimum
-    Z <- fit_l(l)$Z
-    sel <- O & ok
-    Ds[sel] <- (Es * exp(Z))[sel]
-    out[, , s] <- Ds
-    sm[, , s] <- sel
-    diag_rows[[length(diag_rows) + 1L]] <- data.table(measure = "deaths", stratum = s, method = "whittaker",
-                                                      along = "period", lambda_period = l)
   }
+  warn_whittaker_bound(diag_rows)
   list(obs = smoothed_obs(data, g, out, sm), diag = rbindlist(diag_rows))
 }
 
@@ -303,7 +340,7 @@ gam2d_smooth_obs <- function(data, g, k = NULL) {
   np <- dim(D)[2]
   if (na < 5 || np < 5) mt_abort("The age-period GAM needs at least 5 ages and 5 periods.", class = "argument")
   k <- k %||% c(min(10, na - 1), min(10, np - 1))
-  age <- axis_midpoints(g$age, data$omega)
+  age <- cell_ages(g$age$lower, g$age$upper)
   grid <- data.frame(age = rep(age, np), year = rep(g$period$lower, each = na))
   out <- D
   diag_rows <- list()
@@ -327,8 +364,14 @@ gam2d_smooth_obs <- function(data, g, k = NULL) {
 #' `mt_smooth_check()` compares smoothed with raw rates per stratum:
 #'
 #' * `mad_log`: median absolute difference of log rates;
-#' * `dispersion`: mean squared Pearson residual of the raw deaths around
-#'   the smoothed deaths; about 1 when smoothing removed Poisson noise only,
+#' * `dispersion`: the Pearson estimate of the dispersion of the raw deaths
+#'   around the smoothed deaths, the sum of squared Pearson residuals
+#'   divided by `n - edf` (McCullagh and Nelder 1989), where `n` is the
+#'   number of smoothed cells with raw deaths and `edf` the effective
+#'   degrees of freedom of the fits of the stratum (column `edf`, from the
+#'   attribute `"smooth"` of [mt_smooth()]; when it is not available, for
+#'   example after further preprocessing steps, the sum is divided by `n`
+#'   and `edf` is `NA`). About 1 when smoothing removed Poisson noise only,
 #'   above 1 when the raw rates vary more (for example year effects), well
 #'   below 1 when the smoothing follows the noise;
 #' * `trend_ratio`: variance of year-to-year changes of the smoothed log
@@ -348,8 +391,11 @@ gam2d_smooth_obs <- function(data, g, k = NULL) {
 #' @param ages Age labels to show (default: four ages across the range).
 #' @param strata Stratum labels to show (default: all).
 #' @param colour Stratum variable that gives the colours.
-#' @return `mt_smooth_check()`: a `data.table` with the stratum columns and
-#'   the measures above. `mt_plot_smooth()`: a ggplot object.
+#' @return `mt_smooth_check()`: a `data.table` with the stratum columns, the
+#'   measures above and `edf`. `mt_plot_smooth()`: a ggplot object.
+#' @references
+#' McCullagh P, Nelder JA (1989). *Generalized Linear Models* (2nd ed.).
+#' Chapman and Hall.
 #' @examples
 #' x <- mt_example(deaths = "single", years = 2000:2015)
 #' s <- mt_smooth(x, along = "period", method = "whittaker")
@@ -375,6 +421,16 @@ mt_smooth_check <- function(data, smoothed) {
     D[!sm] <- NA
     Ds[!sm] <- NA
   }
+  # effective degrees of freedom of the fits, summed per stratum
+  edf <- rep(NA_real_, dim(D)[3])
+  dg <- attr(smoothed, "smooth")
+  if (is.data.frame(dg) && nrow(dg) && "stratum" %in% names(dg)) {
+    v <- dg[["edf"]] %||% dg[["ed"]]
+    if (!is.null(v)) {
+      sv <- tapply(v, dg$stratum, sum)
+      edf[as.integer(names(sv))] <- sv
+    }
+  }
   rows <- lapply(seq_len(dim(D)[3]), function(s) {
     lr <- log(pmax(D[, , s], 0.5) / E[, , s])
     ls <- log(pmax(Ds[, , s], 1e-10) / E[, , s])
@@ -388,9 +444,12 @@ mt_smooth_check <- function(data, smoothed) {
     } else {
       NA_real_
     }
+    n <- sum(!is.na(pear))
+    df_res <- if (is.finite(edf[s]) && n - edf[s] > 0) n - edf[s] else n
     data.table(stratum = s, mad_log = stats::median(abs(lr - ls), na.rm = TRUE),
-               dispersion = mean(pear^2, na.rm = TRUE), trend_ratio = tr,
-               correlation = suppressWarnings(stats::cor(as.vector(lr), as.vector(ls), use = "complete.obs")))
+               dispersion = sum(pear^2, na.rm = TRUE) / df_res, trend_ratio = tr,
+               correlation = suppressWarnings(stats::cor(as.vector(lr), as.vector(ls), use = "complete.obs")),
+               edf = if (df_res < n) edf[s] else NA_real_)
   })
   out <- merge(smoothed$strata, rbindlist(rows), by = "stratum", sort = FALSE)
   out[]

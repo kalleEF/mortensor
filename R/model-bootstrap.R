@@ -6,14 +6,19 @@
 #' forecast draws are pooled across refits:
 #'
 #' * `type = "grid"`: deaths on the grid (after preprocessing) are drawn
-#'   from Poisson distributions with the fitted rates of the model (or the
-#'   preprocessed rates when the model has no fitted rates); the model is
-#'   refitted without preprocessing. This is the semi-parametric bootstrap of
-#'   Brouhns et al. (2005), generalised to any model.
+#'   from Poisson distributions with the fitted deaths of the model (fitted
+#'   rates times exposures) as means, and the model is refitted without
+#'   preprocessing. This is the semi-parametric bootstrap with fitted deaths
+#'   of Renshaw and Haberman (2008), applied to any model. Models of
+#'   observed rates (such as [rwd()]) and models without fitted rates use
+#'   the deaths on the grid as means.
 #' * `type = "data"`: the observed deaths, at their original resolution, are
-#'   drawn from Poisson distributions with the observed counts as means, and
-#'   preprocessing and model are refitted. This propagates the uncertainty of
-#'   ungrouping and smoothing, for any smoother.
+#'   drawn from Poisson distributions with the observed counts as means, as
+#'   in the bootstrap of Brouhns, Denuit and Van Keilegom (2005), and
+#'   preprocessing and model are refitted. Refitting the preprocessing
+#'   (ungrouping and smoothing) on each resample is the package's
+#'   extension; it propagates the uncertainty of the preprocessing, for any
+#'   smoother.
 #'
 #' @param spec A model specification.
 #' @param n_boot Number of bootstrap refits.
@@ -21,6 +26,10 @@
 #' @param seed Random seed for the resampling.
 #' @return A model specification.
 #' @references
+#' Renshaw AE, Haberman S (2008). On simulation-based approaches to risk
+#' measurement in mortality with specific reference to Poisson Lee-Carter
+#' modelling. *Insurance: Mathematics and Economics* 42(2): 797-816.
+#'
 #' Brouhns N, Denuit M, Van Keilegom I (2005). Bootstrapping the Poisson
 #' log-bilinear model for mortality forecasting. *Scandinavian Actuarial
 #' Journal* 2005(3): 212-224.
@@ -58,6 +67,9 @@ mt_fit.mt_spec_bootstrap <- function(spec, data, prep = NULL, cores = 1, ...) {
   wrap_fit(base, spec, "mt_fit_bootstrap", list(boot = fits))
 }
 
+# Poisson resample of the deaths on the grid with the fitted deaths as means
+# (semi-parametric bootstrap of Renshaw and Haberman 2008); the deaths on the
+# grid for models of observed rates or without fitted rates
 resample_grid <- function(fit) {
   m <- fit$observed
   if (isTRUE(fit$spec$smooth)) {
@@ -72,6 +84,8 @@ resample_grid <- function(fit) {
   arrays_to_mt_data(D, fit$train_E, fit$age, fit$periods, fit$strata, fit$omega)
 }
 
+# Poisson resample of the observed deaths with the observed counts as means
+# (Brouhns, Denuit and Van Keilegom 2005)
 resample_data <- function(data) {
   data$obs$deaths <- copy(data$obs$deaths)
   data$obs$deaths[, value := stats::rpois(.N, value)]

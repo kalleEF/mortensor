@@ -289,8 +289,11 @@ print.summary.mt_fit <- function(x, ...) {
     cal <- x$calibration
     grp <- if (!is.null(cal$band) && any(cal$band != "all ages")) paste0(cal$group, ", ages ", cal$band) else cal$group
     ci <- if (!is.null(cal$scale_h1_lo)) sprintf(" (%.2f-%.2f)", cal$scale_h1_lo, cal$scale_h1_hi) else ""
-    cat(sprintf(paste("  calibration (%s): spread factor %.2f%s at horizon 1, x h^%.2f; drift %+.4f; inner CRPS",
-                      "%.4f -> %.4f, 95%% coverage %.2f -> %.2f\n"), grp, cal$scale_h1, ci, cal$slope, cal$drift,
+    # slope and drift are exactly 0 when they were not estimated
+    hz <- ifelse(cal$slope != 0, sprintf(" at horizon 1, x h^%.2f", cal$slope), " at all horizons")
+    dr <- ifelse(cal$drift != 0, sprintf("; drift %+.4f", cal$drift), "")
+    cat(sprintf(paste("  calibration (%s): spread factor %.2f%s%s%s; inner CRPS",
+                      "%.4f -> %.4f, 95%% coverage %.2f -> %.2f\n"), grp, cal$scale_h1, ci, hz, dr,
                 cal$crps_before, cal$crps_after, cal$cov95_before, cal$cov95_after), sep = "")
   }
   bad <- x$diagnostics[status != "ok" | nzchar(message)]
@@ -306,11 +309,20 @@ model_assumptions <- function(spec) {
   p <- spec$params
   switch(class(spec)[1],
          mt_spec_lee_carter = paste(
-           "log m(x,t) = a(x) + b(x) k(t), estimated by", if (p$method == "poisson") "Poisson maximum likelihood",
-           if (p$method == "svd") "SVD of log rates with k(t) refitted to the observed deaths",
-           "(Brouhns et al. 2002; Lee and Carter 1992). k(t) follows a random walk with drift; draws include",
+           "log m(x,t) = a(x) + b(x) k(t), estimated by",
+           if (p$method == "poisson") "Poisson maximum likelihood (Brouhns et al. 2002)." else
+             paste0("SVD of the centred log rates (Lee and Carter 1992), ", switch(
+               p$adjust %||% "dt",
+               dt = "with k(t) refitted so that the fitted total deaths of each year match the observed ones",
+               dxt = paste("with k(t) refitted by Poisson maximum likelihood of the deaths by age given a(x) and",
+                           "b(x) (Booth, Maindonald and Smith 2002)"),
+               e0 = paste("with k(t) refitted so that the fitted life expectancy at the first age matches the",
+                          "observed one (Lee and Miller 2001)"),
+               none = "with k(t) from the SVD (not refitted)"), "."),
+           "k(t) follows a random walk with drift; draws include",
            "its innovations and the uncertainty of the drift. a(x) and b(x) are fixed",
-           "(parameter uncertainty with bootstrapped()). Jump-off:", p$jump_off, "rates.",
+           "(parameter uncertainty with bootstrapped()). Predictive draws add Poisson variation of the deaths",
+           "given the rates. Jump-off:", p$jump_off, "rates.",
            if (isTRUE(p$rotate)) {
              sprintf(paste("b(x) rotates towards an ultimate pattern (flat below 65) as life expectancy at birth",
                            "of each path rises from %g to %g (Li, Lee and Gerland 2013); k(t) is solved again so",
@@ -320,9 +332,10 @@ model_assumptions <- function(spec) {
          mt_spec_coda = coda_assumptions(spec),
          mt_spec_coda_causes = coda_assumptions(spec),
          mt_spec_rwd = if (isTRUE(p$observation_noise)) {
-           paste("Each age: log rate = level + noise, level a random walk with drift (local level model).",
-                 "Noise variance from Poisson counts plus a common extra part; level variance partly pooled over",
-                 "ages. Draws include level and drift uncertainty; predictive draws add the noise.")
+           paste("Each age: log rate = level + noise, level a random walk with drift (local level model;",
+                 "deprecated variant). Variances from a moment estimator of this package (Poisson part plus a",
+                 "common extra part, clamped, level variance partly pooled over ages). Draws include level and",
+                 "drift uncertainty; predictive draws add Poisson variation of the deaths.")
          } else {
            paste0("Each age: log rate a random walk with drift, estimated from the year-to-year changes",
                   if (!is.null(p$drift_window)) sprintf(" of the last %d years", p$drift_window) else "",
@@ -330,34 +343,45 @@ model_assumptions <- function(spec) {
                   "rates accumulates, so intervals are wide where deaths are few.")
          },
          mt_spec_multipop = paste(
-           if (p$type == "li_lee") "Li-Lee: log m(x,t,i) = a(x,i) + B(x) K(t) + b(x,i) k(t,i)" else
-             "Product-ratio: log m(x,t,i) = common Lee-Carter + a(x,i) + b(x,i) k(t,i)",
-           "(Li and Lee 2005; Hyndman, Booth and Yasmeen 2013). The common factor (per group of `common_by`)",
+           if (p$type == "li_lee") "Li-Lee (Li and Lee 2005): log m(x,t,i) = a(x,i) + B(x) K(t) + b(x,i) k(t,i)." else
+             paste("Product-ratio, Lee-Carter version (deprecated; no published source, see coherent_fdm()):",
+                   "log m(x,t,i) = common Lee-Carter + a(x,i) + b(x,i) k(t,i)."),
+           "The common factor (per group of `common_by`)",
            "follows a random walk with drift; each stratum's k(t,i) an AR(1) without intercept",
-           "(|phi| <= 0.99), independent across strata, so deviations from the common trend stay bounded.",
-           "Draws include the innovations and drift uncertainty of K and the AR(1) innovations;",
-           "a, b and phi are fixed."),
+           "(|phi| <= 0.99, a bound of this package), independent across strata, so deviations from the common",
+           "trend stay bounded. Draws include the innovations and drift uncertainty of K and the AR(1) innovations;",
+           "a, b and phi are fixed. Predictive draws add Poisson variation of the deaths given the rates."),
          mt_spec_coherent_fdm = paste(
            "Product-ratio method with functional data models (Hyndman, Booth and Yasmeen 2013; demography):",
            "rates smoothed over age; the geometric mean of the strata (per group of `common_by`) and the ratio",
            "of each stratum to it are decomposed into principal components; the product's scores follow ARIMA",
            "models, the ratios' scores stationary ARFIMA models, so deviations from the product stay bounded.",
-           "Draws simulate the scores and resample the model errors; predictive draws add Poisson and",
-           "extra-Poisson noise."),
+           "Draws simulate the scores and resample the model errors; predictive draws add Poisson variation",
+           "of the deaths given the rates."),
          mt_spec_stanmomo = paste(
            "Bayesian stochastic mortality model fitted with Stan (StanMoMo; Barigou et al. 2023):", p$model,
            "with", p$family, "likelihood and log link; period indexes random walks with drift, cohort effects",
            "AR(2). Draws are posterior draws of the expected rates (parameters and future indexes);",
-           "predictive draws add Poisson and extra-Poisson noise."),
+           if (identical(p$family, "nb")) {
+             paste("predictive draws are negative binomial deaths with the dispersion of the same posterior",
+                   "draw (posterior predictive distribution).")
+           } else {
+             "predictive draws add Poisson variation of the deaths given the rates."
+           }),
          mt_spec_apc_bayes = paste(
            "Bayesian age-period-cohort model (bamp; Schmid and Held 2007): logit rate = age + period + cohort",
            "effects with random-walk priors, binomial likelihood, each stratum fitted separately. Draws are",
            "posterior samples of the rates (parameters and random walks of period and cohort effects);",
-           "predictive draws add Poisson and extra-Poisson noise."),
+           "predictive draws add Poisson variation of the deaths given the rates (bamp's binomial likelihood",
+           "and overdispersion are not carried into them)."),
          mt_spec_ensemble = paste("Mixture of the component models: each draw comes from one component, chosen in",
                                   "proportion to the weights; uncertainty of the components and their spread."),
-         mt_spec_reconciled = paste("Base model reconciled draw by draw over the hierarchy;", spec$params$method,
-                                    "projection on the deaths (or rates) scale."),
+         mt_spec_reconciled = paste("Base model reconciled draw by draw over the hierarchy on the deaths (or rates)",
+                                    switch(spec$params$method,
+                                           bottom_up = "scale: aggregates are the sums of the bottom strata.",
+                                           proportional = "scale: parts of fixed nodes scaled in proportion.",
+                                           energy_score = "scale: map learnt by score-optimal reconciliation.",
+                                           paste0("scale: ", spec$params$method, " projection."))),
          mt_spec_recalibrated = paste(model_assumptions(p$base), sprintf(paste(
            "Calibrated: the spread%s of the draws%s is rescaled to minimise the %s of %s in forecasts from %d",
            "origins in the last %d training years."), if (p$bias) " and drift" else "",
@@ -367,8 +391,9 @@ model_assumptions <- function(spec) {
                   asr = "the log ASR"), p$n_origins, p$years)),
          mt_spec_anchored = paste(model_assumptions(p$base), sprintf(paste(
            "Anchored: forecasts start at the observed level of the last %d training year(s), with offsets per",
-           "age and stratum%s fading out over %s years."), p$years,
-           if (isTRUE(p$shrink)) " (shrunk where deaths are few)" else "", format(p$decay))),
+           "age and stratum%s %s."), p$years,
+           if (isTRUE(p$shrink)) " (shrunk where deaths are few)" else "",
+           if (is.finite(p$decay)) sprintf("fading out over %s years", format(p$decay)) else "kept at all horizons")),
          paste(spec$label, "- see the help page of its constructor for the model and its uncertainty."))
 }
 

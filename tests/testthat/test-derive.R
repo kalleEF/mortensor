@@ -119,12 +119,90 @@ test_that("standard weights cover open grid intervals and paths can be returned"
   expect_identical(dim(prob_dying(fc, 30, 70, paths = TRUE)), c(3L, 2L, 20L))
 })
 
+# Draws of one stratum and period with given rates and exposures of the
+# last training year
+hand_draws <- function(age, m, E) {
+  n <- length(age)
+  st <- data.table::data.table(stratum = 1L, label = "all")
+  fit <- list(exposure_last = array(E, c(n, 1, 1), dimnames = list(age$labels, "2019", "all")))
+  mortensor:::new_mt_draws(array(m, c(n, 1, 1, 1)), age, 2020, st, model = "test", origin = 2019, fit = fit)
+}
+
+test_that("asr() standardises directly on the age groups of the standard", {
+  age <- single_ages(80, 92)
+  m <- exp(-4 + 0.1 * (0:12))
+  E <- seq(1000, 400, length.out = 13)
+  dr <- hand_draws(age, m, E)
+  # ESP 2013: 80-84 (2500), 85-89 (1500), and the open cell 92+ joins 90-94
+  # and 95+ (800 + 200) with the cells 90 and 91
+  grp <- rep(1:3, c(5, 5, 3))
+  W <- c(2500, 1500, 1000)
+  rate_g <- tapply(m * E, grp, sum) / tapply(E, grp, sum)
+  expect_equal(asr(dr)$mean, sum(W * rate_g) / sum(W) * 1e5, tolerance = 1e-12)
+  # the weights of the standard shared among the grid cells
+  w <- c(rep(500, 5), rep(300, 5), 160, 160, 480 + 200)
+  expect_equal(mortensor:::standard_weights(age, standard_population()), w)
+  expect_equal(asr(dr, age_groups = "grid")$mean, sum(w * m) / sum(w) * 1e5, tolerance = 1e-12)
+  # given exposures replace those of the last training year
+  E2 <- matrix(rev(E), 13, 1, dimnames = list(age$labels, "all"))
+  rate_2 <- tapply(m * rev(E), grp, sum) / tapply(rev(E), grp, sum)
+  expect_equal(asr(dr, exposure = E2)$mean, sum(W * rate_2) / sum(W) * 1e5, tolerance = 1e-12)
+  # a group without exposures: the plain mean of its rates
+  E0 <- E
+  E0[1:5] <- 0
+  rate_0 <- c(mean(m[1:5]), rate_g[2:3])
+  expect_equal(asr(hand_draws(age, m, E0))$mean, sum(W * rate_0) / sum(W) * 1e5, tolerance = 1e-12)
+  # coarser grid cells collect the standard groups they cover, cells that
+  # straddle a bound join the neighbouring groups, and a standard group the
+  # grid covers in part counts with the covered share of its weight
+  esp <- standard_population("esp2013")
+  g <- mortensor:::asr_groups(age_groups(c(0, 5, 10, 90)), esp)
+  expect_identical(g$group, 1:4)
+  expect_equal(g$weight, c(5000, 5500, sum(esp$weight[esp$age_lo >= 10 & esp$age_lo < 90]), 1000))
+  g2 <- mortensor:::asr_groups(mt_axis(c(0, 3, 7), c(3, 7, 12), kind = "age"), esp)
+  expect_identical(g2$group, rep(1L, 3))
+  expect_equal(g2$weight, 1000 + 4000 + 5500 + 5500 * 2 / 5)
+  # on the standard's own age groups both ways agree
+  ag <- age_groups(c(0, 1, seq(5, 95, 5)))
+  mm <- exp(seq(-7, -1, length.out = 21))
+  d5 <- hand_draws(ag, mm, seq(9e4, 1e3, length.out = 21))
+  expect_equal(asr(d5)$mean, asr(d5, age_groups = "grid")$mean, tolerance = 1e-12)
+})
+
+test_that("yll() uses the life expectancy at the average age at death", {
+  age <- age_groups(seq(50, 90, 5))
+  m <- exp(seq(-5.5, -1.5, length.out = 9))
+  E <- seq(5e4, 1e4, length.out = 9)
+  dr <- hand_draws(age, m, E)
+  lt <- life_table(m, age)
+  # a_x = n / 2: the life expectancy halfway through each closed interval
+  e_death <- c((lt$ex[-9] + lt$ex[-1]) / 2, lt$ex[9])
+  expect_equal(yll(dr)$mean, sum(m * E * e_death), tolerance = 1e-10)
+  # a reference life table, interpolated in the same way
+  ref <- seq(30, 5, length.out = 9)
+  expect_equal(yll(dr, reference_ex = ref)$mean, sum(m * E * c((ref[-9] + ref[-1]) / 2, ref[9])),
+               tolerance = 1e-10)
+  expect_error(yll(dr, reference_ex = 1:3), class = "mt_error_argument")
+})
+
+test_that("mt_observed() keeps the observed rates out of the bootstrap draws", {
+  x <- mt_example(deaths = "single", years = 2015:2016)
+  o1 <- mt_observed(x, n_draws = 1)
+  expect_equal(o1$rates[, , , 1], o1$observed, ignore_attr = TRUE)
+  o5 <- mt_observed(x, n_draws = 5)
+  expect_equal(o5$observed, o1$observed)
+  expect_false(isTRUE(all.equal(o5$rates[, , , 1], o5$observed, check.attributes = FALSE)))
+  # cells without deaths get no variation
+  zero <- which(o5$observed == 0)
+  if (length(zero)) expect_true(all(matrix(o5$rates, ncol = 5)[zero, ] == 0))
+})
+
 test_that("observed inequality indices use the population weights of each year", {
   x <- mt_example_regions(years = 2010:2012, regions = 1)
   x <- mt_subset(x, sex == "female", region == unique(mt_strata(x)$region)[1])
   iq <- mt_inequality(x, "quintile", quantity = "rate", age = mt_grid(x)$age$labels[10])[index == "sii"]
   ob <- mt_observed(x)
-  r <- ob$rates[10, , , 1]
+  r <- ob$observed[10, , ]
   E <- apply(ob$exposure, c(2, 3), sum)
   manual <- vapply(seq_len(nrow(E)), function(t) {
     w <- E[t, ] / sum(E[t, ])
@@ -142,4 +220,29 @@ test_that("mt_inequality() leaves out levels not in `order`", {
   b <- mt_inequality(xa, "quintile", order = paste0("Q", 5:1), quantity = "asr")
   expect_equal(b$q0.5, a$q0.5, tolerance = 0.01)  # Poisson draws of the observed rates
   expect_error(mt_inequality(x, "quintile", order = c("Q1", "Q9")), class = "mt_error_argument")
+})
+
+
+test_that("Gompertz and Kannisto tails run to omega and are closed with L = l / m", {
+  m <- 1e-5 * exp(0.1 * (30:99 + 0.5))
+  age <- single_ages(30, 100)
+  for (law in c("gompertz", "kannisto")) {
+    lt <- life_table(c(m, 0.5), age, open = law, k = 10, omega = 105)
+    # the same by hand: least squares on the last 10 log (logit) rates
+    x <- 90:99 + 0.5
+    y <- if (law == "kannisto") stats::qlogis(m[61:70]) else log(m[61:70])
+    cf <- stats::coef(stats::lm(y ~ x))
+    tail_rate <- function(a) {
+      eta <- cf[1] + cf[2] * a
+      if (law == "kannisto") stats::plogis(eta) else exp(eta)
+    }
+    mm <- tail_rate(100:104 + 0.5)
+    l <- c(1, cumprod(exp(-mm)))
+    e_open <- sum(l[1:5] * (1 - exp(-mm)) / mm) + l[6] / tail_rate(105.5)
+    expect_equal(tail(lt$ex, 1), unname(e_open), tolerance = 1e-10)
+  }
+  # the closure at omega makes the result insensitive to omega
+  e110 <- tail(life_table(c(m, 0.5), age, open = "gompertz")$ex, 1)
+  e130 <- tail(life_table(c(m, 0.5), age, open = "gompertz", omega = 130)$ex, 1)
+  expect_lt(abs(e110 - e130), 0.01)
 })

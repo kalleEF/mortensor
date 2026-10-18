@@ -9,18 +9,27 @@
 #'
 #' * **published totals** (`hierarchy`): the missing cells of every
 #'   aggregate with a known total must add up to that total minus its known
-#'   cells. They are estimated by iterative proportional fitting (raking):
-#'   starting values, the expected deaths at the pooled death rate of the
-#'   same age and period, are scaled constraint by constraint until every
-#'   total is matched. With two crossed variables (regions and causes) the
-#'   result is the log-linear independence fit of the missing cells given
-#'   both margins. Missing aggregates are then filled as sums of their parts.
+#'   cells. They are estimated by iterative proportional fitting (raking;
+#'   Deming and Stephan 1940; Bishop, Fienberg and Holland 1975): starting
+#'   values, the expected deaths at the pooled death rate of the same age
+#'   and period, are scaled constraint by constraint until every total is
+#'   matched. With two crossed variables (regions and causes) and no binding
+#'   bounds, the limit is the fit of the log-linear model of independence
+#'   (with the starting values as offset) to the missing cells given both
+#'   margins (Bishop, Fienberg and Holland 1975). Missing aggregates are then
+#'   filled as sums of their parts.
 #' * **bounds of the suppressed counts** (`lower`, `upper`): the range that
 #'   the suppression rule implies, for example `lower = 1, upper = 2` when
-#'   counts of 1 and 2 are suppressed, or `upper = 4` for `"<5"`. Estimates
-#'   are kept inside the bounds during raking. Cells that no published total
-#'   covers get the expected deaths at the pooled rate, limited to the
-#'   bounds; this needs a finite `upper`.
+#'   counts of 1 and 2 are suppressed, or `upper = 4` for `"<5"`. During
+#'   raking, the estimates are clipped to the bounds within each
+#'   proportional-fitting step. This clipping is a heuristic of this package:
+#'   once a bound binds, the result is no longer the log-linear fit above,
+#'   and the iterations have no convergence guarantee (they stop after
+#'   `maxit`, and a remaining gap to a published total is reported). Cells
+#'   that no published total covers get the mean of a Poisson distribution
+#'   with the expected deaths at the pooled rate as its mean, truncated to
+#'   the bounds: `E[Y | lower <= Y <= upper]` over the integers in the
+#'   range. This needs a finite `upper`.
 #'
 #' Without bounds, cells that no published total covers stay missing (with a
 #' warning). The estimates are plausible values that agree with the
@@ -43,6 +52,13 @@
 #' @return The `mt_data` object with filled deaths; a summary in attribute
 #'   `"fill"` (cells filled, cells left missing, inconsistent cells,
 #'   iterations, largest relative gap to a published total).
+#' @references
+#' Bishop YMM, Fienberg SE, Holland PW (1975). *Discrete Multivariate
+#' Analysis: Theory and Practice*. MIT Press.
+#'
+#' Deming WE, Stephan FF (1940). On a least squares adjustment of a sampled
+#' frequency table when the expected marginal totals are known. *Annals of
+#' Mathematical Statistics* 11(4): 427-444.
 #' @examples
 #' d <- data.frame(region = c("A", "B", "C", "all"), year = 2020, age = "90+",
 #'                 deaths = c(10, NA, NA, 40), exposure = c(100, 200, 200, 500))
@@ -50,7 +66,7 @@
 #' y <- mt_fill_suppressed(x, mt_hierarchy(region = "all"))
 #' mt_obs(y)
 #' attr(y, "fill")
-#' # counts below 3 suppressed, no totals: expected deaths limited to 1-2
+#' # counts below 3 suppressed, no totals: Poisson mean truncated to 1-2
 #' d2 <- data.frame(region = c("A", "B"), year = 2020, age = "90+", deaths = c(30, NA),
 #'                  exposure = c(1000, 50))
 #' z <- mt_fill_suppressed(mt_data(deaths = d2, exposure = d2, by = "region"), lower = 1, upper = 2)
@@ -111,7 +127,8 @@ mt_fill_suppressed <- function(data, hierarchy = NULL, lower = 0, upper = Inf, m
   obs_b <- !is.na(Y[, bb, drop = FALSE]) & !is.na(Ex[, bb, drop = FALSE])
   ref <- rowSums(ifelse(obs_b, Y[, bb, drop = FALSE], 0)) / pmax(rowSums(ifelse(obs_b, Ex[, bb, drop = FALSE], 0)),
                                                                    1e-12)
-  start <- Ex * ref
+  expected <- Ex * ref
+  start <- expected
   start[is.na(start)] <- 1
   start <- pmin(pmax(start, max(lower, 1e-6)), upper)
   b <- hs$bottom
@@ -159,8 +176,9 @@ mt_fill_suppressed <- function(data, hierarchy = NULL, lower = 0, upper = Inf, m
     }
     active <- active & change > tol
   }
-  # cells that no published total covers: expected deaths limited to the
-  # bounds, or left missing without a finite upper bound
+  # cells that no published total covers: mean of the Poisson distribution
+  # of the expected deaths truncated to the bounds, or left missing without
+  # a finite upper bound
   covered <- matrix(FALSE, nrow(Y), length(b))
   colnames(covered) <- b
   for (cn in cons) {
@@ -170,7 +188,12 @@ mt_fill_suppressed <- function(data, hierarchy = NULL, lower = 0, upper = Inf, m
   uncovered <- miss_b & !covered
   if (any(uncovered)) {
     eb <- est[, b, drop = FALSE]
-    eb[uncovered] <- if (is.finite(upper)) start[, b, drop = FALSE][uncovered] else NA
+    eb[uncovered] <- if (is.finite(upper)) {
+      lam <- expected[, b, drop = FALSE][uncovered]
+      ifelse(is.na(lam), start[, b, drop = FALSE][uncovered], truncated_poisson_mean(lam, lower, upper))
+    } else {
+      NA
+    }
     est[, b] <- eb
   }
   # missing aggregates as sums of their parts
@@ -216,4 +239,26 @@ mt_fill_suppressed <- function(data, hierarchy = NULL, lower = 0, upper = Inf, m
   attr(data, "fill") <- data.table(filled = n_filled, missing = still,
                                    inconsistent = inconsistent, iterations = it, max_gap = gap)
   data
+}
+
+# Mean of a Poisson(lambda) distribution truncated to the integers in
+# [lower, upper], E[Y | lower <= Y <= upper]; a range without an integer
+# gives the value of lambda clipped to the bounds
+truncated_poisson_mean <- function(lambda, lower, upper) {
+  lo <- ceiling(lower - 1e-9)
+  hi <- floor(upper + 1e-9)
+  vapply(lambda, function(l) {
+    if (!is.finite(l) || hi < lo) return(min(max(l, lower), upper))
+    if (l <= 0) return(lo)
+    if (hi - lo <= 1e5) {
+      k <- seq(lo, hi)
+      lp <- stats::dpois(k, l, log = TRUE)
+      p <- exp(lp - max(lp))
+      return(sum(k * p) / sum(p))
+    }
+    # wide ranges: E[Y 1(lo <= Y <= hi)] = lambda P(lo - 1 <= Y <= hi - 1)
+    num <- stats::ppois(hi - 1, l) - stats::ppois(lo - 2, l)
+    den <- stats::ppois(hi, l) - stats::ppois(lo - 1, l)
+    if (den > 0) l * num / den else min(max(l, lower), upper)
+  }, 0)
 }

@@ -27,9 +27,9 @@ predictive draws, backtests and coherence. Two questions follow:
    their documentation recommends, compare with mortensor pipelines in
    rolling-origin backtests?
 
-The computations take about an hour, mostly for MCMC chains, and are run by
-`dev/compare-packages.R` in the source repository; this vignette shows the
-code and reads the stored results. Versions used:
+The computations take one to one and a half hours, mostly for MCMC
+chains, and are run by `dev/compare-packages.R` in the source repository;
+this vignette shows the code and reads the stored results. Versions used:
 
 ```{r}
 res$settings$versions
@@ -122,9 +122,11 @@ simulate_model.mt_spec_native_bamp <- function(spec, fit, h, n_draws, ...) {
 
 `demography::lca()` is wrapped in the same way (random walk with drift for
 k, its 95% bounds); StMoMo models are used through `stmomo()`, which calls
-`fit()` and `simulate()`. The native distributions describe the smooth
-death rates; mortensor's predictive draws add the variation of observed
-rates around them.
+`fit()` and `simulate()`. The native distributions of bamp and `lca()`
+describe the smooth death rates, and that of `fdm()` includes an
+observational variance; for models of smooth rates, mortensor's
+predictive draws add Poisson variation of the deaths given the rates
+(Brouhns, Denuit and Vermunt 2002).
 
 Data sets: the ONS deprivation data (`ons_data`, sex by quintile, 5-year
 age groups with 0-4 combined so that bamp has equal widths), France (HMD
@@ -169,33 +171,38 @@ adds no difference beyond Monte Carlo error.
 **Accuracy.** Four observations hold across the data sets:
 
 * The same model used through mortensor scores better than the native
-  package in 5 of 7 comparisons, mainly because mortensor's
-  predictive draws include the variation of observed rates around the
-  smooth forecast, which the native intervals omit. This improves coverage
-  most: bamp on the ONS data covers 0.79 of observed rates at 95% natively
-  and 0.92 through `apc_bayes()`; the functional demographic model 0.76
-  against 0.82 (ONS) and 0.59 against 0.70 (France). The exceptions are
-  the functional demographic model on the ONS data, where both have the
-  same CRPS (0.072), and `demography::lca()` on England & Wales men, whose
-  least-squares fit with k adjusted to the observed deaths is more accurate
-  there than the Poisson Lee-Carter of `lee_carter()` and of StMoMo.
+  package in 4 of 7 comparisons. Where the native intervals describe the
+  smooth rates only, the Poisson variation of the deaths in mortensor's
+  predictive draws improves coverage: bamp on the ONS data covers 0.79 of
+  observed rates at 95% natively and 0.91 through `apc_bayes()`, on
+  bamp's example 0.62 against 0.73; `lca()` on the ONS data 0.56 against
+  0.77 for `lee_carter()`. The functional demographic model on France is
+  more accurate through mortensor (CRPS 0.091 against 0.094, coverage
+  0.66 against 0.59). The exceptions are the functional demographic model
+  on the ONS data, where the native forecast is slightly more accurate
+  (CRPS 0.0719 against 0.0726) with lower coverage (0.76 against 0.81),
+  and `demography::lca()` on France and on England & Wales men, whose
+  least-squares fit with k adjusted to the observed deaths is more
+  accurate there than the Poisson Lee-Carter of `lee_carter()` (CRPS
+  0.098 against 0.104 and 0.058 against 0.062) and, on England & Wales
+  men, of StMoMo.
 * No single model is best everywhere. The Bayesian APC model is the most
   accurate on the ONS data and on bamp's example, the StMoMo APC model on
   England & Wales men 55-89 (cohort effects), and the random walk with drift
   on France, where the age pattern of mortality decline changed over the
   period and Lee-Carter extrapolates the old pattern.
 * Single structured models (Lee-Carter, `lca()`, functional demographic
-  model, StMoMo LC and CBD) have 95% intervals that cover 56% to 82% of the
-  observed rates on the three larger data sets, so they understate the
-  uncertainty of real forecasts. On
-  the three larger data sets the random walk and the ensemble of Lee-Carter
-  and random walk cover 92% to 98% (bamp's example has only 48 scored
-  cells).
-* The ensemble is never the most accurate but always close to the best
-  (CRPS within 11% of the best model on the ONS data, 3% on France, 30% on
-  England & Wales men) with near-nominal coverage, at the cost of seconds;
-  the Bayesian APC models took about 40 minutes per backtest on the ONS
-  data.
+  model, Li-Lee, StMoMo LC and CBD) have 95% intervals that cover 56% to
+  81% of the observed rates on the three larger data sets, so they
+  understate the uncertainty of real forecasts. On the three larger data
+  sets the random walk and the ensemble of Lee-Carter and random walk
+  cover 92% to 98% (bamp's example has only 48 scored cells).
+* The ensemble is never the most accurate (its CRPS is 10% above that of
+  the best model on the ONS data, 5% on France and 31% on England & Wales
+  men), but its coverage is near nominal on all three data sets, at the
+  cost of seconds; the Bayesian APC models took 34 (`apc_bayes()`) and 52
+  minutes (native bamp) per backtest on the ONS data, on a machine shared
+  with other jobs.
 
 On data like these, an ensemble is a robust default, and a backtest on the
 data at hand (`mt_backtest()`) decides whether a structured model such as an

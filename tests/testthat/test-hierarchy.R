@@ -49,6 +49,35 @@ test_that("reconciliation makes all nodes add up for every method", {
   expect_error(mt_reconcile(fc, mt_hierarchy(cause = "all")), class = "mt_error_argument")
 })
 
+test_that("reconciliation keeps the draws as they are by default and never reorders joint models", {
+  x <- mt_example_regions(years = 2005:2016, regions = 2)
+  xa <- mt_aggregate_strata(x, h3())
+  fc <- mt_forecast(mt_fit(lee_carter(), xa), h = 2, n_draws = 30, seed = 1)
+  b <- mortensor:::hierarchy_structure(fc$strata, h3())$bottom
+  # bottom-up without reordering: the bottom draws are those of the base model
+  rb <- mt_reconcile(fc, h3(), method = "bottom_up")
+  expect_equal(rb$rates[, , b, ], fc$rates[, , b, ], tolerance = 1e-10)
+  expect_identical(mt_reconcile(fc, h3())$rates, mt_reconcile(fc, h3(), dependence = "none")$rates)
+  re <- mt_reconcile(fc, h3(), method = "bottom_up", dependence = "empirical", seed = 1)
+  expect_false(isTRUE(all.equal(re$rates[, , b, ], fc$rates[, , b, ])))
+  expect_lt(coherence_gap(re, h3()), 1e-8)
+  expect_identical(reconciled(lee_carter(), h3())$params$dependence, "none")
+  expect_identical(reconciled(lee_carter(), h3(), dependence = "auto")$params$dependence, "none")
+  expect_identical(reconciled(lee_carter(), h3(), dependence = "empirical")$params$dependence, "empirical")
+  # joint models carry the dependence between strata: their paths are not reordered
+  expect_warning(sp <- reconciled(li_lee(common_by = "sex"), h3(), dependence = "empirical"),
+                 class = "mt_warning_reconcile")
+  expect_identical(sp$params$dependence, "none")
+  fj <- mt_forecast(mt_fit(li_lee(common_by = "sex"), xa), h = 2, n_draws = 30, seed = 1)
+  expect_warning(rj <- mt_reconcile(fj, h3(), method = "bottom_up", dependence = "empirical", seed = 1),
+                 class = "mt_warning_reconcile")
+  expect_equal(rj$rates[, , b, ], fj$rates[, , b, ], tolerance = 1e-10)
+  expect_true(mortensor:::spec_is_joint(anchored(li_lee())))
+  expect_true(mortensor:::spec_is_joint(ensemble(li_lee(), tucker3())))
+  expect_false(mortensor:::spec_is_joint(ensemble(li_lee(), lee_carter())))
+  expect_false(mortensor:::spec_is_joint(stratified("sex", female = li_lee(), male = lee_carter())))
+})
+
 test_that("the empirical copula keeps each stratum's marginal distribution", {
   x <- mt_example_regions(years = 2005:2016, regions = 2)
   fc <- mt_forecast(mt_fit(lee_carter(), x), h = 2, n_draws = 50, seed = 1)
@@ -111,4 +140,14 @@ test_that("rate-additive hierarchies (causes) reconcile on the rate scale, also 
       expect_lt(ratio, 1.25)
     }
   }
+})
+
+test_that("reconciled() warns when the exposures of the totals do not match the hierarchy", {
+  x <- mt_example_causes(years = 2005:2019)
+  expect_warning(mt_fit(reconciled(lee_carter(), mt_hierarchy(cause = "all")), x),
+                 class = "mt_warning_hierarchy_exposure")
+  expect_no_warning(mt_fit(reconciled(lee_carter(), mt_hierarchy(cause = "all", additive = "rates")), x))
+  xr <- mt_aggregate_strata(mt_example_regions(years = 2005:2019, regions = 2),
+                            mt_hierarchy(sex = "both", region = "all"))
+  expect_no_warning(mt_fit(reconciled(lee_carter(), mt_hierarchy(sex = "both", region = "all")), xr))
 })

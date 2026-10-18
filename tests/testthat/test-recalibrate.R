@@ -5,7 +5,7 @@ test_that("the calibration estimator recovers a known spread factor", {
   L <- matrix(stats::rnorm(G * n, 0, 0.05), G)
   pieces <- list(list(label = "a", L = L, m = rep(0, G), h = rep(1:4, G / 4), E = rep(1, G),
                       C = Matrix::Diagonal(G), Ecell = rep(1, G), y = stats::rnorm(G, 0, 0.1),
-                      noise = rep(FALSE, n), sd = matrix(0, G, n)))
+                      noise = rep(FALSE, n), size = rep(Inf, n)))
   P <- with_seed_test(2, mortensor:::stack_pieces(pieces, n))
   r <- mortensor:::calibration_fit(P, "constant", FALSE)
   expect_equal(r$table$scale_h1, 2, tolerance = 0.15)
@@ -33,10 +33,13 @@ test_that("recalibrated() wraps any model and forecasts on the grid", {
   sp <- recalibrated(lee_carter(), years = 6, n_origins = 3, n_draws = 30)
   expect_s3_class(sp, "mt_spec_recalibrated")
   expect_equal(sp$min_periods, lee_carter()$min_periods + 6)
+  # one spread factor for all horizons by default
+  expect_identical(sp$params$scale, "constant")
   r <- expect_mt_model(sp, data = x, n_draws = 20)
   cal <- r$fit$calibration
   expect_true(all(c("group", "scale_h1", "slope", "drift", "crps_before", "crps_after", "cov95_after") %in%
                     names(cal)))
+  expect_equal(cal$slope, 0)
   expect_lte(cal$crps_after, cal$crps_before + 1e-12)
   expect_equal(r$fit$calibration_origins, c(2010, 2012, 2014))
   expect_identical(r$fc$model, "Lee-Carter, recalibrated")
@@ -104,7 +107,7 @@ test_that("recalibrated() estimates factors by age band and on life expectancy",
 
 test_that("recalibrated() reports intervals of the factors and damps the drift", {
   x <- mt_example(deaths = "single", years = 1985:2015)
-  fit <- mt_fit(recalibrated(lee_carter(), years = 6, n_origins = 3, n_draws = 30, n_boot = 5), x)
+  fit <- mt_fit(recalibrated(lee_carter(), years = 6, n_origins = 3, n_draws = 30, n_boot = 5, scale = "horizon"), x)
   cal <- fit$calibration
   expect_true(all(c("scale_h1_lo", "scale_h1_hi", "slope_lo", "slope_hi") %in% names(cal)))
   expect_lte(cal$scale_h1_lo, cal$scale_h1_hi)
@@ -113,4 +116,17 @@ test_that("recalibrated() reports intervals of the factors and damps the drift",
   expect_equal(sh$b[8:20], rep(0.16, 13))
   expect_warning(mt_fit(recalibrated(rwd(), years = 3, n_origins = 1, n_draws = 20), x),
                  class = "mt_warning_calibration")
+})
+
+test_that("recalibrated() warns when the forecast is much longer than the calibrated horizons", {
+  x <- mt_example(deaths = "single", years = 1995:2016)
+  fit <- mt_fit(recalibrated(rwd(), years = 4, n_origins = 2, n_draws = 20), x)
+  # origins 2012 and 2014: horizons 1 to 4 are calibrated
+  expect_equal(fit$calibration_hmax, 4)
+  expect_no_warning(mt_forecast(fit, h = 8, n_draws = 20, seed = 1), class = "mt_warning_recalibrate")
+  expect_warning(mt_forecast(fit, h = 9, n_draws = 20, seed = 1), class = "mt_warning_recalibrate")
+  expect_warning(mt_forecast(fit, to = 2026, n_draws = 20, seed = 1), class = "mt_warning_recalibrate")
+  # beyond the calibrated horizons the factor of horizon 4 is kept
+  sh <- mortensor:::calibration_shift(c(log(1.5), 0.2), 1:9, "horizon", FALSE, h_max = 4)
+  expect_equal(sh$s[5:9], rep(1.5 * 4^0.2, 5))
 })

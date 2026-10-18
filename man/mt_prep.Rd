@@ -56,7 +56,10 @@ ungrouping or smoothing never sees data after the forecast origin.
 \details{
 Steps:
 \itemize{
-\item \code{step_ungroup(...)}: \code{\link[=mt_ungroup]{mt_ungroup()}};
+\item \code{step_ungroup(...)}: \code{\link[=mt_ungroup]{mt_ungroup()}}, by default the published PCLM
+without rescaling to the group totals (models fitted to the ungrouped
+data and backtest scores against the grouped test data do not need
+exact group totals); \code{step_ungroup(preserve_totals = TRUE)} rescales;
 \item \code{step_smooth(...)}: \code{\link[=mt_smooth]{mt_smooth()}}. The model is fitted to the
 smoothed rates; residuals and observation noise refer to the raw
 deaths. Smoothing over time (\code{along = "period"}, or \code{dims = 2})
@@ -71,10 +74,19 @@ example after a change of trend; compare windows with \code{\link[=tuned]{tuned(
 \item \code{step_shocks(periods, action)}: periods with exceptional mortality (for
 example 2020-2022) are either replaced by log-linear interpolation of
 the rates of the neighbouring periods (\code{"interpolate"}, deaths become
-exposure times the interpolated rate) or removed (\code{"exclude"}, only at
-the start or end of the data). With \code{"interpolate"}, shock periods at
-the start or end of the data, which have no neighbour on one side, are
-removed, as in a backtest whose training window ends inside the shock.
+exposure times the interpolated rate, provenance \code{"interpolated"}) or
+removed (\code{"exclude"}, only at the start or end of the data). With
+\code{"interpolate"}, shock periods at the start or end of the data, which
+have no neighbour on one side, are removed instead, with a warning of
+class \code{mt_warning_prep} (as in a backtest whose training window ends
+inside the shock). The interpolated years enter the fit as if they had
+been observed: the model sees a straight line in the log rates between
+the neighbouring years, without the year-to-year variation of observed
+years. Models that estimate their uncertainty from year-to-year changes
+(for example the random walk of a period index) therefore estimate a
+smaller variance, and their forecast intervals become narrower;
+check coverage in a backtest. Excluding the periods (only possible at
+the edges) avoids this.
 }
 }
 \examples{

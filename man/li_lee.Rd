@@ -2,18 +2,15 @@
 % Please edit documentation in R/model-multipop.R
 \name{li_lee}
 \alias{li_lee}
-\alias{product_ratio}
-\title{Coherent multi-population models}
+\title{Li-Lee coherent multi-population model}
 \usage{
 li_lee(ratio_order = 1, common_by = NULL, jump_off = c("fitted", "observed"))
-
-product_ratio(ratio_order = 1, jump_off = c("fitted", "observed"))
 }
 \arguments{
-\item{ratio_order}{Number of stratum-specific (ratio) factors.}
+\item{ratio_order}{Number of stratum-specific factors.}
 
 \item{common_by}{Stratum variable(s) defining groups with their own common
-factor (\code{li_lee()} only).}
+factor.}
 
 \item{jump_off}{\code{"fitted"} (forecasts start from the fitted rates of the
 last year) or \code{"observed"} (forecasts are multiplied by the ratio of
@@ -26,21 +23,15 @@ avoids a step between the last observed and the first forecast year.}
 A model specification.
 }
 \description{
-Joint models for several strata (for example women and men, or regions)
-whose forecasts do not diverge in the long run:
+Joint model for several strata (for example women and men, or regions)
+whose forecasts do not diverge in the long run (Li and Lee 2005):
+\verb{log m[x,t,i] = a[x,i] + B[x] K[t] + b[x,i] k[t,i]}. The common factor
+\verb{B K} is a Lee-Carter model of the pooled rates (sum of deaths over sum of
+exposures, SVD with \code{K} refitted to the total deaths of each year); the
+stratum factors \verb{b k} are the first \code{ratio_order} components of an SVD of
+the residuals of each stratum.
 }
 \details{
-\itemize{
-\item \code{li_lee()} (Li and Lee 2005): \verb{log m[x,t,i] = a[x,i] + B[x] K[t] + b[x,i] k[t,i]}. The common factor \verb{B K} is a Lee-Carter model of the
-pooled rates (sum of deaths over sum of exposures); the stratum factors
-\verb{b k} are fitted to the residuals.
-\item \code{product_ratio()} (Hyndman, Booth and Yasmeen 2013): the geometric mean
-of the stratum rates (product) is modelled with a Lee-Carter-type
-factor, and the ratios of each stratum to the product with factors whose
-scores are stationary. This is a Lee-Carter-type version of the method;
-the original uses functional data models.
-}
-
 With \code{common_by} (for example \code{"sex"}), \code{li_lee()} fits one common factor
 per level of that stratum variable (women and men each with their own
 trend), and the other strata (for example regions and deprivation
@@ -48,11 +39,32 @@ quintiles) deviate from their group's common factor. If the data carry a
 hierarchy (see \code{\link[=mt_aggregate_strata]{mt_aggregate_strata()}}), the common factors are estimated
 from the bottom strata only, so aggregates are not counted twice.
 
-In both models the common period index follows a random walk with drift
-(with drift uncertainty) and the stratum-specific scores follow AR(1)
-processes without drift, so the differences between strata stay bounded.
-Draws include the innovations of all indexes; predictive draws add
-extra-Poisson and Poisson variation.
+The common period index follows a random walk with drift (with drift
+uncertainty) and the stratum-specific indexes \code{k[t,i]} follow AR(1)
+processes, so the differences between strata stay bounded. Two choices
+of this package differ from Li and Lee (2005), who model \code{k[t,i]} as an
+AR(1) process with a constant:
+\itemize{
+\item the AR(1) processes have no constant (intercept): the coefficient is
+the least-squares estimate through the origin, and the stratum indexes
+revert to zero, their mean over the fitting period;
+\item the AR(1) coefficient is bounded to \verb{|phi| <= 0.99}, a package-specific
+safeguard against unit roots and explosive deviations (reference
+unknown). A warning (class \code{mt_warning_li_lee}) names the strata where
+the bound binds; their deviations then revert very slowly, and the
+assumption of coherence may not suit them.
+}
+
+Draws include the innovations of all indexes and the drift uncertainty of
+the common index; \code{a}, \code{B}, \code{b} and the AR(1) coefficients are fixed.
+Predictive draws (\code{mt_forecast(predictive = TRUE)}) add Poisson variation
+of the deaths given the rates and the exposures, and no other observation
+noise. If intervals are too narrow on real data, that is a property of
+the model (see \code{\link[=recalibrated]{recalibrated()}}, \code{\link[=ensemble]{ensemble()}}, or
+overdispersed models such as \code{stanmomo(family = "nb")}).
+
+\code{product_ratio()}, a Lee-Carter version of the product-ratio method, is
+deprecated; use \code{\link[=coherent_fdm]{coherent_fdm()}}.
 }
 \examples{
 x <- mt_example(deaths = "single")
@@ -63,10 +75,12 @@ Li N, Lee R (2005). Coherent mortality forecasts for a group of
 populations: an extension of the Lee-Carter method. \emph{Demography} 42(3):
 575-594. \doi{10.1353/dem.2005.0021}
 
+Lee RD, Carter LR (1992). Modeling and forecasting U.S. mortality.
+\emph{Journal of the American Statistical Association} 87(419): 659-671.
+
 Lee R, Miller T (2001). Evaluating the performance of the Lee-Carter
 method for forecasting mortality. \emph{Demography} 38(4): 537-549.
-
-Hyndman RJ, Booth H, Yasmeen F (2013). Coherent mortality forecasting: the
-product-ratio method with functional time series models. \emph{Demography}
-50(1): 261-283.
+}
+\seealso{
+\code{\link[=coherent_fdm]{coherent_fdm()}} for the product-ratio method.
 }

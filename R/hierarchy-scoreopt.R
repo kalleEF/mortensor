@@ -13,6 +13,9 @@
 # Carlo energy score with Stan Math; here its gradient is written out
 # analytically, so no compiled code is needed. The training forecasts come
 # from inner rolling origins within the training data (as in recalibrated()).
+# Differences from ProbReco (documented in reconciled()): the two samples of
+# each step are drawn from disjoint sets of a fixed set of inner draws
+# (scoreopt_pairs()), and outputs and inputs are rescaled before Adam.
 
 # Settings of the training (`control` of reconciled()): draws per inner
 # forecast, draws per optimisation step (Q of ProbReco), and the Adam
@@ -100,8 +103,8 @@ scoreopt_train <- function(p, data, prep, fit, hs, cores = 1) {
   list(d = d, G = G, table = tab, origins = out$origins, control = ctl)
 }
 
-# One inner origin: base draws (after the empirical copula, as in the
-# forecast) and observed values of every node for the next `horizon` years,
+# One inner origin: base draws (reordered as in the forecast with
+# dependence = "empirical") and observed values of every node for the next `horizon` years,
 # on the deaths scale (additive = "deaths") or the rate scale. `noise`:
 # observation noise of the bottom strata per draw, as the forecast adds it
 scoreopt_origin <- function(p, data, origin, last, prep, n_draws, hs, strata, additive) {
@@ -193,17 +196,16 @@ scoreopt_age <- function(pieces, a, hs, ctl) {
   X <- X / sx
   Z <- if (any(Z != 0)) Z / sc
   start <- c(rep(0, m), as.vector(sweep(G0, 2, sx, "*") / sc))
-  # columns of the base draws: two independent samples of `draws_per_step`
-  # draws of each training forecast per step
+  # columns of the base draws: two samples of `draws_per_step` draws of each
+  # training forecast per step, from disjoint sets of its draws
   per <- rep(seq_len(nt), each = ctl$draws_per_step)
   pick <- function(i1, i2, per) {
     list(x1 = X[, i1, drop = FALSE], x2 = X[, i2, drop = FALSE], e1 = if (!is.null(Z)) Z[, i1, drop = FALSE],
          e2 = if (!is.null(Z)) Z[, i2, drop = FALSE], per = per)
   }
   draw <- function() {
-    i1 <- off[per] + unlist(lapply(nd, sample.int, size = ctl$draws_per_step, replace = TRUE))
-    i2 <- off[per] + unlist(lapply(nd, sample.int, size = ctl$draws_per_step, replace = TRUE))
-    pick(i1, i2, per)
+    ij <- lapply(nd, scoreopt_pairs, q = ctl$draws_per_step)
+    pick(off[per] + unlist(lapply(ij, `[[`, 1L)), off[per] + unlist(lapply(ij, `[[`, 2L)), per)
   }
   opt <- scoreopt_sgd(Y, draw, S, start, ctl)
   # in-sample energy score per training forecast at the start (OLS) and at
@@ -216,9 +218,24 @@ scoreopt_age <- function(pieces, a, hs, ctl) {
        iterations = opt$iterations, es_start = es(start), es_end = es(c(opt$d, as.vector(opt$G))))
 }
 
+# Two samples of q of the n draws of a training forecast for one step of the
+# optimisation, from disjoint sets of draws, so that no draw is paired with
+# itself (ProbReco simulates the two samples independently): without
+# replacement when n >= 2 q, otherwise with replacement from two disjoint
+# random halves of the draws
+scoreopt_pairs <- function(n, q) {
+  if (n >= 2 * q) {
+    s <- sample.int(n, 2 * q)
+    return(list(s[seq_len(q)], s[q + seq_len(q)]))
+  }
+  p <- sample.int(n)
+  k <- n %/% 2
+  list(p[sample.int(k, q, replace = TRUE)], p[k + sample.int(k, q, replace = TRUE)])
+}
+
 # Adam on the Monte Carlo total energy score, as ProbReco::scoreopt().
 # `draw()` returns the base draws of one step: list(x1, x2 = two
-# independent sets of draws [node, column], e1, e2 = observation noise of the
+# sets of draws [node, column] (scoreopt_pairs()), e1, e2 = observation noise of the
 # bottom strata [bottom, column] or NULL, per = training forecast of each
 # column)
 scoreopt_sgd <- function(Y, draw, S, Gvec, control) {

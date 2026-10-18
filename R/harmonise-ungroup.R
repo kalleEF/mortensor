@@ -1,31 +1,97 @@
 #' Estimate grid-resolution data from grouped observations
 #'
 #' Fills the modelling grid (single years of age by default) from deaths and
-#' exposures observed in coarser age groups, using the penalized composite
-#' link model (PCLM; Eilers 2007, Rizzi et al. 2015).
+#' exposures observed in coarser age groups. The default is the penalized
+#' composite link model (PCLM; Eilers 2007; Rizzi, Gampe and Eilers 2015) as
+#' published: the estimates are the fitted values of the model, without
+#' rescaling.
 #'
 #' * **Exposures** observed coarser than the grid are ungrouped first, as
-#'   counts (`exposure_method = "pclm"`) or by a monotone spline of the
-#'   cumulative counts (`"monotone"`, Hyman filter), which preserves group
-#'   totals exactly.
+#'   counts by the PCLM (`exposure_method = "pclm"`) or by the monotone cubic
+#'   interpolation of Hyman (1983) applied to the cumulative counts
+#'   (`"monotone"`), which reproduces the group totals exactly.
 #' * **Deaths** are ungrouped as **rates** when exposures are available on
-#'   the grid: the exposures enter as offset, so cohort-size waves stay in the
-#'   exposures and the estimated rate schedule is smooth. Without exposures,
-#'   deaths are ungrouped as counts per year of age (1D only; 2D smoothing of
-#'   death counts cannot represent cohort waves and is refused).
-#' * The open age interval is expanded into single years up to `omega`; for
-#'   rates the exposure of the open interval is spread with
-#'   stationary-population weights implied by the fitted rates.
+#'   the grid: the exposures enter the composite link as offset (Rizzi, Gampe
+#'   and Eilers 2015), so cohort-size waves stay in the exposures and the
+#'   estimated rate schedule is smooth. Without exposures, deaths are
+#'   ungrouped as counts per year of age (1D only; 2D smoothing of death
+#'   counts cannot represent cohort waves and is refused).
 #' * `dims = 1` fits each stratum and period separately; `dims = 2` fits a
-#'   smooth age-period surface per stratum (two smoothing parameters).
+#'   smooth age-period surface of rates per stratum with two smoothing
+#'   parameters, the PCLM of rates over age and period with exposures of
+#'   Rizzi et al. (2019).
 #'
-#' With `preserve_totals = TRUE`, the estimated deaths within each observed
-#' group are rescaled to the observed total, so aggregation reproduces the
-#' data exactly. Cells already observed at grid resolution are kept. When
-#' deaths are ungrouped as rates and the grid starts with age 0 as its own
-#' interval, an observed first year of life is kept and left out of the fit,
-#' as in [mt_smooth()]: infant mortality does not follow the age pattern of
-#' the following ages, and its peak would spill into ages 1-6.
+#' **Group totals.** The PCLM reproduces the total over all groups of a fit
+#' (the penalty leaves the level of the latent curve free), but not each
+#' group total: the gap is reported as `max_rel_diff` in the diagnostics.
+#' With `preserve_totals = TRUE` the estimates within each observed group
+#' are rescaled to the observed total after the fit, so that aggregation
+#' reproduces the data exactly. This rescaling is a post-hoc step of
+#' mortensor without a published source: it creates steps at the
+#' group boundaries, and with `dims = 2` it puts the year-to-year noise of
+#' every group back onto the smooth surface. On England and Wales men
+#' (2000-2011, 5-year groups) the median absolute difference of the
+#' single-year log rates between the two settings is about 0.002 with
+#' `dims = 1` and 0.008 with `dims = 2`.
+#'
+#' **Open age interval.** For counts (exposures, or deaths without
+#' exposures), an open last group is expanded into single years up to
+#' `omega` (see [mt_data()]) and the PCLM spreads its total over them, as
+#' with a last interval of width `omega` minus its lower bound in the
+#' ungroup package. For rates, an open interval of the *grid* (for example
+#' 100+) is expanded into single years up to `omega` as well, and its
+#' exposure is split over these years with stationary-population weights
+#' `l(x) = exp(-cumsum(m(x)))` implied by the fitted rates; starting from
+#' rates that rise by 10% per year of age, the weights and the fit are
+#' iterated until no weight changes by more than 1e-6 (at most 50
+#' iterations; the smoothing parameters are selected again once the weights
+#' have converged). This treatment of the open interval is specific to
+#' mortensor (reference unknown).
+#'
+#' When the deaths are grouped more coarsely than the exposures at old ages
+#' (for example deaths 90+ and single-year exposures), the rates within the
+#' last group are extrapolated by the smooth latent curve from the lower
+#' groups, and the comparison with real data is poor at the highest ages.
+#' On French women in 2006 (Human Mortality Database data in the
+#' demography package), with deaths in 5-year groups and 90+ and exposures
+#' in single years to 110+, the median absolute log error of the ungrouped
+#' rates at ages 90-109 against the single-year rates was 0.09 with
+#' `dims = 1` (0.02 at ages 30-89). The errors were within 0.1 on the log
+#' scale up to age 101, but the rates were too high by 0.3-0.4 at ages
+#' 104-109, because the latent curve continues the rise of the rates below
+#' 90 while the observed rates rise more slowly at the highest ages. With a grid
+#' open at 100+ (exposures 100+, expanded with the stationary weights), the
+#' rate of 100+ was too high by 0.14 on the log scale (median over
+#' 1997-2006). With the exposures also grouped at 90+, the error at 90-109
+#' was 0.19 (rates too low). With `dims = 2` (1997-2006, ages 30 and over)
+#' and smoothing parameters chosen by BIC, the error at 90-109 was 1.4: BIC
+#' chose very small smoothing parameters (the large counts vary more than
+#' Poisson noise) and the rates inside the wide last group oscillated; with
+#' `lambda = c(100, 10)` fixed it was 0.05. Treat ungrouped rates inside a
+#' wide open group as extrapolations, prefer data with a higher open age,
+#' check the smoothing parameters (attribute `"ungroup"`) and the result
+#' with [mt_plot_ungroup()].
+#'
+#' Cells already observed at grid resolution are kept. When deaths are
+#' ungrouped as rates and the grid starts with age 0 as its own interval, an
+#' observed first year of life is kept and left out of the fit, as in
+#' [mt_smooth()]: infant mortality does not follow the age pattern of the
+#' following ages, and its peak would spill into ages 1-6.
+#'
+#' **Defaults.** The basis and penalty follow the defaults of the ungroup
+#' package (version 1.6.3) for one dimension: cubic B-splines (`deg = 3`)
+#' with a knot every `kr = 2` years, a second-order difference penalty
+#' (`pord = 2`) and the smoothing parameter chosen by BIC. The search range
+#' of the smoothing parameter is wider than ungroup's (0.1 to 1e5 in one
+#' dimension, 0.1 to 1000 in two): `lambda_range = c(1e-2, 1e8)`. In two
+#' dimensions ungroup uses fixed smoothing parameters (1, 1) and a knot every
+#' 7 cells by default; here both parameters are chosen by BIC with a knot
+#' every `kr` years and periods.
+#'
+#' The methods `"hyman_kannisto"`, `"natural_gompertz"` and `"gam"` are
+#' deprecated: they are heuristics of this package without a published
+#' source. They still work, with a warning of class
+#' `mt_warning_deprecated`.
 #'
 #' In backtests use `step_ungroup()` so that ungrouping, in particular in 2D,
 #' sees only the training window.
@@ -39,18 +105,18 @@
 #'   open interval.
 #' @param dims 1 or 2 (for `method = "pclm"`; `"gam"` is always 2D, the
 #'   other methods 1D).
-#' @param method Method for deaths: `"pclm"` (default); `"monotone"`
-#'   (cumulative deaths interpolated by a monotone Hyman spline, counts only,
-#'   1D, ignores exposures); or rate-based spline methods, which
-#'   need exposures on the grid: `"hyman_kannisto"` (monotone spline of log
-#'   group rates with a Kannisto tail for the open interval),
-#'   `"natural_gompertz"` (natural spline with a log-linear tail) and `"gam"`
-#'   (2D tensor-product GAM of log group rates over age and year with a
-#'   Kannisto tail, package mgcv). All three preserve the exposure-weighted
-#'   group rates exactly. The vignette "Ungrouping age groups: methods and
-#'   diagnostics" compares the methods on data with known single years;
-#'   [mt_plot_ungroup()] and [mt_ungroup_check()] check a result.
-#' @param exposure_method `"pclm"` or `"monotone"`.
+#' @param method Method for deaths: `"pclm"` (default), or `"monotone"`, the
+#'   monotone cubic interpolation of Hyman (1983) of the cumulative deaths
+#'   (counts only, 1D, ignores exposures; group totals reproduced exactly).
+#'   Deprecated, without a published source: `"hyman_kannisto"` (monotone
+#'   spline of log group rates with a Kannisto tail), `"natural_gompertz"`
+#'   (natural spline with a log-linear tail) and `"gam"` (2D tensor-product
+#'   GAM of log group rates over age and year with a Kannisto tail, package
+#'   mgcv); they need exposures on the grid and rescale to the
+#'   exposure-weighted group rates. The vignette "Ungrouping age groups:
+#'   methods and diagnostics" compares methods on data with known single
+#'   years; [mt_plot_ungroup()] and [mt_ungroup_check()] check a result.
+#' @param exposure_method `"pclm"` or `"monotone"` (Hyman 1983).
 #' @param lambda Fixed smoothing parameter(s); `NULL` selects them by
 #'   `criterion`.
 #' @param criterion `"bic"` or `"aic"`.
@@ -58,36 +124,49 @@
 #' @param deg,pord Degree of the B-splines and order of the difference
 #'   penalty.
 #' @param lambda_range Search range for the smoothing parameters.
-#' @param preserve_totals Rescale estimates to observed group totals.
-#' @param tail,tail_width For `method = "gam"`: the parametric curve that
-#'   takes over from the GAM above the start of the last age group
+#' @param preserve_totals Rescale the estimates to the observed group totals
+#'   after the fit (default `FALSE`, the published PCLM); see Details.
+#' @param tail,tail_width For the deprecated `method = "gam"`: the parametric
+#'   curve that takes over from the GAM above the start of the last age group
 #'   (`"kannisto"`, logistic, or `"gompertz"`, log-linear), fitted to the GAM
 #'   rates from age 70, and the width (years) of the logistic blend between
 #'   the two.
 #' @return An `mt_data` object with deaths (and exposures) on the grid.
 #'   Diagnostics per fit are attached as attribute `"ungroup"`: smoothing
 #'   parameters, effective dimension, the largest relative difference between
-#'   fitted and observed group totals before rescaling, and a flag when a
-#'   smoothing parameter is at the boundary of the search range.
+#'   fitted and observed group totals (before any rescaling), the number of
+#'   iterations of the open-interval weights (`open_iterations`, `NA` without
+#'   an expanded open interval), and a flag when a smoothing parameter is at
+#'   the boundary of the search range.
 #' @references
 #' Eilers PHC (2007). Ill-posed problems with counts, the composite link model
 #' and penalized likelihood. *Statistical Modelling* 7(3): 239-254.
 #'
+#' Hyman JM (1983). Accurate monotonicity preserving cubic interpolation.
+#' *SIAM Journal on Scientific and Statistical Computing* 4(4): 645-654.
+#'
 #' Rizzi S, Gampe J, Eilers PHC (2015). Efficient estimation of smooth
 #' distributions from coarsely grouped data. *American Journal of
 #' Epidemiology* 182(2): 138-147. \doi{10.1093/aje/kwv020}
+#'
+#' Rizzi S, Halekoh U, Thinggaard M, Engholm G, Christensen N, Johannesen TB,
+#' Lindahl-Jacobsen R (2019). How to estimate mortality trends from grouped
+#' vital statistics. *International Journal of Epidemiology* 48(2): 571-582.
+#' \doi{10.1093/ije/dyy183}
 #' @examples
 #' x <- mt_example(years = 2010:2014)
 #' u <- mt_ungroup(x)
 #' u
 #' head(attr(u, "ungroup"))
+#' # rescaled to the observed group totals (post-hoc step of the package)
+#' ut <- mt_ungroup(x, preserve_totals = TRUE)
 #' @export
 mt_ungroup <- function(data, age = NULL, dims = 1,
                        method = c("pclm", "monotone", "hyman_kannisto", "natural_gompertz", "gam"),
                        exposure_method = c("pclm", "monotone"),
                        lambda = NULL,
                        criterion = c("bic", "aic"), kr = 2, deg = 3, pord = 2,
-                       lambda_range = c(1e-2, 1e8), preserve_totals = TRUE, tail = c("kannisto", "gompertz"),
+                       lambda_range = c(1e-2, 1e8), preserve_totals = FALSE, tail = c("kannisto", "gompertz"),
                        tail_width = 2) {
   check_class(data, "mt_data", "data")
   method <- match.arg(method)
@@ -96,6 +175,12 @@ mt_ungroup <- function(data, age = NULL, dims = 1,
   exposure_method <- match.arg(exposure_method)
   criterion <- match.arg(criterion)
   check_number(dims, "dims", lower = 1, upper = 2, integerish = TRUE)
+  if (!is.logical(preserve_totals) || length(preserve_totals) != 1L || is.na(preserve_totals)) {
+    mt_abort("`preserve_totals` must be TRUE or FALSE.", class = "argument")
+  }
+  if (method %in% c("hyman_kannisto", "natural_gompertz", "gam")) {
+    warn_deprecated_ungroup(sprintf("mt_ungroup(method = \"%s\")", method))
+  }
   if (dims == 2 && method %in% c("monotone", "hyman_kannisto", "natural_gompertz")) {
     mt_warn(sprintf("dims = 2 is ignored by method = \"%s\", which works per stratum and period.", method),
             class = "ungroup_dims")
@@ -146,9 +231,22 @@ mt_ungroup <- function(data, age = NULL, dims = 1,
     mt_warn(sprintf("The smoothing parameter is at the boundary of the search range in %d of %d fits.",
                     sum(dg$at_bound %in% TRUE), nrow(dg)), class = "lambda_bound")
   }
+  if (nrow(dg) && "open_converged" %in% names(dg) && any(dg$open_converged %in% FALSE)) {
+    mt_warn(sprintf(paste("The weights of the open age interval did not converge in %d of %d fits (50 iterations);",
+                          "the rates in the open interval are approximate."),
+                    sum(dg$open_converged %in% FALSE), nrow(dg)), class = "ungroup_open")
+  }
   data$grid <- g
   attr(data, "ungroup") <- dg
   data
+}
+
+# Warning for the deprecated ungrouping and disaggregation heuristics
+warn_deprecated_ungroup <- function(what, alternative = NULL) {
+  alternative <- alternative %||% paste("the penalized composite link model (method = \"pclm\") or the monotone cubic",
+                                        "interpolation of cumulative counts of Hyman (1983) (method = \"monotone\")")
+  mt_warn(sprintf("%s is deprecated: it is a heuristic of this package without a published source. Use %s.",
+                  what, alternative), class = "deprecated", call = NULL)
 }
 
 needs_ungroup <- function(obs, g) {
@@ -259,7 +357,8 @@ ungroup_rates <- function(D, E, g, omega, ctl, dims) {
                                             method = paste0(ctl$method_label %||% "pclm_rate", "_1d"),
                                             lambda_age = r$fit$lambda[1],
                                             lambda_period = NA_real_, ed = r$fit$ed,
-                                            max_rel_diff = r$rel, at_bound = isTRUE(r$fit$at_bound))
+                                            max_rel_diff = r$rel, at_bound = isTRUE(r$fit$at_bound),
+                                            open_iterations = r$open_iterations, open_converged = r$open_converged)
       }
     } else {
       ps <- seq(min(Ds$p1), max(Ds$p2))
@@ -278,7 +377,8 @@ ungroup_rates <- function(D, E, g, omega, ctl, dims) {
                                           method = paste0(ctl$method_label %||% "pclm_rate", "_2d"),
                                           lambda_age = r$fit$lambda[1],
                                           lambda_period = r$fit$lambda[2],
-                                          ed = r$fit$ed, max_rel_diff = r$rel, at_bound = isTRUE(r$fit$at_bound))
+                                          ed = r$fit$ed, max_rel_diff = r$rel, at_bound = isTRUE(r$fit$at_bound),
+                                          open_iterations = r$open_iterations, open_converged = r$open_converged)
     }
   }
   list(obs = grid_table(rbindlist(out), g), diag = rbindlist(dg, fill = TRUE))
@@ -301,24 +401,55 @@ ungroup_rate_block <- function(o, e_list, fa, B, pen, ctl, omega, n_open, ps = N
   if (anyNA(e_grid)) mt_abort("Exposures are missing for grid cells needed by the ungrouping.", class = "ungroup")
   open_idx <- which(fa$grid == ng & fa$open)
   w <- matrix(1, nf, length(ps))
-  init_rate <- sum(o$value) / sum(e_grid)
   if (length(open_idx)) {
-    w[open_idx, ] <- open_weights(init_rate * exp(0.1 * seq_along(open_idx)))
+    # starting weights: rates rising by 10% per year of age in the open interval
+    w[open_idx, ] <- open_weights(sum(o$value) / sum(e_grid) * exp(0.1 * seq_along(open_idx)))
   }
-  fit <- NULL
-  for (outer_it in seq_len(if (length(open_idx)) 3L else 1L)) {
+  fit_w <- function(w, lambda, beta) {
     off <- as.vector(e_grid[fa$grid, , drop = FALSE] * w)
     cov <- Matrix::colSums(C) > 0 & off > 0
-    fit <- pclm_fit(o$value, C[, cov, drop = FALSE], off[cov], B[cov, , drop = FALSE], pen, ctl$lambda,
-                    ctl$criterion, ctl$lambda_range, beta = fit$beta)
-    rate <- rep(NA_real_, length(off))
-    rate[cov] <- fit$gamma
-    if (!length(open_idx)) break
-    rate_m <- matrix(exp(as.numeric(B %*% fit$beta)), nf, length(ps))
-    for (j in seq_along(ps)) w[open_idx, j] <- open_weights(rate_m[open_idx, j])
+    fit <- pclm_fit(o$value, C[, cov, drop = FALSE], off[cov], B[cov, , drop = FALSE], pen, lambda,
+                    ctl$criterion, ctl$lambda_range, beta = beta)
+    list(fit = fit, off = off, cov = cov)
   }
-  off <- as.vector(e_grid[fa$grid, , drop = FALSE] * w)
-  cov <- Matrix::colSums(C) > 0 & off > 0
+  r <- fit_w(w, ctl$lambda, NULL)
+  open_it <- NA_integer_
+  open_conv <- NA
+  if (length(open_idx)) {
+    # the exposure of the open interval is split with the stationary weights
+    # of the fitted rates: weights and fit are iterated to a fixed point, with
+    # the smoothing parameters fixed; they are then selected again with the
+    # converged weights, until the selection no longer changes
+    open_it <- 0L
+    open_conv <- TRUE
+    select <- is.null(ctl$lambda)
+    at_bound <- isTRUE(r$fit$at_bound)
+    for (round in seq_len(if (select) 3L else 1L)) {
+      lam <- r$fit$lambda
+      repeat {
+        rate_m <- matrix(exp(as.numeric(B %*% r$fit$beta)), nf, length(ps))
+        w_new <- w
+        for (j in seq_along(ps)) w_new[open_idx, j] <- open_weights(rate_m[open_idx, j])
+        if (max(abs(w_new - w)) < 1e-6) break
+        if (open_it >= 50L) {
+          open_conv <- FALSE
+          break
+        }
+        open_it <- open_it + 1L
+        w <- w_new
+        r <- fit_w(w, lam, r$fit$beta)
+      }
+      if (!select || !open_conv || round == 3L) break
+      r2 <- fit_w(w, NULL, r$fit$beta)
+      at_bound <- isTRUE(r2$fit$at_bound)
+      if (all(abs(log10(r2$fit$lambda / lam)) < 0.01)) break
+      r <- r2
+    }
+    r$fit$at_bound <- at_bound
+  }
+  fit <- r$fit
+  off <- r$off
+  cov <- r$cov
   deaths_f <- rep(0, length(off))
   deaths_f[cov] <- off[cov] * fit$gamma
   rel <- max(abs(fit$mu / pmax(o$value, 1e-12) - 1)[o$value > 0], 0)
@@ -339,7 +470,8 @@ ungroup_rate_block <- function(o, e_list, fa, B, pen, ctl, omega, n_open, ps = N
     vals[m] <- exact$value
     prov[m] <- "observed"
   }
-  list(a = a[keep], p = p[keep], deaths = vals[keep], provenance = prov[keep], fit = fit, rel = rel)
+  list(a = a[keep], p = p[keep], deaths = vals[keep], provenance = prov[keep], fit = fit, rel = rel,
+       open_iterations = open_it, open_converged = open_conv)
 }
 
 rescale_to_groups <- function(est, C, y) {

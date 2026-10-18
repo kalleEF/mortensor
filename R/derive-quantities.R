@@ -7,16 +7,65 @@
 #'
 #' * `prob_dying()`: probability of dying between ages `from` and `to` (for
 #'   example the SDG indicator 3.4.1 uses 30 to 70), `1 - l(to) / l(from)`
-#'   from the period life table;
+#'   from the period life table of [life_table()] (Preston, Heuveline and
+#'   Guillot 2001);
 #' * `asr()`: age-standardised death rate per `per` persons (default
-#'   100,000) with weights of a standard population, restricted to the ages
-#'   of the grid and renormalised (columns `ages`, `standard` and `per`
-#'   state this; an ASR for ages 50+ is per 100,000 of the standard
-#'   population aged 50+);
-#' * `yll()`: years of life lost, deaths times a reference remaining life
-#'   expectancy at each age (by default the forecast's own period life
-#'   expectancy at the interval midpoint, approximated by the value at the
-#'   start of the interval).
+#'   100,000), by direct standardisation with the weights of a standard
+#'   population (see Age-standardised rates);
+#' * `yll()`: years of life lost, the deaths of each age interval times the
+#'   remaining life expectancy at the average age at death in the interval
+#'   (see Years of life lost).
+#'
+#' @section Age-standardised rates:
+#' By default (`age_groups = "standard"`) the rates are first combined to
+#' the age groups of the standard population, as for the European Standard
+#' Population (Eurostat 2013): the rate of a standard age group is the sum
+#' of the deaths divided by the sum of the exposures of the grid cells in
+#' it, that is the mean of their rates weighted by their exposures. The ASR
+#' is the mean of these rates weighted by the standard population. The
+#' exposures are those of each observed year for observed data and, for
+#' forecasts, `exposure` (default: the exposures of the last training year,
+#' as in [mt_deaths()]). Rates of a group without exposures (all zero, or
+#' draws that hold none) are averaged with equal weights.
+#'
+#' Grid cells wider than the standard groups (for example 0-4 for the groups
+#' 0 and 1-4 of the ESP 2013, or an open interval 90+ for the groups 90-94
+#' and 95+) take the sum of the weights of the standard groups they cover:
+#' rates and weights are combined over the smallest age groups that are
+#' unions both of grid cells and of standard groups. Only the ages of the
+#' grid enter, and the weights are renormalised to them (columns `ages`,
+#' `standard` and `per` state this; an ASR for ages 50+ is per 100,000 of
+#' the standard population aged 50+); a standard group that the grid covers
+#' only in part enters with the covered share of its weight.
+#'
+#' `age_groups = "grid"` instead shares the weight of each standard group
+#' evenly among the grid cells within it (the weight of the open standard
+#' group equally among the grid cells it covers) and weights the rates of
+#' the grid cells with these shares. This is specific to this package
+#' (reference unknown). Where the grid is finer than the standard groups,
+#' every cell of a group gets the same weight, although the older cells of
+#' a group have higher death rates and, at older ages, fewer persons, so the
+#' ASR is higher than with the standard's age groups: by 1.8% to 3.6% for
+#' French rates on single years of age to 100+ (HMD, 1950-2006, ESP 2013),
+#' and by more when the grid extends to higher ages, over which the weight
+#' of the open standard group 95+ is then spread evenly (up to 11% with
+#' single years to 110+). On a grid of the standard's age groups (or
+#' coarser) both give the same value.
+#'
+#' @section Years of life lost:
+#' `yll()` multiplies the deaths of each age interval by the remaining life
+#' expectancy at the average age at death in the interval, `x + a_x`,
+#' interpolated linearly between the values at the start and at the end of
+#' the interval, `e_x + a_x / n_x * (e_(x+n) - e_x)` (as for e-dagger in
+#' [lifespan_variation()]); the last interval uses its `e_x`. With the life
+#' expectancy of the forecast's own period life table (default) these are
+#' the period expected years of life lost of Murray (1994). With
+#' `reference_ex`, the remaining life expectancy of a standard life table at
+#' the start of each grid interval, interpolated in the same way with the
+#' `a_x` of the forecast's life table, they are the standard expected years
+#' of life lost of the same paper. Neither discounting nor age weighting is
+#' applied. The deaths are rates times `exposure` (default: the exposures of
+#' the last training year), without Poisson noise.
 #'
 #' @param draws An [mt_draws] object; `prob_dying()` and `asr()` also take an
 #'   [mt_data] object for observed rates (with Poisson intervals, see
@@ -26,21 +75,41 @@
 #' @param standard The name of a standard population (see
 #'   [standard_population()]) or a data frame with `age_lo`, `age_hi`,
 #'   `weight`.
-#' @param exposure Future exposures for `yll()` (see [mt_deaths()]).
+#' @param exposure Exposures (see [mt_deaths()]): for `yll()` the future
+#'   exposures that give the deaths; for `asr()` the exposures that weight
+#'   the rates within each standard age group (default: those of each
+#'   observed year for observed data, of the last training year for
+#'   forecasts).
 #' @param per Rates per `per` persons (age-standardised rates).
-#' @param reference_ex Reference remaining life expectancy per grid age, or
-#'   `NULL` for the forecast's own.
+#' @param age_groups `"standard"` (default: direct standardisation on the
+#'   age groups of the standard population) or `"grid"` (the standard
+#'   weights shared among the grid cells, specific to this package). See
+#'   Age-standardised rates.
+#' @param reference_ex Reference remaining life expectancy at the start of
+#'   each grid interval, or `NULL` for the forecast's own.
 #' @param probs Quantile levels.
 #' @param paths Return the values of every path, an array `[period, stratum,
 #'   draw]`, instead of the summary (for example to compute ratios between
 #'   strata path by path).
 #' @return A `data.table` with stratum columns, `period`, `mean` and
 #'   quantiles, or with `paths = TRUE` an array.
+#' @references
+#' Eurostat (2013). Revision of the European Standard Population: report of
+#' Eurostat's task force. Methodologies and Working papers. Publications
+#' Office of the European Union, Luxembourg. \doi{10.2785/11470}
+#'
+#' Murray CJL (1994). Quantifying the burden of disease: the technical
+#' basis for disability-adjusted life years. *Bulletin of the World Health
+#' Organization* 72(3): 429-445.
+#'
+#' Preston SH, Heuveline P, Guillot M (2001). *Demography: Measuring and
+#' Modeling Population Processes*. Blackwell.
 #' @examples
 #' x <- mt_example(deaths = "single")
 #' fc <- mt_forecast(mt_fit(lee_carter(), x), h = 5, n_draws = 100, seed = 1)
 #' prob_dying(fc, from = 30, to = 70)
 #' asr(fc)
+#' yll(fc)
 #' @name derived
 NULL
 
@@ -87,19 +156,96 @@ prob_dying <- function(draws, from, to, probs = c(0.025, 0.1, 0.5, 0.9, 0.975), 
 
 #' @rdname derived
 #' @export
-asr <- function(draws, standard = "esp2013", probs = c(0.025, 0.1, 0.5, 0.9, 0.975), paths = FALSE, per = 1e5) {
+asr <- function(draws, standard = "esp2013", probs = c(0.025, 0.1, 0.5, 0.9, 0.975), paths = FALSE, per = 1e5,
+                exposure = NULL, age_groups = c("standard", "grid")) {
+  age_groups <- match.arg(age_groups)
   draws <- as_draws(draws)
   if (is.character(standard)) standard <- standard_population(standard)
-  w <- standard_weights(draws$age, standard)
   d <- dim(draws$rates)
   M <- matrix(draws$rates, nrow = d[1])
-  v <- array(colSums(M * w) / sum(w) * per, d[-1])
+  E <- if (age_groups == "standard") draws_exposure(draws, exposure)
+  v <- array(asr_columns(M, draws$age, standard, E, per, age_groups), d[-1])
   out <- summarise_paths(v, draws, probs, paths = paths)
   if (paths) return(out)
   a <- draws$age
   out[, `:=`(ages = sprintf("%s-%s", a$labels[1], a$labels[length(a)]), standard = attr(standard, "name") %||% "user",
              per = per)]
   out[]
+}
+
+# Exposures [age, period, stratum] of draws: `exposure` if given, those of
+# the observed years of mt_observed(), else those of the last training year
+# (the draws' own, matched by position if unnamed); NULL when the draws hold
+# none that fit
+draws_exposure <- function(draws, exposure = NULL) {
+  d <- dim(draws$rates)
+  if (!is.null(exposure)) return(expand_exposure(exposure, d, dimnames(draws$rates)))
+  if (!is.null(draws$exposure) && identical(dim(draws$exposure), d[1:3])) return(draws$exposure)
+  if (is.null(draws$exposure_last)) return(NULL)
+  tryCatch(suppressWarnings(expand_exposure(draws$exposure_last, d, dimnames(draws$rates))),
+           mt_error_argument = function(e) NULL)
+}
+
+# Age-standardised rates of the columns of M (rates [age, n]) with the
+# exposures E (a vector or matrix [age, k] recycled over the columns of M,
+# n a multiple of k; NULL for equal weights): the rates combined to the age
+# groups of asr_groups() (sum of rate times exposure over the sum of the
+# exposures; the plain mean where the exposures are zero), weighted by the
+# standard population
+asr_columns <- function(M, age, standard, E = NULL, per = 1e5, age_groups = "standard") {
+  g <- asr_groups(age, standard, age_groups)
+  rows <- which(!is.na(g$group))
+  M <- M[rows, , drop = FALSE]
+  grp <- g$group[rows]
+  E <- if (is.null(E)) matrix(1, length(rows), 1) else matrix(E, length(age))[rows, , drop = FALSE]
+  den <- rowsum(E, grp, reorder = TRUE)
+  R <- rowsum(M * as.vector(E), grp, reorder = TRUE) / as.vector(den)
+  zero <- !(den > 0)
+  if (any(zero)) {
+    plain <- rowsum(M, grp, reorder = TRUE) / tabulate(grp)
+    z <- rep_len(as.vector(zero), length(R))
+    R[z] <- plain[z]
+  }
+  colSums(R * g$weight) / sum(g$weight) * per
+}
+
+# Age groups of an age-standardised rate: `group` (the group of each grid
+# cell, NA outside the standard) and per group its standard `weight` and its
+# bounds `lower` and `upper`. "standard": the smallest groups that are
+# unions both of grid cells and of standard groups (the standard's age
+# groups where the grid is finer); a standard group covered in part by the
+# grid counts with the covered share of its weight. "grid": every grid cell
+# with the weights of standard_weights()
+asr_groups <- function(age, standard, age_groups = "standard") {
+  standard <- as.data.table(standard)
+  lo <- age$lower
+  hi <- age$upper
+  if (age_groups == "grid") {
+    w <- standard_weights(age, standard)
+    grp <- cumsum(w > 0)
+    grp[w <= 0] <- NA_integer_
+    return(list(group = grp, weight = w[w > 0], lower = lo[w > 0], upper = hi[w > 0]))
+  }
+  slo <- standard$age_lo
+  shi <- standard$age_hi
+  ov <- outer(seq_along(lo), seq_along(slo), function(i, k) pmin(hi[i], shi[k]) - pmax(lo[i], slo[k]))
+  hit <- ov > 1e-9
+  if (!any(hit)) mt_abort("The standard population does not cover the grid ages.", class = "argument")
+  # neighbouring cells share a group when a standard group spans their bound
+  grp <- rep(NA_integer_, length(lo))
+  cur <- 0L
+  for (i in seq_along(lo)) {
+    if (!any(hit[i, ])) next
+    if (i == 1L || is.na(grp[i - 1L]) || !any(hit[i, ] & hit[i - 1L, ])) cur <- cur + 1L
+    grp[i] <- cur
+  }
+  covered <- colSums(ifelse(hit, ov, 0))
+  share <- ifelse(is.finite(shi), pmin(covered / (shi - slo), 1), 1)
+  share[colSums(hit) == 0] <- 0
+  sg <- apply(hit, 2, function(h) if (any(h)) grp[which(h)[1]] else NA_integer_)
+  weight <- vapply(seq_len(cur), function(k) sum((standard$weight * share)[which(sg == k)]), 0)
+  list(group = grp, weight = weight, lower = vapply(seq_len(cur), function(k) min(lo[grp == k], na.rm = TRUE), 0),
+       upper = vapply(seq_len(cur), function(k) max(hi[grp == k], na.rm = TRUE), 0))
 }
 
 # Weight of each grid cell: the standard weights of the overlapping standard
@@ -185,15 +331,30 @@ yll <- function(draws, exposure = NULL, reference_ex = NULL, probs = c(0.025, 0.
   check_class(draws, "mt_draws", "draws")
   deaths <- mt_deaths(draws, exposure = exposure, noise = FALSE)
   d <- dim(draws$rates)
+  M <- matrix(draws$rates, nrow = d[1])
+  lt <- lt_columns(M, draws$age)
   if (is.null(reference_ex)) {
-    M <- matrix(draws$rates, nrow = d[1])
-    ex <- lt_columns(M, draws$age)$ex
+    ex <- lt$ex
   } else {
     if (length(reference_ex) != d[1]) mt_abort("`reference_ex` needs one value per grid age.", class = "argument")
     ex <- matrix(reference_ex, d[1], prod(d[-1]))
   }
-  v <- array(colSums(matrix(deaths, nrow = d[1]) * ex), d[-1])
+  v <- array(colSums(matrix(deaths, nrow = d[1]) * ex_at_death(ex, lt$ax, draws$age)), d[-1])
   summarise_paths(v, draws, probs)
+}
+
+# Remaining life expectancy at the average age at death x + a_x of each
+# interval, interpolated linearly between e_x and e_(x+n) (ex and ax
+# [age, n]); the last interval keeps its e_x
+ex_at_death <- function(ex, ax, age) {
+  na <- nrow(ex)
+  if (na == 1L) return(ex)
+  n <- age$upper - age$lower
+  i <- seq_len(na - 1L)
+  out <- ex
+  e0 <- ex[i, , drop = FALSE]
+  out[i, ] <- e0 + ax[i, , drop = FALSE] / n[i] * (ex[i + 1L, , drop = FALSE] - e0)
+  out
 }
 
 #' Export forecasts and result tables

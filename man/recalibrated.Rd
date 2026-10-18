@@ -8,7 +8,7 @@ recalibrated(
   spec,
   years = 10,
   n_origins = 5,
-  scale = c("horizon", "constant"),
+  scale = c("constant", "horizon"),
   bias = FALSE,
   target = c("crps", "interval"),
   level = 0.95,
@@ -28,10 +28,12 @@ recalibrated(
 \item{n_origins}{Number of origins in the window (evenly spaced from
 \code{years} to 2 years before the end of the training data).}
 
-\item{scale}{\code{"horizon"} (spread factor \eqn{s_1 h^{\gamma}}) or
-\code{"constant"}.}
+\item{scale}{\code{"constant"} (default: one spread factor \eqn{s_1} for all
+horizons) or \code{"horizon"} (spread factor \eqn{s_1 h^{\gamma}},
+package-specific).}
 
-\item{bias}{Estimate a correction of the drift (log rate per year).}
+\item{bias}{Estimate a correction of the drift (log rate per year;
+package-specific).}
 
 \item{target}{\code{"crps"} or \code{"interval"} (interval score at \code{level}).}
 
@@ -75,22 +77,59 @@ remaining years of the window;
 \item the draws are transformed per cell on the log scale,
 \deqn{\log m^* = \tilde m + b\,h + s(h)\,(\log m - \tilde m),}
 where \eqn{\tilde m} is the median of the draws in the cell, \eqn{h} the
-horizon, \eqn{s(h) = s_1 h^{\gamma}} a spread factor (\code{scale = "horizon"}; \eqn{\gamma = 0} for \code{scale = "constant"}), constant
-beyond the longest horizon of the window, and \eqn{b} a correction of
-the drift per year (\code{bias = TRUE});
+horizon, \eqn{s(h)} a spread factor, one value \eqn{s_1} for all
+horizons (\code{scale = "constant"}, default) or \eqn{s_1 h^{\gamma}}
+(\code{scale = "horizon"}), held constant beyond the longest horizon of the
+window, and \eqn{b} a correction of the drift per year (\code{bias = TRUE});
 \item \eqn{s_1}, \eqn{\gamma} and \eqn{b} minimise the mean CRPS (or the
 interval score, \code{target}) of the log death rates in the window, with
-Poisson (and the model's extra-Poisson) variation of the observed
-deaths, as in \code{\link[=mt_backtest]{mt_backtest()}}. Draws of an ensemble get the observation
+the Poisson (or the model's negative binomial) variation of the
+observed deaths, as in \code{\link[=mt_backtest]{mt_backtest()}}. Draws of an ensemble get the observation
 noise of the component they come from.
 }
 
 The final model is fitted on all training data and its forecasts are
-transformed with the estimated parameters. This is minimum-CRPS
-estimation of a location-scale recalibration (Gneiting et al. 2005)
-applied to simulated paths: ranks within each cell are kept, so paths stay
-paths, and derived quantities such as life expectancy can be computed
-from the calibrated draws.
+transformed with the estimated parameters. Ranks within each cell are
+kept, so paths stay paths, and derived quantities such as life expectancy
+can be computed from the calibrated draws.
+
+\strong{Published methods.} The closest published method is the
+member-by-member post-processing of ensemble forecasts (Van Schaeybroeck
+and Vannitsem 2015), which shifts every member of an ensemble and
+rescales its deviation from the ensemble mean, with parameters for each
+lead time estimated by maximum likelihood or minimum CRPS. Here each
+simulated path is rescaled around the median of the draws of each cell,
+on the log scale, with one spread factor for all horizons (\code{scale = "constant"}) estimated by minimum CRPS on inner rolling-origin forecasts.
+Minimum-CRPS estimation follows ensemble model output statistics (EMOS,
+Gneiting et al. 2005), which fits a parametric predictive distribution
+instead of transforming the draws.
+
+\strong{Package-specific options} (reference unknown): the power law of the
+spread factor over the horizon (\code{scale = "horizon"}), the correction of
+the drift (\code{bias = TRUE}), separate factors for age bands (\code{ages}) and
+calibration on life expectancy or the age-standardised rate (\code{quantity}).
+
+\strong{Estimation.} The parameters are bounded: \eqn{s_1} between 0.1 and 20,
+\eqn{\gamma} between -1 and 1, and \eqn{b} between -0.05 and 0.05 (log
+rate per year). With one parameter (\code{scale = "constant"}, \code{bias = FALSE})
+\eqn{\log s_1} is found by \code{\link[stats:optimize]{stats::optimize()}} within its bounds;
+otherwise the parameters are found by Nelder-Mead (\code{\link[stats:optim]{stats::optim()}},
+relative tolerance 1e-6, at most 300 iterations), started at
+\eqn{s_1 = 1}, \eqn{\gamma = 0}, \eqn{b = 0}, with values outside the
+bounds rejected. The observation noise of the scored forecasts is
+simulated once (common random numbers), so the score is a deterministic
+function of the parameters.
+
+\strong{Long horizons.} The parameters are estimated on horizons 1 to
+\eqn{h_{max}}, the distance from the first origin to the last training
+year (10 years with the defaults). Beyond \eqn{h_{max}} the spread factor
+and the drift correction are held at their values at \eqn{h_{max}}. A
+forecast more than twice as long as \eqn{h_{max}} gives a warning (class
+\code{mt_warning_recalibrate}), because nothing in the training data shows how
+the spread of the model is wrong at such horizons. With the defaults this
+concerns forecasts of more than 20 years (\code{mt_forecast()} forecasts 10 by
+default); give a longer \code{years} for long projections, or accept the
+constant factor.
 
 The wrapper works with any specification, including \code{\link[=ensemble]{ensemble()}},
 \code{\link[=bootstrapped]{bootstrapped()}} and joint models. For \code{\link[=reconciled]{reconciled()}} models the bottom
@@ -110,22 +149,20 @@ estimated from few overlapping forecasts (with the defaults, 5 origins and
 30 forecast years, horizons 1 to 10), so they carry their own uncertainty,
 and they cannot anticipate changes after the window. \code{n_boot} refits them
 on forecasts (stratum x origin) resampled with replacement and reports
-95\% percentile intervals. Beyond the longest horizon of the window, the
-spread factor and the drift correction stay constant. The inner models are
-fitted to shorter series than the final model, which matters for models
-whose uncertainty depends on the length of the series (the drift of a
-random walk). Compare calibrated and uncalibrated models in an outer
-backtest.
+95\% percentile intervals. The inner models are fitted to shorter series
+than the final model, which matters for models whose uncertainty depends
+on the length of the series (the drift of a random walk). Compare
+calibrated and uncalibrated models in an outer backtest.
 
-\strong{Age bands.} With \code{ages} (break points, for example \code{c(50, 75)}), the
-factors are estimated separately for each age band, so that a model that
-is too narrow at old ages and too wide at young ages is corrected at
-both. Observed cells belong to the band of their lower age; use break
-points that are bounds of the observed age groups.
+\strong{Age bands} (package-specific). With \code{ages} (break points, for example
+\code{c(50, 75)}), the factors are estimated separately for each age band, so
+that a model that is too narrow at old ages and too wide at young ages is
+corrected at both. Observed cells belong to the band of their lower age;
+use break points that are bounds of the observed age groups.
 
-\strong{Quantity.} By default the log death rates of single cells are scored.
-Intervals of life expectancy and ASR also depend on how the ages move
-together, which the transformation keeps from the base model;
+\strong{Quantity} (package-specific). By default the log death rates of single
+cells are scored. Intervals of life expectancy and ASR also depend on how
+the ages move together, which the transformation keeps from the base model;
 \code{quantity = "life_expectancy"} (at birth) or \code{"asr"} scores these instead,
 per test year and stratum (fewer scored values, so the factors are less
 certain).
@@ -154,6 +191,11 @@ fit$calibration
 fc <- mt_forecast(fit, h = 5, n_draws = 100, seed = 1)
 }
 \references{
+Van Schaeybroeck B, Vannitsem S (2015). Ensemble post-processing using
+member-by-member approaches: theoretical aspects. \emph{Quarterly Journal of
+the Royal Meteorological Society} 141(688): 807-818.
+\doi{10.1002/qj.2397}
+
 Gneiting T, Raftery AE, Westveld AH, Goldman T (2005). Calibrated
 probabilistic forecasting using ensemble model output statistics and
 minimum CRPS estimation. \emph{Monthly Weather Review} 133(5): 1098-1118.
