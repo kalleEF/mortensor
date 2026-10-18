@@ -29,7 +29,7 @@ contribution has an interval.
 | `"stepwise"` | any function of the rates | Andreev, Shkolnikov and Begun (2002) |
 | `"kitagawa"` | crude death rate: rates and age structure | Kitagawa (1955) |
 | `groups` with `composition = "radix"` | life expectancy of a population of subgroups fixed from the start (sex, education): subgroup rates and composition | Riffe, Tursun-zade and Trias Llimós (2024), "Arriaga meets Kitagawa" |
-| `groups` with `composition = "pooled"` | life expectancy of the pooled rates (areas, regions): subgroup rates and age-specific composition | Horiuchi et al. (2008) |
+| `groups` with `composition = "pooled"` | life expectancy of the pooled rates (areas, regions): subgroup rates and age-specific composition | parametrisation specific to this package (reference unknown); line integral of Horiuchi et al. (2008) |
 
 ```{r}
 library(mortensor)
@@ -168,7 +168,9 @@ England (the quintiles weighted by their population at each age, as in
 published life tables; "current rates" in Vaupel's terms, while the radix
 version of Riffe et al. describes "current conditions"). The rates of
 every quintile and age and the shares at every age are the parameters of a
-line-integral decomposition:
+line-integral decomposition (Horiuchi et al. 2008). This parametrisation
+is specific to this package (reference unknown); others would split the
+difference differently between rates and composition:
 
 ```{r}
 eng <- mt_decompose(x, periods = c(2001, 2019), groups = "quintile", composition = "pooled")
@@ -256,8 +258,10 @@ fit of 2019 already puts the gap at 5.7 years. The model's own narrowing,
 from the fitted 2019 gap, is 1.1 years (95% interval 0.03 to 2.0): the
 deviations of Q1 from the common trend return towards their average. The
 vignette "Inequality in England" shows that in 2010-2019 the gap did not
-behave like this, and that Li-Lee forecast it poorly. `anchored()` moves the start towards the observed level but
-fades out within ten years, so it does not change the gap in 2035.
+behave like this, and that Li-Lee forecast it poorly. `anchored()` starts
+the forecast from the observed rates of 2019 and keeps this offset in
+every forecast year (Lee and Miller 2001); the gap then narrows only by
+the model's own change.
 
 Two forecasts of the same year are compared by giving the second as `y`.
 Their draws are independent, so they are shuffled before they are paired
@@ -316,9 +320,10 @@ rates fell.
   ages.
 * Populations of subgroups: `composition = "radix"` (Riffe et al.) for
   subgroups fixed from the starting age (sex, education from 30 or 35,
-  country of birth); `"pooled"` for areas, regions and other groups
-  between which people move, and whenever the target is the life
-  expectancy of the whole population as published.
+  country of birth); `"pooled"` (a parametrisation specific to this
+  package) for areas, regions and other groups between which people move,
+  and whenever the target is the life expectancy of the whole population
+  as published.
 * Forecasts from an observed year: report the jump-off (`jump_off`) or
   decompose from the fitted rates (`observed = "fitted"`); compare two
   models with independent draws (the default).
@@ -344,6 +349,9 @@ a model of continuous change. *Demography* 45(4): 785-801.
 
 Kitagawa EM (1955). Components of a difference between two rates. *Journal
 of the American Statistical Association* 50(272): 1168-1194.
+
+Lee R, Miller T (2001). Evaluating the performance of the Lee-Carter
+method for forecasting mortality. *Demography* 38(4): 537-549.
 
 Riffe T, Tursun-zade R, Trias Llimós S (2024). Arriaga meets Kitagawa. Life
 expectancy decomposition with population subgroups. MPIDR Working Paper
