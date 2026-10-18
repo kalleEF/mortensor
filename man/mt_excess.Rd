@@ -154,7 +154,8 @@ region) gets its own row.
 x <- mt_example(years = 2000:2019, deaths = "single")
 # a shock: 10\% more deaths at ages 70+ in 2018 and 2019
 x$obs$deaths[period_lo >= 2018 & age_lo >= 70, value := round(1.1 * value)]
-ex <- mt_excess(lee_carter(), x, baseline = c(2000, 2015), ages = c(30, 70), n_draws = 200, seed = 1)
+ex <- mt_excess(lee_carter(), x, baseline = c(2000, 2015), ages = c(30, 70),
+                n_draws = 200, seed = 1)
 ex[, list(sex, age, period, observed, excess_q0.5, p_score_q0.025, p_score_q0.975)]
 if (requireNamespace("ggplot2", quietly = TRUE)) mt_plot_excess(ex)
 }
