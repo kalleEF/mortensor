@@ -5,7 +5,9 @@
 #'
 #' * `mt_plot_ungroup(type = "profile")`: the observed group rates (grey
 #'   steps) and the ungrouped rates (lines) over age in one period. The
-#'   ungrouped rates should pass through the steps and change smoothly.
+#'   ungrouped rates should change smoothly and pass close to the steps
+#'   (exactly through their exposure-weighted means only with
+#'   `preserve_totals = TRUE` or the monotone method).
 #' * `type = "time"`: the ungrouped rates of a few ages over the periods
 #'   (log scale), with the known rates of `reference` as points or, without
 #'   `reference`, the rate of the observed group that contains each age
@@ -24,7 +26,7 @@
 #' * `mt_ungroup_check()` summarises the fits: the share of fits whose
 #'   smoothing parameter is at the boundary of its search range
 #'   (`at_bound`), the largest relative gap between fitted and observed group
-#'   totals before rescaling (`max_rel_gap`) and, with `reference`, by age
+#'   totals before any rescaling (`max_rel_gap`) and, with `reference`, by age
 #'   band the median absolute log error (`mae_log`), the same for the
 #'   Poisson noise of the known rates (`noise_log`, the error that perfect
 #'   estimates would have) and the median signed log error (`bias_log`).
@@ -47,7 +49,7 @@
 #' @seealso The vignette "Ungrouping age groups: methods and diagnostics".
 #' @examples
 #' x <- mt_example(years = 2010:2014)
-#' u <- list(PCLM = mt_ungroup(x), "Hyman spline" = mt_ungroup(x, method = "hyman_kannisto"))
+#' u <- list(PCLM = mt_ungroup(x), "PCLM, rescaled" = mt_ungroup(x, preserve_totals = TRUE))
 #' mt_ungroup_check(u)
 #' if (requireNamespace("ggplot2", quietly = TRUE)) {
 #'   mt_plot_ungroup(x, u, strata = "female")

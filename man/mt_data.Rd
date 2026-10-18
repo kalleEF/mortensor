@@ -46,7 +46,11 @@ column names) of the one variable in \code{by} that the table lacks.}
 numeric age (for example 110 for the Human Mortality Database "110+").}
 
 \item{omega}{Assumed maximum age, used wherever an open interval needs a
-finite upper bound.}
+finite upper bound, for example \code{\link[=mt_ungroup]{mt_ungroup()}}, which expands an open
+interval into single years up to \code{omega}. Methods that need one
+representative age per cell (\code{\link[=mt_smooth]{mt_smooth()}} with the Whittaker smoother
+or GAMs) do not use it: they place an open interval at its lower bound
+plus half the width of the interval below it (a package convention).}
 
 \item{missing}{Values that mark missing cells in character value columns,
 for example the symbols of official statistics for confidential or

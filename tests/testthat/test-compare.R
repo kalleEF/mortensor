@@ -72,17 +72,37 @@ test_that("mt_plot_smooth() compares smoothers and mt_plot_pit() shows calibrati
   expect_s3_class(mt_plot_pit(bt), "ggplot")
 })
 
-test_that("smoothing over time gives every age the same smoothness", {
+test_that("smoothing over time is the weighted Whittaker smoother with GCV per age", {
   x <- mt_example(deaths = "single", years = 1995:2015)
   s <- mt_smooth(x, along = "period", method = "whittaker")
+  dg <- attr(s, "smooth")
+  # one smoothing parameter per age and stratum
+  expect_identical(nrow(dg), 2L * length(mt_grid(x)$age))
+  expect_true(all(c("age", "lambda_period", "edf", "at_bound") %in% names(dg)))
   D <- mt_array(x, "deaths")[, , 1]
   E <- mt_array(x, "exposure")[, , 1]
   S <- mt_array(s, "deaths")[, , 1]
-  rough <- function(M) apply(log(M / E), 1, function(v) mean(abs(diff(v, differences = 2))))
-  r <- rough(S) / rough(pmax(D, 0.5))
-  # the ages with the most deaths are smoothed about as much as the others
-  many <- order(rowSums(D), decreasing = TRUE)[1:10]
-  expect_lt(mean(r[many]), 2 * mean(r))
+  # each age: (W + lambda P) z = W y with the deaths as weights and lambda by GCV
+  P <- crossprod(diff(diag(21), differences = 2))
+  gcv <- function(l, y, w) {
+    A <- diag(w) + l * P
+    z <- solve(A, w * y)
+    21 * sum(w * (y - z)^2) / (21 - sum(diag(solve(A, diag(w)))))^2
+  }
+  for (a in c(1, 30, 60)) {
+    y <- log(pmax(D[a, ], 0.5) / E[a, ])
+    w <- pmax(D[a, ], 0.5)
+    l <- dg[stratum == 1]$lambda_period[a]
+    expect_equal(as.vector(log(S[a, ] / E[a, ])), as.vector(solve(diag(w) + l * P, w * y)), tolerance = 1e-8)
+    grid <- 10^seq(-2, 8, 0.25)
+    expect_lte(gcv(l, y, w), min(vapply(grid, gcv, 0, y = y, w = w)) * (1 + 1e-4))
+  }
+  # lambda_range is honoured in both directions
+  sr <- suppressWarnings(mt_smooth(x, along = "period", lambda_range = c(10, 100)), classes = "mt_warning_lambda_bound")
+  expect_true(all(attr(sr, "smooth")$lambda_period >= 10 - 1e-6 & attr(sr, "smooth")$lambda_period <= 100 + 1e-6))
+  sa <- suppressWarnings(mt_smooth(mt_window(x, from = 2013), method = "whittaker", lambda_range = c(10, 100)),
+                         classes = "mt_warning_lambda_bound")
+  expect_true(all(attr(sa, "smooth")$lambda_age >= 10 - 1e-6 & attr(sa, "smooth")$lambda_age <= 100 + 1e-6))
 })
 
 test_that("mt_plot_contrast() draws gaps of one or several forecasts", {

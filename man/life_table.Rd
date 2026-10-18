@@ -10,7 +10,8 @@ life_table(
   ax = NULL,
   open = c("reciprocal", "gompertz", "kannisto"),
   k = 10,
-  radix = 1e+05
+  radix = 1e+05,
+  omega = 110
 )
 }
 \arguments{
@@ -23,9 +24,13 @@ interval).}
 
 \item{open}{\code{"reciprocal"}, \code{"gompertz"} or \code{"kannisto"}.}
 
-\item{k}{Number of ages used for the Gompertz fit.}
+\item{k}{Number of ages used for the Gompertz or Kannisto fit.}
 
 \item{radix}{Starting number of survivors.}
+
+\item{omega}{Age up to which a Gompertz or Kannisto tail is applied
+(default 110, the default \code{omega} of \code{\link[=mt_data]{mt_data()}}); ignored with
+\code{open = "reciprocal"}.}
 }
 \value{
 A \code{data.table} with \code{age_lo}, \code{age_hi}, \code{n}, \code{mx}, \code{ax}, \code{qx},
@@ -34,23 +39,34 @@ A \code{data.table} with \code{age_lo}, \code{age_hi}, \code{n}, \code{mx}, \cod
 \description{
 Period life table for single or grouped ages with an open last interval.
 Interval widths come from the age axis, so abridged and single-year
-schedules are handled by the same code.
+schedules are handled by the same code. The relations are the standard
+ones of Preston, Heuveline and Guillot (2001):
 }
 \details{
 \itemize{
-\item \verb{q_x = n m / (1 + (n - a) m)}; where this exceeds 1 (rates above
-about \code{2 / n}, far beyond observed values), the constant-hazard value
-\verb{1 - exp(-n m)} is used, so that survivors stay positive;
-\item \code{a_x} defaults to \code{n / 2} for every closed interval (supply \code{ax} to
-override, for example for age 0, where \code{n / 2} overstates the average
-time lived by infants who die; the effect on e0 at low infant mortality
-is below 0.01 years);
-\item open interval: \code{"reciprocal"} uses \code{L = l / m}; \code{"gompertz"} fits a
-Gompertz line to the log rates of the last \code{k} closed single-year ages and
-integrates it from the start of the open interval to age 130;
-\code{"kannisto"} does the same with the Kannisto model, a line for the logit
-of the rates, whose hazard levels off at old ages (Thatcher, Kannisto and
-Vaupel 1998);
+\item \verb{q_x = n m / (1 + (n - a) m)} for a closed interval of width \code{n}; where
+this exceeds 1 (rates above about \code{2 / n}, far beyond observed values),
+the constant-hazard value \verb{1 - exp(-n m)} is used, so that survivors
+stay positive;
+\item \code{a_x} defaults to \code{n / 2} for every closed interval, the simple
+convention of deaths spread evenly over the interval (supply \code{ax} to
+override). At age 0, \code{n / 2} overstates the average time lived by
+infants who die; the Human Mortality Database uses the age-0 values of
+Andreev and Kingkade (2015), which depend on sex and on the infant
+death rate and are not implemented here. The effect on e0 at low
+infant mortality is below 0.01 years;
+\item open interval: \code{"reciprocal"} (default) uses \code{L = l / m} (Preston,
+Heuveline and Guillot 2001). \code{"gompertz"} fits a Gompertz line (log
+rate linear in age) by least squares to the log rates of the last \code{k}
+closed single-year ages; \code{"kannisto"} fits the Kannisto model, a line
+for the logit of the rates whose hazard levels off at old ages
+(Thatcher, Kannisto and Vaupel 1998), by least squares to the logits
+of the same rates. Thatcher, Kannisto and Vaupel (1998) and the Human
+Mortality Database fit these models by maximum likelihood to deaths
+and exposures instead, which needs the counts. The fitted rates are
+applied year by year from the start of the open interval to \code{omega},
+and the survivors at \code{omega} are closed with \code{L = l / m} at the fitted
+rate there;
 \item a rate of 0 in the open interval (no deaths, as in small populations)
 would give an infinite life expectancy: the last positive rate of the
 closed intervals is used for the open interval instead (column \code{mx}
@@ -64,6 +80,13 @@ lt <- life_table(m, single_ages(30, 100))
 lt[age_lo \%in\% c(30, 65, 100)]
 }
 \references{
+Andreev EM, Kingkade WW (2015). Average age at death in infancy and
+infant mortality level: reconsidering the Coale-Demeny formulas at
+current levels of low mortality. \emph{Demographic Research} 33: 363-390.
+
+Preston SH, Heuveline P, Guillot M (2001). \emph{Demography: Measuring and
+Modeling Population Processes}. Blackwell.
+
 Thatcher AR, Kannisto V, Vaupel JW (1998). \emph{The Force of Mortality at Ages
 80 to 120}. Odense University Press.
 }

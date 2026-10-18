@@ -2,27 +2,45 @@
 #'
 #' Period life table for single or grouped ages with an open last interval.
 #' Interval widths come from the age axis, so abridged and single-year
-#' schedules are handled by the same code.
+#' schedules are handled by the same code. The relations are the standard
+#' ones of Preston, Heuveline and Guillot (2001):
 #'
-#' * `q_x = n m / (1 + (n - a) m)`; where this exceeds 1 (rates above
-#'   about `2 / n`, far beyond observed values), the constant-hazard value
-#'   `1 - exp(-n m)` is used, so that survivors stay positive;
-#' * `a_x` defaults to `n / 2` for every closed interval (supply `ax` to
-#'   override, for example for age 0, where `n / 2` overstates the average
-#'   time lived by infants who die; the effect on e0 at low infant mortality
-#'   is below 0.01 years);
-#' * open interval: `"reciprocal"` uses `L = l / m`; `"gompertz"` fits a
-#'   Gompertz line to the log rates of the last `k` closed single-year ages and
-#'   integrates it from the start of the open interval to age 130;
-#'   `"kannisto"` does the same with the Kannisto model, a line for the logit
-#'   of the rates, whose hazard levels off at old ages (Thatcher, Kannisto and
-#'   Vaupel 1998);
+#' * `q_x = n m / (1 + (n - a) m)` for a closed interval of width `n`; where
+#'   this exceeds 1 (rates above about `2 / n`, far beyond observed values),
+#'   the constant-hazard value `1 - exp(-n m)` is used, so that survivors
+#'   stay positive;
+#' * `a_x` defaults to `n / 2` for every closed interval, the simple
+#'   convention of deaths spread evenly over the interval (supply `ax` to
+#'   override). At age 0, `n / 2` overstates the average time lived by
+#'   infants who die; the Human Mortality Database uses the age-0 values of
+#'   Andreev and Kingkade (2015), which depend on sex and on the infant
+#'   death rate and are not implemented here. The effect on e0 at low
+#'   infant mortality is below 0.01 years;
+#' * open interval: `"reciprocal"` (default) uses `L = l / m` (Preston,
+#'   Heuveline and Guillot 2001). `"gompertz"` fits a Gompertz line (log
+#'   rate linear in age) by least squares to the log rates of the last `k`
+#'   closed single-year ages; `"kannisto"` fits the Kannisto model, a line
+#'   for the logit of the rates whose hazard levels off at old ages
+#'   (Thatcher, Kannisto and Vaupel 1998), by least squares to the logits
+#'   of the same rates. Thatcher, Kannisto and Vaupel (1998) and the Human
+#'   Mortality Database fit these models by maximum likelihood to deaths
+#'   and exposures instead, which needs the counts. The fitted rates are
+#'   applied year by year from the start of the open interval to `omega`,
+#'   and the survivors at `omega` are closed with `L = l / m` at the fitted
+#'   rate there;
 #' * a rate of 0 in the open interval (no deaths, as in small populations)
 #'   would give an infinite life expectancy: the last positive rate of the
 #'   closed intervals is used for the open interval instead (column `mx`
 #'   keeps the given rate). Only a schedule without any positive rate gives
 #'   an infinite value.
 #' @references
+#' Andreev EM, Kingkade WW (2015). Average age at death in infancy and
+#' infant mortality level: reconsidering the Coale-Demeny formulas at
+#' current levels of low mortality. *Demographic Research* 33: 363-390.
+#'
+#' Preston SH, Heuveline P, Guillot M (2001). *Demography: Measuring and
+#' Modeling Population Processes*. Blackwell.
+#'
 #' Thatcher AR, Kannisto V, Vaupel JW (1998). *The Force of Mortality at Ages
 #' 80 to 120*. Odense University Press.
 #'
@@ -31,7 +49,10 @@
 #'   interval).
 #' @param ax Optional average years lived in the interval by those who die.
 #' @param open `"reciprocal"`, `"gompertz"` or `"kannisto"`.
-#' @param k Number of ages used for the Gompertz fit.
+#' @param k Number of ages used for the Gompertz or Kannisto fit.
+#' @param omega Age up to which a Gompertz or Kannisto tail is applied
+#'   (default 110, the default `omega` of [mt_data()]); ignored with
+#'   `open = "reciprocal"`.
 #' @param radix Starting number of survivors.
 #' @return A `data.table` with `age_lo`, `age_hi`, `n`, `mx`, `ax`, `qx`,
 #'   `lx`, `dx`, `Lx`, `Tx`, `ex`.
@@ -41,12 +62,13 @@
 #' lt[age_lo %in% c(30, 65, 100)]
 #' @export
 life_table <- function(mx, age = NULL, ax = NULL, open = c("reciprocal", "gompertz", "kannisto"), k = 10,
-                       radix = 1e5) {
+                       radix = 1e5, omega = 110) {
   open <- match.arg(open)
   age <- age %||% single_ages(0, length(mx) - 1)
   check_class(age, "mt_axis", "age")
   if (length(mx) != length(age)) mt_abort("`mx` needs one value per age interval.", class = "lifetable")
-  r <- lt_columns(matrix(mx, ncol = 1), age, ax, open, k)
+  check_number(omega, "omega", lower = 1)
+  r <- lt_columns(matrix(mx, ncol = 1), age, ax, open, k, omega)
   out <- data.table(age_lo = age$lower, age_hi = age$upper, n = age$upper - age$lower, mx = mx, ax = r$ax[, 1],
                     qx = r$qx[, 1], lx = radix * r$lx[, 1], dx = radix * r$dx[, 1], Lx = radix * r$Lx[, 1],
                     Tx = radix * r$Tx[, 1], ex = r$ex[, 1])
@@ -54,7 +76,7 @@ life_table <- function(mx, age = NULL, ax = NULL, open = c("reciprocal", "gomper
 }
 
 # Column-wise life tables: M is a matrix [age, schedule]
-lt_columns <- function(M, age, ax = NULL, open = "reciprocal", k = 10) {
+lt_columns <- function(M, age, ax = NULL, open = "reciprocal", k = 10, omega = 110) {
   na <- nrow(M)
   n <- age$upper - age$lower
   is_open <- is.infinite(n[na])
@@ -71,7 +93,7 @@ lt_columns <- function(M, age, ax = NULL, open = "reciprocal", k = 10) {
   Dx <- L * Q
   Lx <- nn * (L - Dx) + A * Dx
   if (is_open) {
-    Lx[na, ] <- if (open == "reciprocal") L[na, ] / m_open else L[na, ] * gompertz_open_ex(M, age, k, open)
+    Lx[na, ] <- if (open == "reciprocal") L[na, ] / m_open else L[na, ] * gompertz_open_ex(M, age, k, open, omega)
   }
   Tx <- apply(Lx, 2, function(z) rev(cumsum(rev(z))))
   if (is.null(dim(Tx))) Tx <- matrix(Tx, nrow = na)
@@ -105,8 +127,11 @@ lt_qx <- function(M, nn, A) {
   Q
 }
 
-# Life expectancy at the start of the open interval under a Gompertz extension
-gompertz_open_ex <- function(M, age, k, law = "gompertz") {
+# Life expectancy at the start of the open interval under a Gompertz or
+# Kannisto tail fitted by least squares to the log (logit) rates of the last
+# k single-year ages: constant hazards year by year from the start of the
+# open interval to omega, survivors at omega closed with L = l / m
+gompertz_open_ex <- function(M, age, k, law = "gompertz", omega = 110) {
   na <- nrow(M)
   single <- which(age$upper - age$lower == 1)
   use <- tail(single[single < na], k)
@@ -117,13 +142,18 @@ gompertz_open_ex <- function(M, age, k, law = "gompertz") {
   Y <- M[use, , drop = FALSE]
   Y <- if (law == "kannisto") log(pmin(Y, 0.99) / (1 - pmin(Y, 0.99))) else log(Y)
   coef <- solve(crossprod(X), crossprod(X, Y))
-  ages <- seq(age$lower[na], 129) + 0.5
-  eta <- cbind(1, ages) %*% coef
-  mm <- if (law == "kannisto") exp(eta) / (1 + exp(eta)) else exp(eta)
+  lo <- age$lower[na]
+  ages <- seq(lo, max(lo, ceiling(omega) - 1)) + 0.5
+  tail_rate <- function(x) {
+    eta <- cbind(1, x) %*% coef
+    if (law == "kannisto") exp(eta) / (1 + exp(eta)) else exp(eta)
+  }
+  mm <- tail_rate(ages)
   p <- exp(-mm)
-  l <- rbind(1, apply(p, 2, cumprod))[seq_along(ages), , drop = FALSE]
-  Lx <- l * (1 - p) / pmax(mm, 1e-12)
-  colSums(Lx)
+  l <- rbind(1, matrix(apply(p, 2, cumprod), nrow = length(ages)))
+  Lx <- l[seq_along(ages), , drop = FALSE] * (1 - p) / pmax(mm, 1e-12)
+  m_end <- as.vector(tail_rate(max(ages) + 1))
+  colSums(Lx) + l[length(ages) + 1, ] / pmax(m_end, 1e-12)
 }
 
 #' Life expectancy from rates or forecast draws
@@ -137,7 +167,7 @@ gompertz_open_ex <- function(M, age, k, law = "gompertz") {
 #' @param probs Quantiles reported for draws.
 #' @param paths For draws, return the values of every path, an array
 #'   `[period, stratum, draw]`.
-#' @param ... Passed to the life-table calculation (`ax`, `open`, `k`). A
+#' @param ... Passed to the life-table calculation (`ax`, `open`, `k`, `omega`). A
 #'   rate of 0 in the open interval is replaced as in [life_table()].
 #' @return For arrays, an array without the age dimension. For draws, a
 #'   `data.table` with the mean and quantiles per stratum and period, computed

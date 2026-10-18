@@ -34,8 +34,8 @@ mt_plot_smooth(
 \item{periods}{Years shown with \code{along = "age"} (default: first and last).}
 }
 \value{
-\code{mt_smooth_check()}: a \code{data.table} with the stratum columns and
-the measures above. \code{mt_plot_smooth()}: a ggplot object.
+\code{mt_smooth_check()}: a \code{data.table} with the stratum columns, the
+measures above and \code{edf}. \code{mt_plot_smooth()}: a ggplot object.
 }
 \description{
 \code{mt_smooth_check()} compares smoothed with raw rates per stratum:
@@ -43,8 +43,14 @@ the measures above. \code{mt_plot_smooth()}: a ggplot object.
 \details{
 \itemize{
 \item \code{mad_log}: median absolute difference of log rates;
-\item \code{dispersion}: mean squared Pearson residual of the raw deaths around
-the smoothed deaths; about 1 when smoothing removed Poisson noise only,
+\item \code{dispersion}: the Pearson estimate of the dispersion of the raw deaths
+around the smoothed deaths, the sum of squared Pearson residuals
+divided by \code{n - edf} (McCullagh and Nelder 1989), where \code{n} is the
+number of smoothed cells with raw deaths and \code{edf} the effective
+degrees of freedom of the fits of the stratum (column \code{edf}, from the
+attribute \code{"smooth"} of \code{\link[=mt_smooth]{mt_smooth()}}; when it is not available, for
+example after further preprocessing steps, the sum is divided by \code{n}
+and \code{edf} is \code{NA}). About 1 when smoothing removed Poisson noise only,
 above 1 when the raw rates vary more (for example year effects), well
 below 1 when the smoothing follows the noise;
 \item \code{trend_ratio}: variance of year-to-year changes of the smoothed log
@@ -65,4 +71,8 @@ x <- mt_example(deaths = "single", years = 2000:2015)
 s <- mt_smooth(x, along = "period", method = "whittaker")
 mt_smooth_check(x, s)
 if (requireNamespace("ggplot2", quietly = TRUE)) mt_plot_smooth(x, s)
+}
+\references{
+McCullagh P, Nelder JA (1989). \emph{Generalized Linear Models} (2nd ed.).
+Chapman and Hall.
 }

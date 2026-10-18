@@ -1,14 +1,16 @@
 # Penalized composite link model (PCLM) ----------------------------------------
 #
-# Method: Eilers (2007), Rizzi, Gampe and Eilers (2015). The structure (B-spline
-# basis on the latent scale, difference penalty, IRLS, lambda chosen by an
-# information criterion) follows the 'ungroup' package 1.6.3 (MIT licence;
-# M. D. Pascariu, S. Rizzi, J. Schoeley, M. J. Danko). This implementation is
-# written for mortensor and differs in the treatment of rates: the exposure
-# offset enters the composite link directly and the open age interval is
-# expanded into single years up to omega with stationary-population weights,
-# so no artificial-bin reallocation is applied to rates (the source of the
-# level shift found in revamp plan 5.1).
+# Method: Eilers (2007), Rizzi, Gampe and Eilers (2015); for rates over age and
+# period, Rizzi et al. (2019). The structure (B-spline basis on the latent
+# scale, difference penalty, IRLS, lambda chosen by an information criterion)
+# follows the 'ungroup' package 1.6.3 (MIT licence; M. D. Pascariu, S. Rizzi,
+# J. Schoeley, M. J. Danko). This implementation is written for mortensor and
+# differs in the treatment of rates: the exposure offset enters the composite
+# link directly, and an open age interval of the grid is expanded into single
+# years up to omega with stationary-population weights for its exposure (a
+# package-specific treatment, reference unknown; see open_weights()), so no
+# artificial-bin reallocation is applied to rates (the source of the level
+# shift found in revamp plan 5.1).
 
 #' Fit a penalized composite link model
 #'
@@ -191,7 +193,10 @@ link_matrix <- function(lo, hi, fine_lo, fine_hi) {
   C
 }
 
-# Stationary-population weights within the open interval
+# Stationary-population weights within the open interval of the grid: the
+# exposure of the open interval is split over its single years in proportion
+# to l(x) = exp(-cumsum(m)) implied by the fitted rates (package-specific,
+# reference unknown); see ungroup_rate_block() for the iteration
 open_weights <- function(rate) {
   l <- exp(-c(0, cumsum(rate[-length(rate)])))
   l / sum(l)

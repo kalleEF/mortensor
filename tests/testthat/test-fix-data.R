@@ -118,3 +118,24 @@ test_that("mt_example_regions() works for a single year", {
   expect_identical(unique(mt_obs(x)$period_lo), 2019)
   expect_identical(dim(attr(x, "truth")), c(11L, 1L, 20L))
 })
+
+
+test_that("suppressed cells without a published total get the truncated Poisson mean", {
+  d <- data.frame(region = c("A", "B", "C"), year = 2020, age = "90+", deaths = c(30, NA, NA),
+                  exposure = c(1000, 50, 100))
+  x <- suppressWarnings(mt_data(deaths = d, exposure = d, by = "region"))
+  y <- mt_fill_suppressed(x, lower = 1, upper = 2)
+  est <- mt_obs(y)[provenance == "estimated"][order(label)]
+  # expected deaths 1.5 and 3 at the pooled rate 0.03: E[Y | 1 <= Y <= 2] = (1 + lambda) / (1 + lambda / 2)
+  lam <- c(1.5, 3)
+  expect_equal(est$value, (1 + lam) / (1 + lam / 2), tolerance = 1e-10)
+  # wider bounds: the mean over 0..4
+  z <- mt_fill_suppressed(x, lower = 0, upper = 4)
+  k <- 0:4
+  tm <- vapply(lam, function(l) sum(k * stats::dpois(k, l)) / sum(stats::dpois(k, l)), 0)
+  expect_equal(mt_obs(z)[provenance == "estimated"][order(label)]$value, tm, tolerance = 1e-10)
+  # limits: no deaths expected, far above the bounds, bounds without an integer, wide bounds
+  expect_equal(mortensor:::truncated_poisson_mean(c(0, 1e6), 1, 2), c(1, 2), tolerance = 1e-5)
+  expect_equal(mortensor:::truncated_poisson_mean(0.5, 0.2, 0.8), 0.5)
+  expect_equal(mortensor:::truncated_poisson_mean(5, 0, 1e6), 5, tolerance = 1e-8)
+})
