@@ -37,6 +37,11 @@ scoreopt_control <- function(control = list()) {
   check_number(ctl$beta2, "control$beta2", lower = 0, upper = 0.9999)
   check_number(ctl$tol, "control$tol", lower = 0)
   check_number(ctl$epsilon, "control$epsilon", lower = 1e-300)
+  if (ctl$eta > 0 && ctl$max_iter > 0 && ctl$tol >= ctl$eta) {
+    mt_warn(paste("`control$tol` is not below `control$eta`: the steps of Adam are at most about `eta`, so the",
+                  "optimisation stops after the first step. Give a smaller `tol` (0 runs all `max_iter` steps)."),
+            class = "argument")
+  }
   ctl
 }
 

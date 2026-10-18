@@ -21,7 +21,13 @@
 #'
 #' `coda()` is the Lee-Carter model in compositional form (Oeppen 2008), as
 #' formulated by Bergeron-Boucher, Canudas-Romo, Oeppen and Vaupel (2017). It
-#' models the life-table distribution of deaths, not the death rates:
+#' models the life-table distribution of deaths, not the death rates. With
+#' `coherent = TRUE` or `common_by`, it is their coherent model for several
+#' populations. The code follows the reference implementation, `model.Oeppen()`
+#' and `model.OeppenC()` of the R package MortalityForecast 0.8.1 (Pascariu
+#' and Bergeron-Boucher), and reproduces its fitted values and point forecasts.
+#'
+#' The model of one stratum has six steps:
 #'
 #' 1. the death rates of each year give life-table deaths `d[x, t]` with
 #'    radix 1 at the first age ([life_table()] conventions); for a closed age
@@ -38,9 +44,8 @@
 #'    closure) to life-table deaths and then to death rates.
 #'
 #' With `jump_off = "observed"` (the default, as `jumpchoice = "actual"` of
-#' the reference implementation, `model.Oeppen()` of the R package
-#' MortalityForecast 0.8.1), forecasts are the observed deaths of the last
-#' year `T` perturbed by the change of the model:
+#' the reference implementation), forecasts are the observed deaths of the
+#' last year `T` perturbed by the change of the model:
 #' `d[x, T + j]` is proportional to `d_obs[x, T] exp(b[x] (k[T + j] - k[T]))`.
 #' With `"fitted"`, forecasts start from the fitted deaths of the last year.
 #' The forecast of year `T + j` uses the index `j` steps ahead; the reference
@@ -355,9 +360,11 @@ ar1_mean_paths <- function(a, h, n_draws) {
 #'
 #' `coda_causes()` forecasts death rates by cause with the multiple-decrement
 #' form of the compositional Lee-Carter model, which Oeppen (2008) proposed
-#' and tested on Japanese causes of death. Only the abstract of that paper is
-#' published. This function implements the natural multiple-decrement form of
-#' [coda()]:
+#' and tested on Japanese causes of death. Causes add up to all causes in
+#' every draw. The model is experimental.
+#'
+#' Only the abstract of Oeppen (2008) is published. This function implements
+#' the natural multiple-decrement form of [coda()]:
 #'
 #' 1. in each group (the strata that differ only in `var`, for example one
 #'    group per sex), the cause-specific rates `m[x, c]` add up to all-cause
@@ -381,12 +388,12 @@ ar1_mean_paths <- function(a, h, n_draws) {
 #' inside the model and counts towards the all-cause rates; it is not a
 #' stratum of the output.
 #'
-#' The model is experimental. One index `k[t]` drives all ages and causes, so
-#' the causes cannot follow different trends beyond the pattern `b[x, c]`.
-#' The extensions of Kjærgaard, Ergemen, Kallestrup-Lamb, Oeppen and
-#' Lindahl-Jacobsen (2019) are not implemented. Compare the model with
-#' [cause_shares()] or [reconciled()] separate models in a backtest before
-#' using it.
+#' One index `k[t]` drives all ages and causes, so the causes cannot follow
+#' different trends beyond the pattern `b[x, c]`. The extensions of
+#' Kjærgaard, Ergemen, Kallestrup-Lamb, Oeppen and Lindahl-Jacobsen (2019)
+#' are not implemented. In a backtest on [mt_example_causes()] the model was
+#' less accurate than [cause_shares()]; compare it with [cause_shares()] or
+#' [reconciled()] separate models in a backtest before using it.
 #'
 #' Jump-off, the open age interval and zero deaths are treated as in
 #' [coda()]: the all-cause log rate of an open interval is regressed on
@@ -484,14 +491,14 @@ fit_model.mt_spec_coda_causes <- function(spec, D, E, ages, periods, strata = NU
   fits <- lapply(seq_along(groups), function(g) {
     m <- mc[[g]]
     if (use_residual) m <- array(c(m, pmax(mt[[g]] - rowSums(m, dims = 2), 0)), c(na, nt, nc))
-    for (c in seq_len(nc)) {
-      what <- sprintf("cause %s of group %s", if (c <= K) causes[c] else "residual", groups[g])
-      m[, , c] <- coda_positive_rates(matrix(m[, , c], na), what)
+    for (j in seq_len(nc)) {
+      what <- sprintf("cause %s of group %s", if (j <= K) causes[j] else "residual", groups[g])
+      m[, , j] <- coda_positive_rates(matrix(m[, , j], na), what)
     }
     out <- coda_fit_clr(md_forward(m, ages), if (open) log(rowSums(m, dims = 2)[na, ]))
     out$jump_off <- p$jump_off
     R <- md_rates(out$alpha + outer(out$b, out$k), ages, nc, coda_open_fitted(out$open, out$k))
-    for (c in seq_len(K)) fitted[, , part_id[g, c]] <<- R[, , c]
+    for (j in seq_len(K)) fitted[, , part_id[g, j]] <<- R[, , j]
     fitted[, , tot_id[g]] <<- md_total(R)
     out
   })
@@ -516,7 +523,7 @@ simulate_model.mt_spec_coda_causes <- function(spec, fit, h, n_draws, ...) {
     open <- NULL
     if (!is.null(gf$open)) open <- (if (obs) gf$open$last - gf$open$b * kT else gf$open$a) + gf$open$b * kv
     R <- md_rates(Zf, fit$ages, nc, open)
-    for (c in seq_len(fit$K)) out[, , fit$part_id[g, c], ] <- R[, , c]
+    for (j in seq_len(fit$K)) out[, , fit$part_id[g, j], ] <- R[, , j]
     out[, , fit$tot_id[g], ] <- md_total(R)
   }
   out
@@ -600,18 +607,18 @@ md_rates <- function(Z, ages, nc, open_log = NULL) {
   P <- sweep(P, 2, colSums(P), "/")
   dxc <- array(P[seq_len(na * nc), , drop = FALSE], c(na, nc, ncol(P)))
   dx <- matrix(dxc[, 1, ], na)
-  for (c in seq_len(nc)[-1]) dx <- dx + dxc[, c, ]
+  for (j in seq_len(nc)[-1]) dx <- dx + dxc[, j, ]
   lz <- log(if (nrow(P) > na * nc) rbind(dx, P[nrow(P), ]) else dx)
   m <- matrix(coda_rates(lz, ages, open_log), na)
   out <- array(NA_real_, c(na, ncol(P), nc))
-  for (c in seq_len(nc)) out[, , c] <- m * matrix(dxc[, c, ], na) / dx
+  for (j in seq_len(nc)) out[, , j] <- m * matrix(dxc[, j, ], na) / dx
   out
 }
 
 # All-cause rates as the sum of the cause rates [age, column, cause]
 md_total <- function(R) {
   tot <- R[, , 1]
-  for (c in seq_len(dim(R)[3])[-1]) tot <- tot + R[, , c]
+  for (j in seq_len(dim(R)[3])[-1]) tot <- tot + R[, , j]
   tot
 }
 

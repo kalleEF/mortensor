@@ -1,6 +1,8 @@
 # Validation checks of the compositional data (CoDa) models: coda(),
-# coda(coherent = TRUE) and coda_causes(). To be merged into checks.R; the
-# proposed lines for thresholds.csv (check,metric,comparator,threshold,note):
+# coda(coherent = TRUE) and coda_causes(). To be merged into checks.R. Run
+# times at 2026-10: coda_ew 9 s, coda_coherent_fr 24 s (suite full),
+# coda_causes_coherence 7 s. Proposed lines for thresholds.csv
+# (check,metric,comparator,threshold,note):
 #
 # coda_ew,coda_crps,<=,0.06,"0.0548 at 2026-10 (lee_carter() 0.0687, rwd() 0.0586)"
 # coda_ew,coda_cov95,>=,0.9,"0.991 at 2026-10 (over-covers: clr noise of ages with few deaths enters k)"
@@ -35,7 +37,7 @@ checks$coda_ew <- list(
   })
 
 checks$coda_coherent_fr <- list(
-  suite = "quick",
+  suite = "full",
   description = paste("France (HMD via demography::fr.mort), women and men, ages 0-99 and 100+, 1950-2006:",
                       "backtest (origins 1991-1996, h = 10) of coda(coherent = TRUE) against coda() and li_lee();",
                       "CRPS and coverage of log rates, CRPS of the open interval (100+), and the gap in life",

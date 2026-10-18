@@ -46,7 +46,55 @@ checks$scoreopt_probreco <- list(
                value = c(max(abs(mine$G - ref$G)), max(abs(mine$d - ref$d)), max(abs(ref$G - G0))))
   })
 
+# Backtest of score-optimal reconciliation against WLS: CRPS ratios and 95%
+# coverage by level of the hierarchy, the coherence gap of a forecast and the
+# runtime of one fit
+scoreopt_backtest <- function(xa, h, origins, spec_es) {
+  t0 <- proc.time()[["elapsed"]]
+  fit <- suppressWarnings(mt_fit(spec_es, xa))
+  secs <- proc.time()[["elapsed"]] - t0
+  fc <- mt_forecast(fit, h = 5, n_draws = 100, seed = 1, predictive = TRUE)
+  hs <- mortensor:::hierarchy_structure(fc$strata, h)
+  E <- mortensor:::expand_exposure(fc$exposure_last, dim(fc$rates))
+  D <- fc$rates * as.vector(E)
+  gap <- max(vapply(seq_len(dim(D)[4]), function(j) {
+    max(vapply(seq_len(dim(D)[2]), function(t) {
+      full <- matrix(D[, t, hs$bottom, j], dim(D)[1]) %*% t(hs$S)
+      max(abs(full / matrix(D[, t, , j], dim(D)[1]) - 1))
+    }, 0))
+  }, 0))
+  bt <- suppressWarnings(mt_compare(list(wls = reconciled(lee_carter(), h, method = "wls"), es = spec_es), xa,
+                                    origins = origins, h = 5, n_draws = 200))
+  s <- mt_score_table(bt, metrics = c("crps", "cov95"), hierarchy = h, digits = 6)
+  v <- function(m, l, col) s[model == m & level == l][[col]]
+  lev <- c("bottom", "aggregate", "total")
+  data.frame(metric = c(paste0("crps_ratio_", lev), paste0("cov95_", lev), "max_gap", "seconds_fit"),
+             value = c(vapply(lev, function(l) v("es", l, "crps") / v("wls", l, "crps"), 0),
+                       vapply(lev, function(l) v("es", l, "cov95"), 0), gap, secs))
+}
+
 checks$scoreopt_regions <- list(
   suite = "full",
-  description = "TBD",
-  run = function() data.frame(metric = "todo", value = NA_real_))
+  description = paste("Score-optimal reconciliation (reconciled(lee_carter(), method = 'energy_score'), defaults:",
+                      "10 training years, 5 inner origins, horizons 1-5) on mt_example_regions() with 2 sexes x 2",
+                      "regions x 5 quintiles and all aggregates (54 strata), 1995-2019: backtest from 2009, 2011",
+                      "and 2013 (h = 5); CRPS relative to WLS and 95% coverage by level, largest coherence gap of",
+                      "predictive draws, seconds for one fit."),
+  run = function() {
+    x <- mt_example_regions(years = 1995:2019, regions = 2)
+    h <- mt_hierarchy(sex = "both", region = "all", quintile = "all")
+    xa <- mt_aggregate_strata(x, h)
+    scoreopt_backtest(xa, h, c(2009, 2011, 2013), reconciled(lee_carter(), h, method = "energy_score"))
+  })
+
+checks$scoreopt_ons <- list(
+  suite = "full",
+  description = paste("As scoreopt_regions on ONS England (ons_data), sex x IMD quintile with England (18 strata),",
+                      "training on 6 years (5 inner origins, horizons 1-3): backtest from 2011-2014 (h = 5)."),
+  run = function() {
+    x <- ons_quintiles()
+    h <- mt_hierarchy(sex = "both", quintile = list(total = "England"))
+    xa <- mt_aggregate_strata(x, h)
+    scoreopt_backtest(xa, h, 2011:2014, reconciled(lee_carter(), h, method = "energy_score", years = 6,
+                                                   n_origins = 5, horizon = 3))
+  })

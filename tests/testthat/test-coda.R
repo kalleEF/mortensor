@@ -118,8 +118,8 @@ test_that("the coherent CoDa model reproduces the published algorithm on French 
 
 test_that("CoDa fits handle zero deaths, closed age ranges and open intervals", {
   m <- matrix(c(0, 0.01, 0.02, 0.04), 2)
-  expect_equal(mortensor:::coda_positive_rates(m), matrix(c(0.005, 0.01, 0.02, 0.04), 2))
-  expect_warning(mortensor:::coda_positive_rates(m), class = "mt_warning_sparse")
+  expect_warning(r <- mortensor:::coda_positive_rates(m), class = "mt_warning_sparse")
+  expect_equal(r, matrix(c(0.005, 0.01, 0.02, 0.04), 2))
   x <- mt_example(deaths = "single", years = 1995:2012)
   fit <- mt_fit(coda(), x)
   f <- fit$fits[[1]]
