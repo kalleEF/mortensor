@@ -845,6 +845,58 @@ checks$scoreopt_regions <- list(
     scoreopt_backtest(xa, h, c(2009, 2011, 2013), reconciled(lee_carter(), h, method = "energy_score"))
   })
 
+# Rolling-origin backtests (h = 10, 200 draws) of the P-spline models: CRPS
+# and 95% coverage of the log rates and of life expectancy at the first age
+# of the grid, and seconds per model (fits and forecasts of all origins)
+pspline_backtest <- function(data, origins, models) {
+  rows <- lapply(names(models), function(nm) {
+    set.seed(1)
+    t0 <- proc.time()[["elapsed"]]
+    b <- suppressWarnings(mt_backtest(models[[nm]], data, origins = origins, h = 10, n_draws = 200,
+                                      quantities = "life_expectancy"))
+    secs <- proc.time()[["elapsed"]] - t0
+    r <- b[b$target == "rate", ]
+    e <- b[b$target == "life_expectancy", ]
+    data.frame(metric = paste0(nm, c("_crps", "_cov95", "_e0_crps", "_e0_cov95", "_seconds")),
+               value = c(mean(r$crps), mean(r$cov95), mean(e$crps), mean(e$cov95), secs))
+  })
+  out <- do.call(rbind, rows)
+  v <- function(m) out$value[out$metric == m]
+  ratios <- lapply(setdiff(names(models), "lc"), function(nm) {
+    data.frame(metric = paste0("crps_ratio_", nm, "_lc", c("", "_e0")),
+               value = c(v(paste0(nm, "_crps")) / v("lc_crps"), v(paste0(nm, "_e0_crps")) / v("lc_e0_crps")))
+  })
+  rbind(out, do.call(rbind, ratios))
+}
+
+checks$psplines_ew <- list(
+  suite = "quick",
+  description = paste("p_splines() (Currie, Durban and Eilers 2004) on England & Wales men (HMD via StMoMo), ages",
+                      "30-100, 1961-2011: rolling-origin backtest (origins 1996-2001, h = 10) against lee_carter();",
+                      "CRPS and 95% coverage of log rates and of life expectancy at 30 (up to age 101), CRPS",
+                      "ratios to Lee-Carter, seconds for the backtest."),
+  run = function() pspline_backtest(ew_single_ages(30, 100), 1996:2001, list(lc = lee_carter(), ps = p_splines())))
+
+checks$cp_splines_ew <- list(
+  suite = "full",
+  description = paste("As psplines_ew for cp_splines() (Camarda 2019; 100 bootstrap samples) against lee_carter()."),
+  run = function() pspline_backtest(ew_single_ages(30, 100), 1996:2001, list(lc = lee_carter(), cps = cp_splines())))
+
+checks$psplines_france <- list(
+  suite = "full",
+  description = paste("French women (HMD via demography::fr.mort), ages 0-99 and 100+, 1950-2006: rolling-origin",
+                      "backtest (origins 1991-1996, h = 10) of p_splines(), p_splines(overdispersion = TRUE) and",
+                      "cp_splines() (infant coefficient, 100 bootstrap samples) against lee_carter(); CRPS and 95%",
+                      "coverage of log rates and of life expectancy at birth, CRPS ratios to Lee-Carter, seconds",
+                      "per model."),
+  run = function() {
+    fr <- suppressWarnings(as_mt_data(mortensor:::pkg_data("fr.mort", "demography"), series = "female",
+                                      years = 1950:2006))
+    fr <- mt_regroup(fr, age = 0:100)
+    pspline_backtest(fr, 1991:1996, list(lc = lee_carter(), ps = p_splines(),
+                                         ps_od = p_splines(overdispersion = TRUE), cps = cp_splines()))
+  })
+
 checks$scoreopt_ons <- list(
   suite = "full",
   description = paste("As scoreopt_regions on ONS England (ons_data), sex x IMD quintile with England (18 strata),",

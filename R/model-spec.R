@@ -208,16 +208,23 @@ model_inputs <- function(d, spec) {
   }
   D <- tryCatch(mt_array(d, "deaths"), mt_error_resolution = function(e) coarse("deaths"))
   E <- tryCatch(mt_array(d, "exposure"), mt_error_resolution = function(e) coarse("exposure"))
-  if (anyNA(D) || anyNA(E)) mt_abort(describe_missing(D, E, g, d$strata), class = "model_data", call = NULL)
-  if (any(E <= 0)) {
-    i <- which(E <= 0, arr.ind = TRUE)[1, ]
+  # models that give missing cells and cells without exposure weight 0
+  # (`missing_ok`, the P-spline models) accept them
+  missing_ok <- isTRUE(spec$missing_ok)
+  if (!missing_ok && (anyNA(D) || anyNA(E))) {
+    mt_abort(describe_missing(D, E, g, d$strata), class = "model_data", call = NULL)
+  }
+  bad_E <- if (missing_ok) !is.na(E) & E < 0 else E <= 0
+  if (any(bad_E)) {
+    i <- which(bad_E, arr.ind = TRUE)[1, ]
     mt_abort(sprintf(paste("Exposures must be positive on the grid; %d cell(s) are zero or negative, for example %s,",
                            "age %s, %s. At the highest ages, close the age range with an open interval, for example",
-                           "mt_regroup(x, age = 0:100)."), sum(E <= 0), d$strata$label[i[3]], g$age$labels[i[1]],
+                           "mt_regroup(x, age = 0:100)."), sum(bad_E), d$strata$label[i[3]], g$age$labels[i[1]],
                      g$period$labels[i[2]]),
              class = "model_data", call = NULL)
   }
   r <- D / E
+  if (missing_ok) r[!is.na(E) & E == 0] <- NA
   high <- which(r > 1 & is.finite(g$age$upper)[slice.index(r, 1)])
   if (length(high)) {
     i <- arrayInd(high[1], dim(r))

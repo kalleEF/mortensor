@@ -51,6 +51,8 @@ reference:
     contents:
       - lee_carter
       - rwd
+      - p_splines
+      - cp_splines
       - hyndman_ullah
       - coda
       - stmomo
