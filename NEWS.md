@@ -66,8 +66,10 @@ New published models:
   agree with the nordpred package to 3e-8. Its draws hold coefficient
   uncertainty only and are far too narrow (95% coverage 0.11).
 
-Fix: quantiles of draws are interpolated as `a + w (b - a)`, so tied draws
-no longer give a median above the upper quantile.
+Fixes: quantiles of draws are interpolated as `a + w (b - a)`, so tied
+draws no longer give a median above the upper quantile; errors of rejected
+candidate models of the forecast package no longer appear in knitted
+documents with `coherent_fdm()`.
 
 Documentation: `dev/generalisation-plan.md` plans experimental
 generalisations of the deprecated package methods, grounded in verified

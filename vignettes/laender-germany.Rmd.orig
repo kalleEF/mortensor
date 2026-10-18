@@ -137,11 +137,6 @@ mt_score_table(bt[region == "East" & sex != "both"], metrics = c("crps", "cov95"
 mt_plot_scores(bt[region %in% laender & sex != "both"], by = "model", target = "life_expectancy")
 ```
 
-The printed errors come from `forecast::arfima()`, which fits the
-models of the ratios of the coherent fdm: in a few backtest fits its first
-estimate of an ARMA part (by conditional sum of squares) fails, and it
-estimates the model again by maximum likelihood.
-
 Lee-Carter continues the trends of 1998-2019: the gap of men keeps
 narrowing, and women in the East pull further ahead. Li-Lee and the
 coherent fdm hold the gaps near their recent level, with women in the

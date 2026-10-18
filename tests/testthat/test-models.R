@@ -210,3 +210,15 @@ test_that("parameters, fitted values, residuals and summaries are available", {
   expect_output(print(summary(mt_fit(lee_carter(), x))), "Poisson deviance")
   expect_error(mt_parameters(mt_fit(tucker3(), x)), class = "mt_error_argument")
 })
+
+test_that("quiet_try() keeps errors printed by try() out of a redirected try.outFile (knitr)", {
+  tc <- textConnection("printed", "w", local = TRUE)
+  old <- options(try.outFile = tc)
+  on.exit({
+    options(old)
+    close(tc)
+  })
+  r <- mortensor:::quiet_try(try(stop("not shown")))
+  expect_s3_class(r, "try-error")
+  expect_length(printed, 0)
+})

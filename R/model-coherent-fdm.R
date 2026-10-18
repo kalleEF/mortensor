@@ -181,9 +181,13 @@ fit_model.mt_spec_coherent_fdm <- function(spec, D, E, ages, periods, strata = N
 }
 
 # Evaluate quietly: the model searches of the forecast package print the
-# errors of rejected candidate models through try()
+# errors of rejected candidate models through try(), to the connection in
+# option try.outFile (knitr sets it to the document), so it is set to
+# stderr and captured with the messages
 quiet_try <- function(expr) {
   out <- NULL
+  op <- options(try.outFile = stderr())
+  on.exit(options(op), add = TRUE)
   utils::capture.output(out <- suppressWarnings(expr), type = "message")
   out
 }
