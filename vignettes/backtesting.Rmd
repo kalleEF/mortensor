@@ -174,10 +174,43 @@ trend, while the trend of English mortality changed after 2011. "Tuning and reca
 intervals to the errors of recent forecasts, and "Choosing and combining
 models" how mixtures of models do.
 
+## Is the difference larger than chance?
+
+Mean scores over seven origins depend on the particular years. The
+Diebold-Mariano test (Diebold and Mariano 1995) asks whether two models
+differ in accuracy by more than the origins vary. `mt_dm_test()` computes
+it for each horizon from the mean score of each origin, so the many cells
+of one forecast count once. Forecasts from neighbouring origins overlap
+in their test years, which the test allows for (autocovariances up to lag
+`h - 1`), and it uses the small-sample correction of Harvey, Leybourne and
+Newbold (1997):
+
+```{r}
+dm <- mt_dm_test(bt, ref = "Li-Lee")
+dm[target == "rate", list(model, horizon, mean_diff, statistic, p_value)]
+```
+
+A positive `mean_diff` means a higher CRPS than Li-Lee, so a less
+accurate forecast. Li-Lee forecast the rates more accurately than the
+random walk at every horizon (p below 0.02). Li-Lee and Lee-Carter differ
+by less than 4% of their CRPS, with p-values from 0.5 to 0.8: this
+backtest cannot tell them apart.
+
+```{r}
+dm[target == "life_expectancy", list(model, horizon, mean_diff, statistic, p_value)]
+```
+
+For life expectancy, Lee-Carter was more accurate than Li-Lee one year
+ahead (p = 0.03); at longer horizons the differences are within chance.
+With seven origins the test has six degrees of freedom and detects only
+large and consistent differences. The row `"all"` averages over the
+horizons.
+
 ## How far to trust a backtest
 
 * Seven origins of one country are few, and the test years overlap; a
-  difference of a few percent in the CRPS can be noise.
+  difference of a few percent in the CRPS can be noise, as
+  `mt_dm_test()` shows.
 * A backtest scores the past. If the future differs from the test period
   (a pandemic, a policy change), so will the accuracy.
 * Compare models on the same origins, horizons and cells, as
@@ -190,6 +223,9 @@ Bracher J, Ray EL, Gneiting T, Reich NG (2021). Evaluating epidemic
 forecasts in an interval format. *PLoS Computational Biology* 17(2):
 e1008618.
 
+Diebold FX, Mariano RS (1995). Comparing predictive accuracy. *Journal of
+Business & Economic Statistics* 13(3): 253-263.
+
 Gneiting T, Balabdaoui F, Raftery AE (2007). Probabilistic forecasts,
 calibration and sharpness. *Journal of the Royal Statistical Society
 Series B* 69(2): 243-268.
@@ -197,6 +233,10 @@ Series B* 69(2): 243-268.
 Gneiting T, Raftery AE (2007). Strictly proper scoring rules, prediction,
 and estimation. *Journal of the American Statistical Association*
 102(477): 359-378.
+
+Harvey D, Leybourne S, Newbold P (1997). Testing the equality of
+prediction mean squared errors. *International Journal of Forecasting*
+13(2): 281-291.
 
 Hyndman RJ, Koehler AB (2006). Another look at measures of forecast
 accuracy. *International Journal of Forecasting* 22(4): 679-688.

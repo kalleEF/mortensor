@@ -53,6 +53,7 @@ work: `claude/vigilant-albattani-2ssw1x` (plays the role of `dev-0.2`).
 | Q5 | done | this branch | Owner's decisions: `stanmomo()` (StanMoMo LC, RH, APC, CBD, M6; Poisson or NB; posterior draws of expected rates; convergence warnings) with validation check `stanmomo_ew`; `calibrated()` renamed `recalibrated()` (vignette "Tuning and recalibration"); `hyndman_ullah()` keeps smoothing by default |
 | Q6 | done | this branch | Review of the whole package (six reviewers, about 55 confirmed findings), fixed by area with regression tests (`tests/testthat/test-fix-*.R`): data adapters and suppression, ungrouping (age 0 kept out of the fit, group totals of spline methods), smoothing with missing cells, backtest floor after aggregation, quantity scores from deaths, ungrouped data refused in backtests, wrapper field stack (`reconciled(anchored())`), independent observation noise in reconciled draws, bottom-level exposures, per-stratum random number streams, `cause_shares()` predictive counts, observation noise for observed-rate models fitted to smoothed rates; documentation corrected; precomputed vignettes re-knitted |
 | E1 | done | this branch | Engineering after the review: `mt_parameters()` for ensembles and fits by groups; random number streams per origin in backtests and recalibration (bug fixed in `par_lapply(streams = TRUE)`, which passed positions instead of elements); `coherent_fdm()` forecasts 74 s to 26 s per German backtest origin with identical draws (ARFIMA simulation models built once per coefficient); README and function map diagrams as images (`dev/diagrams/`) for the GitHub app |
+| E2 | done | this branch | Published methods: `coda()` (Oeppen 2008; Bergeron-Boucher et al. 2017; adapted from MortalityForecast 0.8.1) with the coherent model, `coda_causes()` (experimental), `lee_carter(rotate = TRUE)` (Li, Lee and Gerland 2013), `stmomo("m7"/"m8")`, `reconciled(method = "energy_score")` (Panagiotelis et al. 2023; less accurate than WLS in both backtests), `mt_dm_test()` (Diebold-Mariano with HLN correction), `lifespan_variation()` (adapted from LifeIneq 00.04.09) also as a quantity of comparisons, `mt_excess()`/`mt_plot_excess()`; vignettes "Lifespan variation" and "Excess mortality"; 12 validation checks added (`coda_*`, `rotation_france`, `dm_ew`, `stmomo_cbd_ew`, `lifespan_reference`, `excess_*`, `scoreopt_*`). Not implemented by decision: TOPALS, models of life expectancy, population projection |
 | U1 | done | this branch | Methods of the earlier UK analysis (plan 4.2-4.8): `mt_smooth(along = "period")` (Whittaker over time, GCV pooled per stratum), `mt_smooth(dims = 2, method = "gam")` (quasi-Poisson `te(age, year)`), `mt_smooth_check()`, `mt_plot_smooth()`; models fitted to smoothed rates take residuals, observation noise, MASE scale and copula from the raw deaths (`fit$raw_D`); `anchored()` and `mt_jump_off()`; `fixed` nodes in `mt_reconcile()`/`reconciled()` with non-negative projection, `mt_coherence()`, `mt_plot_coherence()`; `mt_backtest(quantities = )` and `mt_score(target = )` for life expectancy and ASR, `mt_plot_scores(by = "model")`; `lee_carter(adjust = , choose_period = )` (demography's `lca` adjustments and BMS period); `ensemble(top_k = )`; `mt_tune(strategy = "two_stage")`; tail options and diagnostics of disaggregation (`mt_shape_rates()`, `mt_disaggregate_check()`, `mt_plot_disaggregation()`); validation check `smoothing_jumpoff`; vignettes updated (HMD, deprivation, coherence, causes) |
 | V3 | done | this branch | Comparison vignette (fidelity and accuracy vs demography, bamp, StMoMo; stored results of `dev/compare-packages.R`, full run 2026-10-13); regional vignette on German Laender (precomputed); validation check `de_regions` |
 | D1.12 (HMD) | done | this branch | `mt_from_hmd()`, `mt_read_hmd()` (HMDHFDplus, credentials from `HMD_USER`/`HMD_PASSWORD`) |
@@ -224,6 +225,19 @@ work: `claude/vigilant-albattani-2ssw1x` (plays the role of `dev-0.2`).
   alternate between origins. Smoothing fdm narrows its intervals (95%
   coverage 0.63 against 0.70). Tuned and calibrated fdm: 95% coverage
   0.90/0.91 (rates), 0.87/0.80 (life expectancy).
+
+- 2026-10-18: Extensions (E2). Lifespan variation depends on the open age
+  interval more than the first draft of the help page said: with 85+
+  instead of 100+, e-dagger of French women in 2006 is 2.1 years (22%)
+  higher, the Gini coefficient and the interquartile range up to 13%
+  lower; from 95+ the differences are below 2%. Help page, FAQ and
+  vignette state this. Excess deaths of a national total from separate
+  models of its parts have too narrow intervals (Germany 2020: 11,000 to
+  28,000 from 32 Land-by-sex Lee-Carter models, -1,000 to 55,000 from a
+  model of the total), because independent trend errors cancel in the sum;
+  the vignette recommends a model of the total or a joint model. With
+  three backtest origins the Diebold-Mariano variance is not estimable;
+  the model-choice vignette tests on 16 origins instead.
 
 ## Open questions
 

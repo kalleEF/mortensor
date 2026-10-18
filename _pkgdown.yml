@@ -33,7 +33,7 @@ reference:
       - mt_prep
       - mt_set_grid
   - title: 4. Describe the past
-    desc: Observed indicators with Poisson intervals, gaps between strata, inequality indices and decompositions (which also work on forecasts).
+    desc: Observed indicators with Poisson intervals, gaps between strata, inequality indices, lifespan variation, decompositions and excess mortality (which also work on forecasts).
     contents:
       - mt_observed
       - life_expectancy
@@ -41,15 +41,18 @@ reference:
       - mt_contrast
       - mt_plot_contrast
       - mt_inequality
+      - lifespan_variation
       - mt_decompose
       - mt_plot_decomposition
       - standard_population
       - life_table
+      - mt_excess
   - title: 5. Models for one population
     contents:
       - lee_carter
       - rwd
       - hyndman_ullah
+      - coda
       - stmomo
       - stanmomo
       - arima_series
@@ -62,6 +65,7 @@ reference:
       - coherent_fdm
       - tucker3
       - cause_shares
+      - coda_causes
   - title: 7. Combine models and make forecasts coherent
     desc: Model wrappers (ensembles, different models for groups of strata, reconciliation, calibration, jump-off, bootstrap, tuning) and hierarchies of strata.
     contents:
@@ -92,10 +96,11 @@ reference:
       - mt_shape_rates
       - mt_disaggregate_check
   - title: 9. Evaluate and compare
-    desc: Rolling-origin backtests and scores; several models and forecasts side by side.
+    desc: Rolling-origin backtests and scores; tests of differences in accuracy; several models and forecasts side by side.
     contents:
       - mt_backtest
       - mt_score
+      - mt_dm_test
       - mt_compare
       - mt_plot_design
   - title: 10. Report
@@ -140,6 +145,7 @@ articles:
       - tuning-recalibration
       - coherence
       - decomposition
+      - lifespan-variation
   - title: Models
     desc: Which model to use, and how to combine several.
     contents:
@@ -152,6 +158,7 @@ articles:
     contents:
       - inequality-england
       - laender-germany
+      - excess-mortality
   - title: Help
     contents:
       - faq

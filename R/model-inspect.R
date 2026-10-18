@@ -5,9 +5,17 @@
 #'
 #' * [lee_carter()]: `a` (age pattern), `b` (age pattern of change), `k`
 #'   (period index), and the drift and innovation standard deviation of `k`;
+#'   with `rotate = TRUE` also the ultimate pattern `b_ultimate`;
 #' * [li_lee()], [product_ratio()]: the common factor of each group (`B`,
 #'   `K`, its drift and standard deviation), and per stratum the deviations
 #'   `a`, `b`, `k` and their AR(1) coefficient `phi` and standard deviation;
+#' * [coda()]: the centre `a` (geometric mean distribution of life-table
+#'   deaths), the loadings `b`, the index `k` with its drift and standard
+#'   deviation, the share of variation explained by the first component and
+#'   the parameters of the open age interval; the coherent model gives per
+#'   group of `common_by` the common `a`, `B`, `K` and per stratum `a`, `b`,
+#'   `k` and their AR(1) parameters. [coda_causes()]: per group, as
+#'   [coda()], with parts by age and cause;
 #' * [rwd()]: drift and innovation standard deviation per age (and, with
 #'   `observation_noise = TRUE`, the variances of level and noise);
 #' * [apc_bayes()]: posterior medians and 90% intervals of the age, period
@@ -100,9 +108,11 @@ base_parameters <- function(fit, sp) {
       f <- fit$fits[[s]]
       if (is.null(f)) return(NULL)
       rbind(row(lab[s], "a", ages, f$a), row(lab[s], "b", ages, f$b), row(lab[s], "k", yrs, f$k),
-            row(lab[s], "drift_k", "", f$drift), row(lab[s], "sd_k", "", f$sigma_k))
+            row(lab[s], "drift_k", "", f$drift), row(lab[s], "sd_k", "", f$sigma_k),
+            if (!is.null(f$b_ultimate)) row(lab[s], "b_ultimate", ages, f$b_ultimate))
     })))
   }
+  if (inherits(sp, c("mt_spec_coda", "mt_spec_coda_causes"))) return(coda_parameters(fit, sp))
   if (inherits(sp, "mt_spec_rwd")) {
     return(rbindlist(lapply(seq_along(fit$fits), function(s) {
       f <- fit$fits[[s]]
@@ -300,7 +310,15 @@ model_assumptions <- function(spec) {
            if (p$method == "svd") "SVD of log rates with k(t) refitted to the observed deaths",
            "(Brouhns et al. 2002; Lee and Carter 1992). k(t) follows a random walk with drift; draws include",
            "its innovations and the uncertainty of the drift. a(x) and b(x) are fixed",
-           "(parameter uncertainty with bootstrapped()). Jump-off:", p$jump_off, "rates."),
+           "(parameter uncertainty with bootstrapped()). Jump-off:", p$jump_off, "rates.",
+           if (isTRUE(p$rotate)) {
+             sprintf(paste("b(x) rotates towards an ultimate pattern (flat below 65) as life expectancy at birth",
+                           "of each path rises from %g to %g (Li, Lee and Gerland 2013); k(t) is solved again so",
+                           "that each path keeps the life expectancy at birth of the unrotated model; rates change",
+                           "from the jump-off year."), p$rotation[["e0_start"]], p$rotation[["e0_end"]])
+           }),
+         mt_spec_coda = coda_assumptions(spec),
+         mt_spec_coda_causes = coda_assumptions(spec),
          mt_spec_rwd = if (isTRUE(p$observation_noise)) {
            paste("Each age: log rate = level + noise, level a random walk with drift (local level model).",
                  "Noise variance from Poisson counts plus a common extra part; level variance partly pooled over",

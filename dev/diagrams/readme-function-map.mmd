@@ -9,9 +9,9 @@ flowchart TD
   P["`**mt_draws**
   simulated future rates`"]
   B["`**backtest scores**
-  mt_score()`"]
+  mt_score(), mt_dm_test()`"]
   R["`**results**
-  life_expectancy(), asr(), mt_contrast(), mt_decompose(), plots, CSV`"]
+  life_expectancy(), lifespan_variation(), asr(), mt_contrast(), mt_decompose(), mt_excess(), plots, CSV`"]
   T -- "mt_data()" --> D
   D -- "mt_fit()" --> F
   S --> F

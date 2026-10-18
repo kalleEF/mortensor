@@ -8,7 +8,7 @@ mt_contrast(
   x,
   var,
   ref,
-  quantity = c("life_expectancy", "asr", "prob_dying", "rate"),
+  quantity = c("life_expectancy", "asr", "prob_dying", "rate", "lifespan_variation"),
   type = c("difference", "ratio"),
   probs = c(0.025, 0.5, 0.975),
   ...
@@ -22,8 +22,8 @@ mt_contrast(
 
 \item{ref}{Reference level of \code{var}.}
 
-\item{quantity}{\code{"life_expectancy"}, \code{"asr"}, \code{"prob_dying"} or
-\code{"rate"}.}
+\item{quantity}{\code{"life_expectancy"}, \code{"asr"}, \code{"prob_dying"}, \code{"rate"}
+or \code{"lifespan_variation"}.}
 
 \item{type}{\code{"difference"} (level minus reference) or \code{"ratio"}.}
 
@@ -31,7 +31,8 @@ mt_contrast(
 
 \item{...}{Arguments of the quantity: \code{at} for life expectancy,
 \code{standard} and \code{per} for \code{asr()}, \code{from} and \code{to} for \code{prob_dying()},
-\code{age} (an age label) for \code{"rate"}.}
+\code{age} (an age label) for \code{"rate"}, \code{measure} (one index, default
+\code{"edagger"}) and \code{at} for \code{\link[=lifespan_variation]{lifespan_variation()}}.}
 }
 \value{
 A \code{data.table} with the other stratum variables, \code{level}, \code{ref},
@@ -40,7 +41,8 @@ a positive difference (or a ratio above 1).
 }
 \description{
 Compares a derived quantity (life expectancy, age-standardised rate,
-probability of dying, or death rate of one age group) between the levels
+probability of dying, death rate of one age group, or an index of
+lifespan variation) between the levels
 of a stratum variable and a reference level, path by path, so that the
 interval of the difference includes the joint uncertainty of both
 strata. Strata are matched on all other stratum variables (for example

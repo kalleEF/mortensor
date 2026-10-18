@@ -13,7 +13,7 @@ Every analysis passes the same objects from top to bottom. The boxes are
 objects; the labels on the arrows are the functions that connect them.
 
 <p align="center">
-<img src="function-map-main.png" width="740" alt="Main path: your tables become an mt_data object with mt_data() and are prepared and checked (map 1); mt_fit() fits a model specification to the data, and mt_backtest() scores specifications on past years; mt_forecast() gives mt_draws, simulated paths of future rates; tables and plots of life expectancy, rates, deaths, gaps and decompositions come from the draws, from the backtest scores (mt_score()) or from the observed data (map 3).">
+<img src="function-map-main.png" width="740" alt="Main path: your tables become an mt_data object with mt_data() and are prepared and checked (map 1); mt_fit() fits a model specification to the data, and mt_backtest() scores specifications on past years; mt_forecast() gives mt_draws, simulated paths of future rates; tables and plots of life expectancy, lifespan variation, rates, deaths, gaps, decompositions and excess mortality come from the draws, from the backtest scores (mt_score()) or from the observed data (map 3).">
 </p>
 
 ## Map 1: from tables to analysis-ready data
@@ -39,13 +39,13 @@ Preprocessing steps given as `prep` are repeated in every fit, so that
 backtests do not see the test years.
 
 <p align="center">
-<img src="function-map-models.png" width="885" alt="Map 2, models: models for one population per stratum or for several strata jointly form a model specification, optionally inside wrappers (ensemble(), stratified(), reconciled(), recalibrated(), anchored(), bootstrapped(), tuned()) that may use a hierarchy from mt_hierarchy(); mt_fit() takes the specification, the model-ready data and optional preprocessing from mt_prep(); the fit is inspected (summary(), mt_parameters(), residuals()) or forecast with mt_forecast().">
+<img src="function-map-models.png" width="885" alt="Map 2, models: models for one population per stratum (including coda()) or for several strata jointly (including coda(coherent = TRUE) and coda_causes()) form a model specification, optionally inside wrappers (ensemble(), stratified(), reconciled(), recalibrated(), anchored(), bootstrapped(), tuned()) that may use a hierarchy from mt_hierarchy(); mt_fit() takes the specification, the model-ready data and optional preprocessing from mt_prep(); the fit is inspected (summary(), mt_parameters(), residuals()) or forecast with mt_forecast().">
 </p>
 
 Choosing between specifications:
 
 <p align="center">
-<img src="function-map-choice.png" width="528" alt="Choosing between specifications: the data and the candidate specifications, each with its preprocessing, go into mt_backtest(); mt_score() and the score plots (mt_plot_scores(), mt_plot_coverage()) lead to the chosen specification.">
+<img src="function-map-choice.png" width="793" alt="Choosing between specifications: the data and the candidate specifications, each with its preprocessing, go into mt_backtest(); mt_score(), the score plots (mt_plot_scores(), mt_plot_coverage()) and mt_dm_test() (is the difference between two models larger than chance?) lead to the chosen specification.">
 </p>
 
 `tuned()` and `mt_tune()` run the same comparison inside a fit, over a
@@ -62,7 +62,7 @@ include the joint uncertainty of all strata. The same functions describe
 observed data.
 
 <p align="center">
-<img src="function-map-results.png" width="813" alt="Map 3, from draws to results: forecast draws (mt_draws) and observed data (mt_data) give indicators (life_expectancy(), asr(), prob_dying(), yll(), mt_deaths()), comparisons (mt_contrast(), mt_inequality(), mt_decompose()) and output (mt_summarise(), plots, mt_export()); draws can be aggregated or refined (mt_aggregate_draws(), mt_disaggregate(), mt_coherence()).">
+<img src="function-map-results.png" width="813" alt="Map 3, from draws to results: forecast draws (mt_draws) and observed data (mt_data) give indicators (life_expectancy(), lifespan_variation(), asr(), prob_dying(), yll(), mt_deaths()), comparisons (mt_contrast(), mt_inequality(), mt_decompose(), and mt_excess() for observed data against a baseline fit) and output (mt_summarise(), plots including mt_plot_excess(), mt_export()); draws can be aggregated or refined (mt_aggregate_draws(), mt_disaggregate(), mt_coherence()).">
 </p>
 
 ## Functions by purpose
@@ -86,9 +86,9 @@ observed data.
 | Harmonise | `mt_plot_ungroup()`, `mt_ungroup_check()` | ungrouped against grouped rates, stability over time, errors against known single years; several methods side by side | `mt_data` and ungrouped data (or a list) | ggplot, table |
 | Harmonise | `mt_smooth_check()`, `mt_plot_smooth()` | how much smoothing removed (dispersion, trend ratio); several smoothers in one figure | `mt_data` pair or list | table, ggplot |
 | Harmonise | `mt_prep()`, `mt_prep_apply()` with `step_ungroup()`, `step_smooth()`, `step_regroup()`, `step_grid()`, `step_shocks()`, `step_window()` | preprocessing inside fits and backtests | steps | pipeline |
-| Model | `lee_carter()`, `rwd()`, `li_lee()`, `product_ratio()`, `hyndman_ullah()`, `coherent_fdm()`, `stmomo()`, `stanmomo()`, `arima_series()`, `ets_series()`, `apc_bayes()`, `tucker3()`, `cause_shares()` | model specifications | settings | `mt_spec` |
+| Model | `lee_carter()` (optionally rotated), `rwd()`, `li_lee()`, `product_ratio()`, `hyndman_ullah()`, `coherent_fdm()`, `coda()` (also coherent), `stmomo()`, `stanmomo()`, `arima_series()`, `ets_series()`, `apc_bayes()`, `tucker3()`, `cause_shares()`, `coda_causes()` | model specifications | settings | `mt_spec` |
 | Model | `apc_select()`, `mcmc_control()`, `mt_tune()` | choose random-walk orders, MCMC settings; model and preprocessing settings by forecast accuracy on the last years (hold-out or rolling origins; rates, life expectancy or ASR) | data, grid | table, `mt_spec` |
-| Combine | `ensemble()` (optionally `top_k`), `stratified()`, `reconciled()`, `bootstrapped()`, `tuned()` | mixtures, different models for groups of strata, coherence, parameter uncertainty (and of smoothing, `type = "data"`), tuning | `mt_spec` | `mt_spec` |
+| Combine | `ensemble()` (optionally `top_k`), `stratified()`, `reconciled()` (also score-optimal, `method = "energy_score"`), `bootstrapped()`, `tuned()` | mixtures, different models for groups of strata, coherence, parameter uncertainty (and of smoothing, `type = "data"`), tuning | `mt_spec` | `mt_spec` |
 | Combine | `mt_order_strata()` | keep an ordering between strata (for example women below men) path by path | `mt_draws` | `mt_draws` |
 | Calibrate | `recalibrated()` | rescale the spread (optionally the drift) of any model's draws to its forecast errors in the last years, overall or by age band, for rates, life expectancy or ASR | `mt_spec` | `mt_spec` |
 | Jump-off | `anchored()`, `mt_jump_off()` | start forecasts at the observed level of the last years; report the first-year step | `mt_spec`, `mt_draws` | `mt_spec`, table |
@@ -99,9 +99,12 @@ observed data.
 | Forecast | `mt_forecast()`, `mt_summarise()` | simulated paths and their quantiles | `mt_fit` | `mt_draws`, table |
 | Evaluate | `mt_backtest()`, `mt_score()` | rolling-origin scores of rates, life expectancy or ASR, and of gaps between strata (`contrast`) | `mt_spec`, `mt_data` | table |
 | Evaluate | `mt_compare()`, `mt_score_table()` | backtests of several models on the same origins; scores of rates, life expectancy and gaps side by side, by level of a hierarchy | named list of `mt_spec`, `mt_data` | table |
+| Evaluate | `mt_dm_test()` | Diebold-Mariano tests: is one model more accurate than another, per horizon, beyond chance? | backtest from `mt_compare()` | table |
 | Evaluate | `mt_plot_scores()`, `mt_plot_coverage()`, `mt_plot_pit()`, `mt_plot_backtest_design()`, `mt_plot_tuning()` | scores by horizon or model, interval coverage, PIT histograms, the design of a backtest, tuning scores | backtest, tuning | ggplot |
 | Describe | `mt_observed()` | observed rates as draws | `mt_data` | `mt_draws` |
 | Report | `life_expectancy()`, `asr()`, `prob_dying()` | indicators path by path, observed or forecast | `mt_draws` or `mt_data` | table |
+| Report | `lifespan_variation()` | e-dagger, entropy, Gini, standard deviation, coefficient of variation and interquartile range of the age at death | `mt_draws`, `mt_data` or rates | table, array |
+| Report | `mt_excess()`, `mt_plot_excess()` | excess deaths, P-scores and loss of life expectancy against the expected values of a baseline model, by age, stratum and year | `mt_fit` or `mt_spec`, `mt_data` | table, ggplot |
 | Report | `yll()`, `mt_deaths()` | years of life lost, deaths with projected populations | `mt_draws` | table, array |
 | Report | `life_table()`, `standard_population()` | life tables from rates; standard populations esp2013, esp1976, who2000 | rates, name | table |
 | Report | `mt_contrast()`, `mt_inequality()`, `mt_plot_contrast()` | gaps, ratios, SII, RII; gaps over time | `mt_draws` or `mt_data` | table, ggplot |
@@ -123,15 +126,14 @@ development points:
   exposures (for expected deaths) come from a population projection, for
   example of the statistical office, passed as `exposure`.
 * **Spatial models for small areas.** There is no model with spatial
-  smoothing between neighbouring regions (such as BYM models); pooling
-  works through common trends (`li_lee()`); Bayesian APC models smooth over
-  age, period and cohort within each stratum.
-* **Uncertainty of score differences.** `mt_score()` reports mean scores;
-  standard errors over origins and strata or paired tests of two models
-  are not computed.
-* **Lifespan variation.** Lifespan variation (e-dagger, Gini) is not a
-  built-in quantity; `mt_decompose()` accepts it as a function of the
-  rates.
+  smoothing between neighbouring regions (such as BYM models), and no
+  relational model for small populations (such as TOPALS); pooling works
+  through common trends (`li_lee()`); Bayesian APC models smooth over age,
+  period and cohort within each stratum.
+* **Models of life expectancy.** Models that forecast life expectancy
+  itself (such as the Bayesian models of the UN or the double-gap model)
+  are not implemented; mortensor forecasts rates and derives life
+  expectancy from them.
 * **Multiple imputation of suppressed cells.** `mt_fill_suppressed()`
   returns one estimate; the uncertainty of suppressed counts is not carried
   into forecasts.

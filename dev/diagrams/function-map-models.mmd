@@ -1,8 +1,8 @@
 flowchart TD
   ONE["`**one population per stratum**
-  lee_carter(), rwd(), hyndman_ullah(), stmomo(), stanmomo(), arima_series(), ets_series(), apc_bayes()`"]
+  lee_carter(), rwd(), hyndman_ullah(), coda(), stmomo(), stanmomo(), arima_series(), ets_series(), apc_bayes()`"]
   MANY["`**several strata jointly**
-  li_lee(common_by), product_ratio(), coherent_fdm(), tucker3(), cause_shares()`"]
+  li_lee(common_by), product_ratio(), coherent_fdm(), coda(coherent = TRUE), tucker3(), cause_shares(), coda_causes()`"]
   H["`**mt_hierarchy()**
   totals and groups of strata; fixed nodes such as a trusted total`"]
   WRAP["`**wrappers around any model**

@@ -28,7 +28,7 @@ mt_score_table(
 
 mt_compare_forecasts(
   forecasts,
-  quantity = c("life_expectancy", "asr", "deaths", "rate"),
+  quantity = c("life_expectancy", "asr", "deaths", "rate", "lifespan_variation"),
   periods = NULL,
   at = NULL,
   ages = NULL,
@@ -36,18 +36,20 @@ mt_compare_forecasts(
   level = 0.95,
   digits = 1,
   wide = TRUE,
-  exposure = NULL
+  exposure = NULL,
+  measure = "edagger"
 )
 
 mt_plot_compare(
   forecasts,
-  quantity = c("life_expectancy", "rate", "asr"),
+  quantity = c("life_expectancy", "rate", "asr", "lifespan_variation"),
   at = NULL,
   ages = NULL,
   strata = NULL,
   periods = NULL,
   level = 0.95,
-  data = NULL
+  data = NULL,
+  measure = "edagger"
 )
 }
 \arguments{
@@ -82,13 +84,14 @@ separately for the bottom series, the aggregates and the grand total
 
 \item{quantity}{\code{"life_expectancy"}, \code{"asr"} (per 100,000), \code{"deaths"}
 (summed over the ages, with the exposures of the last observed year
-unless \code{exposure} is given; forecasts only) or \code{"rate"} (death rates of
-the ages in \code{ages}).}
+unless \code{exposure} is given; forecasts only), \code{"rate"} (death rates of
+the ages in \code{ages}) or \code{"lifespan_variation"} (the index \code{measure} of
+\code{\link[=lifespan_variation]{lifespan_variation()}}).}
 
 \item{periods}{Years shown (for the plot a range \code{c(first, last)}, or
 one year: then medians and intervals per stratum side by side).}
 
-\item{at}{Age for life expectancy.}
+\item{at}{Age for life expectancy and lifespan variation.}
 
 \item{ages}{Age labels for \code{quantity = "rate"}.}
 
@@ -100,6 +103,8 @@ one year: then medians and intervals per stratum side by side).}
 
 \item{exposure}{Future exposures for \code{quantity = "deaths"} (see
 \code{\link[=mt_deaths]{mt_deaths()}}).}
+
+\item{measure}{Index of lifespan variation for \code{quantity = "lifespan_variation"} (see \code{\link[=lifespan_variation]{lifespan_variation()}}).}
 }
 \value{
 \code{mt_compare()}: an \code{mt_backtest} table. \code{mt_score_table()},

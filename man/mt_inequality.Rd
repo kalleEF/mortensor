@@ -8,7 +8,7 @@ mt_inequality(
   x,
   var,
   order = NULL,
-  quantity = c("asr", "life_expectancy", "prob_dying", "rate"),
+  quantity = c("asr", "life_expectancy", "prob_dying", "rate", "lifespan_variation"),
   probs = c(0.025, 0.5, 0.975),
   ...
 )
@@ -26,14 +26,15 @@ level first so that a positive SII means higher values in more deprived
 groups. Levels not listed, such as the total of a hierarchy, are left
 out.}
 
-\item{quantity}{\code{"life_expectancy"}, \code{"asr"}, \code{"prob_dying"} or
-\code{"rate"}.}
+\item{quantity}{\code{"life_expectancy"}, \code{"asr"}, \code{"prob_dying"}, \code{"rate"}
+or \code{"lifespan_variation"}.}
 
 \item{probs}{Quantile levels.}
 
 \item{...}{Arguments of the quantity: \code{at} for life expectancy,
 \code{standard} and \code{per} for \code{asr()}, \code{from} and \code{to} for \code{prob_dying()},
-\code{age} (an age label) for \code{"rate"}.}
+\code{age} (an age label) for \code{"rate"}, \code{measure} (one index, default
+\code{"edagger"}) and \code{at} for \code{\link[=lifespan_variation]{lifespan_variation()}}.}
 }
 \value{
 A \code{data.table} with the other stratum variables, \code{index} (\code{"sii"}

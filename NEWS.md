@@ -2,6 +2,75 @@
 
 Clean break: the 0.1.x interface is replaced (see `dev/revamp-plan.md`).
 
+## Published methods added
+
+Models:
+
+* `coda()`: the compositional data model of life-table deaths (Oeppen
+  2008; Bergeron-Boucher et al. 2017), adapted from MortalityForecast
+  0.8.1, whose fitted values and point forecasts it reproduces. The
+  coherent model of several populations (`coherent = TRUE` or
+  `common_by`) has a common component and stratum deviations that follow
+  AR(1) processes. The open age interval follows the indexes. Validation
+  (checks `coda_ew`, `coda_coherent_fr`): CRPS on England & Wales men
+  0.055 against 0.069 for `lee_carter()`; coherent model on France 0.077
+  against 0.080 for `li_lee()`.
+* `coda_causes()` (experimental): the multiple-decrement form of the CoDa
+  model for causes of death, which add up to all causes in every draw.
+  Less accurate than `cause_shares()` on simulated causes.
+* `lee_carter(rotate = TRUE)`: rotation of the age pattern of decline as
+  life expectancy rises (Li, Lee and Gerland 2013, as in MortCast); life
+  expectancy at birth stays that of the unrotated forecast. On France,
+  CRPS 1% lower than without rotation 10 years ahead and 2% lower 20
+  years ahead (check `rotation_france`).
+* `stmomo("m7")` and `stmomo("m8")`: the cohort extensions of the CBD
+  model (Cairns et al. 2009), with `gc_order` and `xc`.
+* `reconciled(method = "energy_score")`: score-optimal reconciliation
+  (Panagiotelis et al. 2023), learnt from the base model's forecasts at
+  inner origins; it reproduces `ProbReco::scoreopt()` to 4e-15. In
+  backtests on simulated regions and on the ONS data it was less accurate
+  than WLS (CRPS 11-32% higher), which the help page and the coherence
+  vignette say.
+
+Evaluation:
+
+* `mt_dm_test()`: Diebold-Mariano tests (with the correction of Harvey,
+  Leybourne and Newbold 1997) of the difference in accuracy between two
+  models of the same backtest, per horizon, allowing for forecasts that
+  overlap in their test years. Agrees with `forecast::dm.test()` to 3e-14.
+  Horizons with too few origins for the autocovariances get no test.
+
+Derived quantities:
+
+* `lifespan_variation()`: life disparity (e-dagger), entropy, Gini
+  coefficient, standard deviation, variance, coefficient of variation and
+  interquartile range of the age at death, for rates, observed data and
+  forecast draws, conditional on survival to an age `at`. Adapted from
+  LifeIneq 00.04.09, which it matches to 1e-15 on tables with intervals of
+  equal width. The help page quantifies how much the measures depend on
+  the open age interval.
+* Lifespan variation is a quantity of `mt_compare_forecasts()`,
+  `mt_plot_compare()`, `mt_contrast()` and `mt_inequality()` (`quantity =
+  "lifespan_variation"`, `measure`).
+* `mt_excess()` and `mt_plot_excess()`: excess deaths, P-scores and the
+  loss of life expectancy against the predictive draws of a baseline
+  model, by age group, stratum and year, and summed over years. Cells with
+  estimated deaths are left out and counted. France 2003: 15,100 excess
+  deaths (95% interval 5,600 to 25,400). Intervals covered the true excess
+  in 97-98% of simulated cases (check `excess_simulation`).
+
+Vignettes and documentation:
+
+* New vignettes "Lifespan variation" (France: observed, by age, the
+  effect of the open age interval, forecasts of Lee-Carter, rotated
+  Lee-Carter and CoDa) and "Excess mortality" (France 2003 and 1918,
+  German Laender 2020-2024).
+* "Backtesting and scores" tests the differences between models with
+  `mt_dm_test()`; "Choosing and combining models" adds CoDa and M7 and a
+  test from 16 origins; "Coherent forecasts" describes score-optimal
+  reconciliation; "Model reference", FAQ, README and the function map
+  (diagrams redrawn) cover the new functions.
+
 ## Fixes from a review of the whole package
 
 Data:
