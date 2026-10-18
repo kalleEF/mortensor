@@ -20,8 +20,10 @@ es_small <- function(control = list(max_iter = 30, n_draws = 30), seed = 1) {
   es_cache[[key]]
 }
 
+# Reference values of ProbReco 0.1.2 (GitHub; not on CRAN in October 2026), computed with
+# the inputs below by ProbReco::total_score() and ProbReco::scoreopt(); the
+# live comparison is the validation check scoreopt_probreco
 test_that("the energy score and its gradient agree with ProbReco::total_score()", {
-  skip_if_not_installed("ProbReco")
   S <- toy_S()
   n <- nrow(S)
   m <- ncol(S)
@@ -33,24 +35,23 @@ test_that("the energy score and its gradient agree with ProbReco::total_score()"
   X1 <- lapply(seq_len(nt), function(t) matrix(stats::rnorm(n * q, mu), n))
   X2 <- lapply(seq_len(nt), function(t) matrix(stats::rnorm(n * q, mu), n))
   Gvec <- stats::runif(m + m * n)
-  # each function returns the first set of draws, then the second
-  mk <- function(t) {
-    calls <- new.env()
-    calls$k <- 0
-    function() {
-      calls$k <- calls$k + 1
-      if (calls$k %% 2 == 1) X1[[t]] else X2[[t]]
-    }
-  }
-  ref <- ProbReco::total_score(lapply(seq_len(nt), function(t) Y[, t]), lapply(seq_len(nt), mk), S, Gvec)
+  # ProbReco::total_score() with simulators returning X1 and X2 in turn
+  ref_value <- 513.668107817976
+  ref_grad <- c(5.32330877804002, 5.16038433254996, 5.45839051553478, 5.18666903305029,
+                73.5430348823312, 71.0948327249186, 75.6524489595797, 71.8542159198307,
+                39.7455623581232, 38.6302390947981, 41.0777892498448, 39.040487686585,
+                31.5219492603984, 30.8709007672793, 32.2485217098189, 30.6825053502916,
+                24.7115954061266, 23.9630919407974, 25.9789196343302, 24.2866097284893,
+                16.074570446705, 15.5908031553095, 15.666837470057, 14.8295122848392,
+                9.89132410356916, 9.53570065701031, 9.57665183342033, 9.26517146962715,
+                20.6493749482943, 19.820286770771, 20.6350535406984, 19.9554114502089)
   z <- list(x1 = do.call(cbind, X1), x2 = do.call(cbind, X2), per = rep(seq_len(nt), each = q))
   mine <- mortensor:::scoreopt_score(Y, z, S, Gvec)
-  expect_equal(mine$value, ref$value, tolerance = 1e-10)
-  expect_equal(mine$grad, as.vector(ref$grad), tolerance = 1e-9)
+  expect_equal(mine$value, ref_value, tolerance = 1e-10)
+  expect_equal(mine$grad, ref_grad, tolerance = 1e-9)
 })
 
 test_that("the optimisation reproduces ProbReco::scoreopt() and its d and G reconcile as S (d + G y)", {
-  skip_if_not_installed("ProbReco")
   S <- toy_S()
   n <- nrow(S)
   m <- ncol(S)
@@ -61,10 +62,19 @@ test_that("the optimisation reproduces ProbReco::scoreopt() and its d and G reco
   # biased base forecasts with independent noise, so that d and G move away from OLS
   mu <- as.vector(S %*% c(5, 3, 2, 4)) * c(1.2, 0.9, 1.1, 1, 1, 1, 1)
   prob <- lapply(seq_len(nt), function(t) function() matrix(stats::rnorm(n * q, mu, 0.7), n))
-  data <- lapply(seq_len(nt), function(t) Y[, t])
   ctl <- list(max_iter = 60, eta = 0.01, beta1 = 0.9, beta2 = 0.999, tol = 1e-4, epsilon = 1e-8)
-  set.seed(3)
-  ref <- suppressWarnings(ProbReco::scoreopt(data, prob, S, control = list(maxIter = ctl$max_iter, eta = ctl$eta)))
+  # d, G and the final score of ProbReco's scoreopt() on the columns of Y and the simulators prob,
+  # with 60 steps of size 0.01, after set.seed(3)
+  ref <- list(d = c(-0.0552304955884408, -0.0583922156429147, -0.0386396541621559, -0.0651290346298366),
+              G = matrix(c(0.147131287895525, 0.134770863972964, 0.156038333142657, 0.130163040881612,
+                           0.287947933818218, 0.267537907860464, -0.104876537047501, -0.11848369763802,
+                           -0.107370349196739, -0.131763285872062, 0.296812429363369, 0.262207226596617,
+                           0.703970360126506, -0.391306055138435, -0.0385768987772873, -0.0611726771283236,
+                           -0.454729739848281, 0.664070940231183, -0.137458403440889, -0.148176143108982,
+                           -0.203064926313919, -0.203769367848319, 0.714922499497194, -0.555109511577202,
+                           -0.0314794330719143, -0.0462762882709701, -0.372225958843104, 0.697253469532088),
+                         m, n),
+              val = 14.5659283343904)
   # ProbReco checks its inputs by calling every function three times before the first step
   set.seed(3)
   for (k in 1:3) for (f in prob) f()
