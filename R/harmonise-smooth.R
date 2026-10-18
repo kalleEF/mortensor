@@ -31,6 +31,11 @@
 #'   and overdispersion estimated, so that year-to-year variation beyond
 #'   Poisson noise is not taken for signal.
 #'
+#' With `"pspline"`, an open age interval of the grid is expanded into
+#' single years up to `omega` and its exposure is split by the PCLM of the
+#' exposures, as in [mt_ungroup()] (`open_split = "pclm"`, Rizzi, Gampe and
+#' Eilers 2015).
+#'
 #' The Whittaker smoother minimises `sum(w (y - z)^2) + lambda sum((D z)^2)`
 #' for log rates `y`, weights `w` and differences `D` of order `pord`
 #' (divided differences over age, so that groups of different widths are
@@ -170,7 +175,7 @@ mt_smooth <- function(data, dims = 1, lambda = NULL, criterion = c("bic", "aic")
   }
   ctl <- list(lambda = lambda, criterion = criterion, kr = kr, deg = deg, pord = pord,
               lambda_range = lambda_range, preserve_totals = FALSE, keep_observed = FALSE,
-              provenance = "smoothed", method_label = "pspline")
+              provenance = "smoothed", method_label = "pspline", open_split = "pclm")
   res <- ungroup_rates(data$obs$deaths, data$obs$exposure, g, data$omega, ctl, dims)
   data$obs$deaths <- res$obs
   data$grid <- g

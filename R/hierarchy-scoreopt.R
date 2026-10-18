@@ -16,6 +16,9 @@
 # Differences from ProbReco (documented in reconciled()): the two samples of
 # each step are drawn from disjoint sets of a fixed set of inner draws
 # (scoreopt_pairs()), and outputs and inputs are rescaled before Adam.
+# Differences from the paper (also documented there): expanding inner
+# windows, horizons pooled in one objective, one d and G per age, the score
+# of the predictive distribution, 50 draws per step, ProbReco's stopping rule.
 
 # Settings of the training (`control` of reconciled()): draws per inner
 # forecast, draws per optimisation step (Q of ProbReco), and the Adam
@@ -298,7 +301,8 @@ scoreopt_pre <- function(Y, S) list(StS = crossprod(S), StY = crossprod(S, Y), y
 
 # Forecast: y_tilde = S (d + G y) per age, year and draw on the scale of
 # reconcile_array(); bottom values below zero are set to zero and the
-# aggregates are their sums. Returns what reconcile_array() returns
+# aggregates are their sums (package-specific: the paper does not treat
+# negative values). Returns what reconcile_array() returns
 scoreopt_apply <- function(arr, hs, additive, so, exposure, d) {
   S <- hs$S
   b <- hs$bottom

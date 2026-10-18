@@ -112,7 +112,7 @@ simulate_model.mt_spec_fdm <- function(spec, fit, h, n_draws, ...) {
 #' Wrapper around \pkg{StMoMo} (Villegas, Kaishev and Millossovich 2018):
 #' age-period-cohort (`"apc"`), Cairns-Blake-Dowd (`"cbd"`, logit link),
 #' Renshaw-Haberman (`"rh"`), M6, M7 and M8 (`"m6"`, `"m7"`, `"m8"`, logit
-#' link) and Lee-Carter (`"lc"`). `"rh"` is StMoMo's Renshaw-Haberman model
+#' link), the Plat model (`"plat"`, logit link) and Lee-Carter (`"lc"`). `"rh"` is StMoMo's Renshaw-Haberman model
 #' with `cohortAgeFun = "1"` (the default of StMoMo's `rh()`): `log m(x,t) =
 #' a(x) + b(x) k(t) + g(t - x)`, a cohort effect without age modulation, not
 #' the original 2006 specification of the Renshaw-Haberman model, whose
@@ -143,12 +143,34 @@ simulate_model.mt_spec_fdm <- function(spec, fit, h, n_draws, ...) {
 #' The CBD family is meant for older ages (StMoMo's examples use ages 55 to
 #' 89). For M7 the cohort index is forecast with ARIMA(2,0,0) with a non-zero
 #' mean, as in the StMoMo vignette, since its constraints remove any trend;
-#' the other cohort models use ARIMA(1,1,0) with drift.
+#' the other cohort models use ARIMA(1,1,0) with drift, except the Plat
+#' model.
 #'
-#' @param model `"apc"`, `"cbd"`, `"rh"`, `"m6"`, `"m7"`, `"m8"` or `"lc"`.
+#' **Plat model.** Plat (2009) combines the CBD model with features of the
+#' Lee-Carter model. `"plat"` is the reduced Plat model for older ages as the
+#' StMoMo vignette defines it (Villegas, Kaishev and Millossovich 2018,
+#' Section 4): `logit q(x,t) = a(x) + k1(t) + (xbar - x) k2(t) + g(t - x)`,
+#' built with `StMoMo::StMoMo()` from the vignette's age functions (`1` and
+#' `xbar - x`, `xbar` the mean age of the data) and its constraint function.
+#' The constraints centre both period indexes and remove the level, the
+#' linear and the quadratic trend from the cohort effect (regression of the
+#' cohort effect on the year of birth and its square, as in Haberman and
+#' Renshaw 2011). The period indexes are forecast with a multivariate random
+#' walk with drift and the cohort index with ARIMA(2,0,0) with a non-zero
+#' mean (the vignette's Table 3). The vignette uses the logit link with
+#' initial exposures for all its models; Plat (2009) uses the log link with
+#' Poisson deaths, and for all ages adds a third period term `(xbar - x)+
+#' k3(t)`, which he suggests dropping when only older ages are of interest.
+#' The full model with that term is not offered. In the vignette's 50-year
+#' forecasts for England and Wales men aged 55-89, the rates of this model
+#' increase, which the vignette calls implausible: the central trend is
+#' linked to the estimated cohort effect.
+#'
+#' @param model `"apc"`, `"cbd"`, `"rh"`, `"m6"`, `"m7"`, `"m8"`, `"plat"` or
+#'   `"lc"`.
 #' @param clip Cohorts with fewer observations get zero weight.
 #' @param gc_order ARIMA order for the cohort index. Default: `c(2, 0, 0)`
-#'   for M7, `c(1, 1, 0)` for the other cohort models.
+#'   for M7 and the Plat model, `c(1, 1, 0)` for the other cohort models.
 #' @param xc Age at which the cohort effect of M8 vanishes (`model = "m8"`
 #'   only). Cairns et al. (2009) estimate it; StMoMo's `m8()` needs a fixed
 #'   value, and its example uses the highest age of the data (89 for ages
@@ -162,6 +184,12 @@ simulate_model.mt_spec_fdm <- function(spec, fit, h, n_draws, ...) {
 #' data from England and Wales and the United States. *North American
 #' Actuarial Journal* 13(1): 1-35.
 #'
+#' Haberman S, Renshaw A (2011). A comparative study of parametric mortality
+#' projection models. *Insurance: Mathematics and Economics* 48(1): 35-55.
+#'
+#' Plat R (2009). On stochastic mortality modeling. *Insurance: Mathematics
+#' and Economics* 45(3): 393-404. \doi{10.1016/j.insmatheco.2009.08.006}
+#'
 #' Villegas AM, Kaishev VK, Millossovich P (2018). StMoMo: an R package for
 #' stochastic mortality modeling. *Journal of Statistical Software* 84(3):
 #' 1-38. \doi{10.18637/jss.v084.i03}
@@ -172,9 +200,11 @@ simulate_model.mt_spec_fdm <- function(spec, fit, h, n_draws, ...) {
 #'   old <- mt_regroup(mt_set_grid(x, age = single_ages(55, 89, open = FALSE)),
 #'                     age = single_ages(55, 89, open = FALSE))
 #'   fc7 <- mt_forecast(mt_fit(stmomo("m7"), old), h = 5, n_draws = 50, seed = 1)
+#'   fcp <- mt_forecast(mt_fit(stmomo("plat"), old), h = 5, n_draws = 50, seed = 1)
 #' }
 #' @export
-stmomo <- function(model = c("apc", "cbd", "rh", "m6", "m7", "m8", "lc"), clip = 3, gc_order = NULL, xc = NULL) {
+stmomo <- function(model = c("apc", "cbd", "rh", "m6", "m7", "m8", "plat", "lc"), clip = 3, gc_order = NULL,
+                   xc = NULL) {
   model <- match.arg(model)
   need_pkg("StMoMo", "for stmomo()")
   if (!is.null(xc)) {
@@ -184,7 +214,7 @@ stmomo <- function(model = c("apc", "cbd", "rh", "m6", "m7", "m8", "lc"), clip =
   if (!is.null(gc_order) && (!is.numeric(gc_order) || length(gc_order) != 3 || anyNA(gc_order) || any(gc_order < 0))) {
     mt_abort("`gc_order` must be an ARIMA order c(p, d, q).", class = "argument")
   }
-  gc_order <- gc_order %||% if (model == "m7") c(2, 0, 0) else c(1, 1, 0)
+  gc_order <- gc_order %||% if (model %in% c("m7", "plat")) c(2, 0, 0) else c(1, 1, 0)
   params <- c(list(model = model, clip = clip, gc_order = gc_order), if (model == "m8") list(xc = xc))
   new_mt_spec("stmomo", params, min_periods = 8,
               label = sprintf("StMoMo %s%s", toupper(model), if (is.null(xc)) "" else sprintf(" (xc = %g)", xc)))
@@ -194,10 +224,10 @@ stmomo <- function(model = c("apc", "cbd", "rh", "m6", "m7", "m8", "lc"), clip =
 fit_model.mt_spec_stmomo <- function(spec, D, E, ages, periods, ...) {
   p <- spec$params
   x <- ages$lower
-  if (p$model %in% c("apc", "rh", "m6", "m7", "m8") && any(utils::head(ages$upper - ages$lower, -1) != 1)) {
+  if (p$model %in% c("apc", "rh", "m6", "m7", "m8", "plat") && any(utils::head(ages$upper - ages$lower, -1) != 1)) {
     mt_abort("StMoMo cohort models need single years of age.", class = "model_data")
   }
-  logit <- p$model %in% c("cbd", "m6", "m7", "m8")
+  logit <- p$model %in% c("cbd", "m6", "m7", "m8", "plat")
   mod <- switch(p$model,
                 apc = StMoMo::apc(link = "log"),
                 cbd = StMoMo::cbd(link = "logit"),
@@ -205,6 +235,7 @@ fit_model.mt_spec_stmomo <- function(spec, D, E, ages, periods, ...) {
                 m6 = StMoMo::m6(link = "logit"),
                 m7 = StMoMo::m7(link = "logit"),
                 m8 = StMoMo::m8(link = "logit", xc = p$xc %||% max(x)),
+                plat = stmomo_plat(),
                 lc = StMoMo::lc(link = "log"))
   Dx <- round(D)
   Ex <- if (logit) E + D / 2 else E
@@ -215,6 +246,39 @@ fit_model.mt_spec_stmomo <- function(spec, D, E, ages, periods, ...) {
   if (!isTRUE(fit$conv)) mt_abort("StMoMo fit did not converge.", class = "model_fit")
   fv <- stmomo_fitted(fit)
   list(fit = fit, logit = logit, gc_order = p$gc_order, fitted = if (logit) -log(1 - pmin(fv, 0.999)) else fv)
+}
+
+# The reduced Plat model of the StMoMo vignette. stmomo_plat() and
+# stmomo_plat_constraints() are taken from the code of the vignette of StMoMo
+# 0.4.1 (Villegas, Kaishev and Millossovich 2018, Section 4, functions `f2`
+# and `constPlat`), GPL (>= 2), by Andres M. Villegas, Pietro Millossovich and
+# Vladimir Kaishev. Changes: names and layout only.
+stmomo_plat <- function() {
+  StMoMo::StMoMo(link = "logit", staticAgeFun = TRUE, periodAgeFun = c("1", stmomo_plat_f2), cohortAgeFun = "1",
+                 constFun = stmomo_plat_constraints)
+}
+
+stmomo_plat_f2 <- function(x, ages) mean(ages) - x
+
+# Constraints: the cohort effect without level, linear and quadratic trend
+# (transformation 13 of the vignette with constants from a regression on the
+# cohort and its square), then both period indexes centred (transformation 14)
+stmomo_plat_constraints <- function(ax, bx, kt, b0x, gc, wxt, ages) {
+  n_years <- dim(wxt)[2]
+  x <- ages
+  t <- 1:n_years
+  c <- (1 - utils::tail(ages, 1)):(n_years - ages[1])
+  xbar <- mean(x)
+  phi <- stats::coef(stats::lm(gc ~ 1 + c + I(c^2), na.action = stats::na.omit))
+  gc <- gc - phi[1] - phi[2] * c - phi[3] * c^2
+  kt[2, ] <- kt[2, ] + 2 * phi[3] * t
+  kt[1, ] <- kt[1, ] + phi[2] * t + phi[3] * (t^2 - 2 * xbar * t)
+  ax <- ax + phi[1] - phi[2] * x + phi[3] * x^2
+  ci <- rowMeans(kt, na.rm = TRUE)
+  ax <- ax + ci[1] + ci[2] * (xbar - x)
+  kt[1, ] <- kt[1, ] - ci[1]
+  kt[2, ] <- kt[2, ] - ci[2]
+  list(ax = ax, bx = bx, kt = kt, b0x = b0x, gc = gc)
 }
 
 # Fitted rates; cohorts with zero weight (`clip`) have no estimated effect,

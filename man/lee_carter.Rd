@@ -40,10 +40,10 @@ Smith 2002).}
 pattern as life expectancy at birth rises (Li, Lee and Gerland 2013).}
 
 \item{rotation}{Settings of the rotation, a named vector: life expectancy
-at birth at which the rotation starts (\code{e0_start}) and is complete
-(\code{e0_end}), and the exponent of the weights (\code{power}). The defaults are
-those of Li, Lee and Gerland (2013) and MortCast; elements left out keep
-their defaults.}
+at birth at which the rotation starts (\code{e0_start}, default 80) and is
+complete (\code{e0_end}, default 102), and the exponent of the weights
+(\code{power}, default 0.5). The defaults are those of Li, Lee and Gerland
+(2013, eq. 2) and MortCast; elements left out keep their defaults.}
 }
 \value{
 A model specification.
@@ -112,30 +112,54 @@ overdispersed models such as \code{stanmomo("lc", family = "nb")}
 Partrat 2007).
 
 \code{rotate = TRUE} rotates the age pattern of decline as life expectancy
-rises (Li, Lee and Gerland 2013). In long-lived populations the decline
-of mortality slows down at young ages and speeds up at old ages, which a
-fixed \code{b[x]} does not capture over long horizons. For each path and year
-\code{t}, the life expectancy at birth \code{e0} of the unrotated forecast gives the
-weight \verb{w = (0.5 (1 + sin(pi / 2 (2 u - 1))))^power} with
-\code{u = (e0 - e0_start) / (e0_end - e0_start)}; \code{w} is 0 below \code{e0_start} and
-1 from \code{e0_end}. The age pattern of that year is \verb{B[x, t] = (1 - w) b[x] + w bu[x]}. The ultimate pattern \code{bu} has the mean of \code{b} over ages 15-64 at
-all ages below 65; from age 65 it keeps the shape of \code{b}, scaled so that
-the first age group from 65 equals that mean; it sums to 1 like \code{b}. The
-index is then solved again, path by path and year by year, so that the
-rotated rates have the same life expectancy at birth as the unrotated
-ones: rotation changes the age pattern of the forecast and keeps its life
-expectancy at birth. Decline thus moves from young ages to the ages where
-\code{bu} exceeds \code{b}. Where \code{b} at 65 is already above its mean over ages
-15-64 (as for French women), it moves mostly to ages 15-64. Rates change
-from the jump-off year \code{T}, \verb{log m[x, t] = log m[x, T] + B[x, t] (k*[t] - k[T])}, so the jump-off rates stay as they are. Fitted rates, and paths
-with \code{e0} below \code{e0_start}, are unchanged. In MortCast (Sevcikova et al.
-2016) the path of life expectancy comes from a separate model
-(bayesLife); here it is that of the Lee-Carter draws. Rotation needs ages
-from 0 (life expectancy at birth) with age groups starting at 15 and 65.
-With a closed last age group, a warning notes that life expectancy is
-then truncated at the highest age. Rotated forecasts compute life tables
-for every path and year and are much slower (about 20 times for single
-years of age).
+rises (Li, Lee and Gerland 2013; status: published, with the deviations
+listed below). In long-lived populations the decline of mortality slows
+down at young ages and speeds up at old ages, which a fixed \code{b[x]} does
+not capture over long horizons. For each path and year \code{t}, the life
+expectancy at birth \code{e0} of the unrotated forecast gives the weight \verb{w = (0.5 (1 + sin(pi / 2 (2 u - 1))))^power} with \code{u = (e0 - e0_start) / (e0_end - e0_start)}; \code{w} is 0 below \code{e0_start} and 1 from \code{e0_end} (eq.
+2 of the paper). The age pattern of that year is \verb{B[x, t] = (1 - w) b[x] + w bu[x]} (eq. 3). The defaults are those of the paper: the rotation starts
+at 80 (about the median life expectancy of the 20 populations with the
+highest life expectancy in 2005-2010), is complete at 102 (the value with
+which the ratio of the death rates at age 0 and at ages 15-19 approaches
+its estimated long-run level of 7.7), and the exponent is 0.5. The
+ultimate pattern \code{bu} has the mean of \code{b} over ages 15-64 at all ages
+below 65, as in the paper. From age 65 it keeps the shape of \code{b}, scaled
+so that the first age group from 65 equals that mean, and it sums to 1
+like \code{b}: the paper only notes that lowering \code{b} at young ages raises it at
+older ages because \code{b} sums to 1, and this scaling is that of MortCast
+(Sevcikova et al. 2016). The index is then solved again, path by path and
+year by year, so that the rotated rates have the same life expectancy at
+birth as the unrotated ones (eq. 4): rotation changes the age pattern of
+the forecast and keeps its life expectancy at birth. Decline thus moves
+from young ages to the ages where \code{bu} exceeds \code{b}. Where \code{b} at 65 is
+already above its mean over ages 15-64 (as for French women), it moves
+mostly to ages 15-64. Fitted rates, and paths with \code{e0} below \code{e0_start},
+are unchanged. Rotation needs ages from 0 (life expectancy at birth) with
+age groups starting at 15 and 65. With a closed last age group, a warning
+notes that life expectancy is then truncated at the highest age. Rotated
+forecasts compute life tables for every path and year and are much slower
+(about 20 times for single years of age).
+
+Deviations of the rotation from Li, Lee and Gerland (2013):
+\itemize{
+\item the paper forecasts \code{b} and \code{k} for both sexes combined (Li and Lee
+2005) and takes the weights from the life expectancy of both sexes
+combined; \code{lee_carter()} fits each stratum separately, so the weights
+come from the life expectancy of the stratum (MortCast takes the path
+of life expectancy from a separate model);
+\item the paper illustrates the method with the median path of life
+expectancy; here every draw is rotated with its own path of life
+expectancy;
+\item rates change from the jump-off year \code{T}, \verb{log m[x, t] = log m[x, T] + B[x, t] (k*[t] - k[T])}. Eq. (4) writes \verb{a[x] + B[x, t] K[t]} with \code{a}
+the last observed log rates (as \code{jump_off = "observed"}) or their mean
+over the years; with \code{jump_off = "fitted"} the fitted rates of year \code{T}
+are the starting point (package-specific), which keeps the jump-off
+rates when \code{B} departs from \code{b};
+\item the paper extends the open age group to age 130 with a logistic model
+before fitting (footnote 3); here the age groups of the data are used,
+and life expectancy closes the open interval with \code{L = l / m}
+(\code{\link[=life_table]{life_table()}}).
+}
 }
 \examples{
 x <- mt_example(deaths = "single")
@@ -184,6 +208,10 @@ Li N, Lee R, Gerland P (2013). Extending the Lee-Carter method to model
 the rotation of age patterns of mortality decline for long-term
 projections. \emph{Demography} 50(6): 2037-2051.
 \doi{10.1007/s13524-013-0232-2}
+
+Li N, Lee R (2005). Coherent mortality forecasts for a group of
+populations: an extension of the Lee-Carter method. \emph{Demography} 42(3):
+575-594. \doi{10.1353/dem.2005.0021}
 
 Sevcikova H, Li N, Kantorova V, Gerland P, Raftery AE (2016). Age-specific
 mortality and fertility rates for probabilistic population projections.

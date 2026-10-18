@@ -65,6 +65,13 @@ test_that("rotation weights and the ultimate pattern agree with MortCast", {
   expect_equal(mortensor:::rotation_weights(c(70, 80, 85, 90, 95, 102, 120)),
                c(0, 0, 0.34946417959909837, 0.65486073394528510, 0.87767898956725554, 1, 1), tolerance = 1e-14)
   expect_equal(mortensor:::rotation_weights(90, 75, 100, 1), 0.5 * (1 + sin(pi / 2 * (2 * 15 / 25 - 1))))
+  # eq. (2) of Li, Lee and Gerland (2013) with their defaults (80, 102, p =
+  # 0.5): half way, w = 0.5 and ws = 0.5^0.5; the smooth weight rises faster
+  # than the linear one at the start and slower at the end
+  expect_equal(mortensor:::rotation_weights(91), sqrt(0.5))
+  w_lin <- (c(81, 101) - 80) / 22
+  expect_true(all(diff(mortensor:::rotation_weights(c(80, 81))) > diff(c(0, w_lin[1]))))
+  expect_lt(diff(mortensor:::rotation_weights(c(101, 102))), diff(c(w_lin[2], 1)))
 })
 
 test_that("the ultimate pattern generalises to single years and keeps groups without deaths flat", {

@@ -103,16 +103,15 @@ test_that("2D ungrouping runs and keeps totals", {
   expect_lt(rough(u), rough(ut))
 })
 
-test_that("the weights of the open interval are iterated to convergence", {
+test_that("the exposure of the open interval is split with stationary weights or by the PCLM of the exposures", {
   x <- mt_example(years = 2001:2002)
+  D <- mt_obs(x, "deaths")[stratum == 1 & period_lo == 2001]
+  E <- mt_obs(x, "exposure")[stratum == 1 & period_lo == 2001]
   # grid open at 100+, expanded to omega = 110 inside the PCLM
-  u <- mt_ungroup(x)
+  u <- mt_ungroup(x, open_split = "stationary")
   dg <- attr(u, "ungroup")
   expect_true(all(dg$open_converged))
   expect_true(all(dg$open_iterations >= 1 & dg$open_iterations < 50))
-  # at the fixed point the weights are the stationary weights of the fitted rates
-  D <- mt_obs(x, "deaths")[stratum == 1 & period_lo == 2001]
-  E <- mt_obs(x, "exposure")[stratum == 1 & period_lo == 2001]
   g <- mt_grid(u)
   e <- E$value[match(g$age$lower, E$age_lo)]
   idx <- data.table::data.table(a1 = findInterval(D$age_lo, g$age$lower),
@@ -120,13 +119,34 @@ test_that("the weights of the open interval are iterated to convergence", {
   o <- cbind(D, idx)
   fa <- mortensor:::fine_axis(g$age, 110)
   bas <- mortensor:::pclm_basis((fa$lower + fa$upper) / 2, min(fa$lower), max(fa$upper))
-  ctl <- list(lambda = dg$lambda_age[1], criterion = "bic", lambda_range = c(1e-2, 1e8), preserve_totals = FALSE)
-  r <- mortensor:::ungroup_rate_block(o, list(e), fa, bas$B, list(bas$P), ctl, 110, NULL)
   open <- which(fa$grid == length(g$age))
+  # "stationary": at the fixed point the weights are the stationary weights of the fitted rates
+  ctl <- list(lambda = dg$lambda_age[1], criterion = "bic", kr = 2, deg = 3, pord = 2, lambda_range = c(1e-2, 1e8),
+              preserve_totals = FALSE, open_split = "stationary")
+  r <- mortensor:::ungroup_rate_block(o, list(e), fa, bas$B, list(bas$P), ctl, 110, NULL)
   rate <- exp(as.numeric(bas$B %*% r$fit$beta))[open]
   w <- mortensor:::open_weights(rate)
   dopen <- r$deaths[r$a == length(g$age)]
   expect_equal(dopen, sum(e[length(e)] * w * rate), tolerance = 1e-4)
+  # "pclm": the weights are the PCLM estimates of the exposures in the open
+  # interval (exposures of all grid cells as counts, then 15 years with 0
+  # counts beyond omega, Rizzi et al. 2015)
+  up <- mt_ungroup(x, open_split = "pclm")
+  expect_true(all(is.na(attr(up, "ungroup")$open_iterations)))
+  ctl$open_split <- "pclm"
+  r <- mortensor:::ungroup_rate_block(o, list(e), fa, bas$B, list(bas$P), ctl, 110, NULL)
+  lo <- c(fa$lower, 110:124)
+  hi <- c(fa$upper, 111:125)
+  Ce <- 1 * outer(seq_len(length(e) + 1), c(fa$grid, rep(length(e) + 1, 15)), "==")
+  be <- mortensor:::pclm_basis((lo + hi) / 2, min(lo), max(hi))
+  fe <- mortensor:::pclm_fit(c(e, 0), Ce, hi - lo, be$B, list(be$P), lambda = ctl$lambda)
+  we <- fe$gamma[open] / sum(fe$gamma[open])
+  expect_equal(mortensor:::open_weights_pclm(e, fa, ctl), we)
+  rate <- exp(as.numeric(bas$B %*% r$fit$beta))[open]
+  expect_equal(r$deaths[r$a == length(g$age)], sum(e[length(e)] * we * rate), tolerance = 1e-8)
+  # the exposures of the open interval decline with age
+  expect_true(all(diff(we) < 0))
+  expect_error(mt_ungroup(x, open_split = "none"))
 })
 
 test_that("an open deaths interval at 90+ is extrapolated as documented (French women, HMD)", {
@@ -148,18 +168,21 @@ test_that("an open deaths interval at 90+ is extrapolated as documented (French 
   expect_gt(median(le[old]), 0)
   expect_gt(mean(le[ages >= 104 & ages <= 109]), 0.2)
   expect_lt(median(abs(le[ages >= 30 & ages < 90])), 0.03)
-  # grid open at 100+: the PCLM expands it to omega with stationary weights
+  # grid open at 100+: the PCLM expands it to omega and splits its exposure
+  # with stationary weights (default) or by the PCLM of the exposures
   f100 <- mt_regroup(fr, age = 0:100)
   x100 <- f100
   x100$obs$deaths <- x$obs$deaths
   x100$grid <- NULL
-  u100 <- mt_ungroup(x100, age = single_ages(0, 100))
-  expect_true(attr(u100, "ungroup")$open_converged)
-  e100 <- log(rate(u100) / rate(f100))
-  expect_lt(median(abs(e100[90:99 + 1])), 0.06)
-  # ?mt_ungroup: the rate of 100+ is too high by about 0.15 on the log scale
-  expect_gt(e100[101], 0.05)
-  expect_lt(e100[101], 0.25)
+  for (os in c("stationary", "pclm")) {
+    u100 <- mt_ungroup(x100, age = single_ages(0, 100), open_split = os)
+    if (os == "stationary") expect_true(attr(u100, "ungroup")$open_converged)
+    e100 <- log(rate(u100) / rate(f100))
+    expect_lt(median(abs(e100[90:99 + 1])), 0.06)
+    # ?mt_ungroup: the rate of 100+ is too high by about 0.15 on the log scale
+    expect_gt(e100[101], 0.05)
+    expect_lt(e100[101], 0.25)
+  }
 })
 
 test_that("England & Wales benchmark (HMD) meets the accuracy thresholds", {

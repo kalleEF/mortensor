@@ -35,18 +35,67 @@
 #' `dims = 1` and 0.008 with `dims = 2`.
 #'
 #' **Open age interval.** For counts (exposures, or deaths without
-#' exposures), an open last group is expanded into single years up to
-#' `omega` (see [mt_data()]) and the PCLM spreads its total over them, as
-#' with a last interval of width `omega` minus its lower bound in the
-#' ungroup package. For rates, an open interval of the *grid* (for example
-#' 100+) is expanded into single years up to `omega` as well, and its
-#' exposure is split over these years with stationary-population weights
-#' `l(x) = exp(-cumsum(m(x)))` implied by the fitted rates; starting from
-#' rates that rise by 10% per year of age, the weights and the fit are
-#' iterated until no weight changes by more than 1e-6 (at most 50
-#' iterations; the smoothing parameters are selected again once the weights
-#' have converged). This treatment of the open interval is specific to
-#' mortensor (reference unknown).
+#' exposures), an open last group is expanded into single years up to the
+#' maximum age `omega` (see [mt_data()]) and the PCLM spreads its total over
+#' them, as with a last interval of width `omega` minus its lower bound in
+#' the ungroup package. For rates, an open interval of the *grid* (for
+#' example 100+) is expanded into single years up to `omega` as well, and
+#' its exposure is split over these years (`open_split`):
+#'
+#' * `"pclm"` (default): by the PCLM of the exposures of all grid cells,
+#'   with a group of 0 counts of 15 years beyond `omega`, as Rizzi, Gampe
+#'   and Eilers (2015) ungroup grouped exposures (their maximum age 115 and
+#'   a group 115-130 with 0 counts); the estimates enter the composite link
+#'   of the rates;
+#' * `"stationary"`: with stationary-population weights `l(x) =
+#'   exp(-cumsum(m(x)))` implied by the fitted rates; starting from rates
+#'   that rise by 10% per year of age, the weights and the fit are iterated
+#'   until no weight changes by more than 1e-6 (at most 50 iterations; the
+#'   smoothing parameters are selected again once the weights have
+#'   converged). This treatment is specific to mortensor (reference
+#'   unknown); it was the default up to E3.
+#'
+#' On French women and men (1997-2006, deaths in 5-year groups and 90+,
+#' grid open at 100+), the rate of 100+ was too high by 0.14 (women) and
+#' 0.15 (men) on the log scale with `"stationary"` and by 0.12 and 0.15 with
+#' `"pclm"`; the median absolute log error at 90-99 was 0.020 and 0.022
+#' with `"stationary"`, 0.019 and 0.022 with `"pclm"`. On data simulated
+#' with the exposures of a stationary population above 100 ([mt_example()]),
+#' `"stationary"` was closer (median absolute log error at 90+ 0.006,
+#' against 0.009 with `"pclm"`), because that generator has the stationary
+#' exposures this option assumes.
+#'
+#' **Relation to Rizzi, Gampe and Eilers (2015).** As in the paper, the
+#' observed counts are Poisson with means composed from a latent
+#' distribution `exp(B beta)` (times the exposures for rates), estimated by
+#' penalised likelihood with a second-order difference penalty on the
+#' coefficients weighted by `lambda` (their penalised log-likelihood with
+#' `lambda / 2`, by iteratively reweighted least squares), and the effective
+#' dimension is the trace of the hat matrix. The departures:
+#'
+#' * basis: the paper uses one coefficient per fine cell (`B` the identity)
+#'   and allows a B-spline basis; here `B` is a cubic B-spline basis, as in
+#'   Eilers (2007) and the ungroup package;
+#' * smoothing parameter: the paper minimises AIC over a grid of `log10
+#'   lambda`; the default here is BIC, the default of the ungroup package,
+#'   minimised by golden-section search on `log10 lambda` within
+#'   `lambda_range`. `criterion = "aic"` gives the paper's criterion;
+#' * open last interval of counts: the paper sets a maximum age (115) and
+#'   adds a group with 0 counts beyond it (115-130); here the open group
+#'   ends at `omega` without such a group. On French women in 2006 with
+#'   exposures in 5-year groups and 90+, adding a group with 0 counts of 15
+#'   years beyond `omega = 110` changed the median absolute log error of the
+#'   rates at 90-109 from 0.19 (too low) to 0.66 (too high); with exposures
+#'   in single years to 89 and 90+, from 0.57 to 0.14. The split of a wide
+#'   open group from its total is weakly identified either way;
+#' * exposures: as in the paper, they enter the composite link, and grouped
+#'   exposures are ungrouped by the PCLM first; the open interval of the
+#'   grid as described above (`"pclm"` follows the paper);
+#' * iterations: the paper iterates until the coefficients change by less
+#'   than 1e-6; here the iterations stop when the largest change is below
+#'   1e-6 relative to the coefficients or the penalised deviance changes by
+#'   less than 1e-8 relative, with step halving when it rises;
+#' * in 2D (Rizzi et al. 2019) see Defaults below.
 #'
 #' When the deaths are grouped more coarsely than the exposures at old ages
 #' (for example deaths 90+ and single-year exposures), the rates within the
@@ -60,10 +109,10 @@
 #' scale up to age 101, but the rates were too high by 0.3-0.4 at ages
 #' 104-109, because the latent curve continues the rise of the rates below
 #' 90 while the observed rates rise more slowly at the highest ages. With a grid
-#' open at 100+ (exposures 100+, expanded with the stationary weights), the
-#' rate of 100+ was too high by 0.14 on the log scale (median over
-#' 1997-2006). With the exposures also grouped at 90+, the error at 90-109
-#' was 0.19 (rates too low). With `dims = 2` (1997-2006, ages 30 and over)
+#' open at 100+ (exposures 100+), the rate of 100+ was too high by 0.14 on
+#' the log scale (median over 1997-2006, see above). With the exposures also
+#' grouped in 5-year groups and 90+, the error at 90-109 was 0.19 (rates too
+#' low). With `dims = 2` (1997-2006, ages 30 and over)
 #' and smoothing parameters chosen by BIC, the error at 90-109 was 1.4: BIC
 #' chose very small smoothing parameters (the large counts vary more than
 #' Poisson noise) and the rates inside the wide last group oscillated; with
@@ -126,6 +175,10 @@
 #' @param lambda_range Search range for the smoothing parameters.
 #' @param preserve_totals Rescale the estimates to the observed group totals
 #'   after the fit (default `FALSE`, the published PCLM); see Details.
+#' @param open_split Split of the exposure of an open interval of the grid
+#'   when deaths are ungrouped as rates: `"pclm"` (default, the PCLM of the
+#'   exposures, Rizzi, Gampe and Eilers 2015) or `"stationary"`
+#'   (package-specific stationary-population weights); see Details.
 #' @param tail,tail_width For the deprecated `method = "gam"`: the parametric
 #'   curve that takes over from the GAM above the start of the last age group
 #'   (`"kannisto"`, logistic, or `"gompertz"`, log-linear), fitted to the GAM
@@ -166,10 +219,11 @@ mt_ungroup <- function(data, age = NULL, dims = 1,
                        exposure_method = c("pclm", "monotone"),
                        lambda = NULL,
                        criterion = c("bic", "aic"), kr = 2, deg = 3, pord = 2,
-                       lambda_range = c(1e-2, 1e8), preserve_totals = FALSE, tail = c("kannisto", "gompertz"),
-                       tail_width = 2) {
+                       lambda_range = c(1e-2, 1e8), preserve_totals = FALSE, open_split = c("pclm", "stationary"),
+                       tail = c("kannisto", "gompertz"), tail_width = 2) {
   check_class(data, "mt_data", "data")
   method <- match.arg(method)
+  open_split <- match.arg(open_split)
   tail <- match.arg(tail)
   check_number(tail_width, "tail_width", lower = 0.1)
   exposure_method <- match.arg(exposure_method)
@@ -193,7 +247,7 @@ mt_ungroup <- function(data, age = NULL, dims = 1,
     g$age <- single_year_grid(data)
   }
   ctl <- list(lambda = lambda, criterion = criterion, kr = kr, deg = deg, pord = pord,
-              lambda_range = lambda_range, preserve_totals = preserve_totals, infant = TRUE)
+              lambda_range = lambda_range, preserve_totals = preserve_totals, infant = TRUE, open_split = open_split)
   diag_rows <- list()
   if (!is.null(data$obs$exposure) && needs_ungroup(data$obs$exposure, g)) {
     res <- ungroup_counts_1d(data$obs$exposure, g, data$omega, ctl, exposure_method, "exposure")
@@ -266,12 +320,12 @@ ungroup_counts_1d <- function(obs, g, omega, ctl, method, measure) {
   x <- (fa$lower + fa$upper) / 2
   bas <- pclm_basis(x, min(fa$lower), max(fa$upper), ctl$kr, ctl$deg, ctl$pord)
   width <- fa$upper - fa$lower
-  open_split <- is.infinite(obs$age_hi) & obs$a1 != obs$a2
-  if (any(open_split)) {
+  open_cells <- is.infinite(obs$age_hi) & obs$a1 != obs$a2
+  if (any(open_cells)) {
     mt_warn(sprintf(paste0("The open %s interval from age %s is split into %d grid cells from its total alone; ",
                            "the age pattern inside it is extrapolated and can be badly wrong. Prefer data with ",
                            "a higher open age or a grid whose open interval starts at %s."),
-                    measure, min(obs$age_lo[open_split]), max(obs$a2 - obs$a1 + 1), min(obs$age_lo[open_split])),
+                    measure, min(obs$age_lo[open_cells]), max(obs$a2 - obs$a1 + 1), min(obs$age_lo[open_cells])),
             class = "ungroup_open_counts", call = NULL)
   }
   out <- list()
@@ -401,9 +455,16 @@ ungroup_rate_block <- function(o, e_list, fa, B, pen, ctl, omega, n_open, ps = N
   if (anyNA(e_grid)) mt_abort("Exposures are missing for grid cells needed by the ungrouping.", class = "ungroup")
   open_idx <- which(fa$grid == ng & fa$open)
   w <- matrix(1, nf, length(ps))
+  stationary <- length(open_idx) && identical(ctl$open_split, "stationary")
   if (length(open_idx)) {
-    # starting weights: rates rising by 10% per year of age in the open interval
-    w[open_idx, ] <- open_weights(sum(o$value) / sum(e_grid) * exp(0.1 * seq_along(open_idx)))
+    if (stationary) {
+      # starting weights: rates rising by 10% per year of age in the open interval
+      w[open_idx, ] <- open_weights(sum(o$value) / sum(e_grid) * exp(0.1 * seq_along(open_idx)))
+    } else {
+      # the exposure of the open interval split by the PCLM of the exposures
+      # of the grid cells (Rizzi, Gampe and Eilers 2015)
+      for (j in seq_along(ps)) w[open_idx, j] <- open_weights_pclm(e_grid[, j], fa, ctl)
+    }
   }
   fit_w <- function(w, lambda, beta) {
     off <- as.vector(e_grid[fa$grid, , drop = FALSE] * w)
@@ -415,7 +476,7 @@ ungroup_rate_block <- function(o, e_list, fa, B, pen, ctl, omega, n_open, ps = N
   r <- fit_w(w, ctl$lambda, NULL)
   open_it <- NA_integer_
   open_conv <- NA
-  if (length(open_idx)) {
+  if (stationary) {
     # the exposure of the open interval is split with the stationary weights
     # of the fitted rates: weights and fit are iterated to a fixed point, with
     # the smoothing parameters fixed; they are then selected again with the
@@ -472,6 +533,37 @@ ungroup_rate_block <- function(o, e_list, fa, B, pen, ctl, omega, n_open, ps = N
   }
   list(a = a[keep], p = p[keep], deaths = vals[keep], provenance = prov[keep], fit = fit, rel = rel,
        open_iterations = open_it, open_converged = open_conv)
+}
+
+# Weights of the single years of the open grid interval from the PCLM of
+# the exposures of all grid cells of one period (exposures as counts, offset
+# the widths of the fine cells, the open cell expanded to omega), as Rizzi,
+# Gampe and Eilers (2015) ungroup grouped exposures before they enter the
+# composite link of the rates
+open_weights_pclm <- function(e, fa, ctl) {
+  open_idx <- which(fa$grid == max(fa$grid) & fa$open)
+  cells <- sort(unique(fa$grid))
+  if (!(e[max(cells)] > 0)) return(rep(1 / length(open_idx), length(open_idx)))
+  # single years from omega on, in a group with 0 counts
+  zb <- zero_bin(max(fa$upper))
+  lower <- c(fa$lower, zb$lower)
+  upper <- c(fa$upper, zb$upper)
+  grid <- c(fa$grid, rep(max(cells) + 1L, length(zb$lower)))
+  C <- 1 * outer(c(cells, max(cells) + 1L), grid, "==")
+  width <- upper - lower
+  bas <- pclm_basis((lower + upper) / 2, min(lower), max(upper), ctl$kr, ctl$deg, ctl$pord)
+  fit <- pclm_fit(c(e[cells], 0), C, width, bas$B, list(bas$P), ctl$lambda, ctl$criterion, ctl$lambda_range)
+  est <- (width * fit$gamma)[open_idx]
+  est / sum(est)
+}
+
+# Group with 0 counts beyond the maximum age omega that closes an open last
+# interval of counts, as in Rizzi, Gampe and Eilers (2015): they set the
+# maximum age to 115 and add a group 115-130 with 0 counts. Its single years
+# from omega to omega + width
+zero_bin <- function(omega, width = 15) {
+  lo <- seq(omega, omega + width - 1)
+  list(lower = lo, upper = lo + 1)
 }
 
 rescale_to_groups <- function(est, C, y) {

@@ -70,7 +70,9 @@ mt_summarise <- function(draws, probs = c(0.025, 0.1, 0.5, 0.9, 0.975)) {
 #' @export
 as.data.table.mt_draws <- function(x, keep.rownames = FALSE, ...) mt_summarise(x)
 
-# Quantiles of each row (type 7), vectorised by sorting
+# Quantiles of each row (type 7), vectorised by sorting; written as a + w (b -
+# a), so that tied draws give exactly their value and the quantiles stay
+# ordered
 row_quantiles <- function(M, probs) {
   n <- ncol(M)
   S <- t(apply(M, 1, sort))
@@ -79,7 +81,8 @@ row_quantiles <- function(M, probs) {
   lo <- floor(h)
   hi <- pmin(ceiling(h), n)
   w <- h - lo
-  S[, lo, drop = FALSE] * rep(1 - w, each = nrow(M)) + S[, hi, drop = FALSE] * rep(w, each = nrow(M))
+  S_lo <- S[, lo, drop = FALSE]
+  S_lo + rep(w, each = nrow(M)) * (S[, hi, drop = FALSE] - S_lo)
 }
 
 life_expectancy_draws <- function(x, at = NULL, probs = c(0.025, 0.1, 0.5, 0.9, 0.975), ...) {

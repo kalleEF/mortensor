@@ -28,7 +28,10 @@ smoothing and the jump-off aside (see their own vignettes).
 | Lee-Carter | `lee_carter()` | mortensor | one time index, with an age pattern of change (Lee and Carter 1992); `rotate = TRUE` moves the decline to older ages as life expectancy rises (Li, Lee and Gerland 2013) |
 | Compositional data model | `coda()` | mortensor | the Lee-Carter model of the life-table distribution of deaths (Oeppen 2008; Bergeron-Boucher et al. 2017) |
 | Functional demographic model | `hyndman_ullah()` | demography | rates smoothed over age, several components (Hyndman and Ullah 2007) |
-| Lee-Carter, CBD, APC, Renshaw-Haberman, M6, M7, M8 | `stmomo("lc")`, `"cbd"`, `"apc"`, `"rh"`, `"m6"`, `"m7"`, `"m8"` | StMoMo | generalised age-period-cohort models (Cairns et al. 2009; Villegas et al. 2018) |
+| P-splines | `p_splines()` | mortensor | a smooth surface of the log rates over age and year, extended over the forecast years (Currie, Durban and Eilers 2004) |
+| Constrained P-splines | `cp_splines()` | mortensor | the P-spline forecast, with the rates of ageing and of change of each age kept within their past range (Camarda 2019) |
+| Rates of mortality improvement | `bohk_rau()` | mortensor | a Bayesian trend of the yearly improvement of each age, from smoothed rates (Bohk-Ewald and Rau 2017) |
+| Lee-Carter, CBD, APC, Renshaw-Haberman, M6, M7, M8, Plat | `stmomo("lc")`, `"cbd"`, `"apc"`, `"rh"`, `"m6"`, `"m7"`, `"m8"`, `"plat"` | StMoMo | generalised age-period-cohort models (Cairns et al. 2009; Plat 2009; Villegas et al. 2018) |
 | Bayesian Lee-Carter, RH, APC, CBD, M6 | `stanmomo("lc")`, `"rh"`, ... | StanMoMo | the StMoMo models fitted with Stan, with posterior uncertainty of all parameters (Barigou et al. 2023) |
 | Bayesian APC | `apc_bayes()` | bamp | age, period and cohort effects with random-walk priors (Schmid and Held 2007) |
 | Time series per age | `arima_series()`, `ets_series()` | forecast | a separate ARIMA or exponential smoothing model for each age |
@@ -59,15 +62,19 @@ models <- list("random walk" = rwd(),
                "APC" = stmomo("apc"),
                "M6" = stmomo("m6"),
                "M7" = stmomo("m7"),
+               "Plat" = stmomo("plat"),
                "CoDa" = coda(),
+               "P-splines" = p_splines(),
+               "CP-splines" = cp_splines(),
+               "Bohk-Rau" = bohk_rau(),
                "Bayesian APC" = apc_bayes(mcmc = mcmc_control("fast")),
                "Bayesian RH" = stanmomo("rh", h_max = 20, cores = 4))
 set.seed(1)  # the MCMC samplers of bamp and Stan draw their seeds from R
 fc <- lapply(models, function(m) mt_forecast(mt_fit(m, ew), h = 20, n_draws = 500, seed = 1))
 #> Warning in report_fit_problems(diagnostics, spec$label, classes): Functional
-#> demographic model: warnings in 1 stratum/strata, for example male:
-#> smooth.demogdata() failed (initial parameters not feasible); smoothed without
-#> the monotonicity constraint. (see the diagnostics of the fit).
+#> demographic model: smooth.demogdata() failed (initial parameters not feasible);
+#> smoothed without the monotonicity constraint. (diagnostics of 1 stratum/strata
+#> of the fit).
 ```
 
 The warning comes from fdm: its default smoothing over age, a spline that
@@ -87,9 +94,12 @@ mt_compare_forecasts(fc, periods = c(2021, 2031))
 #>                 CBD              APC               M6               M7
 #> 1: 27.5 (26.6-28.3) 27.4 (26.6-28.1) 27.2 (26.3-28.0) 27.5 (26.6-28.3)
 #> 2: 28.7 (27.6-29.7) 28.4 (27.4-29.5) 28.1 (26.8-29.0) 28.8 (27.7-29.9)
-#>                CoDa     Bayesian APC      Bayesian RH
-#> 1: 27.7 (26.6-28.9) 26.5 (25.4-27.5) 27.5 (26.4-28.3)
-#> 2: 29.4 (27.7-30.8) 26.7 (25.0-28.1) 28.5 (26.9-29.8)
+#>                Plat             CoDa        P-splines       CP-splines
+#> 1: 27.0 (26.1-27.8) 27.9 (26.1-29.0) 28.5 (27.7-29.3) 27.3 (27.1-27.5)
+#> 2: 27.9 (26.6-28.9) 29.7 (27.8-30.9) 30.6 (28.3-32.1) 28.4 (28.2-28.6)
+#>            Bohk-Rau     Bayesian APC      Bayesian RH
+#> 1: 28.1 (27.5-28.2) 26.6 (25.4-27.6) 27.5 (26.5-28.4)
+#> 2: 29.9 (29.1-30.1) 26.7 (25.1-28.2) 28.5 (27.1-29.8)
 ```
 
 
@@ -100,15 +110,24 @@ mt_plot_compare(fc[c("random walk", "Lee-Carter", "fdm", "APC", "Bayesian APC")]
 ![](model-choice-plot-models-1.png)
 
 All models forecast a further rise, at different paces and with
-different uncertainty. By 2031 the medians range from 26.7 to 29.4 years:
+different uncertainty. By 2031 the medians range from 26.7 to 30.6 years:
 
-* **CoDa** and **fdm** give the highest forecasts (29.4 and 29.2 years);
-  fdm has the narrowest interval, CoDa one of the widest.
+* **P-splines**, **Bohk-Rau**, **CoDa** and **fdm** give the highest
+  forecasts (30.6, 29.9, 29.7 and 29.2 years). The P-spline surface
+  continues the trend of each age over the last years and has the widest
+  interval (28.3-32.1). The interval of Bohk-Rau is narrow, and its median
+  lies close to its upper bound (29.1-30.1): the forecast improvements
+  are limited to 3.5% a year (the upper limit of the paper), which cuts
+  off the upper part of the distribution.
 * The period models (**random walk**, **Lee-Carter**, **CBD**) and **M7**
   agree closely, at about 28.7 years.
-* The cohort models **APC** and **M6** are lower (28.4 and 28.1 years);
-  the **Bayesian RH** (StanMoMo: Lee-Carter with a cohort effect, fitted
-  with Stan) lies between them and the period models (28.5 years).
+* The cohort models **APC** and **M6** are lower (28.4 and 28.1 years),
+  and **Plat** is lower still (27.9 years); the **Bayesian RH** (StanMoMo:
+  Lee-Carter with a cohort effect, fitted with Stan) lies between them and
+  the period models (28.5 years).
+* **CP-splines** forecast 28.4 years with the narrowest interval of all
+  (28.2-28.6). Their draws carry the uncertainty of the fit only, without
+  innovations of the trend.
 * The **Bayesian APC** barely moves. Its default priors are first-order
   random walks for period and cohort (`period = "rw1"`), which carry the
   last period effect forward without a trend; only the cohorts entering
@@ -136,9 +155,13 @@ mt_score_table(bt, metrics = c("crps", "cov95"))
 #>  5:          APC 0.0393 0.947   0.261    1.000
 #>  6:           M6 0.0316 0.981   0.184    1.000
 #>  7:           M7 0.0523 0.816   0.374    0.800
-#>  8:         CoDa 0.0457 0.838   0.257    1.000
-#>  9: Bayesian APC 0.0715 0.678   0.568    0.667
-#> 10:  Bayesian RH 0.0461 0.874   0.282    1.000
+#>  8:         Plat 0.0531 0.833   0.351    0.967
+#>  9:         CoDa 0.0497 0.875   0.321    0.767
+#> 10:    P-splines 0.0565 0.628   0.352    0.400
+#> 11:   CP-splines 0.0624 0.359   0.497    0.100
+#> 12:     Bohk-Rau 0.0337 0.682   0.108    0.867
+#> 13: Bayesian APC 0.0736 0.690   0.586    0.667
+#> 14:  Bayesian RH 0.0455 0.901   0.278    1.000
 ```
 
 
@@ -148,13 +171,18 @@ mt_plot_scores(bt, by = "model", target = "life_expectancy")
 
 ![](model-choice-plot-scores-1.png)
 
-* **M6** and **APC** forecast the rates best (CRPS 0.032 and 0.039), M6
-  also life expectancy, and their intervals covered the observed values
-  (95% coverage of the rates 0.98 and 0.95).
-* **CoDa** comes next for the rates (0.046) and forecast life expectancy
-  as well as APC (0.257 against 0.261 years).
-* The **Bayesian RH** follows closely (0.046); its 95% intervals covered
-  0.87 of the observed rates.
+* **M6** forecast the rates best (CRPS 0.032), followed by **Bohk-Rau**
+  (0.034) and **APC** (0.039). The intervals of M6 and APC covered the
+  observed values (95% coverage of the rates 0.98 and 0.95).
+* **Bohk-Rau** forecast life expectancy best by far (CRPS 0.108 years,
+  against 0.184 for M6), but its intervals are too narrow: they covered
+  0.68 of the observed rates and 0.87 of the observed values of life
+  expectancy.
+* The **Bayesian RH** follows APC for the rates (0.0455); its 95%
+  intervals covered 0.90 of the observed rates.
+* **CoDa** forecast the rates (0.050) and life expectancy (0.321 years)
+  less accurately than the cohort models; its intervals covered 0.88 of
+  the rates and 0.77 of the values of life expectancy.
 * The period models and the random walk lie close together; the random
   walk forecast the single rates slightly better than Lee-Carter and CBD.
   The intervals of Lee-Carter and CBD are too narrow for the rates (95%
@@ -162,7 +190,14 @@ mt_plot_scores(bt, by = "model", target = "life_expectancy")
   the deaths to the forecast rates. Those of the random walk, which
   forecasts the observed rates themselves, cover 0.97. **M7**, CBD with a
   cohort effect, forecast the rates more accurately than CBD (0.052
-  against 0.057), but not life expectancy.
+  against 0.057), but not life expectancy. **Plat** forecast the rates
+  about as accurately as M7 (0.053) and life expectancy slightly better
+  than both (0.351 years).
+* **P-splines** forecast the rates about as accurately as Lee-Carter
+  (0.0565 against 0.0571), with intervals that are too narrow (95%
+  coverage 0.63). **CP-splines** were less accurate (0.062), and their
+  intervals covered only 0.36 of the observed rates and 0.10 of the
+  values of life expectancy.
 * **fdm** forecast life expectancy fairly accurately, but its intervals
   are far too narrow (95% coverage 0.46 for the rates and 0.30 for life
   expectancy).
@@ -181,43 +216,62 @@ tests whether the mean score of a model differs from that of a reference
 model by more than the origins vary (Diebold and Mariano 1995). By
 default the variance of the mean difference is the equal-weighted cosine
 estimate, with critical values from a t distribution (Lazarus, Lewis,
-Stock and Watson 2018; Coroneo and Iacone 2020), so that the test keeps
+Stock and Watson 2018), so that the test keeps
 its nominal size with few origins whose test years overlap. Three origins
 are too few: the test would have one degree of freedom. A second backtest
-of the five fastest models from 16 origins (1991-2006), five years ahead,
-tests life expectancy at 55 against M6:
+from 16 origins (1991-2006), five years ahead, tests life expectancy at 55
+against Bohk-Rau, the most accurate model for life expectancy above. To
+save time it leaves out fdm, CBD, M7 and the Bayesian models of bamp and
+Stan:
 
 
 ```r
-fast <- models[c("random walk", "Lee-Carter", "APC", "M6", "CoDa")]
+fast <- models[c("random walk", "Lee-Carter", "APC", "M6", "Plat", "CoDa", "P-splines", "CP-splines", "Bohk-Rau")]
 bt_dm <- mt_compare(fast, ew, origins = 1991:2006, h = 5, n_draws = 200, quantities = "life_expectancy")
-dm <- mt_dm_test(bt_dm, ref = "M6", targets = "life_expectancy")
+dm <- mt_dm_test(bt_dm, ref = "Bohk-Rau", targets = "life_expectancy")
 dm[horizon %in% c("1", "5", "all"), list(model, horizon, df, score, score_ref, mean_diff, p_value)]
-#>           model horizon df      score  score_ref  mean_diff    p_value
-#>  1: random walk       1  2 0.09724537 0.08185772 0.01538766 0.04709528
-#>  2: random walk       5  2 0.33916424 0.18850382 0.15066042 0.02335147
-#>  3: random walk     all  2 0.20274758 0.12847414 0.07427344 0.02945383
-#>  4:  Lee-Carter       1  2 0.09869128 0.08185772 0.01683356 0.12919591
-#>  5:  Lee-Carter       5  2 0.33400346 0.18850382 0.14549963 0.04916992
-#>  6:  Lee-Carter     all  2 0.20342037 0.12847414 0.07494623 0.05835174
-#>  7:         APC       1  2 0.10308853 0.08185772 0.02123081 0.02510482
-#>  8:         APC       5  2 0.22542556 0.18850382 0.03692174 0.14707349
-#>  9:         APC     all  2 0.15659917 0.12847414 0.02812503 0.05495459
-#> 10:        CoDa       1  2 0.09290433 0.08185772 0.01104661 0.04062320
-#> 11:        CoDa       5  2 0.24122606 0.18850382 0.05272224 0.15010093
-#> 12:        CoDa     all  2 0.15784842 0.12847414 0.02937428 0.08623775
+#>           model horizon df      score  score_ref    mean_diff     p_value
+#>  1: random walk       1  2 0.09724537 0.09099150  0.006253872 0.157400614
+#>  2: random walk       5  2 0.33916424 0.11117290  0.227991344 0.010672063
+#>  3: random walk     all  2 0.20274758 0.09241699  0.110330596 0.017752259
+#>  4:  Lee-Carter       1  2 0.09869128 0.09099150  0.007699773 0.029304835
+#>  5:  Lee-Carter       5  2 0.33400346 0.11117290  0.222830559 0.008694245
+#>  6:  Lee-Carter     all  2 0.20342037 0.09241699  0.111003388 0.017919348
+#>  7:         APC       1  2 0.10308853 0.09099150  0.012097025 0.139017394
+#>  8:         APC       5  2 0.22542556 0.11117290  0.114252662 0.006023920
+#>  9:         APC     all  2 0.15659917 0.09241699  0.064182182 0.010681374
+#> 10:          M6       1  2 0.08185772 0.09099150 -0.009133784 0.240459083
+#> 11:          M6       5  2 0.18850382 0.11117290  0.077330925 0.082025317
+#> 12:          M6     all  2 0.12847414 0.09241699  0.036057156 0.057652444
+#> 13:        Plat       1  2 0.08671621 0.09099150 -0.004275289 0.510662864
+#> 14:        Plat       5  2 0.32694266 0.11117290  0.215769759 0.008177062
+#> 15:        Plat     all  2 0.19160430 0.09241699  0.099187312 0.009181521
+#> 16:        CoDa       1  2 0.15954209 0.09099150  0.068550585 0.095605371
+#> 17:        CoDa       5  2 0.25731151 0.11117290  0.146138611 0.016253603
+#> 18:        CoDa     all  2 0.19907843 0.09241699  0.106661448 0.005195717
+#> 19:   P-splines       1  2 0.13070078 0.09099150  0.039709277 0.008357861
+#> 20:   P-splines       5  2 0.39054479 0.11117290  0.279371893 0.050576023
+#> 21:   P-splines     all  2 0.24080913 0.09241699  0.148392140 0.051245330
+#> 22:  CP-splines       1  2 0.10823133 0.09099150  0.017239831 0.041965892
+#> 23:  CP-splines       5  2 0.42735305 0.11117290  0.316180154 0.006180024
+#> 24:  CP-splines     all  2 0.24483804 0.09241699  0.152421054 0.017647085
+#>           model horizon df      score  score_ref    mean_diff     p_value
 ```
 
-A positive `mean_diff` means a higher CRPS than M6, so a less accurate
-forecast. M6 had the lowest mean CRPS at each horizon shown, but with 16
-origins the test has 2 degrees of freedom (`df`) and finds only large
-and consistent differences. On average over the five horizons, the
-difference is significant at the 5% level only against the random walk
-(p = 0.029); against Lee-Carter and APC the p-values are 0.058 and
-0.055, against CoDa 0.086. One year ahead it is significant against the
-random walk, APC and CoDa (p from 0.025 to 0.047), five years ahead
-against the random walk and Lee-Carter (p = 0.023 and 0.049). Forecasts
-from neighbouring origins share test years, which the test allows for.
+A positive `mean_diff` means a higher CRPS than Bohk-Rau, so a less
+accurate forecast. With 16 origins the test has 2 degrees of freedom
+(`df`) and finds only large and consistent differences. Bohk-Rau had the
+lowest mean CRPS five years ahead and on average over the five horizons.
+On average, the difference is significant at the 5% level against the
+random walk, Lee-Carter, APC, Plat, CoDa and CP-splines (p from 0.005 to
+0.018), but not against M6 (p = 0.058) and P-splines (p = 0.051). Five
+years ahead it is significant against the same six models (p from 0.006
+to 0.016), and again not against M6 (p = 0.082) and P-splines
+(p = 0.051). One year ahead, M6 and Plat had a lower mean CRPS
+than Bohk-Rau (p = 0.24 and 0.51), and the difference is significant
+only against Lee-Carter, P-splines and CP-splines (p from 0.008 to
+0.042). Forecasts from neighbouring origins share test years, which the
+test allows for.
 The version of `forecast::dm.test()` (`varestimator = "acf"`, with the
 correction of Harvey, Leybourne and Newbold 1997) is an option; with few
 overlapping origins it rejects too often when the models are equally
@@ -270,21 +324,25 @@ mt_score_table(rbind(bt, bt_ens), metrics = c("crps", "cov95"))
 #>  5:                                           APC 0.0393 0.947   0.261    1.000
 #>  6:                                            M6 0.0316 0.981   0.184    1.000
 #>  7:                                            M7 0.0523 0.816   0.374    0.800
-#>  8:                                          CoDa 0.0457 0.838   0.257    1.000
-#>  9:                                  Bayesian APC 0.0715 0.678   0.568    0.667
-#> 10:                                   Bayesian RH 0.0461 0.874   0.282    1.000
-#> 11: equal: Lee-Carter, fdm, APC, M6, Bayesian APC 0.0448 0.943   0.324    1.000
-#> 12:                     CRPS weights, best 3 of 6 0.0354 0.980   0.238    1.000
+#>  8:                                          Plat 0.0531 0.833   0.351    0.967
+#>  9:                                          CoDa 0.0497 0.875   0.321    0.767
+#> 10:                                     P-splines 0.0565 0.628   0.352    0.400
+#> 11:                                    CP-splines 0.0624 0.359   0.497    0.100
+#> 12:                                      Bohk-Rau 0.0337 0.682   0.108    0.867
+#> 13:                                  Bayesian APC 0.0736 0.690   0.586    0.667
+#> 14:                                   Bayesian RH 0.0455 0.901   0.278    1.000
+#> 15: equal: Lee-Carter, fdm, APC, M6, Bayesian APC 0.0426 0.952   0.298    1.000
+#> 16:                     CRPS weights, best 3 of 6 0.0354 0.980   0.238    1.000
 ```
 
 * The **equal-weight ensemble** is more accurate than the average of its
-  components (CRPS of the rates 0.045 against 0.051), and its intervals
+  components (CRPS of the rates 0.043 against 0.051), and its intervals
   cover. This always holds: the CRPS is a convex function of the forecast
   distribution, so the CRPS of a mixture is never larger than the weighted
   mean of the CRPS of its components. It includes the weak Bayesian APC,
   which pulls it behind APC and M6.
 * The **CRPS-weighted ensemble** comes close to M6, the best single model
-  (CRPS of the rates 0.035 against 0.032), without knowing beforehand
+  for the rates (CRPS 0.035 against 0.032), without knowing beforehand
   which model that would be: its weights were estimated anew at each
   origin from the years before it.
 
@@ -326,14 +384,19 @@ Bergeron-Boucher M-P, Canudas-Romo V, Oeppen J, Vaupel JW (2017).
 Coherent forecasts of mortality with compositional data analysis.
 *Demographic Research* 37(17): 527-566.
 
+Bohk-Ewald C, Rau R (2017). Probabilistic mortality forecasting with
+varying age-specific survival improvements. *Genus* 73(1): 1.
+
 Cairns AJG, Blake D, Dowd K, Coughlan GD, Epstein D, Ong A, Balevich I
 (2009). A quantitative comparison of stochastic mortality models using
 data from England and Wales and the United States. *North American
 Actuarial Journal* 13(1): 1-35.
 
-Coroneo L, Iacone F (2020). Comparing predictive accuracy in small
-samples using fixed-smoothing asymptotics. *Journal of Applied
-Econometrics* 35(4): 391-409.
+Camarda CG (2019). Smooth constrained mortality forecasting.
+*Demographic Research* 41(38): 1091-1130.
+
+Currie ID, Durban M, Eilers PHC (2004). Smoothing and forecasting
+mortality rates. *Statistical Modelling* 4(4): 279-298.
 
 Diebold FX, Mariano RS (1995). Comparing predictive accuracy. *Journal of
 Business & Economic Statistics* 13(3): 253-263.
@@ -364,6 +427,9 @@ projections. *Demography* 50(6): 2037-2051.
 Oeppen J (2008). Coherent forecasting of multiple-decrement life tables:
 a test using Japanese cause of death data. CODAWORK'08, Universitat de
 Girona.
+
+Plat R (2009). On stochastic mortality modeling. *Insurance: Mathematics
+and Economics* 45(3): 393-404.
 
 Schmid VJ, Held L (2007). Bayesian age-period-cohort modeling and
 prediction - BAMP. *Journal of Statistical Software* 21(8): 1-15.

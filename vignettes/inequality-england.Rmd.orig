@@ -131,7 +131,7 @@ each quintile independently (`reconciled()` keeps the draws as they
 are), so the deviations of its draws partly cancel in the totals. The
 gap separates the models clearly: Li-Lee and the coherent fdm forecast
 it worst, and their intervals covered the observed gap in only 4% and
-18% of the cases, because in 2010-2019 the female gap did not return to
+16% of the cases, because in 2010-2019 the female gap did not return to
 its past level. Lee-Carter forecast the gap best, with intervals that
 covered it in every case, the ensemble of Lee-Carter and fdm second. The
 pipeline continues with Lee-Carter, chosen for the quantity of the

@@ -42,7 +42,7 @@ checks$coverage_lee_carter <- list(
 
 checks$coverage_tucker3 <- list(
   suite = "quick",
-  description = "As coverage_lee_carter for tucker3() (log rates, ranks 3/3/2, random walk factors).",
+  description = "As coverage_lee_carter for tucker3() (log rates, default ranks 2/2/2, random walk factors).",
   run = function() coverage_check(tucker3(), 6))
 
 checks$coverage_rwd <- list(
@@ -583,7 +583,9 @@ checks$dm_size <- list(
   description = paste("Size of mt_dm_test() at nominal 5% under the null: loss differences of forecasts h years",
                       "ahead from n consecutive origins simulated as a moving average of order h - 1 with mean",
                       "zero (2000 replicates for each n in 7, 16 and h in 1, 3, 5). Rejection rates of the default",
-                      "fixed-smoothing (EWC) test, and of the HLN-corrected test (varestimator = 'acf', info)."),
+                      "fixed-smoothing (EWC) test, of the Daniell-kernel test of Coroneo and Iacone (2020;",
+                      "varestimator = 'daniell') at h = 1 and over all h (info), and of the HLN-corrected test",
+                      "(varestimator = 'acf', info)."),
   run = function() {
     set.seed(5)
     grid <- expand.grid(n = c(7, 16), h = c(1, 3, 5))
@@ -597,7 +599,9 @@ checks$dm_size <- list(
     }
     ewc <- mapply(size, grid$n, grid$h, MoreArgs = list(ve = "ewc"))
     acf <- mapply(size, grid$n, grid$h, MoreArgs = list(ve = "acf"))
-    data.frame(metric = c("ewc_size_max", "ewc_size_min", "acf_size_max"), value = c(max(ewc), min(ewc), max(acf)))
+    dan <- mapply(size, grid$n, grid$h, MoreArgs = list(ve = "daniell"))
+    data.frame(metric = c("ewc_size_max", "ewc_size_min", "acf_size_max", "daniell_size_h1_max", "daniell_size_max"),
+               value = c(max(ewc), min(ewc), max(acf), max(dan[grid$h == 1]), max(dan)))
   })
 
 checks$stmomo_cbd_ew <- list(
@@ -632,6 +636,107 @@ checks$stmomo_cbd_ew <- list(
                          rel("m8", StMoMo::m8(xc = 89))))
   })
 
+# Scores of a model and of the Lee-Carter model (`lc`) in a backtest with
+# life expectancy: CRPS and 95% coverage of log rates and of life
+# expectancy at the first age, and the CRPS ratios to Lee-Carter
+scores_vs_lc <- function(bt, models) {
+  s <- mt_score(bt)
+  e <- mt_score(bt, target = "life_expectancy")
+  v <- function(tab, m, col) tab[[col]][tab$model == m]
+  out <- list()
+  for (m in c("lc", models)) {
+    out[[m]] <- data.frame(metric = paste0(m, c("_crps", "_cov95", "_e_crps", "_e_cov95")),
+                           value = c(v(s, m, "crps"), v(s, m, "cov95"), v(e, m, "crps"), v(e, m, "cov95")))
+  }
+  for (m in models) {
+    out[[paste0(m, "_ratio")]] <- data.frame(metric = paste0(c("crps_ratio_", "e_crps_ratio_"), m, "_lc"),
+                                             value = c(v(s, m, "crps") / v(s, "lc", "crps"),
+                                                       v(e, m, "crps") / v(e, "lc", "crps")))
+  }
+  do.call(rbind, unname(out))
+}
+
+checks$stmomo_plat_ew <- list(
+  suite = "full",
+  description = paste("Plat model (stmomo(\"plat\"), the reduced model of the StMoMo vignette) on England & Wales",
+                      "men (HMD via StMoMo), ages 55-89, 1961-2011: rolling-origin backtest (origins 1996-2001,",
+                      "h = 10) against lee_carter(); CRPS and 95% coverage of log rates and of life expectancy at",
+                      "55 (to age 90), CRPS ratios to Lee-Carter. Fitted rates on 1961-2011 against the vignette's",
+                      "code run with StMoMo directly (central2initial(), clip = 3)."),
+  run = function() {
+    ew <- ew_single_ages(55, 89)
+    bt <- mt_compare(list(lc = lee_carter(), plat = stmomo("plat")), ew, origins = 1996:2001, h = 10,
+                     n_draws = 200, quantities = "life_expectancy")
+    sd <- StMoMo::central2initial(mortensor:::pkg_data("EWMaleData", "StMoMo"))
+    wxt <- StMoMo::genWeightMat(55:89, sd$years, clip = 3)
+    direct <- suppressWarnings(StMoMo::fit(mortensor:::stmomo_plat(), data = sd, ages.fit = 55:89, wxt = wxt,
+                                           verbose = FALSE))
+    q <- stats::fitted(direct, type = "rates")
+    f <- stats::fitted(mt_fit(stmomo("plat"), ew))[, , 1]
+    ok <- !is.na(q)
+    rbind(scores_vs_lc(bt, "plat"),
+          data.frame(metric = "plat_max_rel_diff_stmomo", value = max(abs(f[ok] / -log(1 - q[ok]) - 1))))
+  })
+
+checks$bohk_rau_ew <- list(
+  suite = "full",
+  description = paste("Bohk-Ewald and Rau model (bohk_rau(), exponential core model with the paper's settings, and",
+                      "the linear core model) on England & Wales men, ages 30-100, 1961-2011, as backtest_ew",
+                      "(origins 1996-2001, h = 10) against lee_carter(); CRPS and 95% coverage of log rates and of",
+                      "life expectancy at 30 (to age 101), CRPS ratios to Lee-Carter, the number of fits whose",
+                      "chains gave a convergence warning (Gelman-Rubin statistic above 1.1) and seconds per",
+                      "origin for the three models."),
+  run = function() {
+    ew <- ew_single_ages(30, 100)
+    o <- 1996:2001
+    n_warn <- 0
+    t0 <- proc.time()[["elapsed"]]
+    bt <- withCallingHandlers(
+      mt_compare(list(lc = lee_carter(), br = bohk_rau(), br_lin = bohk_rau(core = "linear")), ew, origins = o,
+                 h = 10, n_draws = 200, quantities = "life_expectancy"),
+      mt_warning_convergence = function(w) {
+        n_warn <<- n_warn + 1
+        invokeRestart("muffleWarning")
+      })
+    secs <- (proc.time()[["elapsed"]] - t0) / length(o)
+    rbind(scores_vs_lc(bt, c("br", "br_lin")),
+          data.frame(metric = c("convergence_warnings", "seconds_per_origin"), value = c(n_warn, secs)))
+  })
+
+# Projections of mortensor's nordpred_apc() for England & Wales men in 18 age
+# groups (0-4, ..., 80-84, 85+) and 5-year periods 1962-2011, as computed by
+# the nordpred package 1.1 (Moller and Weedon-Fekjaer; GPL-2) with
+# startestage = 5, startuseage = 6 and its defaults: rates of age groups
+# 25-29, 50-54, 70-74 and 85+ in the five periods from 2012-2016. The same
+# values are in tests/testthat/test-nordpred.R.
+nordpred_reference <- function() {
+  matrix(c(0.0005445302386, 0.0004552115784, 0.0004024828974, 0.0003780180962, 0.0003547576954,
+           0.0038321842080, 0.0038589651100, 0.0039776418660, 0.0040447382340, 0.0040569304810,
+           0.0230578400400, 0.0209277757700, 0.0208264255400, 0.0211386178600, 0.0219131426000,
+           0.1401941702000, 0.1211083416000, 0.1090513773000, 0.1037796141000, 0.1007035372000),
+         4, 5, byrow = TRUE)
+}
+
+checks$nordpred_ew <- list(
+  suite = "quick",
+  description = paste("Nordpred model (nordpred_apc(), power 5 and log link) on England & Wales men in 5-year age",
+                      "groups 30-34, ..., 90-94, 95-100, 1961-2011 (annual data summed to 5-year periods inside",
+                      "the fit): rolling-origin backtest (origins 1996-2001, h = 10) against lee_carter() on the",
+                      "same age groups; CRPS and 95% coverage of log rates and of life expectancy at 30 (to age",
+                      "101), CRPS ratios to Lee-Carter. Point projections for 18 age groups 0-85+ against the",
+                      "nordpred package 1.1 (largest relative difference)."),
+  run = function() {
+    ew <- ew_single_ages(30, 100)
+    ew5 <- mt_regroup(ew, age = age_groups(seq(30, 95, 5), open = FALSE, last_upper = 101))
+    bt <- mt_compare(list(lc = lee_carter(), np = nordpred_apc(), np_log = nordpred_apc(link = "log")), ew5,
+                     origins = 1996:2001, h = 10, n_draws = 200, quantities = "life_expectancy")
+    all <- mt_regroup(as_mt_data(mortensor:::pkg_data("EWMaleData", "StMoMo")), age = c(seq(0, 80, 5), 85))
+    f <- mt_fit(nordpred_apc(est_age = 20, use_age = 25), all)$fits[[1]]
+    proj <- mortensor:::nordpred_projection(f, 5)[c("25-29", "50-54", "70-74", "85-100"), ]
+    rbind(scores_vs_lc(bt, c("np", "np_log")),
+          data.frame(metric = "max_rel_diff_nordpred", value = max(abs(proj / nordpred_reference() - 1))))
+  })
+
 # France (HMD via demography::fr.mort) life tables: single ages 0-109 and
 # 110+, or deaths and exposures summed to the age groups starting at `breaks`
 fr_life_tables <- function() {
@@ -648,6 +753,85 @@ fr_life_tables <- function() {
        male_1987_single = list(m = fr$rate$male[, "1987"], age = single_ages(0, 110)),
        female_1950_5y = grouped("female", 1950, seq(0, 100, 5)))
 }
+
+checks$lifetable_thatcher <- list(
+  suite = "quick",
+  description = paste("Kannisto and Gompertz closures of life_table() fitted by maximum likelihood as in Thatcher,",
+                      "Kannisto and Vaupel (1998): from the probabilities of dying at ages 80-98 of the cohorts born",
+                      "in 1871-1880 (their Table 6.1, four decimals), for which the life-table survivors are the",
+                      "numbers reaching each age, the fitted a and b against their Appendix D (Tables 5 and 1);",
+                      "largest relative differences, and those of the former least-squares fit (info)."),
+  run = function() {
+    q <- list(male = c(0.1224, 0.1326, 0.1452, 0.1565, 0.1702, 0.1822, 0.1965, 0.2116, 0.2276, 0.2424, 0.2580,
+                       0.2749, 0.2907, 0.3073, 0.3253, 0.3434, 0.3571, 0.3691, 0.3817),
+              female = c(0.0987, 0.1074, 0.1180, 0.1291, 0.1409, 0.1520, 0.1653, 0.1787, 0.1926, 0.2070, 0.2225,
+                         0.2354, 0.2524, 0.2687, 0.2867, 0.3050, 0.3228, 0.3358, 0.3504))
+    pub <- list(kannisto = list(male = c(3.39306e-05, 1.04287e-01), female = c(2.31232e-05, 1.05869e-01)),
+                gompertz = list(male = c(2.17126e-04, 7.97629e-02), female = c(1.22095e-04, 8.41400e-02)))
+    out <- list()
+    for (law in names(pub)) {
+      da <- db <- la <- lb <- 0
+      for (sx in names(q)) {
+        m <- c(q[[sx]] / (1 - q[[sx]] / 2), 0.6)
+        tl <- attr(life_table(m, single_ages(80, 99), open = law, k = 19), "tail")
+        da <- max(da, abs(tl$a / pub[[law]][[sx]][1] - 1))
+        db <- max(db, abs(tl$b / pub[[law]][[sx]][2] - 1))
+        # the former fit: least squares on the log (logit) rates at mid-year
+        y <- if (law == "kannisto") stats::qlogis(m[1:19]) else log(m[1:19])
+        cf <- stats::coef(stats::lm(y ~ I(80:98 + 0.5)))
+        la <- max(la, abs(exp(cf[[1]]) / pub[[law]][[sx]][1] - 1))
+        lb <- max(lb, abs(cf[[2]] / pub[[law]][[sx]][2] - 1))
+      }
+      out[[law]] <- data.frame(metric = paste0(law, c("_max_rel_diff_a", "_max_rel_diff_b", "_ls_rel_diff_a",
+                                                      "_ls_rel_diff_b")), value = c(da, db, la, lb))
+    }
+    do.call(rbind, out)
+  })
+
+checks$reconcile_nonneg <- list(
+  suite = "quick",
+  description = paste("Non-negative reconciliation (Wickramasuriya, Turlach and Hyndman 2020): on 400 random",
+                      "base forecasts of a hierarchy of 8 bottom series (total, 3 groups) with aggregates too low,",
+                      "diagonal or full weights and 0, 1 or 2 fixed nodes, the largest difference (relative to",
+                      "the largest base forecast) between the block principal pivoting solution and",
+                      "quadprog::solve.QP() of their Eq. 3 (fixed nodes as equality constraints), the largest",
+                      "relative change of a fixed node, and the mean number of exchanges (info)."),
+  run = function() {
+    if (!requireNamespace("quadprog", quietly = TRUE)) return(data.frame(metric = "skipped", value = 1))
+    groups <- list(1:3, 4:5, 6:8)
+    sagg <- rbind(rep(1, 8), t(vapply(groups, function(g) replace(numeric(8), g, 1), numeric(8))))
+    S <- rbind(sagg, diag(8))
+    Ut <- cbind(diag(4), -sagg)
+    b <- 5:12
+    set.seed(11)
+    diff_qp <- diff_fixed <- 0
+    its <- integer()
+    for (i in 1:400) {
+      y <- as.vector(S %*% (stats::rgamma(8, 2) * 10)) * exp(stats::rnorm(12, 0, 0.6))
+      y[1:4] <- y[1:4] * stats::runif(4, 0.2, 1)
+      full <- i %% 2 == 0
+      Lam <- if (full) crossprod(matrix(stats::rnorm(144), 12)) / 12 + diag(stats::runif(12, 0.5, 2)) else
+        diag(stats::runif(12, 0.5, 3))
+      keep <- list(integer(), 1L, c(2L, 9L))[[i %% 3 + 1]]
+      W <- mortensor:::keep_weights(if (full) Lam else diag(Lam), keep)
+      x0 <- mortensor:::project_rows(matrix(y, 1), W, Ut)
+      if (all(x0[, b] >= 0)) next
+      nn <- mortensor:::nnls_reconcile(matrix(y, 1), W, Ut, b, x0)
+      its <- c(its, nn$iterations)
+      li <- solve(Lam)
+      A <- diag(8)
+      b0 <- numeric(8)
+      if (length(keep)) {
+        A <- cbind(t(S[keep, , drop = FALSE]), A)
+        b0 <- c(y[keep], b0)
+      }
+      ref <- quadprog::solve.QP(t(S) %*% li %*% S, as.vector(t(S) %*% li %*% y), A, b0, meq = length(keep))$solution
+      diff_qp <- max(diff_qp, max(abs(nn$X[1, b] - pmax(ref, 0))) / max(abs(y)))
+      if (length(keep)) diff_fixed <- max(diff_fixed, max(abs((S %*% nn$X[1, b])[keep] / y[keep] - 1)))
+    }
+    data.frame(metric = c("max_rel_diff_quadprog", "max_rel_change_fixed", "cases", "mean_iterations"),
+               value = c(diff_qp, diff_fixed, length(its), mean(its)))
+  })
 
 checks$lifespan_reference <- list(
   suite = "quick",
@@ -843,6 +1027,58 @@ checks$scoreopt_regions <- list(
     h <- mt_hierarchy(sex = "both", region = "all", quintile = "all")
     xa <- mt_aggregate_strata(x, h)
     scoreopt_backtest(xa, h, c(2009, 2011, 2013), reconciled(lee_carter(), h, method = "energy_score"))
+  })
+
+# Rolling-origin backtests (h = 10, 200 draws) of the P-spline models: CRPS
+# and 95% coverage of the log rates and of life expectancy at the first age
+# of the grid, and seconds per model (fits and forecasts of all origins)
+pspline_backtest <- function(data, origins, models) {
+  rows <- lapply(names(models), function(nm) {
+    set.seed(1)
+    t0 <- proc.time()[["elapsed"]]
+    b <- suppressWarnings(mt_backtest(models[[nm]], data, origins = origins, h = 10, n_draws = 200,
+                                      quantities = "life_expectancy"))
+    secs <- proc.time()[["elapsed"]] - t0
+    r <- b[b$target == "rate", ]
+    e <- b[b$target == "life_expectancy", ]
+    data.frame(metric = paste0(nm, c("_crps", "_cov95", "_e0_crps", "_e0_cov95", "_seconds")),
+               value = c(mean(r$crps), mean(r$cov95), mean(e$crps), mean(e$cov95), secs))
+  })
+  out <- do.call(rbind, rows)
+  v <- function(m) out$value[out$metric == m]
+  ratios <- lapply(setdiff(names(models), "lc"), function(nm) {
+    data.frame(metric = paste0("crps_ratio_", nm, "_lc", c("", "_e0")),
+               value = c(v(paste0(nm, "_crps")) / v("lc_crps"), v(paste0(nm, "_e0_crps")) / v("lc_e0_crps")))
+  })
+  rbind(out, do.call(rbind, ratios))
+}
+
+checks$psplines_ew <- list(
+  suite = "quick",
+  description = paste("p_splines() (Currie, Durban and Eilers 2004) on England & Wales men (HMD via StMoMo), ages",
+                      "30-100, 1961-2011: rolling-origin backtest (origins 1996-2001, h = 10) against lee_carter();",
+                      "CRPS and 95% coverage of log rates and of life expectancy at 30 (up to age 101), CRPS",
+                      "ratios to Lee-Carter, seconds for the backtest."),
+  run = function() pspline_backtest(ew_single_ages(30, 100), 1996:2001, list(lc = lee_carter(), ps = p_splines())))
+
+checks$cp_splines_ew <- list(
+  suite = "full",
+  description = paste("As psplines_ew for cp_splines() (Camarda 2019; 100 bootstrap samples) against lee_carter()."),
+  run = function() pspline_backtest(ew_single_ages(30, 100), 1996:2001, list(lc = lee_carter(), cps = cp_splines())))
+
+checks$psplines_france <- list(
+  suite = "full",
+  description = paste("French women (HMD via demography::fr.mort), ages 0-99 and 100+, 1950-2006: rolling-origin",
+                      "backtest (origins 1991-1996, h = 10) of p_splines(), p_splines(overdispersion = TRUE) and",
+                      "cp_splines() (infant coefficient, 100 bootstrap samples) against lee_carter(); CRPS and 95%",
+                      "coverage of log rates and of life expectancy at birth, CRPS ratios to Lee-Carter, seconds",
+                      "per model."),
+  run = function() {
+    fr <- suppressWarnings(as_mt_data(mortensor:::pkg_data("fr.mort", "demography"), series = "female",
+                                      years = 1950:2006))
+    fr <- mt_regroup(fr, age = 0:100)
+    pspline_backtest(fr, 1991:1996, list(lc = lee_carter(), ps = p_splines(),
+                                         ps_od = p_splines(overdispersion = TRUE), cps = cp_splines()))
   })
 
 checks$scoreopt_ons <- list(

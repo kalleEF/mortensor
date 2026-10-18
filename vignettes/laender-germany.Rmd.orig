@@ -143,11 +143,13 @@ coherent fdm hold the gaps near their recent level, with women in the
 East slightly behind again. The backtest decides between these
 assumptions:
 
-* For the Laender, the coherent fdm and the ensemble are the most accurate
-  (CRPS of the rates 0.082, against 0.090 for Li-Lee and 0.092 for
-  Lee-Carter); the ensemble's intervals cover the rates best (95%
-  coverage 0.85). The intervals of life expectancy are too narrow for
-  every model (95% coverage 0.67 to 0.78).
+* For the Laender, the ensemble and the coherent fdm are the most
+  accurate (CRPS of the rates 0.0821 and 0.0825, against 0.090 for Li-Lee
+  and 0.092 for Lee-Carter); the coherent fdm forecasts their life
+  expectancy best (CRPS 0.303 years, ensemble 0.316). The ensemble's
+  intervals cover the rates best (95% coverage 0.855). The intervals of
+  life expectancy are too narrow for every model (95% coverage 0.62 to
+  0.78).
 * For the totals (East, West and Germany), the ensemble forecasts the
   rates most accurately, but all intervals are too narrow there (95%
   coverage of the rates of Germany 0.31 to 0.59). Lee-Carter forecasts
@@ -155,13 +157,14 @@ assumptions:
   in the totals: its intervals of life expectancy for Germany covered
   none of the 15 observed values.
 * The East-West gap is forecast best by Lee-Carter and the ensemble (CRPS
-  0.075 and 0.080), whose intervals covered every observed gap; those of
-  Li-Lee and the coherent fdm covered it in only 33% and 37% of the
+  0.075 and 0.077), whose intervals covered every observed gap; those of
+  Li-Lee and the coherent fdm covered it in only 33% and 40% of the
   cases.
 
-The ensemble of Lee-Carter and the coherent fdm is the most accurate for
-the Laender and second to Lee-Carter for the gap. No single model does as
-well on both, so the pipeline continues with the ensemble.
+The ensemble of Lee-Carter and the coherent fdm forecasts the rates of the
+Laender as accurately as the coherent fdm alone, and the gap almost as
+accurately as Lee-Carter. No single model does as well on both, so the
+pipeline continues with the ensemble.
 
 ### Jump-off
 
@@ -177,13 +180,13 @@ bt_steps <- rbind(bt[model == "Lee-Carter + coherent fdm"], bt_anchor)
 mt_score_table(bt_steps[sex != "both"], metrics = c("crps", "cov95"))
 ```
 
-Anchoring made the forecasts of the rates worse (CRPS 0.085 against
+Anchoring made the forecasts of the rates worse (CRPS 0.084 against
 0.077): the observed rates of a single year carry their random variation
 into every forecast year, and those of small Laender are noisy. It made
-the forecasts of life expectancy slightly more accurate (0.299 against
-0.302) and those of the East-West gap more accurate (0.097 against
-0.105). The question concerns life expectancy and the gap, so the
-pipeline uses it.
+the forecasts of life expectancy slightly more accurate (0.312 against
+0.317) and left those of the East-West gap nearly unchanged (0.102
+against 0.103). The question concerns life expectancy and the gap, so the
+pipeline uses it; the gain is small.
 
 ## Forecasts to 2035
 
@@ -218,9 +221,9 @@ gap[level == "East" & period %in% c(2025, 2035),
 ```
 
 In 2035, women in the East are forecast to live about as long as those
-in the West (0.03 years longer, 95% interval -0.34 to 1.59), men 1.0
+in the West (0.05 years less, 95% interval -0.34 to 1.59), men 1.0
 years less (-1.66 to 0.29). The forecast continues the slow narrowing of
-the male gap (1.15 years in 2025), but the gap most likely does not
+the male gap (1.14 years in 2025), but the gap most likely does not
 close by 2035.
 
 Which ages make up the gap of men in 2019 and in 2035 ("Decomposing
@@ -242,8 +245,8 @@ the contributions are small and uncertain.
 | Suppressed cells | raking to Land and national totals | all totals matched | `mt_fill_suppressed()` | "Your own data" |
 | Hierarchy | Laender, East and West, Germany; sexes | | `mt_hierarchy()`, `mt_aggregate_strata()` | "Coherent forecasts" |
 | Coherence | bottom-up sums of the Laender | | `reconciled(method = "bottom_up")` | "Coherent forecasts" |
-| Model | ensemble of Lee-Carter and coherent fdm | most accurate for the Laender, second for the gap | `ensemble()`, `coherent_fdm()`, `mt_compare(contrast = )` | "Choosing and combining models" |
-| Jump-off | observed rates of the last year (Lee and Miller 2001) | better life expectancy and gap, worse rates | `anchored()` | "Where a forecast starts" |
+| Model | ensemble of Lee-Carter and coherent fdm | most accurate for the rates of the Laender, second for the gap | `ensemble()`, `coherent_fdm()`, `mt_compare(contrast = )` | "Choosing and combining models" |
+| Jump-off | observed rates of the last year (Lee and Miller 2001) | slightly better life expectancy, gap nearly unchanged, worse rates | `anchored()` | "Where a forecast starts" |
 | Gap | East - West, path by path | | `mt_contrast()`, `mt_decompose()` | "Decomposing differences" |
 
 ## References

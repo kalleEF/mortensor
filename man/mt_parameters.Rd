@@ -27,18 +27,36 @@ with \code{rotate = TRUE} also the ultimate pattern \code{b_ultimate};
 \code{K}, its drift and standard deviation), and per stratum the deviations
 \code{a}, \code{b}, \code{k} and their AR(1) coefficient \code{phi} and standard deviation;
 \item \code{\link[=coda]{coda()}}: the centre \code{a} (geometric mean distribution of life-table
-deaths), the loadings \code{b}, the index \code{k} with its drift and standard
-deviation, the share of variation explained by the first component and
-the parameters of the open age interval; the coherent model gives per
-group of \code{common_by} the common \code{a}, \code{B}, \code{K} and per stratum \code{a}, \code{b},
-\code{k} and their AR(1) parameters. \code{\link[=coda_causes]{coda_causes()}}: per group, as
-\code{\link[=coda]{coda()}}, with parts by age and cause;
+deaths), the loadings \code{b}, the index \code{k} with the order (\code{order_k}),
+coefficients (\code{arima_k}) and innovation standard deviation (\code{sd_k}) of
+its ARIMA model, the share of variation explained by the component, the
+parameters of the open age interval (\code{a_open}, \code{b_open}) or of the
+Kannisto model of each year (\code{kannisto_a}, \code{kannisto_b}); the coherent
+model gives per group of \code{common_by} the common \code{a}, \code{B}, \code{K} (with
+\code{order_K}, \code{arima_K}, \code{sd_K}) and per stratum \code{a}, \code{b}, \code{k} and the
+ARIMA model of \code{k}. \code{\link[=coda_causes]{coda_causes()}}: per group, as \code{\link[=coda]{coda()}}, with parts
+by age and cause (\code{b1}, \code{k1}, \code{b2}, \code{k2}, ... with several components);
 \item \code{\link[=rwd]{rwd()}}: drift and innovation standard deviation per age (and, with
 \code{observation_noise = TRUE}, the variances of level and noise);
 \item \code{\link[=apc_bayes]{apc_bayes()}}: posterior medians and 90\% intervals of the age, period
 and cohort effects (logit scale, bamp's identification), and the
 Gelman-Rubin statistics (\code{rhat}, values below 1.1 indicate convergence)
-of the identified quantities.
+of the identified quantities;
+\item \code{\link[=p_splines]{p_splines()}}, \code{\link[=cp_splines]{cp_splines()}}: the smoothing parameters over age
+(\code{lambda_age}) and years (\code{lambda_year}), the effective dimension
+(\code{ed}), the criterion (\code{bic} or \code{aic}) and the dispersion (deviance
+divided by the number of cells minus the effective dimension); for
+\code{\link[=cp_splines]{cp_splines()}} also the bounds of the rates of ageing and of change per
+age (\code{ageing_lower}, \code{ageing_upper}, \code{change_lower}, \code{change_upper}).
+\item \code{\link[=bohk_rau]{bohk_rau()}}: posterior medians and 90\% intervals of the curve
+parameters \code{b1} and \code{b2} by age and of the variance and hyperparameters,
+the least-squares values \code{theta1}, \code{theta2} (exponential core model) and
+the Gelman-Rubin statistics (\code{rhat});
+\item \code{\link[=nordpred_apc]{nordpred_apc()}}: estimates and 90\% Wald intervals of the age, period
+and cohort effects (cohorts by central year of birth) and of the drift,
+the projected drift, the number of periods fitted, the choice of the
+recent trend and the p-values of the goodness of fit and of the test for
+the recent trend.
 }
 
 Fits of wrapped packages (StMoMo, demography) keep the original fitted

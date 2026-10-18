@@ -80,6 +80,34 @@ test_that("the EWC test keeps its size with few overlapping origins", {
   expect_lt(size, 0.10)
 })
 
+test_that("the Daniell-kernel test of Coroneo and Iacone (2020) matches a computation with the FFT", {
+  # their Eqs. 8-9: 2 pi times the mean periodogram at the first m Fourier
+  # frequencies, m = floor(T^(1/3)), and the t distribution with 2 m df
+  by_fft <- function(d) {
+    n <- length(d)
+    m <- max(1, floor(n^(1 / 3) + 1e-9))
+    pg <- Mod(stats::fft(d))^2 / n
+    stat <- sqrt(n) * mean(d) / sqrt(mean(pg[1 + seq_len(m)]))
+    list(m = m, statistic = stat, p_value = 2 * stats::pt(-abs(stat), df = 2 * m))
+  }
+  bt <- fake_backtest()
+  r <- mt_dm_test(bt, varestimator = "daniell")
+  expect_true(all(r$df == 4))  # 20 origins: m = floor(20^(1/3)) = 2
+  for (h in c(1:3, NA)) {
+    e1 <- origin_losses(bt, "b", "crps", if (is.na(h)) NULL else h)
+    e2 <- origin_losses(bt, "a", "crps", if (is.na(h)) NULL else h)
+    ref <- by_fft(e1 - e2)
+    row <- r[horizon == if (is.na(h)) "all" else h]
+    expect_equal(row$statistic, ref$statistic, tolerance = 1e-10)
+    expect_equal(row$p_value, ref$p_value, tolerance = 1e-10)
+    expect_true(is.na(row$lag))
+  }
+  expect_identical(vapply(c(3, 7, 8, 26, 27, 64), function(n) mortensor:::dm_daniell(stats::rnorm(n))$df, 0),
+                   c(2, 2, 4, 4, 6, 8))
+  # with two losses the only frequency is pi, with one degree of freedom
+  expect_equal(mortensor:::dm_daniell(c(0.1, 0.3))$df, 1)
+})
+
 test_that("mt_dm_test(varestimator = \"acf\") equals forecast::dm.test() on the losses per origin", {
   skip_if_not_installed("forecast")
   bt <- fake_backtest()

@@ -1,101 +1,119 @@
-# Compositional data (CoDa) models of life-table deaths.
-# coda() adapts model.Oeppen(), predict.Oeppen() and get_dx_values(), and
-# coda(coherent = TRUE) adapts model.OeppenC() and predict.OeppenC(), of
-# MortalityForecast 0.8.1 (https://github.com/mpascariu/MortalityForecast,
-# files R/model_Oeppen.R and R/model_OeppenC.R), GPL-3, by Marius D. Pascariu
-# and Marie-Pier Bergeron-Boucher. Zero rates are replaced as by the "min"
-# method of replace.zeros() (R/utils.R of the same package). Changes: life-table
-# deaths come from the death rates through life_table() conventions
-# (lt_columns()); the clr transform is computed directly (no compositions
-# package); the benchmark of the coherent model is the closed geometric mean of
-# the bottom strata of each group (the reference takes a benchmark population
-# from the user); the forecast of year T + j uses the index j steps ahead (the
-# reference uses j + 1 steps and corrects the first step by its jump-off, which
-# cancels for the random walk with drift and the observed jump-off); draws are
-# simulated paths of the indexes, with drift uncertainty; the log rate of an
-# open age interval is regressed on the indexes (the reference forecasts the
-# deaths only). coda_causes() extends the model to the multiple-decrement form
-# described by Oeppen (2008).
+# Compositional data (CoDa) models of life-table deaths: coda() and
+# coda_causes(). Written from Bergeron-Boucher, Canudas-Romo, Oeppen and
+# Vaupel (2017) and Oeppen (2008); the numerical core is in
+# model-coda-core.R. Earlier versions adapted MortalityForecast 0.8.1 (GPL-3,
+# Pascariu and Bergeron-Boucher); its random walk with drift for the index
+# and AR(1) deviations remain available through `order` and `order_dev`.
 
 #' Compositional data (CoDa) model of life-table deaths
 #'
-#' `coda()` is the Lee-Carter model in compositional form (Oeppen 2008), as
-#' formulated by Bergeron-Boucher, Canudas-Romo, Oeppen and Vaupel (2017). It
-#' models the life-table distribution of deaths by age (which sums to 1). With
+#' `coda()` is the Lee-Carter model in compositional form (Oeppen 2008) as
+#' published by Bergeron-Boucher, Canudas-Romo, Oeppen and Vaupel (2017). It
+#' models the life-table distribution of deaths by age, which sums to 1. With
 #' `coherent = TRUE` or `common_by`, it is their coherent model for several
-#' populations. The code follows the reference implementation, `model.Oeppen()`
-#' and `model.OeppenC()` of the R package MortalityForecast 0.8.1 (Pascariu
-#' and Bergeron-Boucher), and reproduces its fitted values and point forecasts.
+#' populations (CoDa-coherent). Status: published, with the deviations listed
+#' below. Page and equation numbers refer to Bergeron-Boucher et al. (2017).
 #'
-#' The model of one stratum has six steps:
+#' **Model (Section 2.3, Appendix A).** For one stratum:
 #'
 #' 1. the death rates of each year give life-table deaths `d[x, t]` with
-#'    radix 1 at the first age ([life_table()] conventions); for a closed age
-#'    range, the survivors at its upper bound are an extra part, so that the
-#'    parts sum to 1;
+#'    radix 1 at the first age ([life_table()] conventions);
 #' 2. `a[x]` is the geometric mean of `d[x, t]` over the years, closed to 1;
 #' 3. the deaths are centred by perturbation (`d[x, t] / a[x]`, closed) and
-#'    transformed by the centred log-ratio (clr);
+#'    transformed by the centred log-ratio (clr), eq. (5);
 #' 4. the first component of a singular value decomposition gives
-#'    `clr(d[x, t] / a[x]) = b[x] k[t]` (`b` sums to zero);
-#' 5. `k[t]` follows a random walk with drift (ARIMA(0,1,0) with drift, the
-#'    default of the reference implementation);
+#'    `clr(d[x, t] / a[x]) = b[x] k[t]`, eq. (6); `b` and `k` sum to zero, and
+#'    their signs make `k` increase over the fitting period (p. 533);
+#' 5. `k[t]` follows an ARIMA(0,1,1) model with drift, fitted by maximum
+#'    likelihood (`order`, `drift`; p. 536 and Appendix A, p. 555, where this
+#'    order had the best BIC for most of 15 countries);
 #' 6. forecasts are transformed back (inverse clr, perturbation by `a`,
-#'    closure) to life-table deaths and then to death rates.
+#'    closure, eq. 7) to life-table deaths and then to death rates.
 #'
-#' With `jump_off = "observed"` (the default, as `jumpchoice = "actual"` of
-#' the reference implementation), forecasts are the observed deaths of the
-#' last year `T` perturbed by the change of the model:
-#' `d[x, T + j]` is proportional to `d_obs[x, T] exp(b[x] (k[T + j] - k[T]))`.
-#' With `"fitted"`, forecasts start from the fitted deaths of the last year.
-#' The forecast of year `T + j` uses the index `j` steps ahead; the reference
-#' implementation uses `j + 1` steps, which makes no difference for the
-#' observed jump-off with a random walk with drift.
+#' **Jump-off (Appendix G, p. 566).** With `jump_off = "observed"` (the
+#' default), forecasts are the life-table deaths of the last year `T`
+#' perturbed by the change of the model (eq. 17): `d[x, T + j]` is
+#' proportional to `d[x, T] exp(b[x] (k[T + j] - k[T]))`. With `"fitted"`,
+#' forecasts start from the fitted deaths of year `T`. The point forecast of
+#' the ARIMA(0,1,1) index with drift is shifted so that its first step equals
+#' the drift (eq. 20), which removes the break that the moving-average term
+#' causes in the first forecast year; the package applies the same
+#' correction to any ARIMA(0,1,q) index with drift.
 #'
-#' **Coherent model.** With `coherent = TRUE` or `common_by` (for example
-#' `"sex"`), the strata of each group (all strata, or each level of
-#' `common_by`) share a common component (Bergeron-Boucher et al. 2017):
-#' `clr(d[x, t, i] / a[x, i]) = B[x] K[t] + b[x, i] k[t, i]`. The common
-#' component `B K` is the first component of the CoDa model of the average
-#' distribution of the group, the closed geometric mean of the life-table
-#' deaths of its strata (the centre of the compositions). The deviations of
-#' each stratum are the first component of the remaining variation. `K`
-#' follows a random walk with drift, and `k[t, i]` an AR(1) process with mean
-#' (estimated by maximum likelihood), as in the reference implementation
-#' (`model.OeppenC()`, defaults `order.B = c(0, 1, 0)` with drift and
-#' `order.D = c(1, 0, 0)` without drift), so the deviations stay bounded. If
-#' the data carry a hierarchy (see [mt_aggregate_strata()]), the average uses
-#' the bottom strata only, as [li_lee()] does.
+#' **Coherent model (Section 2.4, Appendix C).** The common component
+#' `B[x] K[t]` is the model above fitted to the average mortality of a group:
+#' the arithmetic mean of the death rates of its strata (equal weights, p.
+#' 557), turned into life-table deaths. Each stratum `i` has its own centre
+#' `a[x, i]` and deviation `clr(d[x, t, i] / a[x, i] / C[exp(B K)]) = b[x, i]
+#' k[t, i]` (eq. 8a), the first component of the SVD after removing the
+#' common component. `K` follows the model of `order` and `drift` (with eq.
+#' 20), each `k[t, i]` an ARIMA(1,1,0) model without drift (`order_dev`,
+#' `drift_dev`; p. 537), whose point forecast levels off, so that the point
+#' forecasts of the strata do not diverge; their intervals still widen with
+#' the horizon. `order_dev = c(1, 0, 0)` gives an AR(1) process with a mean,
+#' which Li and Lee (2005) suggest for their deviations (as cited on p. 531)
+#' and whose deviations stay bounded in distribution. Groups are all strata,
+#' or each level of `common_by`; if the data carry a hierarchy (see
+#' [mt_aggregate_strata()]), the average uses the bottom strata only, as
+#' [li_lee()] does.
 #'
-#' **Open age interval.** Life-table deaths of an open interval are the
-#' survivors at its lower bound; they do not determine its death rate, and
-#' the reference implementation forecasts the deaths only. Here the log death
-#' rate of the open interval gets loadings on the same indexes, estimated by
-#' least squares: `log m[open, t] = a_o + b_o k[t]`, and in the coherent model
-#' `log m[open, t, i] = a_o[i] + B_o K[t] + b_o[i] k[t, i]`, with `B_o` from the
-#' mean log rate of the group. The open interval thus follows the rest of the
-#' age pattern (and the jump-off rule). An auxiliary random walk on the
-#' observed log rate, as in [tucker3()], accumulates the noise of the few
-#' deaths at the highest ages: on French data (ages 100+, forecasts of 10
-#' years) a quarter to a half of its paths exceeded a rate of 1.
+#' **Draws (Appendix B, pp. 556-557).** Draws carry the uncertainty of the
+#' estimates and of the index forecasts: the residuals of eq. (5) are
+#' resampled cell by cell and added to the fitted component, `b` and `k` are
+#' estimated again (`a` is kept, as in the paper), the ARIMA model is fitted
+#' again to the new index, and future paths of the index are simulated with
+#' innovations resampled from its residuals. `ceiling(sqrt(n_draws))` refits
+#' share the draws (the paper uses 100 refits with 100 paths each). In the
+#' coherent model, the common and the stratum components are simulated
+#' independently and added (Appendix B); the draws of the common component
+#' are the same for all strata of a group. The draws are then centred on the
+#' point forecast: each draw is perturbed by the ratio of the point forecast
+#' of the first forecast year to the median of the draws in that year, part
+#' by part. This follows the authors' code (CoDaForecast.R, supplementary
+#' material of the paper); eq. (19) of the paper shifts the bounds of the
+#' intervals of life expectancy so that their median is the point forecast.
+#' Draws are expected rates; predictive draws (`mt_forecast(predictive =
+#' TRUE)`) add Poisson variation of the deaths given the rates and the
+#' exposures, and no other observation noise. The model weights all parts
+#' equally on the clr scale, so the noise of ages with few deaths enters `k`;
+#' its intervals can be wider than those of [lee_carter()] (p. 543).
 #'
-#' **Zero deaths.** Cells with zero deaths have no logarithm. As
-#' `replace.zeros()` of the reference implementation (method `"min"`), zero
-#' rates are replaced by half the smallest positive rate of the stratum in
-#' the training years; a warning is given when more than 10% of the cells
-#' are affected.
+#' **Old ages (Appendix C, pp. 557-558).** With single-year age groups from
+#' 80 (at least to 89) and `open = "auto"` (the default) or `"kannisto"`, the
+#' rates from age 80 are replaced in every year by a Kannisto model (Thatcher,
+#' Kannisto and Vaupel 1998) fitted by Poisson maximum likelihood to the
+#' deaths and exposures of the single ages 80 to 100 of the grid (the
+#' authors' code fits ages 80-100 of the Human Mortality Database, open
+#' interval 110+) and applied up to age 120, where the life table closes; the
+#' single ages 80-120 are parts of the composition. The rate of an open age interval is the forecast deaths over
+#' the forecast person-years of its parts, and the forecasts of the ages from
+#' 80 are those of the smoothed rates. Other age groups (for example 5-year
+#' groups) do not allow this extension. Then, with `open = "auto"` or
+#' `"regression"`, the deaths of an open interval are the survivors at its
+#' lower bound, and its log death rate gets loadings on the same indexes,
+#' estimated by least squares: `log m[open, t] = a_o + b_o k[t]` (coherent
+#' model: `a_o[i] + B_o K[t] + b_o[i] k[t, i]`, `B_o` from the log of the
+#' average rate of the group); a closed age range adds the survivors at its
+#' upper bound as a part. Both are package-specific (reference unknown).
 #'
-#' Draws simulate the indexes: the random walk with drift includes the
-#' uncertainty of the drift (normal, with the variance of the mean change),
-#' the AR(1) processes their innovations; `a` and `b` are fixed. Draws are
-#' expected rates; predictive draws (`mt_forecast(predictive = TRUE)`) add
-#' Poisson variation of the deaths given the rates and the exposures, and no
-#' other observation noise. If intervals are too narrow on real data, that
-#' is a property of the model (see [recalibrated()], [ensemble()], or
-#' overdispersed models such as `stanmomo(family = "nb")`).
-#' The model weights all ages equally on the clr scale, so the noise of ages
-#' with few deaths enters `k`; its intervals can be wider than those of
-#' [lee_carter()].
+#' **Zero deaths (Appendix C, p. 558).** Zero counts of the ages that keep
+#' their own rates (below 80 with the Kannisto extension, all ages otherwise)
+#' are replaced multiplicatively in each year: each zero gets the share
+#' `delta` of the deaths of the year, the other shares are multiplied by
+#' `1 - z delta` (`z` zeros), and `delta` is half the smallest positive count
+#' over all ages and years divided by the deaths of the year. A warning is
+#' given when more than 10% of the cells are zero. Package safeguards: the
+#' imputed share of a year is at most 1/2, and a year whose deaths at ages
+#' from 80 allow no Kannisto fit takes the fit to all years together (with a
+#' warning).
+#'
+#' **Deviations from the paper.** Besides the package-specific treatment of
+#' other age groups: the life tables use `a_x = n / 2` at every age (the
+#' authors' code uses 0.06 at age 0); the residuals of the bootstrap are
+#' those of eq. (5), as the paper describes (the authors' code takes them
+#' around the in-sample one-step forecasts of the ARIMA model); the number of
+#' refits follows `n_draws`; the draws are centred as in the authors' code
+#' (see above).
 #'
 #' @param jump_off `"observed"` (forecasts start from the observed deaths of
 #'   the last year) or `"fitted"` (from the fitted deaths).
@@ -103,25 +121,56 @@
 #' @param common_by Stratum variable(s) defining groups with their own common
 #'   component (implies `coherent = TRUE`); `NULL` with `coherent = TRUE` puts
 #'   all strata in one group.
+#' @param order ARIMA order `c(p, d, q)` of the index (of the common index in
+#'   the coherent model); `c(0, 1, 1)` by default (Bergeron-Boucher et al.
+#'   2017). `c(0, 1, 0)` with `drift = TRUE` is the random walk with drift of
+#'   Lee and Carter (1992), the default of the R package MortalityForecast.
+#' @param drift Include a drift (a constant of the differenced index) when
+#'   `d = 1`; ignored otherwise (`d = 0` includes a mean, `d = 2` no
+#'   constant).
+#' @param order_dev,drift_dev ARIMA order and drift of the indexes of the
+#'   deviations of each stratum in the coherent model; `c(1, 1, 0)` without
+#'   drift by default (Bergeron-Boucher et al. 2017).
+#' @param open Treatment of the old ages: `"auto"` (the Kannisto extension
+#'   where the age groups allow it, otherwise the regression of the open
+#'   interval), `"kannisto"` or `"regression"`.
 #' @return A model specification.
 #' @references
 #' Oeppen J (2008). Coherent forecasting of multiple-decrement life tables:
 #' a test using Japanese cause of death data. CODAWORK'08, Universitat de
-#' Girona.
+#' Girona. \url{https://hdl.handle.net/10256/742}
 #'
 #' Bergeron-Boucher M-P, Canudas-Romo V, Oeppen J, Vaupel JW (2017).
 #' Coherent forecasts of mortality with compositional data analysis.
 #' *Demographic Research* 37(17): 527-566. \doi{10.4054/DemRes.2017.37.17}
+#'
+#' Thatcher AR, Kannisto V, Vaupel JW (1998). *The Force of Mortality at Ages
+#' 80 to 120*. Odense University Press.
+#'
+#' Li N, Lee R (2005). Coherent mortality forecasts for a group of
+#' populations: an extension of the Lee-Carter method. *Demography* 42(3):
+#' 575-594. \doi{10.1353/dem.2005.0021}
+#'
+#' Lee RD, Carter LR (1992). Modeling and forecasting U.S. mortality.
+#' *Journal of the American Statistical Association* 87(419): 659-671.
 #' @seealso [coda_causes()] for causes of death, [lee_carter()] for the model
 #'   of death rates, [li_lee()] for its coherent version.
 #' @examples
 #' x <- mt_example(deaths = "single", years = 1995:2012)
 #' fc <- mt_forecast(mt_fit(coda(), x), h = 5, n_draws = 50, seed = 1)
 #' fc2 <- mt_forecast(mt_fit(coda(coherent = TRUE), x), h = 5, n_draws = 50, seed = 1)
+#' # random walk with drift for the index (Lee and Carter 1992)
+#' fc3 <- mt_forecast(mt_fit(coda(order = c(0, 1, 0)), x), h = 5, n_draws = 50, seed = 1)
 #' @export
-coda <- function(jump_off = c("observed", "fitted"), coherent = FALSE, common_by = NULL) {
+coda <- function(jump_off = c("observed", "fitted"), coherent = FALSE, common_by = NULL, order = c(0, 1, 1),
+                 drift = TRUE, order_dev = c(1, 1, 0), drift_dev = FALSE, open = c("auto", "kannisto", "regression")) {
   jump_off <- match.arg(jump_off)
+  open <- match.arg(open)
   check_flag(coherent, "coherent")
+  check_flag(drift, "drift")
+  check_flag(drift_dev, "drift_dev")
+  order <- check_arima_order(order, "order")
+  order_dev <- check_arima_order(order_dev, "order_dev")
   if (!is.null(common_by)) {
     if (!is.character(common_by) || !length(common_by)) {
       mt_abort("`common_by` must name stratum variables.", class = "argument")
@@ -133,120 +182,62 @@ coda <- function(jump_off = c("observed", "fitted"), coherent = FALSE, common_by
   }
   label <- if (!coherent) "CoDa" else if (is.null(common_by)) "Coherent CoDa" else
     sprintf("Coherent CoDa (common by %s)", paste(common_by, collapse = ", "))
-  new_mt_spec("coda", list(jump_off = jump_off, coherent = coherent, common_by = common_by), joint = coherent,
-              min_periods = if (coherent) 8 else 5,
-              label = paste0(label, if (jump_off == "fitted") ", fitted jump-off" else ""))
+  ts_label <- c(if (!identical(order, c(0, 1, 1)) || !drift) arima_label(order, drift),
+                if (coherent && (!identical(order_dev, c(1, 1, 0)) || drift_dev))
+                  paste("deviations", arima_label(order_dev, drift_dev)))
+  new_mt_spec("coda", list(jump_off = jump_off, coherent = coherent, common_by = common_by, order = order,
+                           drift = drift, order_dev = order_dev, drift_dev = drift_dev, open = open),
+              joint = coherent, min_periods = if (coherent) 8 else 6,
+              label = paste0(label, if (length(ts_label)) paste0(", ", paste(ts_label, collapse = ", ")),
+                             if (open == "regression") ", open regression" else "",
+                             if (jump_off == "fitted") ", fitted jump-off" else ""))
 }
 
 #' @export
 fit_model.mt_spec_coda <- function(spec, D, E, ages, periods, strata = NULL, hierarchy = NULL, ...) {
-  if (isTRUE(spec$params$coherent)) return(coda_fit_coherent(spec, D, E, ages, strata, hierarchy))
-  fit <- coda_fit_one(coda_positive_rates(D / E), ages)
-  fit$jump_off <- spec$params$jump_off
-  fit$ages <- ages
-  fit$fitted <- coda_rates(fit$alpha + outer(fit$b, fit$k), ages, coda_open_fitted(fit$open, fit$k))
+  p <- spec$params
+  if (isTRUE(p$coherent)) return(coda_fit_coherent(spec, D, E, ages, strata, hierarchy))
+  layout <- coda_layout(ages, p$open %||% "auto")
+  sc <- coda_schedule(D, E, layout, "the stratum")
+  fit <- coda_core(coda_clr(sc$m, layout), 1, p$order %||% c(0, 1, 1), p$drift %||% TRUE)
+  if (!is.null(sc$open_log)) fit$open <- coda_open_fit(sc$open_log, fit$k)
+  fit$kannisto <- sc$kannisto
+  fit$layout <- layout
+  fit$parts <- layout$parts
+  fit$jump_off <- p$jump_off
+  fit$fitted <- coda_layout_rates(fit$alpha + fit$b %*% t(fit$k), layout, coda_open_fitted(fit$open, fit$k))
   fit
 }
 
 #' @export
 simulate_model.mt_spec_coda <- function(spec, fit, h, n_draws, ...) {
   if (isTRUE(spec$params$coherent)) return(coda_simulate_coherent(fit, h, n_draws))
-  kv <- as.vector(coda_rw_paths(fit, h, n_draws))
+  pt <- coda_point(fit, h)
+  bt <- coda_boot(fit, h, n_draws, open_y = fit$open$y)
+  sims <- coda_centre(fit$alpha + bt$Z, pt$Z[, 1], bt$open, pt$open[1])
+  array(coda_layout_rates(sims$Z, fit$layout, sims$open), c(length(fit$layout$ages), h, n_draws))
+}
+
+# Point forecast of a CoDa fit of one stratum: clr life-table deaths
+# [part, h] and the log rate of the open interval (method "regression"),
+# from the observed or fitted deaths of the last year
+coda_point <- function(fit, h) {
+  kf <- coda_index_mean(fit, h)
+  kT <- fit$k[nrow(fit$k), ]
   obs <- identical(fit$jump_off, "observed")
-  kT <- fit$k[length(fit$k)]
-  Zf <- (if (obs) fit$Z_last - fit$b * kT else fit$alpha) + outer(fit$b, kv)
+  base <- if (obs) fit$Z_last - drop(fit$b %*% kT) else fit$alpha
   open <- NULL
-  if (!is.null(fit$open)) open <- (if (obs) fit$open$last - fit$open$b * kT else fit$open$a) + fit$open$b * kv
-  array(coda_rates(Zf, fit$ages, open), c(length(fit$ages), h, n_draws))
-}
-
-# CoDa Lee-Carter fit of one stratum (or group of causes) from its clr
-# life-table deaths Z [part, period]; `open_log`: log rates of the open
-# interval (NULL for a closed age range)
-coda_fit_clr <- function(Z, open_log = NULL) {
-  alpha <- rowMeans(Z)
-  sv <- coda_svd(Z - alpha)
-  dk <- diff(sv$k)
-  drift <- mean(dk)
-  list(alpha = alpha, b = sv$b, k = sv$k, drift = drift,
-       sigma_k = sqrt(sum((dk - drift)^2) / max(length(dk) - 1, 1)), explained = sv$explained,
-       Z_last = Z[, ncol(Z)], open = if (!is.null(open_log)) coda_open_fit(open_log, sv$k))
-}
-
-# CoDa Lee-Carter fit of one stratum from positive rates [age, period]
-coda_fit_one <- function(m, ages) {
-  na <- length(ages)
-  open <- is.infinite(ages$upper[na])
-  if (na + as.integer(!open) < 2) mt_abort("The CoDa model needs at least two age groups.", class = "model_fit")
-  out <- coda_fit_clr(matrix(coda_forward(m, ages), ncol = ncol(m)), if (open) log(m[na, ]))
-  out$parts <- c(ages$labels, if (!open) "survivors")
-  out
-}
-
-# First component of the SVD of centred clr data [part, period]: k = d u
-# (periods), b = v (parts); the largest entry of b is positive
-coda_svd <- function(C) {
-  s <- svd(t(C), nu = 1, nv = 1)
-  b <- s$v[, 1]
-  k <- s$d[1] * s$u[, 1]
-  if (b[which.max(abs(b))] < 0) {
-    b <- -b
-    k <- -k
+  if (!is.null(fit$open)) {
+    open <- (if (obs) fit$open$last - sum(fit$open$b * kT) else fit$open$a) + drop(kf %*% fit$open$b)
   }
-  list(b = b, k = k, explained = s$d[1]^2 / max(sum(s$d^2), .Machine$double.xmin))
+  list(Z = base + fit$b %*% t(kf), open = open, k = kf)
 }
 
-# Least-squares loadings of the log rate of the open interval on the period
-# index(es) (columns of X), the open-interval analogue of b[x]
-coda_open_fit <- function(lo, X) {
-  X <- cbind(1, X)
-  cf <- qr.coef(qr(X), lo)
-  cf[is.na(cf)] <- 0
-  res <- lo - X %*% cf
-  list(a = cf[[1]], b = unname(cf[-1]), last = lo[length(lo)],
-       sd = sqrt(sum(res^2) / max(length(lo) - ncol(X), 1)))
-}
+coda_open_fitted <- function(open, k) if (is.null(open)) NULL else open$a + drop(as.matrix(k) %*% open$b)
 
-coda_open_fitted <- function(open, k) if (is.null(open)) NULL else open$a + open$b * k
-
-# Index paths [h, draw]: random walk with drift and normal innovations,
-# including the uncertainty of the drift (as lee_carter())
-coda_rw_paths <- function(f, h, n_draws) {
-  dk <- diff(f$k)
-  matrix(rw_paths(f$k[length(f$k)], f$drift, matrix(dk - f$drift, nrow = 1), h, n_draws, "gaussian",
-                  sigma = f$sigma_k, exp_out = FALSE), h, n_draws)
-}
-
-# Rates from clr life-table deaths [part, ...]; `open_log`: log rates of the
-# open interval (one per column), ignored for a closed age range
-coda_rates <- function(Z, ages, open_log = NULL) {
-  open <- NULL
-  if (is.infinite(ages$upper[length(ages)])) {
-    if (is.null(open_log)) mt_abort("The open interval needs its rates.", class = "model")
-    open <- exp(open_log)
-  }
-  coda_backward(Z, ages, open_rates = open)
-}
-
-# Zero rates replaced by half the smallest positive rate (replace.zeros(),
-# method "min", of MortalityForecast)
-coda_positive_rates <- function(m, what = "the stratum") {
-  pos <- is.finite(m) & m > 0
-  if (!any(pos)) mt_abort(sprintf("No deaths in %s in the training years.", what), class = "model_fit")
-  if (!all(pos)) {
-    share <- mean(!pos)
-    if (share > 0.1) {
-      mt_warn(sprintf(paste("%.0f%% of the cells of %s have no deaths; their rates were set to half the smallest",
-                            "positive rate. Wider age groups (mt_regroup()) or smoothing (step_smooth()) avoid",
-                            "this."), 100 * share, what), class = "sparse")
-    }
-    m[!pos] <- min(m[pos]) / 2
-  }
-  m
-}
-
-# Coherent CoDa model: a common component per group from the closed
-# geometric mean of its (bottom) strata, and AR(1) deviations per stratum
+# Coherent CoDa model: per group, a common component from the average death
+# rates of its (bottom) strata, and per stratum the first component of the
+# deviations from it
 coda_fit_coherent <- function(spec, D, E, ages, strata, hierarchy) {
   p <- spec$params
   na <- dim(D)[1]
@@ -263,99 +254,85 @@ coda_fit_coherent <- function(spec, D, E, ages, strata, hierarchy) {
   pool <- rep(TRUE, ns)
   if (!is.null(hierarchy) && !is.null(strata)) pool <- hierarchy_structure(strata, hierarchy)$is_bottom
   labels <- if (is.null(strata)) as.character(seq_len(ns)) else strata$label
-  open <- is.infinite(ages$upper[na])
-  if (na + as.integer(!open) < 2) mt_abort("The CoDa model needs at least two age groups.", class = "model_fit")
-  m <- lapply(seq_len(ns), function(s) {
-    coda_positive_rates(matrix(D[, , s] / E[, , s], na), sprintf("stratum %s", labels[s]))
+  layout <- coda_layout(ages, p$open %||% "auto")
+  sched <- lapply(seq_len(ns), function(s) {
+    coda_schedule(D[, , s], E[, , s], layout, sprintf("stratum %s", labels[s]))
   })
-  # clr of the life-table deaths [part, period] and log open rates of each stratum
-  Z <- lapply(m, function(ms) matrix(coda_forward(ms, ages), ncol = nt))
-  lo <- if (open) matrix(t(vapply(m, function(ms) log(ms[na, ]), numeric(nt))), ns, nt) else NULL
+  Z <- lapply(sched, function(sc) coda_clr(sc$m, layout))
+  reg <- layout$method == "regression"
   commons <- lapply(seq_len(max(group)), function(g) {
     use <- group == g & pool
     if (!any(use)) use <- group == g
-    # closed geometric mean of the strata: mean of their clr
-    out <- coda_fit_clr(Reduce(`+`, Z[use]) / sum(use), if (open) colMeans(lo[use, , drop = FALSE]))
+    # average mortality of the group: arithmetic mean of the rates
+    mbar <- Reduce(`+`, lapply(sched[use], `[[`, "m")) / sum(use)
+    out <- coda_core(coda_clr(mbar, layout), 1, p$order %||% c(0, 1, 1), p$drift %||% TRUE)
+    if (reg) {
+      obar <- Reduce(`+`, lapply(sched[use], function(sc) exp(sc$open_log))) / sum(use)
+      out$open <- coda_open_fit(log(obar), out$k)
+    }
     out$members <- which(use)
     out
   })
   fitted <- array(NA_real_, c(na, nt, ns))
   own <- lapply(seq_len(ns), function(s) {
     cm <- commons[[group[s]]]
-    alpha <- rowMeans(Z[[s]])
-    common <- outer(cm$b, cm$k)
-    sv <- coda_svd(Z[[s]] - alpha - common)
-    out <- list(alpha = alpha, b = sv$b, k = sv$k, ar = ar1_mean_fit(sv$k), explained = sv$explained,
-                Z_last = Z[[s]][, nt])
+    common <- cm$b %*% t(cm$k)
+    out <- coda_core(Z[[s]], 1, p$order_dev %||% c(1, 1, 0), p$drift_dev %||% FALSE, common = common,
+                     adjust = FALSE)
+    out$kannisto <- sched[[s]]$kannisto
     lo_fit <- NULL
-    if (open) {
-      out$open <- coda_open_fit(lo[s, ] - cm$open$b * cm$k, sv$k)
-      out$open$last <- lo[s, nt]
-      lo_fit <- out$open$a + cm$open$b * cm$k + out$open$b * sv$k
+    if (reg) {
+      lo <- sched[[s]]$open_log
+      out$open <- coda_open_fit(lo - drop(cm$k %*% cm$open$b), out$k)
+      out$open$last <- lo[nt]
+      lo_fit <- out$open$a + drop(cm$k %*% cm$open$b) + drop(out$k %*% out$open$b)
     }
-    fitted[, , s] <<- coda_rates(alpha + common + outer(sv$b, sv$k), ages, lo_fit)
+    fitted[, , s] <<- coda_layout_rates(out$alpha + common + out$b %*% t(out$k), layout, lo_fit)
     out
   })
-  list(commons = commons, group = group, strata = own, fitted = fitted, ages = ages, jump_off = p$jump_off,
-       parts = c(ages$labels, if (!open) "survivors"))
+  list(commons = commons, group = group, strata = own, fitted = fitted, layout = layout, jump_off = p$jump_off,
+       parts = layout$parts)
+}
+
+# Point forecasts of the coherent model: clr deaths [part, h] and log open
+# rates of stratum s
+coda_point_coherent <- function(fit, s, h, Kf = NULL) {
+  cm <- fit$commons[[fit$group[s]]]
+  st <- fit$strata[[s]]
+  Kf <- Kf %||% coda_index_mean(cm, h)
+  kf <- coda_index_mean(st, h)
+  KT <- cm$k[nrow(cm$k), ]
+  kT <- st$k[nrow(st$k), ]
+  obs <- identical(fit$jump_off, "observed")
+  base <- if (obs) st$Z_last - drop(cm$b %*% KT) - drop(st$b %*% kT) else st$alpha
+  open <- NULL
+  if (!is.null(st$open)) {
+    base_o <- if (obs) st$open$last - sum(cm$open$b * KT) - sum(st$open$b * kT) else st$open$a
+    open <- base_o + drop(Kf %*% cm$open$b) + drop(kf %*% st$open$b)
+  }
+  list(Z = base + cm$b %*% t(Kf) + st$b %*% t(kf), open = open, K = Kf, k = kf)
 }
 
 coda_simulate_coherent <- function(fit, h, n_draws) {
-  na <- length(fit$ages)
+  layout <- fit$layout
+  na <- length(layout$ages)
   ns <- length(fit$strata)
-  obs <- identical(fit$jump_off, "observed")
-  Kp <- lapply(fit$commons, function(cm) as.vector(coda_rw_paths(cm, h, n_draws)))
+  common <- lapply(fit$commons, function(cm) {
+    list(boot = coda_boot(cm, h, n_draws, open_y = cm$open$y), K = coda_index_mean(cm, h))
+  })
   out <- array(NA_real_, c(na, h, ns, n_draws))
   for (s in seq_len(ns)) {
     g <- fit$group[s]
     cm <- fit$commons[[g]]
     st <- fit$strata[[s]]
-    kv <- as.vector(ar1_mean_paths(st$ar, h, n_draws))
-    KT <- cm$k[length(cm$k)]
-    kT <- st$k[length(st$k)]
-    base <- if (obs) st$Z_last - cm$b * KT - st$b * kT else st$alpha
-    Zf <- base + outer(cm$b, Kp[[g]]) + outer(st$b, kv)
+    pt <- coda_point_coherent(fit, s, h, common[[g]]$K)
+    y_dev <- if (!is.null(st$open)) st$open$y else NULL
+    dev <- coda_boot(st, h, n_draws, open_y = y_dev)
+    Zs <- st$alpha + common[[g]]$boot$Z + dev$Z
     open <- NULL
-    if (!is.null(st$open)) {
-      base_o <- if (obs) st$open$last - cm$open$b * KT - st$open$b * kT else st$open$a
-      open <- base_o + cm$open$b * Kp[[g]] + st$open$b * kv
-    }
-    out[, , s, ] <- coda_rates(Zf, fit$ages, open)
-  }
-  out
-}
-
-# AR(1) with mean by maximum likelihood (stats::arima(), as
-# forecast::Arima(order = c(1, 0, 0), method = "ML") in the reference)
-ar1_mean_fit <- function(k) {
-  n <- length(k)
-  last <- k[n]
-  if (n < 4 || stats::sd(k) < 1e-10 * (1 + abs(mean(k)))) {
-    return(list(phi = 0, mean = mean(k), sigma = if (n > 1) stats::sd(k) else 0, last = last))
-  }
-  fit <- NULL
-  for (method in c("ML", "CSS-ML")) {
-    fit <- tryCatch(suppressWarnings(stats::arima(k, order = c(1, 0, 0), method = method)),
-                    error = function(e) NULL)
-    if (!is.null(fit)) break
-  }
-  if (is.null(fit)) {
-    a <- ar1_fit(k - mean(k))
-    return(list(phi = a$phi, mean = mean(k), sigma = a$sigma, last = last))
-  }
-  cf <- stats::coef(fit)
-  # innovation variance with two degrees of freedom less, as forecast::Arima()
-  list(phi = unname(cf[["ar1"]]), mean = unname(cf[["intercept"]]),
-       sigma = sqrt(sum(stats::residuals(fit)^2) / (n - 2)), last = last)
-}
-
-# Paths [h, draw] of an AR(1) process with mean from its last value
-ar1_mean_paths <- function(a, h, n_draws) {
-  out <- matrix(NA_real_, h, n_draws)
-  prev <- rep(a$last, n_draws)
-  for (t in seq_len(h)) {
-    prev <- a$mean + a$phi * (prev - a$mean) + stats::rnorm(n_draws, 0, a$sigma)
-    out[t, ] <- prev
+    if (!is.null(st$open)) open <- common[[g]]$boot$open - cm$open$a + dev$open
+    sims <- coda_centre(Zs, pt$Z[, 1], open, pt$open[1])
+    out[, , s, ] <- coda_layout_rates(sims$Z, layout, sims$open)
   }
   out
 }
@@ -365,52 +342,68 @@ ar1_mean_paths <- function(a, h, n_draws) {
 #' `coda_causes()` forecasts death rates by cause with the multiple-decrement
 #' form of the compositional Lee-Carter model, which Oeppen (2008) proposed
 #' and tested on Japanese causes of death. Causes add up to all causes in
-#' every draw. The model is experimental.
+#' every draw. The model is experimental. Status: published, with the
+#' deviations listed below; section numbers refer to Oeppen (2008).
 #'
-#' Only the abstract of Oeppen (2008) is published. This function implements
-#' the natural multiple-decrement form of [coda()]:
+#' **Model (Sections 3, 6 and 8.3).** In each group (the strata that differ
+#' only in `var`, for example one group per sex):
 #'
-#' 1. in each group (the strata that differ only in `var`, for example one
-#'    group per sex), the cause-specific rates `m[x, c]` add up to all-cause
-#'    rates `m[x]`, which give life-table deaths `d[x]` with radix 1
-#'    ([life_table()] conventions); the deaths are split by cause,
-#'    `d[x, c] = d[x] m[x, c] / m[x]` (multiple-decrement life table);
-#' 2. the composition is the joint distribution of the deaths `d[x, c]` over
-#'    age and cause, plus the survivors at the upper bound of a closed age
-#'    range;
-#' 3. as in [coda()], the composition is centred by its closed geometric
-#'    mean over the years and transformed by the centred log-ratio; the first
-#'    component of a singular value decomposition gives `b[x, c] k[t]`, and
-#'    `k[t]` follows a random walk with drift;
+#' 1. the cause-specific rates `m[x, c]` add up to all-cause rates `m[x]`,
+#'    which give life-table deaths `d[x]` with radix 1 ([life_table()]
+#'    conventions); the deaths are split by cause, `d[x, c] = d[x] m[x, c] /
+#'    m[x]` (relations of the multiple-decrement life table, eq. 1 and 7);
+#' 2. the array of deaths by age and cause of each year is unfolded into one
+#'    composition (Section 6), plus the survivors at the upper bound of a
+#'    closed age range;
+#' 3. the compositions are centred by their closed geometric mean over the
+#'    years and transformed by the centred log-ratio; the first `rank`
+#'    components of a singular value decomposition give `sum_j b_j[x, c]
+#'    k_j[t]` (Section 3, steps 1-7);
 #' 4. forecast deaths `d[x, c]` give all-cause rates from the all-cause
 #'    life-table deaths `d[x] = sum_c d[x, c]`, and cause-specific rates
-#'    `m[x, c] = m[x] d[x, c] / d[x]`.
+#'    `m[x, c] = m[x] d[x, c] / d[x]` (eq. 7, Section 8.3).
 #'
 #' The causes add up to the all-cause rates in every draw, and the strata of
 #' `total_level` get their sum. If the listed causes leave part of the
 #' all-cause deaths unexplained (`residual`), that part is a residual cause
 #' inside the model and counts towards the all-cause rates; it is not a
-#' stratum of the output.
+#' stratum of the output (package-specific).
 #'
-#' One index `k[t]` drives all ages and causes, so the causes cannot follow
-#' different trends beyond the pattern `b[x, c]`. The extensions of
-#' Kjærgaard, Ergemen, Kallestrup-Lamb, Oeppen and Lindahl-Jacobsen (2019)
-#' are not implemented. In a backtest on [mt_example_causes()] the model was
-#' less accurate than the deprecated [cause_shares()]; compare it with
+#' **Indexes and rank.** For Japanese women 1951-1990, Oeppen (2008, Sections
+#' 6 and 7) uses two components and selects ARIMA(0,2,2) models for the
+#' indexes by AICc; Section 3 notes, for the Lee-Carter model, that one
+#' component is usually adequate for advanced economies and that its index
+#' can be forecast by a simple ARIMA model such as the random walk with drift.
+#' These choices belong to one data set; the defaults here are one component
+#' and the index model of [coda()], ARIMA(0,1,1) with drift (Bergeron-Boucher
+#' et al. 2017, with Oeppen as co-author). `rank = 2, order = c(0, 2, 2)`
+#' gives Oeppen's specification for Japan. With several components, each
+#' index has its own ARIMA model, independent of the others (the paper does
+#' not say how the second index was forecast).
+#'
+#' **Deviations from the paper.** Oeppen (2008) gives point forecasts only:
+#' the jump-off (forecasts start from the observed deaths of the last year,
+#' `jump_off = "observed"`) and the draws (bootstrap of the residuals and of
+#' the index paths, centred on the point forecast) are those of [coda()]
+#' (Bergeron-Boucher et al. 2017, Appendices B and G). Oeppen (2008, Section
+#' 3) replaces zero counts by lightly smoothing the deaths of each year with
+#' a penalised histogram smoother whose smoothing parameter is not given;
+#' here zero counts are replaced multiplicatively in the composition of each
+#' year (Bergeron-Boucher et al. 2017, Appendix C; see [coda()]). How the
+#' death rate of the open age interval follows from the forecast deaths is
+#' not stated; here the all-cause log rate of an open interval is regressed
+#' on the indexes and split by cause through the composition
+#' (package-specific, as `open = "regression"` of [coda()]).
+#'
+#' Draws are expected rates. Predictive draws (`mt_forecast(predictive =
+#' TRUE)`) draw Poisson all-cause deaths given the all-cause rates and
+#' exposures and split them multinomially between the causes by the cause
+#' shares of the draw, so that the causes also add up to all causes in
+#' predictive draws; no other observation noise is added (package-specific).
+#'
+#' The extensions of Kjærgaard, Ergemen, Kallestrup-Lamb, Oeppen and
+#' Lindahl-Jacobsen (2019) are not implemented. Compare the model with
 #' [reconciled()] separate models in a backtest before using it.
-#'
-#' Jump-off, the open age interval and zero deaths are treated as in
-#' [coda()]: the all-cause log rate of an open interval is regressed on
-#' `k[t]` (its split by cause comes from the composition), and zero rates of
-#' a cause are replaced by half its smallest positive rate in the group (as
-#' `replace.zeros()` of the R package MortalityForecast). Draws are expected
-#' rates. Predictive draws (`mt_forecast(predictive = TRUE)`) draw Poisson
-#' all-cause deaths given the all-cause rates and exposures and split them
-#' multinomially between the causes by the cause shares of the draw, so that
-#' the causes also add up to all causes in predictive draws; no other
-#' observation noise is added. If intervals are too narrow on real data,
-#' that is a property of the model (see [recalibrated()], [ensemble()], or
-#' overdispersed models such as `stanmomo(family = "nb")`).
 #'
 #' @param var Stratum variable with the causes.
 #' @param total_level Level of `var` for all causes.
@@ -420,11 +413,14 @@ ar1_mean_paths <- function(a, h, n_draws) {
 #'   covered by the listed causes: `TRUE`, `FALSE`, or `"auto"` (added when
 #'   the listed causes leave more than 0.1% of all-cause mortality
 #'   unexplained in the median cell).
+#' @param rank Number of components (1 by default; Oeppen 2008 used 2 for
+#'   Japan).
+#' @param order,drift ARIMA order and drift of each index, as in [coda()].
 #' @return A model specification.
 #' @references
 #' Oeppen J (2008). Coherent forecasting of multiple-decrement life tables:
 #' a test using Japanese cause of death data. CODAWORK'08, Universitat de
-#' Girona.
+#' Girona. \url{https://hdl.handle.net/10256/742}
 #'
 #' Bergeron-Boucher M-P, Canudas-Romo V, Oeppen J, Vaupel JW (2017).
 #' Coherent forecasts of mortality with compositional data analysis.
@@ -440,16 +436,25 @@ ar1_mean_paths <- function(a, h, n_draws) {
 #' fit <- mt_fit(coda_causes(), x)
 #' fc <- mt_forecast(fit, h = 5, n_draws = 50, seed = 1)
 #' @export
-coda_causes <- function(var = "cause", total_level = "all", jump_off = c("observed", "fitted"), residual = "auto") {
+coda_causes <- function(var = "cause", total_level = "all", jump_off = c("observed", "fitted"), residual = "auto",
+                        rank = 1, order = c(0, 1, 1), drift = TRUE) {
   jump_off <- match.arg(jump_off)
   if (!is.character(var) || length(var) != 1L) mt_abort("`var` must be one stratum variable.", class = "argument")
   if (length(total_level) != 1L) mt_abort("`total_level` must be one level.", class = "argument")
   if (!identical(residual, "auto") && !(is.logical(residual) && length(residual) == 1L && !is.na(residual))) {
     mt_abort("`residual` must be TRUE, FALSE or \"auto\".", class = "argument")
   }
-  new_mt_spec("coda_causes", list(var = var, total_level = total_level, jump_off = jump_off, residual = residual),
-              joint = TRUE, min_periods = 5,
-              label = paste0("CoDa causes (multiple decrement)", if (jump_off == "fitted") ", fitted jump-off" else ""))
+  check_number(rank, "rank", lower = 1, upper = 5, integerish = TRUE)
+  check_flag(drift, "drift")
+  order <- check_arima_order(order, "order")
+  ts_label <- c(if (rank > 1) sprintf("rank %d", as.integer(rank)),
+                if (!identical(order, c(0, 1, 1)) || !drift) arima_label(order, drift))
+  new_mt_spec("coda_causes", list(var = var, total_level = total_level, jump_off = jump_off, residual = residual,
+                                  rank = as.integer(rank), order = order, drift = drift),
+              joint = TRUE, min_periods = 6,
+              label = paste0("CoDa causes (multiple decrement)",
+                             if (length(ts_label)) paste0(", ", paste(ts_label, collapse = ", ")),
+                             if (jump_off == "fitted") ", fitted jump-off" else ""))
 }
 
 #' @export
@@ -485,7 +490,8 @@ fit_model.mt_spec_coda_causes <- function(spec, D, E, ages, periods, strata = NU
     vapply(groups, function(g) find(g, cc, sprintf("lacks cause '%s'", cc)), 1L, USE.NAMES = FALSE)
   }, integer(length(groups))), nrow = length(groups))
   K <- length(causes)
-  open <- is.infinite(ages$upper[na])
+  layout <- coda_layout(ages, "regression")
+  open <- layout$method == "regression"
   # rates of the causes [age, period, cause] and of all causes, per group
   mc <- lapply(seq_along(groups), function(g) {
     array(D[, , part_id[g, ], drop = FALSE] / E[, , part_id[g, ], drop = FALSE], c(na, nt, K))
@@ -494,17 +500,22 @@ fit_model.mt_spec_coda_causes <- function(spec, D, E, ages, periods, strata = NU
   short <- unlist(lapply(seq_along(groups), function(g) (1 - rowSums(mc[[g]], dims = 2) / mt[[g]])[mt[[g]] > 0]))
   use_residual <- if (identical(p$residual, "auto")) stats::median(short) > 1e-3 else isTRUE(p$residual)
   nc <- K + use_residual
+  rank <- p$rank %||% 1L
   fitted <- array(NA_real_, c(na, nt, ns))
   fits <- lapply(seq_along(groups), function(g) {
     m <- mc[[g]]
     if (use_residual) m <- array(c(m, pmax(mt[[g]] - rowSums(m, dims = 2), 0)), c(na, nt, nc))
-    for (j in seq_len(nc)) {
-      what <- sprintf("cause %s of group %s", if (j <= K) causes[j] else "residual", groups[g])
-      m[, , j] <- coda_positive_rates(matrix(m[, , j], na), what)
-    }
-    out <- coda_fit_clr(md_forward(m, ages), if (open) log(rowSums(m, dims = 2)[na, ]))
+    m[!is.finite(m)] <- 0
+    # zero deaths: multiplicative replacement in the composition by age and
+    # cause of each year (deaths on the all-cause exposures)
+    Et <- matrix(E[, , tot_id[g]], na)
+    Dg <- matrix(aperm(m * as.vector(Et), c(1, 3, 2)), na * nc, nt)
+    Dg <- coda_replace_zeros(Dg, sprintf("the causes of group %s", groups[g]))
+    m <- aperm(array(Dg, c(na, nc, nt)), c(1, 3, 2)) / as.vector(Et)
+    out <- coda_core(md_forward(m, ages), rank, p$order %||% c(0, 1, 1), p$drift %||% TRUE)
+    if (open) out$open <- coda_open_fit(log(rowSums(m, dims = 2)[na, ]), out$k)
     out$jump_off <- p$jump_off
-    R <- md_rates(out$alpha + outer(out$b, out$k), ages, nc, coda_open_fitted(out$open, out$k))
+    R <- md_rates(out$alpha + out$b %*% t(out$k), layout, nc, coda_open_fitted(out$open, out$k))
     for (j in seq_len(K)) fitted[, , part_id[g, j]] <<- R[, , j]
     fitted[, , tot_id[g]] <<- md_total(R)
     out
@@ -512,7 +523,7 @@ fit_model.mt_spec_coda_causes <- function(spec, D, E, ages, periods, strata = NU
   parts <- c(paste(rep(ages$labels, nc), rep(c(causes, if (use_residual) "residual"), each = na)),
              if (!open) "survivors")
   list(groups = fits, group_labels = groups, tot_id = tot_id, part_id = part_id, causes = causes, K = K,
-       residual = use_residual, parts = parts, ages = ages, fitted = fitted)
+       residual = use_residual, parts = parts, ages = ages, layout = layout, fitted = fitted)
 }
 
 #' @export
@@ -523,13 +534,10 @@ simulate_model.mt_spec_coda_causes <- function(spec, fit, h, n_draws, ...) {
   nc <- fit$K + fit$residual
   for (g in seq_along(fit$groups)) {
     gf <- fit$groups[[g]]
-    kv <- as.vector(coda_rw_paths(gf, h, n_draws))
-    obs <- identical(gf$jump_off, "observed")
-    kT <- gf$k[length(gf$k)]
-    Zf <- (if (obs) gf$Z_last - gf$b * kT else gf$alpha) + outer(gf$b, kv)
-    open <- NULL
-    if (!is.null(gf$open)) open <- (if (obs) gf$open$last - gf$open$b * kT else gf$open$a) + gf$open$b * kv
-    R <- md_rates(Zf, fit$ages, nc, open)
+    pt <- coda_point(gf, h)
+    bt <- coda_boot(gf, h, n_draws, open_y = gf$open$y)
+    sims <- coda_centre(gf$alpha + bt$Z, pt$Z[, 1], bt$open, pt$open[1])
+    R <- md_rates(sims$Z, fit$layout, nc, sims$open)
     for (j in seq_len(fit$K)) out[, , fit$part_id[g, j], ] <- R[, , j]
     out[, , fit$tot_id[g], ] <- md_total(R)
   }
@@ -604,10 +612,11 @@ md_forward <- function(mc, ages) {
 }
 
 # Inverse of md_forward(): cause rates [age, column, cause] from clr deaths
-# [part, column]; all-cause rates from the all-cause life-table deaths, the
-# open interval from `open_log` (log all-cause rates)
-md_rates <- function(Z, ages, nc, open_log = NULL) {
-  na <- length(ages)
+# [part, column]; all-cause rates from the all-cause life-table deaths
+# (layout "regression" or "closed"), the open interval from `open_log` (log
+# all-cause rates); cause rates by eq. (7) of Oeppen (2008)
+md_rates <- function(Z, layout, nc, open_log = NULL) {
+  na <- length(layout$ages)
   Zm <- matrix(Z, nrow(Z))
   P <- exp(Zm)
   P <- sweep(P, 2, colSums(P), "/")
@@ -615,7 +624,7 @@ md_rates <- function(Z, ages, nc, open_log = NULL) {
   dx <- matrix(dxc[, 1, ], na)
   for (j in seq_len(nc)[-1]) dx <- dx + dxc[, j, ]
   lz <- log(if (nrow(P) > na * nc) rbind(dx, P[nrow(P), ]) else dx)
-  m <- matrix(coda_rates(lz, ages, open_log), na)
+  m <- matrix(coda_layout_rates(lz, layout, open_log), na)
   out <- array(NA_real_, c(na, ncol(P), nc))
   for (j in seq_len(nc)) out[, , j] <- m * matrix(dxc[, j, ], na) / dx
   out
@@ -629,9 +638,10 @@ md_total <- function(R) {
 }
 
 # Parameters of CoDa fits, for mt_parameters(): the closed centre `a`, the
-# loadings `b` (parts of the composition: ages, ages by cause, survivors) and
-# the indexes, with the drift and standard deviation of the random walks, the
-# AR(1) coefficients of the coherent model and the loadings of the open interval
+# loadings `b` (parts of the composition: ages, ages by cause, survivors),
+# the indexes with the coefficients and innovation standard deviation of
+# their ARIMA models, the share of variation explained, the loadings of the
+# open interval and the Kannisto parameters of each year
 coda_parameters <- function(fit, sp = fit$spec) {
   lab <- fit$strata$label
   yrs <- as.character(fit$periods)
@@ -642,11 +652,28 @@ coda_parameters <- function(fit, sp = fit$spec) {
   centre <- function(alpha) exp(alpha) / sum(exp(alpha))
   one <- function(who, x, parts, idx = "k") {
     b_name <- if (idx == "K") "B" else "b"
-    out <- rbind(row(who, "a", parts, centre(x$alpha)), row(who, b_name, parts, x$b), row(who, idx, yrs, x$k),
-                 row(who, paste0("drift_", idx), "", x$drift), row(who, paste0("sd_", idx), "", x$sigma_k),
-                 row(who, "explained", "", x$explained))
-    if (!is.null(x$open)) out <- rbind(out, coda_open_rows(row, who, x$open, b_name))
-    out
+    r <- ncol(x$k)
+    suffix <- if (r > 1) seq_len(r) else ""
+    out <- list(row(who, "a", parts, centre(x$alpha)))
+    for (j in seq_len(r)) {
+      tsj <- x$ts[[j]]
+      cf <- tsj$coef
+      out <- c(out, list(row(who, paste0(b_name, suffix[j]), parts, x$b[, j]),
+                         row(who, paste0(idx, suffix[j]), yrs, x$k[, j]),
+                         row(who, paste0("order_", idx, suffix[j]), c("p", "d", "q"), tsj$order),
+                         if (length(cf)) row(who, paste0("arima_", idx, suffix[j]), names(cf), cf),
+                         row(who, paste0("sd_", idx, suffix[j]), "", tsj$sigma),
+                         row(who, paste0("explained", suffix[j]), "", x$explained[j])))
+    }
+    if (!is.null(x$open)) {
+      out <- c(out, list(row(who, "a_open", "", x$open$a), row(who, paste0(b_name, "_open"), suffix, x$open$b),
+                         row(who, "sd_open", "", x$open$sd)))
+    }
+    if (!is.null(x$kannisto)) {
+      out <- c(out, list(row(who, "kannisto_a", yrs, exp(x$kannisto[1, ])), row(who, "kannisto_b", yrs,
+                                                                                   x$kannisto[2, ])))
+    }
+    rbindlist(out)
   }
   if (inherits(sp, "mt_spec_coda_causes")) {
     return(rbindlist(lapply(seq_along(f$groups), function(g) {
@@ -660,43 +687,37 @@ coda_parameters <- function(fit, sp = fit$spec) {
     cm <- f$commons[[g]]
     one(sprintf("common %d (%s)", g, paste(lab[f$group == g], collapse = ", ")), cm, f$parts, "K")
   }))
-  own <- rbindlist(lapply(seq_along(f$strata), function(s) {
-    st <- f$strata[[s]]
-    out <- rbind(row(lab[s], "a", f$parts, centre(st$alpha)), row(lab[s], "b", f$parts, st$b),
-                 row(lab[s], "k", yrs, st$k), row(lab[s], "phi", "", st$ar$phi),
-                 row(lab[s], "mean_k", "", st$ar$mean), row(lab[s], "sd_k", "", st$ar$sigma),
-                 row(lab[s], "explained", "", st$explained))
-    if (!is.null(st$open)) out <- rbind(out, coda_open_rows(row, lab[s], st$open, "b"))
-    out
-  }))
+  own <- rbindlist(lapply(seq_along(f$strata), function(s) one(lab[s], f$strata[[s]], f$parts)))
   rbind(common, own)
-}
-
-coda_open_rows <- function(row, who, open, b_name) {
-  rbind(row(who, "a_open", "", open$a), row(who, paste0(b_name, "_open"), "", open$b),
-        row(who, "sd_open", "", open$sd))
 }
 
 # Statement of the model and its uncertainty, for summary()
 coda_assumptions <- function(spec) {
   p <- spec$params
-  open <- paste("The log rate of an open age interval is regressed on the same indexes.")
+  draws <- paste("Draws (Bergeron-Boucher et al. 2017, Appendix B): residuals resampled and the components and",
+                 "ARIMA models estimated again, index paths with resampled innovations; centred on the point",
+                 "forecast in the first forecast year.")
+  ts <- arima_label(p$order %||% c(0, 1, 1), p$drift %||% TRUE)
   if (inherits(spec, "mt_spec_coda_causes")) {
     return(paste("Multiple-decrement CoDa model (Oeppen 2008; experimental): per group, clr of the life-table",
-                 "deaths by age and cause = a + b k(t), first SVD component; k(t) a random walk with drift (draws",
-                 "include innovations and drift uncertainty; a, b fixed). Causes add up to all causes in every",
-                 "draw; predictive draws split Poisson all-cause deaths multinomially. Jump-off:", p$jump_off,
-                 "deaths.", open))
+                 sprintf("deaths by age and cause = a + sum of %d component(s) b k(t) of the SVD; k(t) %s.",
+                         p$rank %||% 1L, ts),
+                 "Causes add up to all causes in every draw; predictive draws split Poisson all-cause deaths",
+                 "multinomially.", draws, "Jump-off:", p$jump_off, "deaths. The log rate of an open age interval",
+                 "is regressed on the indexes."))
   }
+  old <- switch(p$open %||% "auto",
+                regression = "The log rate of an open age interval is regressed on the indexes.",
+                paste("Ages from 80 by a Kannisto model extended to 120 where the age groups are single years from 80",
+                      "(otherwise the log rate of an open interval is regressed on the indexes)."))
   if (!isTRUE(p$coherent)) {
     return(paste("CoDa Lee-Carter model (Oeppen 2008; Bergeron-Boucher et al. 2017): clr of the life-table deaths",
-                 "= clr(a) + b k(t), first SVD component; k(t) a random walk with drift (draws include",
-                 "innovations and drift uncertainty; a, b fixed). Jump-off:", p$jump_off, "deaths.", open))
+                 sprintf("= clr(a) + b k(t), first SVD component; k(t) %s.", ts), draws, "Jump-off:", p$jump_off,
+                 "deaths.", old))
   }
   paste("Coherent CoDa model (Bergeron-Boucher et al. 2017): clr of the life-table deaths = clr(a_i) + B K(t) +",
-        "b_i k_i(t), with B K from the closed geometric mean of the strata of each group",
+        "b_i k_i(t), with B K from the average death rates of the strata of each group",
         if (!is.null(p$common_by)) sprintf("(groups by %s)", paste(p$common_by, collapse = ", ")) else "",
-        "; K(t) a random walk with drift, k_i(t) AR(1) with mean, so deviations stay bounded. Draws include the",
-        "innovations, the drift uncertainty of K; a, B, b and the AR coefficients are fixed. Jump-off:",
-        p$jump_off, "deaths.", open)
+        sprintf("; K(t) %s, k_i(t) %s.", ts, arima_label(p$order_dev %||% c(1, 1, 0), p$drift_dev %||% FALSE)),
+        draws, "Jump-off:", p$jump_off, "deaths.", old)
 }

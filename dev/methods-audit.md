@@ -62,8 +62,9 @@ warn (class `mt_warning_deprecated`) and name the replacement.
    standard weighted Whittaker smoother and quasi-Poisson GAM; truncated
    Poisson mean for suppressed cells.
 7. `mt_dm_test(varestimator = "ewc")`: fixed-smoothing test with the
-   equal-weighted cosine variance (Lazarus et al. 2018; Coroneo and Iacone
-   2020); simulated size 0.048-0.066 at nominal 5% for 7-16 origins and
+   equal-weighted cosine variance (Lazarus et al. 2018; the earlier
+   attribution to Coroneo and Iacone 2020 was corrected in E4: they use a
+   Daniell-kernel estimate, now `varestimator = "daniell"`); simulated size 0.048-0.066 at nominal 5% for 7-16 origins and
    h up to 5.
 8. ASR by direct standardisation on the standard's age groups (Eurostat
    2013); `yll()` with e(x + a_x) (Murray 1994); "pooled" composition and
@@ -76,11 +77,36 @@ Verified references; not implemented in E3.
 | Method | Reference | Fit for mortensor |
 |---|---|---|
 | Nordpred: APC with a power link and damped drift, used for cancer incidence and mortality projections | Møller et al. (2003) Statistics in Medicine 22(17): 2751-2766 | Public-health projections; simple Poisson GLM |
-| 2D P-spline forecasting | Currie, Durban and Eilers (2004) Statistical Modelling 4(4): 279-298 | Smoothing already uses P-splines; forecasting by extending the basis |
-| Smooth constrained forecasting | Camarda (2019) Demographic Research 41(38): 1091-1130 | P-splines constrained by forecasts of summary measures (e0, lifespan variation) |
+| 2D P-spline forecasting | Currie, Durban and Eilers (2004) Statistical Modelling 4(4): 279-298 | Implemented in E4 as `p_splines()`, adapted from MortalitySmooth 2.3.4 |
+| Smooth constrained forecasting | Camarda (2019) Demographic Research 41(38): 1091-1130 | P-spline forecasts constrained by asymmetric penalties on the rates of ageing and of change (corrected after reading the full text; implemented in E4 as `cp_splines()`) |
 | Plat model | Plat (2009) Insurance: Mathematics and Economics 45(3): 393-404 | A StMoMo specification; small addition to `stmomo()` |
 | APCI model | Richards, Currie, Kleinow and Ritchie (2019) British Actuarial Journal 24: e13 | CMI model used in UK practice |
 | Negative-binomial Lee-Carter | Delwarde, Denuit and Partrat (2007) ASMBI 23(5): 385-401 | Published overdispersion in place of the removed layer |
 | Common age effect model for several populations | Kleinow (2015) Insurance: Mathematics and Economics 63: 147-152 | Applied to socio-economic groups in England |
 | SAINT model for small populations | Jarner and Kryger (2011) ASTIN Bulletin 41(2): 377-418 | Small populations against a reference population |
 | Varying age-specific improvements | Bohk-Ewald and Rau (2017) Genus 73: 1 | Bayesian; heavier |
+
+## Full texts read in E4
+
+Sources and their access are recorded in the literature manifests of the
+session (Crossref-verified citations). Read in full: Oeppen (2008),
+Bergeron-Boucher et al. (2017) with their code, Russolillo, Giordano and
+Haberman (2011, accepted manuscript), Li, Lee and Gerland (2013, accepted
+manuscript), Panagiotelis et al. (2023, preprint), Wickramasuriya, Turlach
+and Hyndman (2020, preprint), Coroneo and Iacone (2020), Rizzi, Gampe and
+Eilers (2015), Thatcher, Kannisto and Vaupel (1998), Hyndman, Booth and
+Yasmeen (2013, preprint), Camarda (2019) with his code, Bohk-Ewald and Rau
+(2017). Implemented from software where the paper was unavailable:
+Currie, Durban and Eilers (2004) through MortalitySmooth 2.3.4; Plat (2009)
+through the StMoMo vignette; Nordpred through the documentation of the
+nordpred package (GPL-2 only, so no code was copied). Still read only as
+abstracts, so not implemented: Delwarde, Denuit and Partrat (2007),
+Richards et al. (2019, APCI), Kleinow (2015), Jarner and Kryger (2011) and
+Jarner and Jallbjørn (2022, SAINT), Kjærgaard et al. (2019), Lazarus et al.
+(2018), Van Schaeybroeck and Vannitsem (2015), Lee and Miller (2001).
+
+Corrections of this audit after reading the full texts: Camarda (2019)
+constrains rates of ageing and of change (row above corrected); the
+equal-weighted cosine variance is that of Lazarus et al. (2018), and
+Coroneo and Iacone (2020) use a Daniell-kernel estimate.
+
