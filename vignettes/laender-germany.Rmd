@@ -143,14 +143,6 @@ expectancy of every series and the gap between each region and the West
 ```r
 bt <- mt_compare(cand, xh, origins = c(2008, 2011, 2014), h = 5, n_draws = 200, quantities = "life_expectancy",
                  contrast = c(var = "region", ref = "West"))
-#> Error in stats::arima(x = x, order = order, seasonal = seasonal, include.mean = include.mean,  : 
-#>   non-stationary AR part from CSS
-#> Error in stats::arima(x = x, order = order, seasonal = seasonal, include.mean = include.mean,  : 
-#>   non-stationary AR part from CSS
-#> Error in stats::arima(x = x, order = order, seasonal = seasonal, include.mean = include.mean,  : 
-#>   non-stationary AR part from CSS
-#> Error in stats::arima(x = x, order = order, seasonal = seasonal, include.mean = include.mean,  : 
-#>   non-stationary AR part from CSS
 mt_score_table(bt, metrics = c("crps", "cov95"), targets = c("rate", "life_expectancy"), hierarchy = h)
 #>                         model     level   crps cov95 crps_le cov95_le
 #>  1:                Lee-Carter    bottom 0.0923 0.776   0.379    0.754
@@ -183,11 +175,6 @@ mt_plot_scores(bt[region %in% laender & sex != "both"], by = "model", target = "
 ```
 
 ![](laender-germany-plot-scores-1.png)
-
-The printed errors come from `forecast::arfima()`, which fits the
-models of the ratios of the coherent fdm: in a few backtest fits its first
-estimate of an ARMA part (by conditional sum of squares) fails, and it
-estimates the model again by maximum likelihood.
 
 Lee-Carter continues the trends of 1998-2019: the gap of men keeps
 narrowing, and women in the East pull further ahead. Li-Lee and the
@@ -229,10 +216,6 @@ jump-off"), checked in the same backtest:
 ens <- ensemble(lc = lee_carter(), cf = coherent_fdm(common_by = "sex"))
 bt_anchor <- mt_compare(list("+ anchored" = bu(anchored(ens))), xh, origins = c(2008, 2011, 2014),
                         h = 5, n_draws = 200, quantities = "life_expectancy", contrast = c(var = "region", ref = "West"))
-#> Error in stats::arima(x = x, order = order, seasonal = seasonal, include.mean = include.mean,  : 
-#>   non-stationary AR part from CSS
-#> Error in stats::arima(x = x, order = order, seasonal = seasonal, include.mean = include.mean,  : 
-#>   non-stationary AR part from CSS
 bt_steps <- rbind(bt[model == "Lee-Carter + coherent fdm"], bt_anchor)
 mt_score_table(bt_steps[sex != "both"], metrics = c("crps", "cov95"))
 #>                        model   crps cov95 crps_le cov95_le crps_le_gap
