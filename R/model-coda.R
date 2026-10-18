@@ -88,7 +88,11 @@
 #' Draws simulate the indexes: the random walk with drift includes the
 #' uncertainty of the drift (normal, with the variance of the mean change),
 #' the AR(1) processes their innovations; `a` and `b` are fixed. Draws are
-#' expected rates; predictive draws add extra-Poisson and Poisson variation.
+#' expected rates; predictive draws (`mt_forecast(predictive = TRUE)`) add
+#' Poisson variation of the deaths given the rates and the exposures, and no
+#' other observation noise. If intervals are too narrow on real data, that
+#' is a property of the model (see [recalibrated()], [ensemble()], or
+#' overdispersed models such as `stanmomo(family = "nb")`).
 #' The model weights all ages equally on the clr scale, so the noise of ages
 #' with few deaths enters `k`; its intervals can be wider than those of
 #' [lee_carter()].
@@ -392,7 +396,7 @@ ar1_mean_paths <- function(a, h, n_draws) {
 #' different trends beyond the pattern `b[x, c]`. The extensions of
 #' Kjærgaard, Ergemen, Kallestrup-Lamb, Oeppen and Lindahl-Jacobsen (2019)
 #' are not implemented. In a backtest on [mt_example_causes()] the model was
-#' less accurate than [cause_shares()]; compare it with [cause_shares()] or
+#' less accurate than the deprecated [cause_shares()]; compare it with
 #' [reconciled()] separate models in a backtest before using it.
 #'
 #' Jump-off, the open age interval and zero deaths are treated as in
@@ -400,10 +404,13 @@ ar1_mean_paths <- function(a, h, n_draws) {
 #' `k[t]` (its split by cause comes from the composition), and zero rates of
 #' a cause are replaced by half its smallest positive rate in the group (as
 #' `replace.zeros()` of the R package MortalityForecast). Draws are expected
-#' rates. Predictive draws (`mt_forecast(predictive = TRUE)`) add
-#' extra-Poisson and Poisson variation to the all-cause rates and split the
-#' all-cause deaths multinomially between the causes, so that the causes also
-#' add up to all causes in predictive draws.
+#' rates. Predictive draws (`mt_forecast(predictive = TRUE)`) draw Poisson
+#' all-cause deaths given the all-cause rates and exposures and split them
+#' multinomially between the causes by the cause shares of the draw, so that
+#' the causes also add up to all causes in predictive draws; no other
+#' observation noise is added. If intervals are too narrow on real data,
+#' that is a property of the model (see [recalibrated()], [ensemble()], or
+#' overdispersed models such as `stanmomo(family = "nb")`).
 #'
 #' @param var Stratum variable with the causes.
 #' @param total_level Level of `var` for all causes.
@@ -427,7 +434,7 @@ ar1_mean_paths <- function(a, h, n_draws) {
 #' (2019). Forecasting causes of death by using compositional data analysis:
 #' the case of cancer deaths. *Journal of the Royal Statistical Society
 #' Series C* 68(5): 1351-1370. \doi{10.1111/rssc.12357}
-#' @seealso [cause_shares()], [coda()].
+#' @seealso [reconciled()] with a hierarchy of causes, [coda()].
 #' @examples
 #' x <- mt_example_causes(years = 2005:2019)
 #' fit <- mt_fit(coda_causes(), x)
@@ -546,8 +553,8 @@ mt_forecast.mt_fit_coda_causes <- function(fit, h = 10, to = NULL, n_draws = 500
   })
 }
 
-# Predictive draws: extra-Poisson and Poisson variation of the all-cause
-# rates, deaths split multinomially by the cause shares of the draw (successive
+# Predictive draws: Poisson all-cause deaths given the all-cause rates and
+# exposures, split multinomially by the cause shares of the draw (successive
 # binomial draws; without a residual cause the last cause takes the rest)
 coda_causes_predictive <- function(arr, fit, exposure) {
   d <- dim(arr)
@@ -557,8 +564,7 @@ coda_causes_predictive <- function(arr, fit, exposure) {
   for (g in seq_along(f$tot_id)) {
     i <- f$tot_id[g]
     tot <- arr[, , i, , drop = FALSE]
-    noisy <- tot * exp(stats::rnorm(length(tot), 0, fit$noise_sd[, i]))
-    mu <- noisy * as.vector(E[, , i])
+    mu <- tot * as.vector(E[, , i])
     ok <- !is.na(mu)
     Dt <- array(NA_real_, dim(tot))
     Dt[ok] <- stats::rpois(sum(ok), mu[ok])

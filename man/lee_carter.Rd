@@ -88,6 +88,25 @@ Age groups without deaths in the fitting period get a constant rate (0.5
 deaths over the period) and no trend; with \code{adjust = "e0"} they enter the
 life tables at that rate.
 
+\strong{Safeguards of this package for sparse counts.} Where the Poisson
+likelihood has no finite maximum (\code{method = "poisson"} with very few
+deaths), the fit falls back to two package-specific estimators (reference
+unknown), each with a warning (class \code{mt_warning_model_fit}; within
+\code{\link[=mt_fit]{mt_fit()}} it is reported with the stratum): first to the Poisson fit with
+a ridge penalty that shrinks \code{b} towards equal shares \code{1 / n_ages}, and
+if that also fails to the SVD estimates (\code{method = "svd"} with \code{adjust = "dt"}). Their forecasts are not those of the Poisson Lee-Carter model;
+wider age groups (\code{\link[=mt_regroup]{mt_regroup()}}) or pooling (\code{\link[=li_lee]{li_lee()}}) avoid them.
+
+Draws describe the expected rates. Predictive draws
+(\code{mt_forecast(predictive = TRUE)}) add Poisson variation of the deaths
+given the rates and the exposures, the observation model of the Poisson
+Lee-Carter model (Brouhns, Denuit and Vermunt 2002); no other observation
+noise is added. If intervals are too narrow on real data, that is a
+property of the model: see \code{\link[=recalibrated]{recalibrated()}}, \code{\link[=ensemble]{ensemble()}}, or
+overdispersed models such as \code{stanmomo("lc", family = "nb")}
+(\code{\link[=stanmomo]{stanmomo()}}; negative binomial Lee-Carter model of Delwarde, Denuit and
+Partrat 2007).
+
 \code{rotate = TRUE} rotates the age pattern of decline as life expectancy
 rises (Li, Lee and Gerland 2013). In long-lived populations the decline
 of mortality slows down at young ages and speeds up at old ages, which a
@@ -144,6 +163,10 @@ conditions of variable mortality decline. \emph{Population Studies} 56(3):
 Lee R, Miller T (2001). Evaluating the performance of the Lee-Carter
 method for forecasting mortality. \emph{Demography} 38(4): 537-549.
 \doi{10.1353/dem.2001.0036}
+
+Delwarde A, Denuit M, Partrat C (2007). Negative binomial version of the
+Lee-Carter model for mortality forecasting. \emph{Applied Stochastic Models in
+Business and Industry} 23(5): 385-401.
 
 Brouhns N, Denuit M, Van Keilegom I (2005). Bootstrapping the Poisson
 log-bilinear model for mortality forecasting. \emph{Scandinavian Actuarial

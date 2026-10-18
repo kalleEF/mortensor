@@ -18,10 +18,11 @@
 #' @param joint Whether the model is fitted jointly across strata.
 #' @param min_periods Minimum number of periods in the training data.
 #' @param label Display name.
-#' @param smooth Whether the draws describe smooth underlying rates (`TRUE`,
-#'   for example Lee-Carter; such fits return in-sample `fitted` rates, from
-#'   which extra-Poisson noise is estimated) or observed rates (`FALSE`, for
-#'   example a random walk on observed log rates).
+#' @param smooth Whether the draws describe expected (underlying) rates
+#'   (`TRUE`, for example Lee-Carter: predictive draws add Poisson variation
+#'   of the deaths given these rates and the exposures) or observed rates
+#'   (`FALSE`, for example a random walk on observed log rates: predictive
+#'   draws add nothing).
 #' @return An object of class `c("mt_spec_<model>", "mt_spec")`.
 #' @keywords internal
 #' @export
@@ -103,23 +104,29 @@ mt_fit.mt_spec <- function(spec, data, prep = NULL, cores = 1, ...) {
   md <- model_inputs(d, spec)
   raw_D <- raw_deaths(pr$raw, md)
   st <- d$strata
+  # warnings inside the fit of a stratum are collected (one warning per fit,
+  # see report_fit_problems()), with the topics of mortensor's warnings
   run <- function(expr_fun) {
     t0 <- proc.time()[["elapsed"]]
     w <- new.env(parent = emptyenv())
     w$msg <- character()
+    w$cls <- character()
     res <- withCallingHandlers(tryCatch(expr_fun(), error = function(e) e),
                                warning = function(cnd) {
                                  w$msg <- c(w$msg, conditionMessage(cnd))
+                                 w$cls <- c(w$cls, grep("^mt_warning_", class(cnd), value = TRUE))
                                  invokeRestart("muffleWarning")
                                })
     secs <- proc.time()[["elapsed"]] - t0
     ok <- !inherits(res, "error")
     list(fit = if (ok) res else NULL, status = if (ok) "ok" else "failed",
-         message = if (ok) paste(unique(w$msg), collapse = " | ") else conditionMessage(res), seconds = secs)
+         message = if (ok) paste(unique(w$msg), collapse = " | ") else conditionMessage(res), seconds = secs,
+         classes = unique(w$cls))
   }
   if (spec$joint) {
     r <- run(function() fit_model(spec, md$D, md$E, md$age, md$periods, strata = st, hierarchy = d$hierarchy))
     fits <- r$fit
+    classes <- r$classes
     diagnostics <- data.table(stratum = st$label, status = r$status, message = r$message, seconds = r$seconds)
   } else {
     # matrices [age, period] also with a single age group
@@ -128,6 +135,7 @@ mt_fit.mt_spec <- function(spec, data, prep = NULL, cores = 1, ...) {
     # one random number stream per stratum, so that results do not depend on `cores`
     res <- par_lapply(seq_len(nrow(st)), one, cores, streams = TRUE)
     fits <- lapply(res, `[[`, "fit")
+    classes <- unique(unlist(lapply(res, `[[`, "classes")))
     diagnostics <- data.table(stratum = st$label, status = vapply(res, `[[`, "", "status"),
                               message = vapply(res, `[[`, "", "message"),
                               seconds = vapply(res, `[[`, 0, "seconds"))
@@ -135,18 +143,16 @@ mt_fit.mt_spec <- function(spec, data, prep = NULL, cores = 1, ...) {
   if (all(diagnostics$status == "failed")) {
     mt_abort(sprintf("The model failed in every stratum: %s", diagnostics$message[1]), class = "model_fit")
   }
-  report_fit_problems(diagnostics, spec$label)
-  # observation noise, observed rates and residuals refer to the raw rates
-  # (before smoothing); the model is fitted to the preprocessed rates. A model
-  # of observed rates (rwd(), arima_series()) fitted to smoothed rates
-  # forecasts smoothed rates: its predictive draws add the noise of the raw
-  # rates around the smoothed ones
+  report_fit_problems(diagnostics, spec$label, classes)
+  # observed rates and residuals refer to the raw rates (before smoothing);
+  # the model is fitted to the preprocessed rates. A model of observed rates
+  # (rwd(), arima_series()) fitted to smoothed rates forecasts smoothed
+  # rates: its predictive draws add Poisson deaths given these rates
   D_obs <- raw_D %||% md$D
   structure(list(spec = spec, prep = prep, fits = fits, diagnostics = diagnostics, age = md$age,
                  periods = md$periods, strata = st, omega = d$omega,
                  observed = D_obs / md$E, train_D = md$D, raw_D = raw_D, train_E = md$E,
                  exposure_last = md$E[, length(md$periods), , drop = FALSE], level_totals = data$level_totals,
-                 noise_sd = extra_noise_sd(spec, fits, D_obs, md$E, smoothed = if (!is.null(raw_D)) md$D / md$E),
                  smoothed_input = !is.null(raw_D)),
             class = "mt_fit")
 }
@@ -161,8 +167,10 @@ raw_deaths <- function(raw, md) {
   D
 }
 
-# One warning per fit for failed strata and for warnings inside strata
-report_fit_problems <- function(diagnostics, label) {
+# One warning per fit for failed strata and for warnings inside strata; the
+# latter carries the classes of mortensor's warnings inside the strata
+# (`classes`, such as "mt_warning_li_lee") besides mt_warning_model_fit
+report_fit_problems <- function(diagnostics, label, classes = character()) {
   bad <- diagnostics[status == "failed"]
   if (nrow(bad)) {
     mt_warn(sprintf(paste("%s failed in %d of %d strata (%s: %s); their forecasts are missing. Sparse strata often",
@@ -172,35 +180,10 @@ report_fit_problems <- function(diagnostics, label) {
   }
   msg <- diagnostics[status == "ok" & nzchar(message)]
   if (nrow(msg)) {
+    topics <- setdiff(sub("^mt_warning_", "", classes), "model_fit")
     mt_warn(sprintf("%s: warnings in %d stratum/strata, for example %s: %s (see the diagnostics of the fit).", label,
-                    nrow(msg), msg$stratum[1], msg$message[1]), class = "model_fit")
+                    nrow(msg), msg$stratum[1], msg$message[1]), class = c("model_fit", topics))
   }
-}
-
-# Extra-Poisson noise on the log scale per age and stratum, from in-sample
-# fitted rates; for models of observed rates fitted to smoothed rates
-# (`smoothed`, [age, period, stratum]), around the smoothed rates
-extra_noise_sd <- function(spec, fits, D, E, smoothed = NULL) {
-  out <- matrix(0, dim(D)[1], dim(D)[3])
-  smooth <- isTRUE(spec$smooth)
-  if (!smooth && is.null(smoothed)) return(out)
-  fitted <- if (smooth && spec$joint) fits$fitted else NULL
-  na <- dim(D)[1]
-  for (s in seq_len(dim(D)[3])) {
-    f <- if (!smooth) smoothed[, , s] else if (spec$joint) fitted[, , s] else fits[[s]]$fitted
-    if (is.null(f)) next
-    # matrices [age, period] also with a single age group
-    f <- matrix(f, na)
-    Es <- matrix(E[, , s], na)
-    r <- log_rates(matrix(D[, , s], na), Es) - log(f)
-    r[!is.finite(r)] <- NA
-    pois <- rowMeans(1 / pmax(f * Es, 0.5), na.rm = TRUE)
-    n <- rowSums(!is.na(r))
-    v <- rowSums((r - rowMeans(r, na.rm = TRUE))^2, na.rm = TRUE) / pmax(n - 1, 1) - pois
-    v[n < 3 | !is.finite(v)] <- 0
-    out[, s] <- sqrt(pmax(v, 0))
-  }
-  out
 }
 
 model_inputs <- function(d, spec) {
@@ -356,16 +339,29 @@ print.mt_fit <- function(x, ...) {
 #' @param seed Random seed (`NULL` leaves the random number generator as
 #'   is).
 #' @param predictive If `TRUE`, draws describe observable rates: for
-#'   models of smooth rates, and for any model fitted to smoothed rates
-#'   (`step_smooth()`), extra-Poisson noise (estimated from in-sample
-#'   residuals of the raw rates) and Poisson variation of deaths given
-#'   `exposure` are added;
-#'   cells can have zero deaths (rate 0). Used by [mt_backtest()], which
-#'   sums the deaths to the observed cells before taking logarithms.
+#'   models of expected rates (such as [lee_carter()]), and for any model
+#'   fitted to smoothed rates (`step_smooth()`), deaths are drawn given the
+#'   rates of each draw and `exposure` and divided by the exposures. The
+#'   deaths are Poisson, the observation model of the Poisson Lee-Carter
+#'   model (Brouhns, Denuit and Vermunt 2002); for models with a negative
+#'   binomial likelihood (`stanmomo(family = "nb")`) they are negative
+#'   binomial with the model's dispersion. No other observation noise is
+#'   added. Models of observed rates ([rwd()], [arima_series()],
+#'   [ets_series()]) add nothing. Cells can have zero deaths (rate 0). Used
+#'   by [mt_backtest()], which sums the deaths to the observed cells before
+#'   taking logarithms. If predictive intervals are too narrow on real
+#'   data, that is a property of the model: see [recalibrated()],
+#'   [ensemble()] or overdispersed models such as `stanmomo(family =
+#'   "nb")`.
 #' @param exposure Exposures for predictive draws: array `[age, period,
 #'   stratum]` or matrix `[age, stratum]` (default: last training year).
 #' @param ... Passed to methods.
 #' @return An [mt_draws] object.
+#' @references
+#' Brouhns N, Denuit M, Vermunt JK (2002). A Poisson log-bilinear regression
+#' approach to the construction of projected lifetables. *Insurance:
+#' Mathematics and Economics* 31(3): 373-393.
+#' \doi{10.1016/S0167-6687(02)00185-3}
 #' @examples
 #' x <- mt_example(deaths = "single")
 #' fc <- mt_forecast(mt_fit(rwd(), x), h = 5, n_draws = 100, seed = 1)
@@ -392,20 +388,35 @@ mt_forecast.mt_fit <- function(fit, h = 10, to = NULL, n_draws = 500, seed = NUL
   arr <- array(NA_real_, c(na, h, ns, n_draws),
                dimnames = list(age = fit$age$labels, period = as.character(last + seq_len(h)),
                                stratum = fit$strata$label, draw = NULL))
+  # size of the negative binomial distribution of the deaths per stratum and
+  # draw, for models with that likelihood (the posterior draw of the
+  # dispersion that belongs to each draw of the rates); NULL: Poisson
+  size <- NULL
   with_seed(seed, {
     if (spec$joint) {
-      if (!is.null(fit$fits)) arr[] <- simulate_model(spec, fit$fits, h, n_draws)
+      if (!is.null(fit$fits)) {
+        sim <- simulate_model(spec, fit$fits, h, n_draws)
+        arr[] <- sim
+        if (!is.null(attr(sim, "nb_size"))) size <- matrix(attr(sim, "nb_size"), ns, n_draws)
+      }
     } else {
       for (s in seq_len(ns)) {
-        if (!is.null(fit$fits[[s]])) arr[, , s, ] <- simulate_model(spec, fit$fits[[s]], h, n_draws)
+        if (is.null(fit$fits[[s]])) next
+        sim <- simulate_model(spec, fit$fits[[s]], h, n_draws)
+        arr[, , s, ] <- sim
+        if (!is.null(attr(sim, "nb_size"))) {
+          if (is.null(size)) size <- matrix(Inf, ns, n_draws)
+          size[s, ] <- attr(sim, "nb_size")
+        }
       }
     }
-    if (predictive) arr <- predictive_rates(arr, fit, exposure, spec)
+    if (predictive) arr <- predictive_rates(arr, fit, exposure, spec, size)
   })
   check_draws_plausible(arr, fit$age, fit$strata, spec$label)
   out <- new_mt_draws(arr, fit$age, last + seq_len(h), fit$strata, model = spec$label, origin = last, fit = fit,
                       seed = seed)
   out$predictive <- predictive
+  out$nb_size <- size
   out
 }
 
@@ -427,21 +438,33 @@ check_draws_plausible <- function(arr, age, strata, label) {
   invisible()
 }
 
-# Observed-rate draws: extra-Poisson noise (models of smooth rates, or fitted to smoothed rates) and
-# Poisson deaths given exposures.
-# Cells may have zero deaths (rate 0); scores that take logarithms floor the
-# deaths after summing them to the observed cells, not per grid cell
-predictive_rates <- function(arr, fit, exposure, spec) {
+# Observed-rate draws: deaths given the rates of each draw and the exposures,
+# divided by the exposures (models of expected rates, or fitted to smoothed
+# rates). The deaths are Poisson (Brouhns, Denuit and Vermunt 2002), or
+# negative binomial with `size` [stratum, draw] for models with that
+# likelihood; no other observation noise is added. Cells may have zero
+# deaths (rate 0); scores that take logarithms floor the deaths after
+# summing them to the observed cells, not per grid cell
+predictive_rates <- function(arr, fit, exposure, spec, size = NULL) {
+  if (!isTRUE(spec$smooth) && !isTRUE(fit$smoothed_input)) return(arr)
   d <- dim(arr)
   E <- expand_exposure(exposure %||% fit$exposure_last, d, dimnames(arr))
-  if (isTRUE(spec$smooth) || isTRUE(fit$smoothed_input)) {
-    sd <- array(fit$noise_sd[, rep(seq_len(d[3]), each = d[2])], d[1:3])
-    arr <- arr * exp(stats::rnorm(length(arr), 0, as.vector(sd)))
-    mu <- arr * as.vector(E)
-    ok <- !is.na(mu)
-    deaths <- array(NA_real_, d)
-    deaths[ok] <- stats::rpois(sum(ok), mu[ok])
-    arr <- deaths / pmax(as.vector(E), 1e-12)
-  }
-  arr
+  mu <- arr * as.vector(E)
+  ok <- !is.na(mu)
+  sz <- if (!is.null(size)) rep(as.vector(size), each = d[1] * d[2])[ok]
+  deaths <- array(NA_real_, d)
+  deaths[ok] <- r_deaths(mu[ok], sz)
+  deaths / pmax(as.vector(E), 1e-12)
+}
+
+# Deaths given their expected values `mu`: Poisson, or negative binomial
+# with `size` (mean mu, variance mu + mu^2 / size; Inf gives Poisson)
+r_deaths <- function(mu, size = NULL) {
+  if (is.null(size) || !any(is.finite(size))) return(stats::rpois(length(mu), mu))
+  size <- rep_len(size, length(mu))
+  out <- numeric(length(mu))
+  nb <- is.finite(size)
+  out[!nb] <- stats::rpois(sum(!nb), mu[!nb])
+  out[nb] <- stats::rnbinom(sum(nb), size = size[nb], mu = mu[nb])
+  out
 }

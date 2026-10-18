@@ -34,9 +34,11 @@
 #' larger than the weighted mean of the CRPS of its components (the CRPS is
 #' convex in the forecast distribution). The vignette "Choosing and
 #' combining models" compares ensembles and single models in a backtest.
-#' In populations with few deaths per cell, use `rwd(observation_noise = TRUE)` as the random-walk
-#' component: the plain random walk accumulates the Poisson noise of
-#' observed rates and its long-horizon paths become implausible.
+#' In populations with few deaths per cell, the plain random walk
+#' accumulates the Poisson noise of observed rates and its long-horizon
+#' paths become implausible; the local level model with drift, the random
+#' walk observed with noise, is `arima_series(order = c(0, 1, 1), drift =
+#' TRUE)` (its reduced form, Harvey 1989).
 #'
 #' @param ... Model specifications; names are used as labels.
 #' @param weights `"equal"`, `"crps"`, `"stack"` or a numeric vector.
@@ -124,7 +126,7 @@ mt_fit.mt_spec_ensemble <- function(spec, data, prep = NULL, cores = 1, ...) {
   # the data of the first component, without fields of wrappers around it
   # (calibration, anchor, tuning, ...): they do not describe the ensemble
   fields <- c("age", "periods", "strata", "omega", "observed", "train_D", "raw_D", "train_E", "exposure_last",
-              "level_totals", "noise_sd")
+              "level_totals")
   out <- c(list(spec = spec, prep = prep), ref[intersect(fields, names(ref))],
            list(components = fits[ok], weights = stats::setNames(w[ok], names(fits)[ok]), diagnostics = diag,
                 reconcile = common_reconcile(fits[ok])))

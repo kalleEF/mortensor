@@ -754,7 +754,7 @@ shrink_cov <- function(X, shrink = "auto") {
 #' [mt_forecast()]) can then be given for the bottom strata only, and those
 #' of the aggregates are their sums. Predictive draws (used by backtests)
 #' are coherent as well: the observation noise of the base model (Poisson
-#' and extra-Poisson variation for models of smooth rates, none for models
+#' variation of the deaths for models of expected rates, none for models
 #' of observed rates such as [rwd()]; for [ensemble()] and [stratified()]
 #' models that of the component or group each draw comes from) is drawn for
 #' the bottom strata only, independently per cell, and the aggregates are

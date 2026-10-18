@@ -5,7 +5,7 @@ test_that("the calibration estimator recovers a known spread factor", {
   L <- matrix(stats::rnorm(G * n, 0, 0.05), G)
   pieces <- list(list(label = "a", L = L, m = rep(0, G), h = rep(1:4, G / 4), E = rep(1, G),
                       C = Matrix::Diagonal(G), Ecell = rep(1, G), y = stats::rnorm(G, 0, 0.1),
-                      noise = rep(FALSE, n), sd = matrix(0, G, n)))
+                      noise = rep(FALSE, n), size = rep(Inf, n)))
   P <- with_seed_test(2, mortensor:::stack_pieces(pieces, n))
   r <- mortensor:::calibration_fit(P, "constant", FALSE)
   expect_equal(r$table$scale_h1, 2, tolerance = 0.15)

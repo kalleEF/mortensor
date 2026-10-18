@@ -104,8 +104,9 @@ estimates of the excess mortality of the COVID-19 pandemic follow this
 approach with their own baseline model (Msemburi et al. 2023); Acosta
 and Irizarry (2022) describe a model of the excess itself. Here the expected deaths are draws of
 \code{\link[=mt_forecast]{mt_forecast()}} with \code{predictive = TRUE}: the uncertainty of the
-baseline trend plus the Poisson and extra-Poisson variation of the death
-counts. The observed deaths minus each draw give draws of the excess.
+baseline trend plus the Poisson variation of the death counts given the
+rates (negative binomial for \code{stanmomo(family = "nb")}). The observed
+deaths minus each draw give draws of the excess.
 When the baseline model holds, the interval of the excess covers the true
 excess with its nominal probability, and an interval that contains zero
 means deaths within the range of normal variation.

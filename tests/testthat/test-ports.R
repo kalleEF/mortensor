@@ -1,6 +1,7 @@
 test_that("wrapped and multi-population models satisfy the contract", {
   expect_mt_model(li_lee())
-  expect_mt_model(product_ratio(ratio_order = 2))
+  expect_warning(pr <- product_ratio(ratio_order = 2), class = "mt_warning_deprecated")
+  expect_mt_model(pr)
   skip_if_not_installed("demography")
   skip_if_not_installed("forecast")
   expect_mt_model(hyndman_ullah(order = 2))
@@ -99,7 +100,8 @@ test_that("Li-Lee forecasts of strata stay close together", {
 
 test_that("cause shares add up to all causes in every draw", {
   x <- mt_example_causes(years = 2000:2015)
-  fit <- mt_fit(cause_shares(total = lee_carter(), ranks = c(2, 2, 2, 2)), x)
+  expect_warning(cs <- cause_shares(total = lee_carter(), ranks = c(2, 2, 2, 2)), class = "mt_warning_deprecated")
+  fit <- mt_fit(cs, x)
   fc <- mt_forecast(fit, h = 3, n_draws = 20, seed = 1)
   st <- fc$strata
   for (sx in c("female", "male")) {
@@ -110,10 +112,11 @@ test_that("cause shares add up to all causes in every draw", {
   }
   p <- mt_forecast(fit, h = 2, n_draws = 10, seed = 1, predictive = TRUE)
   expect_false(anyNA(p$rates))
-  bt <- mt_backtest(cause_shares(total = rwd(), ranks = c(2, 2, 2, 2)), x, origins = 2012, h = 3, n_draws = 30)
+  bt <- mt_backtest(suppressWarnings(cause_shares(total = rwd(), ranks = c(2, 2, 2, 2))), x, origins = 2012, h = 3,
+                    n_draws = 30)
   expect_setequal(unique(bt$cause), c("all", "cvd", "cancer", "other"))
-  expect_error(mt_fit(cause_shares(var = "region"), x), class = "mt_error_argument")
-  expect_error(cause_shares(ranks = 1:3), class = "mt_error_argument")
+  expect_error(mt_fit(suppressWarnings(cause_shares(var = "region")), x), class = "mt_error_argument")
+  expect_error(suppressWarnings(cause_shares(ranks = 1:3)), class = "mt_error_argument")
 })
 
 test_that("ILR transforms round trip", {

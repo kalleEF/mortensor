@@ -2,12 +2,12 @@
 
 test_that("rwd() with a drift window and observation noise fits and forecasts", {
   x <- mt_example(deaths = "single", years = 2000:2019)
-  fit <- mt_fit(rwd(drift_window = 10, observation_noise = TRUE), x)
+  expect_warning(sp <- rwd(drift_window = 10, observation_noise = TRUE), class = "mt_warning_deprecated")
+  fit <- mt_fit(sp, x)
   f <- fit$fits[[1]]$fitted
   expect_equal(dim(f), c(length(fit$age), 20))
   expect_true(all(is.na(f[, 1:10])))
   expect_true(all(is.finite(f[, 11:20])))
-  expect_true(all(is.finite(fit$noise_sd)))
   fc <- mt_forecast(fit, h = 2, n_draws = 10, seed = 1, predictive = TRUE)
   expect_false(anyNA(fc$rates))
 })
@@ -57,7 +57,7 @@ test_that("StMoMo forecasts one year ahead", {
 test_that("cause shares keep causes adding up in predictive draws and follow the total model", {
   x <- mt_example_causes(years = 2005:2019)
   st <- mt_strata(x)
-  fit <- mt_fit(cause_shares(total = lee_carter(), ranks = c(2, 2, 2, 2)), x)
+  fit <- mt_fit(suppressWarnings(cause_shares(total = lee_carter(), ranks = c(2, 2, 2, 2))), x)
   E <- fit$exposure_last
   p <- mt_forecast(fit, h = 2, n_draws = 10, seed = 1, predictive = TRUE)
   for (sx in c("female", "male")) {
@@ -69,7 +69,7 @@ test_that("cause shares keep causes adding up in predictive draws and follow the
     expect_equal(d_tot, round(d_tot), tolerance = 1e-8)
   }
   # a total model of observed rates: predictive draws are the draws
-  fit2 <- mt_fit(cause_shares(total = rwd(), ranks = c(2, 2, 2, 2)), x)
+  fit2 <- mt_fit(suppressWarnings(cause_shares(total = rwd(), ranks = c(2, 2, 2, 2))), x)
   expect_false(fit2$spec$smooth)
   a <- mt_forecast(fit2, h = 2, n_draws = 10, seed = 1)
   b <- mt_forecast(fit2, h = 2, n_draws = 10, seed = 1, predictive = TRUE)
@@ -86,7 +86,6 @@ test_that("joint models run with a single age group", {
   for (spec in list(tucker3(), li_lee())) {
     fit <- mt_fit(spec, x)
     expect_true(all(fit$diagnostics$status == "ok"))
-    expect_equal(dim(fit$noise_sd), c(1, 2))
     fc <- mt_forecast(fit, h = 2, n_draws = 5, seed = 1, predictive = TRUE)
     expect_equal(dim(fc$rates), c(1, 2, 2, 5))
   }
@@ -116,10 +115,12 @@ test_that("models of observed rates fitted to smoothed rates add observation noi
   x <- mt_regroup(mt_example(deaths = "grouped", years = 1995:2019), age = "deaths")
   raw <- mt_fit(rwd(), x)
   expect_false(raw$smoothed_input)
-  expect_true(all(raw$noise_sd == 0))
+  # observed rates: predictive draws add nothing
+  a <- mt_forecast(raw, h = 2, n_draws = 20, seed = 1)
+  b <- mt_forecast(raw, h = 2, n_draws = 20, seed = 1, predictive = TRUE)
+  expect_equal(b$rates, a$rates)
   fit <- mt_fit(rwd(), x, prep = mt_prep(step_smooth(along = "period", method = "whittaker")))
   expect_true(fit$smoothed_input)
-  expect_true(any(fit$noise_sd > 0))
   d <- mt_forecast(fit, h = 3, n_draws = 200, seed = 1)
   p <- mt_forecast(fit, h = 3, n_draws = 200, seed = 1, predictive = TRUE)
   # predictive draws are deaths given the exposures: wider than the draws of the smoothed rates

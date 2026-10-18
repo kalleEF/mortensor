@@ -80,8 +80,8 @@ beyond the longest horizon of the window, and \eqn{b} a correction of
 the drift per year (\code{bias = TRUE});
 \item \eqn{s_1}, \eqn{\gamma} and \eqn{b} minimise the mean CRPS (or the
 interval score, \code{target}) of the log death rates in the window, with
-Poisson (and the model's extra-Poisson) variation of the observed
-deaths, as in \code{\link[=mt_backtest]{mt_backtest()}}. Draws of an ensemble get the observation
+the Poisson (or the model's negative binomial) variation of the
+observed deaths, as in \code{\link[=mt_backtest]{mt_backtest()}}. Draws of an ensemble get the observation
 noise of the component they come from.
 }
 
