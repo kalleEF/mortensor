@@ -45,10 +45,10 @@ tn <- mt_tune(window_model, data.frame(window = c(15, 20, 30, 51)), ew, inner_or
 tn$scores
 #>    window       rmse         se selected
 #>     <num>      <num>      <num>   <lgcl>
-#> 1:     15 0.09663394 0.01095455     TRUE
-#> 2:     20 0.10893774 0.01174786    FALSE
-#> 3:     30 0.11908960 0.01040995    FALSE
-#> 4:     51 0.12341207 0.01074560    FALSE
+#> 1:     15 0.09688975 0.01112097     TRUE
+#> 2:     20 0.10894032 0.01163030    FALSE
+#> 3:     30 0.11887717 0.01033258    FALSE
+#> 4:     51 0.12362359 0.01068757    FALSE
 ```
 
 ``` r
@@ -86,23 +86,23 @@ held-out years.
 [`recalibrated()`](../reference/recalibrated.md) refits the model at
 several origins within the last ten training years, compares the
 forecasts with what was observed, and rescales the spread of the draws
-around their median by a factor that can grow with the horizon. The
-factor minimises the CRPS of these recent forecasts:
+around their median by one factor for all horizons. The factor minimises
+the CRPS of these recent forecasts. The closest published method is the
+member-by-member post-processing of ensemble forecasts (Van Schaeybroeck
+and Vannitsem 2015):
 
 ``` r
 
 fit_cal <- mt_fit(recalibrated(lee_carter()), ew)
-fit_cal$calibration[, .(scale_h1, slope, crps_before, crps_after, cov95_before, cov95_after)]
-#>    scale_h1       slope crps_before crps_after cov95_before cov95_after
-#>       <num>       <num>       <num>      <num>        <num>       <num>
-#> 1: 2.663646 -0.08257622  0.07156094 0.06722745    0.6690141   0.9314554
+fit_cal$calibration[, .(scale_h1, crps_before, crps_after, cov95_before, cov95_after)]
+#>    scale_h1 crps_before crps_after cov95_before cov95_after
+#>       <num>       <num>      <num>        <num>       <num>
+#> 1: 2.600246  0.07590544 0.06859299    0.4755869   0.8849765
 ```
 
-The factor at horizon 1 (`scale_h1`) is about 2.7: Lee-Carter’s
-intervals were far too narrow in the last decade. The factor changes
-little with the horizon (`slope` near 0, the factor is
-`scale_h1 * h^slope`). Within the window, recalibration raised the 95%
-coverage from 0.67 to 0.93.
+The factor (`scale_h1`) is 2.6: Lee-Carter’s intervals were far too
+narrow in the last decade. Within the window, recalibration raised the
+95% coverage from 0.48 to 0.88 and lowered the CRPS from 0.076 to 0.069.
 
 ## Both together, checked in a backtest
 
@@ -120,10 +120,10 @@ bt <- mt_compare(list("Lee-Carter" = lee_carter(), "window tuned" = tuned_lc,
 mt_score_table(bt, metrics = c("crps", "cov95"))
 #>                         model   crps cov95 crps_le cov95_le
 #>                        <fctr>  <num> <num>   <num>    <num>
-#> 1:                 Lee-Carter 0.0687 0.746   0.473    0.917
-#> 2:               window tuned 0.0573 0.733   0.287    1.000
-#> 3:               recalibrated 0.0657 0.877   0.442    1.000
-#> 4: window tuned, recalibrated 0.0559 0.828   0.289    1.000
+#> 1:                 Lee-Carter 0.0709 0.632   0.470      0.9
+#> 2:               window tuned 0.0584 0.664   0.285      1.0
+#> 3:               recalibrated 0.0661 0.847   0.442      1.0
+#> 4: window tuned, recalibrated 0.0563 0.811   0.293      1.0
 ```
 
 ``` r
@@ -133,27 +133,37 @@ mt_plot_coverage(bt)
 
 ![](tuning-recalibration_files/figure-html/unnamed-chunk-6-1.png)
 
-The tuned window makes the forecasts more accurate: CRPS 0.057 against
-0.069 for the rates, 0.29 against 0.47 years for life expectancy at 30
+The tuned window makes the forecasts more accurate: CRPS 0.058 against
+0.071 for the rates, 0.29 against 0.47 years for life expectancy at 30
 (`_le`). Recalibration widens the intervals: the 95% coverage of the
-rates rises from 0.75 to 0.88, and from 0.73 to 0.83 for the tuned
+rates rises from 0.63 to 0.85, and from 0.66 to 0.81 for the tuned
 model, whose recent errors were smaller, so its intervals widen less.
-The coverage of life expectancy is high for all versions: errors of
-single ages partly cancel in life expectancy. Tuning and recalibration
-answer different questions and combine: the tuned and recalibrated
-version has the lowest CRPS of the rates (0.056).
+All versions remain below the nominal level, and their coverage falls
+with the horizon: the base model is too narrow by more at long horizons,
+and one factor for all horizons does not correct that. The coverage of
+life expectancy is high for all versions: errors of single ages partly
+cancel in life expectancy. Tuning and recalibration answer different
+questions and combine: the tuned and recalibrated version has the lowest
+CRPS of the rates (0.056).
 
 ## Options
 
 - `recalibrated(by = "sex")`: separate factors for groups of strata
   (with joint models, contrasts between the groups then get wider
   intervals);
-- `recalibrated(ages = c(50, 75))`: separate factors for age bands;
-- `recalibrated(quantity = "life_expectancy")`: recalibrate the
-  intervals of life expectancy instead of single rates;
 - `recalibrated(n_boot = 50)`: bootstrap intervals of the factors, which
   rest on few forecasts;
 - `tuned(..., by = "sex")`: tune and fit groups of strata separately.
+
+Further options of [`recalibrated()`](../reference/recalibrated.md) are
+specific to this package (reference unknown):
+
+- `scale = "horizon"`: a factor that changes with the horizon as a power
+  law, `scale_h1 * h^slope`;
+- `bias = TRUE`: a correction of the drift;
+- `ages = c(50, 75)`: separate factors for age bands;
+- `quantity = "life_expectancy"`: recalibrate the intervals of life
+  expectancy instead of single rates.
 
 ## Summary
 
@@ -162,3 +172,9 @@ version has the lowest CRPS of the rates (0.056).
 | Which settings forecast best? | [`mt_tune()`](../reference/mt_tune.md), [`tuned()`](../reference/mt_tune.md) | the forecast |
 | How wide should the intervals be? | [`recalibrated()`](../reference/recalibrated.md) | the width of the intervals |
 | Did it help? | [`mt_compare()`](../reference/mt_compare.md), [`mt_score_table()`](../reference/mt_compare.md) | nothing; it checks |
+
+## References
+
+Van Schaeybroeck B, Vannitsem S (2015). Ensemble post-processing using
+member-by-member approaches: theoretical aspects. *Quarterly Journal of
+the Royal Meteorological Society* 141(688): 807-818.

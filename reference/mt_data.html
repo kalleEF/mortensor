@@ -121,7 +121,11 @@ numeric age (for example 110 for the Human Mortality Database "110+").</p></dd>
 
 <dt id="arg-omega">omega<a class="anchor" aria-label="anchor" href="#arg-omega"></a></dt>
 <dd><p>Assumed maximum age, used wherever an open interval needs a
-finite upper bound.</p></dd>
+finite upper bound, for example <code><a href="mt_ungroup.html">mt_ungroup()</a></code>, which expands an open
+interval into single years up to <code>omega</code>. Methods that need one
+representative age per cell (<code><a href="mt_smooth.html">mt_smooth()</a></code> with the Whittaker smoother
+or GAMs) do not use it: they place an open interval at its lower bound
+plus half the width of the interval below it (a package convention).</p></dd>
 
 
 <dt id="arg-missing">missing<a class="anchor" aria-label="anchor" href="#arg-missing"></a></dt>

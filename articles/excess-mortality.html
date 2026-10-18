@@ -77,9 +77,10 @@ any mortality model of the package to the baseline years, forecasts the
 later years with the observed exposures, and compares the observed
 deaths with each simulated path of expected deaths. The intervals
 therefore contain the uncertainty of the baseline trend and the random
-variation of the death counts. The WHO estimates of the excess mortality
-of the COVID-19 pandemic follow this approach with their own baseline
-model (Msemburi et al. 2023).</p>
+variation of the death counts: they are prediction intervals for the
+realised excess under the baseline model. The WHO estimates of the
+excess mortality of the COVID-19 pandemic follow this approach with
+their own baseline model (Msemburi et al. 2023).</p>
 <p>The results are</p>
 <ul>
 <li>the <strong>excess</strong>: observed minus expected deaths;</li>
@@ -107,19 +108,19 @@ Lee-Carter model of the years 1990-2002:</p>
 <span><span class="va">ex</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">period</span>, <span class="va">observed</span>, <span class="va">expected_q0.5</span>, <span class="va">excess_q0.025</span>, <span class="va">excess_q0.5</span>, <span class="va">excess_q0.975</span>, <span class="va">p_score_q0.5</span><span class="op">)</span><span class="op">]</span></span>
 <span><span class="co">#&gt;    period observed expected_q0.5 excess_q0.025 excess_q0.5 excess_q0.975</span></span>
 <span><span class="co">#&gt;     &lt;num&gt;    &lt;num&gt;         &lt;num&gt;         &lt;num&gt;       &lt;num&gt;         &lt;num&gt;</span></span>
-<span><span class="co">#&gt; 1:   2003   552339      537269.0      5606.375     15070.0     25445.525</span></span>
-<span><span class="co">#&gt; 2:   2004   509429      539842.5    -44524.750    -30413.5    -16279.675</span></span>
-<span><span class="co">#&gt; 3:   2005   527535      543595.0    -33115.700    -16060.0       798.525</span></span>
-<span><span class="co">#&gt; 4:   2006   516416      548697.5    -52128.375    -32281.5    -13218.850</span></span>
+<span><span class="co">#&gt; 1:   2003   552339      536931.5      6624.225     15407.5     24207.650</span></span>
+<span><span class="co">#&gt; 2:   2004   509429      539789.0    -42437.625    -30360.0    -16082.050</span></span>
+<span><span class="co">#&gt; 3:   2005   527535      543092.0    -31888.450    -15557.0       682.875</span></span>
+<span><span class="co">#&gt; 4:   2006   516416      548104.5    -51667.575    -31688.5    -13050.350</span></span>
 <span><span class="co">#&gt;    p_score_q0.5</span></span>
 <span><span class="co">#&gt;           &lt;num&gt;</span></span>
-<span><span class="co">#&gt; 1:     2.804926</span></span>
-<span><span class="co">#&gt; 2:    -5.633773</span></span>
-<span><span class="co">#&gt; 3:    -2.954405</span></span>
-<span><span class="co">#&gt; 4:    -5.883296</span></span></code></pre></div>
+<span><span class="co">#&gt; 1:     2.869547</span></span>
+<span><span class="co">#&gt; 2:    -5.624420</span></span>
+<span><span class="co">#&gt; 3:    -2.864524</span></span>
+<span><span class="co">#&gt; 4:    -5.781471</span></span></code></pre></div>
 <p><code>by = character()</code> sums women and men. In 2003, about
-15,000 more people died than expected (95% interval 5,600 to 25,400),
-2.8% more than expected. Fouillet et al. (2006) counted about 15,000
+15,000 more people died than expected (95% interval 6,600 to 24,200),
+2.9% more than expected. Fouillet et al. (2006) counted about 15,000
 excess deaths between 1 and 20 August 2003 against the mortality of
 2000-2002, so the rest of the year was close to the baseline.</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
@@ -136,17 +137,17 @@ deaths far from the baseline period.</p>
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/mt_excess.html">mt_excess</a></span><span class="op">(</span><span class="va">fit</span>, <span class="va">x</span>, periods <span class="op">=</span> <span class="fl">2003</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">sex</span>, <span class="va">observed</span>, <span class="va">excess_q0.025</span>, <span class="va">excess_q0.5</span>, <span class="va">excess_q0.975</span><span class="op">)</span><span class="op">]</span></span>
 <span><span class="co">#&gt;       sex observed excess_q0.025 excess_q0.5 excess_q0.975</span></span>
 <span><span class="co">#&gt;    &lt;char&gt;    &lt;num&gt;         &lt;num&gt;       &lt;num&gt;         &lt;num&gt;</span></span>
-<span><span class="co">#&gt; 1: female   273315      3448.800     11671.5     19341.575</span></span>
-<span><span class="co">#&gt; 2:   male   279024     -1337.075      3531.0      8953.625</span></span>
+<span><span class="co">#&gt; 1: female   273315      3662.975     11716.5     18782.100</span></span>
+<span><span class="co">#&gt; 2:   male   279024      -423.375      3877.5      8718.475</span></span>
 <span><span class="va">ex_age</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_excess.html">mt_excess</a></span><span class="op">(</span><span class="va">fit</span>, <span class="va">x</span>, periods <span class="op">=</span> <span class="fl">2003</span>, by <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="op">)</span>, ages <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">45</span>, <span class="fl">65</span>, <span class="fl">75</span>, <span class="fl">85</span><span class="op">)</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
 <span><span class="va">ex_age</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">age</span>, <span class="va">observed</span>, <span class="va">excess_q0.5</span>, <span class="va">p_score_q0.025</span>, <span class="va">p_score_q0.5</span>, <span class="va">p_score_q0.975</span><span class="op">)</span><span class="op">]</span></span>
 <span><span class="co">#&gt;       age observed excess_q0.5 p_score_q0.025 p_score_q0.5 p_score_q0.975</span></span>
 <span><span class="co">#&gt;    &lt;char&gt;    &lt;num&gt;       &lt;num&gt;          &lt;num&gt;        &lt;num&gt;          &lt;num&gt;</span></span>
-<span><span class="co">#&gt; 1:   0-44    29115      -439.0     -4.4707459    -1.485417      1.3511059</span></span>
-<span><span class="co">#&gt; 2:  45-64    81495      2498.5      1.5390342     3.162798      4.8867019</span></span>
-<span><span class="co">#&gt; 3:  65-74    89304     -1400.5     -3.5247795    -1.544025      0.3337944</span></span>
-<span><span class="co">#&gt; 4:  75-84   167633      5619.0      0.5302193     3.468219      6.3495506</span></span>
-<span><span class="co">#&gt; 5:    85+   184792      8982.0      3.3076824     5.108924      6.9832477</span></span></code></pre></div>
+<span><span class="co">#&gt; 1:   0-44    29115      -428.0      -4.132683    -1.448736     1.16936356</span></span>
+<span><span class="co">#&gt; 2:  45-64    81495      2469.0       1.589854     3.124288     4.69657168</span></span>
+<span><span class="co">#&gt; 3:  65-74    89304     -1377.0      -3.085393    -1.518510     0.03105528</span></span>
+<span><span class="co">#&gt; 4:  75-84   167633      5854.5       1.435597     3.618837     5.64991291</span></span>
+<span><span class="co">#&gt; 5:    85+   184792      9069.0       3.547467     5.160964     6.74166633</span></span></code></pre></div>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/mt_excess.html">mt_plot_excess</a></span><span class="op">(</span><span class="va">ex_age</span>, type <span class="op">=</span> <span class="st">"p_score"</span><span class="op">)</span></span></code></pre></div>
 <p><img src="excess-mortality_files/figure-html/plot-age-1.png" class="r-plt" alt="" width="672"></p>
@@ -162,8 +163,8 @@ life expectancy at birth minus that of each path of expected rates.</p>
 <span><span class="va">le</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">sex</span>, <span class="va">observed</span>, <span class="va">expected_q0.5</span>, <span class="va">excess_q0.025</span>, <span class="va">excess_q0.5</span>, <span class="va">excess_q0.975</span><span class="op">)</span><span class="op">]</span></span>
 <span><span class="co">#&gt;       sex observed expected_q0.5 excess_q0.025 excess_q0.5 excess_q0.975</span></span>
 <span><span class="co">#&gt;    &lt;char&gt;    &lt;num&gt;         &lt;num&gt;         &lt;num&gt;       &lt;num&gt;         &lt;num&gt;</span></span>
-<span><span class="co">#&gt; 1: female 82.95594      83.20279    -0.5685339  -0.2468486     0.1022864</span></span>
-<span><span class="co">#&gt; 2:   male 75.87930      76.00291    -0.3828217  -0.1236114     0.0994448</span></span></code></pre></div>
+<span><span class="co">#&gt; 1: female 82.95594      83.20438    -0.5308777  -0.2484383    0.08556622</span></span>
+<span><span class="co">#&gt; 2:   male 75.87930      76.01581    -0.3704429  -0.1365119    0.07779665</span></span></code></pre></div>
 <p>Life expectancy of women was 0.25 years lower than expected; the
 interval includes zero, because an annual life expectancy hides a shock
 of two weeks.</p>
@@ -183,11 +184,11 @@ years before 2003:</p>
 <span><span class="op">}</span><span class="op">)</span><span class="op">)</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">baseline</span>, <span class="va">excess_q0.025</span>, <span class="va">excess_q0.5</span>, <span class="va">excess_q0.975</span>, <span class="va">p_score_q0.5</span><span class="op">)</span><span class="op">]</span></span>
 <span><span class="co">#&gt;                 baseline excess_q0.025 excess_q0.5 excess_q0.975 p_score_q0.5</span></span>
 <span><span class="co">#&gt;                   &lt;char&gt;         &lt;num&gt;       &lt;num&gt;         &lt;num&gt;        &lt;num&gt;</span></span>
-<span><span class="co">#&gt; 1:  Lee-Carter 1990-2002      4662.100    15269.50      24719.80     2.843114</span></span>
-<span><span class="co">#&gt; 2:  Lee-Carter 1993-2002      5804.200    15274.50      23506.88     2.844072</span></span>
+<span><span class="co">#&gt; 1:  Lee-Carter 1990-2002      6560.475    15558.00      23824.10     2.898389</span></span>
+<span><span class="co">#&gt; 2:  Lee-Carter 1993-2002      6841.425    15558.50      23485.87     2.898485</span></span>
 <span><span class="co">#&gt; 3: random walk 1990-2002      6604.257    15194.38      26120.47     2.828732</span></span>
-<span><span class="co">#&gt; 4:      Li-Lee 1990-2002      -258.550    14395.00      28768.22     2.675929</span></span></code></pre></div>
-<p>The medians agree within 900 deaths. Li-Lee, whose common factor ties
+<span><span class="co">#&gt; 4:      Li-Lee 1990-2002       174.350    14839.00      28411.90     2.760744</span></span></code></pre></div>
+<p>The medians agree within 800 deaths. Li-Lee, whose common factor ties
 the trends of women and men together, gives the widest interval of the
 sum: when the trend errors of the parts are correlated, they do not
 cancel in the total. Report the baseline model and years with the
@@ -205,18 +206,18 @@ these years):</p>
 <span><span class="va">e18</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">sex</span>, <span class="va">period</span>, <span class="va">excess_q0.025</span>, <span class="va">excess_q0.5</span>, <span class="va">excess_q0.975</span>, <span class="va">p_score_q0.5</span><span class="op">)</span><span class="op">]</span></span>
 <span><span class="co">#&gt;        sex period excess_q0.025 excess_q0.5 excess_q0.975 p_score_q0.5</span></span>
 <span><span class="co">#&gt;     &lt;char&gt;  &lt;num&gt;         &lt;num&gt;       &lt;num&gt;         &lt;num&gt;        &lt;num&gt;</span></span>
-<span><span class="co">#&gt;  1: female   1914    -11119.275     17744.5      47573.07     6.274322</span></span>
-<span><span class="co">#&gt;  2: female   1915    -21114.825     23712.0      62769.37     8.547329</span></span>
-<span><span class="co">#&gt;  3: female   1916    -37333.100     18283.5      66942.35     6.812711</span></span>
-<span><span class="co">#&gt;  4: female   1917    -40205.525     28591.5      77379.35    10.843196</span></span>
-<span><span class="co">#&gt;  5: female   1918     37314.225    112526.5     172727.88    42.546285</span></span>
-<span><span class="co">#&gt;  6: female   1919    -31413.825     45546.0     109408.95    17.512169</span></span>
-<span><span class="co">#&gt;  7:   male   1914    278445.150    305674.5     329615.65    98.833110</span></span>
-<span><span class="co">#&gt;  8:   male   1915    316801.950    351930.5     381905.85   117.832756</span></span>
-<span><span class="co">#&gt;  9:   male   1916    202813.575    239698.5     274085.35    83.982005</span></span>
-<span><span class="co">#&gt; 10:   male   1917    111154.650    159475.0     199189.42    57.155606</span></span>
-<span><span class="co">#&gt; 11:   male   1918    220695.450    275881.0     322360.60    98.098397</span></span>
-<span><span class="co">#&gt; 12:   male   1919     -8753.025     54239.5     103360.67    19.707532</span></span></code></pre></div>
+<span><span class="co">#&gt;  1: female   1914    -11344.650     17967.5      47219.97     6.358185</span></span>
+<span><span class="co">#&gt;  2: female   1915    -21425.050     24139.5      62661.12     8.714857</span></span>
+<span><span class="co">#&gt;  3: female   1916    -36893.200     17593.0      66988.12     6.538593</span></span>
+<span><span class="co">#&gt;  4: female   1917    -38849.175     29459.5      77968.67    11.209280</span></span>
+<span><span class="co">#&gt;  5: female   1918     37376.625    112934.5     173221.62    42.766475</span></span>
+<span><span class="co">#&gt;  6: female   1919    -30836.325     45057.5     109011.72    17.291865</span></span>
+<span><span class="co">#&gt;  7:   male   1914    279363.850    305607.0     328975.65    98.789724</span></span>
+<span><span class="co">#&gt;  8:   male   1915    318055.825    352372.0     381504.15   118.155237</span></span>
+<span><span class="co">#&gt;  9:   male   1916    201987.600    239766.5     274307.60    84.025849</span></span>
+<span><span class="co">#&gt; 10:   male   1917    114019.325    159651.0     198354.65    57.254799</span></span>
+<span><span class="co">#&gt; 11:   male   1918    221010.225    276639.0     322274.53    98.633727</span></span>
+<span><span class="co">#&gt; 12:   male   1919     -6935.175     54779.5     103200.12    19.942843</span></span></code></pre></div>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/mt_excess.html">mt_plot_excess</a></span><span class="op">(</span><span class="va">e18</span>, type <span class="op">=</span> <span class="st">"p_score"</span><span class="op">)</span></span></code></pre></div>
 <p><img src="excess-mortality_files/figure-html/plot-1918-1.png" class="r-plt" alt="" width="672"></p>
@@ -231,14 +232,14 @@ of 1918 are forecast five years ahead of the baseline. By age, for
 <span><span class="va">e18a</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">sex</span>, <span class="va">age</span>, <span class="va">observed</span>, <span class="va">excess_q0.5</span>, <span class="va">p_score_q0.5</span><span class="op">)</span><span class="op">]</span></span>
 <span><span class="co">#&gt;       sex    age observed excess_q0.5 p_score_q0.5</span></span>
 <span><span class="co">#&gt;    &lt;char&gt; &lt;char&gt;    &lt;num&gt;       &lt;num&gt;        &lt;num&gt;</span></span>
-<span><span class="co">#&gt; 1: female   0-14    56670     25833.5    83.775761</span></span>
-<span><span class="co">#&gt; 2: female  15-44   102306     55792.0   119.946683</span></span>
-<span><span class="co">#&gt; 3: female  45-64    71760     14789.5    25.959927</span></span>
-<span><span class="co">#&gt; 4: female    65+   146271     15674.0    12.001807</span></span>
-<span><span class="co">#&gt; 5:   male   0-14    60876     25979.0    74.444812</span></span>
-<span><span class="co">#&gt; 6:   male  15-44   275811    226843.0   463.248014</span></span>
-<span><span class="co">#&gt; 7:   male  45-64    94349     15915.0    20.290945</span></span>
-<span><span class="co">#&gt; 8:   male    65+   126074      7537.5     6.358801</span></span></code></pre></div>
+<span><span class="co">#&gt; 1: female   0-14    56670     25922.0     84.30467</span></span>
+<span><span class="co">#&gt; 2: female  15-44   102306     55691.0    119.47013</span></span>
+<span><span class="co">#&gt; 3: female  45-64    71760     14830.0     26.04953</span></span>
+<span><span class="co">#&gt; 4: female    65+   146271     16140.0     12.40289</span></span>
+<span><span class="co">#&gt; 5:   male   0-14    60876     26249.5     75.80755</span></span>
+<span><span class="co">#&gt; 6:   male  15-44   275811    226852.5    463.35672</span></span>
+<span><span class="co">#&gt; 7:   male  45-64    94349     15977.5     20.38688</span></span>
+<span><span class="co">#&gt; 8:   male    65+   126074      7672.0      6.47962</span></span></code></pre></div>
 <p>Women aged 15-44 died at more than twice the expected rate, a mark of
 the 1918 pandemic, which was most lethal for young adults.</p>
 </div>
@@ -267,30 +268,30 @@ model of the national total, both sexes, fitted to 2010-2019:</p>
 <span><span class="va">ex_de</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">period</span>, <span class="va">observed</span>, <span class="va">excess_q0.025</span>, <span class="va">excess_q0.5</span>, <span class="va">excess_q0.975</span>, <span class="va">p_score_q0.5</span>, <span class="va">p_positive</span><span class="op">)</span><span class="op">]</span></span>
 <span><span class="co">#&gt;    period observed excess_q0.025 excess_q0.5 excess_q0.975 p_score_q0.5</span></span>
 <span><span class="co">#&gt;     &lt;num&gt;    &lt;num&gt;         &lt;num&gt;       &lt;num&gt;         &lt;num&gt;        &lt;num&gt;</span></span>
-<span><span class="co">#&gt; 1:   2020   985572      -963.875     26354.5      54663.78     2.747500</span></span>
-<span><span class="co">#&gt; 2:   2021  1023687     13959.925     57289.5      97750.07     5.928151</span></span>
-<span><span class="co">#&gt; 3:   2022  1066341     47014.275    101341.5     145831.95    10.501715</span></span>
-<span><span class="co">#&gt; 4:   2023  1028206      2275.975     66324.5     124618.85     6.895288</span></span>
-<span><span class="co">#&gt; 5:   2024  1007758    -32997.600     30685.5      95076.57     3.140555</span></span>
+<span><span class="co">#&gt; 1:   2020   985572      2311.300     26267.5      52377.22     2.738182</span></span>
+<span><span class="co">#&gt; 2:   2021  1023687     15661.950     57406.5      94859.87     5.940977</span></span>
+<span><span class="co">#&gt; 3:   2022  1066341     50894.150    101402.0     146893.22    10.508644</span></span>
+<span><span class="co">#&gt; 4:   2023  1028206      6046.075     63961.0     118533.40     6.633273</span></span>
+<span><span class="co">#&gt; 5:   2024  1007758    -35162.625     31518.0      95599.50     3.228509</span></span>
 <span><span class="co">#&gt;    p_positive</span></span>
 <span><span class="co">#&gt;         &lt;num&gt;</span></span>
-<span><span class="co">#&gt; 1:      0.970</span></span>
-<span><span class="co">#&gt; 2:      0.996</span></span>
+<span><span class="co">#&gt; 1:      0.982</span></span>
+<span><span class="co">#&gt; 2:      0.998</span></span>
 <span><span class="co">#&gt; 3:      1.000</span></span>
-<span><span class="co">#&gt; 4:      0.978</span></span>
-<span><span class="co">#&gt; 5:      0.828</span></span>
+<span><span class="co">#&gt; 4:      0.982</span></span>
+<span><span class="co">#&gt; 5:      0.842</span></span>
 <span><span class="fu"><a href="../reference/mt_excess.html">mt_excess</a></span><span class="op">(</span><span class="fu"><a href="../reference/lee_carter.html">lee_carter</a></span><span class="op">(</span><span class="op">)</span>, <span class="va">germany</span>, baseline <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2010</span>, <span class="fl">2019</span><span class="op">)</span>, by <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="op">)</span>, cumulative <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>          seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">from</span>, <span class="va">period</span>, <span class="va">excess_q0.025</span>, <span class="va">excess_q0.5</span>, <span class="va">excess_q0.975</span><span class="op">)</span><span class="op">]</span></span>
 <span><span class="co">#&gt;     from period excess_q0.025 excess_q0.5 excess_q0.975</span></span>
 <span><span class="co">#&gt;    &lt;num&gt;  &lt;num&gt;         &lt;num&gt;       &lt;num&gt;         &lt;num&gt;</span></span>
-<span><span class="co">#&gt; 1:  2020   2020      -963.875     26354.5      54663.78</span></span>
-<span><span class="co">#&gt; 2:  2020   2021     21745.725     85125.0     145962.10</span></span>
-<span><span class="co">#&gt; 3:  2020   2022     72705.150    182873.5     284930.35</span></span>
-<span><span class="co">#&gt; 4:  2020   2023     85289.000    250826.0     401462.32</span></span>
-<span><span class="co">#&gt; 5:  2020   2024     61848.500    282996.5     483027.62</span></span></code></pre></div>
+<span><span class="co">#&gt; 1:  2020   2020       2311.30     26267.5      52377.22</span></span>
+<span><span class="co">#&gt; 2:  2020   2021      24021.85     83942.5     146951.52</span></span>
+<span><span class="co">#&gt; 3:  2020   2022      79598.40    185328.0     292246.35</span></span>
+<span><span class="co">#&gt; 4:  2020   2023      98231.30    249652.5     403424.02</span></span>
+<span><span class="co">#&gt; 5:  2020   2024      71029.15    281336.0     494946.17</span></span></code></pre></div>
 <p>The excess rose from about 26,000 in 2020 to 101,000 in 2022 and fell
-afterwards; from 2020 to 2022 it summed to 183,000, with a wide interval
-(73,000 to 285,000). The interval is wide because the expected deaths of
+afterwards; from 2020 to 2022 it summed to 185,000, with a wide interval
+(80,000 to 292,000). The interval is wide because the expected deaths of
 2022 are a forecast three years beyond a baseline of ten years.</p>
 <p>Summing separate models of the 32 strata (Land by sex) instead gives
 a much narrower interval for the same total:</p>
@@ -299,11 +300,11 @@ a much narrower interval for the same total:</p>
 <span>          seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">period</span>, <span class="va">excess_q0.025</span>, <span class="va">excess_q0.5</span>, <span class="va">excess_q0.975</span><span class="op">)</span><span class="op">]</span></span>
 <span><span class="co">#&gt;    period excess_q0.025 excess_q0.5 excess_q0.975</span></span>
 <span><span class="co">#&gt;     &lt;num&gt;         &lt;num&gt;       &lt;num&gt;         &lt;num&gt;</span></span>
-<span><span class="co">#&gt; 1:   2020     11068.050     19094.0      28479.55</span></span>
-<span><span class="co">#&gt; 2:   2021     35794.700     48118.5      60482.52</span></span>
-<span><span class="co">#&gt; 3:   2022     76635.350     91800.0     106571.65</span></span>
-<span><span class="co">#&gt; 4:   2023     36244.150     54795.5      73615.62</span></span>
-<span><span class="co">#&gt; 5:   2024      1853.475     22284.0      41176.32</span></span></code></pre></div>
+<span><span class="co">#&gt; 1:   2020     11846.200     19819.0      27936.45</span></span>
+<span><span class="co">#&gt; 2:   2021     36992.925     48672.0      59548.20</span></span>
+<span><span class="co">#&gt; 3:   2022     76783.600     91649.0     106078.55</span></span>
+<span><span class="co">#&gt; 4:   2023     36012.875     55313.5      72157.88</span></span>
+<span><span class="co">#&gt; 5:   2024      1588.225     22743.0      41031.38</span></span></code></pre></div>
 <p>Separate models draw their trend errors independently, so these
 cancel in the sum, while in reality the Länder share much of their
 trend. For a total, use a model of the total, or a joint model of its
@@ -318,22 +319,22 @@ factor per sex:</p>
 <span><span class="va">ex_l</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/order.html" class="external-link">order</a></span><span class="op">(</span><span class="op">-</span><span class="va">p_score_q0.5</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">region</span>, <span class="va">p_score_q0.025</span>, <span class="va">p_score_q0.5</span>, <span class="va">p_score_q0.975</span>, <span class="va">cells</span>, <span class="va">skipped</span><span class="op">)</span><span class="op">]</span></span>
 <span><span class="co">#&gt;                     region p_score_q0.025 p_score_q0.5 p_score_q0.975 cells</span></span>
 <span><span class="co">#&gt;                     &lt;char&gt;          &lt;num&gt;        &lt;num&gt;          &lt;num&gt; &lt;int&gt;</span></span>
-<span><span class="co">#&gt;  1:              Thüringen      7.4532384   15.1557232      21.292852    36</span></span>
-<span><span class="co">#&gt;  2:                Sachsen      6.3765040   13.6719614      19.846265    36</span></span>
-<span><span class="co">#&gt;  3:         Sachsen-Anhalt      4.1907960   10.8027397      17.254436    36</span></span>
-<span><span class="co">#&gt;  4:            Brandenburg      0.7964173    8.1966265      14.434801    36</span></span>
-<span><span class="co">#&gt;  5: Mecklenburg-Vorpommern     -0.2892798    6.3543089      12.241962    36</span></span>
-<span><span class="co">#&gt;  6:                 Bayern     -1.2681683    5.5483044      11.024289    36</span></span>
-<span><span class="co">#&gt;  7:                 Hessen     -0.9902274    5.2028681      10.884268    36</span></span>
-<span><span class="co">#&gt;  8:               Saarland     -1.7159657    4.5899119      10.228890    36</span></span>
-<span><span class="co">#&gt;  9:                Hamburg     -2.7470839    4.0671515       9.742152    36</span></span>
-<span><span class="co">#&gt; 10:                 Bremen     -2.4111913    3.8805974       9.832265    34</span></span>
-<span><span class="co">#&gt; 11:                 Berlin     -2.9159538    3.8432410       9.440658    36</span></span>
-<span><span class="co">#&gt; 12:      Baden-Württemberg     -2.9372918    3.6408126       9.007041    36</span></span>
-<span><span class="co">#&gt; 13:    Nordrhein-Westfalen     -3.2942193    3.0946965       8.314086    36</span></span>
-<span><span class="co">#&gt; 14:        Rheinland-Pfalz     -3.8786642    2.6646230       8.372199    36</span></span>
-<span><span class="co">#&gt; 15:          Niedersachsen     -4.4369139    2.0238411       7.120832    36</span></span>
-<span><span class="co">#&gt; 16:     Schleswig-Holstein     -5.9877643    0.2301982       5.290194    36</span></span>
+<span><span class="co">#&gt;  1:              Thüringen      8.2139112   15.0511173      21.503461    36</span></span>
+<span><span class="co">#&gt;  2:                Sachsen      6.8553909   13.5246191      19.342746    36</span></span>
+<span><span class="co">#&gt;  3:         Sachsen-Anhalt      4.0430413   10.9956839      16.683186    36</span></span>
+<span><span class="co">#&gt;  4:            Brandenburg      1.5361014    8.2373372      14.024362    36</span></span>
+<span><span class="co">#&gt;  5: Mecklenburg-Vorpommern      0.2290761    6.3847594      12.354611    36</span></span>
+<span><span class="co">#&gt;  6:                 Bayern     -0.7342602    5.5024026      11.109088    36</span></span>
+<span><span class="co">#&gt;  7:                 Hessen     -0.9070643    5.2978926      10.429007    36</span></span>
+<span><span class="co">#&gt;  8:               Saarland     -1.4714408    4.5975748       9.993489    36</span></span>
+<span><span class="co">#&gt;  9:                Hamburg     -2.2928389    4.2946483       9.722956    36</span></span>
+<span><span class="co">#&gt; 10:                 Bremen     -2.4942770    3.8608077       9.690832    34</span></span>
+<span><span class="co">#&gt; 11:                 Berlin     -2.5349797    3.6690816       9.388032    36</span></span>
+<span><span class="co">#&gt; 12:      Baden-Württemberg     -2.3032827    3.6462279       8.712516    36</span></span>
+<span><span class="co">#&gt; 13:    Nordrhein-Westfalen     -3.0283399    2.9866045       8.118214    36</span></span>
+<span><span class="co">#&gt; 14:        Rheinland-Pfalz     -3.6987771    2.9342018       8.260803    36</span></span>
+<span><span class="co">#&gt; 15:          Niedersachsen     -3.9596874    2.1275509       6.986354    36</span></span>
+<span><span class="co">#&gt; 16:     Schleswig-Holstein     -5.7930055    0.2356595       5.424224    36</span></span>
 <span><span class="co">#&gt;     skipped</span></span>
 <span><span class="co">#&gt;       &lt;int&gt;</span></span>
 <span><span class="co">#&gt;  1:       0</span></span>
@@ -370,7 +371,7 @@ interval of the excess should contain the true excess in 95% of cases.
 The validation suite of the package checks this on simulated data
 (<code><a href="../reference/mt_example.html">mt_example()</a></code>, a Lee-Carter baseline, deaths at ages 70 and
 older raised by 10% in two years, 20 replicates): the intervals
-contained zero where there was no shock in 97.5% of the cases, and the
+contained zero where there was no shock in 98% of the cases, and the
 injected deaths in 98% of the cases where there was one. On real data,
 the coverage depends on how well the baseline model forecasts the years
 of the shock; a backtest of the baseline model on years without a shock

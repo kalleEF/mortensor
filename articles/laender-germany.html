@@ -71,7 +71,7 @@
     
 <p><em>This vignette is precomputed
 (<code>dev/precompute-vignettes.R</code>) because its backtests take
-about half an hour.</em></p>
+about 20 minutes.</em></p>
 <p>How will life expectancy in the 16 German Laender develop until 2035,
 and will the remaining gap between East and West Germany close? This
 vignette answers with one complete pipeline: official tables with
@@ -196,25 +196,25 @@ expectancy of every series and the gap between each region and the West
 <span>                 contrast <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>var <span class="op">=</span> <span class="st">"region"</span>, ref <span class="op">=</span> <span class="st">"West"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/mt_compare.html">mt_score_table</a></span><span class="op">(</span><span class="va">bt</span>, metrics <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"crps"</span>, <span class="st">"cov95"</span><span class="op">)</span>, targets <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"rate"</span>, <span class="st">"life_expectancy"</span><span class="op">)</span>, hierarchy <span class="op">=</span> <span class="va">h</span><span class="op">)</span></span>
 <span><span class="co">#&gt;                         model     level   crps cov95 crps_le cov95_le</span></span>
-<span><span class="co">#&gt;  1:                Lee-Carter    bottom 0.0915 0.814   0.374    0.776</span></span>
-<span><span class="co">#&gt;  2:                Lee-Carter aggregate 0.0665 0.692   0.361    0.533</span></span>
-<span><span class="co">#&gt;  3:                Lee-Carter     total 0.0477 0.437   0.360    0.267</span></span>
-<span><span class="co">#&gt;  4:                    Li-Lee    bottom 0.0894 0.851   0.392    0.786</span></span>
-<span><span class="co">#&gt;  5:                    Li-Lee aggregate 0.0647 0.764   0.362    0.700</span></span>
-<span><span class="co">#&gt;  6:                    Li-Lee     total 0.0502 0.600   0.343    0.533</span></span>
-<span><span class="co">#&gt;  7:              coherent fdm    bottom 0.0817 0.839   0.280    0.682</span></span>
-<span><span class="co">#&gt;  8:              coherent fdm aggregate 0.0591 0.727   0.250    0.553</span></span>
-<span><span class="co">#&gt;  9:              coherent fdm     total 0.0458 0.470   0.236    0.333</span></span>
-<span><span class="co">#&gt; 10: Lee-Carter + coherent fdm    bottom 0.0815 0.872   0.300    0.795</span></span>
-<span><span class="co">#&gt; 11: Lee-Carter + coherent fdm aggregate 0.0583 0.754   0.281    0.583</span></span>
-<span><span class="co">#&gt; 12: Lee-Carter + coherent fdm     total 0.0443 0.481   0.290    0.333</span></span></code></pre></div>
+<span><span class="co">#&gt;  1:                Lee-Carter    bottom 0.0923 0.776   0.379    0.754</span></span>
+<span><span class="co">#&gt;  2:                Lee-Carter aggregate 0.0681 0.627   0.381    0.444</span></span>
+<span><span class="co">#&gt;  3:                Lee-Carter     total 0.0514 0.307   0.410    0.000</span></span>
+<span><span class="co">#&gt;  4:                    Li-Lee    bottom 0.0901 0.812   0.396    0.765</span></span>
+<span><span class="co">#&gt;  5:                    Li-Lee aggregate 0.0654 0.732   0.366    0.683</span></span>
+<span><span class="co">#&gt;  6:                    Li-Lee     total 0.0507 0.589   0.346    0.533</span></span>
+<span><span class="co">#&gt;  7:              coherent fdm    bottom 0.0819 0.822   0.281    0.667</span></span>
+<span><span class="co">#&gt;  8:              coherent fdm aggregate 0.0594 0.706   0.252    0.544</span></span>
+<span><span class="co">#&gt;  9:              coherent fdm     total 0.0461 0.448   0.238    0.333</span></span>
+<span><span class="co">#&gt; 10: Lee-Carter + coherent fdm    bottom 0.0817 0.852   0.302    0.780</span></span>
+<span><span class="co">#&gt; 11: Lee-Carter + coherent fdm aggregate 0.0585 0.751   0.284    0.614</span></span>
+<span><span class="co">#&gt; 12: Lee-Carter + coherent fdm     total 0.0443 0.485   0.296    0.333</span></span></code></pre></div>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/mt_compare.html">mt_score_table</a></span><span class="op">(</span><span class="va">bt</span><span class="op">[</span><span class="va">region</span> <span class="op">==</span> <span class="st">"East"</span> <span class="op">&amp;</span> <span class="va">sex</span> <span class="op">!=</span> <span class="st">"both"</span><span class="op">]</span>, metrics <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"crps"</span>, <span class="st">"cov95"</span><span class="op">)</span>, targets <span class="op">=</span> <span class="st">"life_expectancy_gap"</span><span class="op">)</span></span>
 <span><span class="co">#&gt;                        model crps_le_gap cov95_le_gap</span></span>
-<span><span class="co">#&gt; 1:                Lee-Carter      0.0761        1.000</span></span>
-<span><span class="co">#&gt; 2:                    Li-Lee      0.1550        0.400</span></span>
-<span><span class="co">#&gt; 3:              coherent fdm      0.1520        0.467</span></span>
-<span><span class="co">#&gt; 4: Lee-Carter + coherent fdm      0.0754        1.000</span></span></code></pre></div>
+<span><span class="co">#&gt; 1:                Lee-Carter      0.0749        1.000</span></span>
+<span><span class="co">#&gt; 2:                    Li-Lee      0.1580        0.333</span></span>
+<span><span class="co">#&gt; 3:              coherent fdm      0.1560        0.367</span></span>
+<span><span class="co">#&gt; 4: Lee-Carter + coherent fdm      0.0797        1.000</span></span></code></pre></div>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/mt_plot_more.html">mt_plot_scores</a></span><span class="op">(</span><span class="va">bt</span><span class="op">[</span><span class="va">region</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="va">laender</span> <span class="op">&amp;</span> <span class="va">sex</span> <span class="op">!=</span> <span class="st">"both"</span><span class="op">]</span>, by <span class="op">=</span> <span class="st">"model"</span>, target <span class="op">=</span> <span class="st">"life_expectancy"</span><span class="op">)</span></span></code></pre></div>
 <p><img src="laender-germany-plot-scores-1.png"></p>
@@ -225,49 +225,56 @@ East slightly behind again. The backtest decides between these
 assumptions:</p>
 <ul>
 <li>For the Laender, the coherent fdm and the ensemble are the most
-accurate (CRPS of the rates 0.082, against 0.089 for Li-Lee and 0.092
+accurate (CRPS of the rates 0.082, against 0.090 for Li-Lee and 0.092
 for Lee-Carter); the ensemble’s intervals cover the rates best (95%
-coverage 0.87). The intervals of life expectancy are too narrow for
-every model (95% coverage 0.68 to 0.80).</li>
+coverage 0.85). The intervals of life expectancy are too narrow for
+every model (95% coverage 0.67 to 0.78).</li>
 <li>For the totals (East, West and Germany), the ensemble forecasts the
-rates most accurately, but all intervals are too narrow there.</li>
-<li>The East-West gap is forecast best by the ensemble and Lee-Carter
-(CRPS 0.075 and 0.076), whose intervals covered every observed gap;
-those of Li-Lee and the coherent fdm covered it in only 40% and 47% of
+rates most accurately, but all intervals are too narrow there (95%
+coverage of the rates of Germany 0.31 to 0.59). Lee-Carter forecasts
+each Land independently, so the deviations of its draws partly cancel in
+the totals: its intervals of life expectancy for Germany covered none of
+the 15 observed values.</li>
+<li>The East-West gap is forecast best by Lee-Carter and the ensemble
+(CRPS 0.075 and 0.080), whose intervals covered every observed gap;
+those of Li-Lee and the coherent fdm covered it in only 33% and 37% of
 the cases.</li>
 </ul>
 <p>The ensemble of Lee-Carter and the coherent fdm is the most accurate
-for the Laender and, together with Lee-Carter, for the gap, so the
-pipeline continues with it: combining models pays here.</p>
+for the Laender and second to Lee-Carter for the gap. No single model
+does as well on both, so the pipeline continues with the ensemble.</p>
 <div class="section level3">
 <h3 id="jump-off">Jump-off<a class="anchor" aria-label="anchor" href="#jump-off"></a>
 </h3>
-<p>Starting the forecasts at the observed level of the last three years
-(<code><a href="../reference/anchored.html">anchored()</a></code>, “Where a forecast starts: the jump-off”),
-checked in the same backtest:</p>
+<p>Starting the forecasts at the observed rates of the last year
+(<code><a href="../reference/anchored.html">anchored()</a></code>, Lee and Miller 2001; “Where a forecast starts:
+the jump-off”), checked in the same backtest:</p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">ens</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ensemble.html">ensemble</a></span><span class="op">(</span>lc <span class="op">=</span> <span class="fu"><a href="../reference/lee_carter.html">lee_carter</a></span><span class="op">(</span><span class="op">)</span>, cf <span class="op">=</span> <span class="fu"><a href="../reference/coherent_fdm.html">coherent_fdm</a></span><span class="op">(</span>common_by <span class="op">=</span> <span class="st">"sex"</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="va">bt_anchor</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_compare.html">mt_compare</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="st">"+ anchored"</span> <span class="op">=</span> <span class="fu">bu</span><span class="op">(</span><span class="fu"><a href="../reference/anchored.html">anchored</a></span><span class="op">(</span><span class="va">ens</span>, years <span class="op">=</span> <span class="fl">3</span><span class="op">)</span><span class="op">)</span><span class="op">)</span>, <span class="va">xh</span>, origins <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2008</span>, <span class="fl">2011</span>, <span class="fl">2014</span><span class="op">)</span>,</span>
+<span><span class="va">bt_anchor</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_compare.html">mt_compare</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="st">"+ anchored"</span> <span class="op">=</span> <span class="fu">bu</span><span class="op">(</span><span class="fu"><a href="../reference/anchored.html">anchored</a></span><span class="op">(</span><span class="va">ens</span><span class="op">)</span><span class="op">)</span><span class="op">)</span>, <span class="va">xh</span>, origins <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2008</span>, <span class="fl">2011</span>, <span class="fl">2014</span><span class="op">)</span>,</span>
 <span>                        h <span class="op">=</span> <span class="fl">5</span>, n_draws <span class="op">=</span> <span class="fl">200</span>, quantities <span class="op">=</span> <span class="st">"life_expectancy"</span>, contrast <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>var <span class="op">=</span> <span class="st">"region"</span>, ref <span class="op">=</span> <span class="st">"West"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">bt_steps</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">rbind</a></span><span class="op">(</span><span class="va">bt</span><span class="op">[</span><span class="va">model</span> <span class="op">==</span> <span class="st">"Lee-Carter + coherent fdm"</span><span class="op">]</span>, <span class="va">bt_anchor</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/mt_compare.html">mt_score_table</a></span><span class="op">(</span><span class="va">bt_steps</span><span class="op">[</span><span class="va">sex</span> <span class="op">!=</span> <span class="st">"both"</span><span class="op">]</span>, metrics <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"crps"</span>, <span class="st">"cov95"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt;                        model   crps cov95 crps_le cov95_le crps_le_gap</span></span>
-<span><span class="co">#&gt; 1: Lee-Carter + coherent fdm 0.0766 0.835   0.301    0.730       0.108</span></span>
-<span><span class="co">#&gt; 2:                + anchored 0.0759 0.839   0.293    0.738       0.104</span></span>
+<span><span class="co">#&gt; 1: Lee-Carter + coherent fdm 0.0767 0.823   0.302    0.741      0.1050</span></span>
+<span><span class="co">#&gt; 2:                + anchored 0.0853 0.809   0.299    0.732      0.0974</span></span>
 <span><span class="co">#&gt;    cov95_le_gap</span></span>
-<span><span class="co">#&gt; 1:        0.996</span></span>
-<span><span class="co">#&gt; 2:        1.000</span></span></code></pre></div>
-<p>Anchoring made every quantity slightly more accurate (CRPS of the
-rates 0.0759 against 0.0766), so the pipeline uses it. Smoothing the
-rates over age made the forecasts of this ensemble slightly worse in a
-separate run and is not used.</p>
+<span><span class="co">#&gt; 1:        0.998</span></span>
+<span><span class="co">#&gt; 2:        0.998</span></span></code></pre></div>
+<p>Anchoring made the forecasts of the rates worse (CRPS 0.085 against
+0.077): the observed rates of a single year carry their random variation
+into every forecast year, and those of small Laender are noisy. It made
+the forecasts of life expectancy slightly more accurate (0.299 against
+0.302) and those of the East-West gap more accurate (0.097 against
+0.105). The question concerns life expectancy and the gap, so the
+pipeline uses it.</p>
 </div>
 </div>
 <div class="section level2">
 <h2 id="forecasts-to-2035">Forecasts to 2035<a class="anchor" aria-label="anchor" href="#forecasts-to-2035"></a>
 </h2>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">fc</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_forecast.html">mt_forecast</a></span><span class="op">(</span><span class="fu"><a href="../reference/mt_fit.html">mt_fit</a></span><span class="op">(</span><span class="fu">bu</span><span class="op">(</span><span class="fu"><a href="../reference/anchored.html">anchored</a></span><span class="op">(</span><span class="va">ens</span>, years <span class="op">=</span> <span class="fl">3</span><span class="op">)</span><span class="op">)</span>, <span class="va">xh</span><span class="op">)</span>, to <span class="op">=</span> <span class="fl">2035</span>, n_draws <span class="op">=</span> <span class="fl">1000</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="va">fc</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_forecast.html">mt_forecast</a></span><span class="op">(</span><span class="fu"><a href="../reference/mt_fit.html">mt_fit</a></span><span class="op">(</span><span class="fu">bu</span><span class="op">(</span><span class="fu"><a href="../reference/anchored.html">anchored</a></span><span class="op">(</span><span class="va">ens</span><span class="op">)</span><span class="op">)</span>, <span class="va">xh</span><span class="op">)</span>, to <span class="op">=</span> <span class="fl">2035</span>, n_draws <span class="op">=</span> <span class="fl">1000</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span></code></pre></div>
 <p>Life expectancy at birth in 2035, both sexes, with 95% intervals:</p>
 <div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">e35</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/life_expectancy.html">life_expectancy</a></span><span class="op">(</span><span class="va">fc</span><span class="op">)</span><span class="op">[</span><span class="va">period</span> <span class="op">==</span> <span class="fl">2035</span> <span class="op">&amp;</span> <span class="va">sex</span> <span class="op">==</span> <span class="st">"both"</span><span class="op">]</span></span>
@@ -290,16 +297,17 @@ Germany, path by path, with the observed differences:</p>
 <code class="sourceCode R"><span><span class="va">gap</span><span class="op">[</span><span class="va">level</span> <span class="op">==</span> <span class="st">"East"</span> <span class="op">&amp;</span> <span class="va">period</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2025</span>, <span class="fl">2035</span><span class="op">)</span>,</span>
 <span>    <span class="fu">.</span><span class="op">(</span><span class="va">sex</span>, <span class="va">period</span>, gap <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">sprintf</a></span><span class="op">(</span><span class="st">"%.2f (%.2f to %.2f)"</span>, <span class="va">q0.5</span>, <span class="va">q0.025</span>, <span class="va">q0.975</span><span class="op">)</span><span class="op">)</span><span class="op">]</span></span>
 <span><span class="co">#&gt;       sex period                    gap</span></span>
-<span><span class="co">#&gt; 1: female   2025   0.10 (-0.29 to 0.66)</span></span>
-<span><span class="co">#&gt; 2: female   2035   0.21 (-0.45 to 1.13)</span></span>
-<span><span class="co">#&gt; 3:   male   2025 -1.09 (-1.54 to -0.58)</span></span>
-<span><span class="co">#&gt; 4:   male   2035 -0.91 (-1.68 to -0.01)</span></span>
-<span><span class="co">#&gt; 5:   both   2025 -0.54 (-0.85 to -0.08)</span></span>
-<span><span class="co">#&gt; 6:   both   2035  -0.40 (-0.92 to 0.42)</span></span></code></pre></div>
-<p>In 2035, women in the East are forecast to live 0.2 years longer than
-those in the West (95% interval -0.45 to 1.13), men 0.9 years less
-(-1.68 to -0.01). The forecast continues the slow narrowing of the male
-gap, but the gap most likely does not close by 2035.</p>
+<span><span class="co">#&gt; 1: female   2025   0.03 (-0.27 to 0.88)</span></span>
+<span><span class="co">#&gt; 2: female   2035   0.03 (-0.34 to 1.59)</span></span>
+<span><span class="co">#&gt; 3:   male   2025 -1.15 (-1.54 to -0.46)</span></span>
+<span><span class="co">#&gt; 4:   male   2035  -1.04 (-1.66 to 0.29)</span></span>
+<span><span class="co">#&gt; 5:   both   2025  -0.59 (-0.79 to 0.01)</span></span>
+<span><span class="co">#&gt; 6:   both   2035  -0.51 (-0.79 to 0.63)</span></span></code></pre></div>
+<p>In 2035, women in the East are forecast to live about as long as
+those in the West (0.03 years longer, 95% interval -0.34 to 1.59), men
+1.0 years less (-1.66 to 0.29). The forecast continues the slow
+narrowing of the male gap (1.15 years in 2025), but the gap most likely
+does not close by 2035.</p>
 <p>Which ages make up the gap of men in 2019 and in 2035 (“Decomposing
 differences in life expectancy”):</p>
 <div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
@@ -361,7 +369,7 @@ ages the contributions are small and uncertain.</p>
 <tr class="odd">
 <td>Model</td>
 <td>ensemble of Lee-Carter and coherent fdm</td>
-<td>most accurate for the Laender and for the gap</td>
+<td>most accurate for the Laender, second for the gap</td>
 <td>
 <code><a href="../reference/ensemble.html">ensemble()</a></code>, <code><a href="../reference/coherent_fdm.html">coherent_fdm()</a></code>,
 <code>mt_compare(contrast = )</code>
@@ -370,8 +378,8 @@ ages the contributions are small and uncertain.</p>
 </tr>
 <tr class="even">
 <td>Jump-off</td>
-<td>observed level of the last three years</td>
-<td>slightly better scores</td>
+<td>observed rates of the last year (Lee and Miller 2001)</td>
+<td>better life expectancy and gap, worse rates</td>
 <td><code><a href="../reference/anchored.html">anchored()</a></code></td>
 <td>“Where a forecast starts”</td>
 </tr>
@@ -393,6 +401,9 @@ ages the contributions are small and uncertain.</p>
 <p>Hyndman RJ, Booth H, Yasmeen F (2013). Coherent mortality
 forecasting: the product-ratio method with functional time series
 models. <em>Demography</em> 50(1): 261-283.</p>
+<p>Lee R, Miller T (2001). Evaluating the performance of the Lee-Carter
+method for forecasting mortality. <em>Demography</em> 38(4):
+537-549.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

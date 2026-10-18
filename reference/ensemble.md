@@ -1,15 +1,22 @@
 # Ensembles of models
 
-A mixture of the predictive distributions of several models: each draw
-of the ensemble is a draw of one component, chosen in proportion to the
-weights. Mixing draws (rather than averaging quantiles) keeps the paths
-coherent, so derived quantities such as life expectancy can be computed
-from the ensemble draws.
+A mixture (linear pool, Gneiting and Ranjan 2013) of the predictive
+distributions of several models: each draw of the ensemble is a draw of
+one component, chosen with the weights as probabilities. Mixing draws
+keeps the paths coherent, so derived quantities such as life expectancy
+can be computed from the ensemble draws.
 
 ## Usage
 
 ``` r
-ensemble(..., weights = "equal", inner_origins = 3, inner_h = 5, top_k = NULL)
+ensemble(
+  ...,
+  weights = "equal",
+  inner_origins = 3,
+  inner_h = 5,
+  top_k = NULL,
+  inner_n_draws = 100
+)
 ```
 
 ## Arguments
@@ -25,13 +32,17 @@ ensemble(..., weights = "equal", inner_origins = 3, inner_h = 5, top_k = NULL)
 - inner_origins, inner_h:
 
   Inner backtest for `weights = "crps"` and `weights = "stack"`, and for
-  `top_k`.
+  `top_k`: the number of origins and the horizon of each inner forecast.
 
 - top_k:
 
   Keep only the `top_k` components with the lowest CRPS in the inner
   backtest on the training years (the others get weight 0); `NULL` keeps
   all.
+
+- inner_n_draws:
+
+  Draws per inner forecast of the inner backtest.
 
 ## Value
 
@@ -45,13 +56,22 @@ Weights:
 
 - a numeric vector (normalised to sum to 1);
 
-- `"crps"`: inverse mean CRPS of an inner rolling-origin backtest on the
-  last `inner_origins` years of the training window, so the weights
-  never use data after the forecast origin;
+- `"crps"`: proportional to the inverse mean CRPS of each component in
+  an inner rolling-origin backtest on the last years of the training
+  window (`inner_origins`, `inner_h`), so the weights never use data
+  after the forecast origin. This is a package heuristic (reference
+  unknown), analogous to the inverse mean squared error weights of Bates
+  and Granger (1969) with the mean CRPS in place of the mean squared
+  error;
 
-- `"stack"`: weights on the simplex that minimise the squared error of
-  the weighted median forecasts (log scale) in the same inner backtest
-  (the non-negative stacking, fitted on training data only).
+- `"stack"`: weights that minimise the squared error of the weighted
+  mean of the components' median forecasts (log rates) in the same inner
+  backtest, constrained to be non-negative and to sum to 1. This is
+  stacking of point forecasts (Breiman 1996; for mortality, Kessy,
+  Sherris, Villegas and Ziveyi 2022). Using these weights as the
+  probabilities of the mixture is a deviation: they are optimal for the
+  linear combination of the medians, not for the mixture distribution,
+  whose median is not the weighted mean of the medians.
 
 Each draw of the ensemble comes from one component for all strata, so
 paths keep the dependence between strata and the coherence of reconciled
@@ -68,14 +88,34 @@ inner backtest (`"crps"`, `"stack"`, `top_k`) compare the components on
 the cells that all of them forecast.
 
 A mixture is wider than its components when they disagree, which often
-corrects the too narrow intervals of single models, and its CRPS is
-never larger than the weighted mean of the CRPS of its components (the
-CRPS is convex in the forecast distribution). The vignette "Choosing and
-combining models" compares ensembles and single models in a backtest. In
-populations with few deaths per cell, use
-`rwd(observation_noise = TRUE)` as the random-walk component: the plain
+corrects the too narrow intervals of single models; a linear pool of
+different calibrated components is overdispersed (Gneiting and Ranjan
+2013). Its CRPS is never larger than the weighted mean of the CRPS of
+its components (the CRPS is convex in the forecast distribution). The
+vignette "Choosing and combining models" compares ensembles and single
+models in a backtest. In populations with few deaths per cell, the plain
 random walk accumulates the Poisson noise of observed rates and its
-long-horizon paths become implausible.
+long-horizon paths become implausible; the local level model with drift,
+the random walk observed with noise, is
+`arima_series(order = c(0, 1, 1), drift = TRUE)` (its reduced form,
+Harvey 1989).
+
+## References
+
+Gneiting T, Ranjan R (2013). Combining predictive distributions.
+*Electronic Journal of Statistics* 7: 1747-1782.
+
+Bates JM, Granger CWJ (1969). The combination of forecasts. *Operational
+Research Quarterly* 20(4): 451-468.
+
+Breiman L (1996). Stacked regressions. *Machine Learning* 24(1): 49-64.
+
+Kessy SR, Sherris M, Villegas AM, Ziveyi J (2022). Mortality forecasting
+using stacked regression ensembles. *Scandinavian Actuarial Journal*
+2022(7): 591-626.
+
+Harvey AC (1989). *Forecasting, Structural Time Series Models and the
+Kalman Filter*. Cambridge University Press.
 
 ## Examples
 

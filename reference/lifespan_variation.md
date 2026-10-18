@@ -84,11 +84,15 @@ deaths `d_x` of each interval (the discrete formulas of LifeIneq). With
   interval uses its `e_x`);
 
 - `"var"`, `"sd"`: variance and standard deviation of the age at death,
-  `sum(p_x * (y_x - at - e)^2)`;
+  `sum(p_x * (y_x - at - e)^2)`, for the deaths from the conditioning
+  age `at` on, measured from `at`: the distance of each age at death
+  `y_x` from the mean age at death `at + e`. This differs from
+  `ineq_var()` and `ineq_sd()` of LifeIneq 00.04.09 for abridged tables,
+  where the ages at death are measured from the first age of the table;
 
-- `"cv"`: coefficient of variation, the standard deviation divided by
-  the mean age at death `at + e` (or by `e` with
-  `distribution = "remaining_life"`);
+- `"cv"`: coefficient of variation, the standard deviation (as for
+  `"sd"`, measured from `at`) divided by the mean age at death `at + e`
+  (or by `e` with `distribution = "remaining_life"`);
 
 - `"entropy"`: the life-table entropy of Keyfitz (1977) and Leser
   (1955), `H = e-dagger / e`, the elasticity of life expectancy to a
@@ -102,10 +106,12 @@ deaths `d_x` of each interval (the discrete formulas of LifeIneq). With
 
 - `"iqr"`: interquartile range, the distance between the ages by which a
   quarter and three quarters of the survivors at age `at` have died. The
-  survival curve is interpolated linearly within closed intervals
-  (deaths spread evenly, as with the default `a_x = n / 2`) and
-  exponentially in the open interval (with the mean `a_x` of that
-  interval).
+  survival curve is interpolated linearly within closed intervals, which
+  spreads the deaths of an interval evenly over it whatever `a_x` the
+  life table uses (a given `ax` changes the survivors at the bounds of
+  the intervals, not the interpolation within them, which agrees with
+  the life table only for `a_x = n / 2`, the default), and exponentially
+  in the open interval (with the mean `a_x` of that interval).
 
 The absolute measures (`edagger`, `sd`, `iqr`) are in years, `var` in
 years squared; `cv`, `entropy` and `gini` have no unit.
@@ -173,26 +179,26 @@ x <- mt_example(deaths = "single", years = 2015:2019)
 lifespan_variation(x, measure = c("edagger", "gini"), at = 65)
 #>     stratum    sex  label period       mean     q0.025       q0.1       q0.5
 #>       <int> <char> <char>  <num>      <num>      <num>      <num>      <num>
-#>  1:       1 female female   2015 8.32653252 8.28650268 8.30044142 8.32662042
-#>  2:       1 female female   2016 8.35511514 8.31683126 8.32937049 8.35521479
-#>  3:       1 female female   2017 8.35671269 8.31818244 8.33166253 8.35581992
-#>  4:       1 female female   2018 8.32388828 8.28524442 8.29841089 8.32333160
-#>  5:       1 female female   2019 8.29707412 8.26148309 8.27296038 8.29672086
-#>  6:       2   male   male   2015 7.67576125 7.63989496 7.65244014 7.67576397
-#>  7:       2   male   male   2016 7.68757690 7.65231498 7.66476279 7.68698523
-#>  8:       2   male   male   2017 7.68981676 7.65538380 7.66816994 7.68969267
-#>  9:       2   male   male   2018 7.70039788 7.66787043 7.67889076 7.70072088
-#> 10:       2   male   male   2019 7.71825775 7.68950978 7.70009451 7.71772973
-#> 11:       1 female female   2015 0.06255155 0.06226856 0.06235711 0.06255368
-#> 12:       1 female female   2016 0.06260181 0.06231575 0.06243157 0.06260402
-#> 13:       1 female female   2017 0.06260496 0.06232645 0.06241969 0.06260100
-#> 14:       1 female female   2018 0.06242314 0.06213256 0.06223741 0.06242601
-#> 15:       1 female female   2019 0.06221368 0.06194941 0.06203594 0.06221215
-#> 16:       2   male   male   2015 0.05960837 0.05933062 0.05944483 0.05961660
-#> 17:       2   male   male   2016 0.05965643 0.05939437 0.05949076 0.05965620
-#> 18:       2   male   male   2017 0.05967871 0.05944727 0.05952649 0.05968562
-#> 19:       2   male   male   2018 0.05973061 0.05949512 0.05957462 0.05973087
-#> 20:       2   male   male   2019 0.05989824 0.05967985 0.05976202 0.05989641
+#>  1:       1 female female   2015 8.32648793 8.28650268 8.30044142 8.32642084
+#>  2:       1 female female   2016 8.35503803 8.31655864 8.32918726 8.35521479
+#>  3:       1 female female   2017 8.35662888 8.31656517 8.33159353 8.35578434
+#>  4:       1 female female   2018 8.32388246 8.28524442 8.29841089 8.32321845
+#>  5:       1 female female   2019 8.29711243 8.26148309 8.27296038 8.29689757
+#>  6:       2   male   male   2015 7.67580858 7.63989496 7.65244014 7.67601617
+#>  7:       2   male   male   2016 7.68755552 7.65231498 7.66476279 7.68692266
+#>  8:       2   male   male   2017 7.68982095 7.65538380 7.66816994 7.68969267
+#>  9:       2   male   male   2018 7.70039310 7.66787043 7.67889076 7.70063336
+#> 10:       2   male   male   2019 7.71823831 7.68950978 7.70009451 7.71770624
+#> 11:       1 female female   2015 0.06255131 0.06226856 0.06235711 0.06255288
+#> 12:       1 female female   2016 0.06260120 0.06230963 0.06243079 0.06260387
+#> 13:       1 female female   2017 0.06260439 0.06232508 0.06241802 0.06260054
+#> 14:       1 female female   2018 0.06242313 0.06213256 0.06223741 0.06242601
+#> 15:       1 female female   2019 0.06221388 0.06194941 0.06203594 0.06221215
+#> 16:       2   male   male   2015 0.05960866 0.05933062 0.05944483 0.05961848
+#> 17:       2   male   male   2016 0.05965631 0.05939437 0.05949076 0.05965554
+#> 18:       2   male   male   2017 0.05967874 0.05944727 0.05952649 0.05968654
+#> 19:       2   male   male   2018 0.05973063 0.05949512 0.05957462 0.05973087
+#> 20:       2   male   male   2019 0.05989808 0.05967985 0.05976202 0.05989505
 #>     stratum    sex  label period       mean     q0.025       q0.1       q0.5
 #>       <int> <char> <char>  <num>      <num>      <num>      <num>      <num>
 #>           q0.9     q0.975 measure    at
@@ -202,7 +208,7 @@ lifespan_variation(x, measure = c("edagger", "gini"), at = 65)
 #>  3: 8.38298598 8.39759399 edagger    65
 #>  4: 8.34713620 8.36463024 edagger    65
 #>  5: 8.32123878 8.33481790 edagger    65
-#>  6: 7.69796135 7.70951549 edagger    65
+#>  6: 7.69804244 7.70951549 edagger    65
 #>  7: 7.71050649 7.71970902 edagger    65
 #>  8: 7.70979783 7.72077743 edagger    65
 #>  9: 7.72066148 7.73448400 edagger    65

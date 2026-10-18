@@ -69,7 +69,12 @@ mt_data(
 - omega:
 
   Assumed maximum age, used wherever an open interval needs a finite
-  upper bound.
+  upper bound, for example [`mt_ungroup()`](mt_ungroup.md), which
+  expands an open interval into single years up to `omega`. Methods that
+  need one representative age per cell ([`mt_smooth()`](mt_smooth.md)
+  with the Whittaker smoother or GAMs) do not use it: they place an open
+  interval at its lower bound plus half the width of the interval below
+  it (a package convention).
 
 - missing:
 

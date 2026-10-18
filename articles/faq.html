@@ -158,15 +158,19 @@ count against the model, and <code><a href="../reference/mt_backtest.html">mt_ba
 <h3 id="which-ungrouping-method-should-i-use">Which ungrouping method should I use?<a class="anchor" aria-label="anchor" href="#which-ungrouping-method-should-i-use"></a>
 </h3>
 <p>The penalized composite link model (<code><a href="../reference/mt_ungroup.html">mt_ungroup()</a></code>,
-default) ungroups deaths as rates with the exposures as offset and keeps
-group totals exactly. On England &amp; Wales data grouped into 5-year
-groups, it and the spline methods (<code>"hyman_kannisto"</code>,
-<code>"natural_gompertz"</code>, <code>"gam"</code>) were almost as
-close to the known single years as the Poisson noise allows; they
-differed in the last, wide age group, where the PCLM was closest. Check
-your own result with <code><a href="../reference/ungroup-diagnostics.html">mt_plot_ungroup()</a></code> and
-<code><a href="../reference/ungroup-diagnostics.html">mt_ungroup_check()</a></code>; see “Ungrouping age groups: methods and
-diagnostics”.</p>
+default) ungroups deaths as rates with the exposures as offset. Its
+estimates are the fitted values of the model: they reproduce the total
+over all age groups of a fit, and the diagnostics report the largest gap
+to a single group total (<code>max_rel_diff</code>).
+<code>preserve_totals = TRUE</code> rescales the estimates to every
+group total, a post-hoc rescaling of this package that creates jumps at
+the group boundaries. <code>method = "monotone"</code> interpolates the
+cumulative counts and reproduces every group total, without using the
+exposures. The spline methods <code>"hyman_kannisto"</code>,
+<code>"natural_gompertz"</code> and <code>"gam"</code> are deprecated:
+they have no published source. Check your own result with
+<code><a href="../reference/ungroup-diagnostics.html">mt_plot_ungroup()</a></code> and <code><a href="../reference/ungroup-diagnostics.html">mt_ungroup_check()</a></code>; see
+“Ungrouping age groups: methods and diagnostics”.</p>
 </div>
 <div class="section level3">
 <h3 id="can-i-split-the-open-interval-90-into-single-years">Can I split the open interval 90+ into single years?<a class="anchor" aria-label="anchor" href="#can-i-split-the-open-interval-90-into-single-years"></a>
@@ -221,9 +225,11 @@ strata</td>
 <td>
 <code>li_lee(common_by = ...)</code>, wider age groups
 (<code><a href="../reference/mt_regroup.html">mt_regroup()</a></code>), <code><a href="../reference/mt_prep.html">step_smooth()</a></code>;
-<code>rwd(observation_noise = TRUE)</code> in ensembles</td>
+<code>arima_series(order = c(0, 1, 1), drift = TRUE)</code> in
+ensembles</td>
 <td>pooling and smoothing reduce noise; the plain random walk
-accumulates it</td>
+accumulates it, the random walk observed with noise separates it from
+the trend</td>
 </tr>
 <tr class="even">
 <td>Totals and parts must add up</td>
@@ -234,8 +240,8 @@ accumulates it</td>
 <td>Causes of death</td>
 <td>separate or Li-Lee models per cause,
 <code>reconciled(..., method = "bottom_up")</code> with
-<code>cause = list(total = "all", additive = "rates")</code>
-</td>
+<code>cause = list(total = "all", additive = "rates")</code>;
+<code><a href="../reference/coda_causes.html">coda_causes()</a></code> (experimental)</td>
 <td>cause rates add up to the all-cause rate</td>
 </tr>
 <tr class="even">
@@ -271,20 +277,24 @@ and every forecast for warnings about implausible rates.</p>
 <h3 id="why-are-my-95-intervals-too-narrow-or-too-wide">Why are my 95% intervals too narrow (or too wide)?<a class="anchor" aria-label="anchor" href="#why-are-my-95-intervals-too-narrow-or-too-wide"></a>
 </h3>
 <p>Intervals of most models describe the uncertainty of their own
-assumptions, for example a constant drift. On real data, changes of
-trend add uncertainty that these assumptions leave out, so intervals
-tend to be too narrow over 5 to 10 years: in backtests on HMD and ONS
-data the 95% coverage of Lee-Carter was 0.70 to 0.84. The plain random
-walk is wider, because year-to-year changes of observed rates contain
-observation noise twice; that extra width happened to give good 95%
-coverage on real data. <code>rwd(observation_noise = TRUE)</code>
-removes the double counting and is sharper (lower CRPS), with intervals
-that were too narrow on real data. Mixtures of models
-(<code><a href="../reference/ensemble.html">ensemble()</a></code>) widen the intervals where the models disagree.
-<code><a href="../reference/recalibrated.html">recalibrated()</a></code> rescales the spread of any model’s draws to
-its forecast errors in the last years of the training data (by default
-ten); on England &amp; Wales men it raised the 95% coverage of
-Lee-Carter from 0.75 to 0.88. Check calibration with
+assumptions, for example a constant drift, and their predictive draws
+add the Poisson variation of the deaths only. On real data, changes of
+trend and year effects add uncertainty that these assumptions leave out,
+so intervals tend to be too narrow over 5 to 10 years: in the backtests
+of the vignettes the 95% coverage of Lee-Carter was 0.79 on the ONS
+quintiles (horizons 1 to 5, “Getting started with mortensor”) and 0.63
+on England &amp; Wales men (horizons 1 to 10, “Tuning and
+recalibration”). The plain random walk is wider, because year-to-year
+changes of observed rates contain observation noise twice; the local
+level model with drift,
+<code>arima_series(order = c(0, 1, 1), drift = TRUE)</code>, separates
+the noise from the trend (Harvey 1989). Mixtures of models
+(<code><a href="../reference/ensemble.html">ensemble()</a></code>) widen the intervals where the models disagree,
+and the negative binomial family of <code><a href="../reference/stanmomo.html">stanmomo()</a></code> allows for
+overdispersion. <code><a href="../reference/recalibrated.html">recalibrated()</a></code> rescales the spread of any
+model’s draws to its forecast errors in the last years of the training
+data (by default ten); on England &amp; Wales men it raised the 95%
+coverage of Lee-Carter from 0.63 to 0.85. Check calibration with
 <code><a href="../reference/mt_backtest.html">mt_backtest()</a></code> and <code><a href="../reference/mt_plot.html">mt_plot_coverage()</a></code>.</p>
 </div>
 <div class="section level3">
@@ -294,15 +304,22 @@ Lee-Carter from 0.75 to 0.88. Check calibration with
 differ by less than these scores vary between origins.
 <code><a href="../reference/mt_dm_test.html">mt_dm_test()</a></code> tests whether the difference is larger than
 chance, horizon by horizon, with the Diebold-Mariano test (Diebold and
-Mariano 1995) and the small-sample correction of Harvey, Leybourne and
-Newbold (1997):</p>
+Mariano 1995). By default the long-run variance of the loss differences
+is the equal-weighted cosine estimate with fixed-smoothing critical
+values (Lazarus et al. 2018; Coroneo and Iacone 2020), which allows for
+the overlap of forecasts from neighbouring origins and keeps the size of
+the test nearly correct with few origins:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">bt</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_compare.html">mt_compare</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>lc <span class="op">=</span> <span class="fu"><a href="../reference/lee_carter.html">lee_carter</a></span><span class="op">(</span><span class="op">)</span>, rw <span class="op">=</span> <span class="fu"><a href="../reference/rwd.html">rwd</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span>, <span class="va">data</span>, origins <span class="op">=</span> <span class="fl">1995</span><span class="op">:</span><span class="fl">2009</span>, h <span class="op">=</span> <span class="fl">5</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/mt_dm_test.html">mt_dm_test</a></span><span class="op">(</span><span class="va">bt</span>, ref <span class="op">=</span> <span class="st">"lc"</span><span class="op">)</span></span></code></pre></div>
-<p>Forecasts from neighbouring origins overlap, which the test allows
-for; it needs more origins than the horizon (at horizon 5, at least six
-origins). With origins spaced <code>h</code> years apart the forecasts
-do not overlap and the test is most reliable. A non-significant
+<p>With few origins the test has few degrees of freedom and finds only
+large and consistent differences. More origins, or origins spaced
+<code>h</code> years apart, whose forecasts do not overlap, give more
+informative tests. <code>varestimator = "acf"</code> gives the test of
+<code><a href="https://pkg.robjhyndman.com/forecast/reference/dm.test.html" class="external-link">forecast::dm.test()</a></code> with the small-sample correction of
+Harvey, Leybourne and Newbold (1997); with 7 overlapping origins it
+rejected a true null hypothesis in 10% to 19% of simulated samples at
+the nominal 5% level (see <code><a href="../reference/mt_dm_test.html">?mt_dm_test</a></code>). A non-significant
 difference means that the backtest cannot tell the models apart; they
 may still differ.</p>
 </div>
@@ -338,20 +355,17 @@ small regions); check it in a backtest, as the applied vignettes do.
 Smoothing over time removes the year-to-year noise from the fitted
 trends and from the start of the forecast, but also the variation from
 which models such as Lee-Carter estimate the uncertainty of their period
-index: alone, it made intervals too narrow in backtests (95% coverage of
-Lee-Carter 0.59 instead of 0.75 on England &amp; Wales men). Most of the
-gain there comes from <code><a href="../reference/recalibrated.html">recalibrated()</a></code>, which re-estimates
-the spread against the raw observations: calibration alone gave a CRPS
-of 0.0657 and a coverage of 0.88 (against 0.0687 and 0.75); Whittaker
-smoothing over time added nothing to it, the age-period GAM a little
-(0.0646, coverage 0.91). On the ONS quintiles smoothing over time made
-the forecasts worse (“Smoothing death rates”). Treat it as optional and
-check it in a backtest. Use smoothing as a preprocessing step
-(<code>mt_prep(step_smooth(...))</code>), never on the data before
-fitting (<code><a href="../reference/mt_backtest.html">mt_backtest()</a></code> stops, <code><a href="../reference/mt_fit.html">mt_fit()</a></code> warns),
-so that backtests refit it on each training window and models take their
-observation noise from the raw rates. <code><a href="../reference/mt_smooth_check.html">mt_smooth_check()</a></code> and
-<code><a href="../reference/mt_smooth_check.html">mt_plot_smooth()</a></code> show what the smoothing removed.</p>
+index: on the ONS quintiles, Whittaker smoothing over time lowered the
+95% coverage of Lee-Carter from 0.80 to 0.63 and raised its CRPS from
+0.067 to 0.072 (“Smoothing death rates”). <code><a href="../reference/recalibrated.html">recalibrated()</a></code>
+re-estimates the spread of a smoothed model against the raw
+observations. Treat smoothing as optional and check it in a backtest.
+Use it as a preprocessing step (<code>mt_prep(step_smooth(...))</code>),
+never on the data before fitting (<code><a href="../reference/mt_backtest.html">mt_backtest()</a></code> stops,
+<code><a href="../reference/mt_fit.html">mt_fit()</a></code> warns), so that backtests refit it on each
+training window and residuals and scores refer to the raw rates.
+<code><a href="../reference/mt_smooth_check.html">mt_smooth_check()</a></code> and <code><a href="../reference/mt_smooth_check.html">mt_plot_smooth()</a></code> show
+what the smoothing removed.</p>
 </div>
 <div class="section level3">
 <h3 id="why-does-the-forecast-start-with-a-step">Why does the forecast start with a step?<a class="anchor" aria-label="anchor" href="#why-does-the-forecast-start-with-a-step"></a>
@@ -360,16 +374,18 @@ observation noise from the raw rates. <code><a href="../reference/mt_smooth_chec
 When the fit misses the level of the last years, the first forecast year
 jumps away from the observations; <code><a href="../reference/mt_jump_off.html">mt_jump_off()</a></code> reports the
 step, and the forecast plots show it as a gap between the solid (fitted)
-and the dashed (forecast) line. <code>anchored(model, years = 3)</code>
-moves the start to the observed level of the last three years, fading
-out over ten years (so forecasts more than ten years ahead are those of
-the model); it improved short-term accuracy on England &amp; Wales men
-and on the ONS data. Starting from the observed rates of the last year
-alone (<code>lee_carter(jump_off = "observed")</code>, or
-<code>anchored(years = 1, decay = Inf, shrink = FALSE)</code>) was best
-on England &amp; Wales men (CRPS 0.0583 against 0.0639 anchored to three
-years), whose counts are large, and worse on the ONS quintiles, whose
-last year is noisier. Decompositions of a change from an observed to a
+and the dashed (forecast) line. <code>anchored(model)</code> starts any
+model from the observed rates of the last training year and keeps this
+offset in every forecast year, the jump-off adjustment of Lee and Miller
+(2001); <code>lee_carter(jump_off = "observed")</code> and
+<code>li_lee(jump_off = "observed")</code> do the same within the model.
+The observed rates of one year carry their random variation into every
+forecast year, which matters where deaths are few. The other settings of
+<code><a href="../reference/anchored.html">anchored()</a></code> are package-specific: the offset of the last
+<code>years</code> years, shrunk where deaths are few
+(<code>shrink = TRUE</code>) and fading out over <code>decay</code>
+years. “Where a forecast starts: the jump-off” compares the starting
+points in a backtest. Decompositions of a change from an observed to a
 forecast year include the step; <code><a href="../reference/mt_decompose.html">mt_decompose()</a></code> reports it
 (<code>jump_off</code>) and can start from the fitted rates
 (<code>observed = "fitted"</code>).</p>
@@ -378,15 +394,18 @@ forecast year include the step; <code><a href="../reference/mt_decompose.html">m
 <h3 id="what-is-the-difference-between-predictive-draws-and-forecast-rates">What is the difference between predictive draws and forecast
 rates?<a class="anchor" aria-label="anchor" href="#what-is-the-difference-between-predictive-draws-and-forecast-rates"></a>
 </h3>
-<p>For models of smooth rates (Lee-Carter, Li-Lee, Tucker3, FDM, StMoMo,
-Bayesian APC, <code>rwd(observation_noise = TRUE)</code>),
-<code><a href="../reference/mt_forecast.html">mt_forecast()</a></code> returns draws of the smooth death rates by
-default, and <code>predictive = TRUE</code> adds the variation of
-observed rates around them (extra-Poisson and Poisson noise given the
-exposures), which is what an observed future rate will show. Models of
-observed rates (<code><a href="../reference/rwd.html">rwd()</a></code>, <code><a href="../reference/arima_series.html">arima_series()</a></code>,
-<code><a href="../reference/arima_series.html">ets_series()</a></code>) forecast observed rates directly, and
-<code>predictive</code> adds nothing. Backtests use predictive draws
+<p>For models of expected rates (Lee-Carter, Li-Lee, CoDa, Tucker3, FDM,
+StMoMo, StanMoMo, Bayesian APC), <code><a href="../reference/mt_forecast.html">mt_forecast()</a></code> returns
+draws of the expected death rates by default, and
+<code>predictive = TRUE</code> draws the deaths given these rates and
+the exposures, which is what an observed future rate will show. The
+deaths are Poisson, the observation model of the Poisson Lee-Carter
+model (Brouhns, Denuit and Vermunt 2002), or negative binomial for
+<code>stanmomo(family = "nb")</code>; no other observation noise is
+added. Models of observed rates (<code><a href="../reference/rwd.html">rwd()</a></code>,
+<code><a href="../reference/arima_series.html">arima_series()</a></code>, <code><a href="../reference/arima_series.html">ets_series()</a></code>) forecast
+observed rates directly, and <code>predictive</code> adds nothing unless
+they were fitted to smoothed rates. Backtests use predictive draws
 because they are compared with observed rates. For life expectancy and
 other summaries of the underlying mortality, use the default draws.</p>
 </div>
@@ -397,8 +416,8 @@ other summaries of the underlying mortality, use the default draws.</p>
 version of Lee-Carter, Li-Lee) replace zero deaths by 0.5, which is
 harmless for a few cells and distorting for many. The Poisson Lee-Carter
 gives age groups without any death a constant rate and shrinks the age
-pattern of change where the counts are too sparse, with a warning. With
-many small cells:</p>
+pattern of change where the counts are too sparse, with a warning (both
+are safeguards of this package). With many small cells:</p>
 <ul>
 <li>model at a coarser resolution (age groups instead of single years,
 or wider groups at young ages, <code><a href="../reference/mt_regroup.html">mt_regroup()</a></code>);</li>
@@ -408,10 +427,12 @@ groups, or borrow strength across ages and years within a stratum with
 the smoothing priors of <code><a href="../reference/apc_bayes.html">apc_bayes()</a></code>;</li>
 <li>smooth before fitting with <code><a href="../reference/mt_prep.html">step_smooth()</a></code> (age 0 is left
 out by default);</li>
-<li>use <code>rwd(observation_noise = TRUE)</code> instead of
-<code><a href="../reference/rwd.html">rwd()</a></code>, alone or in an ensemble: the plain random walk
-treats the Poisson noise of observed rates as real change, and its paths
-over 10 or more years can reach impossible rates;</li>
+<li>use the local level model with drift, a random walk observed with
+noise (<code>arima_series(order = c(0, 1, 1), drift = TRUE)</code>;
+Harvey 1989), instead of <code><a href="../reference/rwd.html">rwd()</a></code>, alone or in an ensemble:
+the plain random walk treats the Poisson noise of observed rates as real
+change, and its paths over 10 or more years can reach impossible
+rates;</li>
 <li>combine rare causes of death into larger groups (see
 <code>ons_cause_groups</code> and <code><a href="../reference/mt_group_levels.html">mt_group_levels()</a></code>).</li>
 </ul>
@@ -505,9 +526,9 @@ growing?<a class="anchor" aria-label="anchor" href="#will-the-gap-between-region
 </h3>
 <p>That depends on the model, not only on the data. Separate models per
 stratum extrapolate each stratum’s trend, so gaps can widen without
-bound. <code><a href="../reference/li_lee.html">li_lee()</a></code> and <code><a href="../reference/li_lee.html">product_ratio()</a></code> let strata
+bound. <code><a href="../reference/li_lee.html">li_lee()</a></code> and <code><a href="../reference/coherent_fdm.html">coherent_fdm()</a></code> let strata
 deviate from a common trend only through stationary processes, so gaps
-return towards their past average; so does
+return towards their past level; so does
 <code>coda(coherent = TRUE)</code> for the distribution of deaths by
 age. Backtests over a few years rarely separate the two; the choice is
 an assumption to state.</p>
@@ -527,9 +548,10 @@ of subgroups from the change of their mortality: for groups defined at
 birth or for life, such as sex or education, as in Riffe, Tursun-zade
 and Trias Llimós (2024) (<code>composition = "radix"</code>); for areas
 such as deprivation quintiles, whose populations move between groups,
-with <code>composition = "pooled"</code>. Forecasts are decomposed draw
-by draw, so contributions have intervals; see “Decomposing differences
-in life expectancy”.</p>
+with <code>composition = "pooled"</code>, a parametrisation of this
+package without a published source. Forecasts are decomposed draw by
+draw, so contributions have intervals; see “Decomposing differences in
+life expectancy”.</p>
 </div>
 </div>
 <div class="section level2">
@@ -604,12 +626,26 @@ the models on four data sets.</p>
 <div class="section level2">
 <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a>
 </h2>
+<p>Brouhns N, Denuit M, Vermunt JK (2002). A Poisson log-bilinear
+regression approach to the construction of projected lifetables.
+<em>Insurance: Mathematics and Economics</em> 31(3): 373-393.</p>
+<p>Coroneo L, Iacone F (2020). Comparing predictive accuracy in small
+samples using fixed-smoothing asymptotics. <em>Journal of Applied
+Econometrics</em> 35(4): 391-409. <a href="doi:10.1002/jae.2756" class="uri">doi:10.1002/jae.2756</a>.</p>
 <p>Diebold FX, Mariano RS (1995). Comparing predictive accuracy.
 <em>Journal of Business &amp; Economic Statistics</em> 13(3):
 253-263.</p>
+<p>Harvey AC (1989). <em>Forecasting, Structural Time Series Models and
+the Kalman Filter</em>. Cambridge University Press.</p>
 <p>Harvey D, Leybourne S, Newbold P (1997). Testing the equality of
 prediction mean squared errors. <em>International Journal of
 Forecasting</em> 13(2): 281-291.</p>
+<p>Lazarus E, Lewis DJ, Stock JH, Watson MW (2018). HAR inference:
+recommendations for practice. <em>Journal of Business &amp; Economic
+Statistics</em> 36(4): 541-559.</p>
+<p>Lee R, Miller T (2001). Evaluating the performance of the Lee-Carter
+method for forecasting mortality. <em>Demography</em> 38(4):
+537-549.</p>
 <p>Li N, Lee R, Gerland P (2013). Extending the Lee-Carter method to
 model the rotation of age patterns of mortality decline for long-term
 projections. <em>Demography</em> 50(6): 2037-2051. <a href="doi:10.1007/s13524-013-0232-2" class="uri">doi:10.1007/s13524-013-0232-2</a>.</p>
@@ -620,6 +656,9 @@ Universitat de Girona.</p>
 Probabilistic forecast reconciliation: properties, evaluation and score
 optimisation. <em>European Journal of Operational Research</em> 306(2):
 693-706. <a href="doi:10.1016/j.ejor.2022.07.040" class="uri">doi:10.1016/j.ejor.2022.07.040</a>.</p>
+<p>Riffe T, Tursun-zade R, Trias Llimós S (2024). Arriaga meets
+Kitagawa. Life expectancy decomposition with population subgroups. MPIDR
+Working Paper WP-2024-029. <a href="doi:10.4054/MPIDR-WP-2024-029" class="uri">doi:10.4054/MPIDR-WP-2024-029</a>.</p>
 <p>Wilmoth JR (1995). Are mortality projections always more pessimistic
 when disaggregated by cause of death? <em>Mathematical Population
 Studies</em> 5(4): 293-319. <a href="doi:10.1080/08898489509525409" class="uri">doi:10.1080/08898489509525409</a>.</p>

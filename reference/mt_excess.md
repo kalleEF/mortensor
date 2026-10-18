@@ -1,18 +1,11 @@
 # Excess mortality
 
 Excess deaths are the observed deaths minus the deaths expected without
-the shock: the predictive deaths of a baseline model fitted to the years
-before it, given the observed exposures of the later years. The WHO
-estimates of the excess mortality of the COVID-19 pandemic follow this
-approach with their own baseline model (Msemburi et al. 2023); Acosta
-and Irizarry (2022) describe a model of the excess itself. Here the
-expected deaths are draws of [`mt_forecast()`](mt_forecast.md) with
-`predictive = TRUE`: the uncertainty of the baseline trend plus the
-Poisson and extra-Poisson variation of the death counts. The observed
-deaths minus each draw give draws of the excess. When the baseline model
-holds, the interval of the excess covers the true excess with its
-nominal probability, and an interval that contains zero means deaths
-within the range of normal variation.
+the shock, from a baseline model fitted to the years before it, given
+the observed exposures of the later years. The WHO estimates of the
+excess mortality of the COVID-19 pandemic also compare observed deaths
+with expected deaths from a baseline model (Msemburi et al. 2023);
+Acosta and Irizarry (2022) describe a model of the excess itself.
 
 ## Usage
 
@@ -146,22 +139,47 @@ mt_plot_excess(
 `mt_excess()`: a `data.table` with the `by` variables, `age`, `age_lo`
 and `age_hi` (deaths), `period`, `observed`, the mean and quantiles of
 `expected` and `excess` (`expected_mean`, `expected_q0.025`, ...), for
-deaths those of `p_score`, then `p_positive`, `cells` and `skipped`; for
-life expectancy also `at`. `mt_plot_excess()`: a ggplot object.
+deaths those of `p_score` (from the mean and quantiles of the expected
+deaths), then `p_positive`, `cells` and `skipped`; for life expectancy
+also `at`. `mt_plot_excess()`: a ggplot object.
 
 ## Details
+
+The estimand: here the expected deaths are draws of
+[`mt_forecast()`](mt_forecast.md) with `predictive = TRUE`, that is
+draws from the predictive distribution of the deaths under the baseline
+model (the uncertainty of the baseline trend plus the Poisson variation
+of the death counts given the rates; negative binomial for
+`stanmomo(family = "nb")`). They describe the counterfactual deaths: the
+deaths that would have been observed without the shock. The observed
+deaths minus each draw give draws of the excess, so its interval is a
+prediction interval for the realised excess, the observed minus the
+realised counterfactual deaths, not a confidence interval for an
+expected excess. It has its nominal coverage when the baseline model is
+correct; an interval that contains zero means deaths within the range of
+the counterfactual deaths.
 
 The result gives, for each row, the observed deaths and the mean and
 quantiles of
 
-- `expected`: the expected deaths;
+- `expected`: the expected (counterfactual) deaths;
 
-- `excess`: observed minus expected deaths;
+- `excess`: observed minus expected deaths, draw by draw;
 
 - `p_score`: the excess in percent of the expected deaths,
-  `100 * excess / expected`, computed draw by draw;
+  `100 * (observed / expected - 1)`. Its quantiles are those of the
+  expected deaths transformed (the P-score at level `p` is
+  `100 * (observed / q - 1)` with `q` the quantile of the expected
+  deaths at level `1 - p`, since the P-score decreases as the expected
+  deaths increase), and `p_score_mean` is the P-score of the mean
+  expected deaths, so a draw without expected deaths (small cells) does
+  not make the row missing;
 
-and `p_positive`, the share of draws with a positive excess.
+and `p_positive`, the share of draws with a positive excess: the
+predictive probability that the observed deaths (or life expectancy)
+exceed the counterfactual ones under the baseline model.
+`1 - p_positive` is a one-sided predictive p-value for the hypothesis of
+no excess.
 
 Sums over ages (`ages`), strata (`by`) and years (`cumulative`) are
 formed draw by draw before the quantiles are taken. With
@@ -229,21 +247,21 @@ ex <- mt_excess(lee_carter(), x, baseline = c(2000, 2015), ages = c(30, 70),
 ex[, list(sex, age, period, observed, excess_q0.5, p_score_q0.025, p_score_q0.975)]
 #>        sex    age period observed excess_q0.5 p_score_q0.025 p_score_q0.975
 #>     <char> <char>  <num>    <num>       <num>          <num>          <num>
-#>  1: female  30-69   2016    12612      -185.0     -3.7193102      1.1920965
-#>  2: female  30-69   2017    12687      -242.5     -4.8970114      1.3443911
-#>  3: female  30-69   2018    12895       -87.5     -4.5601307      2.6809026
-#>  4: female  30-69   2019    13041         9.5     -4.4247675      4.4027760
-#>  5: female    70+   2016    81342      -560.5     -1.9052553      0.8744476
-#>  6: female    70+   2017    81817       -25.0     -1.7737349      1.8091008
-#>  7: female    70+   2018    89833      8228.5      7.9942921     12.3830894
-#>  8: female    70+   2019    90164      8522.0      7.7386203     13.2380700
-#>  9:   male  30-69   2016    19459       352.0     -0.4375878      4.5300483
-#> 10:   male  30-69   2017    19478       254.0     -1.4751127      5.4929109
-#> 11:   male  30-69   2018    20014       775.0     -0.7334315      8.5871145
-#> 12:   male  30-69   2019    20099       823.5     -1.1231044      9.8358980
-#> 13:   male    70+   2016    75217       793.0     -0.5454548      2.8583239
-#> 14:   male    70+   2017    75513      1605.0      0.2959892      4.5194131
-#> 15:   male    70+   2018    82366      9111.0      9.5767595     15.6829512
-#> 16:   male    70+   2019    82187      9570.5      9.6999225     16.7111119
+#>  1: female  30-69   2016    12612      -175.5     -3.7997277      1.1993958
+#>  2: female  30-69   2017    12687      -247.5     -5.0043615      1.2634990
+#>  3: female  30-69   2018    12895      -109.5     -3.9619870      2.9390927
+#>  4: female  30-69   2019    13041        -2.0     -4.2180488      4.5697653
+#>  5: female    70+   2016    81342      -541.5     -1.7376094      0.8941515
+#>  6: female    70+   2017    81817       -23.5     -1.9222482      1.8103672
+#>  7: female    70+   2018    89833      8256.5      7.7771069     12.2721287
+#>  8: female    70+   2019    90164      8526.0      7.6944485     13.1747104
+#>  9:   male  30-69   2016    19459       356.0     -0.5680838      4.7707887
+#> 10:   male  30-69   2017    19478       246.0     -1.6113553      5.2728295
+#> 11:   male  30-69   2018    20014       739.0     -0.4782405      9.0280142
+#> 12:   male  30-69   2019    20099       818.0     -0.8251413      9.6402285
+#> 13:   male    70+   2016    75217       776.5     -0.2047860      2.6701515
+#> 14:   male    70+   2017    75513      1634.5      0.2892615      4.6430295
+#> 15:   male    70+   2018    82366      9037.0      9.5555880     15.4348937
+#> 16:   male    70+   2019    82187      9555.0      9.4421065     16.9296696
 if (requireNamespace("ggplot2", quietly = TRUE)) mt_plot_excess(ex)
 ```

@@ -114,7 +114,9 @@ row per method (and age band, with <code>reference</code>).</p>
 
 <ul><li><p><code>mt_plot_ungroup(type = "profile")</code>: the observed group rates (grey
 steps) and the ungrouped rates (lines) over age in one period. The
-ungrouped rates should pass through the steps and change smoothly.</p></li>
+ungrouped rates should change smoothly and pass close to the steps
+(exactly through their exposure-weighted means only with
+<code>preserve_totals = TRUE</code> or the monotone method).</p></li>
 <li><p><code>type = "time"</code>: the ungrouped rates of a few ages over the periods
 (log scale), with the known rates of <code>reference</code> as points or, without
 <code>reference</code>, the rate of the observed group that contains each age
@@ -133,7 +135,7 @@ from noise.</p></li>
 <li><p><code>mt_ungroup_check()</code> summarises the fits: the share of fits whose
 smoothing parameter is at the boundary of its search range
 (<code>at_bound</code>), the largest relative gap between fitted and observed group
-totals before rescaling (<code>max_rel_gap</code>) and, with <code>reference</code>, by age
+totals before any rescaling (<code>max_rel_gap</code>) and, with <code>reference</code>, by age
 band the median absolute log error (<code>mae_log</code>), the same for the
 Poisson noise of the known rates (<code>noise_log</code>, the error that perfect
 estimates would have) and the median signed log error (<code>bias_log</code>).</p></li>
@@ -146,12 +148,12 @@ estimates would have) and the median signed log error (<code>bias_log</code>).</
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">x</span> <span class="op">&lt;-</span> <span class="fu"><a href="mt_example.html">mt_example</a></span><span class="op">(</span>years <span class="op">=</span> <span class="fl">2010</span><span class="op">:</span><span class="fl">2014</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="va">u</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>PCLM <span class="op">=</span> <span class="fu"><a href="mt_ungroup.html">mt_ungroup</a></span><span class="op">(</span><span class="va">x</span><span class="op">)</span>, <span class="st">"Hyman spline"</span> <span class="op">=</span> <span class="fu"><a href="mt_ungroup.html">mt_ungroup</a></span><span class="op">(</span><span class="va">x</span>, method <span class="op">=</span> <span class="st">"hyman_kannisto"</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">u</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>PCLM <span class="op">=</span> <span class="fu"><a href="mt_ungroup.html">mt_ungroup</a></span><span class="op">(</span><span class="va">x</span><span class="op">)</span>, <span class="st">"PCLM, rescaled"</span> <span class="op">=</span> <span class="fu"><a href="mt_ungroup.html">mt_ungroup</a></span><span class="op">(</span><span class="va">x</span>, preserve_totals <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu">mt_ungroup_check</span><span class="op">(</span><span class="va">u</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>          method at_bound max_rel_gap</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>          &lt;fctr&gt;    &lt;num&gt;       &lt;num&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1:         PCLM        0  0.06695381</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2: Hyman spline        0          NA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>            method at_bound max_rel_gap</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>            &lt;fctr&gt;    &lt;num&gt;       &lt;num&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1:           PCLM        0  0.06695389</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2: PCLM, rescaled        0  0.06695389</span>
 <span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/ns-load.html" class="external-link">requireNamespace</a></span><span class="op">(</span><span class="st">"ggplot2"</span>, quietly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span></span>
 <span class="r-in"><span>  <span class="fu">mt_plot_ungroup</span><span class="op">(</span><span class="va">x</span>, <span class="va">u</span>, strata <span class="op">=</span> <span class="st">"female"</span><span class="op">)</span></span></span>
 <span class="r-in"><span>  <span class="fu">mt_plot_ungroup</span><span class="op">(</span><span class="va">x</span>, <span class="va">u</span>, type <span class="op">=</span> <span class="st">"time"</span>, strata <span class="op">=</span> <span class="st">"female"</span><span class="op">)</span></span></span>

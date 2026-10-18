@@ -140,22 +140,22 @@ e0 <- life_expectancy(x)
 e0[period == 2019, .(Geschlecht, Quintil, q0.025, q0.5, q0.975)]
 #>     Geschlecht Quintil   q0.025     q0.5   q0.975
 #>         <char>  <char>    <num>    <num>    <num>
-#>  1:       male      Q1 72.54543 73.04539 73.51449
-#>  2:       male      Q2 74.09485 74.56581 75.04868
+#>  1:       male      Q1 72.54543 73.04346 73.51449
+#>  2:       male      Q2 74.09485 74.56660 75.04868
 #>  3:       male      Q3 74.85565 75.37452 75.93295
-#>  4:       male      Q4 76.61382 77.15026 77.65594
-#>  5:       male      Q5 77.76514 78.29824 78.77255
-#>  6:     female      Q1 76.02923 76.48933 76.95673
-#>  7:     female      Q2 77.32803 77.79383 78.30203
-#>  8:     female      Q3 79.20649 79.72020 80.29379
-#>  9:     female      Q4 79.45129 80.06467 80.59933
-#> 10:     female      Q5 81.76054 82.30710 82.86119
+#>  4:       male      Q4 76.61884 77.15492 77.65594
+#>  5:       male      Q5 77.76862 78.30108 78.77808
+#>  6:     female      Q1 76.03602 76.49766 76.98199
+#>  7:     female      Q2 77.32803 77.79842 78.31247
+#>  8:     female      Q3 79.20649 79.71905 80.29379
+#>  9:     female      Q4 79.45129 80.06467 80.62082
+#> 10:     female      Q5 81.77045 82.31385 82.87126
 gap <- mt_contrast(x, var = "Quintil", ref = "Q5")
 gap[period == 2019 & level == "Q1"]
 #>    Geschlecht  level    ref period      mean    q0.025      q0.5    q0.975
 #>        <char> <char> <char>  <num>     <num>     <num>     <num>     <num>
-#> 1:       male     Q1     Q5   2019 -5.256117 -5.983747 -5.245298 -4.533949
-#> 2:     female     Q1     Q5   2019 -5.808297 -6.503961 -5.804167 -5.091491
+#> 1:       male     Q1     Q5   2019 -5.259102 -5.987421 -5.245696 -4.541609
+#> 2:     female     Q1     Q5   2019 -5.807940 -6.510433 -5.804283 -5.086910
 #>    p_positive        quantity       type
 #>         <num>          <char>     <char>
 #> 1:          0 life_expectancy difference
@@ -163,10 +163,10 @@ gap[period == 2019 & level == "Q1"]
 mt_inequality(x, "Quintil", order = paste0("Q", 5:1), quantity = "life_expectancy")[period == 2019]
 #>    Geschlecht  index period       mean     q0.025       q0.5     q0.975
 #>        <char> <char>  <num>      <num>      <num>      <num>      <num>
-#> 1:       male    sii   2019 -6.6178416 -7.4097300 -6.6029343 -5.7903053
-#> 2:       male    rii   2019  0.9161847  0.9065701  0.9163918  0.9263074
-#> 3:     female    sii   2019 -7.0098431 -7.7955650 -7.0266418 -6.1376267
-#> 4:     female    rii   2019  0.9152828  0.9062260  0.9150688  0.9253027
+#> 1:       male    sii   2019 -6.6226995 -7.4169824 -6.6084044 -5.7942876
+#> 2:       male    rii   2019  0.9161272  0.9064890  0.9163064  0.9262289
+#> 3:     female    sii   2019 -7.0064219 -7.7924671 -7.0167733 -6.1357340
+#> 4:     female    rii   2019  0.9153267  0.9062257  0.9151347  0.9253908
 #>           quantity
 #>             <char>
 #> 1: life_expectancy
@@ -180,15 +180,15 @@ mt_inequality(x, "Quintil", order = paste0("Q", 5:1), quantity = "life_expectanc
 Three candidates are compared in a backtest with three forecast origins
 and five years ahead: Lee-Carter per stratum; Li-Lee with a common trend
 per sex, which keeps the quintiles from diverging; and an ensemble of
-Lee-Carter and random walks that are robust to small counts.
+Lee-Carter and the random walk with drift per age.
 
 ``` r
 
 cand <- list("Lee-Carter" = lee_carter(), "Li-Lee" = li_lee(common_by = "Geschlecht"),
-             "Lee-Carter + random walk" = ensemble(lc = lee_carter(), rw = rwd(observation_noise = TRUE)))
+             "Lee-Carter + random walk" = ensemble(lc = lee_carter(), rw = rwd()))
 bt <- mt_compare(cand, x, origins = 2012:2014, h = 5, n_draws = 200)
 #> Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label):
-#> Lee-Carter: forecast death rates above 1 in 22.0% of the draws (strata
+#> Lee-Carter: forecast death rates above 1 in 21.5% of the draws (strata
 #> female.Q3; ages 10-14). The model is unstable here, often because of sparse
 #> counts or a steep trend extrapolated far ahead; consider wider age groups
 #> (mt_regroup()), pooling (li_lee(common_by = )), smoothing (step_smooth()) or an
@@ -199,25 +199,42 @@ bt <- mt_compare(cand, x, origins = 2012:2014, h = 5, n_draws = 200)
 #> counts or a steep trend extrapolated far ahead; consider wider age groups
 #> (mt_regroup()), pooling (li_lee(common_by = )), smoothing (step_smooth()) or an
 #> ensemble.
+#> Warning in report_fit_problems(diagnostics, spec$label, classes): Li-Lee
+#> (common by Geschlecht): Li-Lee: the AR(1) coefficient of the stratum index is
+#> bounded at |phi| = 0.99 in 1 stratum/strata (male.Q5): their deviations from
+#> the common trend are close to a unit root and revert very slowly; coherence may
+#> not suit them. (diagnostics of 10 stratum/strata of the fit).
 #> Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label):
-#> Lee-Carter: forecast death rates above 1 in 22.0% of the draws (strata
+#> Lee-Carter: forecast death rates above 1 in 21.5% of the draws (strata
 #> female.Q3; ages 10-14). The model is unstable here, often because of sparse
 #> counts or a steep trend extrapolated far ahead; consider wider age groups
 #> (mt_regroup()), pooling (li_lee(common_by = )), smoothing (step_smooth()) or an
 #> ensemble.
+#> Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label): Random
+#> walk with drift: forecast death rates above 1 in 3.5% of the draws (strata
+#> female.Q3, female.Q5; ages 10-14, 15-19). The model is unstable here, often
+#> because of sparse counts or a steep trend extrapolated far ahead; consider
+#> wider age groups (mt_regroup()), pooling (li_lee(common_by = )), smoothing
+#> (step_smooth()) or an ensemble.
 #> Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label):
 #> Lee-Carter: forecast death rates above 1 in 4.5% of the draws (strata
 #> female.Q3; ages 10-14). The model is unstable here, often because of sparse
 #> counts or a steep trend extrapolated far ahead; consider wider age groups
 #> (mt_regroup()), pooling (li_lee(common_by = )), smoothing (step_smooth()) or an
 #> ensemble.
+#> Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label): Random
+#> walk with drift: forecast death rates above 1 in 2.5% of the draws (strata
+#> female.Q3, female.Q5; ages 10-14, 15-19). The model is unstable here, often
+#> because of sparse counts or a steep trend extrapolated far ahead; consider
+#> wider age groups (mt_regroup()), pooling (li_lee(common_by = )), smoothing
+#> (step_smooth()) or an ensemble.
 scores <- mt_score_table(bt, metrics = c("crps", "cov95"))
 scores
 #>                       model  crps cov95
 #>                      <fctr> <num> <num>
-#> 1:               Lee-Carter 0.147 0.921
-#> 2:                   Li-Lee 0.167 0.898
-#> 3: Lee-Carter + random walk 0.150 0.936
+#> 1:               Lee-Carter 0.148 0.909
+#> 2:                   Li-Lee 0.175 0.880
+#> 3: Lee-Carter + random walk 0.156 0.968
 ```
 
 Warnings about implausible rates in some backtest fits point to young
@@ -241,31 +258,31 @@ summary(fit)
 #>   data: 10 strata; ages 0 to 90+; periods 2005-2019
 #>   model and uncertainty:
 #>     log m(x,t) = a(x) + b(x) k(t), estimated by Poisson maximum likelihood
-#>     (Brouhns et al. 2002; Lee and Carter 1992). k(t) follows a random walk with
-#>     drift; draws include its innovations and the uncertainty of the drift. a(x)
-#>     and b(x) are fixed (parameter uncertainty with bootstrapped()). Jump-off:
-#>     fitted rates.
-#>   fit: Poisson deviance 2444.4 on 3000 cells (0.81 per cell); 2.8% of deviance residuals beyond +/-2
+#>     (Brouhns et al. 2002). k(t) follows a random walk with drift; draws include
+#>     its innovations and the uncertainty of the drift. a(x) and b(x) are fixed
+#>     (parameter uncertainty with bootstrapped()). Predictive draws add Poisson
+#>     variation of the deaths given the rates. Jump-off: fitted rates.
+#>   fit: Poisson deviance 2481.2 on 3000 cells (0.83 per cell); 2.7% of deviance residuals beyond +/-2
 fc <- mt_forecast(fit, to = 2035, n_draws = 500, seed = 1)
 e0_fc <- life_expectancy(fc)
 e0_fc[period == 2035, .(Geschlecht, Quintil, q0.025, q0.5, q0.975)]
 #>     Geschlecht Quintil   q0.025     q0.5   q0.975
 #>         <char>  <char>    <num>    <num>    <num>
-#>  1:       male      Q1 73.57374 76.03999 78.39900
-#>  2:       male      Q2 74.60033 77.18183 80.10067
-#>  3:       male      Q3 75.40007 77.73687 80.69338
-#>  4:       male      Q4 76.87715 79.84113 83.15670
-#>  5:       male      Q5 77.47300 80.64732 83.67783
-#>  6:     female      Q1 77.60533 79.19567 80.72109
-#>  7:     female      Q2 78.11247 80.55551 83.13545
-#>  8:     female      Q3 77.51242 83.08963 90.00569
-#>  9:     female      Q4 78.87688 82.59816 87.23809
-#> 10:     female      Q5 82.17562 86.08796 90.33716
+#>  1:       male      Q1 73.57397 76.04022 78.39923
+#>  2:       male      Q2 74.60027 77.18007 80.09615
+#>  3:       male      Q3 75.40221 77.73909 80.69551
+#>  4:       male      Q4 76.89530 79.84707 83.14944
+#>  5:       male      Q5 77.46679 80.63718 83.65660
+#>  6:     female      Q1 77.59210 79.20813 80.75888
+#>  7:     female      Q2 78.12215 80.56010 83.13295
+#>  8:     female      Q3 77.48239 83.08839 90.03644
+#>  9:     female      Q4 78.86362 82.58275 87.21109
+#> 10:     female      Q5 82.17392 86.09262 90.35157
 mt_contrast(fc, var = "Quintil", ref = "Q5")[period == 2035 & level == "Q1"]
 #>    Geschlecht  level    ref period      mean     q0.025      q0.5     q0.975
 #>        <char> <char> <char>  <num>     <num>      <num>     <num>      <num>
-#> 1:       male     Q1     Q5   2035 -4.658111  -8.527998 -4.674236 -0.7185934
-#> 2:     female     Q1     Q5   2035 -6.920323 -11.364036 -6.920468 -2.6235216
+#> 1:       male     Q1     Q5   2035 -4.646715  -8.513676 -4.663307 -0.7107595
+#> 2:     female     Q1     Q5   2035 -6.912613 -11.376681 -6.909357 -2.6093638
 #>    p_positive        quantity       type
 #>         <num>          <char>     <char>
 #> 1:      0.012 life_expectancy difference

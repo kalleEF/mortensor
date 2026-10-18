@@ -142,7 +142,9 @@ out from each origin).</p></dd>
 first evaluates a coarse grid (every second value of each column,
 including the first and the last) and then the rows of <code>grid</code> within one
 step of the best coarse combination in every column. For large grids,
-such as Tucker ranks, this needs far fewer fits.</p></dd>
+such as Tucker ranks, this needs far fewer fits. The two-stage search
+is a package heuristic: it can miss the best row when the score has
+several minima along a column.</p></dd>
 
 
 <dt id="arg-target">target<a class="anchor" aria-label="anchor" href="#arg-target"></a></dt>
@@ -177,10 +179,13 @@ and <code>tuning_choice</code>.</p>
 origins and forecasts <code>inner_h</code> years from each; the last origin is
 <code>inner_h</code> years before the end of the data. <code>inner_origins = 1</code> is a
 single hold-out: fit to the years up to <code>T - inner_h</code> and forecast the
-last <code>inner_h</code> years (with <code>inner_h = 5</code> or <code>10</code>, the usual choice of
-smoothing and model parameters for <code><a href="https://pkg.robjhyndman.com/demography/reference/fdm.html" class="external-link">demography::fdm()</a></code>). Several origins
-average over more periods and make the choice depend less on the events
-of one period (Tashman 2000).</p>
+last <code>inner_h</code> years. Several origins average over more periods and make
+the choice depend less on the events of one period (Tashman 2000).
+<code>tuned()</code> asks for at least <code>inner_origins + inner_h + 5</code> training years,
+so that the first inner fit has six years; this minimum is a package
+heuristic. Candidates whose models need more years fail at the first
+inner origins and are then scored on fewer origins than the others, or
+not at all.</p>
 <p><strong>What can be tuned.</strong> <code>spec_fun</code> receives one row of <code>grid</code> as named
 arguments and returns a model specification, or <code>list(spec = , prep = )</code>
 to tune preprocessing together with the model: for example the smoothing
@@ -237,8 +242,8 @@ Learning</em>, 2nd edition. Springer, New York.</p>
 <span class="r-in"><span><span class="va">tn2</span><span class="op">$</span><span class="va">scores</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    lambda       rmse          se selected</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     &lt;num&gt;      &lt;num&gt;       &lt;num&gt;   &lt;lgcl&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1:      1 0.06871123 0.007634507    FALSE</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2:    100 0.06770156 0.007473598     TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1:      1 0.06944312 0.008422793    FALSE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2:    100 0.06816706 0.008884341     TRUE</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

@@ -65,7 +65,11 @@ An object of class `mt_prep`; `mt_prep_apply()` returns the processed
 
 Steps:
 
-- `step_ungroup(...)`: [`mt_ungroup()`](mt_ungroup.md);
+- `step_ungroup(...)`: [`mt_ungroup()`](mt_ungroup.md), by default the
+  published PCLM without rescaling to the group totals (models fitted to
+  the ungrouped data and backtest scores against the grouped test data
+  do not need exact group totals);
+  `step_ungroup(preserve_totals = TRUE)` rescales;
 
 - `step_smooth(...)`: [`mt_smooth()`](mt_smooth.md). The model is fitted
   to the smoothed rates; residuals and observation noise refer to the
@@ -86,11 +90,20 @@ Steps:
 - `step_shocks(periods, action)`: periods with exceptional mortality
   (for example 2020-2022) are either replaced by log-linear
   interpolation of the rates of the neighbouring periods
-  (`"interpolate"`, deaths become exposure times the interpolated rate)
-  or removed (`"exclude"`, only at the start or end of the data). With
-  `"interpolate"`, shock periods at the start or end of the data, which
-  have no neighbour on one side, are removed, as in a backtest whose
-  training window ends inside the shock.
+  (`"interpolate"`, deaths become exposure times the interpolated rate,
+  provenance `"interpolated"`) or removed (`"exclude"`, only at the
+  start or end of the data). With `"interpolate"`, shock periods at the
+  start or end of the data, which have no neighbour on one side, are
+  removed instead, with a warning of class `mt_warning_prep` (as in a
+  backtest whose training window ends inside the shock). The
+  interpolated years enter the fit as if they had been observed: the
+  model sees a straight line in the log rates between the neighbouring
+  years, without the year-to-year variation of observed years. Models
+  that estimate their uncertainty from year-to-year changes (for example
+  the random walk of a period index) therefore estimate a smaller
+  variance, and their forecast intervals become narrower; check coverage
+  in a backtest. Excluding the periods (only possible at the edges)
+  avoids this.
 
 ## Examples
 

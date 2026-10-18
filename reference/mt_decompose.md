@@ -96,7 +96,8 @@ summary(
 
 - composition:
 
-  `"radix"` or `"pooled"`; required with `groups` (see Subgroups).
+  `"radix"` (Riffe et al. 2024) or `"pooled"` (specific to this
+  package); required with `groups` (see Subgroups).
 
 - observed:
 
@@ -120,7 +121,7 @@ summary(
 - standard, per:
 
   Standard population and multiplier for `"asr"` (see
-  [`asr()`](derived.md)); `per` also scales `"crude_rate"`.
+  [`asr()`](derived.md) and Methods); `per` also scales `"crude_rate"`.
 
 - exposure:
 
@@ -172,11 +173,12 @@ An `mt_decomposition` object.
 summed (path by path) over the variables not in `by`, with mean and
 quantiles; `summary(by = NULL)` returns one row per comparison (its
 number in `comparison`) with the values in the two populations, their
-difference (mean and quantiles), the jump-off share where it applies,
-the sum of the contributions and the largest difference between the two
-over draws (`max_residual`). `summary(change = c(p1, p2))` decomposes
-the change between two periods of comparisons between strata or objects
-(for example of a gap), path by path.
+difference (mean and quantiles), the jump-off (`jump_off`, an amount in
+the unit of the quantity, for example years) where it applies, the sum
+of the contributions and the largest difference between the two over
+draws (`max_residual`). `summary(change = c(p1, p2))` decomposes the
+change between two periods of comparisons between strata or objects (for
+example of a gap), path by path.
 [`print()`](https://rdrr.io/r/base/print.html) shows the totals.
 
 ## Details
@@ -209,10 +211,13 @@ from an observed year to a forecast year then contains the step from the
 observed to the model's fitted rates of that year (the jump-off, see
 [`mt_jump_off()`](mt_jump_off.md)) and the sampling noise of the
 observed year, besides the forecast change itself. The totals report the
-jump-off share (`jump_off`). `observed = "fitted"` uses the fitted rates
-of observed years, so that the decomposition describes the model's
-change alone; `observed = "poisson"` uses Poisson draws of the observed
-deaths, so that their sampling uncertainty enters the intervals.
+jump-off (`jump_off`): the amount of the difference, in the unit of the
+quantity (years for life expectancy), that is due to the observed
+instead of the fitted rates of observed years. `observed = "fitted"`
+uses the fitted rates of observed years, so that the decomposition
+describes the model's change alone; `observed = "poisson"` uses Poisson
+draws of the observed deaths, so that their sampling uncertainty enters
+the intervals.
 
 Two objects (`y`) are compared draw by draw. Draws of different models
 are independent, so by default (`pairing = "independent"`) the draws of
@@ -250,6 +255,15 @@ too narrow. Use `pairing = "draw"` when `y` is derived from the draws of
   at the average age structure) and the composition effect (age
   structure at the average rates) of Kitagawa (1955). Exact.
 
+The age-standardised rate (`quantity = "asr"`) is decomposed on the age
+groups of the standard population: the rates of each side are first
+combined within them with the exposures of that side, as
+[`asr()`](derived.md) does (deaths over exposures of the grid cells in a
+standard group), so the contributions are by standard age group. The
+rate is then linear in the group rates, and `"horiuchi"` and
+`"stepwise"` both give the renormalised standard weight times the
+difference of the group rate.
+
 Draws whose rates give no valid life table (for example rates far above
 any observed value, see the warning of
 [`mt_forecast()`](mt_forecast.md)) are left out with a warning, and a
@@ -260,7 +274,7 @@ warning reports contributions that do not add up to the difference.
 With `groups`, the populations being compared consist of the levels of a
 stratum variable, and the decomposition separates the effect of their
 composition. `composition` must be chosen, because the two options
-describe different quantities:
+describe different quantities and rest on different grounds:
 
 - `"radix"` (Riffe, Tursun-zade and Trias Llimós 2024, "Arriaga meets
   Kitagawa"): life expectancy (or the probability of dying) of the
@@ -276,15 +290,20 @@ describe different quantities:
   not hold for areas such as deprivation quintiles or regions, between
   which people move and which are reclassified.
 
-- `"pooled"`: the quantity of the pooled rates, which weight the
+- `"pooled"`: a parametrisation specific to this package (reference
+  unknown) for the quantity of the pooled rates, which weight the
   subgroup rates by their population shares at each age (the rates of
   the aggregate strata, as published for whole populations; "current
   rates"). The rates of every subgroup, age and cause and the shares at
-  every age are the parameters of a `"horiuchi"` (default) or
-  `"stepwise"` decomposition; the composition effects are reported by
-  age, summed over subgroups, whose separate composition terms are not
-  identified. With many subgroups, causes and draws this takes minutes;
-  lower `n_steps` or the number of draws for a first look.
+  every age are taken as the parameters of the quantity and decomposed
+  with the generic line integral of Horiuchi, Wilmoth and
+  Pletcher (2008) (`"horiuchi"`, default) or with stepwise replacement
+  (`"stepwise"`). The composition effects are reported by age, summed
+  over subgroups, whose separate composition terms are not identified.
+  Other parametrisations of the same pooled quantity would split the
+  difference differently between rates and composition. With many
+  subgroups, causes and draws this takes minutes; lower `n_steps` or the
+  number of draws for a first look.
 
 Shares come from the exposures: of each observed year, and for forecast
 years from `exposure` (default: the last observed year, so composition
@@ -390,7 +409,7 @@ summary(g, by = "age", change = c(2016, 2025))[1:5]
 #> 3: 0.001939599
 #> 4: 0.001811163
 #> 5: 0.005137142
-# observed 2015 against the forecast of 2025, with the jump-off share
+# observed 2015 against the forecast of 2025, with the jump-off (years)
 mt_decompose(fc, periods = c(2015, 2025), at = 30)
 #> <mt_decomposition> life expectancy at 30, method arriaga; 2 comparison(s), means over 100 draws
 #>    comparison    sex   from     to from_value to_value difference
@@ -405,6 +424,6 @@ mt_decompose(fc, periods = c(2015, 2025), at = 30)
 #>                <num>        <num>
 #> 1:             0.993      4.3e-15
 #> 2:             1.302      6.9e-15
-#> jump_off: part of the difference due to observed instead of fitted rates in observed years of the draws
-#> (see mt_jump_off()); observed = "fitted" decomposes the model's change alone.
+#> jump_off: the amount of the difference (in the unit of the quantity) due to observed instead of fitted rates
+#> in observed years of the draws (see mt_jump_off()); observed = "fitted" decomposes the model's change alone.
 ```

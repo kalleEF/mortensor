@@ -77,7 +77,8 @@ innovations (<code>NULL</code>: all years).</p></dd>
 
 
 <dt id="arg-observation-noise">observation_noise<a class="anchor" aria-label="anchor" href="#arg-observation-noise"></a></dt>
-<dd><p>Model the log rates as a random walk plus noise.</p></dd>
+<dd><p>Deprecated: model the log rates as a random walk
+plus noise (see Details); use <code>arima_series(order = c(0, 1, 1), drift = TRUE)</code>.</p></dd>
 
 </dl></div>
     <div class="section level2">
@@ -93,22 +94,34 @@ the drift of each path is the mean of a bootstrap sample of those
 changes;</p></li>
 <li><p><code>"gaussian"</code>: independent normal innovations per age with the
 estimated variance, and normal drift uncertainty.</p></li>
-</ul><p>Zero death counts are replaced by 0.5 before taking logs.</p>
-<p>With <code>observation_noise = TRUE</code> the log rate is a random walk with drift
-observed with noise (a local level model with drift). Year-to-year
-changes of observed rates then contain the noise of two years, and a
-plain random walk accumulates it at every step, which makes its
-intervals for observed rates too wide when deaths are few or rates
-fluctuate. The variances are estimated per age from the variance and
-first autocovariance of the changes (the noise variance is the Poisson
-part, one over the deaths, plus an extra part common to all ages), the
-level is Kalman filtered, and the forecast draws are paths of the level;
-predictive draws add the observation noise. The variant is more accurate
-than the plain random walk where deaths are few, but over 5 to 10 years
-its intervals can be too narrow, because changes of trend exceed the
-uncertainty of a constant drift; the plain random walk is wider. With a
-<code>drift_window</code>, the model is fitted to the years of the window and fitted
-rates of earlier years are missing.</p>
+</ul><p>Zero death counts are replaced by 0.5 before taking logs. The draws
+describe observed rates, so predictive draws add nothing.</p>
+<p><strong>Deprecated: <code>observation_noise = TRUE</code>.</strong> This variant treats the log
+rate as a random walk with drift observed with noise (a local level
+model with drift), with variances estimated by a moment estimator of this
+package without a published source: from the variance and first
+autocovariance of the year-to-year changes, the noise variance as the
+Poisson part (one over the deaths) plus an extra part common to all ages,
+clamped to at most 0.45 times the variance of the changes, the level
+variance to at least 0.1 times it, and shrunk towards the median of the
+ages with a prior standard deviation of three times that median; the
+level is Kalman filtered and the draws are paths of the level, to which
+predictive draws add Poisson variation of the deaths. It still works and
+warns (class <code>mt_warning_deprecated</code>). The published equivalent is the
+local level model with drift fitted by maximum likelihood (Harvey 1989),
+whose reduced form for the observed log rates is ARIMA(0,1,1) with drift:
+<code>arima_series(order = c(0, 1, 1), drift = TRUE)</code>. With a <code>drift_window</code>,
+the variant is fitted to the years of the window and fitted rates of
+earlier years are missing.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a></h2>
+    <p>Harvey AC (1989). <em>Forecasting, Structural Time Series Models and the
+Kalman Filter</em>. Cambridge University Press.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
+    <div class="dont-index"><p><code><a href="arima_series.html">arima_series()</a></code>.</p></div>
     </div>
 
     <div class="section level2">

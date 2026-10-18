@@ -60,7 +60,7 @@ origin of an outer <code><a href="mt_backtest.html">mt_backtest()</a></code>):</
 <span>  <span class="va">spec</span>,</span>
 <span>  years <span class="op">=</span> <span class="fl">10</span>,</span>
 <span>  n_origins <span class="op">=</span> <span class="fl">5</span>,</span>
-<span>  scale <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"horizon"</span>, <span class="st">"constant"</span><span class="op">)</span>,</span>
+<span>  scale <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"constant"</span>, <span class="st">"horizon"</span><span class="op">)</span>,</span>
 <span>  bias <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  target <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"crps"</span>, <span class="st">"interval"</span><span class="op">)</span>,</span>
 <span>  level <span class="op">=</span> <span class="fl">0.95</span>,</span>
@@ -91,12 +91,14 @@ origin of an outer <code><a href="mt_backtest.html">mt_backtest()</a></code>):</
 
 
 <dt id="arg-scale">scale<a class="anchor" aria-label="anchor" href="#arg-scale"></a></dt>
-<dd><p><code>"horizon"</code> (spread factor \(s_1 h^{\gamma}\)) or
-<code>"constant"</code>.</p></dd>
+<dd><p><code>"constant"</code> (default: one spread factor \(s_1\) for all
+horizons) or <code>"horizon"</code> (spread factor \(s_1 h^{\gamma}\),
+package-specific).</p></dd>
 
 
 <dt id="arg-bias">bias<a class="anchor" aria-label="anchor" href="#arg-bias"></a></dt>
-<dd><p>Estimate a correction of the drift (log rate per year).</p></dd>
+<dd><p>Estimate a correction of the drift (log rate per year;
+package-specific).</p></dd>
 
 
 <dt id="arg-target">target<a class="anchor" aria-label="anchor" href="#arg-target"></a></dt>
@@ -153,20 +155,53 @@ remaining years of the window;</p></li>
 <li><p>the draws are transformed per cell on the log scale,
 $$\log m^* = \tilde m + b\,h + s(h)\,(\log m - \tilde m),$$
 where \(\tilde m\) is the median of the draws in the cell, \(h\) the
-horizon, \(s(h) = s_1 h^{\gamma}\) a spread factor (<code>scale = "horizon"</code>; \(\gamma = 0\) for <code>scale = "constant"</code>), constant
-beyond the longest horizon of the window, and \(b\) a correction of
-the drift per year (<code>bias = TRUE</code>);</p></li>
+horizon, \(s(h)\) a spread factor, one value \(s_1\) for all
+horizons (<code>scale = "constant"</code>, default) or \(s_1 h^{\gamma}\)
+(<code>scale = "horizon"</code>), held constant beyond the longest horizon of the
+window, and \(b\) a correction of the drift per year (<code>bias = TRUE</code>);</p></li>
 <li><p>\(s_1\), \(\gamma\) and \(b\) minimise the mean CRPS (or the
 interval score, <code>target</code>) of the log death rates in the window, with
-Poisson (and the model's extra-Poisson) variation of the observed
-deaths, as in <code><a href="mt_backtest.html">mt_backtest()</a></code>. Draws of an ensemble get the observation
+the Poisson (or the model's negative binomial) variation of the
+observed deaths, as in <code><a href="mt_backtest.html">mt_backtest()</a></code>. Draws of an ensemble get the observation
 noise of the component they come from.</p></li>
 </ol><p>The final model is fitted on all training data and its forecasts are
-transformed with the estimated parameters. This is minimum-CRPS
-estimation of a location-scale recalibration (Gneiting et al. 2005)
-applied to simulated paths: ranks within each cell are kept, so paths stay
-paths, and derived quantities such as life expectancy can be computed
-from the calibrated draws.</p>
+transformed with the estimated parameters. Ranks within each cell are
+kept, so paths stay paths, and derived quantities such as life expectancy
+can be computed from the calibrated draws.</p>
+<p><strong>Published methods.</strong> The closest published method is the
+member-by-member post-processing of ensemble forecasts (Van Schaeybroeck
+and Vannitsem 2015), which shifts every member of an ensemble and
+rescales its deviation from the ensemble mean, with parameters for each
+lead time estimated by maximum likelihood or minimum CRPS. Here each
+simulated path is rescaled around the median of the draws of each cell,
+on the log scale, with one spread factor for all horizons (<code>scale = "constant"</code>) estimated by minimum CRPS on inner rolling-origin forecasts.
+Minimum-CRPS estimation follows ensemble model output statistics (EMOS,
+Gneiting et al. 2005), which fits a parametric predictive distribution
+instead of transforming the draws.</p>
+<p><strong>Package-specific options</strong> (reference unknown): the power law of the
+spread factor over the horizon (<code>scale = "horizon"</code>), the correction of
+the drift (<code>bias = TRUE</code>), separate factors for age bands (<code>ages</code>) and
+calibration on life expectancy or the age-standardised rate (<code>quantity</code>).</p>
+<p><strong>Estimation.</strong> The parameters are bounded: \(s_1\) between 0.1 and 20,
+\(\gamma\) between -1 and 1, and \(b\) between -0.05 and 0.05 (log
+rate per year). With one parameter (<code>scale = "constant"</code>, <code>bias = FALSE</code>)
+\(\log s_1\) is found by <code><a href="https://rdrr.io/r/stats/optimize.html" class="external-link">stats::optimize()</a></code> within its bounds;
+otherwise the parameters are found by Nelder-Mead (<code><a href="https://rdrr.io/r/stats/optim.html" class="external-link">stats::optim()</a></code>,
+relative tolerance 1e-6, at most 300 iterations), started at
+\(s_1 = 1\), \(\gamma = 0\), \(b = 0\), with values outside the
+bounds rejected. The observation noise of the scored forecasts is
+simulated once (common random numbers), so the score is a deterministic
+function of the parameters.</p>
+<p><strong>Long horizons.</strong> The parameters are estimated on horizons 1 to
+\(h_{max}\), the distance from the first origin to the last training
+year (10 years with the defaults). Beyond \(h_{max}\) the spread factor
+and the drift correction are held at their values at \(h_{max}\). A
+forecast more than twice as long as \(h_{max}\) gives a warning (class
+<code>mt_warning_recalibrate</code>), because nothing in the training data shows how
+the spread of the model is wrong at such horizons. With the defaults this
+concerns forecasts of more than 20 years (<code><a href="mt_forecast.html">mt_forecast()</a></code> forecasts 10 by
+default); give a longer <code>years</code> for long projections, or accept the
+constant factor.</p>
 <p>The wrapper works with any specification, including <code><a href="ensemble.html">ensemble()</a></code>,
 <code><a href="bootstrapped.html">bootstrapped()</a></code> and joint models. For <code><a href="reconciled.html">reconciled()</a></code> models the bottom
 strata are calibrated and the aggregates recomputed from them, so the
@@ -184,20 +219,18 @@ estimated from few overlapping forecasts (with the defaults, 5 origins and
 30 forecast years, horizons 1 to 10), so they carry their own uncertainty,
 and they cannot anticipate changes after the window. <code>n_boot</code> refits them
 on forecasts (stratum x origin) resampled with replacement and reports
-95% percentile intervals. Beyond the longest horizon of the window, the
-spread factor and the drift correction stay constant. The inner models are
-fitted to shorter series than the final model, which matters for models
-whose uncertainty depends on the length of the series (the drift of a
-random walk). Compare calibrated and uncalibrated models in an outer
-backtest.</p>
-<p><strong>Age bands.</strong> With <code>ages</code> (break points, for example <code>c(50, 75)</code>), the
-factors are estimated separately for each age band, so that a model that
-is too narrow at old ages and too wide at young ages is corrected at
-both. Observed cells belong to the band of their lower age; use break
-points that are bounds of the observed age groups.</p>
-<p><strong>Quantity.</strong> By default the log death rates of single cells are scored.
-Intervals of life expectancy and ASR also depend on how the ages move
-together, which the transformation keeps from the base model;
+95% percentile intervals. The inner models are fitted to shorter series
+than the final model, which matters for models whose uncertainty depends
+on the length of the series (the drift of a random walk). Compare
+calibrated and uncalibrated models in an outer backtest.</p>
+<p><strong>Age bands</strong> (package-specific). With <code>ages</code> (break points, for example
+<code>c(50, 75)</code>), the factors are estimated separately for each age band, so
+that a model that is too narrow at old ages and too wide at young ages is
+corrected at both. Observed cells belong to the band of their lower age;
+use break points that are bounds of the observed age groups.</p>
+<p><strong>Quantity</strong> (package-specific). By default the log death rates of single
+cells are scored. Intervals of life expectancy and ASR also depend on how
+the ages move together, which the transformation keeps from the base model;
 <code>quantity = "life_expectancy"</code> (at birth) or <code>"asr"</code> scores these instead,
 per test year and stratum (fewer scored values, so the factors are less
 certain).</p>
@@ -218,7 +251,11 @@ coverage of that interval.</p>
     </div>
     <div class="section level2">
     <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a></h2>
-    <p>Gneiting T, Raftery AE, Westveld AH, Goldman T (2005). Calibrated
+    <p>Van Schaeybroeck B, Vannitsem S (2015). Ensemble post-processing using
+member-by-member approaches: theoretical aspects. <em>Quarterly Journal of
+the Royal Meteorological Society</em> 141(688): 807-818.
+<a href="https://doi.org/10.1002/qj.2397" class="external-link">doi:10.1002/qj.2397</a></p>
+<p>Gneiting T, Raftery AE, Westveld AH, Goldman T (2005). Calibrated
 probabilistic forecasting using ensemble model output statistics and
 minimum CRPS estimation. <em>Monthly Weather Review</em> 133(5): 1098-1118.
 <a href="https://doi.org/10.1175/MWR2904.1" class="external-link">doi:10.1175/MWR2904.1</a></p>
@@ -232,12 +269,12 @@ and estimation. <em>Journal of the American Statistical Association</em>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">x</span> <span class="op">&lt;-</span> <span class="fu"><a href="mt_example.html">mt_example</a></span><span class="op">(</span>deaths <span class="op">=</span> <span class="st">"single"</span>, years <span class="op">=</span> <span class="fl">1990</span><span class="op">:</span><span class="fl">2019</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="mt_fit.html">mt_fit</a></span><span class="op">(</span><span class="fu">recalibrated</span><span class="op">(</span><span class="fu"><a href="lee_carter.html">lee_carter</a></span><span class="op">(</span><span class="op">)</span>, years <span class="op">=</span> <span class="fl">8</span>, n_origins <span class="op">=</span> <span class="fl">3</span>, n_draws <span class="op">=</span> <span class="fl">50</span><span class="op">)</span>, <span class="va">x</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">fit</span><span class="op">$</span><span class="va">calibration</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     group     band scale_h1      slope drift cells scored crps_before</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>    &lt;char&gt;   &lt;char&gt;    &lt;num&gt;      &lt;num&gt; &lt;num&gt; &lt;int&gt;  &lt;num&gt;       &lt;num&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1:    all all ages 1.244915 -0.9998819     0  2414   2414  0.03398005</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>    crps_after cov80_before cov80_after cov95_before cov95_after forecasts</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>         &lt;num&gt;        &lt;num&gt;       &lt;num&gt;        &lt;num&gt;       &lt;num&gt;     &lt;int&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1: 0.03389239    0.7692626   0.7228666    0.9092792   0.8719967         6</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     group     band  scale_h1 slope drift cells scored crps_before crps_after</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    &lt;char&gt;   &lt;char&gt;     &lt;num&gt; &lt;num&gt; &lt;num&gt; &lt;int&gt;  &lt;num&gt;       &lt;num&gt;      &lt;num&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1:    all all ages 0.7630612     0     0  2414   2414  0.03388302 0.03386637</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    cov80_before cov80_after cov95_before cov95_after forecasts</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>           &lt;num&gt;       &lt;num&gt;        &lt;num&gt;       &lt;num&gt;     &lt;int&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1:    0.7531069   0.7311516    0.8956089   0.8860812         6</span>
 <span class="r-in"><span><span class="va">fc</span> <span class="op">&lt;-</span> <span class="fu"><a href="mt_forecast.html">mt_forecast</a></span><span class="op">(</span><span class="va">fit</span>, h <span class="op">=</span> <span class="fl">5</span>, n_draws <span class="op">=</span> <span class="fl">100</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span></span>
 </code></pre></div>
     </div>

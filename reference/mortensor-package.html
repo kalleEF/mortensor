@@ -58,12 +58,14 @@ checks plausibility; <code><a href="mt_example.html">mt_example()</a></code> sim
 estimates single-year data with the penalized composite link model,
 <code><a href="mt_smooth.html">mt_smooth()</a></code> smooths rates; <code><a href="mt_prep.html">mt_prep()</a></code> bundles these steps so that
 backtests refit them on every training window.</p></li>
-<li><p><strong>Models</strong>: <code><a href="rwd.html">rwd()</a></code>, <code><a href="lee_carter.html">lee_carter()</a></code>, <code><a href="tucker3.html">tucker3()</a></code>, <code><a href="arima_series.html">arima_series()</a></code>,
-<code><a href="arima_series.html">ets_series()</a></code>, <code><a href="hyndman_ullah.html">hyndman_ullah()</a></code>, <code><a href="stmomo.html">stmomo()</a></code>, <code><a href="li_lee.html">li_lee()</a></code>, <code><a href="li_lee.html">product_ratio()</a></code>,
-<code><a href="apc_bayes.html">apc_bayes()</a></code> (package bamp), <code><a href="cause_shares.html">cause_shares()</a></code> for coherent multi-cause
-forecasts and <code><a href="ensemble.html">ensemble()</a></code>, fitted with <code><a href="mt_fit.html">mt_fit()</a></code> (optionally tuned
-with <code><a href="mt_tune.html">tuned()</a></code>) and forecast with <code><a href="mt_forecast.html">mt_forecast()</a></code> as simulated paths
-(<a href="mt_draws.html">mt_draws</a>).</p></li>
+<li><p><strong>Models</strong>: <code><a href="rwd.html">rwd()</a></code>, <code><a href="lee_carter.html">lee_carter()</a></code>, <code><a href="arima_series.html">arima_series()</a></code>, <code><a href="arima_series.html">ets_series()</a></code>,
+<code><a href="hyndman_ullah.html">hyndman_ullah()</a></code>, <code><a href="coherent_fdm.html">coherent_fdm()</a></code>, <code><a href="stmomo.html">stmomo()</a></code>, <code><a href="stanmomo.html">stanmomo()</a></code>,
+<code><a href="li_lee.html">li_lee()</a></code>, <code><a href="coda.html">coda()</a></code>, <code><a href="apc_bayes.html">apc_bayes()</a></code> (package bamp), the experimental
+<code><a href="tucker3.html">tucker3()</a></code> and <code><a href="coda_causes.html">coda_causes()</a></code>, and <code><a href="ensemble.html">ensemble()</a></code>, fitted with <code><a href="mt_fit.html">mt_fit()</a></code>
+(optionally tuned with <code><a href="mt_tune.html">tuned()</a></code>) and forecast with <code><a href="mt_forecast.html">mt_forecast()</a></code> as
+simulated paths (<a href="mt_draws.html">mt_draws</a>). <code><a href="product_ratio.html">product_ratio()</a></code> and <code><a href="cause_shares.html">cause_shares()</a></code>
+are deprecated. The article "Methods and sources" lists the published
+source of every method.</p></li>
 <li><p><strong>Hierarchies</strong>: <code><a href="mt_hierarchy.html">mt_hierarchy()</a></code> describes crossed or nested strata
 (for example sex x region x deprivation quintile with their totals),
 <code><a href="mt_aggregate_strata.html">mt_aggregate_strata()</a></code> adds the aggregates, <code><a href="mt_reconcile.html">mt_reconcile()</a></code> and

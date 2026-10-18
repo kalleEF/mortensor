@@ -11,8 +11,12 @@ function and principal components, and the scores are forecast with
 ARIMA or ETS models. Draws are simulated with `demography`'s
 [`simulate()`](https://rdrr.io/r/stats/simulate.html) method for
 functional forecasts (uncertainty of the coefficients and resampled
-model errors); predictive draws add the extra-Poisson and Poisson
-variation of the raw deaths as for other models of smooth rates.
+model errors). Predictive draws (`mt_forecast(predictive = TRUE)`) add
+Poisson variation of the deaths given the rates and the exposures, as
+for other models of expected rates, and no other observation noise. If
+intervals are too narrow on real data, that is a property of the model
+(see [`recalibrated()`](recalibrated.md), [`ensemble()`](ensemble.md),
+or overdispersed models such as `stanmomo(family = "nb")`).
 
 ## Usage
 
@@ -60,16 +64,16 @@ A model specification.
 
 Without smoothing, the model errors that
 [`simulate()`](https://rdrr.io/r/stats/simulate.html) resamples contain
-the observation noise, which predictive draws then add a second time:
-keep `smooth = TRUE` unless the rates were smoothed in a preprocessing
-step. `smooth.demogdata()` works on single years of age; for age groups
-the smoothed values at the observed ages are used (a weaker smoothing).
-The smoothing settings (`smooth_args`, such as `k`, the number of knots)
-and the number of components can be chosen by forecast accuracy with
-[`tuned()`](mt_tune.md). When the default monotonic spline cannot be
-fitted (for example for age ranges that start in middle age), the rates
-are smoothed without the monotonicity constraint and the fit diagnostics
-say so.
+the observation noise, which predictive draws then add a second time (as
+Poisson variation): keep `smooth = TRUE` unless the rates were smoothed
+in a preprocessing step. `smooth.demogdata()` works on single years of
+age; for age groups the smoothed values at the observed ages are used (a
+weaker smoothing). The smoothing settings (`smooth_args`, such as `k`,
+the number of knots) and the number of components can be chosen by
+forecast accuracy with [`tuned()`](mt_tune.md). When the default
+monotonic spline cannot be fitted (for example for age ranges that start
+in middle age), the rates are smoothed without the monotonicity
+constraint and the fit diagnostics say so.
 
 ## References
 

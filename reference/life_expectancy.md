@@ -1,6 +1,8 @@
 # Life expectancy from rates or forecast draws
 
-Life expectancy from rates or forecast draws
+Life expectancy of the period life table of
+[`life_table()`](life_table.md) (Preston, Heuveline and Guillot 2001),
+for draws path by path.
 
 ## Usage
 
@@ -44,8 +46,8 @@ life_expectancy(
 
 - ...:
 
-  Passed to the life-table calculation (`ax`, `open`, `k`). A rate of 0
-  in the open interval is replaced as in
+  Passed to the life-table calculation (`ax`, `open`, `k`, `omega`). A
+  rate of 0 in the open interval is replaced as in
   [`life_table()`](life_table.md).
 
 ## Value
@@ -53,6 +55,11 @@ life_expectancy(
 For arrays, an array without the age dimension. For draws, a
 `data.table` with the mean and quantiles per stratum and period,
 computed path by path.
+
+## References
+
+Preston SH, Heuveline P, Guillot M (2001). *Demography: Measuring and
+Modeling Population Processes*. Blackwell.
 
 ## Examples
 

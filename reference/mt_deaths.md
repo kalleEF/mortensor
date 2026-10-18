@@ -27,7 +27,8 @@ mt_deaths(draws, exposure = NULL, noise = TRUE, seed = NULL)
 
 - noise:
 
-  Add Poisson noise.
+  Add Poisson noise (draws of expected rates only; ignored for
+  predictive draws, which contain it).
 
 - seed:
 
@@ -36,6 +37,15 @@ mt_deaths(draws, exposure = NULL, noise = TRUE, seed = NULL)
 ## Value
 
 An array `[age, period, stratum, draw]` of deaths.
+
+## Details
+
+Predictive draws (`mt_forecast(predictive = TRUE)`) already contain the
+variation of the observed deaths (Poisson given the rates, or negative
+binomial for `stanmomo(family = "nb")`): for them no noise is added,
+whatever `noise`, and the result is their deaths. Give the exposures
+that were used for the forecast (its `exposure`); other exposures
+rescale the deaths and the result is then not a count.
 
 ## Examples
 

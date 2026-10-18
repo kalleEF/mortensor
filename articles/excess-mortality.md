@@ -8,9 +8,10 @@ any mortality model of the package to the baseline years, forecasts the
 later years with the observed exposures, and compares the observed
 deaths with each simulated path of expected deaths. The intervals
 therefore contain the uncertainty of the baseline trend and the random
-variation of the death counts. The WHO estimates of the excess mortality
-of the COVID-19 pandemic follow this approach with their own baseline
-model (Msemburi et al. 2023).
+variation of the death counts: they are prediction intervals for the
+realised excess under the baseline model. The WHO estimates of the
+excess mortality of the COVID-19 pandemic follow this approach with
+their own baseline model (Msemburi et al. 2023).
 
 The results are
 
@@ -38,20 +39,20 @@ ex <- mt_excess(fit, x, by = character(), seed = 1)
 ex[, list(period, observed, expected_q0.5, excess_q0.025, excess_q0.5, excess_q0.975, p_score_q0.5)]
 #>    period observed expected_q0.5 excess_q0.025 excess_q0.5 excess_q0.975
 #>     <num>    <num>         <num>         <num>       <num>         <num>
-#> 1:   2003   552339      537269.0      5606.375     15070.0     25445.525
-#> 2:   2004   509429      539842.5    -44524.750    -30413.5    -16279.675
-#> 3:   2005   527535      543595.0    -33115.700    -16060.0       798.525
-#> 4:   2006   516416      548697.5    -52128.375    -32281.5    -13218.850
+#> 1:   2003   552339      536931.5      6624.225     15407.5     24207.650
+#> 2:   2004   509429      539789.0    -42437.625    -30360.0    -16082.050
+#> 3:   2005   527535      543092.0    -31888.450    -15557.0       682.875
+#> 4:   2006   516416      548104.5    -51667.575    -31688.5    -13050.350
 #>    p_score_q0.5
 #>           <num>
-#> 1:     2.804926
-#> 2:    -5.633773
-#> 3:    -2.954405
-#> 4:    -5.883296
+#> 1:     2.869547
+#> 2:    -5.624420
+#> 3:    -2.864524
+#> 4:    -5.781471
 ```
 
 `by = character()` sums women and men. In 2003, about 15,000 more people
-died than expected (95% interval 5,600 to 25,400), 2.8% more than
+died than expected (95% interval 6,600 to 24,200), 2.9% more than
 expected. Fouillet et al. (2006) counted about 15,000 excess deaths
 between 1 and 20 August 2003 against the mortality of 2000-2002, so the
 rest of the year was close to the baseline.
@@ -77,17 +78,17 @@ By sex and age group:
 mt_excess(fit, x, periods = 2003, seed = 1)[, list(sex, observed, excess_q0.025, excess_q0.5, excess_q0.975)]
 #>       sex observed excess_q0.025 excess_q0.5 excess_q0.975
 #>    <char>    <num>         <num>       <num>         <num>
-#> 1: female   273315      3448.800     11671.5     19341.575
-#> 2:   male   279024     -1337.075      3531.0      8953.625
+#> 1: female   273315      3662.975     11716.5     18782.100
+#> 2:   male   279024      -423.375      3877.5      8718.475
 ex_age <- mt_excess(fit, x, periods = 2003, by = character(), ages = c(0, 45, 65, 75, 85), seed = 1)
 ex_age[, list(age, observed, excess_q0.5, p_score_q0.025, p_score_q0.5, p_score_q0.975)]
 #>       age observed excess_q0.5 p_score_q0.025 p_score_q0.5 p_score_q0.975
 #>    <char>    <num>       <num>          <num>        <num>          <num>
-#> 1:   0-44    29115      -439.0     -4.4707459    -1.485417      1.3511059
-#> 2:  45-64    81495      2498.5      1.5390342     3.162798      4.8867019
-#> 3:  65-74    89304     -1400.5     -3.5247795    -1.544025      0.3337944
-#> 4:  75-84   167633      5619.0      0.5302193     3.468219      6.3495506
-#> 5:    85+   184792      8982.0      3.3076824     5.108924      6.9832477
+#> 1:   0-44    29115      -428.0      -4.132683    -1.448736     1.16936356
+#> 2:  45-64    81495      2469.0       1.589854     3.124288     4.69657168
+#> 3:  65-74    89304     -1377.0      -3.085393    -1.518510     0.03105528
+#> 4:  75-84   167633      5854.5       1.435597     3.618837     5.64991291
+#> 5:    85+   184792      9069.0       3.547467     5.160964     6.74166633
 ```
 
 ``` r
@@ -112,8 +113,8 @@ le <- mt_excess(fit, x, periods = 2003, quantity = "life_expectancy", seed = 1)
 le[, list(sex, observed, expected_q0.5, excess_q0.025, excess_q0.5, excess_q0.975)]
 #>       sex observed expected_q0.5 excess_q0.025 excess_q0.5 excess_q0.975
 #>    <char>    <num>         <num>         <num>       <num>         <num>
-#> 1: female 82.95594      83.20279    -0.5685339  -0.2468486     0.1022864
-#> 2:   male 75.87930      76.00291    -0.3828217  -0.1236114     0.0994448
+#> 1: female 82.95594      83.20438    -0.5308777  -0.2484383    0.08556622
+#> 2:   male 75.87930      76.01581    -0.3704429  -0.1365119    0.07779665
 ```
 
 Life expectancy of women was 0.25 years lower than expected; the
@@ -136,13 +137,13 @@ rbindlist(lapply(names(base), function(b) {
 }))[, list(baseline, excess_q0.025, excess_q0.5, excess_q0.975, p_score_q0.5)]
 #>                 baseline excess_q0.025 excess_q0.5 excess_q0.975 p_score_q0.5
 #>                   <char>         <num>       <num>         <num>        <num>
-#> 1:  Lee-Carter 1990-2002      4662.100    15269.50      24719.80     2.843114
-#> 2:  Lee-Carter 1993-2002      5804.200    15274.50      23506.88     2.844072
+#> 1:  Lee-Carter 1990-2002      6560.475    15558.00      23824.10     2.898389
+#> 2:  Lee-Carter 1993-2002      6841.425    15558.50      23485.87     2.898485
 #> 3: random walk 1990-2002      6604.257    15194.38      26120.47     2.828732
-#> 4:      Li-Lee 1990-2002      -258.550    14395.00      28768.22     2.675929
+#> 4:      Li-Lee 1990-2002       174.350    14839.00      28411.90     2.760744
 ```
 
-The medians agree within 900 deaths. Li-Lee, whose common factor ties
+The medians agree within 800 deaths. Li-Lee, whose common factor ties
 the trends of women and men together, gives the widest interval of the
 sum: when the trend errors of the parts are correlated, they do not
 cancel in the total. Report the baseline model and years with the
@@ -161,18 +162,18 @@ e18 <- mt_excess(lee_carter(), y, baseline = c(1900, 1913), seed = 1)
 e18[, list(sex, period, excess_q0.025, excess_q0.5, excess_q0.975, p_score_q0.5)]
 #>        sex period excess_q0.025 excess_q0.5 excess_q0.975 p_score_q0.5
 #>     <char>  <num>         <num>       <num>         <num>        <num>
-#>  1: female   1914    -11119.275     17744.5      47573.07     6.274322
-#>  2: female   1915    -21114.825     23712.0      62769.37     8.547329
-#>  3: female   1916    -37333.100     18283.5      66942.35     6.812711
-#>  4: female   1917    -40205.525     28591.5      77379.35    10.843196
-#>  5: female   1918     37314.225    112526.5     172727.88    42.546285
-#>  6: female   1919    -31413.825     45546.0     109408.95    17.512169
-#>  7:   male   1914    278445.150    305674.5     329615.65    98.833110
-#>  8:   male   1915    316801.950    351930.5     381905.85   117.832756
-#>  9:   male   1916    202813.575    239698.5     274085.35    83.982005
-#> 10:   male   1917    111154.650    159475.0     199189.42    57.155606
-#> 11:   male   1918    220695.450    275881.0     322360.60    98.098397
-#> 12:   male   1919     -8753.025     54239.5     103360.67    19.707532
+#>  1: female   1914    -11344.650     17967.5      47219.97     6.358185
+#>  2: female   1915    -21425.050     24139.5      62661.12     8.714857
+#>  3: female   1916    -36893.200     17593.0      66988.12     6.538593
+#>  4: female   1917    -38849.175     29459.5      77968.67    11.209280
+#>  5: female   1918     37376.625    112934.5     173221.62    42.766475
+#>  6: female   1919    -30836.325     45057.5     109011.72    17.291865
+#>  7:   male   1914    279363.850    305607.0     328975.65    98.789724
+#>  8:   male   1915    318055.825    352372.0     381504.15   118.155237
+#>  9:   male   1916    201987.600    239766.5     274307.60    84.025849
+#> 10:   male   1917    114019.325    159651.0     198354.65    57.254799
+#> 11:   male   1918    221010.225    276639.0     322274.53    98.633727
+#> 12:   male   1919     -6935.175     54779.5     103200.12    19.942843
 ```
 
 ``` r
@@ -194,14 +195,14 @@ e18a <- mt_excess(lee_carter(), y, baseline = c(1900, 1913), periods = 1918, age
 e18a[, list(sex, age, observed, excess_q0.5, p_score_q0.5)]
 #>       sex    age observed excess_q0.5 p_score_q0.5
 #>    <char> <char>    <num>       <num>        <num>
-#> 1: female   0-14    56670     25833.5    83.775761
-#> 2: female  15-44   102306     55792.0   119.946683
-#> 3: female  45-64    71760     14789.5    25.959927
-#> 4: female    65+   146271     15674.0    12.001807
-#> 5:   male   0-14    60876     25979.0    74.444812
-#> 6:   male  15-44   275811    226843.0   463.248014
-#> 7:   male  45-64    94349     15915.0    20.290945
-#> 8:   male    65+   126074      7537.5     6.358801
+#> 1: female   0-14    56670     25922.0     84.30467
+#> 2: female  15-44   102306     55691.0    119.47013
+#> 3: female  45-64    71760     14830.0     26.04953
+#> 4: female    65+   146271     16140.0     12.40289
+#> 5:   male   0-14    60876     26249.5     75.80755
+#> 6:   male  15-44   275811    226852.5    463.35672
+#> 7:   male  45-64    94349     15977.5     20.38688
+#> 8:   male    65+   126074      7672.0      6.47962
 ```
 
 Women aged 15-44 died at more than twice the expected rate, a mark of
@@ -238,32 +239,32 @@ ex_de <- mt_excess(lee_carter(), germany, baseline = c(2010, 2019), by = charact
 ex_de[, list(period, observed, excess_q0.025, excess_q0.5, excess_q0.975, p_score_q0.5, p_positive)]
 #>    period observed excess_q0.025 excess_q0.5 excess_q0.975 p_score_q0.5
 #>     <num>    <num>         <num>       <num>         <num>        <num>
-#> 1:   2020   985572      -963.875     26354.5      54663.78     2.747500
-#> 2:   2021  1023687     13959.925     57289.5      97750.07     5.928151
-#> 3:   2022  1066341     47014.275    101341.5     145831.95    10.501715
-#> 4:   2023  1028206      2275.975     66324.5     124618.85     6.895288
-#> 5:   2024  1007758    -32997.600     30685.5      95076.57     3.140555
+#> 1:   2020   985572      2311.300     26267.5      52377.22     2.738182
+#> 2:   2021  1023687     15661.950     57406.5      94859.87     5.940977
+#> 3:   2022  1066341     50894.150    101402.0     146893.22    10.508644
+#> 4:   2023  1028206      6046.075     63961.0     118533.40     6.633273
+#> 5:   2024  1007758    -35162.625     31518.0      95599.50     3.228509
 #>    p_positive
 #>         <num>
-#> 1:      0.970
-#> 2:      0.996
+#> 1:      0.982
+#> 2:      0.998
 #> 3:      1.000
-#> 4:      0.978
-#> 5:      0.828
+#> 4:      0.982
+#> 5:      0.842
 mt_excess(lee_carter(), germany, baseline = c(2010, 2019), by = character(), cumulative = TRUE,
           seed = 1)[, list(from, period, excess_q0.025, excess_q0.5, excess_q0.975)]
 #>     from period excess_q0.025 excess_q0.5 excess_q0.975
 #>    <num>  <num>         <num>       <num>         <num>
-#> 1:  2020   2020      -963.875     26354.5      54663.78
-#> 2:  2020   2021     21745.725     85125.0     145962.10
-#> 3:  2020   2022     72705.150    182873.5     284930.35
-#> 4:  2020   2023     85289.000    250826.0     401462.32
-#> 5:  2020   2024     61848.500    282996.5     483027.62
+#> 1:  2020   2020       2311.30     26267.5      52377.22
+#> 2:  2020   2021      24021.85     83942.5     146951.52
+#> 3:  2020   2022      79598.40    185328.0     292246.35
+#> 4:  2020   2023      98231.30    249652.5     403424.02
+#> 5:  2020   2024      71029.15    281336.0     494946.17
 ```
 
 The excess rose from about 26,000 in 2020 to 101,000 in 2022 and fell
-afterwards; from 2020 to 2022 it summed to 183,000, with a wide interval
-(73,000 to 285,000). The interval is wide because the expected deaths of
+afterwards; from 2020 to 2022 it summed to 185,000, with a wide interval
+(80,000 to 292,000). The interval is wide because the expected deaths of
 2022 are a forecast three years beyond a baseline of ten years.
 
 Summing separate models of the 32 strata (Land by sex) instead gives a
@@ -275,11 +276,11 @@ mt_excess(lee_carter(), laender, baseline = c(2010, 2019), by = character(),
           seed = 1)[, list(period, excess_q0.025, excess_q0.5, excess_q0.975)]
 #>    period excess_q0.025 excess_q0.5 excess_q0.975
 #>     <num>         <num>       <num>         <num>
-#> 1:   2020     11068.050     19094.0      28479.55
-#> 2:   2021     35794.700     48118.5      60482.52
-#> 3:   2022     76635.350     91800.0     106571.65
-#> 4:   2023     36244.150     54795.5      73615.62
-#> 5:   2024      1853.475     22284.0      41176.32
+#> 1:   2020     11846.200     19819.0      27936.45
+#> 2:   2021     36992.925     48672.0      59548.20
+#> 3:   2022     76783.600     91649.0     106078.55
+#> 4:   2023     36012.875     55313.5      72157.88
+#> 5:   2024      1588.225     22743.0      41031.38
 ```
 
 Separate models draw their trend errors independently, so these cancel
@@ -299,22 +300,22 @@ ex_l <- mt_excess(li_lee(common_by = "sex"), laender, baseline = c(2010, 2019), 
 ex_l[order(-p_score_q0.5), list(region, p_score_q0.025, p_score_q0.5, p_score_q0.975, cells, skipped)]
 #>                     region p_score_q0.025 p_score_q0.5 p_score_q0.975 cells
 #>                     <char>          <num>        <num>          <num> <int>
-#>  1:              Thüringen      7.4532384   15.1557232      21.292852    36
-#>  2:                Sachsen      6.3765040   13.6719614      19.846265    36
-#>  3:         Sachsen-Anhalt      4.1907960   10.8027397      17.254436    36
-#>  4:            Brandenburg      0.7964173    8.1966265      14.434801    36
-#>  5: Mecklenburg-Vorpommern     -0.2892798    6.3543089      12.241962    36
-#>  6:                 Bayern     -1.2681683    5.5483044      11.024289    36
-#>  7:                 Hessen     -0.9902274    5.2028681      10.884268    36
-#>  8:               Saarland     -1.7159657    4.5899119      10.228890    36
-#>  9:                Hamburg     -2.7470839    4.0671515       9.742152    36
-#> 10:                 Bremen     -2.4111913    3.8805974       9.832265    34
-#> 11:                 Berlin     -2.9159538    3.8432410       9.440658    36
-#> 12:      Baden-Württemberg     -2.9372918    3.6408126       9.007041    36
-#> 13:    Nordrhein-Westfalen     -3.2942193    3.0946965       8.314086    36
-#> 14:        Rheinland-Pfalz     -3.8786642    2.6646230       8.372199    36
-#> 15:          Niedersachsen     -4.4369139    2.0238411       7.120832    36
-#> 16:     Schleswig-Holstein     -5.9877643    0.2301982       5.290194    36
+#>  1:              Thüringen      8.2139112   15.0511173      21.503461    36
+#>  2:                Sachsen      6.8553909   13.5246191      19.342746    36
+#>  3:         Sachsen-Anhalt      4.0430413   10.9956839      16.683186    36
+#>  4:            Brandenburg      1.5361014    8.2373372      14.024362    36
+#>  5: Mecklenburg-Vorpommern      0.2290761    6.3847594      12.354611    36
+#>  6:                 Bayern     -0.7342602    5.5024026      11.109088    36
+#>  7:                 Hessen     -0.9070643    5.2978926      10.429007    36
+#>  8:               Saarland     -1.4714408    4.5975748       9.993489    36
+#>  9:                Hamburg     -2.2928389    4.2946483       9.722956    36
+#> 10:                 Bremen     -2.4942770    3.8608077       9.690832    34
+#> 11:                 Berlin     -2.5349797    3.6690816       9.388032    36
+#> 12:      Baden-Württemberg     -2.3032827    3.6462279       8.712516    36
+#> 13:    Nordrhein-Westfalen     -3.0283399    2.9866045       8.118214    36
+#> 14:        Rheinland-Pfalz     -3.6987771    2.9342018       8.260803    36
+#> 15:          Niedersachsen     -3.9596874    2.1275509       6.986354    36
+#> 16:     Schleswig-Holstein     -5.7930055    0.2356595       5.424224    36
 #>     skipped
 #>       <int>
 #>  1:       0
@@ -355,7 +356,7 @@ interval of the excess should contain the true excess in 95% of cases.
 The validation suite of the package checks this on simulated data
 ([`mt_example()`](../reference/mt_example.md), a Lee-Carter baseline,
 deaths at ages 70 and older raised by 10% in two years, 20 replicates):
-the intervals contained zero where there was no shock in 97.5% of the
+the intervals contained zero where there was no shock in 98% of the
 cases, and the injected deaths in 98% of the cases where there was one.
 On real data, the coverage depends on how well the baseline model
 forecasts the years of the shock; a backtest of the baseline model on

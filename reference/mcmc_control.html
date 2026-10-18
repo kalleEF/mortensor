@@ -80,7 +80,9 @@ for backtests), <code>"final"</code> (bamp's automatic choice of chain length), 
 
 
 <dt id="arg-parallel">parallel<a class="anchor" aria-label="anchor" href="#arg-parallel"></a></dt>
-<dd><p>Run the four chains in parallel.</p></dd>
+<dd><p>Run the four chains in parallel. bamp runs them in a
+socket cluster without seeded random number streams, so results differ
+slightly between runs even when a seed is set.</p></dd>
 
 </dl></div>
     <div class="section level2">

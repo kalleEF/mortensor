@@ -79,11 +79,18 @@ quantities, see <code>quantities</code> in <code><a href="mt_backtest.html">mt_b
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>A <code>data.table</code> with the mean CRPS, WIS and absolute error, the
 root mean squared error of the median (<code>rmse</code>), MASE
-(mean of absolute error over the scale; rates only), empirical coverage
+(mean of absolute error over the scale, the mean absolute year-to-year
+change of the training data, as the mean absolute scaled error of
+Hyndman and Koehler 2006; rates only), empirical coverage
 of the 50%, 80% and 95% intervals, mean PIT, the number of scored
 cells and the <code>unit</code> of CRPS, WIS and absolute error (log rates, or
 years for life expectancy). Backtests of the same model with different
 preprocessing (column <code>prep</code>) are scored separately.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a></h2>
+    <p>Hyndman RJ, Koehler AB (2006). Another look at measures of forecast
+accuracy. <em>International Journal of Forecasting</em> 22(4): 679-688.</p>
     </div>
 
     <div class="section level2">

@@ -143,8 +143,8 @@ of <code>cause</code> and <code>groups</code> (default: the hierarchy stored in 
 
 
 <dt id="arg-composition">composition<a class="anchor" aria-label="anchor" href="#arg-composition"></a></dt>
-<dd><p><code>"radix"</code> or <code>"pooled"</code>; required with <code>groups</code> (see
-Subgroups).</p></dd>
+<dd><p><code>"radix"</code> (Riffe et al. 2024) or <code>"pooled"</code> (specific
+to this package); required with <code>groups</code> (see Subgroups).</p></dd>
 
 
 <dt id="arg-observed">observed<a class="anchor" aria-label="anchor" href="#arg-observed"></a></dt>
@@ -170,7 +170,7 @@ are paired.</p></dd>
 
 <dt id="arg-standard-per">standard, per<a class="anchor" aria-label="anchor" href="#arg-standard-per"></a></dt>
 <dd><p>Standard population and multiplier for <code>"asr"</code>
-(see <code><a href="derived.html">asr()</a></code>); <code>per</code> also scales <code>"crude_rate"</code>.</p></dd>
+(see <code><a href="derived.html">asr()</a></code> and Methods); <code>per</code> also scales <code>"crude_rate"</code>.</p></dd>
 
 
 <dt id="arg-exposure">exposure<a class="anchor" aria-label="anchor" href="#arg-exposure"></a></dt>
@@ -222,7 +222,8 @@ path by path.</p></dd>
 summed (path by path) over the variables not in <code>by</code>, with mean and
 quantiles; <code>summary(by = NULL)</code> returns one row per comparison (its
 number in <code>comparison</code>) with the values in the two populations, their
-difference (mean and quantiles), the jump-off share where it applies,
+difference (mean and quantiles), the jump-off (<code>jump_off</code>, an amount in
+the unit of the quantity, for example years) where it applies,
 the sum of the contributions and the largest difference between the
 two over draws (<code>max_residual</code>). <code>summary(change = c(p1, p2))</code>
 decomposes the change between two periods of comparisons between
@@ -256,8 +257,10 @@ path by path. Observed data give the decomposition of the observed rates
 from an observed year to a forecast year then contains the step from the
 observed to the model's fitted rates of that year (the jump-off, see
 <code><a href="mt_jump_off.html">mt_jump_off()</a></code>) and the sampling noise of the observed year, besides
-the forecast change itself. The totals report the jump-off share
-(<code>jump_off</code>). <code>observed = "fitted"</code> uses the fitted rates of observed
+the forecast change itself. The totals report the jump-off (<code>jump_off</code>):
+the amount of the difference, in the unit of the quantity (years for
+life expectancy), that is due to the observed instead of the fitted
+rates of observed years. <code>observed = "fitted"</code> uses the fitted rates of observed
 years, so that the decomposition describes the model's change alone;
 <code>observed = "poisson"</code> uses Poisson draws of the observed deaths, so that
 their sampling uncertainty enters the intervals.</p>
@@ -294,7 +297,14 @@ expectancy without causes the two symmetric versions are identical.</p></li>
 <li><p><code>"kitagawa"</code> (crude death rate): the rate effect (age-specific rates at
 the average age structure) and the composition effect (age structure
 at the average rates) of Kitagawa (1955). Exact.</p></li>
-</ul><p>Draws whose rates give no valid life table (for example rates far above
+</ul><p>The age-standardised rate (<code>quantity = "asr"</code>) is decomposed on the age
+groups of the standard population: the rates of each side are first
+combined within them with the exposures of that side, as <code><a href="derived.html">asr()</a></code> does
+(deaths over exposures of the grid cells in a standard group), so the
+contributions are by standard age group. The rate is then linear in the
+group rates, and <code>"horiuchi"</code> and <code>"stepwise"</code> both give the
+renormalised standard weight times the difference of the group rate.</p>
+<p>Draws whose rates give no valid life table (for example rates far above
 any observed value, see the warning of <code><a href="mt_forecast.html">mt_forecast()</a></code>) are left out with
 a warning, and a warning reports contributions that do not add up to
 the difference.</p>
@@ -306,7 +316,7 @@ the difference.</p>
 <p>With <code>groups</code>, the populations being compared consist of the levels of a
 stratum variable, and the decomposition separates the effect of their
 composition. <code>composition</code> must be chosen, because the two options
-describe different quantities:</p><ul><li><p><code>"radix"</code> (Riffe, Tursun-zade and Trias Llimós 2024, "Arriaga meets
+describe different quantities and rest on different grounds:</p><ul><li><p><code>"radix"</code> (Riffe, Tursun-zade and Trias Llimós 2024, "Arriaga meets
 Kitagawa"): life expectancy (or the probability of dying) of the
 population is the mean of the subgroups' values, weighted by their
 population shares at the starting age (<code>at</code>), as when subgroup life
@@ -319,15 +329,20 @@ fixed from the starting age on and later shares change only through
 mortality: education from age 30 or 35, sex, country of birth. It does
 not hold for areas such as deprivation quintiles or regions, between
 which people move and which are reclassified.</p></li>
-<li><p><code>"pooled"</code>: the quantity of the pooled rates, which weight the
-subgroup rates by their population shares at each age (the rates of the
-aggregate strata, as published for whole populations; "current
+<li><p><code>"pooled"</code>: a parametrisation specific to this package (reference
+unknown) for the quantity of the pooled rates, which weight the
+subgroup rates by their population shares at each age (the rates of
+the aggregate strata, as published for whole populations; "current
 rates"). The rates of every subgroup, age and cause and the shares at
-every age are the parameters of a <code>"horiuchi"</code> (default) or
-<code>"stepwise"</code> decomposition; the composition effects are reported by
-age, summed over subgroups, whose separate composition terms are not
-identified. With many subgroups, causes and draws this takes minutes;
-lower <code>n_steps</code> or the number of draws for a first look.</p></li>
+every age are taken as the parameters of the quantity and decomposed
+with the generic line integral of Horiuchi, Wilmoth and Pletcher (2008)
+(<code>"horiuchi"</code>, default) or with stepwise replacement (<code>"stepwise"</code>).
+The composition effects are reported by age, summed over subgroups,
+whose separate composition terms are not identified. Other
+parametrisations of the same pooled quantity would split the
+difference differently between rates and composition. With many
+subgroups, causes and draws this takes minutes; lower <code>n_steps</code> or the
+number of draws for a first look.</p></li>
 </ul><p>Shares come from the exposures: of each observed year, and for forecast
 years from <code>exposure</code> (default: the last observed year, so composition
 does not change in the forecast unless exposures, for example a
@@ -425,7 +440,7 @@ do we live?". <em>Demographic Research</em> 7: 365-378.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 3: 0.001939599</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 4: 0.001811163</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 5: 0.005137142</span>
-<span class="r-in"><span><span class="co"># observed 2015 against the forecast of 2025, with the jump-off share</span></span></span>
+<span class="r-in"><span><span class="co"># observed 2015 against the forecast of 2025, with the jump-off (years)</span></span></span>
 <span class="r-in"><span><span class="fu">mt_decompose</span><span class="op">(</span><span class="va">fc</span>, periods <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2015</span>, <span class="fl">2025</span><span class="op">)</span>, at <span class="op">=</span> <span class="fl">30</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;mt_decomposition&gt; life expectancy at 30, method arriaga; 2 comparison(s), means over 100 draws</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    comparison    sex   from     to from_value to_value difference</span>
@@ -440,8 +455,8 @@ do we live?". <em>Demographic Research</em> 7: 365-378.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span>                &lt;num&gt;        &lt;num&gt;</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1:             0.993      4.3e-15</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2:             1.302      6.9e-15</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> jump_off: part of the difference due to observed instead of fitted rates in observed years of the draws</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> (see mt_jump_off()); observed = "fitted" decomposes the model's change alone.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> jump_off: the amount of the difference (in the unit of the quantity) due to observed instead of fitted rates</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> in observed years of the draws (see mt_jump_off()); observed = "fitted" decomposes the model's change alone.</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

@@ -131,6 +131,15 @@ up to <code>max_refits</code> times, then reported as failed in the diagnostics.
 and the largest relative rounding change is recorded.</p></li>
 </ul><p>Heterogeneity variants (<code>"rw1+het"</code>, <code>"rw2+het"</code>) are not offered because
 <code><a href="https://volkerschmid.github.io/bamp/reference/predict_apc.html" class="external-link">bamp::predict_apc()</a></code> does not forecast them in bamp 3.0.0.</p>
+<p>Draws are posterior draws of the rates. Predictive draws
+(<code>mt_forecast(predictive = TRUE)</code>) add Poisson variation of the deaths
+given the rates of each draw and the exposures, as for the other models
+of expected rates; no other observation noise is added. bamp's binomial
+likelihood and its overdispersion term (<code>overdispersion = TRUE</code>) are not
+carried into the predictive draws: the overdispersion only enters the
+posterior of the rates. If intervals are too narrow on real data, that is
+a property of the model (see <code><a href="recalibrated.html">recalibrated()</a></code>, <code><a href="ensemble.html">ensemble()</a></code>, or
+overdispersed models such as <code>stanmomo(family = "nb")</code>).</p>
     </div>
     <div class="section level2">
     <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a></h2>

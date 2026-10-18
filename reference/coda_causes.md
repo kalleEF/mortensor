@@ -78,9 +78,9 @@ different trends beyond the pattern `b[x, c]`. The extensions of
 Kjærgaard, Ergemen, Kallestrup-Lamb, Oeppen and Lindahl-Jacobsen (2019)
 are not implemented. In a backtest on
 [`mt_example_causes()`](mt_example_causes.md) the model was less
-accurate than [`cause_shares()`](cause_shares.md); compare it with
-[`cause_shares()`](cause_shares.md) or [`reconciled()`](reconciled.md)
-separate models in a backtest before using it.
+accurate than the deprecated [`cause_shares()`](cause_shares.md);
+compare it with [`reconciled()`](reconciled.md) separate models in a
+backtest before using it.
 
 Jump-off, the open age interval and zero deaths are treated as in
 [`coda()`](coda.md): the all-cause log rate of an open interval is
@@ -88,10 +88,14 @@ regressed on `k[t]` (its split by cause comes from the composition), and
 zero rates of a cause are replaced by half its smallest positive rate in
 the group (as `replace.zeros()` of the R package MortalityForecast).
 Draws are expected rates. Predictive draws
-(`mt_forecast(predictive = TRUE)`) add extra-Poisson and Poisson
-variation to the all-cause rates and split the all-cause deaths
-multinomially between the causes, so that the causes also add up to all
-causes in predictive draws.
+(`mt_forecast(predictive = TRUE)`) draw Poisson all-cause deaths given
+the all-cause rates and exposures and split them multinomially between
+the causes by the cause shares of the draw, so that the causes also add
+up to all causes in predictive draws; no other observation noise is
+added. If intervals are too narrow on real data, that is a property of
+the model (see [`recalibrated()`](recalibrated.md),
+[`ensemble()`](ensemble.md), or overdispersed models such as
+`stanmomo(family = "nb")`).
 
 ## References
 
@@ -112,7 +116,8 @@ Society Series C* 68(5): 1351-1370.
 
 ## See also
 
-[`cause_shares()`](cause_shares.md), [`coda()`](coda.md).
+[`reconciled()`](reconciled.md) with a hierarchy of causes,
+[`coda()`](coda.md).
 
 ## Examples
 

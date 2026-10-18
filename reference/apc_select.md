@@ -70,9 +70,9 @@ if (requireNamespace("bamp", quietly = TRUE)) {
   sel <- apc_select(x, prep = mt_prep(step_ungroup()), orders = "rw1", mcmc = mcmc_control("test"))
   sel$table
 }
-#>       age period cohort overdispersion      dic      pd deviance_at_mean
-#>    <char> <char> <char>         <lgcl>    <num>   <num>            <num>
-#> 1:    rw1    rw1    rw1          FALSE 1028.362 130.922         766.5181
+#>       age period cohort overdispersion     dic       pd deviance_at_mean
+#>    <char> <char> <char>         <lgcl>   <num>    <num>            <num>
+#> 1:    rw1    rw1    rw1          FALSE 1029.48 131.4061         766.6683
 #>    converged
 #>       <lgcl>
 #> 1:      TRUE

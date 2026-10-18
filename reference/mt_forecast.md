@@ -43,13 +43,23 @@ mt_forecast(
 
 - predictive:
 
-  If `TRUE`, draws describe observable rates: for models of smooth
-  rates, and for any model fitted to smoothed rates
-  ([`step_smooth()`](mt_prep.md)), extra-Poisson noise (estimated from
-  in-sample residuals of the raw rates) and Poisson variation of deaths
-  given `exposure` are added; cells can have zero deaths (rate 0). Used
-  by [`mt_backtest()`](mt_backtest.md), which sums the deaths to the
-  observed cells before taking logarithms.
+  If `TRUE`, draws describe observable rates: for models of expected
+  rates (such as [`lee_carter()`](lee_carter.md)), and for any model
+  fitted to smoothed rates ([`step_smooth()`](mt_prep.md)), deaths are
+  drawn given the rates of each draw and `exposure` and divided by the
+  exposures. The deaths are Poisson, the observation model of the
+  Poisson Lee-Carter model (Brouhns, Denuit and Vermunt 2002); for
+  models with a negative binomial likelihood (`stanmomo(family = "nb")`)
+  they are negative binomial with the model's dispersion. No other
+  observation noise is added. Models of observed rates
+  ([`rwd()`](rwd.md), [`arima_series()`](arima_series.md),
+  [`ets_series()`](arima_series.md)) add nothing. Cells can have zero
+  deaths (rate 0). Used by [`mt_backtest()`](mt_backtest.md), which sums
+  the deaths to the observed cells before taking logarithms. If
+  predictive intervals are too narrow on real data, that is a property
+  of the model: see [`recalibrated()`](recalibrated.md),
+  [`ensemble()`](ensemble.md) or overdispersed models such as
+  `stanmomo(family = "nb")`.
 
 - exposure:
 
@@ -63,6 +73,13 @@ mt_forecast(
 ## Value
 
 An [mt_draws](mt_draws.md) object.
+
+## References
+
+Brouhns N, Denuit M, Vermunt JK (2002). A Poisson log-bilinear
+regression approach to the construction of projected lifetables.
+*Insurance: Mathematics and Economics* 31(3): 373-393.
+[doi:10.1016/S0167-6687(02)00185-3](https://doi.org/10.1016/S0167-6687%2802%2900185-3)
 
 ## Examples
 

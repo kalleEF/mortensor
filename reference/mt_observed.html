@@ -83,8 +83,23 @@ directly and call <code>mt_observed()</code> with its defaults.</p>
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>An <code>mt_draws</code> object with the observed periods; draw 1 holds the
-observed rates.</p>
+    <p>An <code>mt_draws</code> object with the observed periods (element
+<code>observed</code>: the observed rates; <code>exposure</code>: the exposures).</p>
+    </div>
+    <div class="section level2">
+    <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
+    <p>The draws are a parametric bootstrap: Poisson counts with the observed
+deaths as their means, divided by the exposures (treated as known). The
+intervals of derived quantities therefore describe the Poisson variation
+of the counts around the observed values. A cell without deaths has mean
+zero and gets no variation, and the observed counts stand in for their
+unknown expected values, so intervals for small populations, with many
+cells of few or no deaths, are too narrow.</p>
+<p>With <code>n_draws = 1</code>, the one draw holds the observed rates (for point
+values, as in <code><a href="mt_decompose.html">mt_decompose()</a></code>). Otherwise every draw is a Poisson draw,
+and the observed rates are kept in the element <code>observed</code>: the observed
+value is not one of the draws, so that means and quantiles describe the
+bootstrap distribution alone.</p>
     </div>
 
     <div class="section level2">
@@ -93,16 +108,16 @@ observed rates.</p>
 <span class="r-in"><span><span class="fu"><a href="life_expectancy.html">life_expectancy</a></span><span class="op">(</span><span class="va">x</span>, at <span class="op">=</span> <span class="fl">65</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     stratum    sex  label period     mean   q0.025     q0.1     q0.5     q0.9</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>       &lt;int&gt; &lt;char&gt; &lt;char&gt;  &lt;num&gt;    &lt;num&gt;    &lt;num&gt;    &lt;num&gt;    &lt;num&gt;    &lt;num&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  1:       1 female female   2015 22.10007 22.03790 22.05694 22.09804 22.14582</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  2:       1 female female   2016 22.20439 22.13830 22.15788 22.20354 22.24883</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  3:       1 female female   2017 22.25782 22.18558 22.21392 22.25935 22.30164</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  4:       1 female female   2018 22.42149 22.35275 22.37736 22.42280 22.46542</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  5:       1 female female   2019 22.45561 22.38683 22.41480 22.45560 22.49756</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  6:       2   male   male   2015 18.06814 18.00324 18.02954 18.06775 18.10818</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  7:       2   male   male   2016 18.17609 18.11630 18.13820 18.17605 18.21950</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  8:       2   male   male   2017 18.23438 18.17299 18.19496 18.23477 18.27489</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  9:       2   male   male   2018 18.35115 18.29143 18.31039 18.35179 18.39155</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 10:       2   male   male   2019 18.43478 18.37806 18.39382 18.43281 18.47447</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  1:       1 female female   2015 22.10008 22.03790 22.05694 22.09804 22.14582</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2:       1 female female   2016 22.20446 22.13830 22.15788 22.20366 22.24883</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  3:       1 female female   2017 22.25787 22.18558 22.21392 22.25940 22.30164</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  4:       1 female female   2018 22.42147 22.35275 22.37736 22.42280 22.46542</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  5:       1 female female   2019 22.45564 22.38683 22.41480 22.45568 22.49756</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  6:       2   male   male   2015 18.06810 18.00324 18.02954 18.06759 18.10818</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  7:       2   male   male   2016 18.17607 18.11630 18.13820 18.17605 18.21950</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  8:       2   male   male   2017 18.23444 18.17299 18.19496 18.23477 18.27489</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  9:       2   male   male   2018 18.35109 18.29143 18.31039 18.35179 18.39155</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 10:       2   male   male   2019 18.43486 18.37806 18.39382 18.43281 18.47527</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>       q0.975    at</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>        &lt;num&gt; &lt;num&gt;</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>  1: 22.16661    65</span>

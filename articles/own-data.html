@@ -185,22 +185,22 @@ variation of the death counts.</p>
 <span><span class="va">e0</span><span class="op">[</span><span class="va">period</span> <span class="op">==</span> <span class="fl">2019</span>, <span class="fu">.</span><span class="op">(</span><span class="va">Geschlecht</span>, <span class="va">Quintil</span>, <span class="va">q0.025</span>, <span class="va">q0.5</span>, <span class="va">q0.975</span><span class="op">)</span><span class="op">]</span></span>
 <span><span class="co">#&gt;     Geschlecht Quintil   q0.025     q0.5   q0.975</span></span>
 <span><span class="co">#&gt;         &lt;char&gt;  &lt;char&gt;    &lt;num&gt;    &lt;num&gt;    &lt;num&gt;</span></span>
-<span><span class="co">#&gt;  1:       male      Q1 72.54543 73.04539 73.51449</span></span>
-<span><span class="co">#&gt;  2:       male      Q2 74.09485 74.56581 75.04868</span></span>
+<span><span class="co">#&gt;  1:       male      Q1 72.54543 73.04346 73.51449</span></span>
+<span><span class="co">#&gt;  2:       male      Q2 74.09485 74.56660 75.04868</span></span>
 <span><span class="co">#&gt;  3:       male      Q3 74.85565 75.37452 75.93295</span></span>
-<span><span class="co">#&gt;  4:       male      Q4 76.61382 77.15026 77.65594</span></span>
-<span><span class="co">#&gt;  5:       male      Q5 77.76514 78.29824 78.77255</span></span>
-<span><span class="co">#&gt;  6:     female      Q1 76.02923 76.48933 76.95673</span></span>
-<span><span class="co">#&gt;  7:     female      Q2 77.32803 77.79383 78.30203</span></span>
-<span><span class="co">#&gt;  8:     female      Q3 79.20649 79.72020 80.29379</span></span>
-<span><span class="co">#&gt;  9:     female      Q4 79.45129 80.06467 80.59933</span></span>
-<span><span class="co">#&gt; 10:     female      Q5 81.76054 82.30710 82.86119</span></span>
+<span><span class="co">#&gt;  4:       male      Q4 76.61884 77.15492 77.65594</span></span>
+<span><span class="co">#&gt;  5:       male      Q5 77.76862 78.30108 78.77808</span></span>
+<span><span class="co">#&gt;  6:     female      Q1 76.03602 76.49766 76.98199</span></span>
+<span><span class="co">#&gt;  7:     female      Q2 77.32803 77.79842 78.31247</span></span>
+<span><span class="co">#&gt;  8:     female      Q3 79.20649 79.71905 80.29379</span></span>
+<span><span class="co">#&gt;  9:     female      Q4 79.45129 80.06467 80.62082</span></span>
+<span><span class="co">#&gt; 10:     female      Q5 81.77045 82.31385 82.87126</span></span>
 <span><span class="va">gap</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_contrast.html">mt_contrast</a></span><span class="op">(</span><span class="va">x</span>, var <span class="op">=</span> <span class="st">"Quintil"</span>, ref <span class="op">=</span> <span class="st">"Q5"</span><span class="op">)</span></span>
 <span><span class="va">gap</span><span class="op">[</span><span class="va">period</span> <span class="op">==</span> <span class="fl">2019</span> <span class="op">&amp;</span> <span class="va">level</span> <span class="op">==</span> <span class="st">"Q1"</span><span class="op">]</span></span>
 <span><span class="co">#&gt;    Geschlecht  level    ref period      mean    q0.025      q0.5    q0.975</span></span>
 <span><span class="co">#&gt;        &lt;char&gt; &lt;char&gt; &lt;char&gt;  &lt;num&gt;     &lt;num&gt;     &lt;num&gt;     &lt;num&gt;     &lt;num&gt;</span></span>
-<span><span class="co">#&gt; 1:       male     Q1     Q5   2019 -5.256117 -5.983747 -5.245298 -4.533949</span></span>
-<span><span class="co">#&gt; 2:     female     Q1     Q5   2019 -5.808297 -6.503961 -5.804167 -5.091491</span></span>
+<span><span class="co">#&gt; 1:       male     Q1     Q5   2019 -5.259102 -5.987421 -5.245696 -4.541609</span></span>
+<span><span class="co">#&gt; 2:     female     Q1     Q5   2019 -5.807940 -6.510433 -5.804283 -5.086910</span></span>
 <span><span class="co">#&gt;    p_positive        quantity       type</span></span>
 <span><span class="co">#&gt;         &lt;num&gt;          &lt;char&gt;     &lt;char&gt;</span></span>
 <span><span class="co">#&gt; 1:          0 life_expectancy difference</span></span>
@@ -208,10 +208,10 @@ variation of the death counts.</p>
 <span><span class="fu"><a href="../reference/mt_inequality.html">mt_inequality</a></span><span class="op">(</span><span class="va">x</span>, <span class="st">"Quintil"</span>, order <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"Q"</span>, <span class="fl">5</span><span class="op">:</span><span class="fl">1</span><span class="op">)</span>, quantity <span class="op">=</span> <span class="st">"life_expectancy"</span><span class="op">)</span><span class="op">[</span><span class="va">period</span> <span class="op">==</span> <span class="fl">2019</span><span class="op">]</span></span>
 <span><span class="co">#&gt;    Geschlecht  index period       mean     q0.025       q0.5     q0.975</span></span>
 <span><span class="co">#&gt;        &lt;char&gt; &lt;char&gt;  &lt;num&gt;      &lt;num&gt;      &lt;num&gt;      &lt;num&gt;      &lt;num&gt;</span></span>
-<span><span class="co">#&gt; 1:       male    sii   2019 -6.6178416 -7.4097300 -6.6029343 -5.7903053</span></span>
-<span><span class="co">#&gt; 2:       male    rii   2019  0.9161847  0.9065701  0.9163918  0.9263074</span></span>
-<span><span class="co">#&gt; 3:     female    sii   2019 -7.0098431 -7.7955650 -7.0266418 -6.1376267</span></span>
-<span><span class="co">#&gt; 4:     female    rii   2019  0.9152828  0.9062260  0.9150688  0.9253027</span></span>
+<span><span class="co">#&gt; 1:       male    sii   2019 -6.6226995 -7.4169824 -6.6084044 -5.7942876</span></span>
+<span><span class="co">#&gt; 2:       male    rii   2019  0.9161272  0.9064890  0.9163064  0.9262289</span></span>
+<span><span class="co">#&gt; 3:     female    sii   2019 -7.0064219 -7.7924671 -7.0167733 -6.1357340</span></span>
+<span><span class="co">#&gt; 4:     female    rii   2019  0.9153267  0.9062257  0.9151347  0.9253908</span></span>
 <span><span class="co">#&gt;           quantity</span></span>
 <span><span class="co">#&gt;             &lt;char&gt;</span></span>
 <span><span class="co">#&gt; 1: life_expectancy</span></span>
@@ -225,14 +225,13 @@ variation of the death counts.</p>
 <p>Three candidates are compared in a backtest with three forecast
 origins and five years ahead: Lee-Carter per stratum; Li-Lee with a
 common trend per sex, which keeps the quintiles from diverging; and an
-ensemble of Lee-Carter and random walks that are robust to small
-counts.</p>
+ensemble of Lee-Carter and the random walk with drift per age.</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">cand</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="st">"Lee-Carter"</span> <span class="op">=</span> <span class="fu"><a href="../reference/lee_carter.html">lee_carter</a></span><span class="op">(</span><span class="op">)</span>, <span class="st">"Li-Lee"</span> <span class="op">=</span> <span class="fu"><a href="../reference/li_lee.html">li_lee</a></span><span class="op">(</span>common_by <span class="op">=</span> <span class="st">"Geschlecht"</span><span class="op">)</span>,</span>
-<span>             <span class="st">"Lee-Carter + random walk"</span> <span class="op">=</span> <span class="fu"><a href="../reference/ensemble.html">ensemble</a></span><span class="op">(</span>lc <span class="op">=</span> <span class="fu"><a href="../reference/lee_carter.html">lee_carter</a></span><span class="op">(</span><span class="op">)</span>, rw <span class="op">=</span> <span class="fu"><a href="../reference/rwd.html">rwd</a></span><span class="op">(</span>observation_noise <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
+<span>             <span class="st">"Lee-Carter + random walk"</span> <span class="op">=</span> <span class="fu"><a href="../reference/ensemble.html">ensemble</a></span><span class="op">(</span>lc <span class="op">=</span> <span class="fu"><a href="../reference/lee_carter.html">lee_carter</a></span><span class="op">(</span><span class="op">)</span>, rw <span class="op">=</span> <span class="fu"><a href="../reference/rwd.html">rwd</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">bt</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_compare.html">mt_compare</a></span><span class="op">(</span><span class="va">cand</span>, <span class="va">x</span>, origins <span class="op">=</span> <span class="fl">2012</span><span class="op">:</span><span class="fl">2014</span>, h <span class="op">=</span> <span class="fl">5</span>, n_draws <span class="op">=</span> <span class="fl">200</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label):</span></span>
-<span><span class="co">#&gt; Lee-Carter: forecast death rates above 1 in 22.0% of the draws (strata</span></span>
+<span><span class="co">#&gt; Lee-Carter: forecast death rates above 1 in 21.5% of the draws (strata</span></span>
 <span><span class="co">#&gt; female.Q3; ages 10-14). The model is unstable here, often because of sparse</span></span>
 <span><span class="co">#&gt; counts or a steep trend extrapolated far ahead; consider wider age groups</span></span>
 <span><span class="co">#&gt; (mt_regroup()), pooling (li_lee(common_by = )), smoothing (step_smooth()) or an</span></span>
@@ -243,25 +242,42 @@ counts.</p>
 <span><span class="co">#&gt; counts or a steep trend extrapolated far ahead; consider wider age groups</span></span>
 <span><span class="co">#&gt; (mt_regroup()), pooling (li_lee(common_by = )), smoothing (step_smooth()) or an</span></span>
 <span><span class="co">#&gt; ensemble.</span></span>
+<span><span class="co">#&gt; Warning in report_fit_problems(diagnostics, spec$label, classes): Li-Lee</span></span>
+<span><span class="co">#&gt; (common by Geschlecht): Li-Lee: the AR(1) coefficient of the stratum index is</span></span>
+<span><span class="co">#&gt; bounded at |phi| = 0.99 in 1 stratum/strata (male.Q5): their deviations from</span></span>
+<span><span class="co">#&gt; the common trend are close to a unit root and revert very slowly; coherence may</span></span>
+<span><span class="co">#&gt; not suit them. (diagnostics of 10 stratum/strata of the fit).</span></span>
 <span><span class="co">#&gt; Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label):</span></span>
-<span><span class="co">#&gt; Lee-Carter: forecast death rates above 1 in 22.0% of the draws (strata</span></span>
+<span><span class="co">#&gt; Lee-Carter: forecast death rates above 1 in 21.5% of the draws (strata</span></span>
 <span><span class="co">#&gt; female.Q3; ages 10-14). The model is unstable here, often because of sparse</span></span>
 <span><span class="co">#&gt; counts or a steep trend extrapolated far ahead; consider wider age groups</span></span>
 <span><span class="co">#&gt; (mt_regroup()), pooling (li_lee(common_by = )), smoothing (step_smooth()) or an</span></span>
 <span><span class="co">#&gt; ensemble.</span></span>
+<span><span class="co">#&gt; Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label): Random</span></span>
+<span><span class="co">#&gt; walk with drift: forecast death rates above 1 in 3.5% of the draws (strata</span></span>
+<span><span class="co">#&gt; female.Q3, female.Q5; ages 10-14, 15-19). The model is unstable here, often</span></span>
+<span><span class="co">#&gt; because of sparse counts or a steep trend extrapolated far ahead; consider</span></span>
+<span><span class="co">#&gt; wider age groups (mt_regroup()), pooling (li_lee(common_by = )), smoothing</span></span>
+<span><span class="co">#&gt; (step_smooth()) or an ensemble.</span></span>
 <span><span class="co">#&gt; Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label):</span></span>
 <span><span class="co">#&gt; Lee-Carter: forecast death rates above 1 in 4.5% of the draws (strata</span></span>
 <span><span class="co">#&gt; female.Q3; ages 10-14). The model is unstable here, often because of sparse</span></span>
 <span><span class="co">#&gt; counts or a steep trend extrapolated far ahead; consider wider age groups</span></span>
 <span><span class="co">#&gt; (mt_regroup()), pooling (li_lee(common_by = )), smoothing (step_smooth()) or an</span></span>
 <span><span class="co">#&gt; ensemble.</span></span>
+<span><span class="co">#&gt; Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label): Random</span></span>
+<span><span class="co">#&gt; walk with drift: forecast death rates above 1 in 2.5% of the draws (strata</span></span>
+<span><span class="co">#&gt; female.Q3, female.Q5; ages 10-14, 15-19). The model is unstable here, often</span></span>
+<span><span class="co">#&gt; because of sparse counts or a steep trend extrapolated far ahead; consider</span></span>
+<span><span class="co">#&gt; wider age groups (mt_regroup()), pooling (li_lee(common_by = )), smoothing</span></span>
+<span><span class="co">#&gt; (step_smooth()) or an ensemble.</span></span>
 <span><span class="va">scores</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_compare.html">mt_score_table</a></span><span class="op">(</span><span class="va">bt</span>, metrics <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"crps"</span>, <span class="st">"cov95"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">scores</span></span>
 <span><span class="co">#&gt;                       model  crps cov95</span></span>
 <span><span class="co">#&gt;                      &lt;fctr&gt; &lt;num&gt; &lt;num&gt;</span></span>
-<span><span class="co">#&gt; 1:               Lee-Carter 0.147 0.921</span></span>
-<span><span class="co">#&gt; 2:                   Li-Lee 0.167 0.898</span></span>
-<span><span class="co">#&gt; 3: Lee-Carter + random walk 0.150 0.936</span></span></code></pre></div>
+<span><span class="co">#&gt; 1:               Lee-Carter 0.148 0.909</span></span>
+<span><span class="co">#&gt; 2:                   Li-Lee 0.175 0.880</span></span>
+<span><span class="co">#&gt; 3: Lee-Carter + random walk 0.156 0.968</span></span></code></pre></div>
 <p>Warnings about implausible rates in some backtest fits point to young
 age groups with few deaths. The model with the lowest CRPS (the rows
 follow the order of the list) is used for the forecast:</p>
@@ -280,31 +296,31 @@ follow the order of the list) is used for the forecast:</p>
 <span><span class="co">#&gt;   data: 10 strata; ages 0 to 90+; periods 2005-2019</span></span>
 <span><span class="co">#&gt;   model and uncertainty:</span></span>
 <span><span class="co">#&gt;     log m(x,t) = a(x) + b(x) k(t), estimated by Poisson maximum likelihood</span></span>
-<span><span class="co">#&gt;     (Brouhns et al. 2002; Lee and Carter 1992). k(t) follows a random walk with</span></span>
-<span><span class="co">#&gt;     drift; draws include its innovations and the uncertainty of the drift. a(x)</span></span>
-<span><span class="co">#&gt;     and b(x) are fixed (parameter uncertainty with bootstrapped()). Jump-off:</span></span>
-<span><span class="co">#&gt;     fitted rates.</span></span>
-<span><span class="co">#&gt;   fit: Poisson deviance 2444.4 on 3000 cells (0.81 per cell); 2.8% of deviance residuals beyond +/-2</span></span>
+<span><span class="co">#&gt;     (Brouhns et al. 2002). k(t) follows a random walk with drift; draws include</span></span>
+<span><span class="co">#&gt;     its innovations and the uncertainty of the drift. a(x) and b(x) are fixed</span></span>
+<span><span class="co">#&gt;     (parameter uncertainty with bootstrapped()). Predictive draws add Poisson</span></span>
+<span><span class="co">#&gt;     variation of the deaths given the rates. Jump-off: fitted rates.</span></span>
+<span><span class="co">#&gt;   fit: Poisson deviance 2481.2 on 3000 cells (0.83 per cell); 2.7% of deviance residuals beyond +/-2</span></span>
 <span><span class="va">fc</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_forecast.html">mt_forecast</a></span><span class="op">(</span><span class="va">fit</span>, to <span class="op">=</span> <span class="fl">2035</span>, n_draws <span class="op">=</span> <span class="fl">500</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
 <span><span class="va">e0_fc</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/life_expectancy.html">life_expectancy</a></span><span class="op">(</span><span class="va">fc</span><span class="op">)</span></span>
 <span><span class="va">e0_fc</span><span class="op">[</span><span class="va">period</span> <span class="op">==</span> <span class="fl">2035</span>, <span class="fu">.</span><span class="op">(</span><span class="va">Geschlecht</span>, <span class="va">Quintil</span>, <span class="va">q0.025</span>, <span class="va">q0.5</span>, <span class="va">q0.975</span><span class="op">)</span><span class="op">]</span></span>
 <span><span class="co">#&gt;     Geschlecht Quintil   q0.025     q0.5   q0.975</span></span>
 <span><span class="co">#&gt;         &lt;char&gt;  &lt;char&gt;    &lt;num&gt;    &lt;num&gt;    &lt;num&gt;</span></span>
-<span><span class="co">#&gt;  1:       male      Q1 73.57374 76.03999 78.39900</span></span>
-<span><span class="co">#&gt;  2:       male      Q2 74.60033 77.18183 80.10067</span></span>
-<span><span class="co">#&gt;  3:       male      Q3 75.40007 77.73687 80.69338</span></span>
-<span><span class="co">#&gt;  4:       male      Q4 76.87715 79.84113 83.15670</span></span>
-<span><span class="co">#&gt;  5:       male      Q5 77.47300 80.64732 83.67783</span></span>
-<span><span class="co">#&gt;  6:     female      Q1 77.60533 79.19567 80.72109</span></span>
-<span><span class="co">#&gt;  7:     female      Q2 78.11247 80.55551 83.13545</span></span>
-<span><span class="co">#&gt;  8:     female      Q3 77.51242 83.08963 90.00569</span></span>
-<span><span class="co">#&gt;  9:     female      Q4 78.87688 82.59816 87.23809</span></span>
-<span><span class="co">#&gt; 10:     female      Q5 82.17562 86.08796 90.33716</span></span>
+<span><span class="co">#&gt;  1:       male      Q1 73.57397 76.04022 78.39923</span></span>
+<span><span class="co">#&gt;  2:       male      Q2 74.60027 77.18007 80.09615</span></span>
+<span><span class="co">#&gt;  3:       male      Q3 75.40221 77.73909 80.69551</span></span>
+<span><span class="co">#&gt;  4:       male      Q4 76.89530 79.84707 83.14944</span></span>
+<span><span class="co">#&gt;  5:       male      Q5 77.46679 80.63718 83.65660</span></span>
+<span><span class="co">#&gt;  6:     female      Q1 77.59210 79.20813 80.75888</span></span>
+<span><span class="co">#&gt;  7:     female      Q2 78.12215 80.56010 83.13295</span></span>
+<span><span class="co">#&gt;  8:     female      Q3 77.48239 83.08839 90.03644</span></span>
+<span><span class="co">#&gt;  9:     female      Q4 78.86362 82.58275 87.21109</span></span>
+<span><span class="co">#&gt; 10:     female      Q5 82.17392 86.09262 90.35157</span></span>
 <span><span class="fu"><a href="../reference/mt_contrast.html">mt_contrast</a></span><span class="op">(</span><span class="va">fc</span>, var <span class="op">=</span> <span class="st">"Quintil"</span>, ref <span class="op">=</span> <span class="st">"Q5"</span><span class="op">)</span><span class="op">[</span><span class="va">period</span> <span class="op">==</span> <span class="fl">2035</span> <span class="op">&amp;</span> <span class="va">level</span> <span class="op">==</span> <span class="st">"Q1"</span><span class="op">]</span></span>
 <span><span class="co">#&gt;    Geschlecht  level    ref period      mean     q0.025      q0.5     q0.975</span></span>
 <span><span class="co">#&gt;        &lt;char&gt; &lt;char&gt; &lt;char&gt;  &lt;num&gt;     &lt;num&gt;      &lt;num&gt;     &lt;num&gt;      &lt;num&gt;</span></span>
-<span><span class="co">#&gt; 1:       male     Q1     Q5   2035 -4.658111  -8.527998 -4.674236 -0.7185934</span></span>
-<span><span class="co">#&gt; 2:     female     Q1     Q5   2035 -6.920323 -11.364036 -6.920468 -2.6235216</span></span>
+<span><span class="co">#&gt; 1:       male     Q1     Q5   2035 -4.646715  -8.513676 -4.663307 -0.7107595</span></span>
+<span><span class="co">#&gt; 2:     female     Q1     Q5   2035 -6.912613 -11.376681 -6.909357 -2.6093638</span></span>
 <span><span class="co">#&gt;    p_positive        quantity       type</span></span>
 <span><span class="co">#&gt;         &lt;num&gt;          &lt;char&gt;     &lt;char&gt;</span></span>
 <span><span class="co">#&gt; 1:      0.012 life_expectancy difference</span></span>

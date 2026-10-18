@@ -95,15 +95,21 @@
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p><code>mt_smooth_check()</code>: a <code>data.table</code> with the stratum columns and
-the measures above. <code>mt_plot_smooth()</code>: a ggplot object.</p>
+    <p><code>mt_smooth_check()</code>: a <code>data.table</code> with the stratum columns, the
+measures above and <code>edf</code>. <code>mt_plot_smooth()</code>: a ggplot object.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
 
 <ul><li><p><code>mad_log</code>: median absolute difference of log rates;</p></li>
-<li><p><code>dispersion</code>: mean squared Pearson residual of the raw deaths around
-the smoothed deaths; about 1 when smoothing removed Poisson noise only,
+<li><p><code>dispersion</code>: the Pearson estimate of the dispersion of the raw deaths
+around the smoothed deaths, the sum of squared Pearson residuals
+divided by <code>n - edf</code> (McCullagh and Nelder 1989), where <code>n</code> is the
+number of smoothed cells with raw deaths and <code>edf</code> the effective
+degrees of freedom of the fits of the stratum (column <code>edf</code>, from the
+attribute <code>"smooth"</code> of <code><a href="mt_smooth.html">mt_smooth()</a></code>; when it is not available, for
+example after further preprocessing steps, the sum is divided by <code>n</code>
+and <code>edf</code> is <code>NA</code>). About 1 when smoothing removed Poisson noise only,
 above 1 when the raw rates vary more (for example year effects), well
 below 1 when the smoothing follows the noise;</p></li>
 <li><p><code>trend_ratio</code>: variance of year-to-year changes of the smoothed log
@@ -116,16 +122,21 @@ dilute them.</p>
 <p><code>mt_plot_smooth()</code> shows raw rates as points and smoothed rates as lines
 over time, one panel per age.</p>
     </div>
+    <div class="section level2">
+    <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a></h2>
+    <p>McCullagh P, Nelder JA (1989). <em>Generalized Linear Models</em> (2nd ed.).
+Chapman and Hall.</p>
+    </div>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">x</span> <span class="op">&lt;-</span> <span class="fu"><a href="mt_example.html">mt_example</a></span><span class="op">(</span>deaths <span class="op">=</span> <span class="st">"single"</span>, years <span class="op">=</span> <span class="fl">2000</span><span class="op">:</span><span class="fl">2015</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">s</span> <span class="op">&lt;-</span> <span class="fu"><a href="mt_smooth.html">mt_smooth</a></span><span class="op">(</span><span class="va">x</span>, along <span class="op">=</span> <span class="st">"period"</span>, method <span class="op">=</span> <span class="st">"whittaker"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu">mt_smooth_check</span><span class="op">(</span><span class="va">x</span>, <span class="va">s</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>    stratum    sex  label    mad_log dispersion  trend_ratio correlation</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>      &lt;int&gt; &lt;char&gt; &lt;char&gt;      &lt;num&gt;      &lt;num&gt;        &lt;num&gt;       &lt;num&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1:       1 female female 0.02113118  0.8846054 0.0013826242   0.9994987</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2:       2   male   male 0.02072276  0.8750107 0.0009253008   0.9996417</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    stratum    sex  label    mad_log dispersion trend_ratio correlation      edf</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>      &lt;int&gt; &lt;char&gt; &lt;char&gt;      &lt;num&gt;      &lt;num&gt;       &lt;num&gt;       &lt;num&gt;    &lt;num&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1:       1 female female 0.01237280  0.9935176   0.2413490   0.9996135 434.4595</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2:       2   male   male 0.01574177  0.9369526   0.1131588   0.9996879 297.3892</span>
 <span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/ns-load.html" class="external-link">requireNamespace</a></span><span class="op">(</span><span class="st">"ggplot2"</span>, quietly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span> <span class="fu">mt_plot_smooth</span><span class="op">(</span><span class="va">x</span>, <span class="va">s</span><span class="op">)</span></span></span>
 <span class="r-plt img"><img src="mt_smooth_check-1.png" alt="" width="700" height="433"></span>
 </code></pre></div>

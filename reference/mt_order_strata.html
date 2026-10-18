@@ -91,6 +91,15 @@ and reported as the share of adjusted cells.</p>
     <p>The adjusted <code>mt_draws</code>, with the share of adjusted cells in
 <code>$coherence</code>.</p>
     </div>
+    <div class="section level2">
+    <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
+    <p>This is a post-hoc adjustment of this package without a published source
+(reference unknown): it changes the draws and leaves the fitted model as
+it is, so the adjusted draws no longer follow the model's distribution. Models
+that keep strata together by construction are <code><a href="li_lee.html">li_lee()</a></code>,
+<code><a href="coherent_fdm.html">coherent_fdm()</a></code> and <code>coda(coherent = TRUE)</code> (<code><a href="coda.html">coda()</a></code>); <code><a href="reconciled.html">reconciled()</a></code>
+makes totals and their parts coherent.</p>
+    </div>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>

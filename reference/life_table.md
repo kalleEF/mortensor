@@ -2,7 +2,8 @@
 
 Period life table for single or grouped ages with an open last interval.
 Interval widths come from the age axis, so abridged and single-year
-schedules are handled by the same code.
+schedules are handled by the same code. The relations are the standard
+ones of Preston, Heuveline and Guillot (2001):
 
 ## Usage
 
@@ -13,7 +14,8 @@ life_table(
   ax = NULL,
   open = c("reciprocal", "gompertz", "kannisto"),
   k = 10,
-  radix = 1e+05
+  radix = 1e+05,
+  omega = 110
 )
 ```
 
@@ -38,11 +40,17 @@ life_table(
 
 - k:
 
-  Number of ages used for the Gompertz fit.
+  Number of ages used for the Gompertz or Kannisto fit.
 
 - radix:
 
   Starting number of survivors.
+
+- omega:
+
+  Age up to which a Gompertz or Kannisto tail is applied (default 110,
+  the default `omega` of [`mt_data()`](mt_data.md)); ignored with
+  `open = "reciprocal"`.
 
 ## Value
 
@@ -51,21 +59,31 @@ A `data.table` with `age_lo`, `age_hi`, `n`, `mx`, `ax`, `qx`, `lx`,
 
 ## Details
 
-- `q_x = n m / (1 + (n - a) m)`; where this exceeds 1 (rates above about
-  `2 / n`, far beyond observed values), the constant-hazard value
-  `1 - exp(-n m)` is used, so that survivors stay positive;
+- `q_x = n m / (1 + (n - a) m)` for a closed interval of width `n`;
+  where this exceeds 1 (rates above about `2 / n`, far beyond observed
+  values), the constant-hazard value `1 - exp(-n m)` is used, so that
+  survivors stay positive;
 
-- `a_x` defaults to `n / 2` for every closed interval (supply `ax` to
-  override, for example for age 0, where `n / 2` overstates the average
-  time lived by infants who die; the effect on e0 at low infant
-  mortality is below 0.01 years);
+- `a_x` defaults to `n / 2` for every closed interval, the simple
+  convention of deaths spread evenly over the interval (supply `ax` to
+  override). At age 0, `n / 2` overstates the average time lived by
+  infants who die; the Human Mortality Database uses the age-0 values of
+  Andreev and Kingkade (2015), which depend on sex and on the infant
+  death rate and are not implemented here. The effect on e0 at low
+  infant mortality is below 0.01 years;
 
-- open interval: `"reciprocal"` uses `L = l / m`; `"gompertz"` fits a
-  Gompertz line to the log rates of the last `k` closed single-year ages
-  and integrates it from the start of the open interval to age 130;
-  `"kannisto"` does the same with the Kannisto model, a line for the
-  logit of the rates, whose hazard levels off at old ages (Thatcher,
-  Kannisto and Vaupel 1998);
+- open interval: `"reciprocal"` (default) uses `L = l / m` (Preston,
+  Heuveline and Guillot 2001). `"gompertz"` fits a Gompertz line (log
+  rate linear in age) by least squares to the log rates of the last `k`
+  closed single-year ages; `"kannisto"` fits the Kannisto model, a line
+  for the logit of the rates whose hazard levels off at old ages
+  (Thatcher, Kannisto and Vaupel 1998), by least squares to the logits
+  of the same rates. Thatcher, Kannisto and Vaupel (1998) and the Human
+  Mortality Database fit these models by maximum likelihood to deaths
+  and exposures instead, which needs the counts. The fitted rates are
+  applied year by year from the start of the open interval to `omega`,
+  and the survivors at `omega` are closed with `L = l / m` at the fitted
+  rate there;
 
 - a rate of 0 in the open interval (no deaths, as in small populations)
   would give an infinite life expectancy: the last positive rate of the
@@ -74,6 +92,13 @@ A `data.table` with `age_lo`, `age_hi`, `n`, `mx`, `ax`, `qx`, `lx`,
   an infinite value.
 
 ## References
+
+Andreev EM, Kingkade WW (2015). Average age at death in infancy and
+infant mortality level: reconsidering the Coale-Demeny formulas at
+current levels of low mortality. *Demographic Research* 33: 363-390.
+
+Preston SH, Heuveline P, Guillot M (2001). *Demography: Measuring and
+Modeling Population Processes*. Blackwell.
 
 Thatcher AR, Kannisto V, Vaupel JW (1998). *The Force of Mortality at
 Ages 80 to 120*. Odense University Press.

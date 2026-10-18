@@ -28,10 +28,10 @@ ensembles also `component`, for fits by groups also `group`.
   deviation of `k`; with `rotate = TRUE` also the ultimate pattern
   `b_ultimate`;
 
-- [`li_lee()`](li_lee.md), [`product_ratio()`](li_lee.md): the common
-  factor of each group (`B`, `K`, its drift and standard deviation), and
-  per stratum the deviations `a`, `b`, `k` and their AR(1) coefficient
-  `phi` and standard deviation;
+- [`li_lee()`](li_lee.md), [`product_ratio()`](product_ratio.md): the
+  common factor of each group (`B`, `K`, its drift and standard
+  deviation), and per stratum the deviations `a`, `b`, `k` and their
+  AR(1) coefficient `phi` and standard deviation;
 
 - [`coda()`](coda.md): the centre `a` (geometric mean distribution of
   life-table deaths), the loadings `b`, the index `k` with its drift and

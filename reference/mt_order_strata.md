@@ -36,6 +36,16 @@ mt_order_strata(draws, var, lower, upper, years = 5)
 The adjusted `mt_draws`, with the share of adjusted cells in
 `$coherence`.
 
+## Details
+
+This is a post-hoc adjustment of this package without a published source
+(reference unknown): it changes the draws and leaves the fitted model as
+it is, so the adjusted draws no longer follow the model's distribution.
+Models that keep strata together by construction are
+[`li_lee()`](li_lee.md), [`coherent_fdm()`](coherent_fdm.md) and
+`coda(coherent = TRUE)` ([`coda()`](coda.md));
+[`reconciled()`](reconciled.md) makes totals and their parts coherent.
+
 ## Examples
 
 ``` r

@@ -40,3 +40,4 @@ Complete analyses from the published tables to the reported results.
 ### Help
 
 - [Frequently asked questions](faq.md):
+- [Methods and sources](methods-sources.md):

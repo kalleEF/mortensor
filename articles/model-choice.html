@@ -169,8 +169,7 @@ Held 2007)</td>
 <tr class="even">
 <td>Several populations</td>
 <td>
-<code><a href="../reference/li_lee.html">li_lee()</a></code>, <code><a href="../reference/li_lee.html">product_ratio()</a></code>,
-<code>coda(coherent = TRUE)</code>, <code><a href="../reference/cause_shares.html">cause_shares()</a></code>,
+<code><a href="../reference/li_lee.html">li_lee()</a></code>, <code>coda(coherent = TRUE)</code>,
 <code><a href="../reference/coda_causes.html">coda_causes()</a></code>
 </td>
 <td>mortensor</td>
@@ -213,10 +212,10 @@ uncertainty of every model.</p>
 <span>               <span class="st">"Bayesian RH"</span> <span class="op">=</span> <span class="fu"><a href="../reference/stanmomo.html">stanmomo</a></span><span class="op">(</span><span class="st">"rh"</span>, h_max <span class="op">=</span> <span class="fl">20</span>, cores <span class="op">=</span> <span class="fl">4</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span>  <span class="co"># the MCMC samplers of bamp and Stan draw their seeds from R</span></span>
 <span><span class="va">fc</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span><span class="va">models</span>, <span class="kw">function</span><span class="op">(</span><span class="va">m</span><span class="op">)</span> <span class="fu"><a href="../reference/mt_forecast.html">mt_forecast</a></span><span class="op">(</span><span class="fu"><a href="../reference/mt_fit.html">mt_fit</a></span><span class="op">(</span><span class="va">m</span>, <span class="va">ew</span><span class="op">)</span>, h <span class="op">=</span> <span class="fl">20</span>, n_draws <span class="op">=</span> <span class="fl">500</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Warning in report_fit_problems(diagnostics, spec$label): Functional demographic</span></span>
-<span><span class="co">#&gt; model: warnings in 1 stratum/strata, for example male: smooth.demogdata()</span></span>
-<span><span class="co">#&gt; failed (initial parameters not feasible); smoothed without the monotonicity</span></span>
-<span><span class="co">#&gt; constraint. (see the diagnostics of the fit).</span></span></code></pre></div>
+<span><span class="co">#&gt; Warning in report_fit_problems(diagnostics, spec$label, classes): Functional</span></span>
+<span><span class="co">#&gt; demographic model: warnings in 1 stratum/strata, for example male:</span></span>
+<span><span class="co">#&gt; smooth.demogdata() failed (initial parameters not feasible); smoothed without</span></span>
+<span><span class="co">#&gt; the monotonicity constraint. (see the diagnostics of the fit).</span></span></code></pre></div>
 <p>The warning comes from fdm: its default smoothing over age, a spline
 that must increase above age 65
 (<code><a href="https://pkg.robjhyndman.com/demography/reference/smooth.demogdata.html" class="external-link">demography::smooth.demogdata()</a></code>), could not be fitted to
@@ -234,13 +233,13 @@ again.</p>
 <span><span class="co">#&gt; 1: 27.5 (26.6-28.3) 27.4 (26.6-28.1) 27.2 (26.3-28.0) 27.5 (26.6-28.3)</span></span>
 <span><span class="co">#&gt; 2: 28.7 (27.6-29.7) 28.4 (27.4-29.5) 28.1 (26.8-29.0) 28.8 (27.7-29.9)</span></span>
 <span><span class="co">#&gt;                CoDa     Bayesian APC      Bayesian RH</span></span>
-<span><span class="co">#&gt; 1: 27.7 (26.6-28.9) 26.6 (25.4-27.6) 27.5 (26.4-28.3)</span></span>
-<span><span class="co">#&gt; 2: 29.4 (27.7-30.8) 26.8 (25.0-28.2) 28.5 (26.9-29.8)</span></span></code></pre></div>
+<span><span class="co">#&gt; 1: 27.7 (26.6-28.9) 26.5 (25.4-27.5) 27.5 (26.4-28.3)</span></span>
+<span><span class="co">#&gt; 2: 29.4 (27.7-30.8) 26.7 (25.0-28.1) 28.5 (26.9-29.8)</span></span></code></pre></div>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/mt_compare.html">mt_plot_compare</a></span><span class="op">(</span><span class="va">fc</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"random walk"</span>, <span class="st">"Lee-Carter"</span>, <span class="st">"fdm"</span>, <span class="st">"APC"</span>, <span class="st">"Bayesian APC"</span><span class="op">)</span><span class="op">]</span>, data <span class="op">=</span> <span class="va">ew</span><span class="op">)</span></span></code></pre></div>
 <p><img src="model-choice-plot-models-1.png"></p>
 <p>All models forecast a further rise, at different paces and with
-different uncertainty. By 2031 the medians range from 26.8 to 29.4
+different uncertainty. By 2031 the medians range from 26.7 to 29.4
 years:</p>
 <ul>
 <li>
@@ -276,15 +275,15 @@ years):</p>
 <span><span class="fu"><a href="../reference/mt_compare.html">mt_score_table</a></span><span class="op">(</span><span class="va">bt</span>, metrics <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"crps"</span>, <span class="st">"cov95"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt;            model   crps cov95 crps_le cov95_le</span></span>
 <span><span class="co">#&gt;  1:  random walk 0.0514 0.973   0.388    0.767</span></span>
-<span><span class="co">#&gt;  2:   Lee-Carter 0.0564 0.751   0.366    0.933</span></span>
-<span><span class="co">#&gt;  3:          fdm 0.0516 0.557   0.320    0.333</span></span>
-<span><span class="co">#&gt;  4:          CBD 0.0554 0.782   0.371    0.833</span></span>
-<span><span class="co">#&gt;  5:          APC 0.0392 0.959   0.261    1.000</span></span>
+<span><span class="co">#&gt;  2:   Lee-Carter 0.0571 0.688   0.365    0.933</span></span>
+<span><span class="co">#&gt;  3:          fdm 0.0534 0.463   0.320    0.300</span></span>
+<span><span class="co">#&gt;  4:          CBD 0.0565 0.713   0.368    0.833</span></span>
+<span><span class="co">#&gt;  5:          APC 0.0393 0.947   0.261    1.000</span></span>
 <span><span class="co">#&gt;  6:           M6 0.0316 0.981   0.184    1.000</span></span>
-<span><span class="co">#&gt;  7:           M7 0.0523 0.816   0.375    0.800</span></span>
-<span><span class="co">#&gt;  8:         CoDa 0.0454 0.873   0.257    1.000</span></span>
-<span><span class="co">#&gt;  9: Bayesian APC 0.0721 0.694   0.573    0.600</span></span>
-<span><span class="co">#&gt; 10:  Bayesian RH 0.0460 0.876   0.282    1.000</span></span></code></pre></div>
+<span><span class="co">#&gt;  7:           M7 0.0523 0.816   0.374    0.800</span></span>
+<span><span class="co">#&gt;  8:         CoDa 0.0457 0.838   0.257    1.000</span></span>
+<span><span class="co">#&gt;  9: Bayesian APC 0.0715 0.678   0.568    0.667</span></span>
+<span><span class="co">#&gt; 10:  Bayesian RH 0.0461 0.874   0.282    1.000</span></span></code></pre></div>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/mt_plot_more.html">mt_plot_scores</a></span><span class="op">(</span><span class="va">bt</span>, by <span class="op">=</span> <span class="st">"model"</span>, target <span class="op">=</span> <span class="st">"life_expectancy"</span><span class="op">)</span></span></code></pre></div>
 <p><img src="model-choice-plot-scores-1.png"></p>
@@ -292,19 +291,25 @@ years):</p>
 <li>
 <strong>M6</strong> and <strong>APC</strong> forecast the rates best
 (CRPS 0.032 and 0.039), M6 also life expectancy, and their intervals
-covered the observed values.</li>
+covered the observed values (95% coverage of the rates 0.98 and
+0.95).</li>
 <li>
-<strong>CoDa</strong> comes next for the rates (0.045) and forecast
+<strong>CoDa</strong> comes next for the rates (0.046) and forecast
 life expectancy as well as APC (0.257 against 0.261 years).</li>
-<li>The <strong>Bayesian RH</strong> follows closely, and its intervals
-covered well (95% coverage 0.88 for the rates).</li>
+<li>The <strong>Bayesian RH</strong> follows closely (0.046); its 95%
+intervals covered 0.87 of the observed rates.</li>
 <li>The period models and the random walk lie close together; the random
-walk forecast the single rates slightly better than Lee-Carter.
-<strong>M7</strong>, CBD with a cohort effect, was not more accurate
-than CBD here.</li>
+walk forecast the single rates slightly better than Lee-Carter and CBD.
+The intervals of Lee-Carter and CBD are too narrow for the rates (95%
+coverage 0.69 and 0.71): their draws add only the Poisson variation of
+the deaths to the forecast rates. Those of the random walk, which
+forecasts the observed rates themselves, cover 0.97.
+<strong>M7</strong>, CBD with a cohort effect, forecast the rates more
+accurately than CBD (0.052 against 0.057), but not life expectancy.</li>
 <li>
 <strong>fdm</strong> forecast life expectancy fairly accurately, but
-its intervals are far too narrow (95% coverage 0.33).</li>
+its intervals are far too narrow (95% coverage 0.46 for the rates and
+0.30 for life expectancy).</li>
 <li>The <strong>Bayesian APC</strong> is the least accurate: a forecast
 without a trend falls behind when mortality keeps declining.</li>
 </ul>
@@ -319,36 +324,47 @@ other data, a period model may forecast best.</p>
 <p>With three origins, a model can rank first by chance.
 <code><a href="../reference/mt_dm_test.html">mt_dm_test()</a></code> tests whether the mean score of a model
 differs from that of a reference model by more than the origins vary
-(Diebold and Mariano 1995, with the correction of Harvey, Leybourne and
-Newbold 1997). Three origins are too few for this test: it would have
-two degrees of freedom, and the covariance of forecasts that overlap in
-their test years cannot be estimated from three values. A second
-backtest of the five fastest models from 16 origins (1991-2006), five
-years ahead, tests life expectancy at 55 against M6:</p>
+(Diebold and Mariano 1995). By default the variance of the mean
+difference is the equal-weighted cosine estimate, with critical values
+from a t distribution (Lazarus, Lewis, Stock and Watson 2018; Coroneo
+and Iacone 2020), so that the test keeps its nominal size with few
+origins whose test years overlap. Three origins are too few: the test
+would have one degree of freedom. A second backtest of the five fastest
+models from 16 origins (1991-2006), five years ahead, tests life
+expectancy at 55 against M6:</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">fast</span> <span class="op">&lt;-</span> <span class="va">models</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"random walk"</span>, <span class="st">"Lee-Carter"</span>, <span class="st">"APC"</span>, <span class="st">"M6"</span>, <span class="st">"CoDa"</span><span class="op">)</span><span class="op">]</span></span>
 <span><span class="va">bt_dm</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_compare.html">mt_compare</a></span><span class="op">(</span><span class="va">fast</span>, <span class="va">ew</span>, origins <span class="op">=</span> <span class="fl">1991</span><span class="op">:</span><span class="fl">2006</span>, h <span class="op">=</span> <span class="fl">5</span>, n_draws <span class="op">=</span> <span class="fl">200</span>, quantities <span class="op">=</span> <span class="st">"life_expectancy"</span><span class="op">)</span></span>
 <span><span class="va">dm</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_dm_test.html">mt_dm_test</a></span><span class="op">(</span><span class="va">bt_dm</span>, ref <span class="op">=</span> <span class="st">"M6"</span>, targets <span class="op">=</span> <span class="st">"life_expectancy"</span><span class="op">)</span></span>
-<span><span class="va">dm</span><span class="op">[</span><span class="va">horizon</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"1"</span>, <span class="st">"5"</span>, <span class="st">"all"</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">model</span>, <span class="va">horizon</span>, <span class="va">score</span>, <span class="va">score_ref</span>, <span class="va">mean_diff</span>, <span class="va">p_value</span><span class="op">)</span><span class="op">]</span></span>
-<span><span class="co">#&gt;           model horizon      score  score_ref  mean_diff      p_value</span></span>
-<span><span class="co">#&gt;  1: random walk       1 0.09724537 0.08206846 0.01517692 1.581224e-02</span></span>
-<span><span class="co">#&gt;  2: random walk       5 0.33916424 0.18908199 0.15008225 4.575789e-06</span></span>
-<span><span class="co">#&gt;  3: random walk     all 0.20274758 0.12886970 0.07387788 2.513700e-05</span></span>
-<span><span class="co">#&gt;  4:  Lee-Carter       1 0.09961131 0.08206846 0.01754286 3.314643e-02</span></span>
-<span><span class="co">#&gt;  5:  Lee-Carter       5 0.33607345 0.18908199 0.14699146 6.806371e-04</span></span>
-<span><span class="co">#&gt;  6:  Lee-Carter     all 0.20465394 0.12886970 0.07578424 1.154523e-03</span></span>
-<span><span class="co">#&gt;  7:         APC       1 0.10400287 0.08206846 0.02193441 4.028557e-03</span></span>
-<span><span class="co">#&gt;  8:         APC       5 0.22565613 0.18908199 0.03657414 4.376043e-02</span></span>
-<span><span class="co">#&gt;  9:         APC     all 0.15722285 0.12886970 0.02835316 2.362806e-04</span></span>
-<span><span class="co">#&gt; 10:        CoDa       1 0.09340164 0.08206846 0.01133318 5.915185e-03</span></span>
-<span><span class="co">#&gt; 11:        CoDa       5 0.24324633 0.18908199 0.05416434 6.456470e-02</span></span>
-<span><span class="co">#&gt; 12:        CoDa     all 0.15893898 0.12886970 0.03006928 1.667530e-02</span></span></code></pre></div>
+<span><span class="va">dm</span><span class="op">[</span><span class="va">horizon</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"1"</span>, <span class="st">"5"</span>, <span class="st">"all"</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">model</span>, <span class="va">horizon</span>, <span class="va">df</span>, <span class="va">score</span>, <span class="va">score_ref</span>, <span class="va">mean_diff</span>, <span class="va">p_value</span><span class="op">)</span><span class="op">]</span></span>
+<span><span class="co">#&gt;           model horizon df      score  score_ref  mean_diff    p_value</span></span>
+<span><span class="co">#&gt;  1: random walk       1  2 0.09724537 0.08185772 0.01538766 0.04709528</span></span>
+<span><span class="co">#&gt;  2: random walk       5  2 0.33916424 0.18850382 0.15066042 0.02335147</span></span>
+<span><span class="co">#&gt;  3: random walk     all  2 0.20274758 0.12847414 0.07427344 0.02945383</span></span>
+<span><span class="co">#&gt;  4:  Lee-Carter       1  2 0.09869128 0.08185772 0.01683356 0.12919591</span></span>
+<span><span class="co">#&gt;  5:  Lee-Carter       5  2 0.33400346 0.18850382 0.14549963 0.04916992</span></span>
+<span><span class="co">#&gt;  6:  Lee-Carter     all  2 0.20342037 0.12847414 0.07494623 0.05835174</span></span>
+<span><span class="co">#&gt;  7:         APC       1  2 0.10308853 0.08185772 0.02123081 0.02510482</span></span>
+<span><span class="co">#&gt;  8:         APC       5  2 0.22542556 0.18850382 0.03692174 0.14707349</span></span>
+<span><span class="co">#&gt;  9:         APC     all  2 0.15659917 0.12847414 0.02812503 0.05495459</span></span>
+<span><span class="co">#&gt; 10:        CoDa       1  2 0.09290433 0.08185772 0.01104661 0.04062320</span></span>
+<span><span class="co">#&gt; 11:        CoDa       5  2 0.24122606 0.18850382 0.05272224 0.15010093</span></span>
+<span><span class="co">#&gt; 12:        CoDa     all  2 0.15784842 0.12847414 0.02937428 0.08623775</span></span></code></pre></div>
 <p>A positive <code>mean_diff</code> means a higher CRPS than M6, so a
-less accurate forecast. M6 was more accurate than each of the other
-models one year ahead and on average over the five horizons (p below
-0.05), and five years ahead than all but CoDa (p = 0.06). With 16
-origins the test has 15 degrees of freedom; forecasts from neighbouring
-origins share test years, which the test allows for.</p>
+less accurate forecast. M6 had the lowest mean CRPS at each horizon
+shown, but with 16 origins the test has 2 degrees of freedom
+(<code>df</code>) and finds only large and consistent differences. On
+average over the five horizons, the difference is significant at the 5%
+level only against the random walk (p = 0.029); against Lee-Carter and
+APC the p-values are 0.058 and 0.055, against CoDa 0.086. One year ahead
+it is significant against the random walk, APC and CoDa (p from 0.025 to
+0.047), five years ahead against the random walk and Lee-Carter (p =
+0.023 and 0.049). Forecasts from neighbouring origins share test years,
+which the test allows for. The version of
+<code><a href="https://pkg.robjhyndman.com/forecast/reference/dm.test.html" class="external-link">forecast::dm.test()</a></code> (<code>varestimator = "acf"</code>,
+with the correction of Harvey, Leybourne and Newbold 1997) is an option;
+with few overlapping origins it rejects too often when the models are
+equally accurate (see <code><a href="../reference/mt_dm_test.html">?mt_dm_test</a></code>).</p>
 </div>
 <div class="section level2">
 <h2 id="ensembles-of-any-combination">Ensembles of any combination<a class="anchor" aria-label="anchor" href="#ensembles-of-any-combination"></a>
@@ -364,7 +380,9 @@ future.</p>
 backtest on the training data only (<code>weights = "crps"</code>:
 inversely proportional to the CRPS of each component;
 <code>"stack"</code>: the combination that minimised the error of the
-median forecasts), and <code>top_k</code> keeps the best components:</p>
+median forecasts), and <code>top_k</code> keeps the best components.
+CRPS weights and <code>top_k</code> are package-specific (see the
+article “Methods and sources”):</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">ens</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>  <span class="st">"equal: Lee-Carter, fdm, APC, M6, Bayesian APC"</span> <span class="op">=</span></span>
@@ -376,7 +394,7 @@ median forecasts), and <code>top_k</code> keeps the best components:</p>
 <span><span class="va">fit_ens</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_fit.html">mt_fit</a></span><span class="op">(</span><span class="va">ens</span><span class="op">[[</span><span class="fl">2</span><span class="op">]</span><span class="op">]</span>, <span class="va">ew</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">fit_ens</span><span class="op">$</span><span class="va">weights</span>, <span class="fl">2</span><span class="op">)</span></span>
 <span><span class="co">#&gt;   rw   lc  fdm  cbd  apc   m6 </span></span>
-<span><span class="co">#&gt; 0.26 0.00 0.00 0.00 0.35 0.38</span></span></code></pre></div>
+<span><span class="co">#&gt; 0.27 0.00 0.00 0.00 0.35 0.38</span></span></code></pre></div>
 <p>On the data up to 2011, the inner backtest kept the random walk, APC
 and M6, weighted by their CRPS. The ensembles in the same backtest as
 the single models:</p>
@@ -385,28 +403,28 @@ the single models:</p>
 <span><span class="fu"><a href="../reference/mt_compare.html">mt_score_table</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">rbind</a></span><span class="op">(</span><span class="va">bt</span>, <span class="va">bt_ens</span><span class="op">)</span>, metrics <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"crps"</span>, <span class="st">"cov95"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt;                                             model   crps cov95 crps_le cov95_le</span></span>
 <span><span class="co">#&gt;  1:                                   random walk 0.0514 0.973   0.388    0.767</span></span>
-<span><span class="co">#&gt;  2:                                    Lee-Carter 0.0564 0.751   0.366    0.933</span></span>
-<span><span class="co">#&gt;  3:                                           fdm 0.0516 0.557   0.320    0.333</span></span>
-<span><span class="co">#&gt;  4:                                           CBD 0.0554 0.782   0.371    0.833</span></span>
-<span><span class="co">#&gt;  5:                                           APC 0.0392 0.959   0.261    1.000</span></span>
+<span><span class="co">#&gt;  2:                                    Lee-Carter 0.0571 0.688   0.365    0.933</span></span>
+<span><span class="co">#&gt;  3:                                           fdm 0.0534 0.463   0.320    0.300</span></span>
+<span><span class="co">#&gt;  4:                                           CBD 0.0565 0.713   0.368    0.833</span></span>
+<span><span class="co">#&gt;  5:                                           APC 0.0393 0.947   0.261    1.000</span></span>
 <span><span class="co">#&gt;  6:                                            M6 0.0316 0.981   0.184    1.000</span></span>
-<span><span class="co">#&gt;  7:                                            M7 0.0523 0.816   0.375    0.800</span></span>
-<span><span class="co">#&gt;  8:                                          CoDa 0.0454 0.873   0.257    1.000</span></span>
-<span><span class="co">#&gt;  9:                                  Bayesian APC 0.0721 0.694   0.573    0.600</span></span>
-<span><span class="co">#&gt; 10:                                   Bayesian RH 0.0460 0.876   0.282    1.000</span></span>
-<span><span class="co">#&gt; 11: equal: Lee-Carter, fdm, APC, M6, Bayesian APC 0.0441 0.941   0.316    0.967</span></span>
-<span><span class="co">#&gt; 12:                     CRPS weights, best 3 of 6 0.0342 0.988   0.225    1.000</span></span></code></pre></div>
+<span><span class="co">#&gt;  7:                                            M7 0.0523 0.816   0.374    0.800</span></span>
+<span><span class="co">#&gt;  8:                                          CoDa 0.0457 0.838   0.257    1.000</span></span>
+<span><span class="co">#&gt;  9:                                  Bayesian APC 0.0715 0.678   0.568    0.667</span></span>
+<span><span class="co">#&gt; 10:                                   Bayesian RH 0.0461 0.874   0.282    1.000</span></span>
+<span><span class="co">#&gt; 11: equal: Lee-Carter, fdm, APC, M6, Bayesian APC 0.0448 0.943   0.324    1.000</span></span>
+<span><span class="co">#&gt; 12:                     CRPS weights, best 3 of 6 0.0354 0.980   0.238    1.000</span></span></code></pre></div>
 <ul>
 <li>The <strong>equal-weight ensemble</strong> is more accurate than the
-average of its components (CRPS of the rates 0.044 against 0.050), and
+average of its components (CRPS of the rates 0.045 against 0.051), and
 its intervals cover. This always holds: the CRPS is a convex function of
 the forecast distribution, so the CRPS of a mixture is never larger than
 the weighted mean of the CRPS of its components. It includes the weak
 Bayesian APC, which pulls it behind APC and M6.</li>
 <li>The <strong>CRPS-weighted ensemble</strong> comes close to M6, the
-best single model, without knowing beforehand which model that would be:
-its weights were estimated anew at each origin from the years before
-it.</li>
+best single model (CRPS of the rates 0.035 against 0.032), without
+knowing beforehand which model that would be: its weights were estimated
+anew at each origin from the years before it.</li>
 </ul>
 <p>An ensemble rarely beats the best single model in hindsight. Its
 value is that it does not depend on picking that model in advance, and
@@ -433,7 +451,7 @@ use an ensemble; estimated weights (<code>weights = "crps"</code>,
 <code>top_k</code>) are re-estimated at every backtest origin, so they
 can be checked in the same way.</li>
 <li>For several populations (sexes, regions, deprivation groups) add the
-pooled models (<code><a href="../reference/li_lee.html">li_lee()</a></code>, <code><a href="../reference/li_lee.html">product_ratio()</a></code>) and
+pooled models (<code><a href="../reference/li_lee.html">li_lee()</a></code>, <code><a href="../reference/coherent_fdm.html">coherent_fdm()</a></code>) and
 make totals coherent (<code><a href="../reference/reconciled.html">reconciled()</a></code>); see the applied
 vignettes.</li>
 </ul>
@@ -451,6 +469,9 @@ Coherent forecasts of mortality with compositional data analysis.
 I (2009). A quantitative comparison of stochastic mortality models using
 data from England and Wales and the United States. <em>North American
 Actuarial Journal</em> 13(1): 1-35.</p>
+<p>Coroneo L, Iacone F (2020). Comparing predictive accuracy in small
+samples using fixed-smoothing asymptotics. <em>Journal of Applied
+Econometrics</em> 35(4): 391-409.</p>
 <p>Diebold FX, Mariano RS (1995). Comparing predictive accuracy.
 <em>Journal of Business &amp; Economic Statistics</em> 13(3):
 253-263.</p>
@@ -463,6 +484,9 @@ models. <em>Demography</em> 50(1): 261-283.</p>
 <p>Hyndman RJ, Ullah MS (2007). Robust forecasting of mortality and
 fertility rates: a functional data approach. <em>Computational
 Statistics &amp; Data Analysis</em> 51(10): 4942-4956.</p>
+<p>Lazarus E, Lewis DJ, Stock JH, Watson MW (2018). HAR inference:
+recommendations for practice. <em>Journal of Business &amp; Economic
+Statistics</em> 36(4): 541-559.</p>
 <p>Lee RD, Carter LR (1992). Modeling and forecasting U.S. mortality.
 <em>Journal of the American Statistical Association</em> 87(419):
 659-671.</p>

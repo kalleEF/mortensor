@@ -60,10 +60,26 @@ A model specification.
 StanMoMo forecasts inside the fit, so the model is fitted with forecasts
 up to `h_max` years. Draws are posterior draws of the expected rates,
 rebuilt from the posterior parameters and forecast indexes; they carry
-the uncertainty of the parameters and of the future indexes. Predictive
-draws add Poisson and extra-Poisson variation of the observed deaths as
-for other models (for the negative binomial family this takes the place
-of its overdispersion). Fitted rates are posterior means.
+the uncertainty of the parameters and of the future indexes. Fitted
+rates are posterior means.
+
+Predictive draws (`mt_forecast(predictive = TRUE)`) are draws of the
+model's posterior predictive distribution of the deaths, divided by the
+exposures. For `family = "poisson"` the deaths are Poisson given the
+rates of each posterior draw and the exposures. For `family = "nb"` they
+are negative binomial (Delwarde, Denuit and Partrat 2007) with mean rate
+x exposure and size `phi`, the dispersion parameter of the same
+posterior draw: variance `mu + mu^2 / phi`, Stan's `neg_binomial_2`
+parameterisation that StanMoMo uses. StanMoMo samples `aux`, the inverse
+dispersion, with a half-normal prior, and reports `phi = 1 / aux`. No
+other observation noise is added. If intervals are too narrow on real
+data, that is a property of the model; compare the negative binomial
+family, [`recalibrated()`](recalibrated.md) or an
+[`ensemble()`](ensemble.md). Wrappers that add the observation noise
+themselves ([`recalibrated()`](recalibrated.md),
+[`anchored()`](anchored.md), [`reconciled()`](reconciled.md)) pair each
+draw with the dispersion of its posterior draw where the draws keep
+their order, and otherwise draw the dispersion from its posterior.
 
 The fit warns when the chains have not converged (largest R-hat of the
 model parameters above 1.05) or had divergent transitions; then use more
@@ -79,6 +95,10 @@ averaging for mortality forecasting using leave-future-out validation.
 *International Journal of Forecasting* 39(2): 674-690.
 [doi:10.1016/j.ijforecast.2022.01.011](https://doi.org/10.1016/j.ijforecast.2022.01.011)
 
+Delwarde A, Denuit M, Partrat C (2007). Negative binomial version of the
+Lee-Carter model for mortality forecasting. *Applied Stochastic Models
+in Business and Industry* 23(5): 385-401.
+
 ## See also
 
 [`stmomo()`](stmomo.md) for the same models fitted by maximum
@@ -93,6 +113,6 @@ if (requireNamespace("StanMoMo", quietly = TRUE)) {
   fit <- mt_fit(stanmomo("lc", chains = 1, iter = 400, h_max = 10), x)
   fc <- mt_forecast(fit, h = 10, n_draws = 100, seed = 1)
 }
-#> Warning: StanMoMo Lee-Carter: warnings in 2 stratum/strata, for example female: StanMoMo chains have not converged (largest R-hat 1.08); use more `iter` or `chains`. (see the diagnostics of the fit).
+#> Warning: StanMoMo Lee-Carter: warnings in 2 stratum/strata, for example female: StanMoMo chains have not converged (largest R-hat 1.34); use more `iter` or `chains`. (see the diagnostics of the fit).
 # }
 ```

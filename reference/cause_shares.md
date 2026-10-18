@@ -1,12 +1,12 @@
-# Coherent multi-cause forecasts with cause shares
+# Coherent multi-cause forecasts with cause shares (deprecated)
 
-Forecasts all-cause mortality with any model (`total`) and the shares of
-the causes in all-cause mortality with a compositional tensor model, so
-that cause-specific forecasts add up to the all-cause forecast in every
-draw (a Tucker4 decomposition of isometric log-ratio coordinates; an
-experimental method without a published application to mortality, so
-compare it with [`reconciled()`](reconciled.md) separate models in a
-backtest):
+**Deprecated.** `cause_shares()` is a method of this package without a
+published source (a Tucker4 decomposition of isometric log-ratio
+coordinates of cause shares). Use [`reconciled()`](reconciled.md) with a
+hierarchy of causes (separate models made coherent), or
+[`coda_causes()`](coda_causes.md), the multiple-decrement compositional
+model of Oeppen (2008). `cause_shares()` still works and warns (class
+`mt_warning_deprecated`).
 
 ## Usage
 
@@ -59,6 +59,11 @@ A model specification.
 
 ## Details
 
+Forecasts all-cause mortality with any model (`total`) and the shares of
+the causes in all-cause mortality with a compositional tensor model, so
+that cause-specific forecasts add up to the all-cause forecast in every
+draw:
+
 1.  shares of each cause (and of a residual cause, the part of all-cause
     mortality not covered by the listed causes) per age, year and group;
 
@@ -76,13 +81,14 @@ Shares of rare causes are noisy; smoothing the rates first
 (`prep = mt_prep(step_smooth())`) can help.
 
 Predictive draws (`mt_forecast(predictive = TRUE)`) are the predictive
-draws of the total model; for models of smooth rates (such as
-[`lee_carter()`](lee_carter.md)) these are Poisson deaths, which are
-split between the causes (and the residual cause) multinomially by the
-share draws, so that the deaths of the causes add up to the all-cause
-deaths also in predictive draws. The residual variation of the shares
-added to these draws is then only the part beyond the multinomial
-variation. For total models of observed rates ([`rwd()`](rwd.md),
+draws of the total model; for models of expected rates (such as
+[`lee_carter()`](lee_carter.md)) these are Poisson deaths given the
+rates (no other observation noise is added), which are split between the
+causes (and the residual cause) multinomially by the share draws, so
+that the deaths of the causes add up to the all-cause deaths also in
+predictive draws. The residual variation of the shares added to these
+draws is then only the part beyond the multinomial variation. For total
+models of observed rates ([`rwd()`](rwd.md),
 [`arima_series()`](arima_series.md), [`ets_series()`](arima_series.md)),
 predictive draws are the draws.
 
@@ -96,10 +102,16 @@ Egozcue JJ, Pawlowsky-Glahn V, Mateu-Figueras G, Barcelo-Vidal C (2003).
 Isometric logratio transformations for compositional data analysis.
 *Mathematical Geology* 35(3): 279-300.
 
+## See also
+
+[`reconciled()`](reconciled.md), [`coda_causes()`](coda_causes.md).
+
 ## Examples
 
 ``` r
 x <- mt_example_causes(years = 2010:2019)
-fit <- mt_fit(cause_shares(total = lee_carter(), ranks = c(2, 2, 2, 2)), x)
+fit <- mt_fit(suppressWarnings(cause_shares(total = lee_carter(), ranks = c(2, 2, 2, 2))), x)
 fc <- mt_forecast(fit, h = 5, n_draws = 50, seed = 1)
+# the replacement:
+fit2 <- mt_fit(coda_causes(), x)
 ```

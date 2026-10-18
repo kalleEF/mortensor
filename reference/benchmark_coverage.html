@@ -56,7 +56,8 @@ draws for the next <code>h</code> years, over <code>n_rep</code> replicates.</p>
 <span>  h <span class="op">=</span> <span class="fl">10</span>,</span>
 <span>  n_draws <span class="op">=</span> <span class="fl">300</span>,</span>
 <span>  n_train <span class="op">=</span> <span class="fl">30</span>,</span>
-<span>  prep <span class="op">=</span> <span class="cn">NULL</span></span>
+<span>  prep <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  sd_obs <span class="op">=</span> <span class="fl">0</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -82,6 +83,14 @@ draws for the next <code>h</code> years, over <code>n_rep</code> replicates.</p>
 
 <dt id="arg-n-train">n_train<a class="anchor" aria-label="anchor" href="#arg-n-train"></a></dt>
 <dd><p>Training years.</p></dd>
+
+
+<dt id="arg-prep">prep<a class="anchor" aria-label="anchor" href="#arg-prep"></a></dt>
+<dd><p>Optional <code><a href="mt_prep.html">mt_prep()</a></code> pipeline.</p></dd>
+
+
+<dt id="arg-sd-obs">sd_obs<a class="anchor" aria-label="anchor" href="#arg-sd-obs"></a></dt>
+<dd><p>Noise of the generator (see <code><a href="simulate_lc_dgp.html">simulate_lc_dgp()</a></code>).</p></dd>
 
 </dl></div>
     <div class="section level2">

@@ -113,7 +113,10 @@ processed <a href="mt_data.html">mt_data</a> object.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
-    <p>Steps:</p><ul><li><p><code>step_ungroup(...)</code>: <code><a href="mt_ungroup.html">mt_ungroup()</a></code>;</p></li>
+    <p>Steps:</p><ul><li><p><code>step_ungroup(...)</code>: <code><a href="mt_ungroup.html">mt_ungroup()</a></code>, by default the published PCLM
+without rescaling to the group totals (models fitted to the ungrouped
+data and backtest scores against the grouped test data do not need
+exact group totals); <code>step_ungroup(preserve_totals = TRUE)</code> rescales;</p></li>
 <li><p><code>step_smooth(...)</code>: <code><a href="mt_smooth.html">mt_smooth()</a></code>. The model is fitted to the
 smoothed rates; residuals and observation noise refer to the raw
 deaths. Smoothing over time (<code>along = "period"</code>, or <code>dims = 2</code>)
@@ -128,10 +131,19 @@ example after a change of trend; compare windows with <code><a href="mt_tune.htm
 <li><p><code>step_shocks(periods, action)</code>: periods with exceptional mortality (for
 example 2020-2022) are either replaced by log-linear interpolation of
 the rates of the neighbouring periods (<code>"interpolate"</code>, deaths become
-exposure times the interpolated rate) or removed (<code>"exclude"</code>, only at
-the start or end of the data). With <code>"interpolate"</code>, shock periods at
-the start or end of the data, which have no neighbour on one side, are
-removed, as in a backtest whose training window ends inside the shock.</p></li>
+exposure times the interpolated rate, provenance <code>"interpolated"</code>) or
+removed (<code>"exclude"</code>, only at the start or end of the data). With
+<code>"interpolate"</code>, shock periods at the start or end of the data, which
+have no neighbour on one side, are removed instead, with a warning of
+class <code>mt_warning_prep</code> (as in a backtest whose training window ends
+inside the shock). The interpolated years enter the fit as if they had
+been observed: the model sees a straight line in the log rates between
+the neighbouring years, without the year-to-year variation of observed
+years. Models that estimate their uncertainty from year-to-year changes
+(for example the random walk of a period index) therefore estimate a
+smaller variance, and their forecast intervals become narrower;
+check coverage in a backtest. Excluding the periods (only possible at
+the edges) avoids this.</p></li>
 </ul></div>
 
     <div class="section level2">

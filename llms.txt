@@ -46,7 +46,7 @@ StMoMo, StanMoMo, demography, ggplot2) use them when installed.
 | Harmonisation | [`mt_regroup()`](reference/mt_regroup.md), [`mt_ungroup()`](reference/mt_ungroup.md) (penalized composite link model with exposure offset, 1D/2D; spline and GAM methods), [`mt_plot_ungroup()`](reference/ungroup-diagnostics.md) and [`mt_ungroup_check()`](reference/ungroup-diagnostics.md) (diagnostics), [`mt_smooth()`](reference/mt_smooth.md) (over age, over time or both; P-splines, Whittaker, GAM), [`mt_smooth_check()`](reference/mt_smooth_check.md), [`mt_plot_smooth()`](reference/mt_smooth_check.md) |
 | Preprocessing pipelines | [`mt_prep()`](reference/mt_prep.md) with [`step_ungroup()`](reference/mt_prep.md), [`step_smooth()`](reference/mt_prep.md), [`step_regroup()`](reference/mt_prep.md), [`step_grid()`](reference/mt_prep.md), [`step_shocks()`](reference/mt_prep.md), [`step_window()`](reference/mt_prep.md); models fitted to smoothed rates take their observation noise from the raw rates |
 | Describing the past | [`mt_observed()`](reference/mt_observed.md), [`life_expectancy()`](reference/life_expectancy.md), [`asr()`](reference/derived.md), [`prob_dying()`](reference/derived.md) on data, [`mt_contrast()`](reference/mt_contrast.md) (gaps, ratios), [`mt_inequality()`](reference/mt_inequality.md) (SII, RII), [`lifespan_variation()`](reference/lifespan_variation.md) (e-dagger, entropy, Gini, standard deviation, IQR), [`standard_population()`](reference/standard_population.md) |
-| Models | [`rwd()`](reference/rwd.md), [`lee_carter()`](reference/lee_carter.md) (Poisson or SVD with the adjustments and period choice of demography; optional rotation of the age pattern, Li, Lee and Gerland 2013), [`coda()`](reference/coda.md) (compositional model of life-table deaths, Oeppen 2008; coherent version of Bergeron-Boucher et al. 2017), [`tucker3()`](reference/tucker3.md), [`arima_series()`](reference/arima_series.md), [`ets_series()`](reference/arima_series.md), [`hyndman_ullah()`](reference/hyndman_ullah.md) (demography), [`stmomo()`](reference/stmomo.md) (APC, CBD, RH, M6, M7, M8, LC), [`stanmomo()`](reference/stanmomo.md) (the same models, Bayesian, in Stan), [`li_lee()`](reference/li_lee.md), [`product_ratio()`](reference/li_lee.md), [`coherent_fdm()`](reference/coherent_fdm.md) (demography), [`apc_bayes()`](reference/apc_bayes.md) and [`apc_select()`](reference/apc_select.md) (bamp), [`cause_shares()`](reference/cause_shares.md), [`coda_causes()`](reference/coda_causes.md) |
+| Models | [`rwd()`](reference/rwd.md), [`lee_carter()`](reference/lee_carter.md) (Poisson or SVD with the adjustments and period choice of demography; optional rotation of the age pattern, Li, Lee and Gerland 2013), [`coda()`](reference/coda.md) (compositional model of life-table deaths, Oeppen 2008; coherent version of Bergeron-Boucher et al. 2017), [`arima_series()`](reference/arima_series.md), [`ets_series()`](reference/arima_series.md), [`hyndman_ullah()`](reference/hyndman_ullah.md) (demography), [`stmomo()`](reference/stmomo.md) (APC, CBD, RH, M6, M7, M8, LC), [`stanmomo()`](reference/stanmomo.md) (the same models, Bayesian, in Stan), [`li_lee()`](reference/li_lee.md), [`coherent_fdm()`](reference/coherent_fdm.md) (demography), [`apc_bayes()`](reference/apc_bayes.md) and [`apc_select()`](reference/apc_select.md) (bamp); experimental: [`tucker3()`](reference/tucker3.md) (three-way Lee-Carter), [`coda_causes()`](reference/coda_causes.md); deprecated: [`product_ratio()`](reference/product_ratio.md), [`cause_shares()`](reference/cause_shares.md) |
 | Wrappers for any model | [`ensemble()`](reference/ensemble.md) (weights from inner backtests, `top_k`), [`stratified()`](reference/stratified.md) (different models for groups of strata), [`reconciled()`](reference/reconciled.md), [`recalibrated()`](reference/recalibrated.md) (spread fitted to the errors of the last 10 years, optionally by age band or for life expectancy), [`anchored()`](reference/anchored.md) (jump-off at the observed level), [`bootstrapped()`](reference/bootstrapped.md), [`tuned()`](reference/mt_tune.md) and [`mt_tune()`](reference/mt_tune.md) (model and preprocessing settings chosen by forecast accuracy on the last years: hold-out or rolling origins, full or two-stage grids) |
 | Coherence | [`mt_hierarchy()`](reference/mt_hierarchy.md), [`mt_aggregate_strata()`](reference/mt_aggregate_strata.md), [`mt_reconcile()`](reference/mt_reconcile.md) and [`reconciled()`](reference/reconciled.md) (bottom-up, WLS, MinT, structural, OLS, proportional; draw by draw; non-negative; `fixed` nodes such as a trusted all-cause total; score-optimal reconciliation learnt from past forecasts, Panagiotelis et al. 2023), [`mt_coherence()`](reference/mt_coherence.md), [`mt_plot_coherence()`](reference/mt_coherence.md), [`mt_aggregate_draws()`](reference/mt_aggregate_draws.md), [`mt_order_strata()`](reference/mt_order_strata.md) |
 | Forecasts | [`mt_fit()`](reference/mt_fit.md), [`summary()`](https://rdrr.io/r/base/summary.html), [`mt_parameters()`](reference/mt_parameters.md), [`residuals()`](https://rdrr.io/r/stats/residuals.html), [`mt_forecast()`](reference/mt_forecast.md) (simulated paths), [`mt_jump_off()`](reference/mt_jump_off.md), [`mt_summarise()`](reference/mt_draws.md), [`mt_deaths()`](reference/mt_deaths.md), [`mt_disaggregate()`](reference/mt_disaggregate.md) with [`mt_shape_rates()`](reference/mt_shape_rates.md) and [`mt_disaggregate_check()`](reference/mt_disaggregate_check.md) |
@@ -263,15 +263,17 @@ Models for one population
 
 Models for several populations and causes
 
-- [`li_lee()`](li_lee.md) [`product_ratio()`](li_lee.md) : Coherent
-  multi-population models
+- [`li_lee()`](li_lee.md) : Li-Lee coherent multi-population model
 - [`coherent_fdm()`](coherent_fdm.md) : Coherent functional demographic
   model (product-ratio, demography)
 - [`tucker3()`](tucker3.md) : Tucker3 tensor model across strata
+  (three-way Lee-Carter model)
 - [`cause_shares()`](cause_shares.md) : Coherent multi-cause forecasts
-  with cause shares
+  with cause shares (deprecated)
 - [`coda_causes()`](coda_causes.md) : Multiple-decrement CoDa model of
   causes of death (experimental)
+- [`product_ratio()`](product_ratio.md) : Lee-Carter version of the
+  product-ratio method (deprecated)
 
 ## 
 
@@ -448,3 +450,4 @@ Complete analyses from the published tables to the reported results.
 ### Help
 
 - [Frequently asked questions](faq.md):
+- [Methods and sources](methods-sources.md):

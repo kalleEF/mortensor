@@ -64,7 +64,7 @@ ungrouped training data).</p></dd>
 
 
 <dt id="arg-method">method<a class="anchor" aria-label="anchor" href="#arg-method"></a></dt>
-<dd><p><code>"last"</code> or <code>"gam"</code>.</p></dd>
+<dd><p><code>"last"</code> or the deprecated <code>"gam"</code>.</p></dd>
 
 
 <dt id="arg-years">years<a class="anchor" aria-label="anchor" href="#arg-years"></a></dt>
@@ -78,12 +78,18 @@ ungrouped training data).</p></dd>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
 
-<ul><li><p><code>"last"</code>: the rates of the last <code>years</code> years (deaths and exposures
-summed), the same for every forecast year;</p></li>
-<li><p><code>"gam"</code>: a quasi-Poisson age-period GAM (<code>te(age, year)</code>, exposures as
-offset, package <span class="pkg">mgcv</span>) fitted to the last <code>years</code> years per
-stratum and extrapolated to <code>periods</code>, so the age pattern within groups
-changes over the forecast years.</p></li>
+<ul><li><p><code>"last"</code> (default): the rates of the last <code>years</code> years (deaths and
+exposures summed), the same for every forecast year: a standard
+schedule for proportional allocation within groups;</p></li>
+<li><p><code>"gam"</code> (deprecated): a quasi-Poisson age-period GAM (<code>te(age, year)</code>,
+exposures as offset, package <span class="pkg">mgcv</span>) fitted to the last <code>years</code>
+years per stratum and extrapolated to <code>periods</code>, so the age pattern
+within groups changes over the forecast years. Extrapolating a
+P-spline surface in time is a heuristic of this package without a
+published source; it still works, with a warning of class
+<code>mt_warning_deprecated</code>. The representative age of an open interval is
+its lower bound plus half the width of the interval below it (package
+convention, as in <code><a href="mt_smooth.html">mt_smooth()</a></code>).</p></li>
 </ul></div>
 
     <div class="section level2">

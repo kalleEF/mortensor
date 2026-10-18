@@ -92,12 +92,19 @@ is).</p></dd>
 
 <dt id="arg-predictive">predictive<a class="anchor" aria-label="anchor" href="#arg-predictive"></a></dt>
 <dd><p>If <code>TRUE</code>, draws describe observable rates: for
-models of smooth rates, and for any model fitted to smoothed rates
-(<code><a href="mt_prep.html">step_smooth()</a></code>), extra-Poisson noise (estimated from in-sample
-residuals of the raw rates) and Poisson variation of deaths given
-<code>exposure</code> are added;
-cells can have zero deaths (rate 0). Used by <code><a href="mt_backtest.html">mt_backtest()</a></code>, which
-sums the deaths to the observed cells before taking logarithms.</p></dd>
+models of expected rates (such as <code><a href="lee_carter.html">lee_carter()</a></code>), and for any model
+fitted to smoothed rates (<code><a href="mt_prep.html">step_smooth()</a></code>), deaths are drawn given the
+rates of each draw and <code>exposure</code> and divided by the exposures. The
+deaths are Poisson, the observation model of the Poisson Lee-Carter
+model (Brouhns, Denuit and Vermunt 2002); for models with a negative
+binomial likelihood (<code>stanmomo(family = "nb")</code>) they are negative
+binomial with the model's dispersion. No other observation noise is
+added. Models of observed rates (<code><a href="rwd.html">rwd()</a></code>, <code><a href="arima_series.html">arima_series()</a></code>,
+<code><a href="arima_series.html">ets_series()</a></code>) add nothing. Cells can have zero deaths (rate 0). Used
+by <code><a href="mt_backtest.html">mt_backtest()</a></code>, which sums the deaths to the observed cells before
+taking logarithms. If predictive intervals are too narrow on real
+data, that is a property of the model: see <code><a href="recalibrated.html">recalibrated()</a></code>,
+<code><a href="ensemble.html">ensemble()</a></code> or overdispersed models such as <code>stanmomo(family = "nb")</code>.</p></dd>
 
 
 <dt id="arg-exposure">exposure<a class="anchor" aria-label="anchor" href="#arg-exposure"></a></dt>
@@ -111,6 +118,13 @@ sums the deaths to the observed cells before taking logarithms.</p></dd>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>An <a href="mt_draws.html">mt_draws</a> object.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a></h2>
+    <p>Brouhns N, Denuit M, Vermunt JK (2002). A Poisson log-bilinear regression
+approach to the construction of projected lifetables. <em>Insurance:
+Mathematics and Economics</em> 31(3): 373-393.
+<a href="https://doi.org/10.1016/S0167-6687%2802%2900185-3" class="external-link">doi:10.1016/S0167-6687(02)00185-3</a></p>
     </div>
 
     <div class="section level2">

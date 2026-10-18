@@ -33,7 +33,9 @@ mcmc_control(
 
 - parallel:
 
-  Run the four chains in parallel.
+  Run the four chains in parallel. bamp runs them in a socket cluster
+  without seeded random number streams, so results differ slightly
+  between runs even when a seed is set.
 
 ## Value
 

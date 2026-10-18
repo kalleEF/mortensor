@@ -52,6 +52,16 @@ the particular events of a single period.
 ``` r
 
 bt <- mt_compare(models, x, origins = 2008:2014, h = 5, n_draws = 200, quantities = "life_expectancy")
+#> Warning in report_fit_problems(diagnostics, spec$label, classes): Li-Lee
+#> (common by sex): Li-Lee: the AR(1) coefficient of the stratum index is bounded
+#> at |phi| = 0.99 in 1 stratum/strata (female.Q4): their deviations from the
+#> common trend are close to a unit root and revert very slowly; coherence may not
+#> suit them. (diagnostics of 10 stratum/strata of the fit).
+#> Warning in report_fit_problems(diagnostics, spec$label, classes): Li-Lee
+#> (common by sex): Li-Lee: the AR(1) coefficient of the stratum index is bounded
+#> at |phi| = 0.99 in 1 stratum/strata (female.Q4): their deviations from the
+#> common trend are close to a unit root and revert very slowly; coherence may not
+#> suit them. (diagnostics of 10 stratum/strata of the fit).
 ```
 
 The forecasts are *predictive*: they describe the observed death rates
@@ -137,8 +147,8 @@ mt_score_table(bt, metrics = c("crps", "rmse", "cov80", "cov95"))
 #>          model   crps  rmse cov80 cov95 crps_le rmse_le cov80_le cov95_le
 #>         <fctr>  <num> <num> <num> <num>   <num>   <num>    <num>    <num>
 #> 1: random walk 0.0850 0.180 0.803 0.915   0.293   0.503    0.603    0.820
-#> 2:  Lee-Carter 0.0678 0.140 0.654 0.829   0.292   0.507    0.626    0.823
-#> 3:      Li-Lee 0.0666 0.132 0.673 0.847   0.336   0.601    0.614    0.811
+#> 2:  Lee-Carter 0.0683 0.139 0.617 0.793   0.293   0.508    0.620    0.814
+#> 3:      Li-Lee 0.0671 0.132 0.642 0.810   0.338   0.603    0.611    0.806
 ```
 
 The columns without suffix score the log death rates of all cells; the
@@ -160,12 +170,12 @@ mt_plot_scores(bt)
 All three models get worse with the horizon, as they should. The random
 walk has wide intervals: its 95% coverage is close to nominal (0.92),
 and its 50% and 80% intervals cover about as often as they should. The
-95% intervals of Lee-Carter and Li-Lee cover 0.83 and 0.85 of the
+95% intervals of Lee-Carter and Li-Lee cover 0.79 and 0.81 of the
 observed rates, fewer at longer horizons: they describe the uncertainty
-of a fixed trend, while the trend of English mortality changed after
-2011. “Tuning and recalibration” shows how to widen intervals to the
-errors of recent forecasts, and “Choosing and combining models” how
-mixtures of models do.
+of a fixed trend and the Poisson noise of the deaths, while the trend of
+English mortality changed after 2011. “Tuning and recalibration” shows
+how to widen intervals to the errors of recent forecasts, and “Choosing
+and combining models” how mixtures of models do.
 
 ## Is the difference larger than chance?
 
@@ -175,60 +185,69 @@ differ in accuracy by more than the origins vary.
 [`mt_dm_test()`](../reference/mt_dm_test.md) computes it for each
 horizon from the mean score of each origin, so the many cells of one
 forecast count once. Forecasts from neighbouring origins overlap in
-their test years, which the test allows for (autocovariances up to lag
-`h - 1`), and it uses the small-sample correction of Harvey, Leybourne
-and Newbold (1997):
+their test years, so the differences between origins are autocorrelated.
+By default the test estimates their variance with the equal-weighted
+cosine (EWC) estimator and takes critical values from a t distribution
+with few degrees of freedom (Lazarus et al. 2018; Coroneo and Iacone
+2020). The older version, with the autocovariances up to lag `h - 1` and
+the small-sample correction of Harvey, Leybourne and Newbold (1997),
+rejects a true null hypothesis too often with few overlapping origins:
+in simulations with seven origins, in 10% to 19% of the samples at the
+nominal 5% level, and in 27% with the fallback to lag 0 of
+[`forecast::dm.test()`](https://pkg.robjhyndman.com/forecast/reference/dm.test.html)
+(see [`?mt_dm_test`](../reference/mt_dm_test.md); `varestimator = "acf"`
+gives that version without the fallback).
 
 ``` r
 
 dm <- mt_dm_test(bt, ref = "Li-Lee")
-dm[target == "rate", list(model, horizon, mean_diff, statistic, p_value)]
-#>           model horizon     mean_diff  statistic      p_value
-#>          <char>  <fctr>         <num>      <num>        <num>
-#>  1: random walk       1  0.0119595721  8.4157008 0.0001534481
-#>  2: random walk       2  0.0129701804  6.0073944 0.0009583211
-#>  3: random walk       3  0.0190240420  4.9418489 0.0025991046
-#>  4: random walk       4  0.0222412221  6.6151447 0.0005745758
-#>  5: random walk       5  0.0258199269  3.1710696 0.0192926229
-#>  6: random walk     all  0.0184029887  6.4845296 0.0006393141
-#>  7:  Lee-Carter       1 -0.0004919661 -0.3959288 0.7058530046
-#>  8:  Lee-Carter       2  0.0008207208  0.3040936 0.7713269519
-#>  9:  Lee-Carter       3  0.0013534123  0.5191091 0.6222685396
-#> 10:  Lee-Carter       4  0.0016088507  0.7159922 0.5008991759
-#> 11:  Lee-Carter       5  0.0024748867  0.5433246 0.6064868413
-#> 12:  Lee-Carter     all  0.0011531809  0.2660219 0.7991274813
+dm[target == "rate", list(model, horizon, mean_diff, statistic, df, p_value)]
+#>           model horizon     mean_diff   statistic    df     p_value
+#>          <char>  <fctr>         <num>       <num> <num>       <num>
+#>  1: random walk       1  0.0117078512 11.17200995     1 0.056832004
+#>  2: random walk       2  0.0121981051 11.66561874     1 0.054439227
+#>  3: random walk       3  0.0187062941 85.80335706     1 0.007419185
+#>  4: random walk       4  0.0217150706 10.36381867     1 0.061237567
+#>  5: random walk       5  0.0253279342  4.59073526     1 0.136541937
+#>  6: random walk     all  0.0179310510  9.03410903     1 0.070182752
+#>  7:  Lee-Carter       1 -0.0002869724 -0.09908812     1 0.937123793
+#>  8:  Lee-Carter       2  0.0006775856  0.18437807     1 0.883924895
+#>  9:  Lee-Carter       3  0.0014679661  0.46086351     1 0.725074982
+#> 10:  Lee-Carter       4  0.0019556634  0.81081784     1 0.566269381
+#> 11:  Lee-Carter       5  0.0024624184  0.80790403     1 0.567390174
+#> 12:  Lee-Carter     all  0.0012553322  0.41249759     1 0.750933008
 ```
 
 A positive `mean_diff` means a higher CRPS than Li-Lee, so a less
 accurate forecast. Li-Lee forecast the rates more accurately than the
-random walk at every horizon (p below 0.02). Li-Lee and Lee-Carter
-differ by less than 4% of their CRPS, with p-values from 0.5 to 0.8:
-this backtest cannot tell them apart.
+random walk at every horizon, with p-values from 0.007 to 0.14 (0.07
+over all horizons). Li-Lee and Lee-Carter differ little, with p-values
+from 0.57 to 0.94: this backtest cannot tell them apart.
 
 ``` r
 
 dm[target == "life_expectancy", list(model, horizon, mean_diff, statistic, p_value)]
-#>           model horizon   mean_diff  statistic    p_value
-#>          <char>  <fctr>       <num>      <num>      <num>
-#>  1: random walk       1 -0.03020856 -2.6593674 0.03755574
-#>  2: random walk       2 -0.02580441 -1.5230345 0.17858066
-#>  3: random walk       3 -0.02894722 -1.2271653 0.26572242
-#>  4: random walk       4 -0.04568760 -0.9719875 0.36859476
-#>  5: random walk       5 -0.08010395 -1.2478513 0.25857634
-#>  6: random walk     all -0.04215035 -0.8274553 0.43964138
-#>  7:  Lee-Carter       1 -0.03607133 -2.8107851 0.03072441
-#>  8:  Lee-Carter       2 -0.03320599 -1.6563294 0.14873335
-#>  9:  Lee-Carter       3 -0.04086515 -1.8131081 0.11975829
-#> 10:  Lee-Carter       4 -0.04610599 -1.6365407 0.15284189
-#> 11:  Lee-Carter       5 -0.06357255 -2.3612003 0.05619187
-#> 12:  Lee-Carter     all -0.04396420 -1.2068646 0.27290181
+#>           model horizon   mean_diff  statistic   p_value
+#>          <char>  <fctr>       <num>      <num>     <num>
+#>  1: random walk       1 -0.03123928 -1.5703335 0.3609921
+#>  2: random walk       2 -0.02758071 -1.0405313 0.4873564
+#>  3: random walk       3 -0.03273421 -0.8868458 0.5381325
+#>  4: random walk       4 -0.04788062 -1.0613540 0.4810573
+#>  5: random walk       5 -0.08298369 -2.0305517 0.2913243
+#>  6: random walk     all -0.04448370 -1.3138241 0.4141789
+#>  7:  Lee-Carter       1 -0.03662197 -1.4811578 0.3780573
+#>  8:  Lee-Carter       2 -0.03362929 -1.1732706 0.4493507
+#>  9:  Lee-Carter       3 -0.04370171 -1.5140826 0.3715934
+#> 10:  Lee-Carter       4 -0.04705685 -1.8454361 0.3161362
+#> 11:  Lee-Carter       5 -0.06599281 -3.3113667 0.1867089
+#> 12:  Lee-Carter     all -0.04540053 -1.7779056 0.3261777
 ```
 
-For life expectancy, Lee-Carter was more accurate than Li-Lee one year
-ahead (p = 0.03); at longer horizons the differences are within chance.
-With seven origins the test has six degrees of freedom and detects only
-large and consistent differences. The row `"all"` averages over the
-horizons.
+For life expectancy, the random walk and Lee-Carter were more accurate
+than Li-Lee at every horizon, but no difference is significant (p-values
+from 0.19 to 0.54). With seven origins the test has one degree of
+freedom (`df`) and detects only large and consistent differences. The
+row `"all"` averages over the horizons.
 
 ## How far to trust a backtest
 
@@ -247,6 +266,10 @@ Bracher J, Ray EL, Gneiting T, Reich NG (2021). Evaluating epidemic
 forecasts in an interval format. *PLoS Computational Biology* 17(2):
 e1008618.
 
+Coroneo L, Iacone F (2020). Comparing predictive accuracy in small
+samples using fixed-smoothing asymptotics. *Journal of Applied
+Econometrics* 35(4): 391-409.
+
 Diebold FX, Mariano RS (1995). Comparing predictive accuracy. *Journal
 of Business & Economic Statistics* 13(3): 253-263.
 
@@ -264,6 +287,10 @@ prediction mean squared errors. *International Journal of Forecasting*
 
 Hyndman RJ, Koehler AB (2006). Another look at measures of forecast
 accuracy. *International Journal of Forecasting* 22(4): 679-688.
+
+Lazarus E, Lewis DJ, Stock JH, Watson MW (2018). HAR inference:
+recommendations for practice. *Journal of Business & Economic
+Statistics* 36(4): 541-559.
 
 Tashman LJ (2000). Out-of-sample tests of forecasting accuracy: an
 analysis and review. *International Journal of Forecasting* 16(4):

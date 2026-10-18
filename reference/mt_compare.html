@@ -69,7 +69,8 @@ forecasts (models, scenarios, jump-off choices) as a table or a figure.</p>
 <span>  targets <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  by <span class="op">=</span> <span class="st">"model"</span>,</span>
 <span>  digits <span class="op">=</span> <span class="fl">3</span>,</span>
-<span>  hierarchy <span class="op">=</span> <span class="cn">NULL</span></span>
+<span>  hierarchy <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  common <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu">mt_compare_forecasts</span><span class="op">(</span></span>
@@ -149,13 +150,19 @@ separately for the bottom series, the aggregates and the grand total
 (column <code>level</code>).</p></dd>
 
 
+<dt id="arg-common">common<a class="anchor" aria-label="anchor" href="#arg-common"></a></dt>
+<dd><p>Score only the cells that every model scored (default
+<code>TRUE</code>); <code>FALSE</code> scores every model on its own cells.</p></dd>
+
+
 <dt id="arg-forecasts">forecasts<a class="anchor" aria-label="anchor" href="#arg-forecasts"></a></dt>
 <dd><p>A named list of <a href="mt_draws.html">mt_draws</a> objects or <a href="mt_data.html">mt_data</a> objects
 (observed values).</p></dd>
 
 
 <dt id="arg-quantity">quantity<a class="anchor" aria-label="anchor" href="#arg-quantity"></a></dt>
-<dd><p><code>"life_expectancy"</code>, <code>"asr"</code> (per 100,000), <code>"deaths"</code>
+<dd><p><code>"life_expectancy"</code>, <code>"asr"</code> (per 100,000, European
+Standard Population 2013, see <code><a href="derived.html">asr()</a></code>), <code>"deaths"</code>
 (summed over the ages, with the exposures of the last observed year
 unless <code>exposure</code> is given; forecasts only), <code>"rate"</code> (death rates of
 the ages in <code>ages</code>) or <code>"lifespan_variation"</code> (the index <code>measure</code> of
@@ -217,7 +224,18 @@ target it holds side by side: log death rates without suffix, life
 expectancy with <code>_le</code> (years), the age-standardised rate with <code>_asr</code>,
 and differences between strata (<code>contrast</code> in <code><a href="mt_backtest.html">mt_backtest()</a></code>) with
 <code>_le_gap</code> and <code>_asr_gap</code>. The same model with different preprocessing
-gets one row per pipeline (column <code>prep</code>, as in <code><a href="mt_score.html">mt_score()</a></code>).</p></li>
+gets one row per pipeline (column <code>prep</code>, as in <code><a href="mt_score.html">mt_score()</a></code>). With
+several models, only the cells that every model scored enter (the
+same origin, horizon, stratum, age group, year and target, as in
+<code><a href="mt_dm_test.html">mt_dm_test()</a></code>), with a warning of class <code>mt_warning_backtest</code> when
+cells are left out: where a model failed at an origin or in a stratum,
+the scores of the other models for those cells would otherwise enter
+their means only, and the means would refer to different targets.
+<code>common = FALSE</code> scores every model on its own cells; a target of
+which no cell was scored by every model (for example with different
+age groups) is always scored so. The CRPS depends on the number of
+draws (see <code><a href="mt_backtest.html">mt_backtest()</a></code>); compare models
+backtested with the same <code>n_draws</code>, as <code>mt_compare()</code> does.</p></li>
 <li><p><code>mt_compare_forecasts()</code> gives one quantity of several forecasts
 (<code>mt_draws</code>) or observed data (<code>mt_data</code>, with Poisson intervals) as
 "median (lower-upper)", one column per forecast (empty where a
@@ -238,7 +256,7 @@ around the last observed year it shows the jump-off of each forecast.</p></li>
 <span class="r-out co"><span class="r-pr">#&gt;</span>          model   crps cov95 crps_le cov95_le</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>         &lt;fctr&gt;  &lt;num&gt; &lt;num&gt;   &lt;num&gt;    &lt;num&gt;</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1: random walk 0.0564 0.948  0.0801        1</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2:  Lee-Carter 0.0355 0.907  0.0746        1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2:  Lee-Carter 0.0359 0.888  0.0750        1</span>
 <span class="r-in"><span><span class="va">fc</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="st">"random walk"</span> <span class="op">=</span> <span class="fu"><a href="mt_forecast.html">mt_forecast</a></span><span class="op">(</span><span class="fu"><a href="mt_fit.html">mt_fit</a></span><span class="op">(</span><span class="fu"><a href="rwd.html">rwd</a></span><span class="op">(</span><span class="op">)</span>, <span class="va">x</span><span class="op">)</span>, h <span class="op">=</span> <span class="fl">10</span>, n_draws <span class="op">=</span> <span class="fl">100</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>           <span class="st">"Lee-Carter"</span> <span class="op">=</span> <span class="fu"><a href="mt_forecast.html">mt_forecast</a></span><span class="op">(</span><span class="fu"><a href="mt_fit.html">mt_fit</a></span><span class="op">(</span><span class="fu"><a href="lee_carter.html">lee_carter</a></span><span class="op">(</span><span class="op">)</span>, <span class="va">x</span><span class="op">)</span>, h <span class="op">=</span> <span class="fl">10</span>, n_draws <span class="op">=</span> <span class="fl">100</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu">mt_compare_forecasts</span><span class="op">(</span><span class="va">fc</span>, periods <span class="op">=</span> <span class="fl">2022</span><span class="op">)</span></span></span>

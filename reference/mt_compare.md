@@ -23,7 +23,8 @@ mt_score_table(
   targets = NULL,
   by = "model",
   digits = 3,
-  hierarchy = NULL
+  hierarchy = NULL,
+  common = TRUE
 )
 
 mt_compare_forecasts(
@@ -100,6 +101,11 @@ mt_plot_compare(
   separately for the bottom series, the aggregates and the grand total
   (column `level`).
 
+- common:
+
+  Score only the cells that every model scored (default `TRUE`); `FALSE`
+  scores every model on its own cells.
+
 - forecasts:
 
   A named list of [mt_draws](mt_draws.md) objects or
@@ -107,7 +113,8 @@ mt_plot_compare(
 
 - quantity:
 
-  `"life_expectancy"`, `"asr"` (per 100,000), `"deaths"` (summed over
+  `"life_expectancy"`, `"asr"` (per 100,000, European Standard
+  Population 2013, see [`asr()`](derived.md)), `"deaths"` (summed over
   the ages, with the exposures of the last observed year unless
   `exposure` is given; forecasts only), `"rate"` (death rates of the
   ages in `ages`) or `"lifespan_variation"` (the index `measure` of
@@ -171,7 +178,19 @@ object.
   and differences between strata (`contrast` in
   [`mt_backtest()`](mt_backtest.md)) with `_le_gap` and `_asr_gap`. The
   same model with different preprocessing gets one row per pipeline
-  (column `prep`, as in [`mt_score()`](mt_score.md)).
+  (column `prep`, as in [`mt_score()`](mt_score.md)). With several
+  models, only the cells that every model scored enter (the same origin,
+  horizon, stratum, age group, year and target, as in
+  [`mt_dm_test()`](mt_dm_test.md)), with a warning of class
+  `mt_warning_backtest` when cells are left out: where a model failed at
+  an origin or in a stratum, the scores of the other models for those
+  cells would otherwise enter their means only, and the means would
+  refer to different targets. `common = FALSE` scores every model on its
+  own cells; a target of which no cell was scored by every model (for
+  example with different age groups) is always scored so. The CRPS
+  depends on the number of draws (see
+  [`mt_backtest()`](mt_backtest.md)); compare models backtested with the
+  same `n_draws`, as `mt_compare()` does.
 
 - `mt_compare_forecasts()` gives one quantity of several forecasts
   (`mt_draws`) or observed data (`mt_data`, with Poisson intervals) as
@@ -194,7 +213,7 @@ mt_score_table(bt)
 #>          model   crps cov95 crps_le cov95_le
 #>         <fctr>  <num> <num>   <num>    <num>
 #> 1: random walk 0.0564 0.948  0.0801        1
-#> 2:  Lee-Carter 0.0355 0.907  0.0746        1
+#> 2:  Lee-Carter 0.0359 0.888  0.0750        1
 fc <- list("random walk" = mt_forecast(mt_fit(rwd(), x), h = 10, n_draws = 100, seed = 1),
            "Lee-Carter" = mt_forecast(mt_fit(lee_carter(), x), h = 10, n_draws = 100, seed = 1))
 mt_compare_forecasts(fc, periods = 2022)

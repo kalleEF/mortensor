@@ -45,10 +45,11 @@ new_mt_spec(
 
 - smooth:
 
-  Whether the draws describe smooth underlying rates (`TRUE`, for
-  example Lee-Carter; such fits return in-sample `fitted` rates, from
-  which extra-Poisson noise is estimated) or observed rates (`FALSE`,
-  for example a random walk on observed log rates).
+  Whether the draws describe expected (underlying) rates (`TRUE`, for
+  example Lee-Carter: predictive draws add Poisson variation of the
+  deaths given these rates and the exposures) or observed rates
+  (`FALSE`, for example a random walk on observed log rates: predictive
+  draws add nothing).
 
 ## Value
 

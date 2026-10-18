@@ -108,10 +108,15 @@ are affected.
 Draws simulate the indexes: the random walk with drift includes the
 uncertainty of the drift (normal, with the variance of the mean change),
 the AR(1) processes their innovations; `a` and `b` are fixed. Draws are
-expected rates; predictive draws add extra-Poisson and Poisson
-variation. The model weights all ages equally on the clr scale, so the
-noise of ages with few deaths enters `k`; its intervals can be wider
-than those of [`lee_carter()`](lee_carter.md).
+expected rates; predictive draws (`mt_forecast(predictive = TRUE)`) add
+Poisson variation of the deaths given the rates and the exposures, and
+no other observation noise. If intervals are too narrow on real data,
+that is a property of the model (see
+[`recalibrated()`](recalibrated.md), [`ensemble()`](ensemble.md), or
+overdispersed models such as `stanmomo(family = "nb")`). The model
+weights all ages equally on the clr scale, so the noise of ages with few
+deaths enters `k`; its intervals can be wider than those of
+[`lee_carter()`](lee_carter.md).
 
 ## References
 

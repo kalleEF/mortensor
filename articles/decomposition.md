@@ -17,7 +17,7 @@ draw by draw, so every contribution has an interval.
 | `"stepwise"` | any function of the rates | Andreev, Shkolnikov and Begun (2002) |
 | `"kitagawa"` | crude death rate: rates and age structure | Kitagawa (1955) |
 | `groups` with `composition = "radix"` | life expectancy of a population of subgroups fixed from the start (sex, education): subgroup rates and composition | Riffe, Tursun-zade and Trias Llimós (2024), “Arriaga meets Kitagawa” |
-| `groups` with `composition = "pooled"` | life expectancy of the pooled rates (areas, regions): subgroup rates and age-specific composition | Horiuchi et al. (2008) |
+| `groups` with `composition = "pooled"` | life expectancy of the pooled rates (areas, regions): subgroup rates and age-specific composition | parametrisation specific to this package (reference unknown); line integral of Horiuchi et al. (2008) |
 
 ``` r
 
@@ -47,23 +47,23 @@ gap
 #>    comparison    sex   from     to period from_value to_value difference
 #>         <int> <char> <char> <char>  <num>      <num>    <num>      <num>
 #> 1:          1 female     Q1     Q2   2019     79.825   82.501      2.676
-#> 2:          2 female     Q1     Q3   2019     79.825   83.930      4.105
+#> 2:          2 female     Q1     Q3   2019     79.825   83.929      4.103
 #> 3:          3 female     Q1     Q4   2019     79.825   85.020      5.195
-#> 4:          4 female     Q1     Q5   2019     79.825   86.290      6.465
+#> 4:          4 female     Q1     Q5   2019     79.825   86.289      6.464
 #> 5:          5   male     Q1     Q2   2019     75.429   78.596      3.167
-#> 6:          6   male     Q1     Q3   2019     75.429   80.604      5.174
+#> 6:          6   male     Q1     Q3   2019     75.429   80.604      5.175
 #> 7:          7   male     Q1     Q4   2019     75.429   81.818      6.389
-#> 8:          8   male     Q1     Q5   2019     75.429   83.094      7.665
+#> 8:          8   male     Q1     Q5   2019     75.429   83.094      7.664
 #>    difference_q0.025 difference_q0.5 difference_q0.975 sum_contributions
 #>                <num>           <num>             <num>             <num>
 #> 1:             2.515           2.682             2.826             2.676
-#> 2:             3.969           4.109             4.249             4.105
+#> 2:             3.964           4.109             4.249             4.103
 #> 3:             5.027           5.198             5.335             5.195
-#> 4:             6.318           6.466             6.615             6.465
+#> 4:             6.318           6.466             6.615             6.464
 #> 5:             3.001           3.166             3.332             3.167
-#> 6:             5.013           5.168             5.312             5.174
-#> 7:             6.223           6.384             6.564             6.389
-#> 8:             7.521           7.659             7.831             7.665
+#> 6:             5.013           5.168             5.312             5.175
+#> 7:             6.223           6.383             6.564             6.389
+#> 8:             7.517           7.657             7.831             7.664
 #>    max_residual
 #>           <num>
 #> 1:      1.3e-14
@@ -265,14 +265,19 @@ of the pooled rates of England (the quintiles weighted by their
 population at each age, as in published life tables; “current rates” in
 Vaupel’s terms, while the radix version of Riffe et al. describes
 “current conditions”). The rates of every quintile and age and the
-shares at every age are the parameters of a line-integral decomposition:
+shares at every age are the parameters of a line-integral decomposition
+(Horiuchi et al. 2008). This parametrisation is specific to this package
+(reference unknown); others would split the difference differently
+between rates and composition:
 
 ``` r
 
 eng <- mt_decompose(x, periods = c(2001, 2019), groups = "quintile", composition = "pooled")
 eng
 #> <mt_decomposition> life expectancy at 0, method horiuchi, pooled composition; 2 comparison(s), 1 draw
-#> Values: of the pooled rates (subgroups weighted by their shares at each age).
+#> Values: of the pooled rates (subgroups weighted by their shares at each age). Pooled composition:
+#> a parametrisation specific to this package (reference unknown), decomposed with the line
+#> integral of Horiuchi et al. (2008) or stepwise replacement.
 #>    comparison    sex   from     to from_value to_value difference
 #>         <int> <char> <char> <char>      <num>    <num>      <num>
 #> 1:          1 female   2001   2019     80.649   83.631      2.982
@@ -451,9 +456,9 @@ narrowing, from the fitted 2019 gap, is 1.1 years (95% interval 0.03 to
 2.0): the deviations of Q1 from the common trend return towards their
 average. The vignette “Inequality in England” shows that in 2010-2019
 the gap did not behave like this, and that Li-Lee forecast it poorly.
-[`anchored()`](../reference/anchored.md) moves the start towards the
-observed level but fades out within ten years, so it does not change the
-gap in 2035.
+[`anchored()`](../reference/anchored.md) starts the forecast from the
+observed rates of 2019 and keeps this offset in every forecast year (Lee
+and Miller 2001); the gap then narrows only by the model’s own change.
 
 Two forecasts of the same year are compared by giving the second as `y`.
 Their draws are independent, so they are shuffled before they are paired
@@ -546,9 +551,10 @@ although the rates fell.
   order of the ages.
 - Populations of subgroups: `composition = "radix"` (Riffe et al.) for
   subgroups fixed from the starting age (sex, education from 30 or 35,
-  country of birth); `"pooled"` for areas, regions and other groups
-  between which people move, and whenever the target is the life
-  expectancy of the whole population as published.
+  country of birth); `"pooled"` (a parametrisation specific to this
+  package) for areas, regions and other groups between which people
+  move, and whenever the target is the life expectancy of the whole
+  population as published.
 - Forecasts from an observed year: report the jump-off (`jump_off`) or
   decompose from the fitted rates (`observed = "fitted"`); compare two
   models with independent draws (the default).
@@ -575,6 +581,9 @@ on a model of continuous change. *Demography* 45(4): 785-801.
 
 Kitagawa EM (1955). Components of a difference between two rates.
 *Journal of the American Statistical Association* 50(272): 1168-1194.
+
+Lee R, Miller T (2001). Evaluating the performance of the Lee-Carter
+method for forecasting mortality. *Demography* 38(4): 537-549.
 
 Riffe T, Tursun-zade R, Trias Llimós S (2024). Arriaga meets Kitagawa.
 Life expectancy decomposition with population subgroups. MPIDR Working

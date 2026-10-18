@@ -111,10 +111,10 @@ preprocessing:</p>
 <span><span class="va">tn</span><span class="op">$</span><span class="va">scores</span></span>
 <span><span class="co">#&gt;    window       rmse         se selected</span></span>
 <span><span class="co">#&gt;     &lt;num&gt;      &lt;num&gt;      &lt;num&gt;   &lt;lgcl&gt;</span></span>
-<span><span class="co">#&gt; 1:     15 0.09663394 0.01095455     TRUE</span></span>
-<span><span class="co">#&gt; 2:     20 0.10893774 0.01174786    FALSE</span></span>
-<span><span class="co">#&gt; 3:     30 0.11908960 0.01040995    FALSE</span></span>
-<span><span class="co">#&gt; 4:     51 0.12341207 0.01074560    FALSE</span></span></code></pre></div>
+<span><span class="co">#&gt; 1:     15 0.09688975 0.01112097     TRUE</span></span>
+<span><span class="co">#&gt; 2:     20 0.10894032 0.01163030    FALSE</span></span>
+<span><span class="co">#&gt; 3:     30 0.11887717 0.01033258    FALSE</span></span>
+<span><span class="co">#&gt; 4:     51 0.12362359 0.01068757    FALSE</span></span></code></pre></div>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/mt_plot_design.html">mt_plot_tuning</a></span><span class="op">(</span><span class="va">tn</span><span class="op">)</span></span></code></pre></div>
 <p><img src="tuning-recalibration_files/figure-html/unnamed-chunk-3-1.png" class="r-plt" alt="" width="672"></p>
@@ -145,20 +145,21 @@ years.</p>
 </h2>
 <p><code><a href="../reference/recalibrated.html">recalibrated()</a></code> refits the model at several origins
 within the last ten training years, compares the forecasts with what was
-observed, and rescales the spread of the draws around their median by a
-factor that can grow with the horizon. The factor minimises the CRPS of
-these recent forecasts:</p>
+observed, and rescales the spread of the draws around their median by
+one factor for all horizons. The factor minimises the CRPS of these
+recent forecasts. The closest published method is the member-by-member
+post-processing of ensemble forecasts (Van Schaeybroeck and Vannitsem
+2015):</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">fit_cal</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_fit.html">mt_fit</a></span><span class="op">(</span><span class="fu"><a href="../reference/recalibrated.html">recalibrated</a></span><span class="op">(</span><span class="fu"><a href="../reference/lee_carter.html">lee_carter</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span>, <span class="va">ew</span><span class="op">)</span></span>
-<span><span class="va">fit_cal</span><span class="op">$</span><span class="va">calibration</span><span class="op">[</span>, <span class="fu">.</span><span class="op">(</span><span class="va">scale_h1</span>, <span class="va">slope</span>, <span class="va">crps_before</span>, <span class="va">crps_after</span>, <span class="va">cov95_before</span>, <span class="va">cov95_after</span><span class="op">)</span><span class="op">]</span></span>
-<span><span class="co">#&gt;    scale_h1       slope crps_before crps_after cov95_before cov95_after</span></span>
-<span><span class="co">#&gt;       &lt;num&gt;       &lt;num&gt;       &lt;num&gt;      &lt;num&gt;        &lt;num&gt;       &lt;num&gt;</span></span>
-<span><span class="co">#&gt; 1: 2.663646 -0.08257622  0.07156094 0.06722745    0.6690141   0.9314554</span></span></code></pre></div>
-<p>The factor at horizon 1 (<code>scale_h1</code>) is about 2.7:
-Lee-Carter’s intervals were far too narrow in the last decade. The
-factor changes little with the horizon (<code>slope</code> near 0, the
-factor is <code>scale_h1 * h^slope</code>). Within the window,
-recalibration raised the 95% coverage from 0.67 to 0.93.</p>
+<span><span class="va">fit_cal</span><span class="op">$</span><span class="va">calibration</span><span class="op">[</span>, <span class="fu">.</span><span class="op">(</span><span class="va">scale_h1</span>, <span class="va">crps_before</span>, <span class="va">crps_after</span>, <span class="va">cov95_before</span>, <span class="va">cov95_after</span><span class="op">)</span><span class="op">]</span></span>
+<span><span class="co">#&gt;    scale_h1 crps_before crps_after cov95_before cov95_after</span></span>
+<span><span class="co">#&gt;       &lt;num&gt;       &lt;num&gt;      &lt;num&gt;        &lt;num&gt;       &lt;num&gt;</span></span>
+<span><span class="co">#&gt; 1: 2.600246  0.07590544 0.06859299    0.4755869   0.8849765</span></span></code></pre></div>
+<p>The factor (<code>scale_h1</code>) is 2.6: Lee-Carter’s intervals
+were far too narrow in the last decade. Within the window, recalibration
+raised the 95% coverage from 0.48 to 0.88 and lowered the CRPS from
+0.076 to 0.069.</p>
 </div>
 <div class="section level2">
 <h2 id="both-together-checked-in-a-backtest">Both together, checked in a backtest<a class="anchor" aria-label="anchor" href="#both-together-checked-in-a-backtest"></a>
@@ -175,22 +176,25 @@ every origin from its own training data:</p>
 <span><span class="fu"><a href="../reference/mt_compare.html">mt_score_table</a></span><span class="op">(</span><span class="va">bt</span>, metrics <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"crps"</span>, <span class="st">"cov95"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt;                         model   crps cov95 crps_le cov95_le</span></span>
 <span><span class="co">#&gt;                        &lt;fctr&gt;  &lt;num&gt; &lt;num&gt;   &lt;num&gt;    &lt;num&gt;</span></span>
-<span><span class="co">#&gt; 1:                 Lee-Carter 0.0687 0.746   0.473    0.917</span></span>
-<span><span class="co">#&gt; 2:               window tuned 0.0573 0.733   0.287    1.000</span></span>
-<span><span class="co">#&gt; 3:               recalibrated 0.0657 0.877   0.442    1.000</span></span>
-<span><span class="co">#&gt; 4: window tuned, recalibrated 0.0559 0.828   0.289    1.000</span></span></code></pre></div>
+<span><span class="co">#&gt; 1:                 Lee-Carter 0.0709 0.632   0.470      0.9</span></span>
+<span><span class="co">#&gt; 2:               window tuned 0.0584 0.664   0.285      1.0</span></span>
+<span><span class="co">#&gt; 3:               recalibrated 0.0661 0.847   0.442      1.0</span></span>
+<span><span class="co">#&gt; 4: window tuned, recalibrated 0.0563 0.811   0.293      1.0</span></span></code></pre></div>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/mt_plot.html">mt_plot_coverage</a></span><span class="op">(</span><span class="va">bt</span><span class="op">)</span></span></code></pre></div>
 <p><img src="tuning-recalibration_files/figure-html/unnamed-chunk-6-1.png" class="r-plt" alt="" width="672"></p>
-<p>The tuned window makes the forecasts more accurate: CRPS 0.057
-against 0.069 for the rates, 0.29 against 0.47 years for life expectancy
+<p>The tuned window makes the forecasts more accurate: CRPS 0.058
+against 0.071 for the rates, 0.29 against 0.47 years for life expectancy
 at 30 (<code>_le</code>). Recalibration widens the intervals: the 95%
-coverage of the rates rises from 0.75 to 0.88, and from 0.73 to 0.83 for
+coverage of the rates rises from 0.63 to 0.85, and from 0.66 to 0.81 for
 the tuned model, whose recent errors were smaller, so its intervals
-widen less. The coverage of life expectancy is high for all versions:
-errors of single ages partly cancel in life expectancy. Tuning and
-recalibration answer different questions and combine: the tuned and
-recalibrated version has the lowest CRPS of the rates (0.056).</p>
+widen less. All versions remain below the nominal level, and their
+coverage falls with the horizon: the base model is too narrow by more at
+long horizons, and one factor for all horizons does not correct that.
+The coverage of life expectancy is high for all versions: errors of
+single ages partly cancel in life expectancy. Tuning and recalibration
+answer different questions and combine: the tuned and recalibrated
+version has the lowest CRPS of the rates (0.056).</p>
 </div>
 <div class="section level2">
 <h2 id="options">Options<a class="anchor" aria-label="anchor" href="#options"></a>
@@ -201,17 +205,25 @@ recalibrated version has the lowest CRPS of the rates (0.056).</p>
 of strata (with joint models, contrasts between the groups then get
 wider intervals);</li>
 <li>
-<code>recalibrated(ages = c(50, 75))</code>: separate factors for
-age bands;</li>
-<li>
-<code>recalibrated(quantity = "life_expectancy")</code>: recalibrate
-the intervals of life expectancy instead of single rates;</li>
-<li>
 <code>recalibrated(n_boot = 50)</code>: bootstrap intervals of the
 factors, which rest on few forecasts;</li>
 <li>
 <code>tuned(..., by = "sex")</code>: tune and fit groups of strata
 separately.</li>
+</ul>
+<p>Further options of <code><a href="../reference/recalibrated.html">recalibrated()</a></code> are specific to this
+package (reference unknown):</p>
+<ul>
+<li>
+<code>scale = "horizon"</code>: a factor that changes with the
+horizon as a power law, <code>scale_h1 * h^slope</code>;</li>
+<li>
+<code>bias = TRUE</code>: a correction of the drift;</li>
+<li>
+<code>ages = c(50, 75)</code>: separate factors for age bands;</li>
+<li>
+<code>quantity = "life_expectancy"</code>: recalibrate the intervals
+of life expectancy instead of single rates.</li>
 </ul>
 </div>
 <div class="section level2">
@@ -250,6 +262,13 @@ separately.</li>
 </tr>
 </tbody>
 </table>
+</div>
+<div class="section level2">
+<h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a>
+</h2>
+<p>Van Schaeybroeck B, Vannitsem S (2015). Ensemble post-processing
+using member-by-member approaches: theoretical aspects. <em>Quarterly
+Journal of the Royal Meteorological Society</em> 141(688): 807-818.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

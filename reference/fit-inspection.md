@@ -58,10 +58,10 @@ summary(fit)
 #>   data: 2 strata; ages 30 to 100+; periods 1990-2019
 #>   model and uncertainty:
 #>     log m(x,t) = a(x) + b(x) k(t), estimated by Poisson maximum likelihood
-#>     (Brouhns et al. 2002; Lee and Carter 1992). k(t) follows a random walk with
-#>     drift; draws include its innovations and the uncertainty of the drift. a(x)
-#>     and b(x) are fixed (parameter uncertainty with bootstrapped()). Jump-off:
-#>     fitted rates.
+#>     (Brouhns et al. 2002). k(t) follows a random walk with drift; draws include
+#>     its innovations and the uncertainty of the drift. a(x) and b(x) are fixed
+#>     (parameter uncertainty with bootstrapped()). Predictive draws add Poisson
+#>     variation of the deaths given the rates. Jump-off: fitted rates.
 #>   fit: Poisson deviance 4105.7 on 4260 cells (0.96 per cell); 4.1% of deviance residuals beyond +/-2
 head(residuals(fit))
 #>    stratum    age period deaths fitted_deaths   residual

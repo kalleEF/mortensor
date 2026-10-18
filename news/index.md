@@ -4,6 +4,136 @@
 
 Clean break: the 0.1.x interface is replaced (see `dev/revamp-plan.md`).
 
+### Published methods as defaults (audit of package-specific methods)
+
+Every method was checked against its published source
+(`dev/methods-audit.md`; article “Methods and sources”). Defaults are
+now the published methods; package-specific options are labelled
+“package-specific (reference unknown)” in their help pages; package
+inventions with a published counterpart in the package are deprecated
+(they work and warn with class `mt_warning_deprecated`). Results change.
+
+Predictive draws:
+
+- Deaths are Poisson given the model’s rates (Brouhns, Denuit and
+  Vermunt 2002). The extra-Poisson layer estimated from in-sample
+  residuals is removed: it had no published source, counted observation
+  noise twice for [`tucker3()`](../reference/tucker3.md) and the
+  functional data models, replaced the posterior predictive of the
+  Bayesian models, and the validation generator added the same noise.
+  `stanmomo(family = "nb")` uses its posterior negative-binomial
+  predictive. Intervals of models of smooth rates are narrower: 95%
+  coverage of [`lee_carter()`](../reference/lee_carter.md) on England &
+  Wales men (ages 30-100, check `backtest_ew`) falls from 0.746 to
+  0.632; on simulated Lee-Carter data with Poisson deaths it is 0.944.
+
+Models:
+
+- [`tucker3()`](../reference/tucker3.md) is centred as in the three-way
+  Lee-Carter model of Russolillo, Giordano and Haberman (2011), without
+  the residual noise layer; experimental. 95% coverage on simulated
+  Lee-Carter data 0.748.
+- Deprecated: [`product_ratio()`](../reference/product_ratio.md) (use
+  [`coherent_fdm()`](../reference/coherent_fdm.md)),
+  [`cause_shares()`](../reference/cause_shares.md) (use
+  [`reconciled()`](../reference/reconciled.md) over a cause hierarchy
+  with `additive = "rates"`, or
+  [`coda_causes()`](../reference/coda_causes.md)),
+  `rwd(observation_noise = TRUE)` (use
+  `arima_series(order = c(0, 1, 1), drift = TRUE)`, its published
+  reduced form), `tucker3(transform = "coda")` (use
+  [`coda()`](../reference/coda.md)).
+- The Li-Lee AR(1) without intercept clamped at 0.99 and the ridge and
+  SVD fallbacks of [`lee_carter()`](../reference/lee_carter.md) for
+  sparse counts are documented and warn.
+
+Combining models and coherence:
+
+- [`reconciled()`](../reference/reconciled.md),
+  [`mt_reconcile()`](../reference/mt_reconcile.md):
+  `dependence = "none"` by default; the reordering of separately
+  simulated strata (`"empirical"`) is opt-in and labelled
+  package-specific. Aggregate intervals of separate models are narrower:
+  95% coverage of the England total (ONS, WLS) 0.434 against 0.552. WLS
+  and MinT weights from the base draws, the non-negativity heuristic,
+  fixed nodes and proportional reconciliation are documented with their
+  sources and deviations.
+- [`reconciled()`](../reference/reconciled.md) warns (class
+  `mt_warning_hierarchy_exposure`) when the exposures of aggregate
+  strata differ from those the hierarchy implies, for example causes of
+  death declared without `additive = "rates"`.
+- `recalibrated(scale = "constant")` by default (member-by-member
+  post-processing, Van Schaeybroeck and Vannitsem 2015); the power law
+  over horizons is an option. `quantity = "asr"` standardises as
+  [`mt_backtest()`](../reference/mt_backtest.md) does.
+- [`anchored()`](../reference/anchored.md) defaults to the jump-off of
+  Lee and Miller (2001): `years = 1, decay = Inf, shrink = FALSE`;
+  averaging, linear decay and shrinkage (DerSimonian-Laird) are
+  package-specific options. On the ONS quintiles the default is less
+  accurate than the former settings (CRPS of Li-Lee 0.0708 against
+  0.0656).
+- Attributions corrected: `ensemble(weights = "crps")` is
+  package-specific; stacking weights optimise the medians;
+  `bootstrapped(type = "grid")` is the residual bootstrap of Renshaw and
+  Haberman (2008).
+
+Harmonisation:
+
+- `mt_ungroup(preserve_totals = FALSE)` by default (the published PCLM);
+  the rescaling to group totals is opt-in. The open age interval inside
+  the PCLM is iterated to convergence and documented as
+  package-specific. Backtests keep exposure totals when they ungroup
+  exposures.
+- Deprecated: ungrouping methods `"hyman_kannisto"`,
+  `"natural_gompertz"` and `"gam"`, `mt_shape_rates(method = "gam")`;
+  [`mt_disaggregate()`](../reference/mt_disaggregate.md) defaults to
+  proportional allocation by a standard age schedule
+  (`method = "shape"`).
+- [`mt_smooth()`](../reference/mt_smooth.md): the weighted Whittaker
+  smoother with smoothing parameters chosen by GCV per age, and a
+  quasi-Poisson GAM in 1D as in 2D.
+- [`mt_fill_suppressed()`](../reference/mt_fill_suppressed.md): cells
+  without a total get the truncated-Poisson mean.
+
+Evaluation and derived quantities:
+
+- `mt_dm_test(varestimator = "ewc")` by default: the fixed-smoothing
+  test with the equal-weighted cosine variance and t critical values
+  (Lazarus et al. 2018; Coroneo and Iacone 2020). In simulations under
+  the null (help page; check `dm_size`), the HLN-corrected test
+  (`"acf"`) rejected in 10-19% of samples at nominal 5% with 7
+  overlapping origins and horizons 2-5, the EWC test in 4.8-7.4% with
+  7-16 origins. p-values are larger: random walk against Li-Lee at
+  horizon 1, 0.049 against 0.00015.
+- [`asr()`](../reference/derived.md) standardises directly on the age
+  groups of the standard (Eurostat 2013) with `asr_groups()` and
+  `asr_columns()`; the former even split of standard weights over finer
+  ages (`age_groups = "grid"`) gave ASRs 1.8-11% too high on French
+  single ages.
+- [`yll()`](../reference/derived.md) uses life expectancy at the mean
+  age at death in the interval, e(x + a_x) (Murray 1994): 8.5-9.9% lower
+  with 5-year groups.
+- `mt_decompose(composition = "pooled")` is labelled package-specific;
+  the estimand of [`mt_excess()`](../reference/mt_excess.md) and its
+  P-scores are specified.
+
+Documentation:
+
+- New article “Methods and sources”: every method with its source and
+  status (published, published with deviations, package-specific).
+- All vignettes use the published defaults and were re-knitted; the
+  package comparison was re-run. Results that changed: in “Choosing and
+  combining models” the Diebold-Mariano test of life expectancy over 16
+  origins separates only the random walk from M6 over all horizons (p =
+  0.029); the intervals of Lee-Carter, CBD and the functional data model
+  are narrower (95% coverage 0.69, 0.71 and 0.46). In the England
+  inequality analysis the Lee-Miller jump-off made rate forecasts worse
+  and is not used. In the German Laender analysis Lee-Carter forecasts
+  the East-West gap best. “Your own data” pairs Lee-Carter with the
+  random walk in its ensemble.
+- Warnings of joint models name the message once instead of an example
+  stratum.
+
 ### Published methods added
 
 Models:
@@ -141,9 +271,9 @@ Models:
   unadjusted); [`stmomo()`](../reference/stmomo.md) forecasts one year;
   [`tucker3()`](../reference/tucker3.md),
   [`li_lee()`](../reference/li_lee.md) and
-  [`product_ratio()`](../reference/li_lee.md) run with a single age
-  group; [`coherent_fdm()`](../reference/coherent_fdm.md) reports groups
-  with fewer than two strata.
+  [`product_ratio()`](../reference/product_ratio.md) run with a single
+  age group; [`coherent_fdm()`](../reference/coherent_fdm.md) reports
+  groups with fewer than two strata.
 - [`cause_shares()`](../reference/cause_shares.md): predictive draws are
   those of the total model, with its deaths split between the causes, so
   the causes add up to the total in every draw; the extra variation of
@@ -796,7 +926,7 @@ own questions).
   [`hyndman_ullah()`](../reference/hyndman_ullah.md),
   [`stmomo()`](../reference/stmomo.md) (APC, CBD, RH, M6, LC),
   [`li_lee()`](../reference/li_lee.md),
-  [`product_ratio()`](../reference/li_lee.md),
+  [`product_ratio()`](../reference/product_ratio.md),
   [`cause_shares()`](../reference/cause_shares.md) (Tucker4-ILR
   multi-cause forecasts),
   [`mt_reconcile()`](../reference/mt_reconcile.md) (MinT, WLS, OLS),
@@ -838,7 +968,7 @@ own questions).
   `ons_data`; the 0.1-to-0.2 migration vignette is removed.
 
 - [`li_lee()`](../reference/li_lee.md) and
-  [`product_ratio()`](../reference/li_lee.md) gain
+  [`product_ratio()`](../reference/product_ratio.md) gain
   `jump_off = "observed"`; Lee-Carter labels name their variant (SVD,
   observed jump-off, bootstrap).
 

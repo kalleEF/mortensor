@@ -100,13 +100,13 @@ groups, 2001-2019 (ONS, Open Government Licence):</p>
 removes noise between neighbouring ages, keeps every year as
 observed;</li>
 <li>
-<strong>over time</strong>, each age separately (Whittaker smoothing
-of the log rates): removes the year-to-year variation, keeps the age
-pattern of every year;</li>
+<strong>over time</strong>, each age separately (weighted Whittaker
+smoothing of the log rates, with the deaths as weights): removes the
+year-to-year variation, keeps the age pattern of every year;</li>
 <li>
-<strong>the age-period surface</strong> (an additive model with a
-tensor-product spline <code>te(age, year)</code>, package mgcv): both at
-once.</li>
+<strong>the age-period surface</strong> (a quasi-Poisson additive
+model with a tensor-product spline <code>te(age, year)</code>, package
+mgcv): both at once.</li>
 </ul>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">sm</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="st">"over age"</span> <span class="op">=</span> <span class="fu"><a href="../reference/mt_smooth.html">mt_smooth</a></span><span class="op">(</span><span class="va">x</span><span class="op">)</span>,</span>
@@ -119,9 +119,12 @@ once.</li>
 leaves almost all of the year-to-year variation, because with 5-year age
 groups the neighbouring ages already agree closely; it matters for
 single years of age and sparse data (small areas, causes of death).
-Smoothing over time and the surface remove the year-to-year variation
-and keep the trend, including the end of the decline after 2011. The
-surface follows the last years a little more closely.</p>
+Smoothing over time and the surface remove most of the year-to-year
+variation and keep the trend, including the end of the decline after
+2011. Over time, the smoothing parameter is chosen for each age: at
+85-89, where deaths are many and the year-to-year variation is large
+relative to Poisson noise, the smoother keeps much of that
+variation.</p>
 </div>
 <div class="section level2">
 <h2 id="how-much-was-removed">How much was removed<a class="anchor" aria-label="anchor" href="#how-much-was-removed"></a>
@@ -131,9 +134,10 @@ observed rates:</p>
 <ul>
 <li>
 <code>dispersion</code>: variance of the observed deaths around the
-smoothed ones, relative to Poisson variance. About 1 means the smoother
-removed Poisson noise only; above 1 means it also removed year effects;
-well below 1 means it followed the noise.</li>
+smoothed ones, relative to Poisson variance, allowing for the degrees of
+freedom of the smoother. About 1 means the smoother removed Poisson
+noise only; above 1 means it also removed year effects; well below 1
+means it followed the noise.</li>
 <li>
 <code>trend_ratio</code>: variance of the year-to-year changes of
 the smoothed rates relative to the observed ones. Small values mean that
@@ -144,14 +148,18 @@ most of the annual variation was removed.</li>
 <span><span class="va">chk</span><span class="op">[</span>, <span class="fu">.</span><span class="op">(</span>dispersion <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">dispersion</span><span class="op">)</span>, <span class="fl">2</span><span class="op">)</span>, trend_ratio <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">trend_ratio</span><span class="op">)</span>, <span class="fl">3</span><span class="op">)</span><span class="op">)</span>, by <span class="op">=</span> <span class="va">method</span><span class="op">]</span></span>
 <span><span class="co">#&gt;                method dispersion trend_ratio</span></span>
 <span><span class="co">#&gt;                &lt;char&gt;      &lt;num&gt;       &lt;num&gt;</span></span>
-<span><span class="co">#&gt; 1:           over age       0.49       0.860</span></span>
-<span><span class="co">#&gt; 2:          over time       2.18       0.028</span></span>
-<span><span class="co">#&gt; 3: age-period surface       2.05       0.052</span></span></code></pre></div>
-<p>Over age, the dispersion is below 1: with 20 age groups per year the
-spline stays close to the points. Over time and on the surface, the
-observed deaths vary about twice as much as Poisson noise around the
-trend: the years differ by more than chance, and smoothing treats these
-year effects as noise. Whether that is right depends on the question.
+<span><span class="co">#&gt; 1:           over age       1.44       0.872</span></span>
+<span><span class="co">#&gt; 2:          over time       1.94       0.167</span></span>
+<span><span class="co">#&gt; 3: age-period surface       3.27       0.046</span></span></code></pre></div>
+<p>Over age, the dispersion is 1.4: around the spline, the deaths of
+neighbouring age groups vary a little more than Poisson noise. Over time
+the observed deaths vary about twice as much as Poisson noise around the
+trend (1.9), and around the surface more than three times as much (3.3):
+the years differ by more than chance, and smoothing treats these year
+effects as noise. The surface removes the most year-to-year variation
+(<code>trend_ratio</code> 0.046, against 0.167 over time); the smoother
+over time follows ages with many deaths closely, as the figure showed at
+85-89. Whether removing year effects is right depends on the question.
 For the trend that a forecast continues, it usually is.</p>
 </div>
 <div class="section level2">
@@ -160,16 +168,19 @@ For the trend that a forecast continues, it usually is.</p>
 <p>Every smoother has a parameter that sets how closely it follows the
 data. By default it is estimated from the data: by BIC for the P-splines
 over age, by generalised cross-validation for smoothing over time (one
-value per stratum, the same smoothness at every age), and by REML for
-the surface. It can also be set by hand (<code>lambda</code>):</p>
+value for each age and stratum), and by REML for the surface. It can
+also be set by hand (<code>lambda</code>):</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">lam</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="st">"lambda = 1"</span> <span class="op">=</span> <span class="fu"><a href="../reference/mt_smooth.html">mt_smooth</a></span><span class="op">(</span><span class="va">x</span>, along <span class="op">=</span> <span class="st">"period"</span>, method <span class="op">=</span> <span class="st">"whittaker"</span>, lambda <span class="op">=</span> <span class="fl">1</span><span class="op">)</span>,</span>
 <span>            <span class="st">"estimated"</span> <span class="op">=</span> <span class="va">sm</span><span class="op">[[</span><span class="st">"over time"</span><span class="op">]</span><span class="op">]</span>,</span>
-<span>            <span class="st">"lambda = 10,000"</span> <span class="op">=</span> <span class="fu"><a href="../reference/mt_smooth.html">mt_smooth</a></span><span class="op">(</span><span class="va">x</span>, along <span class="op">=</span> <span class="st">"period"</span>, method <span class="op">=</span> <span class="st">"whittaker"</span>, lambda <span class="op">=</span> <span class="fl">1e4</span><span class="op">)</span><span class="op">)</span></span>
+<span>            <span class="st">"lambda = 1,000,000"</span> <span class="op">=</span> <span class="fu"><a href="../reference/mt_smooth.html">mt_smooth</a></span><span class="op">(</span><span class="va">x</span>, along <span class="op">=</span> <span class="st">"period"</span>, method <span class="op">=</span> <span class="st">"whittaker"</span>, lambda <span class="op">=</span> <span class="fl">1e6</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/mt_smooth_check.html">mt_plot_smooth</a></span><span class="op">(</span><span class="va">x</span>, <span class="va">lam</span>, ages <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"65-69"</span>, <span class="st">"85-89"</span><span class="op">)</span>, strata <span class="op">=</span> <span class="st">"female.Q1"</span><span class="op">)</span></span></code></pre></div>
 <p><img src="smoothing_files/figure-html/unnamed-chunk-5-1.png" class="r-plt" alt="" width="672"></p>
 <p>A small value follows the noise, a large one approaches a straight
-line. When the choice matters for the forecast, it can be made by
+line of the log rates. The deaths are the weights, so the same value
+smooths less where deaths are many: with <code>lambda = 1e6</code> the
+rates at 65-69 are close to a straight line, while those at 85-89 still
+bend. When the choice matters for the forecast, it can be made by
 forecast accuracy: try several values and keep the one that forecast the
 last years best (<code><a href="../reference/mt_tune.html">mt_tune()</a></code>, see “Tuning and
 recalibration”).</p>
@@ -180,8 +191,8 @@ recalibration”).</p>
 <p>Smoothing changes two things: the level from which a forecast starts,
 and the variation from which the model estimates its uncertainty.
 Smoothing is a preprocessing step of the fit (<code>prep</code>), so
-that backtests repeat it on each training window and the model takes its
-observation noise from the raw deaths:</p>
+that backtests repeat it on each training window; the observed rates and
+residuals of the fit refer to the raw deaths:</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">smooth_t</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_prep.html">mt_prep</a></span><span class="op">(</span><span class="fu"><a href="../reference/mt_prep.html">step_smooth</a></span><span class="op">(</span>along <span class="op">=</span> <span class="st">"period"</span>, method <span class="op">=</span> <span class="st">"whittaker"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">fc</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>raw <span class="op">=</span> <span class="fu"><a href="../reference/mt_forecast.html">mt_forecast</a></span><span class="op">(</span><span class="fu"><a href="../reference/mt_fit.html">mt_fit</a></span><span class="op">(</span><span class="fu"><a href="../reference/lee_carter.html">lee_carter</a></span><span class="op">(</span><span class="op">)</span>, <span class="va">x</span><span class="op">)</span>, h <span class="op">=</span> <span class="fl">15</span>, n_draws <span class="op">=</span> <span class="fl">500</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span>,</span>
@@ -191,15 +202,15 @@ observation noise from the raw deaths:</p>
 <span><span class="co">#&gt; Key: &lt;label, period&gt;</span></span>
 <span><span class="co">#&gt;        label period              raw smoothed over time</span></span>
 <span><span class="co">#&gt;       &lt;char&gt;  &lt;num&gt;           &lt;char&gt;             &lt;char&gt;</span></span>
-<span><span class="co">#&gt; 1: female.Q1   2025 80.5 (79.0-81.9)   80.5 (80.2-80.9)</span></span>
-<span><span class="co">#&gt; 2: female.Q1   2034 81.4 (78.7-84.2)   81.5 (80.9-82.1)</span></span>
-<span><span class="co">#&gt; 3: female.Q5   2025 87.4 (86.1-88.6)   87.3 (87.1-87.4)</span></span>
-<span><span class="co">#&gt; 4: female.Q5   2034 89.0 (86.7-91.1)   88.8 (88.5-89.1)</span></span></code></pre></div>
+<span><span class="co">#&gt; 1: female.Q1   2025 80.5 (79.0-81.9)   80.4 (79.8-81.0)</span></span>
+<span><span class="co">#&gt; 2: female.Q1   2034 81.4 (78.7-84.2)   81.3 (80.3-82.4)</span></span>
+<span><span class="co">#&gt; 3: female.Q5   2025 87.4 (86.1-88.6)   87.2 (86.9-87.5)</span></span>
+<span><span class="co">#&gt; 4: female.Q5   2034 89.0 (86.7-91.1)   88.8 (88.2-89.3)</span></span></code></pre></div>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/mt_compare.html">mt_plot_compare</a></span><span class="op">(</span><span class="va">fc</span>, strata <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"female.Q1"</span>, <span class="st">"female.Q5"</span><span class="op">)</span>, data <span class="op">=</span> <span class="va">x</span><span class="op">)</span></span></code></pre></div>
 <p><img src="smoothing_files/figure-html/unnamed-chunk-7-1.png" class="r-plt" alt="" width="672"></p>
 <p>The central forecasts are close; the intervals of the smoothed fit
-are much narrower (for women in Q1 in 2034, 80.9-82.1 against 78.7-84.2
+are much narrower (for women in Q1 in 2034, 80.3-82.4 against 78.7-84.2
 years). Lee-Carter takes the uncertainty of its forecast from the
 year-to-year variation of its period index, and smoothing over time has
 removed most of it. Whether the narrower intervals are still right is a
@@ -212,19 +223,20 @@ intervals (see “Backtesting and scores”):</p>
 <span><span class="fu"><a href="../reference/mt_compare.html">mt_score_table</a></span><span class="op">(</span><span class="va">bt</span>, metrics <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"crps"</span>, <span class="st">"cov80"</span>, <span class="st">"cov95"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt;                 model   crps cov80 cov95</span></span>
 <span><span class="co">#&gt;                &lt;fctr&gt;  &lt;num&gt; &lt;num&gt; &lt;num&gt;</span></span>
-<span><span class="co">#&gt; 1:                raw 0.0666 0.650 0.831</span></span>
-<span><span class="co">#&gt; 2: smoothed over time 0.0754 0.468 0.640</span></span></code></pre></div>
+<span><span class="co">#&gt; 1:                raw 0.0672 0.609 0.795</span></span>
+<span><span class="co">#&gt; 2: smoothed over time 0.0716 0.461 0.631</span></span></code></pre></div>
 <p><code>cov95</code> is the share of observed rates inside the 95%
-intervals, which should be about 0.95. Without smoothing it is 0.83,
-with smoothing 0.64: the smoothed intervals are much too narrow. The
-CRPS, a score of the whole forecast distribution (lower is better), is
-also worse with smoothing (0.075 against 0.067). On these data the
-year-to-year variation, although about twice Poisson noise, carries
-information about the uncertainty of the trend, and smoothing over time
-does not help the forecast. It helps where counts are small (causes of
-death, small areas), and then together with <code><a href="../reference/recalibrated.html">recalibrated()</a></code>,
-which widens the intervals to the errors of recent forecasts (see
-“Tuning and recalibration”).</p>
+intervals, which should be about 0.95. Without smoothing it is 0.80,
+with smoothing 0.63: the intervals of Lee-Carter are too narrow on these
+data, and those of the smoothed fit much too narrow. The CRPS, a score
+of the whole forecast distribution (lower is better), is also worse with
+smoothing (0.072 against 0.067). On these data the year-to-year
+variation, although about twice Poisson noise, carries information about
+the uncertainty of the trend, and smoothing over time does not help the
+forecast. It helps where counts are small (causes of death, small
+areas), and then together with <code><a href="../reference/recalibrated.html">recalibrated()</a></code>, which widens
+the intervals to the errors of recent forecasts (see “Tuning and
+recalibration”).</p>
 </div>
 <div class="section level2">
 <h2 id="summary">Summary<a class="anchor" aria-label="anchor" href="#summary"></a>

@@ -35,11 +35,18 @@ mt_score(
 
 A `data.table` with the mean CRPS, WIS and absolute error, the root mean
 squared error of the median (`rmse`), MASE (mean of absolute error over
-the scale; rates only), empirical coverage of the 50%, 80% and 95%
-intervals, mean PIT, the number of scored cells and the `unit` of CRPS,
-WIS and absolute error (log rates, or years for life expectancy).
-Backtests of the same model with different preprocessing (column `prep`)
-are scored separately.
+the scale, the mean absolute year-to-year change of the training data,
+as the mean absolute scaled error of Hyndman and Koehler 2006; rates
+only), empirical coverage of the 50%, 80% and 95% intervals, mean PIT,
+the number of scored cells and the `unit` of CRPS, WIS and absolute
+error (log rates, or years for life expectancy). Backtests of the same
+model with different preprocessing (column `prep`) are scored
+separately.
+
+## References
+
+Hyndman RJ, Koehler AB (2006). Another look at measures of forecast
+accuracy. *International Journal of Forecasting* 22(4): 679-688.
 
 ## Examples
 

@@ -11,9 +11,10 @@ predictive draws, backtests and coherence. Two questions follow:
     as their documentation recommends, compare with mortensor pipelines
     in rolling-origin backtests?
 
-The computations take about an hour, mostly for MCMC chains, and are run
-by `dev/compare-packages.R` in the source repository; this vignette
-shows the code and reads the stored results. Versions used:
+The computations take one to one and a half hours, mostly for MCMC
+chains, and are run by `dev/compare-packages.R` in the source
+repository; this vignette shows the code and reads the stored results.
+Versions used:
 
 ``` r
 
@@ -106,12 +107,12 @@ Differences are in units of the posterior standard deviation:
 res$fidelity$bamp[, lapply(.SD, function(v) if (is.numeric(v)) signif(v, 2) else v)]
 #>                        comparison max_abs_diff_median_in_sd
 #>                            <char>                     <num>
-#> 1:   apc_bayes() vs bamp (seed 1)                     0.055
-#> 2: bamp (seed 2) vs bamp (seed 1)                     0.061
+#> 1:   apc_bayes() vs bamp (seed 1)                     0.068
+#> 2: bamp (seed 2) vs bamp (seed 1)                     0.054
 #>    max_abs_diff_90_bounds_in_sd
 #>                           <num>
-#> 1:                         0.11
-#> 2:                         0.11
+#> 1:                         0.09
+#> 2:                         0.14
 ```
 
 ## Accuracy
@@ -157,8 +158,10 @@ is wrapped in the same way (random walk with drift for k, its 95%
 bounds); StMoMo models are used through
 [`stmomo()`](../reference/stmomo.md), which calls `fit()` and
 [`simulate()`](https://rdrr.io/r/stats/simulate.html). The native
-distributions describe the smooth death rates; mortensor’s predictive
-draws add the variation of observed rates around them.
+distributions of bamp and `lca()` describe the smooth death rates, and
+that of `fdm()` includes an observational variance; for models of smooth
+rates, mortensor’s predictive draws add Poisson variation of the deaths
+given the rates (Brouhns, Denuit and Vermunt 2002).
 
 Data sets: the ONS deprivation data (`ons_data`, sex by quintile, 5-year
 age groups with 0-4 combined so that bamp has equal widths), France (HMD
@@ -177,42 +180,42 @@ for (d in unique(acc$data)) {
 #> ONS England, sex x IMD quintile, 5-year groups
 #>                         model   crps  cov50  cov80  cov95 seconds
 #>                        <char> <char> <char> <char> <char>   <num>
-#>           Bayesian APC (bamp) 0.0619   0.48   0.76   0.92    2463
-#>                 bamp (native) 0.0666   0.37   0.62   0.79    2083
-#>                    Lee-Carter 0.0670   0.35   0.62   0.81       2
-#>        Li-Lee (common by sex) 0.0676   0.36   0.63   0.82       1
-#>             Ensemble (lc, rw) 0.0688   0.44   0.75   0.92       3
-#>       demography fdm (native) 0.0719   0.33   0.57   0.76       8
-#>  Functional demographic model 0.0722   0.34   0.63   0.82      30
-#>       demography lca (native) 0.0841   0.21   0.39   0.56       1
+#>           Bayesian APC (bamp) 0.0623   0.46   0.75   0.91    2032
+#>                 bamp (native) 0.0667   0.37   0.62   0.79    3122
+#>                    Lee-Carter 0.0677   0.33   0.58   0.77       2
+#>        Li-Lee (common by sex) 0.0684   0.35   0.60   0.77       1
+#>             Ensemble (lc, rw) 0.0685   0.43   0.75   0.92       2
+#>       demography fdm (native) 0.0719   0.33   0.57   0.76      10
+#>  Functional demographic model 0.0726   0.34   0.62   0.81      30
+#>       demography lca (native) 0.0841   0.21   0.39   0.56       2
 #> 
 #> France (HMD via demography), single ages 0-95
 #>                         model   crps  cov50  cov80  cov95 seconds
 #>                        <char> <char> <char> <char> <char>   <num>
 #>        Random walk with drift 0.0765   0.65   0.91   0.98       2
-#>             Ensemble (lc, rw) 0.0790   0.51   0.84   0.98       2
-#>  Functional demographic model 0.0899   0.30   0.52   0.70      19
-#>       demography fdm (native) 0.0941   0.24   0.43   0.59      13
-#>                    Lee-Carter 0.0977   0.33   0.57   0.79       2
-#>       demography lca (native) 0.0982   0.31   0.54   0.74       2
+#>             Ensemble (lc, rw) 0.0803   0.47   0.82   0.97       3
+#>  Functional demographic model 0.0908   0.28   0.49   0.66      18
+#>       demography fdm (native) 0.0941   0.24   0.43   0.59      11
+#>       demography lca (native) 0.0982   0.31   0.54   0.74       1
+#>                    Lee-Carter 0.1040   0.26   0.46   0.65       1
 #> 
 #> England & Wales men (HMD via StMoMo), single ages 55-89
 #>                    model   crps  cov50  cov80  cov95 seconds
 #>                   <char> <char> <char> <char> <char>   <num>
-#>               StMoMo APC 0.0432   0.35   0.77   0.98       3
+#>               StMoMo APC 0.0432   0.33   0.75   0.98       3
 #>   Random walk with drift 0.0554   0.48   0.80   0.97       0
-#>        Ensemble (lc, rw) 0.0563   0.42   0.74   0.95       1
+#>        Ensemble (lc, rw) 0.0566   0.38   0.73   0.94       0
 #>  demography lca (native) 0.0583   0.31   0.60   0.79       0
-#>               Lee-Carter 0.0619   0.31   0.58   0.79       0
-#>               StMoMo CBD 0.0625   0.35   0.60   0.82       1
-#>                StMoMo LC 0.0646   0.27   0.52   0.75       1
+#>               Lee-Carter 0.0624   0.28   0.52   0.74       0
+#>               StMoMo CBD 0.0635   0.33   0.57   0.76       1
+#>                StMoMo LC 0.0655   0.23   0.46   0.70       1
 #> 
 #> bamp example data (8 age groups, 10 years)
 #>                   model   crps  cov50  cov80  cov95 seconds
 #>                  <char> <char> <char> <char> <char>   <num>
-#>     Bayesian APC (bamp) 0.2602   0.46   0.58   0.75      31
-#>           bamp (native) 0.2738   0.23   0.42   0.60      26
-#>              Lee-Carter 0.2804   0.40   0.65   0.88       1
+#>     Bayesian APC (bamp) 0.2600   0.42   0.52   0.73      28
+#>           bamp (native) 0.2768   0.23   0.40   0.62      25
+#>              Lee-Carter 0.2881   0.31   0.56   0.71       0
 #>  Random walk with drift 0.3460   0.54   0.81   0.85       0
 ```
 
@@ -247,34 +250,42 @@ the wrapper adds no difference beyond Monte Carlo error.
 **Accuracy.** Four observations hold across the data sets:
 
 - The same model used through mortensor scores better than the native
-  package in 5 of 7 comparisons, mainly because mortensor’s predictive
-  draws include the variation of observed rates around the smooth
-  forecast, which the native intervals omit. This improves coverage
-  most: bamp on the ONS data covers 0.79 of observed rates at 95%
-  natively and 0.92 through [`apc_bayes()`](../reference/apc_bayes.md);
-  the functional demographic model 0.76 against 0.82 (ONS) and 0.59
-  against 0.70 (France). The exceptions are the functional demographic
-  model on the ONS data, where both have the same CRPS (0.072), and
+  package in 4 of 7 comparisons. Where the native intervals describe the
+  smooth rates only, the Poisson variation of the deaths in mortensor’s
+  predictive draws improves coverage: bamp on the ONS data covers 0.79
+  of observed rates at 95% natively and 0.91 through
+  [`apc_bayes()`](../reference/apc_bayes.md), on bamp’s example 0.62
+  against 0.73; `lca()` on the ONS data 0.56 against 0.77 for
+  [`lee_carter()`](../reference/lee_carter.md). The functional
+  demographic model on France is more accurate through mortensor (CRPS
+  0.091 against 0.094, coverage 0.66 against 0.59). The exceptions are
+  the functional demographic model on the ONS data, where the native
+  forecast is slightly more accurate (CRPS 0.0719 against 0.0726) with
+  lower coverage (0.76 against 0.81), and
   [`demography::lca()`](https://pkg.robjhyndman.com/demography/reference/lca.html)
-  on England & Wales men, whose least-squares fit with k adjusted to the
-  observed deaths is more accurate there than the Poisson Lee-Carter of
-  [`lee_carter()`](../reference/lee_carter.md) and of StMoMo.
+  on France and on England & Wales men, whose least-squares fit with k
+  adjusted to the observed deaths is more accurate there than the
+  Poisson Lee-Carter of [`lee_carter()`](../reference/lee_carter.md)
+  (CRPS 0.098 against 0.104 and 0.058 against 0.062) and, on England &
+  Wales men, of StMoMo.
 - No single model is best everywhere. The Bayesian APC model is the most
   accurate on the ONS data and on bamp’s example, the StMoMo APC model
   on England & Wales men 55-89 (cohort effects), and the random walk
   with drift on France, where the age pattern of mortality decline
   changed over the period and Lee-Carter extrapolates the old pattern.
 - Single structured models (Lee-Carter, `lca()`, functional demographic
-  model, StMoMo LC and CBD) have 95% intervals that cover 56% to 82% of
-  the observed rates on the three larger data sets, so they understate
-  the uncertainty of real forecasts. On the three larger data sets the
-  random walk and the ensemble of Lee-Carter and random walk cover 92%
-  to 98% (bamp’s example has only 48 scored cells).
-- The ensemble is never the most accurate but always close to the best
-  (CRPS within 11% of the best model on the ONS data, 3% on France, 30%
-  on England & Wales men) with near-nominal coverage, at the cost of
-  seconds; the Bayesian APC models took about 40 minutes per backtest on
-  the ONS data.
+  model, Li-Lee, StMoMo LC and CBD) have 95% intervals that cover 56% to
+  81% of the observed rates on the three larger data sets, so they
+  understate the uncertainty of real forecasts. On the three larger data
+  sets the random walk and the ensemble of Lee-Carter and random walk
+  cover 92% to 98% (bamp’s example has only 48 scored cells).
+- The ensemble is never the most accurate (its CRPS is 10% above that of
+  the best model on the ONS data, 5% on France and 31% on England &
+  Wales men), but its coverage is near nominal on all three data sets,
+  at the cost of seconds; the Bayesian APC models took 34
+  ([`apc_bayes()`](../reference/apc_bayes.md)) and 52 minutes (native
+  bamp) per backtest on the ONS data, on a machine shared with other
+  jobs.
 
 On data like these, an ensemble is a robust default, and a backtest on
 the data at hand ([`mt_backtest()`](../reference/mt_backtest.md))

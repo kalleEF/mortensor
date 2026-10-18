@@ -143,10 +143,10 @@ bt <- mt_compare(list("Lee-Carter" = lee_carter()), x, origins = 2008:2014, h = 
 mt_score_table(bt, metrics = c("crps", "cov80", "cov95"))
 #>         model   crps cov80 cov95
 #>        <fctr>  <num> <num> <num>
-#> 1: Lee-Carter 0.0678 0.654 0.829
+#> 1: Lee-Carter 0.0683 0.617 0.793
 ```
 
-The 95% intervals contained 83% of the observed rates, fewer than 95%:
+The 95% intervals contained 79% of the observed rates, fewer than 95%:
 Lee-Carter’s intervals are too narrow on these data. “Backtesting and
 scores” explains the scores, “Tuning and recalibration” how to widen the
 intervals.
@@ -162,6 +162,7 @@ intervals.
 | Scores and backtests | “Backtesting and scores” |
 | Choosing settings, widening intervals | “Tuning and recalibration” |
 | Models and ensembles | “Choosing and combining models”, “Model reference” |
+| Published sources of the methods | “Methods and sources” (package website) |
 | Totals and parts | “Coherent forecasts” |
 | What drives a gap | “Decomposing differences in life expectancy” |
 | How unequal lifespans are | “Lifespan variation” |

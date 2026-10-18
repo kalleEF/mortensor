@@ -272,8 +272,10 @@ observed cells (for your own models)</td>
 <code><a href="../reference/mt_regroup.html">mt_regroup()</a></code>, <code><a href="../reference/mt_ungroup.html">mt_ungroup()</a></code>,
 <code><a href="../reference/mt_smooth.html">mt_smooth()</a></code>
 </td>
-<td>common resolution, single years, smoothing over age, time or
-both</td>
+<td>common resolution, single years (PCLM or monotone interpolation; the
+spline methods <code>"hyman_kannisto"</code>,
+<code>"natural_gompertz"</code> and <code>"gam"</code> are deprecated),
+smoothing over age, time or both</td>
 <td><code>mt_data</code></td>
 <td><code>mt_data</code></td>
 </tr>
@@ -315,14 +317,17 @@ smoothers in one figure</td>
 <td>Model</td>
 <td>
 <code><a href="../reference/lee_carter.html">lee_carter()</a></code> (optionally rotated), <code><a href="../reference/rwd.html">rwd()</a></code>,
-<code><a href="../reference/li_lee.html">li_lee()</a></code>, <code><a href="../reference/li_lee.html">product_ratio()</a></code>,
-<code><a href="../reference/hyndman_ullah.html">hyndman_ullah()</a></code>, <code><a href="../reference/coherent_fdm.html">coherent_fdm()</a></code>,
-<code><a href="../reference/coda.html">coda()</a></code> (also coherent), <code><a href="../reference/stmomo.html">stmomo()</a></code>,
-<code><a href="../reference/stanmomo.html">stanmomo()</a></code>, <code><a href="../reference/arima_series.html">arima_series()</a></code>,
-<code><a href="../reference/arima_series.html">ets_series()</a></code>, <code><a href="../reference/apc_bayes.html">apc_bayes()</a></code>,
-<code><a href="../reference/tucker3.html">tucker3()</a></code>, <code><a href="../reference/cause_shares.html">cause_shares()</a></code>,
-<code><a href="../reference/coda_causes.html">coda_causes()</a></code>
-</td>
+<code><a href="../reference/li_lee.html">li_lee()</a></code>, <code><a href="../reference/hyndman_ullah.html">hyndman_ullah()</a></code>,
+<code><a href="../reference/coherent_fdm.html">coherent_fdm()</a></code>, <code><a href="../reference/coda.html">coda()</a></code> (also coherent),
+<code><a href="../reference/stmomo.html">stmomo()</a></code>, <code><a href="../reference/stanmomo.html">stanmomo()</a></code>,
+<code><a href="../reference/arima_series.html">arima_series()</a></code>, <code><a href="../reference/arima_series.html">ets_series()</a></code>,
+<code><a href="../reference/apc_bayes.html">apc_bayes()</a></code>, <code><a href="../reference/tucker3.html">tucker3()</a></code>,
+<code><a href="../reference/coda_causes.html">coda_causes()</a></code>; deprecated: <code><a href="../reference/product_ratio.html">product_ratio()</a></code>
+(use <code><a href="../reference/coherent_fdm.html">coherent_fdm()</a></code>), <code><a href="../reference/cause_shares.html">cause_shares()</a></code> (use
+<code><a href="../reference/reconciled.html">reconciled()</a></code> or <code><a href="../reference/coda_causes.html">coda_causes()</a></code>),
+<code>rwd(observation_noise = TRUE)</code> (use
+<code>arima_series(order = c(0, 1, 1), drift = TRUE)</code>),
+<code>tucker3(transform = "coda")</code> (use <code><a href="../reference/coda.html">coda()</a></code>)</td>
 <td>model specifications</td>
 <td>settings</td>
 <td><code>mt_spec</code></td>
@@ -376,8 +381,9 @@ rates, life expectancy or ASR</td>
 <td>
 <code><a href="../reference/anchored.html">anchored()</a></code>, <code><a href="../reference/mt_jump_off.html">mt_jump_off()</a></code>
 </td>
-<td>start forecasts at the observed level of the last years; report the
-first-year step</td>
+<td>start forecasts at the observed rates of the last year (optionally
+of several years, shrunk and fading out); report the first-year
+step</td>
 <td>
 <code>mt_spec</code>, <code>mt_draws</code>
 </td>
@@ -625,7 +631,9 @@ years with gaps)</td>
 <code><a href="../reference/mt_disaggregate_check.html">mt_disaggregate_check()</a></code>,
 <code><a href="../reference/mt_disaggregate_check.html">mt_plot_disaggregation()</a></code>
 </td>
-<td>forecasts on finer ages, with fixed or changing age shapes</td>
+<td>forecasts on finer ages with a fixed age shape within each group
+(the spline methods and <code>mt_shape_rates(method = "gam")</code> are
+deprecated)</td>
 <td><code>mt_draws</code></td>
 <td>
 <code>mt_draws</code>, table, ggplot</td>

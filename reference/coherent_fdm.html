@@ -111,15 +111,18 @@ functional demographic model whose scores are forecast with stationary
 ARFIMA models, so the differences between the strata stay bounded and
 revert towards their recent level.</p></li>
 </ul><p>Forecasts of the strata are products of the two. This is the original
-method of <code><a href="https://pkg.robjhyndman.com/demography/reference/coherentfdm.html" class="external-link">demography::coherentfdm()</a></code>; <code><a href="li_lee.html">product_ratio()</a></code> is a Lee-Carter
-version of it, and <code><a href="li_lee.html">li_lee()</a></code> a related model with a common Lee-Carter
-factor.</p>
+method of <code><a href="https://pkg.robjhyndman.com/demography/reference/coherentfdm.html" class="external-link">demography::coherentfdm()</a></code>; <code><a href="li_lee.html">li_lee()</a></code> is a related model with
+a common Lee-Carter factor. The Lee-Carter version <code><a href="product_ratio.html">product_ratio()</a></code> is
+deprecated in its favour.</p>
 <p>Draws simulate the product and each ratio (uncertainty of the scores and
 resampled model errors, as <code><a href="https://rdrr.io/r/stats/simulate.html" class="external-link">simulate()</a></code> for functional forecasts in
 demography) and multiply them; the ratios of each path are rescaled so
 that they multiply to one, as in <code><a href="https://pkg.robjhyndman.com/demography/reference/forecast.fdmpr.html" class="external-link">demography::forecast.fdmpr()</a></code>.
-Predictive draws add the extra-Poisson and Poisson variation of the raw
-deaths.</p>
+Predictive draws (<code>mt_forecast(predictive = TRUE)</code>) add Poisson variation
+of the deaths given the rates and the exposures, and no other observation
+noise. If intervals are too narrow on real data, that is a property of the
+model (see <code><a href="recalibrated.html">recalibrated()</a></code>, <code><a href="ensemble.html">ensemble()</a></code>, or
+overdispersed models such as <code>stanmomo(family = "nb")</code>).</p>
 <p>With <code>common_by</code> (for example <code>"sex"</code>), each level of that stratum
 variable forms its own group with its own product (for example the
 quintiles of each sex). If the data carry a hierarchy (see

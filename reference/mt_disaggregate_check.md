@@ -63,15 +63,16 @@ x <- mt_example(years = 2000:2019, deaths = "single")
 xg <- mt_regroup(x, age = c(seq(30, 85, 5), 90))
 fc <- mt_forecast(mt_fit(lee_carter(), xg), h = 3, n_draws = 20, seed = 1)
 e <- mt_array(x, "exposure")[, 20, ]
-fs <- mt_disaggregate(fc, mt_grid(x)$age, exposure = e)
+sh <- mt_shape_rates(x, periods = 2020:2022)
+fs <- mt_disaggregate(fc, mt_grid(x)$age, exposure = e, shape_rates = sh)
 mt_disaggregate_check(fc, fs, e)
 #>       sex  label period max_group_error max_second_difference
 #>    <char> <char>  <num>           <num>                 <num>
-#> 1: female female   2020    4.440892e-16             0.4251745
-#> 2: female female   2021    4.440892e-16             0.4369139
-#> 3: female female   2022    4.440892e-16             0.4216458
-#> 4:   male   male   2020    5.551115e-16             0.4308712
-#> 5:   male   male   2021    4.440892e-16             0.4281358
-#> 6:   male   male   2022    6.661338e-16             0.4248617
+#> 1: female female   2020    4.440892e-16             0.3116803
+#> 2: female female   2021    4.440892e-16             0.3116803
+#> 3: female female   2022    4.440892e-16             0.3116803
+#> 4:   male   male   2020    4.440892e-16             0.2758296
+#> 5:   male   male   2021    4.440892e-16             0.2758296
+#> 6:   male   male   2022    4.440892e-16             0.2758296
 if (requireNamespace("ggplot2", quietly = TRUE)) mt_plot_disaggregation(fc, fs)
 ```

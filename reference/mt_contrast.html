@@ -108,7 +108,8 @@ or <code>"lifespan_variation"</code>.</p></dd>
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
 <dd><p>Arguments of the quantity: <code>at</code> for life expectancy,
-<code>standard</code> and <code>per</code> for <code><a href="derived.html">asr()</a></code>, <code>from</code> and <code>to</code> for <code><a href="derived.html">prob_dying()</a></code>,
+<code>standard</code>, <code>per</code>, <code>exposure</code> and <code>age_groups</code> for <code><a href="derived.html">asr()</a></code>, <code>from</code> and
+<code>to</code> for <code><a href="derived.html">prob_dying()</a></code>,
 <code>age</code> (an age label) for <code>"rate"</code>, <code>measure</code> (one index, default
 <code>"edagger"</code>) and <code>at</code> for <code><a href="lifespan_variation.html">lifespan_variation()</a></code>.</p></dd>
 
@@ -117,7 +118,11 @@ or <code>"lifespan_variation"</code>.</p></dd>
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>A <code>data.table</code> with the other stratum variables, <code>level</code>, <code>ref</code>,
 <code>period</code>, <code>mean</code>, quantiles and <code>p_positive</code>, the share of paths with
-a positive difference (or a ratio above 1).</p>
+a positive difference (or a ratio above 1). For forecasts this is the
+predictive probability of a positive difference under the model. For
+observed data it is the share of the Poisson bootstrap draws (see
+<code><a href="mt_observed.html">mt_observed()</a></code>) with a positive difference, which is neither a
+p-value nor a posterior probability.</p>
     </div>
 
     <div class="section level2">

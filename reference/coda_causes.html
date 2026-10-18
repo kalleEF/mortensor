@@ -119,17 +119,20 @@ stratum of the output.</p>
 different trends beyond the pattern <code>b[x, c]</code>. The extensions of
 Kjærgaard, Ergemen, Kallestrup-Lamb, Oeppen and Lindahl-Jacobsen (2019)
 are not implemented. In a backtest on <code><a href="mt_example_causes.html">mt_example_causes()</a></code> the model was
-less accurate than <code><a href="cause_shares.html">cause_shares()</a></code>; compare it with <code><a href="cause_shares.html">cause_shares()</a></code> or
+less accurate than the deprecated <code><a href="cause_shares.html">cause_shares()</a></code>; compare it with
 <code><a href="reconciled.html">reconciled()</a></code> separate models in a backtest before using it.</p>
 <p>Jump-off, the open age interval and zero deaths are treated as in
 <code><a href="coda.html">coda()</a></code>: the all-cause log rate of an open interval is regressed on
 <code>k[t]</code> (its split by cause comes from the composition), and zero rates of
 a cause are replaced by half its smallest positive rate in the group (as
 <code>replace.zeros()</code> of the R package MortalityForecast). Draws are expected
-rates. Predictive draws (<code>mt_forecast(predictive = TRUE)</code>) add
-extra-Poisson and Poisson variation to the all-cause rates and split the
-all-cause deaths multinomially between the causes, so that the causes also
-add up to all causes in predictive draws.</p>
+rates. Predictive draws (<code>mt_forecast(predictive = TRUE)</code>) draw Poisson
+all-cause deaths given the all-cause rates and exposures and split them
+multinomially between the causes by the cause shares of the draw, so that
+the causes also add up to all causes in predictive draws; no other
+observation noise is added. If intervals are too narrow on real data,
+that is a property of the model (see <code><a href="recalibrated.html">recalibrated()</a></code>, <code><a href="ensemble.html">ensemble()</a></code>, or
+overdispersed models such as <code>stanmomo(family = "nb")</code>).</p>
     </div>
     <div class="section level2">
     <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a></h2>
@@ -146,7 +149,7 @@ Series C</em> 68(5): 1351-1370. <a href="https://doi.org/10.1111/rssc.12357" cla
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
-    <div class="dont-index"><p><code><a href="cause_shares.html">cause_shares()</a></code>, <code><a href="coda.html">coda()</a></code>.</p></div>
+    <div class="dont-index"><p><code><a href="reconciled.html">reconciled()</a></code> with a hierarchy of causes, <code><a href="coda.html">coda()</a></code>.</p></div>
     </div>
 
     <div class="section level2">

@@ -39,8 +39,16 @@ The `mt_data` object with an exposure table.
   of the populations on 31 December of years t - 1 and t. The first year
   has no predecessor and is dropped.
 
-Both are standard approximations; the HMD uses more refined cohort-based
-formulas. The approximation used is recorded in the provenance column.
+These are the standard approximations of person-years from population
+counts (Preston, Heuveline and Guillot 2001): the population at the
+middle of the year, or the mean of the populations at its start and its
+end. The HMD uses more refined cohort-based formulas. The approximation
+used is recorded in the provenance column.
+
+## References
+
+Preston SH, Heuveline P, Guillot M (2001). *Demography: Measuring and
+Modeling Population Processes*. Blackwell.
 
 ## Examples
 

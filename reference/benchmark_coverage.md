@@ -13,7 +13,8 @@ benchmark_coverage(
   h = 10,
   n_draws = 300,
   n_train = 30,
-  prep = NULL
+  prep = NULL,
+  sd_obs = 0
 )
 ```
 
@@ -38,6 +39,15 @@ benchmark_coverage(
 - n_train:
 
   Training years.
+
+- prep:
+
+  Optional [`mt_prep()`](mt_prep.md) pipeline.
+
+- sd_obs:
+
+  Noise of the generator (see
+  [`simulate_lc_dgp()`](simulate_lc_dgp.md)).
 
 ## Value
 

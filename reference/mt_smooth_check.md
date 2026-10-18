@@ -52,17 +52,23 @@ mt_plot_smooth(
 
 ## Value
 
-`mt_smooth_check()`: a `data.table` with the stratum columns and the
-measures above. `mt_plot_smooth()`: a ggplot object.
+`mt_smooth_check()`: a `data.table` with the stratum columns, the
+measures above and `edf`. `mt_plot_smooth()`: a ggplot object.
 
 ## Details
 
 - `mad_log`: median absolute difference of log rates;
 
-- `dispersion`: mean squared Pearson residual of the raw deaths around
-  the smoothed deaths; about 1 when smoothing removed Poisson noise
-  only, above 1 when the raw rates vary more (for example year effects),
-  well below 1 when the smoothing follows the noise;
+- `dispersion`: the Pearson estimate of the dispersion of the raw deaths
+  around the smoothed deaths, the sum of squared Pearson residuals
+  divided by `n - edf` (McCullagh and Nelder 1989), where `n` is the
+  number of smoothed cells with raw deaths and `edf` the effective
+  degrees of freedom of the fits of the stratum (column `edf`, from the
+  attribute `"smooth"` of [`mt_smooth()`](mt_smooth.md); when it is not
+  available, for example after further preprocessing steps, the sum is
+  divided by `n` and `edf` is `NA`). About 1 when smoothing removed
+  Poisson noise only, above 1 when the raw rates vary more (for example
+  year effects), well below 1 when the smoothing follows the noise;
 
 - `trend_ratio`: variance of year-to-year changes of the smoothed log
   rates relative to that of the raw log rates (mean over ages); small
@@ -77,15 +83,20 @@ ages left out of the smoothing (see `ages` in
 `mt_plot_smooth()` shows raw rates as points and smoothed rates as lines
 over time, one panel per age.
 
+## References
+
+McCullagh P, Nelder JA (1989). *Generalized Linear Models* (2nd ed.).
+Chapman and Hall.
+
 ## Examples
 
 ``` r
 x <- mt_example(deaths = "single", years = 2000:2015)
 s <- mt_smooth(x, along = "period", method = "whittaker")
 mt_smooth_check(x, s)
-#>    stratum    sex  label    mad_log dispersion  trend_ratio correlation
-#>      <int> <char> <char>      <num>      <num>        <num>       <num>
-#> 1:       1 female female 0.02113118  0.8846054 0.0013826242   0.9994987
-#> 2:       2   male   male 0.02072276  0.8750107 0.0009253008   0.9996417
+#>    stratum    sex  label    mad_log dispersion trend_ratio correlation      edf
+#>      <int> <char> <char>      <num>      <num>       <num>       <num>    <num>
+#> 1:       1 female female 0.01237280  0.9935176   0.2413490   0.9996135 434.4595
+#> 2:       2   male   male 0.01574177  0.9369526   0.1131588   0.9996879 297.3892
 if (requireNamespace("ggplot2", quietly = TRUE)) mt_plot_smooth(x, s)
 ```

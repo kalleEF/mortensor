@@ -96,10 +96,13 @@ mt_plot_compare(fc, periods = 2035, strata = c("female.Q1", "female.Q5", "male.Q
 ![](coherence_files/figure-html/unnamed-chunk-6-1.png)
 
 Life expectancy at birth in 2035 for some of the strata. The medians
-move little; the intervals change more. Sums of parts whose paths are
-only partly dependent vary less than the totals’ own models, so the
-totals get narrower intervals under every method; MinT narrows them
-most.
+move little; the intervals change more. Separate models draw their paths
+independently, and the reconciliation does not reorder them
+(`dependence = "none"`, the default). Sums of independent parts vary
+less than the totals’ own forecasts, so the totals get much narrower
+intervals under every method. WLS and MinT give almost the same result:
+MinT estimates how the strata move together from the base draws, and the
+draws of separate models do not move together.
 
 ## Keeping a trusted total
 
@@ -118,25 +121,32 @@ fixed <- list(separate = fc_base,
               "wls, England fixed" = mt_reconcile(fc_base, h, method = "wls", fixed = "total", seed = 1),
               "proportional, England fixed" = mt_reconcile(fc_base, h, method = "proportional", fixed = "total",
                                                            seed = 1))
+#> Warning in reconcile_array(arr, hs, h$additive, method, shrink, exposure %||% :
+#> In 10% of the draws some bottom forecasts were set to zero to keep the
+#> aggregates and fixed nodes; their distributions are truncated. Check the base
+#> forecasts (mt_coherence()) or use method = "proportional" with fixed nodes.
 mt_compare_forecasts(fixed, periods = 2035, strata = c("both.England", "female.England", "female.Q1", "male.Q5"),
                      digits = 2)
 #> Key: <label, period>
 #>             label period            separate  wls, England fixed
 #>            <char>  <num>              <char>              <char>
 #> 1:   both.England   2035 84.69 (82.77-86.48) 84.69 (82.77-86.48)
-#> 2: female.England   2035 86.02 (83.87-88.40) 86.02 (83.73-88.45)
-#> 3:      female.Q1   2035 81.56 (78.44-84.05) 81.92 (78.20-85.38)
-#> 4:        male.Q5   2035 86.29 (84.70-87.73) 86.22 (84.74-87.96)
+#> 2: female.England   2035 86.02 (83.87-88.40) 85.95 (83.55-88.36)
+#> 3:      female.Q1   2035 81.56 (78.44-84.05) 81.60 (77.74-85.13)
+#> 4:        male.Q5   2035 86.29 (84.70-87.73) 86.30 (84.65-88.07)
 #>    proportional, England fixed
 #>                         <char>
 #> 1:         84.69 (82.77-86.48)
-#> 2:         86.02 (83.94-88.16)
-#> 3:         81.85 (78.03-84.80)
-#> 4:         86.23 (84.60-88.15)
+#> 2:         85.94 (84.00-87.61)
+#> 3:         81.67 (77.78-84.53)
+#> 4:         86.30 (84.02-88.52)
 ```
 
 England keeps the life expectancy of its own model; its parts move
-towards it.
+towards it. The intervals of the bottom series widen (women in Q1, men
+in Q5), because they now carry the uncertainty of England’s own
+forecast. With WLS some bottom forecasts had to be held at zero in 10%
+of the draws (the warning above).
 
 ## Does coherence cost accuracy?
 
@@ -153,33 +163,38 @@ bt <- mt_compare(list(separate = lee_carter(),
 mt_score_table(bt, metrics = c("crps", "cov95"), hierarchy = h)
 #>         model     level   crps cov95
 #>        <fctr>    <fctr>  <num> <num>
-#>  1:  separate    bottom 0.0665 0.836
-#>  2:  separate aggregate 0.0540 0.820
-#>  3:  separate     total 0.0439 0.746
-#>  4: bottom-up    bottom 0.0665 0.834
-#>  5: bottom-up aggregate 0.0550 0.718
-#>  6: bottom-up     total 0.0454 0.530
-#>  7:       wls    bottom 0.0667 0.839
-#>  8:       wls aggregate 0.0549 0.724
-#>  9:       wls     total 0.0447 0.552
-#> 10:      mint    bottom 0.0666 0.803
-#> 11:      mint aggregate 0.0551 0.677
-#> 12:      mint     total 0.0458 0.514
+#>  1:  separate    bottom 0.0672 0.793
+#>  2:  separate aggregate 0.0549 0.764
+#>  3:  separate     total 0.0449 0.672
+#>  4: bottom-up    bottom 0.0672 0.793
+#>  5: bottom-up aggregate 0.0560 0.659
+#>  6: bottom-up     total 0.0477 0.422
+#>  7:       wls    bottom 0.0677 0.766
+#>  8:       wls aggregate 0.0570 0.602
+#>  9:       wls     total 0.0488 0.370
+#> 10:      mint    bottom 0.0677 0.763
+#> 11:      mint aggregate 0.0571 0.603
+#> 12:      mint     total 0.0489 0.376
 ```
 
 `hierarchy = h` scores the bottom series (sex by quintile), the
 aggregates (quintiles for both sexes, England by sex) and the total
 (England) separately.
 
-The bottom series are forecast about as well with every method. The
-totals lose a little accuracy and more coverage: their own models
-capture common movements of the quintiles in their trends, which sums of
-parts reproduce only as far as the dependence between the parts is
-reproduced. By default, [`reconciled()`](../reference/reconciled.md)
-reorders the paths of separately fitted parts so that they move together
-as they did in the training years (`dependence = "empirical"`, Clark et
-al. 2004); joint models such as [`li_lee()`](../reference/li_lee.md) tie
-the parts together in the model itself.
+The bottom series are forecast about as well with every method (CRPS
+0.067-0.068), and their coverage falls a little with WLS and MinT (0.77
+against 0.79). The totals lose accuracy and much coverage: the 95%
+intervals of England contain 0.37-0.42 of the observed rates after
+reconciliation, against 0.67 with its own model. The model of England
+captures the common movements of the quintiles in its trend; sums of
+parts with independent draws do not reproduce them, so their intervals
+are too narrow. Joint models such as
+[`li_lee()`](../reference/li_lee.md) tie the parts together in the model
+itself. `dependence = "empirical"` reorders the paths of separately
+fitted parts so that they move together as they did in the training
+years. This reordering is specific to this package, related to the
+Schaake shuffle (Clark et al. 2004); it is used only when chosen, and a
+backtest should check its effect.
 
 ## Reconciliation learnt from past forecasts
 
@@ -203,8 +218,8 @@ fit$reconcile$scoreopt$table   # in-sample energy score with OLS and after the o
 
 Each fit takes about 20 seconds on these data, so the code is not run
 here. In a backtest from 2011 to 2014 (validation check `scoreopt_ons`),
-the method was less accurate than WLS at every level: CRPS 22% higher
-for the bottom series, 26% for the aggregates and 32% for England. The
+the method was less accurate than WLS at every level: CRPS 21% higher
+for the bottom series, 23% for the aggregates and 26% for England. The
 training forecasts were too high in 2006-2011 and the correction learnt
 from them pushed the forecasts down, while mortality improvement stalled
 after 2011. With few, overlapping training forecasts and one parameter
@@ -216,9 +231,10 @@ should confirm it.
 
 - **Bottom-up** with a joint model of the parts keeps the detailed
   forecasts and needs no forecasts of the totals.
-- **WLS** is a robust default for reconciling separate forecasts;
-  **MinT** gives the narrowest intervals, which a backtest should
-  confirm.
+- **WLS** for reconciling separate forecasts. With separate models,
+  whose draws are independent, **MinT** gives about the same result, and
+  the intervals of the totals are too narrow; check their coverage in a
+  backtest.
 - **fixed** with **proportional** for a trusted total, for example
   causes of death that must add up to an all-cause forecast.
 - **energy_score** only with long training histories, after a backtest

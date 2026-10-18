@@ -71,7 +71,8 @@ labels. Default: the exposures of the last training year.</p></dd>
 
 
 <dt id="arg-noise">noise<a class="anchor" aria-label="anchor" href="#arg-noise"></a></dt>
-<dd><p>Add Poisson noise.</p></dd>
+<dd><p>Add Poisson noise (draws of expected rates only; ignored for
+predictive draws, which contain it).</p></dd>
 
 
 <dt id="arg-seed">seed<a class="anchor" aria-label="anchor" href="#arg-seed"></a></dt>
@@ -81,6 +82,15 @@ labels. Default: the exposures of the last training year.</p></dd>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>An array <code>[age, period, stratum, draw]</code> of deaths.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
+    <p>Predictive draws (<code>mt_forecast(predictive = TRUE)</code>) already contain the
+variation of the observed deaths (Poisson given the rates, or negative
+binomial for <code>stanmomo(family = "nb")</code>): for them no noise is added,
+whatever <code>noise</code>, and the result is their deaths. Give the exposures
+that were used for the forecast (its <code>exposure</code>); other exposures rescale
+the deaths and the result is then not a count.</p>
     </div>
 
     <div class="section level2">

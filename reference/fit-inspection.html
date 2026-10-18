@@ -110,10 +110,10 @@ age-period heat map.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   data: 2 strata; ages 30 to 100+; periods 1990-2019</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   model and uncertainty:</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     log m(x,t) = a(x) + b(x) k(t), estimated by Poisson maximum likelihood</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     (Brouhns et al. 2002; Lee and Carter 1992). k(t) follows a random walk with</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     drift; draws include its innovations and the uncertainty of the drift. a(x)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     and b(x) are fixed (parameter uncertainty with bootstrapped()). Jump-off:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     fitted rates.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     (Brouhns et al. 2002). k(t) follows a random walk with drift; draws include</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     its innovations and the uncertainty of the drift. a(x) and b(x) are fixed</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     (parameter uncertainty with bootstrapped()). Predictive draws add Poisson</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     variation of the deaths given the rates. Jump-off: fitted rates.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   fit: Poisson deviance 4105.7 on 4260 cells (0.96 per cell); 4.1% of deviance residuals beyond +/-2</span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/residuals.html" class="external-link">residuals</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    stratum    age period deaths fitted_deaths   residual</span>

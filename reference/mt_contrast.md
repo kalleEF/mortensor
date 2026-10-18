@@ -53,17 +53,21 @@ mt_contrast(
 
 - ...:
 
-  Arguments of the quantity: `at` for life expectancy, `standard` and
-  `per` for [`asr()`](derived.md), `from` and `to` for
-  [`prob_dying()`](derived.md), `age` (an age label) for `"rate"`,
-  `measure` (one index, default `"edagger"`) and `at` for
+  Arguments of the quantity: `at` for life expectancy, `standard`,
+  `per`, `exposure` and `age_groups` for [`asr()`](derived.md), `from`
+  and `to` for [`prob_dying()`](derived.md), `age` (an age label) for
+  `"rate"`, `measure` (one index, default `"edagger"`) and `at` for
   [`lifespan_variation()`](lifespan_variation.md).
 
 ## Value
 
 A `data.table` with the other stratum variables, `level`, `ref`,
 `period`, `mean`, quantiles and `p_positive`, the share of paths with a
-positive difference (or a ratio above 1).
+positive difference (or a ratio above 1). For forecasts this is the
+predictive probability of a positive difference under the model. For
+observed data it is the share of the Poisson bootstrap draws (see
+[`mt_observed()`](mt_observed.md)) with a positive difference, which is
+neither a p-value nor a posterior probability.
 
 ## Examples
 

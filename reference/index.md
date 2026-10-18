@@ -141,15 +141,17 @@ Models for one population
 
 Models for several populations and causes
 
-- [`li_lee()`](li_lee.md) [`product_ratio()`](li_lee.md) : Coherent
-  multi-population models
+- [`li_lee()`](li_lee.md) : Li-Lee coherent multi-population model
 - [`coherent_fdm()`](coherent_fdm.md) : Coherent functional demographic
   model (product-ratio, demography)
 - [`tucker3()`](tucker3.md) : Tucker3 tensor model across strata
+  (three-way Lee-Carter model)
 - [`cause_shares()`](cause_shares.md) : Coherent multi-cause forecasts
-  with cause shares
+  with cause shares (deprecated)
 - [`coda_causes()`](coda_causes.md) : Multiple-decrement CoDa model of
   causes of death (experimental)
+- [`product_ratio()`](product_ratio.md) : Lee-Carter version of the
+  product-ratio method (deprecated)
 
 ## 
 

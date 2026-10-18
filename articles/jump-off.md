@@ -5,8 +5,8 @@ A forecast continues from some level in the last observed year, the
 which differ from the observed rates: a model with few parameters does
 not reproduce every age, year and stratum. The difference shows up as a
 step between the last observed and the first forecast year. This
-vignette shows when the step is large, the three ways of placing the
-start, and what they change.
+vignette shows when the step is large, the ways of placing the start,
+and what they change.
 
 ``` r
 
@@ -59,26 +59,31 @@ quintiles towards their common trend. For women in Q1 its first forecast
 year then adds another 0.7 years. The step carries into every forecast
 year.
 
-## Three starting points
+## Starting points
 
 - **fitted** (default): the forecast continues from the model’s fitted
   rates of the last year;
-- **observed**: it continues from the observed rates of the last year
-  (`li_lee(jump_off = "observed")`,
-  `lee_carter(jump_off = "observed")`), with all their noise;
-- **anchored**: [`anchored()`](../reference/anchored.md) moves the start
-  of any model to the observed level of the last years (by default
-  three), shrinks the offsets of cells with few deaths towards the mean
-  of the stratum, and lets the offsets fade out over `decay` years (by
-  default ten), so that the forecast returns to the model’s trend.
+- **observed**: it continues from the observed rates of the last year,
+  with all their noise. Lee and Miller (2001) proposed this jump-off for
+  Lee-Carter: the log ratio of observed to fitted rates of the last year
+  is added to the log rates of every forecast year.
+  [`anchored()`](../reference/anchored.md) applies it to any model;
+  `lee_carter(jump_off = "observed")` and
+  `li_lee(jump_off = "observed")` give the same forecasts.
+
+[`anchored()`](../reference/anchored.md) has further options, which are
+specific to this package (reference unknown): `years` averages the
+offsets over the last years, `shrink = TRUE` shrinks the offsets of
+cells with few deaths towards the mean of their stratum, and `decay`
+lets the offsets fade out over that many years, so that the forecast
+returns to the model’s trend. The comparison includes one such setting:
 
 ``` r
 
 fc <- list(fitted = fc_ll,
-           observed = mt_forecast(mt_fit(li_lee(common_by = "sex", jump_off = "observed"), x), h = 10,
-                                  n_draws = 500, seed = 1),
-           anchored = mt_forecast(mt_fit(anchored(li_lee(common_by = "sex"), years = 3), x), h = 10,
-                                  n_draws = 500, seed = 1))
+           observed = mt_forecast(mt_fit(anchored(li_lee(common_by = "sex")), x), h = 10, n_draws = 500, seed = 1),
+           "3 years, fading" = mt_forecast(mt_fit(anchored(li_lee(common_by = "sex"), years = 3, decay = 10,
+                                                           shrink = TRUE), x), h = 10, n_draws = 500, seed = 1))
 ```
 
 ``` r
@@ -90,9 +95,9 @@ mt_plot_compare(fc, strata = c("female.Q1", "female.Q5"), periods = c(2010, 2029
 
 The solid line is the fitted Li-Lee model, the points the observed life
 expectancy. The fitted forecast continues from the solid line, above the
-last points for women in Q1. The observed and the anchored forecasts
-start at the observed level. By age, the observed start also carries the
-noise of single cells, which the anchored start averages over three
+last points for women in Q1. The other two forecasts start at the
+observed level. By age, the observed start also carries the noise of
+single cells, which the package-specific setting averages over three
 years:
 
 ``` r
@@ -110,15 +115,46 @@ following five years:
 
 ``` r
 
-bt <- mt_compare(list(fitted = li_lee(common_by = "sex"), observed = li_lee(common_by = "sex", jump_off = "observed"),
-                      anchored = anchored(li_lee(common_by = "sex"), years = 3)),
+ll <- li_lee(common_by = "sex")
+bt <- mt_compare(list(fitted = ll, observed = anchored(ll),
+                      "3 years, fading" = anchored(ll, years = 3, decay = 10, shrink = TRUE)),
                  x, origins = 2008:2014, h = 5, n_draws = 200, quantities = "life_expectancy")
+#> Warning in report_fit_problems(diagnostics, spec$label, classes): Li-Lee
+#> (common by sex): Li-Lee: the AR(1) coefficient of the stratum index is bounded
+#> at |phi| = 0.99 in 1 stratum/strata (female.Q4): their deviations from the
+#> common trend are close to a unit root and revert very slowly; coherence may not
+#> suit them. (diagnostics of 10 stratum/strata of the fit).
+#> Warning in report_fit_problems(diagnostics, spec$label, classes): Li-Lee
+#> (common by sex): Li-Lee: the AR(1) coefficient of the stratum index is bounded
+#> at |phi| = 0.99 in 1 stratum/strata (female.Q4): their deviations from the
+#> common trend are close to a unit root and revert very slowly; coherence may not
+#> suit them. (diagnostics of 10 stratum/strata of the fit).
+#> Warning in report_fit_problems(diagnostics, spec$label, classes): Li-Lee
+#> (common by sex): Li-Lee: the AR(1) coefficient of the stratum index is bounded
+#> at |phi| = 0.99 in 1 stratum/strata (female.Q4): their deviations from the
+#> common trend are close to a unit root and revert very slowly; coherence may not
+#> suit them. (diagnostics of 10 stratum/strata of the fit).
+#> Warning in report_fit_problems(diagnostics, spec$label, classes): Li-Lee
+#> (common by sex): Li-Lee: the AR(1) coefficient of the stratum index is bounded
+#> at |phi| = 0.99 in 1 stratum/strata (female.Q4): their deviations from the
+#> common trend are close to a unit root and revert very slowly; coherence may not
+#> suit them. (diagnostics of 10 stratum/strata of the fit).
+#> Warning in report_fit_problems(diagnostics, spec$label, classes): Li-Lee
+#> (common by sex): Li-Lee: the AR(1) coefficient of the stratum index is bounded
+#> at |phi| = 0.99 in 1 stratum/strata (female.Q4): their deviations from the
+#> common trend are close to a unit root and revert very slowly; coherence may not
+#> suit them. (diagnostics of 10 stratum/strata of the fit).
+#> Warning in report_fit_problems(diagnostics, spec$label, classes): Li-Lee
+#> (common by sex): Li-Lee: the AR(1) coefficient of the stratum index is bounded
+#> at |phi| = 0.99 in 1 stratum/strata (female.Q4): their deviations from the
+#> common trend are close to a unit root and revert very slowly; coherence may not
+#> suit them. (diagnostics of 10 stratum/strata of the fit).
 mt_score_table(bt, metrics = c("crps", "cov95"))
-#>       model   crps cov95 crps_le cov95_le
-#>      <fctr>  <num> <num>   <num>    <num>
-#> 1:   fitted 0.0666 0.847   0.336    0.811
-#> 2: observed 0.0709 0.848   0.315    0.826
-#> 3: anchored 0.0654 0.859   0.315    0.863
+#>              model   crps cov95 crps_le cov95_le
+#>             <fctr>  <num> <num>   <num>    <num>
+#> 1:          fitted 0.0671 0.810   0.338    0.806
+#> 2:        observed 0.0714 0.808   0.316    0.834
+#> 3: 3 years, fading 0.0661 0.824   0.321    0.831
 ```
 
 ``` r
@@ -129,22 +165,48 @@ mt_plot_scores(bt, target = "life_expectancy")
 ![](jump-off_files/figure-html/unnamed-chunk-7-1.png)
 
 `crps` scores the log death rates, `crps_le` life expectancy at birth in
-years (lower is better; see “Backtesting and scores”). The anchored
-start gives the most accurate forecasts of the rates and of life
-expectancy. The observed start forecasts life expectancy about as well
-but the rates worse, because it carries the noise of single ages and
-years into the forecast. For Lee-Carter fitted to each stratum, whose
-step is small here, the fitted and the anchored start give the same
-scores (CRPS 0.068) and the observed start a worse one (0.078).
+years (lower is better; see “Backtesting and scores”). The observed
+start forecasts life expectancy more accurately than the fitted start
+(CRPS 0.316 against 0.338 years), because the step of Li-Lee at the
+jump-off is large here. It forecasts the rates less accurately (0.071
+against 0.067), because it carries the noise of single ages and years
+into every forecast year. The package-specific setting, which averages
+the offsets over three years, shrinks them and lets them fade out, gives
+the lowest CRPS of the rates (0.066) and a CRPS of life expectancy close
+to that of the observed start (0.321 years). The 95% intervals of all
+three cover 0.81 to 0.82 of the observed rates.
+
+For Lee-Carter fitted to each stratum, whose step is small here:
+
+``` r
+
+bt_lc <- mt_compare(list(fitted = lee_carter(), observed = anchored(lee_carter())), x, origins = 2008:2014, h = 5,
+                    n_draws = 200, quantities = "life_expectancy")
+mt_score_table(bt_lc, metrics = c("crps", "cov95"))
+#>       model   crps cov95 crps_le cov95_le
+#>      <fctr>  <num> <num>   <num>    <num>
+#> 1:   fitted 0.0683 0.793   0.293    0.814
+#> 2: observed 0.0789 0.760   0.310    0.789
+```
+
+Lee-Carter reproduces the last observed year closely, so the observed
+start adds mainly the noise of that year: it forecasts the rates and
+life expectancy less accurately than the fitted start (CRPS 0.079
+against 0.068, and 0.310 against 0.293 years).
 
 ## Summary
 
 | Start | How | When |
 |----|----|----|
-| fitted | default of every model | the model fits the last years closely |
-| observed | `jump_off = "observed"` of [`lee_carter()`](../reference/lee_carter.md) and [`li_lee()`](../reference/li_lee.md) | large populations with little noise |
-| anchored | `anchored(model, years = 3, decay = 10)` around any model | pooled or smooth models; noisy last years |
+| fitted | default of every model | the model fits the last year closely (here Lee-Carter) |
+| observed (Lee and Miller 2001) | `anchored(model)` around any model; `jump_off = "observed"` of [`lee_carter()`](../reference/lee_carter.md) and [`li_lee()`](../reference/li_lee.md) | the fit misses the level of the last year (here Li-Lee) |
+| package-specific | `anchored(model, years = 3, decay = 10, shrink = TRUE)` | noisy last years; check in a backtest |
 
 [`mt_jump_off()`](../reference/mt_jump_off.md) shows the step of any
 forecast; a backtest shows whether another start forecasts better on the
 data at hand.
+
+## References
+
+Lee R, Miller T (2001). Evaluating the performance of the Lee-Carter
+method for forecasting mortality. *Demography* 38(4): 537-549.

@@ -85,12 +85,16 @@ your data.
 
 The penalized composite link model
 ([`mt_ungroup()`](../reference/mt_ungroup.md), default) ungroups deaths
-as rates with the exposures as offset and keeps group totals exactly. On
-England & Wales data grouped into 5-year groups, it and the spline
-methods (`"hyman_kannisto"`, `"natural_gompertz"`, `"gam"`) were almost
-as close to the known single years as the Poisson noise allows; they
-differed in the last, wide age group, where the PCLM was closest. Check
-your own result with
+as rates with the exposures as offset. Its estimates are the fitted
+values of the model: they reproduce the total over all age groups of a
+fit, and the diagnostics report the largest gap to a single group total
+(`max_rel_diff`). `preserve_totals = TRUE` rescales the estimates to
+every group total, a post-hoc rescaling of this package that creates
+jumps at the group boundaries. `method = "monotone"` interpolates the
+cumulative counts and reproduces every group total, without using the
+exposures. The spline methods `"hyman_kannisto"`, `"natural_gompertz"`
+and `"gam"` are deprecated: they have no published source. Check your
+own result with
 [`mt_plot_ungroup()`](../reference/ungroup-diagnostics.md) and
 [`mt_ungroup_check()`](../reference/ungroup-diagnostics.md); see
 “Ungrouping age groups: methods and diagnostics”.
@@ -115,9 +119,9 @@ ones you will report) decides. As a starting point:
 |----|----|----|
 | One population, many deaths per cell, single years or 5-year groups | [`lee_carter()`](../reference/lee_carter.md), [`rwd()`](../reference/rwd.md) and `ensemble(lc = lee_carter(), rw = rwd())` | Lee-Carter is the standard; single models give too narrow intervals on real data, the ensemble is better calibrated |
 | Several strata that should not diverge (sexes, regions, deprivation groups) | `li_lee(common_by = ...)` | a common trend with bounded deviations; pools information across strata |
-| Small populations, many cells with few deaths | `li_lee(common_by = ...)`, wider age groups ([`mt_regroup()`](../reference/mt_regroup.md)), [`step_smooth()`](../reference/mt_prep.md); `rwd(observation_noise = TRUE)` in ensembles | pooling and smoothing reduce noise; the plain random walk accumulates it |
+| Small populations, many cells with few deaths | `li_lee(common_by = ...)`, wider age groups ([`mt_regroup()`](../reference/mt_regroup.md)), [`step_smooth()`](../reference/mt_prep.md); `arima_series(order = c(0, 1, 1), drift = TRUE)` in ensembles | pooling and smoothing reduce noise; the plain random walk accumulates it, the random walk observed with noise separates it from the trend |
 | Totals and parts must add up | `reconciled(model, hierarchy)` | bottom-up for joint models, WLS for separate models |
-| Causes of death | separate or Li-Lee models per cause, `reconciled(..., method = "bottom_up")` with `cause = list(total = "all", additive = "rates")` | cause rates add up to the all-cause rate |
+| Causes of death | separate or Li-Lee models per cause, `reconciled(..., method = "bottom_up")` with `cause = list(total = "all", additive = "rates")`; [`coda_causes()`](../reference/coda_causes.md) (experimental) | cause rates add up to the all-cause rate |
 | Cohort effects (for example generations born around 1925-1945) | [`apc_bayes()`](../reference/apc_bayes.md), `stmomo("apc")` | age-period models attribute cohort patterns to period trends |
 | Trend change in the recent past | `step_window(years)` with a backtest of several windows | a shorter fitting period follows the recent trend |
 | Long horizons, as mortality falls most at ever older ages | `lee_carter(rotate = TRUE)`, [`coda()`](../reference/coda.md) | the rotation moves the age pattern of decline to older ages as life expectancy rises (Li, Lee and Gerland 2013); CoDa forecasts the distribution of deaths by age (Oeppen 2008) |
@@ -129,21 +133,25 @@ implausible rates.
 ### Why are my 95% intervals too narrow (or too wide)?
 
 Intervals of most models describe the uncertainty of their own
-assumptions, for example a constant drift. On real data, changes of
-trend add uncertainty that these assumptions leave out, so intervals
-tend to be too narrow over 5 to 10 years: in backtests on HMD and ONS
-data the 95% coverage of Lee-Carter was 0.70 to 0.84. The plain random
-walk is wider, because year-to-year changes of observed rates contain
-observation noise twice; that extra width happened to give good 95%
-coverage on real data. `rwd(observation_noise = TRUE)` removes the
-double counting and is sharper (lower CRPS), with intervals that were
-too narrow on real data. Mixtures of models
+assumptions, for example a constant drift, and their predictive draws
+add the Poisson variation of the deaths only. On real data, changes of
+trend and year effects add uncertainty that these assumptions leave out,
+so intervals tend to be too narrow over 5 to 10 years: in the backtests
+of the vignettes the 95% coverage of Lee-Carter was 0.79 on the ONS
+quintiles (horizons 1 to 5, “Getting started with mortensor”) and 0.63
+on England & Wales men (horizons 1 to 10, “Tuning and recalibration”).
+The plain random walk is wider, because year-to-year changes of observed
+rates contain observation noise twice; the local level model with drift,
+`arima_series(order = c(0, 1, 1), drift = TRUE)`, separates the noise
+from the trend (Harvey 1989). Mixtures of models
 ([`ensemble()`](../reference/ensemble.md)) widen the intervals where the
-models disagree. [`recalibrated()`](../reference/recalibrated.md)
-rescales the spread of any model’s draws to its forecast errors in the
-last years of the training data (by default ten); on England & Wales men
-it raised the 95% coverage of Lee-Carter from 0.75 to 0.88. Check
-calibration with [`mt_backtest()`](../reference/mt_backtest.md) and
+models disagree, and the negative binomial family of
+[`stanmomo()`](../reference/stanmomo.md) allows for overdispersion.
+[`recalibrated()`](../reference/recalibrated.md) rescales the spread of
+any model’s draws to its forecast errors in the last years of the
+training data (by default ten); on England & Wales men it raised the 95%
+coverage of Lee-Carter from 0.63 to 0.85. Check calibration with
+[`mt_backtest()`](../reference/mt_backtest.md) and
 [`mt_plot_coverage()`](../reference/mt_plot.md).
 
 ### Is one model really more accurate than another?
@@ -152,8 +160,12 @@ A backtest gives mean scores from a few origins, and two models often
 differ by less than these scores vary between origins.
 [`mt_dm_test()`](../reference/mt_dm_test.md) tests whether the
 difference is larger than chance, horizon by horizon, with the
-Diebold-Mariano test (Diebold and Mariano 1995) and the small-sample
-correction of Harvey, Leybourne and Newbold (1997):
+Diebold-Mariano test (Diebold and Mariano 1995). By default the long-run
+variance of the loss differences is the equal-weighted cosine estimate
+with fixed-smoothing critical values (Lazarus et al. 2018; Coroneo and
+Iacone 2020), which allows for the overlap of forecasts from
+neighbouring origins and keeps the size of the test nearly correct with
+few origins:
 
 ``` r
 
@@ -161,12 +173,17 @@ bt <- mt_compare(list(lc = lee_carter(), rw = rwd()), data, origins = 1995:2009,
 mt_dm_test(bt, ref = "lc")
 ```
 
-Forecasts from neighbouring origins overlap, which the test allows for;
-it needs more origins than the horizon (at horizon 5, at least six
-origins). With origins spaced `h` years apart the forecasts do not
-overlap and the test is most reliable. A non-significant difference
-means that the backtest cannot tell the models apart; they may still
-differ.
+With few origins the test has few degrees of freedom and finds only
+large and consistent differences. More origins, or origins spaced `h`
+years apart, whose forecasts do not overlap, give more informative
+tests. `varestimator = "acf"` gives the test of
+[`forecast::dm.test()`](https://pkg.robjhyndman.com/forecast/reference/dm.test.html)
+with the small-sample correction of Harvey, Leybourne and Newbold
+(1997); with 7 overlapping origins it rejected a true null hypothesis in
+10% to 19% of simulated samples at the nominal 5% level (see
+[`?mt_dm_test`](../reference/mt_dm_test.md)). A non-significant
+difference means that the backtest cannot tell the models apart; they
+may still differ.
 
 ### How do I choose smoothing and model parameters by forecast accuracy?
 
@@ -201,20 +218,17 @@ small regions); check it in a backtest, as the applied vignettes do.
 Smoothing over time removes the year-to-year noise from the fitted
 trends and from the start of the forecast, but also the variation from
 which models such as Lee-Carter estimate the uncertainty of their period
-index: alone, it made intervals too narrow in backtests (95% coverage of
-Lee-Carter 0.59 instead of 0.75 on England & Wales men). Most of the
-gain there comes from [`recalibrated()`](../reference/recalibrated.md),
-which re-estimates the spread against the raw observations: calibration
-alone gave a CRPS of 0.0657 and a coverage of 0.88 (against 0.0687 and
-0.75); Whittaker smoothing over time added nothing to it, the age-period
-GAM a little (0.0646, coverage 0.91). On the ONS quintiles smoothing
-over time made the forecasts worse (“Smoothing death rates”). Treat it
-as optional and check it in a backtest. Use smoothing as a preprocessing
-step (`mt_prep(step_smooth(...))`), never on the data before fitting
+index: on the ONS quintiles, Whittaker smoothing over time lowered the
+95% coverage of Lee-Carter from 0.80 to 0.63 and raised its CRPS from
+0.067 to 0.072 (“Smoothing death rates”).
+[`recalibrated()`](../reference/recalibrated.md) re-estimates the spread
+of a smoothed model against the raw observations. Treat smoothing as
+optional and check it in a backtest. Use it as a preprocessing step
+(`mt_prep(step_smooth(...))`), never on the data before fitting
 ([`mt_backtest()`](../reference/mt_backtest.md) stops,
 [`mt_fit()`](../reference/mt_fit.md) warns), so that backtests refit it
-on each training window and models take their observation noise from the
-raw rates. [`mt_smooth_check()`](../reference/mt_smooth_check.md) and
+on each training window and residuals and scores refer to the raw rates.
+[`mt_smooth_check()`](../reference/mt_smooth_check.md) and
 [`mt_plot_smooth()`](../reference/mt_smooth_check.md) show what the
 smoothing removed.
 
@@ -225,34 +239,39 @@ When the fit misses the level of the last years, the first forecast year
 jumps away from the observations;
 [`mt_jump_off()`](../reference/mt_jump_off.md) reports the step, and the
 forecast plots show it as a gap between the solid (fitted) and the
-dashed (forecast) line. `anchored(model, years = 3)` moves the start to
-the observed level of the last three years, fading out over ten years
-(so forecasts more than ten years ahead are those of the model); it
-improved short-term accuracy on England & Wales men and on the ONS data.
-Starting from the observed rates of the last year alone
-(`lee_carter(jump_off = "observed")`, or
-`anchored(years = 1, decay = Inf, shrink = FALSE)`) was best on England
-& Wales men (CRPS 0.0583 against 0.0639 anchored to three years), whose
-counts are large, and worse on the ONS quintiles, whose last year is
-noisier. Decompositions of a change from an observed to a forecast year
-include the step; [`mt_decompose()`](../reference/mt_decompose.md)
+dashed (forecast) line. `anchored(model)` starts any model from the
+observed rates of the last training year and keeps this offset in every
+forecast year, the jump-off adjustment of Lee and Miller (2001);
+`lee_carter(jump_off = "observed")` and `li_lee(jump_off = "observed")`
+do the same within the model. The observed rates of one year carry their
+random variation into every forecast year, which matters where deaths
+are few. The other settings of [`anchored()`](../reference/anchored.md)
+are package-specific: the offset of the last `years` years, shrunk where
+deaths are few (`shrink = TRUE`) and fading out over `decay` years.
+“Where a forecast starts: the jump-off” compares the starting points in
+a backtest. Decompositions of a change from an observed to a forecast
+year include the step; [`mt_decompose()`](../reference/mt_decompose.md)
 reports it (`jump_off`) and can start from the fitted rates
 (`observed = "fitted"`).
 
 ### What is the difference between predictive draws and forecast rates?
 
-For models of smooth rates (Lee-Carter, Li-Lee, Tucker3, FDM, StMoMo,
-Bayesian APC, `rwd(observation_noise = TRUE)`),
+For models of expected rates (Lee-Carter, Li-Lee, CoDa, Tucker3, FDM,
+StMoMo, StanMoMo, Bayesian APC),
 [`mt_forecast()`](../reference/mt_forecast.md) returns draws of the
-smooth death rates by default, and `predictive = TRUE` adds the
-variation of observed rates around them (extra-Poisson and Poisson noise
-given the exposures), which is what an observed future rate will show.
-Models of observed rates ([`rwd()`](../reference/rwd.md),
+expected death rates by default, and `predictive = TRUE` draws the
+deaths given these rates and the exposures, which is what an observed
+future rate will show. The deaths are Poisson, the observation model of
+the Poisson Lee-Carter model (Brouhns, Denuit and Vermunt 2002), or
+negative binomial for `stanmomo(family = "nb")`; no other observation
+noise is added. Models of observed rates
+([`rwd()`](../reference/rwd.md),
 [`arima_series()`](../reference/arima_series.md),
 [`ets_series()`](../reference/arima_series.md)) forecast observed rates
-directly, and `predictive` adds nothing. Backtests use predictive draws
-because they are compared with observed rates. For life expectancy and
-other summaries of the underlying mortality, use the default draws.
+directly, and `predictive` adds nothing unless they were fitted to
+smoothed rates. Backtests use predictive draws because they are compared
+with observed rates. For life expectancy and other summaries of the
+underlying mortality, use the default draws.
 
 ### How do I handle small populations and zero deaths?
 
@@ -260,8 +279,8 @@ Models that take logs of observed rates (the random walk, the SVD
 version of Lee-Carter, Li-Lee) replace zero deaths by 0.5, which is
 harmless for a few cells and distorting for many. The Poisson Lee-Carter
 gives age groups without any death a constant rate and shrinks the age
-pattern of change where the counts are too sparse, with a warning. With
-many small cells:
+pattern of change where the counts are too sparse, with a warning (both
+are safeguards of this package). With many small cells:
 
 - model at a coarser resolution (age groups instead of single years, or
   wider groups at young ages,
@@ -272,10 +291,12 @@ many small cells:
   smoothing priors of [`apc_bayes()`](../reference/apc_bayes.md);
 - smooth before fitting with [`step_smooth()`](../reference/mt_prep.md)
   (age 0 is left out by default);
-- use `rwd(observation_noise = TRUE)` instead of
-  [`rwd()`](../reference/rwd.md), alone or in an ensemble: the plain
-  random walk treats the Poisson noise of observed rates as real change,
-  and its paths over 10 or more years can reach impossible rates;
+- use the local level model with drift, a random walk observed with
+  noise (`arima_series(order = c(0, 1, 1), drift = TRUE)`; Harvey 1989),
+  instead of [`rwd()`](../reference/rwd.md), alone or in an ensemble:
+  the plain random walk treats the Poisson noise of observed rates as
+  real change, and its paths over 10 or more years can reach impossible
+  rates;
 - combine rare causes of death into larger groups (see
   `ons_cause_groups` and
   [`mt_group_levels()`](../reference/mt_group_levels.md)).
@@ -335,9 +356,9 @@ in England” and “Differences between the German Laender”.
 That depends on the model, not only on the data. Separate models per
 stratum extrapolate each stratum’s trend, so gaps can widen without
 bound. [`li_lee()`](../reference/li_lee.md) and
-[`product_ratio()`](../reference/li_lee.md) let strata deviate from a
-common trend only through stationary processes, so gaps return towards
-their past average; so does `coda(coherent = TRUE)` for the distribution
+[`coherent_fdm()`](../reference/coherent_fdm.md) let strata deviate from
+a common trend only through stationary processes, so gaps return towards
+their past level; so does `coda(coherent = TRUE)` for the distribution
 of deaths by age. Backtests over a few years rarely separate the two;
 the choice is an assumption to state.
 
@@ -353,9 +374,10 @@ composition of a population of subgroups from the change of their
 mortality: for groups defined at birth or for life, such as sex or
 education, as in Riffe, Tursun-zade and Trias Llimós (2024)
 (`composition = "radix"`); for areas such as deprivation quintiles,
-whose populations move between groups, with `composition = "pooled"`.
-Forecasts are decomposed draw by draw, so contributions have intervals;
-see “Decomposing differences in life expectancy”.
+whose populations move between groups, with `composition = "pooled"`, a
+parametrisation of this package without a published source. Forecasts
+are decomposed draw by draw, so contributions have intervals; see
+“Decomposing differences in life expectancy”.
 
 ## Describing mortality
 
@@ -420,12 +442,30 @@ data sets.
 
 ## References
 
+Brouhns N, Denuit M, Vermunt JK (2002). A Poisson log-bilinear
+regression approach to the construction of projected lifetables.
+*Insurance: Mathematics and Economics* 31(3): 373-393.
+
+Coroneo L, Iacone F (2020). Comparing predictive accuracy in small
+samples using fixed-smoothing asymptotics. *Journal of Applied
+Econometrics* 35(4): 391-409. <doi:10.1002/jae.2756>.
+
 Diebold FX, Mariano RS (1995). Comparing predictive accuracy. *Journal
 of Business & Economic Statistics* 13(3): 253-263.
+
+Harvey AC (1989). *Forecasting, Structural Time Series Models and the
+Kalman Filter*. Cambridge University Press.
 
 Harvey D, Leybourne S, Newbold P (1997). Testing the equality of
 prediction mean squared errors. *International Journal of Forecasting*
 13(2): 281-291.
+
+Lazarus E, Lewis DJ, Stock JH, Watson MW (2018). HAR inference:
+recommendations for practice. *Journal of Business & Economic
+Statistics* 36(4): 541-559.
+
+Lee R, Miller T (2001). Evaluating the performance of the Lee-Carter
+method for forecasting mortality. *Demography* 38(4): 537-549.
 
 Li N, Lee R, Gerland P (2013). Extending the Lee-Carter method to model
 the rotation of age patterns of mortality decline for long-term
@@ -440,6 +480,10 @@ Panagiotelis A, Gamakumara P, Athanasopoulos G, Hyndman RJ (2023).
 Probabilistic forecast reconciliation: properties, evaluation and score
 optimisation. *European Journal of Operational Research* 306(2):
 693-706. <doi:10.1016/j.ejor.2022.07.040>.
+
+Riffe T, Tursun-zade R, Trias Llimós S (2024). Arriaga meets Kitagawa.
+Life expectancy decomposition with population subgroups. MPIDR Working
+Paper WP-2024-029. <doi:10.4054/MPIDR-WP-2024-029>.
 
 Wilmoth JR (1995). Are mortality projections always more pessimistic
 when disaggregated by cause of death? *Mathematical Population Studies*

@@ -8,9 +8,10 @@ exposures must be available on the grid (use
 [`mt_ungroup()`](mt_ungroup.md) first for grouped data). In a
 forecasting pipeline, use it as a preprocessing step
 (`mt_prep(step_smooth(...))`): models are then fitted to the smoothed
-rates, while the observation noise of their predictive draws, residuals
-and backtest scales come from the rates before smoothing ("smooth input,
-raw residuals").
+rates, while their residuals, observed rates, backtest scales and
+jump-off offsets come from the deaths before smoothing ("smooth input,
+raw residuals"). Predictive draws add Poisson deaths given the model's
+rates, as without smoothing.
 
 ## Usage
 
@@ -44,7 +45,8 @@ mt_smooth(
 
 - lambda:
 
-  Fixed smoothing parameter(s); `NULL` selects them by `criterion`.
+  Fixed smoothing parameter(s) of the P-splines or the Whittaker
+  smoother; `NULL` selects them.
 
 - criterion:
 
@@ -60,7 +62,8 @@ mt_smooth(
 
 - lambda_range:
 
-  Search range for the smoothing parameters.
+  Search range of the smoothing parameters of the P-splines and the
+  Whittaker smoother (in both directions).
 
 - method:
 
@@ -88,23 +91,28 @@ mt_smooth(
 ## Value
 
 An `mt_data` object with smoothed deaths; diagnostics as attribute
-`"smooth"`.
+`"smooth"`, one row per fit, with the smoothing parameter, the effective
+degrees of freedom (`edf`, or `ed` for P-splines) and, for the Whittaker
+smoother, `at_bound` when the selected parameter is at an end of
+`lambda_range` before the fit reached its limit there (interpolation at
+the lower end, a polynomial of degree `pord - 1` at the upper end); such
+fits are also reported with a warning.
 
 ## Details
 
 Methods and directions:
 
 - `dims = 1, along = "age"` (default): each year separately over age,
-  with Poisson P-splines (`"pspline"`), Whittaker smoothing of log rates
-  with the deaths as weights (`"whittaker"`), or a Gaussian additive
-  model of log rates with the deaths as weights (`"gam"`);
+  with Poisson P-splines and the exposures as offset (`"pspline"`; the
+  one-dimensional case of Currie, Durban and Eilers 2004), the weighted
+  Whittaker smoother of log rates with the deaths as weights
+  (`"whittaker"`; Whittaker 1923; Eilers 2003), or a quasi-Poisson
+  additive model `s(age)` with the exposures as offset (`"gam"`; Wood
+  2017), smoothing parameter by REML and overdispersion estimated;
 
-- `dims = 1, along = "period"`: each age separately over time, Whittaker
-  smoothing of log rates with the deaths as weights and one smoothing
-  parameter per stratum (generalised cross-validation pooled over ages).
-  The weights are scaled within each age, so the parameter gives the
-  same smoothness at every age; ages with many deaths are not left
-  unsmoothed;
+- `dims = 1, along = "period"`: each age separately over time, the
+  weighted Whittaker smoother of log rates with the deaths as weights
+  (the approximate inverse variances of the log rates);
 
 - `dims = 2`: the age-period surface, with a Poisson P-spline surface
   (`"pspline"`; Currie, Durban and Eilers 2004) or a quasi-Poisson
@@ -112,6 +120,26 @@ Methods and directions:
   exposures as offset (`"gam"`; Wood 2017), smoothing parameters by REML
   and overdispersion estimated, so that year-to-year variation beyond
   Poisson noise is not taken for signal.
+
+The Whittaker smoother minimises
+`sum(w (y - z)^2) + lambda sum((D z)^2)` for log rates `y`, weights `w`
+and differences `D` of order `pord` (divided differences over age, so
+that groups of different widths are smoothed on the age scale). Its
+smoothing parameter is chosen for every fit separately, by generalised
+cross-validation within `lambda_range`: for each year (over age) or for
+each age (over time) and stratum. Over time, with deaths as weights,
+ages whose year-to-year variation is large relative to their Poisson
+noise (typically ages with many deaths) are smoothed little or not at
+all, and ages with few deaths may be smoothed to a straight line of the
+log rates. The P-spline fits choose their smoothing parameters by
+`criterion` within `lambda_range`.
+
+Where a method needs one age per cell (the Whittaker smoother over age
+and the GAMs), an open last interval such as 90+ is placed at its lower
+bound plus half the width of the interval below it (92.5 after 85-89), a
+convention of this package. The P-splines instead expand the open
+interval into single years up to `omega`, as
+[`mt_ungroup()`](mt_ungroup.md) does.
 
 Smoothing over time removes year-to-year fluctuations from the fitted
 trends and from the starting level of forecasts; the last years are
@@ -133,8 +161,14 @@ look at it. The 2D P-spline surface is slow for many ages and years
 Currie ID, Durban M, Eilers PHC (2004). Smoothing and forecasting
 mortality rates. *Statistical Modelling* 4(4): 279-298.
 
+Eilers PHC (2003). A perfect smoother. *Analytical Chemistry* 75(14):
+3631-3636.
+
+Whittaker ET (1923). On a new method of graduation. *Proceedings of the
+Edinburgh Mathematical Society* 41: 63-75.
+
 Wood SN (2017). *Generalized Additive Models: An Introduction with R*
-(2nd ed.). Chapman and Hall/CRC.
+(2nd ed.). CRC Press.
 
 ## Examples
 
@@ -144,25 +178,25 @@ s <- mt_smooth(x)
 head(attr(s, "smooth"))
 #>    measure stratum period     method lambda_age lambda_period       ed
 #>     <char>   <int> <char>     <char>      <num>         <num>    <num>
-#> 1:  deaths       1   2001 pspline_1d   84044.06            NA 5.767171
-#> 2:  deaths       1   2002 pspline_1d   55318.96            NA 6.280081
-#> 3:  deaths       1   2003 pspline_1d   27572.52            NA 7.243212
-#> 4:  deaths       2   2001 pspline_1d  101398.86            NA 5.533108
-#> 5:  deaths       2   2002 pspline_1d   23289.26            NA 7.546782
-#> 6:  deaths       2   2003 pspline_1d   92069.24            NA 5.638856
-#>    max_rel_diff at_bound
-#>           <num>   <lgcl>
-#> 1:    0.1988679    FALSE
-#> 2:    0.2322712    FALSE
-#> 3:    0.2057177    FALSE
-#> 4:    0.2271092    FALSE
-#> 5:    0.2455273    FALSE
-#> 6:    0.2102315    FALSE
+#> 1:  deaths       1   2001 pspline_1d   86243.51            NA 5.733140
+#> 2:  deaths       1   2002 pspline_1d   55791.61            NA 6.265619
+#> 3:  deaths       1   2003 pspline_1d   27949.37            NA 7.219266
+#> 4:  deaths       2   2001 pspline_1d  100867.89            NA 5.537980
+#> 5:  deaths       2   2002 pspline_1d   23050.92            NA 7.560283
+#> 6:  deaths       2   2003 pspline_1d   89578.26            NA 5.670093
+#>    max_rel_diff at_bound open_iterations open_converged
+#>           <num>   <lgcl>           <int>         <lgcl>
+#> 1:    0.1999760    FALSE              11           TRUE
+#> 2:    0.2327082    FALSE              10           TRUE
+#> 3:    0.2063522    FALSE              11           TRUE
+#> 4:    0.2269536    FALSE               9           TRUE
+#> 5:    0.2456730    FALSE              10           TRUE
+#> 6:    0.2109345    FALSE              10           TRUE
 xt <- mt_example(deaths = "single", years = 2000:2015)
 st <- mt_smooth(xt, along = "period", method = "whittaker")
 mt_smooth_check(xt, st)
-#>    stratum    sex  label    mad_log dispersion  trend_ratio correlation
-#>      <int> <char> <char>      <num>      <num>        <num>       <num>
-#> 1:       1 female female 0.02113118  0.8846054 0.0013826242   0.9994987
-#> 2:       2   male   male 0.02072276  0.8750107 0.0009253008   0.9996417
+#>    stratum    sex  label    mad_log dispersion trend_ratio correlation      edf
+#>      <int> <char> <char>      <num>      <num>       <num>       <num>    <num>
+#> 1:       1 female female 0.01237280  0.9935176   0.2413490   0.9996135 434.4595
+#> 2:       2   male   male 0.01574177  0.9369526   0.1131588   0.9996879 297.3892
 ```

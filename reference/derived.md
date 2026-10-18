@@ -22,7 +22,9 @@ asr(
   standard = "esp2013",
   probs = c(0.025, 0.1, 0.5, 0.9, 0.975),
   paths = FALSE,
-  per = 1e+05
+  per = 1e+05,
+  exposure = NULL,
+  age_groups = c("standard", "grid")
 )
 
 yll(
@@ -68,12 +70,22 @@ yll(
 
 - exposure:
 
-  Future exposures for `yll()` (see [`mt_deaths()`](mt_deaths.md)).
+  Exposures (see [`mt_deaths()`](mt_deaths.md)): for `yll()` the future
+  exposures that give the deaths; for `asr()` the exposures that weight
+  the rates within each standard age group (default: those of each
+  observed year for observed data, of the last training year for
+  forecasts).
+
+- age_groups:
+
+  `"standard"` (default: direct standardisation on the age groups of the
+  standard population) or `"grid"` (the standard weights shared among
+  the grid cells, specific to this package). See Age-standardised rates.
 
 - reference_ex:
 
-  Reference remaining life expectancy per grid age, or `NULL` for the
-  forecast's own.
+  Reference remaining life expectancy at the start of each grid
+  interval, or `NULL` for the forecast's own.
 
 ## Value
 
@@ -84,18 +96,84 @@ with `paths = TRUE` an array.
 
 - `prob_dying()`: probability of dying between ages `from` and `to` (for
   example the SDG indicator 3.4.1 uses 30 to 70), `1 - l(to) / l(from)`
-  from the period life table;
+  from the period life table of [`life_table()`](life_table.md)
+  (Preston, Heuveline and Guillot 2001);
 
 - `asr()`: age-standardised death rate per `per` persons (default
-  100,000) with weights of a standard population, restricted to the ages
-  of the grid and renormalised (columns `ages`, `standard` and `per`
-  state this; an ASR for ages 50+ is per 100,000 of the standard
-  population aged 50+);
+  100,000), by direct standardisation with the weights of a standard
+  population (see Age-standardised rates);
 
-- `yll()`: years of life lost, deaths times a reference remaining life
-  expectancy at each age (by default the forecast's own period life
-  expectancy at the interval midpoint, approximated by the value at the
-  start of the interval).
+- `yll()`: years of life lost, the deaths of each age interval times the
+  remaining life expectancy at the average age at death in the interval
+  (see Years of life lost).
+
+## Age-standardised rates
+
+By default (`age_groups = "standard"`) the rates are first combined to
+the age groups of the standard population, as for the European Standard
+Population (Eurostat 2013): the rate of a standard age group is the sum
+of the deaths divided by the sum of the exposures of the grid cells in
+it, that is the mean of their rates weighted by their exposures. The ASR
+is the mean of these rates weighted by the standard population. The
+exposures are those of each observed year for observed data and, for
+forecasts, `exposure` (default: the exposures of the last training year,
+as in [`mt_deaths()`](mt_deaths.md)). Rates of a group without exposures
+(all zero, or draws that hold none) are averaged with equal weights.
+
+Grid cells wider than the standard groups (for example 0-4 for the
+groups 0 and 1-4 of the ESP 2013, or an open interval 90+ for the groups
+90-94 and 95+) take the sum of the weights of the standard groups they
+cover: rates and weights are combined over the smallest age groups that
+are unions both of grid cells and of standard groups. Only the ages of
+the grid enter, and the weights are renormalised to them (columns
+`ages`, `standard` and `per` state this; an ASR for ages 50+ is per
+100,000 of the standard population aged 50+); a standard group that the
+grid covers only in part enters with the covered share of its weight.
+
+`age_groups = "grid"` instead shares the weight of each standard group
+evenly among the grid cells within it (the weight of the open standard
+group equally among the grid cells it covers) and weights the rates of
+the grid cells with these shares. This is specific to this package
+(reference unknown). Where the grid is finer than the standard groups,
+every cell of a group gets the same weight, although the older cells of
+a group have higher death rates and, at older ages, fewer persons, so
+the ASR is higher than with the standard's age groups: by 1.8% to 3.6%
+for French rates on single years of age to 100+ (HMD, 1950-2006, ESP
+2013), and by more when the grid extends to higher ages, over which the
+weight of the open standard group 95+ is then spread evenly (up to 11%
+with single years to 110+). On a grid of the standard's age groups (or
+coarser) both give the same value.
+
+## Years of life lost
+
+`yll()` multiplies the deaths of each age interval by the remaining life
+expectancy at the average age at death in the interval, `x + a_x`,
+interpolated linearly between the values at the start and at the end of
+the interval, `e_x + a_x / n_x * (e_(x+n) - e_x)` (as for e-dagger in
+[`lifespan_variation()`](lifespan_variation.md)); the last interval uses
+its `e_x`. With the life expectancy of the forecast's own period life
+table (default) these are the period expected years of life lost of
+Murray (1994). With `reference_ex`, the remaining life expectancy of a
+standard life table at the start of each grid interval, interpolated in
+the same way with the `a_x` of the forecast's life table, they are the
+standard expected years of life lost of the same paper. Neither
+discounting nor age weighting is applied. The deaths are rates times
+`exposure` (default: the exposures of the last training year), without
+Poisson noise.
+
+## References
+
+Eurostat (2013). Revision of the European Standard Population: report of
+Eurostat's task force. Methodologies and Working papers. Publications
+Office of the European Union, Luxembourg.
+[doi:10.2785/11470](https://doi.org/10.2785/11470)
+
+Murray CJL (1994). Quantifying the burden of disease: the technical
+basis for disability-adjusted life years. *Bulletin of the World Health
+Organization* 72(3): 429-445.
+
+Preston SH, Heuveline P, Guillot M (2001). *Demography: Measuring and
+Modeling Population Processes*. Blackwell.
 
 ## Examples
 
@@ -130,26 +208,51 @@ prob_dying(fc, from = 30, to = 70)
 asr(fc)
 #>     stratum    sex  label period      mean    q0.025      q0.1      q0.5
 #>       <int> <char> <char>  <num>     <num>     <num>     <num>     <num>
-#>  1:       1 female female   2020  917.8167  900.9276  907.4972  918.2079
-#>  2:       1 female female   2021  907.3934  882.9148  890.9984  907.5024
-#>  3:       1 female female   2022  898.7630  869.8038  879.4961  899.1765
-#>  4:       1 female female   2023  890.1245  855.0679  866.2651  889.4009
-#>  5:       1 female female   2024  881.3295  845.7694  855.4901  882.2764
-#>  6:       2   male   male   2020 1532.8800 1504.1236 1515.9179 1533.4636
-#>  7:       2   male   male   2021 1517.6510 1478.4268 1494.7835 1518.0457
-#>  8:       2   male   male   2022 1499.5829 1457.2561 1468.0689 1498.7367
-#>  9:       2   male   male   2023 1483.6304 1430.7873 1448.2452 1484.6712
-#> 10:       2   male   male   2024 1468.7305 1403.0915 1421.0269 1473.4035
+#>  1:       1 female female   2020  905.4925  888.7426  895.2578  905.8803
+#>  2:       1 female female   2021  895.1552  870.8804  878.8962  895.2629
+#>  3:       1 female female   2022  886.5967  857.8801  867.4904  887.0061
+#>  4:       1 female female   2023  878.0306  843.2699  854.3715  877.3120
+#>  5:       1 female female   2024  869.3095  834.0513  843.6885  870.2473
+#>  6:       2   male   male   2020 1493.9369 1465.5919 1477.2167 1494.5118
+#>  7:       2   male   male   2021 1478.9260 1440.2668 1456.3864 1479.3140
+#>  8:       2   male   male   2022 1461.1183 1419.4051 1430.0597 1460.2826
+#>  9:       2   male   male   2023 1445.3970 1393.3261 1410.5264 1446.4205
+#> 10:       2   male   male   2024 1430.7146 1366.0425 1383.7105 1435.3166
 #>          q0.9    q0.975    ages standard   per
 #>         <num>     <num>  <char>   <char> <num>
-#>  1:  927.2516  935.1484 30-100+  esp2013 1e+05
-#>  2:  922.0057  930.7354 30-100+  esp2013 1e+05
-#>  3:  921.0720  927.5761 30-100+  esp2013 1e+05
-#>  4:  914.8358  922.9969 30-100+  esp2013 1e+05
-#>  5:  905.3257  921.4380 30-100+  esp2013 1e+05
-#>  6: 1549.1706 1555.4688 30-100+  esp2013 1e+05
-#>  7: 1539.8488 1556.3079 30-100+  esp2013 1e+05
-#>  8: 1529.5330 1551.6067 30-100+  esp2013 1e+05
-#>  9: 1518.2615 1535.6114 30-100+  esp2013 1e+05
-#> 10: 1504.3681 1530.9721 30-100+  esp2013 1e+05
+#>  1:  914.8499  922.6825 30-100+  esp2013 1e+05
+#>  2:  909.6469  918.3054 30-100+  esp2013 1e+05
+#>  3:  908.7208  915.1718 30-100+  esp2013 1e+05
+#>  4:  902.5358  910.6300 30-100+  esp2013 1e+05
+#>  5:  893.1043  909.0838 30-100+  esp2013 1e+05
+#>  6: 1509.9958 1516.2048 30-100+  esp2013 1e+05
+#>  7: 1500.8061 1517.0321 30-100+  esp2013 1e+05
+#>  8: 1490.6371 1512.3974 30-100+  esp2013 1e+05
+#>  9: 1479.5267 1496.6290 30-100+  esp2013 1e+05
+#> 10: 1465.8329 1492.0557 30-100+  esp2013 1e+05
+yll(fc)
+#>     stratum    sex  label period     mean   q0.025     q0.1     q0.5     q0.9
+#>       <int> <char> <char>  <num>    <num>    <num>    <num>    <num>    <num>
+#>  1:       1 female female   2020 966862.8 954425.2 959277.4 967160.4 973790.6
+#>  2:       1 female female   2021 959177.0 941057.0 947068.4 959281.2 969947.5
+#>  3:       1 female female   2022 952787.7 931264.8 938508.7 953130.2 969262.7
+#>  4:       1 female female   2023 946366.4 920196.6 928613.1 945881.9 964682.1
+#>  5:       1 female female   2024 939816.6 913177.2 920514.6 940581.4 957675.0
+#>  6:       2   male   male   2020 925711.2 912673.8 918036.0 925984.3 933071.8
+#>  7:       2   male   male   2021 918801.6 900941.0 908418.1 919001.6 928868.6
+#>  8:       2   male   male   2022 910569.9 891219.7 896191.1 910220.8 924206.4
+#>  9:       2   male   male   2023 903279.8 878994.6 887066.8 903799.0 919099.6
+#> 10:       2   male   male   2024 896435.5 866117.9 874467.2 898638.9 912785.9
+#>       q0.975
+#>        <num>
+#>  1: 979560.9
+#>  2: 976338.2
+#>  3: 974027.5
+#>  4: 970673.7
+#>  5: 969531.2
+#>  6: 935906.5
+#>  7: 936283.8
+#>  8: 934167.0
+#>  9: 926954.2
+#> 10: 924857.6
 ```

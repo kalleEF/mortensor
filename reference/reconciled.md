@@ -8,13 +8,14 @@ bottom strata, the aggregate strata are added with
 that the base model forecasts every node; exposures for the forecast
 (`exposure` of [`mt_forecast()`](mt_forecast.md)) can then be given for
 the bottom strata only, and those of the aggregates are their sums.
-Predictive draws (used by backtests) are coherent as well: the
-observation noise of the base model (Poisson and extra-Poisson variation
-for models of smooth rates, none for models of observed rates such as
-[`rwd()`](rwd.md); for [`ensemble()`](ensemble.md) and
-[`stratified()`](stratified.md) models that of the component or group
-each draw comes from) is drawn for the bottom strata only, independently
-per cell, and the aggregates are their sums.
+Predictive draws (used by backtests) are coherent as well: given the
+reconciled rates, the Poisson variation of the deaths of the bottom
+strata is drawn independently per cell and draw (none for models of
+observed rates such as [`rwd()`](rwd.md); for
+[`ensemble()`](ensemble.md) and [`stratified()`](stratified.md) models
+as for the component or group each draw comes from; negative binomial
+for `stanmomo(family = "nb")`), and the aggregates are the sums of the
+bottom strata.
 
 ## Usage
 
@@ -25,7 +26,7 @@ reconciled(
   method = c("wls", "mint", "structural", "ols", "bottom_up", "proportional",
     "energy_score"),
   shrink = "auto",
-  dependence = c("auto", "empirical", "none"),
+  dependence = c("none", "empirical", "auto"),
   fixed = NULL,
   years = 10,
   n_origins = 5,
@@ -43,7 +44,11 @@ reconciled(
 
 - hierarchy:
 
-  An [`mt_hierarchy()`](mt_hierarchy.md).
+  An [`mt_hierarchy()`](mt_hierarchy.md). When the data hold the
+  aggregate strata, their exposures are compared with those the
+  hierarchy implies, with a warning (class
+  `mt_warning_hierarchy_exposure`) when they differ, for example causes
+  of death declared without `additive = "rates"`.
 
 - method:
 
@@ -56,15 +61,15 @@ reconciled(
 
 - dependence:
 
-  `"auto"` (default: `"none"` for models fitted jointly across strata,
-  whose draws already carry their dependence, such as
-  [`li_lee()`](li_lee.md) and [`tucker3()`](tucker3.md); `"empirical"`
-  for models fitted per stratum), `"empirical"` or `"none"`. With
-  `"empirical"` the paths of the strata are reordered before
-  reconciliation (see [`mt_reconcile()`](mt_reconcile.md)), so that
-  aggregates keep the observed co-movement of the strata; the
-  observation noise of predictive draws is independent across cells, as
-  for models without a hierarchy.
+  `"none"` (default: the draws are reconciled as they are),
+  `"empirical"` or `"auto"` (the same as `"none"`, kept for
+  compatibility). With `"empirical"` the paths of separately fitted
+  strata are reordered before reconciliation by a package-specific
+  method (see [`mt_reconcile()`](mt_reconcile.md)). Draws of joint
+  models such as [`li_lee()`](li_lee.md) and [`tucker3()`](tucker3.md),
+  which carry the dependence between strata, are never reordered
+  (`"empirical"` then gives a warning and is ignored). The observation
+  noise of predictive draws is independent across cells either way.
 
 - fixed:
 
@@ -134,6 +139,23 @@ bottom strata. In the forecast, bottom values below zero are set to zero
 and the aggregates are their sums. The estimates and a table of the
 training are in the fit (see Value).
 
+Two details differ from ProbReco. (1) Each step estimates the energy
+score from two samples of `draws_per_step` base draws of every training
+forecast, which ProbReco simulates independently. Here they are taken
+from the `n_draws` inner draws without replacement when there are at
+least `2 * draws_per_step` of them, and otherwise from two disjoint
+random halves, so that a draw is never paired with itself (such pairs
+would contribute a distance of zero to the score). (2) Before the
+optimisation, the bottom values are divided by their mean observed value
+and every node, as an input, by its own mean observed value; the
+estimates are transformed back afterwards. This leaves the optimum
+unchanged, but Adam moves every parameter by steps of about `eta`, so
+the rescaling changes the path of the optimisation, and since it stops
+after `max_iter` steps or when the steps fall below `tol`, also the
+estimates, relative to ProbReco, which optimises on the original scale.
+The rescaling is package-specific; it makes the steps comparable across
+ages and between small and large nodes.
+
 The method has many parameters and few training forecasts. \\G\\ has one
 parameter per bottom stratum and node at each age (20 x 54 for 2 sexes x
 2 regions x 5 quintiles with all aggregates); the defaults give about 20
@@ -178,17 +200,17 @@ fit_es <- mt_fit(es, mt_aggregate_strata(x, h))
 fit_es$reconcile$scoreopt$table
 #>        age forecasts      scale iterations energy_ols energy_opt
 #>     <char>     <num>      <num>      <num>      <num>      <num>
-#>  1:  40-44        11   80.74848        200   112.7909   97.18129
-#>  2:  45-49        11  120.94848        200   181.4128  136.10143
-#>  3:  50-54        11  187.08182        200   222.5451  174.70273
-#>  4:  55-59        11  293.97273        200   260.7576  218.00871
-#>  5:  60-64        11  461.76970         30   396.7081  362.29530
-#>  6:  65-69        11  711.45455         18   581.3779  647.50836
-#>  7:  70-74        11 1068.51515        200   881.1605  720.61784
-#>  8:  75-79        11 1529.67879         38   906.8957  893.64292
-#>  9:  80-84        11 2004.54545         35  1202.3287 1175.47593
-#> 10:  85-89        11 2283.83333         18  1418.6084 1838.65283
-#> 11:    90+        11 4201.22727         13  2269.7176 3327.87922
+#>  1:  40-44        11   80.74848        200   110.6156   92.85656
+#>  2:  45-49        11  120.94848        200   183.2950  132.70090
+#>  3:  50-54        11  187.08182        200   222.4106  166.41359
+#>  4:  55-59        11  293.97273        200   249.2886  202.12100
+#>  5:  60-64        11  461.76970         22   399.3858  404.22064
+#>  6:  65-69        11  711.45455         17   562.5127  650.40601
+#>  7:  70-74        11 1068.51515        200   898.4196  700.22405
+#>  8:  75-79        11 1529.67879        200   882.9746  721.68237
+#>  9:  80-84        11 2004.54545         36  1168.2083 1128.61859
+#> 10:  85-89        11 2283.83333         13  1395.2534 2110.01867
+#> 11:    90+        11 4201.22727         13  2289.7388 3204.27096
 fc_es <- mt_forecast(fit_es, h = 5, n_draws = 50, seed = 1)
 # }
 ```
