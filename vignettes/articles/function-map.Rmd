@@ -82,16 +82,16 @@ observed data.
 | Prepare | `mt_group_levels()`, `mt_relabel()` | aggregation layers, recode labels | `mt_data` | `mt_data` |
 | Prepare | `mt_fill_suppressed()` | estimate suppressed counts | `mt_data`, hierarchy or bounds | `mt_data` |
 | Check | `mt_validate()` | plausibility and hierarchy checks | `mt_data` | findings |
-| Harmonise | `mt_regroup()`, `mt_ungroup()`, `mt_smooth()` | common resolution, single years, smoothing over age, time or both | `mt_data` | `mt_data` |
+| Harmonise | `mt_regroup()`, `mt_ungroup()`, `mt_smooth()` | common resolution, single years (PCLM or monotone interpolation; the spline methods `"hyman_kannisto"`, `"natural_gompertz"` and `"gam"` are deprecated), smoothing over age, time or both | `mt_data` | `mt_data` |
 | Harmonise | `mt_plot_ungroup()`, `mt_ungroup_check()` | ungrouped against grouped rates, stability over time, errors against known single years; several methods side by side | `mt_data` and ungrouped data (or a list) | ggplot, table |
 | Harmonise | `mt_smooth_check()`, `mt_plot_smooth()` | how much smoothing removed (dispersion, trend ratio); several smoothers in one figure | `mt_data` pair or list | table, ggplot |
 | Harmonise | `mt_prep()`, `mt_prep_apply()` with `step_ungroup()`, `step_smooth()`, `step_regroup()`, `step_grid()`, `step_shocks()`, `step_window()` | preprocessing inside fits and backtests | steps | pipeline |
-| Model | `lee_carter()` (optionally rotated), `rwd()`, `li_lee()`, `product_ratio()`, `hyndman_ullah()`, `coherent_fdm()`, `coda()` (also coherent), `stmomo()`, `stanmomo()`, `arima_series()`, `ets_series()`, `apc_bayes()`, `tucker3()`, `cause_shares()`, `coda_causes()` | model specifications | settings | `mt_spec` |
+| Model | `lee_carter()` (optionally rotated), `rwd()`, `li_lee()`, `hyndman_ullah()`, `coherent_fdm()`, `coda()` (also coherent), `stmomo()`, `stanmomo()`, `arima_series()`, `ets_series()`, `apc_bayes()`, `tucker3()`, `coda_causes()`; deprecated: `product_ratio()` (use `coherent_fdm()`), `cause_shares()` (use `reconciled()` or `coda_causes()`), `rwd(observation_noise = TRUE)` (use `arima_series(order = c(0, 1, 1), drift = TRUE)`), `tucker3(transform = "coda")` (use `coda()`) | model specifications | settings | `mt_spec` |
 | Model | `apc_select()`, `mcmc_control()`, `mt_tune()` | choose random-walk orders, MCMC settings; model and preprocessing settings by forecast accuracy on the last years (hold-out or rolling origins; rates, life expectancy or ASR) | data, grid | table, `mt_spec` |
 | Combine | `ensemble()` (optionally `top_k`), `stratified()`, `reconciled()` (also score-optimal, `method = "energy_score"`), `bootstrapped()`, `tuned()` | mixtures, different models for groups of strata, coherence, parameter uncertainty (and of smoothing, `type = "data"`), tuning | `mt_spec` | `mt_spec` |
 | Combine | `mt_order_strata()` | keep an ordering between strata (for example women below men) path by path | `mt_draws` | `mt_draws` |
 | Calibrate | `recalibrated()` | rescale the spread (optionally the drift) of any model's draws to its forecast errors in the last years, overall or by age band, for rates, life expectancy or ASR | `mt_spec` | `mt_spec` |
-| Jump-off | `anchored()`, `mt_jump_off()` | start forecasts at the observed level of the last years; report the first-year step | `mt_spec`, `mt_draws` | `mt_spec`, table |
+| Jump-off | `anchored()`, `mt_jump_off()` | start forecasts at the observed rates of the last year (optionally of several years, shrunk and fading out); report the first-year step | `mt_spec`, `mt_draws` | `mt_spec`, table |
 | Coherence | `mt_hierarchy()`, `mt_aggregate_strata()`, `mt_reconcile()` (with `fixed` nodes; `"proportional"` scales the parts of fixed nodes), `mt_aggregate_draws()` | define and apply totals of strata | hierarchy | `mt_data`, `mt_draws` |
 | Coherence | `mt_coherence()`, `mt_plot_coherence()` | sum of parts over aggregate, per year | `mt_draws`, hierarchy | table, ggplot |
 | Fit | `mt_fit()` | estimate | `mt_spec`, `mt_data` | `mt_fit` |
@@ -113,7 +113,7 @@ observed data.
 | Report | `mt_plot_forecast()`, `mt_plot_age()`, `mt_plot_life_expectancy()`, `mt_plot_shares()`, `mt_plot_rates()`, `mt_plot_tucker()`, `mt_export()` | figures and CSV files | draws, data, tables | ggplot, file |
 | Data | `ons_data`, `ons_cause_groups`, `de_deaths`, `de_population`, `de_cause_groups`, `mt_example()`, `mt_example_causes()`, `mt_example_regions()` | example data (published and simulated) | | tables, `mt_data` |
 | Report | `theme_mortensor()`, `scale_colour_mortensor()`, `scale_fill_mortensor()`, `mt_palette()` | the package's plot style for your own figures | | theme, scales |
-| Disaggregate | `mt_disaggregate()`, `mt_shape_rates()`, `mt_disaggregate_check()`, `mt_plot_disaggregation()` | forecasts on finer ages, with fixed or changing age shapes | `mt_draws` | `mt_draws`, table, ggplot |
+| Disaggregate | `mt_disaggregate()`, `mt_shape_rates()`, `mt_disaggregate_check()`, `mt_plot_disaggregation()` | forecasts on finer ages with a fixed age shape within each group (the spline methods and `mt_shape_rates(method = "gam")` are deprecated) | `mt_draws` | `mt_draws`, table, ggplot |
 | Exchange | `as_demogdata()`, `as_stmomodata()` | cross-checks with demography and StMoMo | `mt_data` | `demogdata`, `StMoMoData` |
 | Extend | `new_mt_spec()` | constructor for developers adding a model (methods for the internal generics `fit_model()` and `simulate_model()`) | model name, parameters | `mt_spec` |
 

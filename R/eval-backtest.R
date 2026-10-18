@@ -3,8 +3,9 @@
 #' For each forecast origin, the data are cut at the origin, the
 #' preprocessing pipeline and the model are fitted on the
 #' training window only, and predictive draws for the next `h` years are
-#' compared with the observations. Nothing after the origin enters the fit,
-#' including ungrouping and smoothing (they are part of `prep`).
+#' compared with the observations (rolling-origin evaluation; Tashman
+#' 2000). Nothing after the origin enters the fit, including ungrouping and
+#' smoothing (they are part of `prep`).
 #'
 #' Evaluation happens at the resolution of the observed deaths: grid draws of
 #' deaths (Poisson given the exposures of the test years, which are treated
@@ -95,6 +96,10 @@
 #' ranked probability score for circular variables and its application to
 #' mesoscale forecast ensemble verification. *Quarterly Journal of the Royal
 #' Meteorological Society* 132: 2925-2942.
+#'
+#' Tashman LJ (2000). Out-of-sample tests of forecasting accuracy: an
+#' analysis and review. *International Journal of Forecasting* 16(4):
+#' 437-450.
 #' @return An object of class `mt_backtest`: a `data.table` with one row per
 #'   observed cell, origin and horizon: `model`, `prep` (the preprocessing
 #'   steps, `"none"` without), `origin`, `horizon`,
@@ -509,11 +514,16 @@ wis_from_quantiles <- function(Q, y, probs) {
 #'   `contrast` in [mt_backtest()]).
 #' @return A `data.table` with the mean CRPS, WIS and absolute error, the
 #'   root mean squared error of the median (`rmse`), MASE
-#'   (mean of absolute error over the scale; rates only), empirical coverage
+#'   (mean of absolute error over the scale, the mean absolute year-to-year
+#'   change of the training data, as the mean absolute scaled error of
+#'   Hyndman and Koehler 2006; rates only), empirical coverage
 #'   of the 50%, 80% and 95% intervals, mean PIT, the number of scored
 #'   cells and the `unit` of CRPS, WIS and absolute error (log rates, or
 #'   years for life expectancy). Backtests of the same model with different
 #'   preprocessing (column `prep`) are scored separately.
+#' @references
+#' Hyndman RJ, Koehler AB (2006). Another look at measures of forecast
+#' accuracy. *International Journal of Forecasting* 22(4): 679-688.
 #' @examples
 #' x <- mt_example(deaths = "single", years = 1990:2012)
 #' bt <- mt_backtest(rwd(), x, origins = 2007, h = 5, n_draws = 100)

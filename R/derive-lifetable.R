@@ -158,6 +158,9 @@ gompertz_open_ex <- function(M, age, k, law = "gompertz", omega = 110) {
 
 #' Life expectancy from rates or forecast draws
 #'
+#' Life expectancy of the period life table of [life_table()] (Preston,
+#' Heuveline and Guillot 2001), for draws path by path.
+#'
 #' @param x A matrix or array of rates with age in the first dimension, an
 #'   [mt_draws] object, or an [mt_data] object (observed rates with Poisson
 #'   intervals, see [mt_observed()]).
@@ -172,6 +175,9 @@ gompertz_open_ex <- function(M, age, k, law = "gompertz", omega = 110) {
 #' @return For arrays, an array without the age dimension. For draws, a
 #'   `data.table` with the mean and quantiles per stratum and period, computed
 #'   path by path.
+#' @references
+#' Preston SH, Heuveline P, Guillot M (2001). *Demography: Measuring and
+#' Modeling Population Processes*. Blackwell.
 #' @examples
 #' x <- mt_example(deaths = "single")
 #' m <- mt_array(x, "deaths") / mt_array(x, "exposure")

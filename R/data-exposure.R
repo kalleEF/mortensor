@@ -13,14 +13,20 @@
 #'   of the populations on 31 December of years t - 1 and t. The first year
 #'   has no predecessor and is dropped.
 #'
-#' Both are standard approximations; the HMD uses more refined cohort-based
-#' formulas. The approximation used is recorded in the provenance column.
+#' These are the standard approximations of person-years from population
+#' counts (Preston, Heuveline and Guillot 2001): the population at the
+#' middle of the year, or the mean of the populations at its start and its
+#' end. The HMD uses more refined cohort-based formulas. The approximation
+#' used is recorded in the provenance column.
 #'
 #' @param data An [mt_data] object with a population table.
 #' @param type The kind of population counts, a required choice: `"midyear"`
 #'   (mid-year estimates, used as exposures), `"jan1"` (1 January) or
 #'   `"dec31"` (31 December); see Details.
 #' @return The `mt_data` object with an exposure table.
+#' @references
+#' Preston SH, Heuveline P, Guillot M (2001). *Demography: Measuring and
+#' Modeling Population Processes*. Blackwell.
 #' @examples
 #' p <- data.frame(year = 2001:2003, age = 70, population = c(1000, 990, 985))
 #' x <- mt_as_exposure(mt_add_population(mt_data(), p), type = "jan1")
