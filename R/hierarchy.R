@@ -122,6 +122,30 @@ membership <- function(nodes, bottom, h, exposure = FALSE) {
   S
 }
 
+# Exposures of the aggregate strata in the data against those the hierarchy
+# implies (sums of the parts, or the shared exposure of additive = "rates")
+check_hierarchy_exposure <- function(data, hs) {
+  if (is.null(data$obs$exposure) || all(hs$is_bottom)) return(invisible())
+  E <- tryCatch(mt_array(data, "exposure"), error = function(e) NULL)
+  if (is.null(E)) return(invisible())
+  d <- dim(E)
+  Eb <- matrix(E[, , hs$bottom, drop = FALSE], d[1] * d[2])
+  agg <- which(!hs$is_bottom)
+  implied <- Eb %*% t(hs$Sx[agg, , drop = FALSE])
+  observed <- matrix(E[, , agg, drop = FALSE], d[1] * d[2])
+  ok <- is.finite(implied) & is.finite(observed) & implied > 0
+  if (!any(ok)) return(invisible())
+  dev <- stats::median(abs(observed[ok] / implied[ok] - 1))
+  if (dev > 0.01) {
+    mt_warn(sprintf(paste("The exposures of the aggregate strata differ from those the hierarchy implies by %.0f%%",
+                          "(median): exposures add up over variables with additive = \"deaths\" and are shared",
+                          "over variables with additive = \"rates\". For causes of death use",
+                          "list(total = ..., additive = \"rates\") in mt_hierarchy()."), 100 * dev),
+            class = "hierarchy_exposure")
+  }
+  invisible()
+}
+
 # Structure of the strata present: S [stratum row, bottom stratum], positions of the bottom rows
 hierarchy_structure <- function(strata, h) {
   h <- as_hierarchy(h)
@@ -913,7 +937,10 @@ shrink_cov <- function(X, shrink = "auto") {
 #' the inner forecasts.
 #'
 #' @param spec Base model specification (fitted to all strata).
-#' @param hierarchy An [mt_hierarchy()].
+#' @param hierarchy An [mt_hierarchy()]. When the data hold the aggregate
+#'   strata, their exposures are compared with those the hierarchy implies,
+#'   with a warning (class `mt_warning_hierarchy_exposure`) when they differ,
+#'   for example causes of death declared without `additive = "rates"`.
 #' @param method A method of [mt_reconcile()], or `"energy_score"`
 #'   (score-optimal reconciliation, see Details).
 #' @param shrink See [mt_reconcile()].
@@ -1011,7 +1038,7 @@ reconciled <- function(spec, hierarchy,
 mt_fit.mt_spec_reconciled <- function(spec, data, prep = NULL, cores = 1, ...) {
   p <- spec$params
   hs <- hierarchy_structure(data$strata, p$hierarchy)
-  if (all(hs$is_bottom)) data <- mt_aggregate_strata(data, p$hierarchy)
+  if (all(hs$is_bottom)) data <- mt_aggregate_strata(data, p$hierarchy) else check_hierarchy_exposure(data, hs)
   fit <- mt_fit(p$base, data, prep = prep, cores = cores, ...)
   hs <- hierarchy_structure(fit$strata, p$hierarchy)
   # the fitted specs can be joint where the spec could not tell (tuned())

@@ -22,7 +22,10 @@ reconciled(
 \arguments{
 \item{spec}{Base model specification (fitted to all strata).}
 
-\item{hierarchy}{An \code{\link[=mt_hierarchy]{mt_hierarchy()}}.}
+\item{hierarchy}{An \code{\link[=mt_hierarchy]{mt_hierarchy()}}. When the data hold the aggregate
+strata, their exposures are compared with those the hierarchy implies,
+with a warning (class \code{mt_warning_hierarchy_exposure}) when they differ,
+for example causes of death declared without \code{additive = "rates"}.}
 
 \item{method}{A method of \code{\link[=mt_reconcile]{mt_reconcile()}}, or \code{"energy_score"}
 (score-optimal reconciliation, see Details).}

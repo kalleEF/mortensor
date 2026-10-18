@@ -141,3 +141,13 @@ test_that("rate-additive hierarchies (causes) reconcile on the rate scale, also 
     }
   }
 })
+
+test_that("reconciled() warns when the exposures of the totals do not match the hierarchy", {
+  x <- mt_example_causes(years = 2005:2019)
+  expect_warning(mt_fit(reconciled(lee_carter(), mt_hierarchy(cause = "all")), x),
+                 class = "mt_warning_hierarchy_exposure")
+  expect_no_warning(mt_fit(reconciled(lee_carter(), mt_hierarchy(cause = "all", additive = "rates")), x))
+  xr <- mt_aggregate_strata(mt_example_regions(years = 2005:2019, regions = 2),
+                            mt_hierarchy(sex = "both", region = "all"))
+  expect_no_warning(mt_fit(reconciled(lee_carter(), mt_hierarchy(sex = "both", region = "all")), xr))
+})

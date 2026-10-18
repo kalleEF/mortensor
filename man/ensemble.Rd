@@ -35,7 +35,7 @@ A model specification.
 A mixture (linear pool, Gneiting and Ranjan 2013) of the predictive
 distributions of several models: each draw of the ensemble is a draw of
 one component, chosen with the weights as probabilities. Mixing draws
-(rather than averaging quantiles) keeps the paths coherent, so derived
+keeps the paths coherent, so derived
 quantities such as life expectancy can be computed from the ensemble
 draws.
 }

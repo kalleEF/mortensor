@@ -10,8 +10,8 @@
 #' core array `G`. The period factors (columns of `B`) are forecast and the
 #' rates rebuilt with `a`, `A`, `C` and `G` fixed.
 #'
-#' The following parts are choices of this package, not of the published
-#' model:
+#' The following parts are choices of this package without a published
+#' source:
 #'
 #' * estimation by higher-order orthogonal iteration (HOOI; De Lathauwer, De
 #'   Moor and Vandewalle 2000), least squares on the log rates;

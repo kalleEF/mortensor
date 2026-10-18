@@ -30,8 +30,8 @@ and reported as the share of adjusted cells.
 }
 \details{
 This is a post-hoc adjustment of this package without a published source
-(reference unknown): it changes the draws of the model, not the model,
-and the adjusted draws no longer follow the model's distribution. Models
+(reference unknown): it changes the draws and leaves the fitted model as
+it is, so the adjusted draws no longer follow the model's distribution. Models
 that keep strata together by construction are \code{\link[=li_lee]{li_lee()}},
 \code{\link[=coherent_fdm]{coherent_fdm()}} and \code{coda(coherent = TRUE)} (\code{\link[=coda]{coda()}}); \code{\link[=reconciled]{reconciled()}}
 makes totals and their parts coherent.

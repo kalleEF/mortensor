@@ -17,8 +17,8 @@
 #' paths of every stratum so that their ranks follow the changes of a
 #' resampled training year: a package-specific heuristic (see
 #' [mt_reconcile()]) that imposes a rank dependence taken from the training
-#' data, not one estimated by a model, and that also replaces the dependence
-#' within joint groups.
+#' data without a model of it, and that also replaces the dependence within
+#' joint groups.
 #' Each group is fitted and forecast as if it were the whole data, so
 #' backtests, [anchored()], [recalibrated()] and [reconciled()] work as for
 #' any model.

@@ -107,7 +107,7 @@ group total: the gap is reported as \code{max_rel_diff} in the diagnostics.
 With \code{preserve_totals = TRUE} the estimates within each observed group
 are rescaled to the observed total after the fit, so that aggregation
 reproduces the data exactly. This rescaling is a post-hoc step of
-mortensor, not part of the published method: it creates steps at the
+mortensor without a published source: it creates steps at the
 group boundaries, and with \code{dims = 2} it puts the year-to-year noise of
 every group back onto the smooth surface. On England and Wales men
 (2000-2011, 5-year groups) the median absolute difference of the

@@ -55,8 +55,8 @@ core array \code{G}. The period factors (columns of \code{B}) are forecast and t
 rates rebuilt with \code{a}, \code{A}, \code{C} and \code{G} fixed.
 }
 \details{
-The following parts are choices of this package, not of the published
-model:
+The following parts are choices of this package without a published
+source:
 \itemize{
 \item estimation by higher-order orthogonal iteration (HOOI; De Lathauwer, De
 Moor and Vandewalle 2000), least squares on the log rates;

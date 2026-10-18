@@ -254,7 +254,7 @@ fit_model.mt_spec_lee_carter <- function(spec, D, E, ages, periods, ...) {
   if ("ridge" %in% fallback) {
     mt_warn(paste("The Poisson likelihood of the Lee-Carter model has no finite maximum (sparse counts); fitted",
                   "with a ridge penalty that shrinks the age pattern of change b towards equal shares (a",
-                  "safeguard of this package, not the Poisson Lee-Carter model)."), class = "model_fit")
+                  "safeguard of this package without a published source)."), class = "model_fit")
   }
   if ("svd" %in% fallback) {
     mt_warn(paste("The Poisson likelihood of the Lee-Carter model has no finite maximum (sparse counts), also with",

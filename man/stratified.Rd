@@ -36,8 +36,8 @@ moved together. \code{\link[=reconciled]{reconciled()}} keeps the draws as they 
 paths of every stratum so that their ranks follow the changes of a
 resampled training year: a package-specific heuristic (see
 \code{\link[=mt_reconcile]{mt_reconcile()}}) that imposes a rank dependence taken from the training
-data, not one estimated by a model, and that also replaces the dependence
-within joint groups.
+data without a model of it, and that also replaces the dependence within
+joint groups.
 Each group is fitted and forecast as if it were the whole data, so
 backtests, \code{\link[=anchored]{anchored()}}, \code{\link[=recalibrated]{recalibrated()}} and \code{\link[=reconciled]{reconciled()}} work as for
 any model.

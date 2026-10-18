@@ -2,6 +2,104 @@
 
 Clean break: the 0.1.x interface is replaced (see `dev/revamp-plan.md`).
 
+## Published methods as defaults (audit of package-specific methods)
+
+Every method was checked against its published source
+(`dev/methods-audit.md`; article "Methods and sources"). Defaults are now
+the published methods; package-specific options are labelled
+"package-specific (reference unknown)" in their help pages; package
+inventions with a published counterpart in the package are deprecated
+(they work and warn with class `mt_warning_deprecated`). Results change.
+
+Predictive draws:
+
+* Deaths are Poisson given the model's rates (Brouhns, Denuit and
+  Vermunt 2002). The extra-Poisson layer estimated from in-sample
+  residuals is removed: it had no published source, counted observation
+  noise twice for `tucker3()` and the functional data models, replaced
+  the posterior predictive of the Bayesian models, and the validation
+  generator added the same noise. `stanmomo(family = "nb")` uses its
+  posterior negative-binomial predictive. Intervals of models of smooth
+  rates are narrower: 95% coverage of `lee_carter()` on England & Wales
+  men (ages 30-100, check `backtest_ew`) falls from 0.746 to 0.632; on
+  simulated Lee-Carter data with Poisson deaths it is 0.944.
+
+Models:
+
+* `tucker3()` is centred as in the three-way Lee-Carter model of
+  Russolillo, Giordano and Haberman (2011), without the residual noise
+  layer; experimental. 95% coverage on simulated Lee-Carter data 0.748.
+* Deprecated: `product_ratio()` (use `coherent_fdm()`), `cause_shares()`
+  (use `reconciled()` over a cause hierarchy with `additive = "rates"`, or
+  `coda_causes()`), `rwd(observation_noise = TRUE)` (use
+  `arima_series(order = c(0, 1, 1), drift = TRUE)`, its published
+  reduced form), `tucker3(transform = "coda")` (use `coda()`).
+* The Li-Lee AR(1) without intercept clamped at 0.99 and the ridge and SVD
+  fallbacks of `lee_carter()` for sparse counts are documented and warn.
+
+Combining models and coherence:
+
+* `reconciled()`, `mt_reconcile()`: `dependence = "none"` by default; the
+  reordering of separately simulated strata (`"empirical"`) is opt-in and
+  labelled package-specific. Aggregate intervals of separate models are
+  narrower: 95% coverage of the England total (ONS, WLS) 0.434 against
+  0.552. WLS and MinT weights from the base draws, the non-negativity
+  heuristic, fixed nodes and proportional reconciliation are documented
+  with their sources and deviations.
+* `reconciled()` warns (class `mt_warning_hierarchy_exposure`) when the
+  exposures of aggregate strata differ from those the hierarchy implies,
+  for example causes of death declared without `additive = "rates"`.
+* `recalibrated(scale = "constant")` by default (member-by-member
+  post-processing, Van Schaeybroeck and Vannitsem 2015); the power law
+  over horizons is an option. `quantity = "asr"` standardises as
+  `mt_backtest()` does.
+* `anchored()` defaults to the jump-off of Lee and Miller (2001):
+  `years = 1, decay = Inf, shrink = FALSE`; averaging, linear decay and
+  shrinkage (DerSimonian-Laird) are package-specific options. On the ONS
+  quintiles the default is less accurate than the former settings (CRPS
+  of Li-Lee 0.0708 against 0.0656).
+* Attributions corrected: `ensemble(weights = "crps")` is package-specific;
+  stacking weights optimise the medians; `bootstrapped(type = "grid")` is
+  the residual bootstrap of Renshaw and Haberman (2008).
+
+Harmonisation:
+
+* `mt_ungroup(preserve_totals = FALSE)` by default (the published PCLM);
+  the rescaling to group totals is opt-in. The open age interval inside
+  the PCLM is iterated to convergence and documented as package-specific.
+  Backtests keep exposure totals when they ungroup exposures.
+* Deprecated: ungrouping methods `"hyman_kannisto"`, `"natural_gompertz"`
+  and `"gam"`, `mt_shape_rates(method = "gam")`; `mt_disaggregate()`
+  defaults to proportional allocation by a standard age schedule
+  (`method = "shape"`).
+* `mt_smooth()`: the weighted Whittaker smoother with smoothing parameters
+  chosen by GCV per age, and a quasi-Poisson GAM in 1D as in 2D.
+* `mt_fill_suppressed()`: cells without a total get the truncated-Poisson
+  mean.
+
+Evaluation and derived quantities:
+
+* `mt_dm_test(varestimator = "ewc")` by default: the fixed-smoothing test
+  with the equal-weighted cosine variance and t critical values (Lazarus
+  et al. 2018; Coroneo and Iacone 2020). The HLN-corrected test
+  (`"acf"`) rejected a true null in up to 15% of simulated cases at
+  nominal 5% with 7-16 overlapping origins; the EWC test in 4.9-7.4%
+  (check `dm_size`). p-values are larger: random walk against Li-Lee at
+  horizon 1, 0.049 against 0.00015.
+* `asr()` standardises directly on the age groups of the standard
+  (Eurostat 2013) with `asr_groups()` and `asr_columns()`; the former even
+  split of standard weights over finer ages (`age_groups = "grid"`) gave
+  ASRs 1.8-11% too high on French single ages.
+* `yll()` uses life expectancy at the mean age at death in the interval,
+  e(x + a_x) (Murray 1994): 8.5-9.9% lower with 5-year groups.
+* `mt_decompose(composition = "pooled")` is labelled package-specific;
+  the estimand of `mt_excess()` and its P-scores are specified.
+
+Documentation:
+
+* New article "Methods and sources": every method with its source and
+  status (published, published with deviations, package-specific).
+
 ## Published methods added
 
 Models:

@@ -235,7 +235,7 @@ checks$causes_reconciled <- list(
   run = function() {
     x <- mt_example_causes(years = 1995:2017)
     prep <- mt_prep(step_smooth())
-    spec <- reconciled(lee_carter(), mt_hierarchy(cause = "all"))
+    spec <- reconciled(lee_carter(), mt_hierarchy(cause = list(total = "all", additive = "rates")))
     fit <- mt_fit(spec, mt_subset(x, periods = c(NA, 2012)), prep = prep)
     fc <- mt_forecast(fit, h = 5, n_draws = 100, seed = 1)
     st <- fc$strata
@@ -476,7 +476,7 @@ checks$coda_causes_coherence <- list(
     g2 <- gap(mt_forecast(fit, h = 5, n_draws = 100, seed = 1, predictive = TRUE))
     o <- 2008:2012
     cc <- mt_backtest(coda_causes(), x, origins = o, h = 5, n_draws = 100)
-    cs <- mt_backtest(reconciled(lee_carter(), mt_hierarchy(cause = "all")), x, origins = o, h = 5, n_draws = 100)
+    cs <- mt_backtest(reconciled(lee_carter(), mt_hierarchy(cause = list(total = "all", additive = "rates"))), x, origins = o, h = 5, n_draws = 100)
     data.frame(metric = c("max_gap", "max_gap_predictive", "cc_crps", "cc_cov95", "cs_crps", "crps_ratio_cc_cs"),
                value = c(g1, g2, mean(cc$crps), mean(cc$cov95), mean(cs$crps), mean(cc$crps) / mean(cs$crps)))
   })

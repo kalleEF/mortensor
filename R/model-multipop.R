@@ -243,8 +243,8 @@ simulate_model.mt_spec_multipop <- function(spec, fit, h, n_draws, ...) {
 #' and reported as the share of adjusted cells.
 #'
 #' This is a post-hoc adjustment of this package without a published source
-#' (reference unknown): it changes the draws of the model, not the model,
-#' and the adjusted draws no longer follow the model's distribution. Models
+#' (reference unknown): it changes the draws and leaves the fitted model as
+#' it is, so the adjusted draws no longer follow the model's distribution. Models
 #' that keep strata together by construction are [li_lee()],
 #' [coherent_fdm()] and `coda(coherent = TRUE)` ([coda()]); [reconciled()]
 #' makes totals and their parts coherent.
