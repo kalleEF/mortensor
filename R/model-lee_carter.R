@@ -38,6 +38,28 @@
 #' deaths over the period) and no trend; with `adjust = "e0"` they enter the
 #' life tables at that rate.
 #'
+#' `rotate = TRUE` rotates the age pattern of decline as life expectancy
+#' rises (Li, Lee and Gerland 2013). In long-lived populations the decline
+#' of mortality slows down at young ages and speeds up at old ages, which a
+#' fixed `b[x]` does not capture over long horizons. For each path and year,
+#' the life expectancy at birth `e0` of the unrotated forecast gives the
+#' weight `w = (0.5 (1 + sin(pi / 2 (2 u - 1))))^power` with
+#' `u = (e0 - e0_start) / (e0_end - e0_start)`; `w` is 0 below `e0_start` and
+#' 1 from `e0_end`. The age pattern of that year is `B[x] = (1 - w) b[x] +
+#' w bu[x]`. The ultimate pattern `bu` has the mean of `b` over ages 15-64 at
+#' all ages below 65; from age 65 it keeps the shape of `b`, scaled so that
+#' the first age group from 65 equals that mean; it sums to 1 like `b`. The
+#' index is then solved again, path by path and year by year, so that the
+#' rotated rates have the same life expectancy at birth as the unrotated
+#' ones: rotation changes the age pattern of the forecast, not its life
+#' expectancy at birth. Rates change from the jump-off year,
+#' `log m[x, t] = log m[x, T] + B[x] (k*[t] - k[T])`, so the jump-off rates
+#' stay as they are. Fitted rates, and paths with `e0` below `e0_start`, are
+#' unchanged. In MortCast (Sevcikova et al. 2016) the path of life
+#' expectancy comes from a separate model (bayesLife); here it is that of
+#' the Lee-Carter draws. Rotation needs ages from 0 (life expectancy at
+#' birth) with age groups starting at 15 and 65, and an open last age group.
+#'
 #' @param method `"poisson"` or `"svd"`.
 #' @param adjust Re-estimation of `k[t]` for `method = "svd"`: `"dt"`,
 #'   `"dxt"`, `"e0"` or `"none"`.
@@ -49,6 +71,13 @@
 #'   last year) or `"observed"` (from the observed rates of the last year).
 #' @param bootstrap Semi-parametric bootstrap of the parameters.
 #' @param n_boot Number of bootstrap fits.
+#' @param rotate Rotate the age pattern of decline `b` towards an ultimate
+#'   pattern as life expectancy at birth rises (Li, Lee and Gerland 2013).
+#' @param rotation Settings of the rotation, a named vector: life expectancy
+#'   at birth at which the rotation starts (`e0_start`) and is complete
+#'   (`e0_end`), and the exponent of the weights (`power`). The defaults are
+#'   those of Li, Lee and Gerland (2013) and MortCast; elements left out keep
+#'   their defaults.
 #' @return A model specification.
 #' @references
 #' Lee RD, Carter LR (1992). Modeling and forecasting U.S. mortality.
@@ -70,31 +99,78 @@
 #' Brouhns N, Denuit M, Van Keilegom I (2005). Bootstrapping the Poisson
 #' log-bilinear model for mortality forecasting. *Scandinavian Actuarial
 #' Journal* 2005(3): 212-224.
+#'
+#' Li N, Lee R, Gerland P (2013). Extending the Lee-Carter method to model
+#' the rotation of age patterns of mortality decline for long-term
+#' projections. *Demography* 50(6): 2037-2051.
+#' \doi{10.1007/s13524-013-0232-2}
+#'
+#' Sevcikova H, Li N, Kantorova V, Gerland P, Raftery AE (2016). Age-specific
+#' mortality and fertility rates for probabilistic population projections.
+#' In Schoen R (ed.) *Dynamic Demographic Analysis*. Springer, 285-310.
+#' \doi{10.1007/978-3-319-26603-9_15}
 #' @examples
 #' x <- mt_example(deaths = "single")
 #' fit <- mt_fit(lee_carter(), x)
 #' fc <- mt_forecast(fit, h = 10, n_draws = 200, seed = 1)
+#' \donttest{
+#' # rotation needs ages from 0: French women (HMD, via demography)
+#' if (requireNamespace("demography", quietly = TRUE)) {
+#'   fr <- as_mt_data(demography::fr.mort, series = "female", years = 1970:2006)
+#'   fr <- mt_regroup(fr, age = c(0, 1, seq(5, 100, 5)))
+#'   fc_rot <- mt_forecast(mt_fit(lee_carter(rotate = TRUE), fr), h = 50, n_draws = 100, seed = 1)
+#'   life_expectancy(fc_rot)
+#' }
+#' }
 #' @export
 lee_carter <- function(method = c("poisson", "svd"), jump_off = c("fitted", "observed"), bootstrap = FALSE,
                        n_boot = 100, adjust = c("dt", "dxt", "e0", "none"), choose_period = FALSE,
-                       min_years = 20) {
+                       min_years = 20, rotate = FALSE, rotation = c(e0_start = 80, e0_end = 102, power = 0.5)) {
   method <- match.arg(method)
   jump_off <- match.arg(jump_off)
   adjust <- match.arg(adjust)
   check_flag(choose_period, "choose_period")
   check_number(min_years, "min_years", lower = 5, integerish = TRUE)
+  check_flag(rotate, "rotate")
+  rotation <- rotation_settings(rotation)
   new_mt_spec("lee_carter", list(method = method, jump_off = jump_off, bootstrap = bootstrap, n_boot = n_boot,
-                                 adjust = adjust, choose_period = choose_period, min_years = min_years),
+                                 adjust = adjust, choose_period = choose_period, min_years = min_years,
+                                 rotate = rotate, rotation = rotation),
               min_periods = if (choose_period) min_years else 5,
               label = paste0("Lee-Carter", if (method == "svd") sprintf(" (SVD, %s)", adjust) else "",
+                             if (rotate) rotation_label(rotation) else "",
                              if (choose_period) ", chosen period" else "",
                              if (jump_off == "observed") ", observed jump-off" else "",
                              if (bootstrap) ", bootstrap" else ""))
 }
 
+# Settings of the rotation: defaults completed by the elements given
+rotation_settings <- function(rotation) {
+  out <- c(e0_start = 80, e0_end = 102, power = 0.5)
+  if (is.list(rotation)) rotation <- unlist(rotation)
+  nm <- names(rotation)
+  if (!is.numeric(rotation) || (length(rotation) && (is.null(nm) || !all(nm %in% names(out)) || anyDuplicated(nm)))) {
+    mt_abort("`rotation` must be a named numeric vector with elements `e0_start`, `e0_end` and `power`.",
+             class = "argument", call = NULL)
+  }
+  out[nm] <- rotation
+  if (anyNA(out) || any(!is.finite(out)) || out[["e0_end"]] <= out[["e0_start"]] || out[["power"]] <= 0) {
+    mt_abort("`rotation` needs finite values with `e0_start` < `e0_end` and `power` > 0.", class = "argument",
+             call = NULL)
+  }
+  out
+}
+
+rotation_label <- function(rotation) {
+  default <- c(e0_start = 80, e0_end = 102, power = 0.5)
+  if (isTRUE(all.equal(rotation, default))) return(", rotated")
+  sprintf(", rotated (e0 %g-%g, power %g)", rotation[["e0_start"]], rotation[["e0_end"]], rotation[["power"]])
+}
+
 #' @export
 fit_model.mt_spec_lee_carter <- function(spec, D, E, ages, periods, ...) {
   p <- spec$params
+  if (isTRUE(p$rotate)) rotation_check(ages)
   zero <- rowSums(D) == 0
   if (sum(!zero) < 2) mt_abort("Fewer than two age groups with deaths.", class = "model_fit")
   fallback <- FALSE
@@ -151,6 +227,19 @@ fit_model.mt_spec_lee_carter <- function(spec, D, E, ages, periods, ...) {
     })
     est$boot <- Filter(Negate(is.null), est$boot)
   }
+  if (isTRUE(p$rotate)) {
+    est$rotation <- c(list(age = ages), as.list(p$rotation))
+    est$b_ultimate <- lc_ultimate_b(est$b, ages, zero)
+    if (is.null(est$b_ultimate)) {
+      mt_abort(paste("Rotation needs a positive age pattern of decline b at ages 15-64 (mean) and in the first age",
+                     "group from 65."), class = "model_fit")
+    }
+    # bootstrap fits without a valid ultimate pattern are dropped
+    est$boot <- Filter(Negate(is.null), lapply(est$boot, function(s) {
+      s$b_ultimate <- lc_ultimate_b(s$b, ages, zero)
+      if (is.null(s$b_ultimate)) NULL else s
+    }))
+  }
   if (first > 1L) {
     # fitted rates only for the chosen period
     est$fitted <- cbind(matrix(NA_real_, nrow(D), first - 1L), est$fitted)
@@ -175,6 +264,129 @@ simulate_model.mt_spec_lee_carter <- function(spec, fit, h, n_draws, ...) {
       base <- if (fit$jump_off == "observed") fit$last_log_rate - s$b * s$k[length(s$k)] else s$a
       out[, , js[m]] <- exp(base + outer(s$b, kk))
     }
+    if (!is.null(fit$rotation)) out[, , js] <- lc_rotate(out[, , js, drop = FALSE], matrix(kp[1, , ], h), s, fit)
+  }
+  out
+}
+
+# Rotation of the age pattern of mortality decline (Li, Lee and Gerland
+# 2013). rotation_weights() and lc_ultimate_b() are adapted from MortCast
+# 2.8-0 (rotate.leecarter() and ultimate.bx() in R/LC.R), GPL (>= 2), by Hana
+# Sevcikova, Nan Li and Patrick Gerland. Changes: the ultimate pattern is
+# defined on any age axis with groups starting at 0, 15 and 65 (the mean
+# over ages 15-64 is weighted by the widths of the age groups, which gives
+# MortCast's mean for 5-year groups and single years), age groups without
+# deaths keep no trend, and the sum is that of b. In MortCast the index is
+# solved by bisection (to 0.01 years) for an external path of life
+# expectancy; here lc_rotate() solves it for the life expectancy of each
+# unrotated Lee-Carter path, and rates change from the jump-off year.
+
+# Ages from 0 (life expectancy at birth) with age groups starting at 15 and
+# 65 (the ultimate pattern)
+rotation_check <- function(age) {
+  lo <- age$lower
+  if (lo[1] != 0 || !all(c(15, 65) %in% lo)) {
+    mt_abort(sprintf(paste("lee_carter(rotate = TRUE) needs ages from 0 with age groups starting at 15 and 65",
+                           "(life expectancy at birth, ultimate pattern of decline); the grid has ages %s to %s.",
+                           "Extend or regroup the ages with mt_regroup()."), age$labels[1], age$labels[length(age)]),
+             class = "model_data", call = NULL)
+  }
+  if (is.finite(age$upper[length(age)])) {
+    mt_warn(sprintf(paste("The last age group (%s) is closed: the rotation uses life expectancy up to age %s, below",
+                          "life expectancy at birth."), age$labels[length(age)], format(age$upper[length(age)])),
+            class = "model_data", call = NULL)
+  }
+  invisible(age)
+}
+
+# Weights of the ultimate pattern for life expectancies e0 (MortCast's
+# rotate.leecarter(): 0 below e0_start, 1 from e0_end)
+rotation_weights <- function(e0, e0_start = 80, e0_end = 102, power = 0.5) {
+  u <- (e0 - e0_start) / (e0_end - e0_start)
+  w <- (0.5 * (1 + sin(pi / 2 * (2 * u - 1))))^power
+  w[!is.na(e0) & e0 < e0_start] <- 0
+  w[!is.na(e0) & e0 >= e0_end] <- 1
+  w
+}
+
+# Ultimate age pattern of decline (MortCast's ultimate.bx()): the mean of b
+# over ages 15-64 at ages below 65; from 65 the shape of b, scaled so that
+# the first age group from 65 equals that mean; the same sum as b. Age groups
+# without deaths (`fixed`) keep b = 0. NULL where the mean or b at 65 is not
+# positive.
+lc_ultimate_b <- function(b, age, fixed = NULL) {
+  fixed <- fixed %||% rep(FALSE, length(b))
+  lo <- age$lower
+  n <- age$upper - lo
+  young <- lo >= 15 & age$upper <= 65 & !fixed
+  i65 <- which(lo == 65)
+  if (!any(young) || length(i65) != 1L) return(NULL)
+  m <- sum(b[young] * n[young]) / sum(n[young])
+  if (!isTRUE(m > 0) || !isTRUE(b[i65] > 0)) return(NULL)
+  bu <- ifelse(lo >= 65, b * (m / b[i65]), m)
+  bu[fixed] <- 0
+  bu / sum(bu) * sum(b)
+}
+
+# Rotated rates for the unrotated draws R [age, h, draw] of parameter set s,
+# with index paths K [h, draw]: per path and year, the weight of the ultimate
+# pattern from the life expectancy of the unrotated rates, and the index
+# solved so that the rotated rates keep that life expectancy. Rates change
+# from the jump-off year: log m = J + B (k* - k[T]), J the jump-off log rates
+# (fitted or observed), so that paths below e0_start are left as they are.
+lc_rotate <- function(R, K, s, fit) {
+  rot <- fit$rotation
+  d <- dim(R)
+  M <- matrix(R, d[1])
+  e0 <- life_expectancy(M, rot$age)
+  w <- rotation_weights(e0, rot$e0_start, rot$e0_end, rot$power)
+  act <- which(!is.na(w) & w > 0)
+  if (!length(act)) return(R)
+  kj <- s$k[length(s$k)]
+  J <- if (fit$jump_off == "observed") fit$last_log_rate else s$a + s$b * kj
+  B <- outer(s$b, 1 - w[act]) + outer(s$b_ultimate, w[act])
+  kap <- lc_solve_e0(J, B, e0[act], as.vector(K)[act] - kj, rot$age)
+  ok <- !is.na(kap)
+  if (!all(ok)) {
+    mt_warn(sprintf(paste("Rotation: no index matches the life expectancy of %d of %d path-years; their rates are",
+                          "not rotated."), sum(!ok), length(ok)), class = "model", call = NULL)
+  }
+  M[, act[ok]] <- exp(J + B[, ok, drop = FALSE] * rep(kap[ok], each = d[1]))
+  array(M, d)
+}
+
+# Index kap (one per column of B) such that the life expectancy at birth of
+# exp(J + B[, j] kap[j]) equals e0[j]: secant steps for all columns at once
+# from `start`, uniroot() for the columns that do not converge; NA where no
+# root is found
+lc_solve_e0 <- function(J, B, e0, start, age, tol = 1e-10, maxit = 30) {
+  na <- length(J)
+  f <- function(kap, cols) {
+    life_expectancy(exp(J + B[, cols, drop = FALSE] * rep(kap, each = na)), age) - e0[cols]
+  }
+  out <- rep(NA_real_, length(start))
+  x0 <- start
+  f0 <- f(x0, seq_along(x0))
+  conv <- is.finite(f0) & abs(f0) < tol
+  out[conv] <- x0[conv]
+  x1 <- x0 - 0.01 * (1 + abs(x0))
+  act <- which(!conv & is.finite(f0))
+  for (it in seq_len(maxit)) {
+    if (!length(act)) break
+    xa <- x1[act]
+    f1 <- f(xa, act)
+    conv <- is.finite(f1) & abs(f1) < tol
+    out[act[conv]] <- xa[conv]
+    step <- f1 * (xa - x0[act]) / (f1 - f0[act])
+    x0[act] <- xa
+    f0[act] <- f1
+    x1[act] <- xa - step
+    act <- act[!conv & is.finite(step)]
+  }
+  for (j in which(is.na(out))) {
+    out[j] <- tryCatch(stats::uniroot(function(kap) f(kap, j), start[j] + c(-1, 1) * (1 + abs(start[j])),
+                                      extendInt = "yes", tol = 1e-12)$root,
+                       error = function(e) NA_real_)
   }
   out
 }

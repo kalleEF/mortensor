@@ -315,6 +315,8 @@ mt_aggregate_strata <- function(data, hierarchy, replace = FALSE) {
 #' @param method `"wls"` (default), `"mint"`, `"structural"`, `"ols"`,
 #'   `"bottom_up"` or `"proportional"` (with `fixed`). The vignette
 #'   "Coherent forecasts: totals and their parts" compares them.
+#'   Score-optimal reconciliation (`"energy_score"`) is learnt from past
+#'   forecasts and is available in [reconciled()] only.
 #' @param shrink Shrinkage intensity for `"mint"` (number between 0 and 1),
 #'   or `"auto"`.
 #' @param exposure Exposures `[age, period, stratum]` or `[age, stratum]` for
@@ -372,6 +374,11 @@ mt_reconcile <- function(draws, hierarchy = NULL,
                          shrink = "auto", exposure = NULL, dependence = c("empirical", "none"), seed = NULL,
                          fixed = NULL, var = NULL, total = NULL, parts = NULL) {
   check_class(draws, "mt_draws", "draws")
+  if (identical(method, "energy_score")) {
+    mt_abort(paste("`method = \"energy_score\"` learns the reconciliation from past forecasts and observations,",
+                   "which forecast draws do not hold: use reconciled(spec, hierarchy, method = \"energy_score\"),",
+                   "which makes them inside the training data."), class = "argument")
+  }
   method <- match.arg(method)
   dependence <- match.arg(dependence)
   if (is.character(hierarchy) && length(hierarchy) == 1 && is.null(var)) {
@@ -758,9 +765,44 @@ shrink_cov <- function(X, shrink = "auto") {
 #' the hierarchy (`mt_score_table(..., hierarchy = )`), as in the vignette
 #' "Coherent forecasts: totals and their parts".
 #'
+#' **Score-optimal reconciliation.** `method = "energy_score"` follows
+#' Panagiotelis et al. (2023). The reconciled draws are
+#' \eqn{\tilde y = S (d + G \hat y)}, where \eqn{\hat y} is a base draw of
+#' all nodes, \eqn{S} sums the bottom strata to the nodes, and \eqn{d} and
+#' \eqn{G} minimise the total energy score of past forecasts. Each time the
+#' model is fitted (also at every origin of an outer [mt_backtest()]), the
+#' base model is refitted at `n_origins` origins in the last `years` of the
+#' training data, as in [recalibrated()], and forecasts the next `horizon`
+#' years. Every origin, horizon and age with observed values for all strata
+#' is one training forecast. \eqn{d} and \eqn{G} are estimated separately for
+#' each age, from the training forecasts of all origins and horizons, on the
+#' scale of the other methods (deaths, or rates when the levels share
+#' exposures). The estimation is stochastic gradient descent (Adam) started
+#' from OLS reconciliation, as in the package ProbReco. The score is that
+#' of the predictive distribution the forecast gives: reconciled draws plus
+#' the observation noise of the bottom strata. In the forecast, bottom
+#' values below zero are set to zero and the aggregates are their sums.
+#' The fit holds \eqn{d} and \eqn{G} per age in `$reconcile$scoreopt`, with
+#' a table of the number of training forecasts and the mean in-sample
+#' energy score at the start (OLS) and at the end.
+#'
+#' The method has many parameters and few training forecasts. \eqn{G} has
+#' one parameter per bottom stratum and node at each age (20 x 54 for 2
+#' sexes x 2 regions x 5 quintiles with all aggregates); the defaults give
+#' about 20 training forecasts per age, which overlap. \eqn{G} can then fit
+#' the training forecasts better than it forecasts new years. The only
+#' regularisation is the limited number of small steps from the OLS start
+#' (`control$max_iter`, `control$eta`). The applications in the paper had
+#' longer training windows. Compare the method with `"wls"` or `"mint"` in a
+#' backtest before using it. The training refits the base model `n_origins`
+#' times, which is most of its cost; the optimisation takes a few seconds per
+#' age for a hierarchy of 54 nodes.
+#'
 #' @param spec Base model specification (fitted to all strata).
 #' @param hierarchy An [mt_hierarchy()].
-#' @param method,shrink See [mt_reconcile()].
+#' @param method A method of [mt_reconcile()], or `"energy_score"`
+#'   (score-optimal reconciliation, see Details).
+#' @param shrink See [mt_reconcile()].
 #' @param dependence `"auto"` (default: `"none"` for models fitted jointly
 #'   across strata, whose draws already carry their dependence, such as
 #'   [li_lee()] and [tucker3()]; `"empirical"` for models fitted per stratum),
@@ -769,17 +811,47 @@ shrink_cov <- function(X, shrink = "auto") {
 #'   aggregates keep the observed co-movement of the strata; the observation
 #'   noise of predictive draws is independent across cells, as for models
 #'   without a hierarchy.
-#' @param fixed Strata whose forecasts are kept (see [mt_reconcile()]).
+#' @param fixed Strata whose forecasts are kept (see [mt_reconcile()]); not
+#'   with `"energy_score"`.
+#' @param years,n_origins,horizon Training of `method = "energy_score"`: the
+#'   length of the training window (the last `years` observed years), the
+#'   number of inner origins in it (as in [recalibrated()]) and the number of
+#'   years each inner forecast covers (horizons 1 to `horizon`, cut at the
+#'   last training year).
+#' @param control Settings of the training for `method = "energy_score"`: a
+#'   list with any of `n_draws` (draws per inner forecast, default 100),
+#'   `draws_per_step` (draws per training forecast in each step, 50),
+#'   `max_iter` (number of steps, 500), `eta` (learning rate, 0.001),
+#'   `beta1` (0.9), `beta2` (0.999), `tol` (1e-4) and `epsilon` (1e-8), as in
+#'   `ProbReco::scoreopt.control()`. `max_iter = 0` gives OLS reconciliation.
+#' @param seed Random seed of the training for `method = "energy_score"`
+#'   (inner forecasts, observation noise and the draws of each step), so
+#'   that fits are reproducible.
 #'
 #' @return A model specification.
+#' @references
+#' Panagiotelis A, Gamakumara P, Athanasopoulos G, Hyndman RJ (2023).
+#' Probabilistic forecast reconciliation: properties, evaluation and score
+#' optimisation. *European Journal of Operational Research* 306(2):
+#' 693-706. \doi{10.1016/j.ejor.2022.07.040}
 #' @examples
 #' x <- mt_example_regions(years = 2000:2019, regions = 3)
 #' h <- mt_hierarchy(sex = "both", region = "all", quintile = "all")
 #' fit <- mt_fit(reconciled(lee_carter(), h, method = "wls"), mt_aggregate_strata(x, h))
 #' fc <- mt_forecast(fit, h = 5, n_draws = 50, seed = 1)
+#' \donttest{
+#' # score-optimal reconciliation, trained on forecasts from 2011 to 2017
+#' es <- reconciled(lee_carter(), h, method = "energy_score", years = 8, n_origins = 4, horizon = 3,
+#'                  control = list(max_iter = 200))
+#' fit_es <- mt_fit(es, mt_aggregate_strata(x, h))
+#' fit_es$reconcile$scoreopt$table
+#' fc_es <- mt_forecast(fit_es, h = 5, n_draws = 50, seed = 1)
+#' }
 #' @export
-reconciled <- function(spec, hierarchy, method = c("wls", "mint", "structural", "ols", "bottom_up", "proportional"),
-                          shrink = "auto", dependence = c("auto", "empirical", "none"), fixed = NULL) {
+reconciled <- function(spec, hierarchy,
+                       method = c("wls", "mint", "structural", "ols", "bottom_up", "proportional", "energy_score"),
+                       shrink = "auto", dependence = c("auto", "empirical", "none"), fixed = NULL,
+                       years = 10, n_origins = 5, horizon = 5, control = list(), seed = 1) {
   check_class(spec, "mt_spec", "spec")
   method <- match.arg(method)
   dependence <- match.arg(dependence)
@@ -791,10 +863,24 @@ reconciled <- function(spec, hierarchy, method = c("wls", "mint", "structural", 
   if (method == "proportional" && !length(fixed)) {
     mt_abort("`method = \"proportional\"` scales the parts of fixed nodes: give `fixed`.", class = "argument")
   }
-  sp <- new_mt_spec("reconciled", list(base = spec, hierarchy = as_hierarchy(hierarchy), method = method,
-                                       shrink = shrink, dependence = dependence, fixed = fixed),
-                    min_periods = spec$min_periods, label = sprintf("%s, reconciled (%s)", spec$label, method))
-  sp
+  params <- list(base = spec, hierarchy = as_hierarchy(hierarchy), method = method, shrink = shrink,
+                 dependence = dependence, fixed = fixed)
+  min_periods <- spec$min_periods
+  if (method == "energy_score") {
+    if (length(fixed)) {
+      mt_abort(paste("`fixed` is not available with `method = \"energy_score\"`, which learns the map of all nodes;",
+                     "use \"wls\", \"mint\" or \"proportional\" to keep fixed nodes."), class = "argument")
+    }
+    check_number(years, "years", lower = 2, integerish = TRUE)
+    check_number(n_origins, "n_origins", lower = 1, integerish = TRUE)
+    check_number(horizon, "horizon", lower = 1, integerish = TRUE)
+    if (!is.null(seed)) check_number(seed, "seed", integerish = TRUE)
+    params <- c(params, list(years = years, n_origins = min(n_origins, years - 1), horizon = horizon,
+                             control = scoreopt_control(control), seed = seed))
+    min_periods <- spec$min_periods + years
+  }
+  new_mt_spec("reconciled", params, min_periods = min_periods,
+              label = sprintf("%s, reconciled (%s)", spec$label, method))
 }
 
 #' @export
@@ -804,9 +890,11 @@ mt_fit.mt_spec_reconciled <- function(spec, data, prep = NULL, cores = 1, ...) {
   if (all(hs$is_bottom)) data <- mt_aggregate_strata(data, p$hierarchy)
   fit <- mt_fit(p$base, data, prep = prep, cores = cores, ...)
   hs <- hierarchy_structure(fit$strata, p$hierarchy)
-  wrap_fit(fit, spec, "mt_fit_reconciled", list(reconcile = list(
-    hierarchy = p$hierarchy, method = p$method, shrink = p$shrink, dependence = p$dependence, structure = hs,
-    fixed = fixed_nodes(p$fixed, fit$strata, p$hierarchy, hs, p$method))))
+  rc <- list(hierarchy = p$hierarchy, method = p$method, shrink = p$shrink, dependence = p$dependence,
+             structure = hs, fixed = fixed_nodes(p$fixed, fit$strata, p$hierarchy, hs, p$method))
+  # score-optimal reconciliation: d and G per age from inner forecasts
+  if (identical(p$method, "energy_score")) rc$scoreopt <- scoreopt_train(p, data, prep, fit, hs, cores)
+  wrap_fit(fit, spec, "mt_fit_reconciled", list(reconcile = rc))
 }
 
 #' @export
@@ -828,8 +916,11 @@ mt_forecast.mt_fit_reconciled <- function(fit, h = 10, to = NULL, n_draws = 500,
       arr <- cr$arr
       component <- permute_component(component, cr$perm)
     }
-    rec <- reconcile_array(arr, hs, rc$hierarchy$additive, rc$method, rc$shrink, E, d,
-                           fixed = rc$fixed %||% integer())
+    rec <- if (identical(rc$method, "energy_score")) {
+      scoreopt_apply(arr, hs, rc$hierarchy$additive, rc$scoreopt, E, d)
+    } else {
+      reconcile_array(arr, hs, rc$hierarchy$additive, rc$method, rc$shrink, E, d, fixed = rc$fixed %||% integer())
+    }
     rates <- rec$rates
     if (predictive) {
       # observation noise of the bottom strata (from the component or group
