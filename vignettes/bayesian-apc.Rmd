@@ -71,11 +71,11 @@ set.seed(1)
 t0 <- proc.time()
 fit <- mt_fit(apc_bayes(mcmc = mcmc_control("fast")), x, prep = prep)
 (proc.time() - t0)[["elapsed"]]
-#> [1] 434.274
+#> [1] 174.176
 fit$diagnostics
 #>    stratum status                              message seconds
-#> 1:  female     ok                                      190.194
-#> 2:    male     ok exposures rounded (max change 0.002) 239.661
+#> 1:  female     ok                                       86.849
+#> 2:    male     ok exposures rounded (max change 0.002)  83.735
 ```
 
 Posterior medians and 90% credible intervals of the effects (logit scale,
@@ -131,18 +131,18 @@ fc
 mt_summarise(fc, probs = c(0.05, 0.5, 0.95))[age %in% c("50", "70", "90") & period %in% c(2007, 2021),
                                              .(label, age, period, q0.05, q0.5, q0.95)]
 #>      label age period       q0.05        q0.5       q0.95
-#>  1: female  50   2007 0.002257623 0.002393671 0.002543068
-#>  2: female  70   2007 0.009699085 0.010254864 0.010822629
-#>  3: female  90   2007 0.120647363 0.126351490 0.132154003
-#>  4: female  50   2021 0.001763904 0.002211449 0.002846412
-#>  5: female  70   2021 0.008130765 0.010071201 0.012649136
-#>  6: female  90   2021 0.088873804 0.107825822 0.131404948
-#>  7:   male  50   2007 0.005140687 0.005372657 0.005617216
-#>  8:   male  70   2007 0.022088867 0.023065805 0.024034113
-#>  9:   male  90   2007 0.168497845 0.174350720 0.180495570
-#> 10:   male  50   2021 0.003872457 0.004650815 0.005599225
-#> 11:   male  70   2021 0.018795157 0.022284004 0.026558336
-#> 12:   male  90   2021 0.139414638 0.160807701 0.185718141
+#>  1: female  50   2007 0.002259379 0.002394504 0.002534089
+#>  2: female  70   2007 0.009697106 0.010255217 0.010848307
+#>  3: female  90   2007 0.120724664 0.126541096 0.132544486
+#>  4: female  50   2021 0.001747114 0.002235568 0.002807592
+#>  5: female  70   2021 0.008095578 0.010091633 0.012536412
+#>  6: female  90   2021 0.088792365 0.108159643 0.130020288
+#>  7:   male  50   2007 0.005146784 0.005378449 0.005609954
+#>  8:   male  70   2007 0.022102181 0.023077429 0.024021848
+#>  9:   male  90   2007 0.168777913 0.174621869 0.180458248
+#> 10:   male  50   2021 0.003918034 0.004646483 0.005575017
+#> 11:   male  70   2021 0.018993049 0.022185004 0.025871436
+#> 12:   male  90   2021 0.140376355 0.160219495 0.181994444
 ```
 
 
@@ -173,14 +173,14 @@ bt <- rbind(
   mt_backtest(apc_bayes(mcmc = mcmc_control("fast")), x, origins = 1996, h = 10, prep = prep, n_draws = 500),
   mt_backtest(lee_carter(), x, origins = 1996, h = 10, prep = prep, n_draws = 500))
 (proc.time() - t0)[["elapsed"]]
-#> [1] 202.424
+#> [1] 128.733
 mt_score(bt, by = "model")
 #>                  model       crps        wis        mae       rmse     mase
-#> 1: Bayesian APC (bamp) 0.06675355 0.06103062 0.08732000 0.11264479 3.771998
-#> 2:          Lee-Carter 0.03655757 0.03298065 0.04972644 0.06585924 2.068951
+#> 1: Bayesian APC (bamp) 0.06667538 0.06065096 0.08814156 0.11342976 3.805169
+#> 2:          Lee-Carter 0.03647788 0.03292307 0.04943503 0.06570118 2.060429
 #>        cov50     cov80     cov95  pit_mean   n     unit
-#> 1: 0.2269231 0.4538462 0.6538462 0.2331418 260 log rate
-#> 2: 0.3961538 0.6423077 0.8000000 0.5187710 260 log rate
+#> 1: 0.2230769 0.4576923 0.6576923 0.2305616 260 log rate
+#> 2: 0.4000000 0.6346154 0.8000000 0.5169664 260 log rate
 ```
 
 
@@ -217,14 +217,14 @@ rbindlist(lapply(names(fits), function(n) {
   data.table(priors = n, q0.05 = quantile(r, 0.05), q0.5 = median(r), q0.95 = quantile(r, 0.95))
 }))
 #> Warning in check_draws_plausible(arr, fit$age, fit$strata, spec$label):
-#> Bayesian APC (bamp): forecast death rates above 1 in 4.5% of the draws (strata
-#> female; ages 79, 83, 84, 87). The model is unstable here, often because of
+#> Bayesian APC (bamp): forecast death rates above 1 in 5.1% of the draws (strata
+#> female; ages 74, 78, 79, 83). The model is unstable here, often because of
 #> sparse counts or a steep trend extrapolated far ahead; consider wider age
 #> groups (mt_regroup()), pooling (li_lee(common_by = )), smoothing
 #> (step_smooth()) or an ensemble.
-#>                       priors      q0.05       q0.5     q0.95
-#> 1: rw2 / rw1 / rw1 (default) 0.11382336 0.13833203 0.1620052
-#> 2:           rw2 / rw2 / rw2 0.00344156 0.07503599 0.6547470
+#>                       priors       q0.05      q0.5     q0.95
+#> 1: rw2 / rw1 / rw1 (default) 0.115328333 0.1379173 0.1685105
+#> 2:           rw2 / rw2 / rw2 0.003988779 0.0900675 0.6683334
 ```
 
 With second-order random walks the interval spans two orders of magnitude,
@@ -237,7 +237,7 @@ carry a drift (`ensemble()`) is a way to combine the strengths.
 
 ## Practical notes
 
-* Runtime: about 1.5 to 4 minutes per stratum with `mcmc_control("fast")`
+* Runtime: about 1.4 to 4 minutes per stratum with `mcmc_control("fast")`
   for 13 age groups and 37 years, depending on the machine and its load;
   `"final"` lets bamp choose the chain length and is several times slower.
 * Heterogeneity terms (`"rw1+het"`, `"rw2+het"`) are not offered, because
