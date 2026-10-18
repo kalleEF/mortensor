@@ -218,11 +218,68 @@ intervals to the errors of recent forecasts, and “Choosing and combining
 models” how mixtures of models do.</p>
 </div>
 <div class="section level2">
+<h2 id="is-the-difference-larger-than-chance">Is the difference larger than chance?<a class="anchor" aria-label="anchor" href="#is-the-difference-larger-than-chance"></a>
+</h2>
+<p>Mean scores over seven origins depend on the particular years. The
+Diebold-Mariano test (Diebold and Mariano 1995) asks whether two models
+differ in accuracy by more than the origins vary.
+<code><a href="../reference/mt_dm_test.html">mt_dm_test()</a></code> computes it for each horizon from the mean
+score of each origin, so the many cells of one forecast count once.
+Forecasts from neighbouring origins overlap in their test years, which
+the test allows for (autocovariances up to lag <code>h - 1</code>), and
+it uses the small-sample correction of Harvey, Leybourne and Newbold
+(1997):</p>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">dm</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_dm_test.html">mt_dm_test</a></span><span class="op">(</span><span class="va">bt</span>, ref <span class="op">=</span> <span class="st">"Li-Lee"</span><span class="op">)</span></span>
+<span><span class="va">dm</span><span class="op">[</span><span class="va">target</span> <span class="op">==</span> <span class="st">"rate"</span>, <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">model</span>, <span class="va">horizon</span>, <span class="va">mean_diff</span>, <span class="va">statistic</span>, <span class="va">p_value</span><span class="op">)</span><span class="op">]</span></span>
+<span><span class="co">#&gt;           model horizon     mean_diff  statistic      p_value</span></span>
+<span><span class="co">#&gt;          &lt;char&gt;  &lt;fctr&gt;         &lt;num&gt;      &lt;num&gt;        &lt;num&gt;</span></span>
+<span><span class="co">#&gt;  1: random walk       1  0.0119595721  8.4157008 0.0001534481</span></span>
+<span><span class="co">#&gt;  2: random walk       2  0.0129701804  6.0073944 0.0009583211</span></span>
+<span><span class="co">#&gt;  3: random walk       3  0.0190240420  4.9418489 0.0025991046</span></span>
+<span><span class="co">#&gt;  4: random walk       4  0.0222412221  6.6151447 0.0005745758</span></span>
+<span><span class="co">#&gt;  5: random walk       5  0.0258199269  3.1710696 0.0192926229</span></span>
+<span><span class="co">#&gt;  6: random walk     all  0.0184029887  6.4845296 0.0006393141</span></span>
+<span><span class="co">#&gt;  7:  Lee-Carter       1 -0.0004919661 -0.3959288 0.7058530046</span></span>
+<span><span class="co">#&gt;  8:  Lee-Carter       2  0.0008207208  0.3040936 0.7713269519</span></span>
+<span><span class="co">#&gt;  9:  Lee-Carter       3  0.0013534123  0.5191091 0.6222685396</span></span>
+<span><span class="co">#&gt; 10:  Lee-Carter       4  0.0016088507  0.7159922 0.5008991759</span></span>
+<span><span class="co">#&gt; 11:  Lee-Carter       5  0.0024748867  0.5433246 0.6064868413</span></span>
+<span><span class="co">#&gt; 12:  Lee-Carter     all  0.0011531809  0.2660219 0.7991274813</span></span></code></pre></div>
+<p>A positive <code>mean_diff</code> means a higher CRPS than Li-Lee, so
+a less accurate forecast. Li-Lee forecast the rates more accurately than
+the random walk at every horizon (p below 0.02). Li-Lee and Lee-Carter
+differ by less than 4% of their CRPS, with p-values from 0.5 to 0.8:
+this backtest cannot tell them apart.</p>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">dm</span><span class="op">[</span><span class="va">target</span> <span class="op">==</span> <span class="st">"life_expectancy"</span>, <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">model</span>, <span class="va">horizon</span>, <span class="va">mean_diff</span>, <span class="va">statistic</span>, <span class="va">p_value</span><span class="op">)</span><span class="op">]</span></span>
+<span><span class="co">#&gt;           model horizon   mean_diff  statistic    p_value</span></span>
+<span><span class="co">#&gt;          &lt;char&gt;  &lt;fctr&gt;       &lt;num&gt;      &lt;num&gt;      &lt;num&gt;</span></span>
+<span><span class="co">#&gt;  1: random walk       1 -0.03020856 -2.6593674 0.03755574</span></span>
+<span><span class="co">#&gt;  2: random walk       2 -0.02580441 -1.5230345 0.17858066</span></span>
+<span><span class="co">#&gt;  3: random walk       3 -0.02894722 -1.2271653 0.26572242</span></span>
+<span><span class="co">#&gt;  4: random walk       4 -0.04568760 -0.9719875 0.36859476</span></span>
+<span><span class="co">#&gt;  5: random walk       5 -0.08010395 -1.2478513 0.25857634</span></span>
+<span><span class="co">#&gt;  6: random walk     all -0.04215035 -0.8274553 0.43964138</span></span>
+<span><span class="co">#&gt;  7:  Lee-Carter       1 -0.03607133 -2.8107851 0.03072441</span></span>
+<span><span class="co">#&gt;  8:  Lee-Carter       2 -0.03320599 -1.6563294 0.14873335</span></span>
+<span><span class="co">#&gt;  9:  Lee-Carter       3 -0.04086515 -1.8131081 0.11975829</span></span>
+<span><span class="co">#&gt; 10:  Lee-Carter       4 -0.04610599 -1.6365407 0.15284189</span></span>
+<span><span class="co">#&gt; 11:  Lee-Carter       5 -0.06357255 -2.3612003 0.05619187</span></span>
+<span><span class="co">#&gt; 12:  Lee-Carter     all -0.04396420 -1.2068646 0.27290181</span></span></code></pre></div>
+<p>For life expectancy, Lee-Carter was more accurate than Li-Lee one
+year ahead (p = 0.03); at longer horizons the differences are within
+chance. With seven origins the test has six degrees of freedom and
+detects only large and consistent differences. The row
+<code>"all"</code> averages over the horizons.</p>
+</div>
+<div class="section level2">
 <h2 id="how-far-to-trust-a-backtest">How far to trust a backtest<a class="anchor" aria-label="anchor" href="#how-far-to-trust-a-backtest"></a>
 </h2>
 <ul>
 <li>Seven origins of one country are few, and the test years overlap; a
-difference of a few percent in the CRPS can be noise.</li>
+difference of a few percent in the CRPS can be noise, as
+<code><a href="../reference/mt_dm_test.html">mt_dm_test()</a></code> shows.</li>
 <li>A backtest scores the past. If the future differs from the test
 period (a pandemic, a policy change), so will the accuracy.</li>
 <li>Compare models on the same origins, horizons and cells, as
@@ -236,12 +293,18 @@ not scored.</li>
 <p>Bracher J, Ray EL, Gneiting T, Reich NG (2021). Evaluating epidemic
 forecasts in an interval format. <em>PLoS Computational Biology</em>
 17(2): e1008618.</p>
+<p>Diebold FX, Mariano RS (1995). Comparing predictive accuracy.
+<em>Journal of Business &amp; Economic Statistics</em> 13(3):
+253-263.</p>
 <p>Gneiting T, Balabdaoui F, Raftery AE (2007). Probabilistic forecasts,
 calibration and sharpness. <em>Journal of the Royal Statistical Society
 Series B</em> 69(2): 243-268.</p>
 <p>Gneiting T, Raftery AE (2007). Strictly proper scoring rules,
 prediction, and estimation. <em>Journal of the American Statistical
 Association</em> 102(477): 359-378.</p>
+<p>Harvey D, Leybourne S, Newbold P (1997). Testing the equality of
+prediction mean squared errors. <em>International Journal of
+Forecasting</em> 13(2): 281-291.</p>
 <p>Hyndman RJ, Koehler AB (2006). Another look at measures of forecast
 accuracy. <em>International Journal of Forecasting</em> 22(4):
 679-688.</p>

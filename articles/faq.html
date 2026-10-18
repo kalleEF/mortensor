@@ -252,6 +252,15 @@ accumulates it</td>
 windows</td>
 <td>a shorter fitting period follows the recent trend</td>
 </tr>
+<tr class="even">
+<td>Long horizons, as mortality falls most at ever older ages</td>
+<td>
+<code>lee_carter(rotate = TRUE)</code>, <code><a href="../reference/coda.html">coda()</a></code>
+</td>
+<td>the rotation moves the age pattern of decline to older ages as life
+expectancy rises (Li, Lee and Gerland 2013); CoDa forecasts the
+distribution of deaths by age (Oeppen 2008)</td>
+</tr>
 </tbody>
 </table>
 <p>Check every fit with <code>summary(fit)</code>,
@@ -279,6 +288,25 @@ Lee-Carter from 0.75 to 0.88. Check calibration with
 <code><a href="../reference/mt_backtest.html">mt_backtest()</a></code> and <code><a href="../reference/mt_plot.html">mt_plot_coverage()</a></code>.</p>
 </div>
 <div class="section level3">
+<h3 id="is-one-model-really-more-accurate-than-another">Is one model really more accurate than another?<a class="anchor" aria-label="anchor" href="#is-one-model-really-more-accurate-than-another"></a>
+</h3>
+<p>A backtest gives mean scores from a few origins, and two models often
+differ by less than these scores vary between origins.
+<code><a href="../reference/mt_dm_test.html">mt_dm_test()</a></code> tests whether the difference is larger than
+chance, horizon by horizon, with the Diebold-Mariano test (Diebold and
+Mariano 1995) and the small-sample correction of Harvey, Leybourne and
+Newbold (1997):</p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">bt</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_compare.html">mt_compare</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>lc <span class="op">=</span> <span class="fu"><a href="../reference/lee_carter.html">lee_carter</a></span><span class="op">(</span><span class="op">)</span>, rw <span class="op">=</span> <span class="fu"><a href="../reference/rwd.html">rwd</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span>, <span class="va">data</span>, origins <span class="op">=</span> <span class="fl">1995</span><span class="op">:</span><span class="fl">2009</span>, h <span class="op">=</span> <span class="fl">5</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/mt_dm_test.html">mt_dm_test</a></span><span class="op">(</span><span class="va">bt</span>, ref <span class="op">=</span> <span class="st">"lc"</span><span class="op">)</span></span></code></pre></div>
+<p>Forecasts from neighbouring origins overlap, which the test allows
+for; it needs more origins than the horizon (at horizon 5, at least six
+origins). With origins spaced <code>h</code> years apart the forecasts
+do not overlap and the test is most reliable. A non-significant
+difference means that the backtest cannot tell the models apart; they
+may still differ.</p>
+</div>
+<div class="section level3">
 <h3 id="how-do-i-choose-smoothing-and-model-parameters-by-forecast-accuracy">How do I choose smoothing and model parameters by forecast
 accuracy?<a class="anchor" aria-label="anchor" href="#how-do-i-choose-smoothing-and-model-parameters-by-forecast-accuracy"></a>
 </h3>
@@ -289,7 +317,7 @@ setting that forecast them best, then refit it to all years.
 preprocessing, and <code><a href="../reference/mt_tune.html">tuned()</a></code> makes it part of a model, so
 that an outer backtest repeats the choice at each origin without seeing
 the test years:</p>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">grid</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/expand.grid.html" class="external-link">expand.grid</a></span><span class="op">(</span>k <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">10</span>, <span class="fl">30</span><span class="op">)</span>, order <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">6</span><span class="op">)</span></span>
 <span><span class="va">spec</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_tune.html">tuned</a></span><span class="op">(</span><span class="kw">function</span><span class="op">(</span><span class="va">order</span>, <span class="va">k</span><span class="op">)</span> <span class="fu"><a href="../reference/hyndman_ullah.html">hyndman_ullah</a></span><span class="op">(</span>order <span class="op">=</span> <span class="va">order</span>, smooth_args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>k <span class="op">=</span> <span class="va">k</span><span class="op">)</span><span class="op">)</span>, <span class="va">grid</span>,</span>
 <span>              inner_origins <span class="op">=</span> <span class="fl">1</span>, inner_h <span class="op">=</span> <span class="fl">10</span>, metric <span class="op">=</span> <span class="st">"rmse"</span><span class="op">)</span></span></code></pre></div>
@@ -436,7 +464,7 @@ strata</td>
 <p>Either end the training data in 2019 (as in the ONS vignettes), or
 mark the years as shocks so that the trend is estimated without
 them:</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">prep</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_prep.html">mt_prep</a></span><span class="op">(</span><span class="fu"><a href="../reference/mt_prep.html">step_shocks</a></span><span class="op">(</span><span class="fl">2020</span><span class="op">:</span><span class="fl">2022</span>, action <span class="op">=</span> <span class="st">"interpolate"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_fit.html">mt_fit</a></span><span class="op">(</span><span class="fu"><a href="../reference/lee_carter.html">lee_carter</a></span><span class="op">(</span><span class="op">)</span>, <span class="va">data</span>, prep <span class="op">=</span> <span class="va">prep</span><span class="op">)</span></span></code></pre></div>
 <p>Whether mortality returns to the pre-pandemic trend is an assumption
@@ -459,14 +487,17 @@ node and reconcile the draws (<code>method = "wls"</code>,
 all-cause forecast that the causes must add up to, give it as
 <code>fixed</code> and use <code>method = "proportional"</code> (its
 parts are scaled in proportion to their forecasts) or <code>"wls"</code>
-(the most uncertain parts absorb the difference). Over long horizons,
-sums of cause forecasts tend to be more pessimistic than forecasts of
-all causes (Wilmoth 1995), so compare the two before choosing.
-Reconciliation of deaths uses exposures of the forecast years; supply
-population projections as <code>exposure</code> when they are available.
-See “Coherent forecasts: totals and their parts” and the applied
-vignettes “Inequality in England” and “Differences between the German
-Laender”.</p>
+(the most uncertain parts absorb the difference).
+<code>method = "energy_score"</code> learns the reconciliation from the
+base model’s past forecasts (Panagiotelis et al. 2023); in the package’s
+backtests it was less accurate than <code>"wls"</code>, so compare it in
+a backtest before using it. Over long horizons, sums of cause forecasts
+tend to be more pessimistic than forecasts of all causes (Wilmoth 1995),
+so compare the two before choosing. Reconciliation of deaths uses
+exposures of the forecast years; supply population projections as
+<code>exposure</code> when they are available. See “Coherent forecasts:
+totals and their parts” and the applied vignettes “Inequality in
+England” and “Differences between the German Laender”.</p>
 </div>
 <div class="section level3">
 <h3 id="will-the-gap-between-regions-or-deprivation-groups-keep-growing">Will the gap between regions or deprivation groups keep
@@ -476,8 +507,10 @@ growing?<a class="anchor" aria-label="anchor" href="#will-the-gap-between-region
 stratum extrapolate each stratum’s trend, so gaps can widen without
 bound. <code><a href="../reference/li_lee.html">li_lee()</a></code> and <code><a href="../reference/li_lee.html">product_ratio()</a></code> let strata
 deviate from a common trend only through stationary processes, so gaps
-return towards their past average. Backtests over a few years rarely
-separate the two; the choice is an assumption to state.</p>
+return towards their past average; so does
+<code>coda(coherent = TRUE)</code> for the distribution of deaths by
+age. Backtests over a few years rarely separate the two; the choice is
+an assumption to state.</p>
 </div>
 <div class="section level3">
 <h3 id="which-ages-and-causes-explain-a-gap-and-how-much-is-composition">Which ages and causes explain a gap, and how much is
@@ -497,6 +530,38 @@ such as deprivation quintiles, whose populations move between groups,
 with <code>composition = "pooled"</code>. Forecasts are decomposed draw
 by draw, so contributions have intervals; see “Decomposing differences
 in life expectancy”.</p>
+</div>
+</div>
+<div class="section level2">
+<h2 id="describing-mortality">Describing mortality<a class="anchor" aria-label="anchor" href="#describing-mortality"></a>
+</h2>
+<div class="section level3">
+<h3 id="how-unequal-are-lifespans">How unequal are lifespans?<a class="anchor" aria-label="anchor" href="#how-unequal-are-lifespans"></a>
+</h3>
+<p>Life expectancy is the average age at death;
+<code><a href="../reference/lifespan_variation.html">lifespan_variation()</a></code> gives its spread: life disparity
+(e-dagger), the life-table entropy, the Gini coefficient, the standard
+deviation and the interquartile range of the age at death, from age 0 or
+conditional on survival to an age <code>at</code>. It works on observed
+data (with Poisson intervals) and on forecast draws. All measures depend
+on the open age interval, e-dagger most: for French women in 2006 it was
+2.1 years higher with an open interval from 85 than with single years of
+age to 100+. Use data with an open interval from 95 or higher, and
+compare measures only between tables with the same open age. See
+“Lifespan variation”.</p>
+</div>
+<div class="section level3">
+<h3 id="how-do-i-estimate-excess-deaths">How do I estimate excess deaths?<a class="anchor" aria-label="anchor" href="#how-do-i-estimate-excess-deaths"></a>
+</h3>
+<p>Fit a baseline model to the years before the shock and compare the
+observed deaths with its predictive draws for the later years:</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">ex</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_excess.html">mt_excess</a></span><span class="op">(</span><span class="fu"><a href="../reference/lee_carter.html">lee_carter</a></span><span class="op">(</span><span class="op">)</span>, <span class="va">data</span>, baseline <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2010</span>, <span class="fl">2019</span><span class="op">)</span>, ages <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">65</span>, <span class="fl">80</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/mt_excess.html">mt_plot_excess</a></span><span class="op">(</span><span class="va">ex</span>, type <span class="op">=</span> <span class="st">"p_score"</span><span class="op">)</span></span></code></pre></div>
+<p>The intervals contain the uncertainty of the baseline trend and the
+random variation of the death counts. The result depends on the baseline
+model and years, which are assumptions to state; compare a few in the
+same call. See “Excess mortality”.</p>
 </div>
 </div>
 <div class="section level2">
@@ -539,6 +604,22 @@ the models on four data sets.</p>
 <div class="section level2">
 <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a>
 </h2>
+<p>Diebold FX, Mariano RS (1995). Comparing predictive accuracy.
+<em>Journal of Business &amp; Economic Statistics</em> 13(3):
+253-263.</p>
+<p>Harvey D, Leybourne S, Newbold P (1997). Testing the equality of
+prediction mean squared errors. <em>International Journal of
+Forecasting</em> 13(2): 281-291.</p>
+<p>Li N, Lee R, Gerland P (2013). Extending the Lee-Carter method to
+model the rotation of age patterns of mortality decline for long-term
+projections. <em>Demography</em> 50(6): 2037-2051. <a href="doi:10.1007/s13524-013-0232-2" class="uri">doi:10.1007/s13524-013-0232-2</a>.</p>
+<p>Oeppen J (2008). Coherent forecasting of multiple-decrement life
+tables: a test using Japanese cause of death data. CODAWORK’08,
+Universitat de Girona.</p>
+<p>Panagiotelis A, Gamakumara P, Athanasopoulos G, Hyndman RJ (2023).
+Probabilistic forecast reconciliation: properties, evaluation and score
+optimisation. <em>European Journal of Operational Research</em> 306(2):
+693-706. <a href="doi:10.1016/j.ejor.2022.07.040" class="uri">doi:10.1016/j.ejor.2022.07.040</a>.</p>
 <p>Wilmoth JR (1995). Are mortality projections always more pessimistic
 when disaggregated by cause of death? <em>Mathematical Population
 Studies</em> 5(4): 293-319. <a href="doi:10.1080/08898489509525409" class="uri">doi:10.1080/08898489509525409</a>.</p>

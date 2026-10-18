@@ -120,6 +120,7 @@ ones you will report) decides. As a starting point:
 | Causes of death | separate or Li-Lee models per cause, `reconciled(..., method = "bottom_up")` with `cause = list(total = "all", additive = "rates")` | cause rates add up to the all-cause rate |
 | Cohort effects (for example generations born around 1925-1945) | [`apc_bayes()`](../reference/apc_bayes.md), `stmomo("apc")` | age-period models attribute cohort patterns to period trends |
 | Trend change in the recent past | `step_window(years)` with a backtest of several windows | a shorter fitting period follows the recent trend |
+| Long horizons, as mortality falls most at ever older ages | `lee_carter(rotate = TRUE)`, [`coda()`](../reference/coda.md) | the rotation moves the age pattern of decline to older ages as life expectancy rises (Li, Lee and Gerland 2013); CoDa forecasts the distribution of deaths by age (Oeppen 2008) |
 
 Check every fit with `summary(fit)`, `mt_parameters(fit)` and
 `mt_plot_residuals(fit)`, and every forecast for warnings about
@@ -144,6 +145,28 @@ last years of the training data (by default ten); on England & Wales men
 it raised the 95% coverage of Lee-Carter from 0.75 to 0.88. Check
 calibration with [`mt_backtest()`](../reference/mt_backtest.md) and
 [`mt_plot_coverage()`](../reference/mt_plot.md).
+
+### Is one model really more accurate than another?
+
+A backtest gives mean scores from a few origins, and two models often
+differ by less than these scores vary between origins.
+[`mt_dm_test()`](../reference/mt_dm_test.md) tests whether the
+difference is larger than chance, horizon by horizon, with the
+Diebold-Mariano test (Diebold and Mariano 1995) and the small-sample
+correction of Harvey, Leybourne and Newbold (1997):
+
+``` r
+
+bt <- mt_compare(list(lc = lee_carter(), rw = rwd()), data, origins = 1995:2009, h = 5)
+mt_dm_test(bt, ref = "lc")
+```
+
+Forecasts from neighbouring origins overlap, which the test allows for;
+it needs more origins than the horizon (at horizon 5, at least six
+origins). With origins spaced `h` years apart the forecasts do not
+overlap and the test is most reliable. A non-significant difference
+means that the backtest cannot tell the models apart; they may still
+differ.
 
 ### How do I choose smoothing and model parameters by forecast accuracy?
 
@@ -296,7 +319,10 @@ model every node and reconcile the draws (`method = "wls"`, `"mint"`,
 a trusted total, such as an all-cause forecast that the causes must add
 up to, give it as `fixed` and use `method = "proportional"` (its parts
 are scaled in proportion to their forecasts) or `"wls"` (the most
-uncertain parts absorb the difference). Over long horizons, sums of
+uncertain parts absorb the difference). `method = "energy_score"` learns
+the reconciliation from the base model’s past forecasts (Panagiotelis et
+al. 2023); in the package’s backtests it was less accurate than `"wls"`,
+so compare it in a backtest before using it. Over long horizons, sums of
 cause forecasts tend to be more pessimistic than forecasts of all causes
 (Wilmoth 1995), so compare the two before choosing. Reconciliation of
 deaths uses exposures of the forecast years; supply population
@@ -311,7 +337,8 @@ stratum extrapolate each stratum’s trend, so gaps can widen without
 bound. [`li_lee()`](../reference/li_lee.md) and
 [`product_ratio()`](../reference/li_lee.md) let strata deviate from a
 common trend only through stationary processes, so gaps return towards
-their past average. Backtests over a few years rarely separate the two;
+their past average; so does `coda(coherent = TRUE)` for the distribution
+of deaths by age. Backtests over a few years rarely separate the two;
 the choice is an assumption to state.
 
 ### Which ages and causes explain a gap, and how much is composition?
@@ -329,6 +356,38 @@ education, as in Riffe, Tursun-zade and Trias Llimós (2024)
 whose populations move between groups, with `composition = "pooled"`.
 Forecasts are decomposed draw by draw, so contributions have intervals;
 see “Decomposing differences in life expectancy”.
+
+## Describing mortality
+
+### How unequal are lifespans?
+
+Life expectancy is the average age at death;
+[`lifespan_variation()`](../reference/lifespan_variation.md) gives its
+spread: life disparity (e-dagger), the life-table entropy, the Gini
+coefficient, the standard deviation and the interquartile range of the
+age at death, from age 0 or conditional on survival to an age `at`. It
+works on observed data (with Poisson intervals) and on forecast draws.
+All measures depend on the open age interval, e-dagger most: for French
+women in 2006 it was 2.1 years higher with an open interval from 85 than
+with single years of age to 100+. Use data with an open interval from 95
+or higher, and compare measures only between tables with the same open
+age. See “Lifespan variation”.
+
+### How do I estimate excess deaths?
+
+Fit a baseline model to the years before the shock and compare the
+observed deaths with its predictive draws for the later years:
+
+``` r
+
+ex <- mt_excess(lee_carter(), data, baseline = c(2010, 2019), ages = c(0, 65, 80))
+mt_plot_excess(ex, type = "p_score")
+```
+
+The intervals contain the uncertainty of the baseline trend and the
+random variation of the death counts. The result depends on the baseline
+model and years, which are assumptions to state; compare a few in the
+same call. See “Excess mortality”.
 
 ## Practicalities
 
@@ -360,6 +419,27 @@ and StMoMo” reports accuracy and interval coverage of the models on four
 data sets.
 
 ## References
+
+Diebold FX, Mariano RS (1995). Comparing predictive accuracy. *Journal
+of Business & Economic Statistics* 13(3): 253-263.
+
+Harvey D, Leybourne S, Newbold P (1997). Testing the equality of
+prediction mean squared errors. *International Journal of Forecasting*
+13(2): 281-291.
+
+Li N, Lee R, Gerland P (2013). Extending the Lee-Carter method to model
+the rotation of age patterns of mortality decline for long-term
+projections. *Demography* 50(6): 2037-2051.
+<doi:10.1007/s13524-013-0232-2>.
+
+Oeppen J (2008). Coherent forecasting of multiple-decrement life tables:
+a test using Japanese cause of death data. CODAWORK’08, Universitat de
+Girona.
+
+Panagiotelis A, Gamakumara P, Athanasopoulos G, Hyndman RJ (2023).
+Probabilistic forecast reconciliation: properties, evaluation and score
+optimisation. *European Journal of Operational Research* 306(2):
+693-706. <doi:10.1016/j.ejor.2022.07.040>.
 
 Wilmoth JR (1995). Are mortality projections always more pessimistic
 when disaggregated by cause of death? *Mathematical Population Studies*

@@ -220,7 +220,7 @@
       <h2 id="-describe-the-past"></h2><li>Describe the past</li>
 
 
-      <div class="section-desc"><p>Observed indicators with Poisson intervals, gaps between strata, inequality indices and decompositions (which also work on forecasts).</p></div>
+      <div class="section-desc"><p>Observed indicators with Poisson intervals, gaps between strata, inequality indices, lifespan variation, decompositions and excess mortality (which also work on forecasts).</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -271,6 +271,13 @@
 
         <dt>
 
+          <code><a href="lifespan_variation.html">lifespan_variation()</a></code>
+
+        </dt>
+        <dd>Lifespan variation from rates or forecast draws</dd>
+
+        <dt>
+
           <code><a href="mt_decompose.html">mt_decompose()</a></code> <code><a href="mt_decompose.html">summary(<i>&lt;mt_decomposition&gt;</i>)</a></code>
 
         </dt>
@@ -296,6 +303,13 @@
 
         </dt>
         <dd>Life tables from death rates on any age axis</dd>
+
+        <dt>
+
+          <code><a href="mt_excess.html">mt_excess()</a></code> <code><a href="mt_excess.html">mt_plot_excess()</a></code>
+
+        </dt>
+        <dd>Excess mortality</dd>
       </dl></div><div class="section level2">
       <h2 id="-models-for-one-population"></h2><li>Models for one population</li>
 
@@ -327,6 +341,13 @@
 
         </dt>
         <dd>Functional demographic model of Hyndman and Ullah (demography)</dd>
+
+        <dt>
+
+          <code><a href="coda.html">coda()</a></code>
+
+        </dt>
+        <dd>Compositional data (CoDa) model of life-table deaths</dd>
 
         <dt>
 
@@ -407,6 +428,13 @@
 
         </dt>
         <dd>Coherent multi-cause forecasts with cause shares</dd>
+
+        <dt>
+
+          <code><a href="coda_causes.html">coda_causes()</a></code>
+
+        </dt>
+        <dd>Multiple-decrement CoDa model of causes of death (experimental)</dd>
       </dl></div><div class="section level2">
       <h2 id="-combine-models-and-make-forecasts-coherent"></h2><li>Combine models and make forecasts coherent</li>
 
@@ -599,7 +627,7 @@
       <h2 id="-evaluate-and-compare"></h2><li>Evaluate and compare</li>
 
 
-      <div class="section-desc"><p>Rolling-origin backtests and scores; several models and forecasts side by side.</p></div>
+      <div class="section-desc"><p>Rolling-origin backtests and scores; tests of differences in accuracy; several models and forecasts side by side.</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -619,6 +647,13 @@
 
         </dt>
         <dd>Summarise backtest scores</dd>
+
+        <dt>
+
+          <code><a href="mt_dm_test.html">mt_dm_test()</a></code>
+
+        </dt>
+        <dd>Test differences in forecast accuracy between models (Diebold-Mariano)</dd>
 
         <dt>
 

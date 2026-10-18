@@ -193,6 +193,57 @@ or observed rates (<code>jump_off = "observed"</code>).</li>
 <code>k(t)</code> and the uncertainty of its drift. <code>a(x)</code>
 and <code>b(x)</code> are fixed; <code>bootstrap = TRUE</code> or
 <code><a href="../reference/bootstrapped.html">bootstrapped()</a></code> adds their uncertainty.</li>
+<li>
+<strong>Rotation</strong> (<code>rotate = TRUE</code>; Li, Lee and
+Gerland 2013): as life expectancy at birth rises from
+<code>e0_start</code> (80) to <code>e0_end</code> (102), the age pattern
+of decline moves from <code>b(x)</code> to an ultimate pattern with
+equal decline below 65 (the mean of <code>b</code> over ages 15-64) and
+the shape of <code>b(x)</code> above. The weight follows a sine curve
+with <code>power</code> 0.5. In each path and year the index is solved
+again so that life expectancy at birth stays that of the unrotated
+forecast; rotation therefore changes the age pattern of the forecast
+only. It needs ages from 0 and computes life tables for every path and
+year, which is about 20 times slower.</li>
+</ul>
+</div>
+<div class="section level3">
+<h3 id="compositional-data-model-coda">Compositional data model: <code>coda()</code><a class="anchor" aria-label="anchor" href="#compositional-data-model-coda"></a>
+</h3>
+<p><code>clr(d(x,t) / a(x)) = b(x) k(t)</code> (Oeppen 2008;
+Bergeron-Boucher et al. 2017), where <code>d(x,t)</code> are the
+life-table deaths (radix 1), <code>a(x)</code> their closed geometric
+mean over the years and <code>clr</code> the centred log-ratio
+transformation. The model forecasts the distribution of deaths by age,
+so the forecast deaths always form a life table.</p>
+<ul>
+<li>
+<strong>Estimation</strong>: first component of the SVD of the
+centred log-ratios, as <code>model.Oeppen()</code> of the R package
+MortalityForecast 0.8.1 (Pascariu). The log rate of the open age
+interval is regressed on <code>k(t)</code>.</li>
+<li>
+<strong>Forecast</strong>: <code>k(t)</code> random walk with drift;
+deaths are transformed back to rates through the life table.</li>
+<li>
+<strong>Jump-off</strong>: observed deaths of the last year, changed
+by the model (default), or fitted deaths
+(<code>jump_off = "fitted"</code>).</li>
+<li>
+<strong>Coherent version</strong> (<code>coherent = TRUE</code> or
+<code>common_by</code>):
+<code>clr(d(x,t,i) / a(x,i)) = B(x) K(t) + b(x,i) k(t,i)</code>, with
+the common component from the average distribution of deaths of the
+strata; <code>K(t)</code> random walk with drift, <code>k(t,i)</code>
+AR(1) processes with mean, so strata stay close to the common trend
+(<code>model.OeppenC()</code>).</li>
+<li>
+<strong>Uncertainty</strong>: innovations and drift of
+<code>k(t)</code> (and <code>K(t)</code>), innovations of the AR(1)
+processes. <code>a</code> and <code>b</code> are fixed. All ages have
+equal weight on the clr scale, so the noise of ages with few deaths
+enters <code>k(t)</code>: intervals can be wider than those of
+Lee-Carter.</li>
 </ul>
 </div>
 <div class="section level3">
@@ -256,9 +307,12 @@ observed rates, so their draws already contain observation noise.</p>
 </h3>
 <p>Calls <code><a href="https://rdrr.io/pkg/StMoMo/man/fit.html" class="external-link">StMoMo::fit()</a></code> and <code><a href="https://rdrr.io/r/stats/simulate.html" class="external-link">simulate()</a></code>
 (Villegas, Kaishev and Millossovich 2018) for the Lee-Carter, CBD, APC,
-RH and M6 families. Draws contain the period and cohort index
-uncertainty that StMoMo simulates; parameter uncertainty is not
-included.</p>
+RH, M6, M7 and M8 families. M7 adds a quadratic age term and a cohort
+effect to CBD; M8 a cohort effect that falls with age to zero at age
+<code>xc</code> (Cairns et al. 2009). The cohort effects of M6 to M8
+follow an ARIMA model (<code>gc_order</code>). Draws contain the period
+and cohort index uncertainty that StMoMo simulates; parameter
+uncertainty is not included.</p>
 </div>
 <div class="section level3">
 <h3 id="bayesian-stmomo-models-stanmomo">Bayesian StMoMo models: <code>stanmomo()</code><a class="anchor" aria-label="anchor" href="#bayesian-stmomo-models-stanmomo"></a>
@@ -367,6 +421,14 @@ all-cause mortality with any model and the shares of causes with a
 Tucker model of their isometric log-ratio coordinates, so the causes add
 up to all causes in every draw. Neither has a published evaluation for
 mortality; compare them with the models above in a backtest.</p>
+<p><code><a href="../reference/coda_causes.html">coda_causes()</a></code> is the multiple-decrement form of
+<code><a href="../reference/coda.html">coda()</a></code> that Oeppen (2008) proposed for causes of death: the
+deaths of a multiple-decrement life table by age and cause form one
+composition with one index <code>k(t)</code>, so the causes add up to
+all causes in every draw. Only the abstract of Oeppen (2008) is
+published, so the implementation follows its natural reading; in a
+backtest on simulated causes it was less accurate than
+<code><a href="../reference/cause_shares.html">cause_shares()</a></code>.</p>
 </div>
 </div>
 <div class="section level2">
@@ -421,6 +483,15 @@ population and are shared by the levels of variables such as causes of
 death (<code>additive = "rates"</code>). The exposures of the forecast
 years are those of the last observed year unless projections are
 given.</p>
+<p>Score-optimal reconciliation (<code>method = "energy_score"</code>;
+Panagiotelis et al. 2023) learns the reconciliation from the base
+model’s own past forecasts: the reconciled draws are
+<code>S (d + G y)</code>, where <code>y</code> are the base draws of all
+nodes, and <code>d</code> and <code>G</code> (per age) minimise the
+energy score of forecasts from <code>n_origins</code> inner origins in
+the last <code>years</code> of the training data, by stochastic gradient
+descent from OLS. It has many parameters and few training forecasts; in
+the package’s backtests it was less accurate than WLS.</p>
 </div>
 <div class="section level3">
 <h3 id="calibration-on-recent-years-recalibrated">Calibration on recent years: <code>recalibrated()</code><a class="anchor" aria-label="anchor" href="#calibration-on-recent-years-recalibrated"></a>
@@ -560,6 +631,16 @@ that tuning compares across windows.</p>
 <td>residual variation and predictive draws</td>
 </tr>
 <tr class="odd">
+<td>
+<code><a href="../reference/coda.html">coda()</a></code>, <code><a href="../reference/coda_causes.html">coda_causes()</a></code>
+</td>
+<td>yes</td>
+<td>yes</td>
+<td>no</td>
+<td>predictive draws</td>
+<td>predictive draws</td>
+</tr>
+<tr class="even">
 <td><code><a href="../reference/hyndman_ullah.html">hyndman_ullah()</a></code></td>
 <td>yes</td>
 <td>as fdm</td>
@@ -567,7 +648,7 @@ that tuning compares across windows.</p>
 <td>predictive draws</td>
 <td>predictive draws</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code><a href="../reference/stmomo.html">stmomo()</a></code></td>
 <td>yes</td>
 <td>yes</td>
@@ -575,7 +656,7 @@ that tuning compares across windows.</p>
 <td>predictive draws</td>
 <td>predictive draws</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code><a href="../reference/stanmomo.html">stanmomo()</a></code></td>
 <td>yes</td>
 <td>posterior</td>
@@ -583,7 +664,7 @@ that tuning compares across windows.</p>
 <td>predictive draws</td>
 <td>predictive draws</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code><a href="../reference/apc_bayes.html">apc_bayes()</a></code></td>
 <td>yes</td>
 <td>posterior</td>
@@ -591,7 +672,7 @@ that tuning compares across windows.</p>
 <td>predictive draws</td>
 <td>predictive draws</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code><a href="../reference/ensemble.html">ensemble()</a></code></td>
 <td>of the components</td>
 <td>of the components</td>
@@ -599,7 +680,7 @@ that tuning compares across windows.</p>
 <td>of the components</td>
 <td>of the components</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code><a href="../reference/stratified.html">stratified()</a></code></td>
 <td>of the model of each group</td>
 <td>of the model of each group</td>
@@ -607,7 +688,7 @@ that tuning compares across windows.</p>
 <td>as the models</td>
 <td>as the models</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code><a href="../reference/bootstrapped.html">bootstrapped()</a></code></td>
 <td>of the base model</td>
 <td>of the base model</td>
@@ -615,7 +696,7 @@ that tuning compares across windows.</p>
 <td>as the base model</td>
 <td>as the base model</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code><a href="../reference/reconciled.html">reconciled()</a></code></td>
 <td>of the base model, projected</td>
 <td></td>
@@ -623,7 +704,7 @@ that tuning compares across windows.</p>
 <td>bottom strata, summed</td>
 <td>bottom strata, summed</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code><a href="../reference/recalibrated.html">recalibrated()</a></code></td>
 <td>of the base model, rescaled</td>
 <td>rescaled (optional correction)</td>
@@ -631,7 +712,7 @@ that tuning compares across windows.</p>
 <td>as the base model</td>
 <td>as the base model</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code><a href="../reference/anchored.html">anchored()</a></code></td>
 <td>of the base model</td>
 <td>of the base model</td>
@@ -660,7 +741,11 @@ test years with the continuous ranked probability score (CRPS; Gneiting
 and Raftery 2007), the weighted interval score (Bracher et al. 2021),
 interval coverage, the probability integral transform and the absolute
 error of the median. Cells with estimated (suppressed) deaths are not
-scored unless <code>score_estimated = TRUE</code>.</p>
+scored unless <code>score_estimated = TRUE</code>.
+<code><a href="../reference/mt_dm_test.html">mt_dm_test()</a></code> tests differences in accuracy between two
+models of the same backtest with the Diebold-Mariano test (Diebold and
+Mariano 1995) and the correction of Harvey, Leybourne and Newbold
+(1997).</p>
 </div>
 <div class="section level2">
 <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a>
@@ -671,6 +756,9 @@ Operational Research</em> 262(1): 60-74.</p>
 <p>Barigou K, Goffard P-O, Loisel S, Salhi Y (2023). Bayesian model
 averaging for mortality forecasting using leave-future-out validation.
 <em>International Journal of Forecasting</em> 39(2): 674-690.</p>
+<p>Bergeron-Boucher M-P, Canudas-Romo V, Oeppen J, Vaupel JW (2017).
+Coherent forecasts of mortality with compositional data analysis.
+<em>Demographic Research</em> 37(17): 527-566. <a href="doi:10.4054/DemRes.2017.37.17" class="uri">doi:10.4054/DemRes.2017.37.17</a>.</p>
 <p>Booth H, Maindonald J, Smith L (2002). Applying Lee-Carter under
 conditions of variable mortality decline. <em>Population Studies</em>
 56(3): 325-336.</p>
@@ -680,11 +768,18 @@ forecasts in an interval format. <em>PLoS Computational Biology</em>
 <p>Brouhns N, Denuit M, Vermunt JK (2002). A Poisson log-bilinear
 regression approach to the construction of projected lifetables.
 <em>Insurance: Mathematics and Economics</em> 31(3): 373-393.</p>
+<p>Cairns AJG, Blake D, Dowd K, Coughlan GD, Epstein D, Ong A, Balevich
+I (2009). A quantitative comparison of stochastic mortality models using
+data from England and Wales and the United States. <em>North American
+Actuarial Journal</em> 13(1): 1-35.</p>
 <p>Currie ID, Durban M, Eilers PHC (2004). Smoothing and forecasting
 mortality rates. <em>Statistical Modelling</em> 4(4): 279-298.</p>
 <p>Deming WE, Stephan FF (1940). On a least squares adjustment of a
 sampled frequency table when the expected marginal totals are known.
 <em>Annals of Mathematical Statistics</em> 11(4): 427-444.</p>
+<p>Diebold FX, Mariano RS (1995). Comparing predictive accuracy.
+<em>Journal of Business &amp; Economic Statistics</em> 13(3):
+253-263.</p>
 <p>Gneiting T, Raftery AE, Westveld AH, Goldman T (2005). Calibrated
 probabilistic forecasting using ensemble model output statistics and
 minimum CRPS estimation. <em>Monthly Weather Review</em> 133(5):
@@ -692,6 +787,9 @@ minimum CRPS estimation. <em>Monthly Weather Review</em> 133(5):
 <p>Gneiting T, Raftery AE (2007). Strictly proper scoring rules,
 prediction, and estimation. <em>Journal of the American Statistical
 Association</em> 102(477): 359-378.</p>
+<p>Harvey D, Leybourne S, Newbold P (1997). Testing the equality of
+prediction mean squared errors. <em>International Journal of
+Forecasting</em> 13(2): 281-291.</p>
 <p>Hyndman RJ, Ahmed RA, Athanasopoulos G, Shang HL (2011). Optimal
 combination forecasts for hierarchical time series. <em>Computational
 Statistics &amp; Data Analysis</em> 55(9): 2579-2589.</p>
@@ -713,6 +811,19 @@ method for forecasting mortality. <em>Demography</em> 38(4):
 <p>Li N, Lee R (2005). Coherent mortality forecasts for a group of
 populations: an extension of the Lee-Carter method. <em>Demography</em>
 42(3): 575-594.</p>
+<p>Li N, Lee R, Gerland P (2013). Extending the Lee-Carter method to
+model the rotation of age patterns of mortality decline for long-term
+projections. <em>Demography</em> 50(6): 2037-2051. <a href="doi:10.1007/s13524-013-0232-2" class="uri">doi:10.1007/s13524-013-0232-2</a>.</p>
+<p>Oeppen J (2008). Coherent forecasting of multiple-decrement life
+tables: a test using Japanese cause of death data. CODAWORK’08,
+Universitat de Girona.</p>
+<p>Panagiotelis A, Gamakumara P, Athanasopoulos G, Hyndman RJ (2023).
+Probabilistic forecast reconciliation: properties, evaluation and score
+optimisation. <em>European Journal of Operational Research</em> 306(2):
+693-706. <a href="doi:10.1016/j.ejor.2022.07.040" class="uri">doi:10.1016/j.ejor.2022.07.040</a>.</p>
+<p>Pascariu MD. MortalityForecast: Standard tools to compare and
+evaluate various mortality forecasting methods. R package version 0.8.1.
+<a href="https://github.com/mpascariu/MortalityForecast" class="external-link uri">https://github.com/mpascariu/MortalityForecast</a></p>
 <p>Rizzi S, Gampe J, Eilers PHC (2015). Efficient estimation of smooth
 distributions from coarsely grouped data. <em>American Journal of
 Epidemiology</em> 182(2): 138-147.</p>

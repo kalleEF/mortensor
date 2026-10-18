@@ -17,6 +17,7 @@ Each article explains one step with a simple model and figures.
 - [Tuning and recalibration](tuning-recalibration.md):
 - [Coherent forecasts: totals and their parts](coherence.md):
 - [Decomposing differences in life expectancy](decomposition.md):
+- [Lifespan variation](lifespan-variation.md):
 
 ### Models
 
@@ -34,6 +35,7 @@ Complete analyses from the published tables to the reported results.
 - [Inequality in England: life expectancy and causes of death by
   deprivation](inequality-england.md):
 - [Differences between the German Laender](laender-germany.md):
+- [Excess mortality](excess-mortality.md):
 
 ### Help
 

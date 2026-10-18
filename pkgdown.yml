@@ -7,11 +7,13 @@ articles:
   coherence: coherence.html
   comparison: comparison.html
   decomposition: decomposition.html
+  excess-mortality: excess-mortality.html
   faq: faq.html
   articles/function-map: function-map.html
   inequality-england: inequality-england.html
   jump-off: jump-off.html
   laender-germany: laender-germany.html
+  lifespan-variation: lifespan-variation.html
   model-choice: model-choice.html
   models: models.html
   mortensor: mortensor.html
@@ -19,4 +21,4 @@ articles:
   smoothing: smoothing.html
   tuning-recalibration: tuning-recalibration.html
   ungrouping: ungrouping.html
-last_built: 2026-10-18T00:19Z
+last_built: 2026-10-18T02:49Z

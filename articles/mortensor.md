@@ -164,4 +164,6 @@ intervals.
 | Models and ensembles | “Choosing and combining models”, “Model reference” |
 | Totals and parts | “Coherent forecasts” |
 | What drives a gap | “Decomposing differences in life expectancy” |
+| How unequal lifespans are | “Lifespan variation” |
+| Deaths above the expected | “Excess mortality” |
 | Complete analyses | “Inequality in England”, “Differences between the German Laender” |

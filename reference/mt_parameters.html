@@ -71,10 +71,18 @@ for ensembles also <code>component</code>, for fits by groups also <code>group</
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
 
 <ul><li><p><code><a href="lee_carter.html">lee_carter()</a></code>: <code>a</code> (age pattern), <code>b</code> (age pattern of change), <code>k</code>
-(period index), and the drift and innovation standard deviation of <code>k</code>;</p></li>
+(period index), and the drift and innovation standard deviation of <code>k</code>;
+with <code>rotate = TRUE</code> also the ultimate pattern <code>b_ultimate</code>;</p></li>
 <li><p><code><a href="li_lee.html">li_lee()</a></code>, <code><a href="li_lee.html">product_ratio()</a></code>: the common factor of each group (<code>B</code>,
 <code>K</code>, its drift and standard deviation), and per stratum the deviations
 <code>a</code>, <code>b</code>, <code>k</code> and their AR(1) coefficient <code>phi</code> and standard deviation;</p></li>
+<li><p><code><a href="coda.html">coda()</a></code>: the centre <code>a</code> (geometric mean distribution of life-table
+deaths), the loadings <code>b</code>, the index <code>k</code> with its drift and standard
+deviation, the share of variation explained by the first component and
+the parameters of the open age interval; the coherent model gives per
+group of <code>common_by</code> the common <code>a</code>, <code>B</code>, <code>K</code> and per stratum <code>a</code>, <code>b</code>,
+<code>k</code> and their AR(1) parameters. <code><a href="coda_causes.html">coda_causes()</a></code>: per group, as
+<code><a href="coda.html">coda()</a></code>, with parts by age and cause;</p></li>
 <li><p><code><a href="rwd.html">rwd()</a></code>: drift and innovation standard deviation per age (and, with
 <code>observation_noise = TRUE</code>, the variances of level and noise);</p></li>
 <li><p><code><a href="apc_bayes.html">apc_bayes()</a></code>: posterior medians and 90% intervals of the age, period

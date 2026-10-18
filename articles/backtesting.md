@@ -167,10 +167,74 @@ of a fixed trend, while the trend of English mortality changed after
 errors of recent forecasts, and “Choosing and combining models” how
 mixtures of models do.
 
+## Is the difference larger than chance?
+
+Mean scores over seven origins depend on the particular years. The
+Diebold-Mariano test (Diebold and Mariano 1995) asks whether two models
+differ in accuracy by more than the origins vary.
+[`mt_dm_test()`](../reference/mt_dm_test.md) computes it for each
+horizon from the mean score of each origin, so the many cells of one
+forecast count once. Forecasts from neighbouring origins overlap in
+their test years, which the test allows for (autocovariances up to lag
+`h - 1`), and it uses the small-sample correction of Harvey, Leybourne
+and Newbold (1997):
+
+``` r
+
+dm <- mt_dm_test(bt, ref = "Li-Lee")
+dm[target == "rate", list(model, horizon, mean_diff, statistic, p_value)]
+#>           model horizon     mean_diff  statistic      p_value
+#>          <char>  <fctr>         <num>      <num>        <num>
+#>  1: random walk       1  0.0119595721  8.4157008 0.0001534481
+#>  2: random walk       2  0.0129701804  6.0073944 0.0009583211
+#>  3: random walk       3  0.0190240420  4.9418489 0.0025991046
+#>  4: random walk       4  0.0222412221  6.6151447 0.0005745758
+#>  5: random walk       5  0.0258199269  3.1710696 0.0192926229
+#>  6: random walk     all  0.0184029887  6.4845296 0.0006393141
+#>  7:  Lee-Carter       1 -0.0004919661 -0.3959288 0.7058530046
+#>  8:  Lee-Carter       2  0.0008207208  0.3040936 0.7713269519
+#>  9:  Lee-Carter       3  0.0013534123  0.5191091 0.6222685396
+#> 10:  Lee-Carter       4  0.0016088507  0.7159922 0.5008991759
+#> 11:  Lee-Carter       5  0.0024748867  0.5433246 0.6064868413
+#> 12:  Lee-Carter     all  0.0011531809  0.2660219 0.7991274813
+```
+
+A positive `mean_diff` means a higher CRPS than Li-Lee, so a less
+accurate forecast. Li-Lee forecast the rates more accurately than the
+random walk at every horizon (p below 0.02). Li-Lee and Lee-Carter
+differ by less than 4% of their CRPS, with p-values from 0.5 to 0.8:
+this backtest cannot tell them apart.
+
+``` r
+
+dm[target == "life_expectancy", list(model, horizon, mean_diff, statistic, p_value)]
+#>           model horizon   mean_diff  statistic    p_value
+#>          <char>  <fctr>       <num>      <num>      <num>
+#>  1: random walk       1 -0.03020856 -2.6593674 0.03755574
+#>  2: random walk       2 -0.02580441 -1.5230345 0.17858066
+#>  3: random walk       3 -0.02894722 -1.2271653 0.26572242
+#>  4: random walk       4 -0.04568760 -0.9719875 0.36859476
+#>  5: random walk       5 -0.08010395 -1.2478513 0.25857634
+#>  6: random walk     all -0.04215035 -0.8274553 0.43964138
+#>  7:  Lee-Carter       1 -0.03607133 -2.8107851 0.03072441
+#>  8:  Lee-Carter       2 -0.03320599 -1.6563294 0.14873335
+#>  9:  Lee-Carter       3 -0.04086515 -1.8131081 0.11975829
+#> 10:  Lee-Carter       4 -0.04610599 -1.6365407 0.15284189
+#> 11:  Lee-Carter       5 -0.06357255 -2.3612003 0.05619187
+#> 12:  Lee-Carter     all -0.04396420 -1.2068646 0.27290181
+```
+
+For life expectancy, Lee-Carter was more accurate than Li-Lee one year
+ahead (p = 0.03); at longer horizons the differences are within chance.
+With seven origins the test has six degrees of freedom and detects only
+large and consistent differences. The row `"all"` averages over the
+horizons.
+
 ## How far to trust a backtest
 
 - Seven origins of one country are few, and the test years overlap; a
-  difference of a few percent in the CRPS can be noise.
+  difference of a few percent in the CRPS can be noise, as
+  [`mt_dm_test()`](../reference/mt_dm_test.md) shows.
 - A backtest scores the past. If the future differs from the test period
   (a pandemic, a policy change), so will the accuracy.
 - Compare models on the same origins, horizons and cells, as
@@ -183,6 +247,9 @@ Bracher J, Ray EL, Gneiting T, Reich NG (2021). Evaluating epidemic
 forecasts in an interval format. *PLoS Computational Biology* 17(2):
 e1008618.
 
+Diebold FX, Mariano RS (1995). Comparing predictive accuracy. *Journal
+of Business & Economic Statistics* 13(3): 253-263.
+
 Gneiting T, Balabdaoui F, Raftery AE (2007). Probabilistic forecasts,
 calibration and sharpness. *Journal of the Royal Statistical Society
 Series B* 69(2): 243-268.
@@ -190,6 +257,10 @@ Series B* 69(2): 243-268.
 Gneiting T, Raftery AE (2007). Strictly proper scoring rules,
 prediction, and estimation. *Journal of the American Statistical
 Association* 102(477): 359-378.
+
+Harvey D, Leybourne S, Newbold P (1997). Testing the equality of
+prediction mean squared errors. *International Journal of Forecasting*
+13(2): 281-291.
 
 Hyndman RJ, Koehler AB (2006). Another look at measures of forecast
 accuracy. *International Journal of Forecasting* 22(4): 679-688.

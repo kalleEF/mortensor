@@ -57,7 +57,9 @@ sum(k) = 0, fitted per stratum:"></head><body>
 <span>  n_boot <span class="op">=</span> <span class="fl">100</span>,</span>
 <span>  adjust <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"dt"</span>, <span class="st">"dxt"</span>, <span class="st">"e0"</span>, <span class="st">"none"</span><span class="op">)</span>,</span>
 <span>  choose_period <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>  min_years <span class="op">=</span> <span class="fl">20</span></span>
+<span>  min_years <span class="op">=</span> <span class="fl">20</span>,</span>
+<span>  rotate <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  rotation <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>e0_start <span class="op">=</span> <span class="fl">80</span>, e0_end <span class="op">=</span> <span class="fl">102</span>, power <span class="op">=</span> <span class="fl">0.5</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -96,6 +98,19 @@ Smith 2002).</p></dd>
 <dd><p><code>choose_period</code> considers fitting periods of more than
 <code>min_years</code> years (<code>minperiod</code> of <code><a href="https://pkg.robjhyndman.com/demography/reference/lca.html" class="external-link">demography::lca()</a></code>).</p></dd>
 
+
+<dt id="arg-rotate">rotate<a class="anchor" aria-label="anchor" href="#arg-rotate"></a></dt>
+<dd><p>Rotate the age pattern of decline <code>b</code> towards an ultimate
+pattern as life expectancy at birth rises (Li, Lee and Gerland 2013).</p></dd>
+
+
+<dt id="arg-rotation">rotation<a class="anchor" aria-label="anchor" href="#arg-rotation"></a></dt>
+<dd><p>Settings of the rotation, a named vector: life expectancy
+at birth at which the rotation starts (<code>e0_start</code>) and is complete
+(<code>e0_end</code>), and the exponent of the weights (<code>power</code>). The defaults are
+those of Li, Lee and Gerland (2013) and MortCast; elements left out keep
+their defaults.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
@@ -133,6 +148,31 @@ deaths of the fitting period (semi-parametric bootstrap of Brouhns et al.
 <p>Age groups without deaths in the fitting period get a constant rate (0.5
 deaths over the period) and no trend; with <code>adjust = "e0"</code> they enter the
 life tables at that rate.</p>
+<p><code>rotate = TRUE</code> rotates the age pattern of decline as life expectancy
+rises (Li, Lee and Gerland 2013). In long-lived populations the decline
+of mortality slows down at young ages and speeds up at old ages, which a
+fixed <code>b[x]</code> does not capture over long horizons. For each path and year
+<code>t</code>, the life expectancy at birth <code>e0</code> of the unrotated forecast gives the
+weight <code>w = (0.5 (1 + sin(pi / 2 (2 u - 1))))^power</code> with
+<code>u = (e0 - e0_start) / (e0_end - e0_start)</code>; <code>w</code> is 0 below <code>e0_start</code> and
+1 from <code>e0_end</code>. The age pattern of that year is <code>B[x, t] = (1 - w) b[x] + w bu[x]</code>. The ultimate pattern <code>bu</code> has the mean of <code>b</code> over ages 15-64 at
+all ages below 65; from age 65 it keeps the shape of <code>b</code>, scaled so that
+the first age group from 65 equals that mean; it sums to 1 like <code>b</code>. The
+index is then solved again, path by path and year by year, so that the
+rotated rates have the same life expectancy at birth as the unrotated
+ones: rotation changes the age pattern of the forecast and keeps its life
+expectancy at birth. Decline thus moves from young ages to the ages where
+<code>bu</code> exceeds <code>b</code>. Where <code>b</code> at 65 is already above its mean over ages
+15-64 (as for French women), it moves mostly to ages 15-64. Rates change
+from the jump-off year <code>T</code>, <code>log m[x, t] = log m[x, T] + B[x, t] (k*[t] - k[T])</code>, so the jump-off rates stay as they are. Fitted rates, and paths
+with <code>e0</code> below <code>e0_start</code>, are unchanged. In MortCast (Sevcikova et al.
+2016) the path of life expectancy comes from a separate model
+(bayesLife); here it is that of the Lee-Carter draws. Rotation needs ages
+from 0 (life expectancy at birth) with age groups starting at 15 and 65.
+With a closed last age group, a warning notes that life expectancy is
+then truncated at the highest age. Rotated forecasts compute life tables
+for every path and year and are much slower (about 20 times for single
+years of age).</p>
     </div>
     <div class="section level2">
     <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a></h2>
@@ -151,6 +191,14 @@ method for forecasting mortality. <em>Demography</em> 38(4): 537-549.
 <p>Brouhns N, Denuit M, Van Keilegom I (2005). Bootstrapping the Poisson
 log-bilinear model for mortality forecasting. <em>Scandinavian Actuarial
 Journal</em> 2005(3): 212-224.</p>
+<p>Li N, Lee R, Gerland P (2013). Extending the Lee-Carter method to model
+the rotation of age patterns of mortality decline for long-term
+projections. <em>Demography</em> 50(6): 2037-2051.
+<a href="https://doi.org/10.1007/s13524-013-0232-2" class="external-link">doi:10.1007/s13524-013-0232-2</a></p>
+<p>Sevcikova H, Li N, Kantorova V, Gerland P, Raftery AE (2016). Age-specific
+mortality and fertility rates for probabilistic population projections.
+In Schoen R (ed.) <em>Dynamic Demographic Analysis</em>. Springer, 285-310.
+<a href="https://doi.org/10.1007/978-3-319-26603-9_15" class="external-link">doi:10.1007/978-3-319-26603-9_15</a></p>
     </div>
 
     <div class="section level2">
@@ -158,6 +206,123 @@ Journal</em> 2005(3): 212-224.</p>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">x</span> <span class="op">&lt;-</span> <span class="fu"><a href="mt_example.html">mt_example</a></span><span class="op">(</span>deaths <span class="op">=</span> <span class="st">"single"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="mt_fit.html">mt_fit</a></span><span class="op">(</span><span class="fu">lee_carter</span><span class="op">(</span><span class="op">)</span>, <span class="va">x</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">fc</span> <span class="op">&lt;-</span> <span class="fu"><a href="mt_forecast.html">mt_forecast</a></span><span class="op">(</span><span class="va">fit</span>, h <span class="op">=</span> <span class="fl">10</span>, n_draws <span class="op">=</span> <span class="fl">200</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="co"># \donttest{</span></span></span>
+<span class="r-in"><span><span class="co"># rotation needs ages from 0: French women (HMD, via demography)</span></span></span>
+<span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/ns-load.html" class="external-link">requireNamespace</a></span><span class="op">(</span><span class="st">"demography"</span>, quietly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span></span>
+<span class="r-in"><span>  <span class="va">fr</span> <span class="op">&lt;-</span> <span class="fu"><a href="as_mt_data.html">as_mt_data</a></span><span class="op">(</span><span class="fu">demography</span><span class="fu">::</span><span class="va"><a href="https://pkg.robjhyndman.com/demography/reference/fr.mort.html" class="external-link">fr.mort</a></span>, series <span class="op">=</span> <span class="st">"female"</span>, years <span class="op">=</span> <span class="fl">1970</span><span class="op">:</span><span class="fl">2006</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="va">fr</span> <span class="op">&lt;-</span> <span class="fu"><a href="mt_regroup.html">mt_regroup</a></span><span class="op">(</span><span class="va">fr</span>, age <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">1</span>, <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">5</span>, <span class="fl">100</span>, <span class="fl">5</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="va">fc_rot</span> <span class="op">&lt;-</span> <span class="fu"><a href="mt_forecast.html">mt_forecast</a></span><span class="op">(</span><span class="fu"><a href="mt_fit.html">mt_fit</a></span><span class="op">(</span><span class="fu">lee_carter</span><span class="op">(</span>rotate <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>, <span class="va">fr</span><span class="op">)</span>, h <span class="op">=</span> <span class="fl">50</span>, n_draws <span class="op">=</span> <span class="fl">100</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="life_expectancy.html">life_expectancy</a></span><span class="op">(</span><span class="va">fc_rot</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="op">}</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     stratum    sex  label period     mean   q0.025     q0.1     q0.5     q0.9</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       &lt;int&gt; &lt;char&gt; &lt;char&gt;  &lt;num&gt;    &lt;num&gt;    &lt;num&gt;    &lt;num&gt;    &lt;num&gt;    &lt;num&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  1:       1 female female   2007 84.45832 83.97909 84.14176 84.42570 84.84040</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2:       1 female female   2008 84.64582 83.98058 84.14838 84.59950 85.21669</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  3:       1 female female   2009 84.81986 84.07303 84.20940 84.77582 85.50512</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  4:       1 female female   2010 84.95914 84.04569 84.24819 84.94668 85.64804</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  5:       1 female female   2011 85.17228 84.19406 84.39411 85.14099 86.06945</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  6:       1 female female   2012 85.36369 84.29550 84.57521 85.32251 86.25054</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  7:       1 female female   2013 85.52862 84.25485 84.64479 85.50286 86.57259</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  8:       1 female female   2014 85.71318 84.34690 84.67043 85.68552 86.81340</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  9:       1 female female   2015 85.88541 84.46973 84.64564 85.91419 87.05366</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 10:       1 female female   2016 86.04160 84.41473 84.82095 86.08765 87.20145</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 11:       1 female female   2017 86.21922 84.48068 84.94156 86.28038 87.39625</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 12:       1 female female   2018 86.35767 84.40915 85.00913 86.40913 87.58079</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 13:       1 female female   2019 86.55185 84.48270 85.21895 86.64661 87.86014</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 14:       1 female female   2020 86.73739 84.59386 85.34588 86.88488 88.21593</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 15:       1 female female   2021 86.86154 84.42512 85.50065 86.93892 88.28391</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 16:       1 female female   2022 87.02331 84.72102 85.58790 87.17942 88.46582</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 17:       1 female female   2023 87.17882 84.52893 85.72703 87.32831 88.81129</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 18:       1 female female   2024 87.34424 84.46988 85.89195 87.45908 88.97988</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 19:       1 female female   2025 87.50461 84.85015 86.03837 87.58242 89.08385</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 20:       1 female female   2026 87.64083 84.90858 86.10474 87.72627 89.32925</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 21:       1 female female   2027 87.80483 85.23695 86.25216 87.89847 89.50748</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 22:       1 female female   2028 87.99057 85.60346 86.35903 87.97488 89.43914</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 23:       1 female female   2029 88.14179 85.67133 86.42451 88.09798 89.69419</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 24:       1 female female   2030 88.27834 85.71681 86.63274 88.27427 89.95481</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 25:       1 female female   2031 88.44130 85.77055 86.79347 88.51256 90.18044</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 26:       1 female female   2032 88.58123 85.83978 86.80131 88.55663 90.17031</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 27:       1 female female   2033 88.75500 85.89025 86.91354 88.85676 90.58709</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 28:       1 female female   2034 88.92816 85.86039 87.07892 88.94462 90.73743</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 29:       1 female female   2035 89.06049 85.90906 87.27126 89.17776 90.87124</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 30:       1 female female   2036 89.21073 86.11898 87.51358 89.36751 91.02247</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 31:       1 female female   2037 89.35301 86.21238 87.67122 89.44646 91.30539</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 32:       1 female female   2038 89.52548 86.20872 87.73986 89.49441 91.54192</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 33:       1 female female   2039 89.70539 86.27487 87.96464 89.78436 91.90117</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 34:       1 female female   2040 89.84683 86.38395 88.11563 89.88735 92.10813</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 35:       1 female female   2041 89.99395 86.85480 88.16030 89.96020 92.17889</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 36:       1 female female   2042 90.15294 87.11016 88.25911 90.18968 92.35955</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 37:       1 female female   2043 90.30115 87.20544 88.46409 90.35192 92.40212</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 38:       1 female female   2044 90.42379 87.30900 88.34859 90.37858 92.47518</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 39:       1 female female   2045 90.56684 87.39265 88.53738 90.59868 92.69714</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 40:       1 female female   2046 90.74251 87.68452 88.77240 90.80616 92.93426</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 41:       1 female female   2047 90.92607 87.92870 88.88210 90.97651 93.05826</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 42:       1 female female   2048 91.03234 87.83601 88.92326 91.06034 93.36926</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 43:       1 female female   2049 91.16372 87.79822 89.18376 91.10862 93.48960</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 44:       1 female female   2050 91.32277 88.06035 89.31103 91.36373 93.77092</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 45:       1 female female   2051 91.46829 88.03537 89.38917 91.48872 93.95286</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 46:       1 female female   2052 91.58919 87.91411 89.43010 91.60156 94.11008</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 47:       1 female female   2053 91.71784 88.32247 89.39964 91.74799 94.15596</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 48:       1 female female   2054 91.84898 88.25525 89.64994 91.90272 94.28004</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 49:       1 female female   2055 91.95132 88.26744 89.70716 91.92643 94.40703</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 50:       1 female female   2056 92.04926 88.41287 89.67235 92.07860 94.61926</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     stratum    sex  label period     mean   q0.025     q0.1     q0.5     q0.9</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       &lt;int&gt; &lt;char&gt; &lt;char&gt;  &lt;num&gt;    &lt;num&gt;    &lt;num&gt;    &lt;num&gt;    &lt;num&gt;    &lt;num&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       q0.975    at</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        &lt;num&gt; &lt;num&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  1: 84.97797     0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2: 85.37398     0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  3: 85.71163     0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  4: 85.86549     0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  5: 86.23777     0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  6: 86.46993     0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  7: 86.85593     0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  8: 87.11083     0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  9: 87.46653     0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 10: 87.94733     0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 11: 88.06047     0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 12: 88.30347     0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 13: 88.54289     0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 14: 88.87291     0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 15: 89.02873     0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 16: 89.12558     0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 17: 89.42112     0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 18: 89.53384     0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 19: 89.76067     0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 20: 89.93365     0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 21: 90.07433     0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 22: 90.20059     0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 23: 90.47060     0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 24: 90.38945     0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 25: 90.48946     0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 26: 90.92321     0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 27: 91.15902     0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 28: 91.50720     0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 29: 91.64974     0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 30: 91.85898     0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 31: 92.02428     0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 32: 92.12758     0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 33: 92.53931     0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 34: 92.53557     0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 35: 92.65133     0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 36: 92.83783     0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 37: 92.97059     0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 38: 93.15846     0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 39: 93.36540     0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 40: 93.44503     0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 41: 93.76265     0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 42: 94.03238     0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 43: 94.21914     0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 44: 94.28079     0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 45: 94.42662     0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 46: 94.70687     0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 47: 94.90896     0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 48: 95.02335     0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 49: 95.14042     0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 50: 95.19589     0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       q0.975    at</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        &lt;num&gt; &lt;num&gt;</span>
+<span class="r-in"><span><span class="co"># }</span></span></span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

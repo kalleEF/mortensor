@@ -86,7 +86,8 @@ pipelines refitted in backtests.
 Describe the past
 
 Observed indicators with Poisson intervals, gaps between strata,
-inequality indices and decompositions (which also work on forecasts).
+inequality indices, lifespan variation, decompositions and excess
+mortality (which also work on forecasts).
 
 - [`mt_observed()`](mt_observed.md) : Observed rates as draws
 - [`life_expectancy()`](life_expectancy.md) : Life expectancy from rates
@@ -100,6 +101,8 @@ inequality indices and decompositions (which also work on forecasts).
   over time
 - [`mt_inequality()`](mt_inequality.md) : Slope and relative index of
   inequality, path by path
+- [`lifespan_variation()`](lifespan_variation.md) : Lifespan variation
+  from rates or forecast draws
 - [`mt_decompose()`](mt_decompose.md)
   [`summary(`*`<mt_decomposition>`*`)`](mt_decompose.md) : Decompose
   differences in mortality by age, cause and subgroup
@@ -109,6 +112,8 @@ inequality indices and decompositions (which also work on forecasts).
   populations
 - [`life_table()`](life_table.md) : Life tables from death rates on any
   age axis
+- [`mt_excess()`](mt_excess.md) [`mt_plot_excess()`](mt_excess.md) :
+  Excess mortality
 
 ## 
 
@@ -118,6 +123,8 @@ Models for one population
 - [`rwd()`](rwd.md) : Random walk with drift on log death rates
 - [`hyndman_ullah()`](hyndman_ullah.md) : Functional demographic model
   of Hyndman and Ullah (demography)
+- [`coda()`](coda.md) : Compositional data (CoDa) model of life-table
+  deaths
 - [`stmomo()`](stmomo.md) : Generalised age-period-cohort models
   (StMoMo)
 - [`stanmomo()`](stanmomo.md) : Bayesian stochastic mortality models in
@@ -141,6 +148,8 @@ Models for several populations and causes
 - [`tucker3()`](tucker3.md) : Tucker3 tensor model across strata
 - [`cause_shares()`](cause_shares.md) : Coherent multi-cause forecasts
   with cause shares
+- [`coda_causes()`](coda_causes.md) : Multiple-decrement CoDa model of
+  causes of death (experimental)
 
 ## 
 
@@ -205,11 +214,13 @@ Fit, inspect and forecast
 
 Evaluate and compare
 
-Rolling-origin backtests and scores; several models and forecasts side
-by side.
+Rolling-origin backtests and scores; tests of differences in accuracy;
+several models and forecasts side by side.
 
 - [`mt_backtest()`](mt_backtest.md) : Rolling-origin backtest
 - [`mt_score()`](mt_score.md) : Summarise backtest scores
+- [`mt_dm_test()`](mt_dm_test.md) : Test differences in forecast
+  accuracy between models (Diebold-Mariano)
 - [`mt_compare()`](mt_compare.md) [`mt_score_table()`](mt_compare.md)
   [`mt_compare_forecasts()`](mt_compare.md)
   [`mt_plot_compare()`](mt_compare.md) : Compare models and forecasts

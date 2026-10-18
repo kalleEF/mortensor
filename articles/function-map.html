@@ -81,7 +81,7 @@ tools.</p>
 are objects; the labels on the arrows are the functions that connect
 them.</p>
 <p align="center">
-<img src="function-map-main.png" width="740" alt="Main path: your tables become an mt_data object with mt_data() and are prepared and checked (map 1); mt_fit() fits a model specification to the data, and mt_backtest() scores specifications on past years; mt_forecast() gives mt_draws, simulated paths of future rates; tables and plots of life expectancy, rates, deaths, gaps and decompositions come from the draws, from the backtest scores (mt_score()) or from the observed data (map 3)."></p>
+<img src="function-map-main.png" width="740" alt="Main path: your tables become an mt_data object with mt_data() and are prepared and checked (map 1); mt_fit() fits a model specification to the data, and mt_backtest() scores specifications on past years; mt_forecast() gives mt_draws, simulated paths of future rates; tables and plots of life expectancy, lifespan variation, rates, deaths, gaps, decompositions and excess mortality come from the draws, from the backtest scores (mt_score()) or from the observed data (map 3)."></p>
 </div>
 <div class="section level2">
 <h2 id="map-1-from-tables-to-analysis-ready-data">Map 1: from tables to analysis-ready data<a class="anchor" aria-label="anchor" href="#map-1-from-tables-to-analysis-ready-data"></a>
@@ -106,10 +106,10 @@ them.</p>
 Preprocessing steps given as <code>prep</code> are repeated in every
 fit, so that backtests do not see the test years.</p>
 <p align="center">
-<img src="function-map-models.png" width="885" alt="Map 2, models: models for one population per stratum or for several strata jointly form a model specification, optionally inside wrappers (ensemble(), stratified(), reconciled(), recalibrated(), anchored(), bootstrapped(), tuned()) that may use a hierarchy from mt_hierarchy(); mt_fit() takes the specification, the model-ready data and optional preprocessing from mt_prep(); the fit is inspected (summary(), mt_parameters(), residuals()) or forecast with mt_forecast()."></p>
+<img src="function-map-models.png" width="885" alt="Map 2, models: models for one population per stratum (including coda()) or for several strata jointly (including coda(coherent = TRUE) and coda_causes()) form a model specification, optionally inside wrappers (ensemble(), stratified(), reconciled(), recalibrated(), anchored(), bootstrapped(), tuned()) that may use a hierarchy from mt_hierarchy(); mt_fit() takes the specification, the model-ready data and optional preprocessing from mt_prep(); the fit is inspected (summary(), mt_parameters(), residuals()) or forecast with mt_forecast()."></p>
 <p>Choosing between specifications:</p>
 <p align="center">
-<img src="function-map-choice.png" width="528" alt="Choosing between specifications: the data and the candidate specifications, each with its preprocessing, go into mt_backtest(); mt_score() and the score plots (mt_plot_scores(), mt_plot_coverage()) lead to the chosen specification."></p>
+<img src="function-map-choice.png" width="793" alt="Choosing between specifications: the data and the candidate specifications, each with its preprocessing, go into mt_backtest(); mt_score(), the score plots (mt_plot_scores(), mt_plot_coverage()) and mt_dm_test() (is the difference between two models larger than chance?) lead to the chosen specification."></p>
 <p><code><a href="../reference/mt_tune.html">tuned()</a></code> and <code><a href="../reference/mt_tune.html">mt_tune()</a></code> run the same
 comparison inside a fit, over a grid of model and preprocessing settings
 (for example the number of components and the smoothing of
@@ -125,7 +125,7 @@ width of its intervals.</p>
 intervals include the joint uncertainty of all strata. The same
 functions describe observed data.</p>
 <p align="center">
-<img src="function-map-results.png" width="813" alt="Map 3, from draws to results: forecast draws (mt_draws) and observed data (mt_data) give indicators (life_expectancy(), asr(), prob_dying(), yll(), mt_deaths()), comparisons (mt_contrast(), mt_inequality(), mt_decompose()) and output (mt_summarise(), plots, mt_export()); draws can be aggregated or refined (mt_aggregate_draws(), mt_disaggregate(), mt_coherence())."></p>
+<img src="function-map-results.png" width="813" alt="Map 3, from draws to results: forecast draws (mt_draws) and observed data (mt_data) give indicators (life_expectancy(), lifespan_variation(), asr(), prob_dying(), yll(), mt_deaths()), comparisons (mt_contrast(), mt_inequality(), mt_decompose(), and mt_excess() for observed data against a baseline fit) and output (mt_summarise(), plots including mt_plot_excess(), mt_export()); draws can be aggregated or refined (mt_aggregate_draws(), mt_disaggregate(), mt_coherence())."></p>
 </div>
 <div class="section level2">
 <h2 id="functions-by-purpose">Functions by purpose<a class="anchor" aria-label="anchor" href="#functions-by-purpose"></a>
@@ -314,13 +314,14 @@ smoothers in one figure</td>
 <tr class="even">
 <td>Model</td>
 <td>
-<code><a href="../reference/lee_carter.html">lee_carter()</a></code>, <code><a href="../reference/rwd.html">rwd()</a></code>,
+<code><a href="../reference/lee_carter.html">lee_carter()</a></code> (optionally rotated), <code><a href="../reference/rwd.html">rwd()</a></code>,
 <code><a href="../reference/li_lee.html">li_lee()</a></code>, <code><a href="../reference/li_lee.html">product_ratio()</a></code>,
 <code><a href="../reference/hyndman_ullah.html">hyndman_ullah()</a></code>, <code><a href="../reference/coherent_fdm.html">coherent_fdm()</a></code>,
-<code><a href="../reference/stmomo.html">stmomo()</a></code>, <code><a href="../reference/stanmomo.html">stanmomo()</a></code>,
-<code><a href="../reference/arima_series.html">arima_series()</a></code>, <code><a href="../reference/arima_series.html">ets_series()</a></code>,
-<code><a href="../reference/apc_bayes.html">apc_bayes()</a></code>, <code><a href="../reference/tucker3.html">tucker3()</a></code>,
-<code><a href="../reference/cause_shares.html">cause_shares()</a></code>
+<code><a href="../reference/coda.html">coda()</a></code> (also coherent), <code><a href="../reference/stmomo.html">stmomo()</a></code>,
+<code><a href="../reference/stanmomo.html">stanmomo()</a></code>, <code><a href="../reference/arima_series.html">arima_series()</a></code>,
+<code><a href="../reference/arima_series.html">ets_series()</a></code>, <code><a href="../reference/apc_bayes.html">apc_bayes()</a></code>,
+<code><a href="../reference/tucker3.html">tucker3()</a></code>, <code><a href="../reference/cause_shares.html">cause_shares()</a></code>,
+<code><a href="../reference/coda_causes.html">coda_causes()</a></code>
 </td>
 <td>model specifications</td>
 <td>settings</td>
@@ -343,7 +344,8 @@ origins; rates, life expectancy or ASR)</td>
 <td>Combine</td>
 <td>
 <code><a href="../reference/ensemble.html">ensemble()</a></code> (optionally <code>top_k</code>),
-<code><a href="../reference/stratified.html">stratified()</a></code>, <code><a href="../reference/reconciled.html">reconciled()</a></code>,
+<code><a href="../reference/stratified.html">stratified()</a></code>, <code><a href="../reference/reconciled.html">reconciled()</a></code> (also
+score-optimal, <code>method = "energy_score"</code>),
 <code><a href="../reference/bootstrapped.html">bootstrapped()</a></code>, <code><a href="../reference/mt_tune.html">tuned()</a></code>
 </td>
 <td>mixtures, different models for groups of strata, coherence,
@@ -461,6 +463,15 @@ life expectancy and gaps side by side, by level of a hierarchy</td>
 </tr>
 <tr class="odd">
 <td>Evaluate</td>
+<td><code><a href="../reference/mt_dm_test.html">mt_dm_test()</a></code></td>
+<td>Diebold-Mariano tests: is one model more accurate than another, per
+horizon, beyond chance?</td>
+<td>backtest from <code><a href="../reference/mt_compare.html">mt_compare()</a></code>
+</td>
+<td>table</td>
+</tr>
+<tr class="even">
+<td>Evaluate</td>
 <td>
 <code><a href="../reference/mt_plot_more.html">mt_plot_scores()</a></code>, <code><a href="../reference/mt_plot.html">mt_plot_coverage()</a></code>,
 <code><a href="../reference/mt_plot_design.html">mt_plot_pit()</a></code>, <code><a href="../reference/mt_plot_design.html">mt_plot_backtest_design()</a></code>,
@@ -471,14 +482,14 @@ design of a backtest, tuning scores</td>
 <td>backtest, tuning</td>
 <td>ggplot</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>Describe</td>
 <td><code><a href="../reference/mt_observed.html">mt_observed()</a></code></td>
 <td>observed rates as draws</td>
 <td><code>mt_data</code></td>
 <td><code>mt_draws</code></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>Report</td>
 <td>
 <code><a href="../reference/life_expectancy.html">life_expectancy()</a></code>, <code><a href="../reference/derived.html">asr()</a></code>,
@@ -490,7 +501,29 @@ design of a backtest, tuning scores</td>
 </td>
 <td>table</td>
 </tr>
+<tr class="odd">
+<td>Report</td>
+<td><code><a href="../reference/lifespan_variation.html">lifespan_variation()</a></code></td>
+<td>e-dagger, entropy, Gini, standard deviation, coefficient of
+variation and interquartile range of the age at death</td>
+<td>
+<code>mt_draws</code>, <code>mt_data</code> or rates</td>
+<td>table, array</td>
+</tr>
 <tr class="even">
+<td>Report</td>
+<td>
+<code><a href="../reference/mt_excess.html">mt_excess()</a></code>, <code><a href="../reference/mt_excess.html">mt_plot_excess()</a></code>
+</td>
+<td>excess deaths, P-scores and loss of life expectancy against the
+expected values of a baseline model, by age, stratum and year</td>
+<td>
+<code>mt_fit</code> or <code>mt_spec</code>,
+<code>mt_data</code>
+</td>
+<td>table, ggplot</td>
+</tr>
+<tr class="odd">
 <td>Report</td>
 <td>
 <code><a href="../reference/derived.html">yll()</a></code>, <code><a href="../reference/mt_deaths.html">mt_deaths()</a></code>
@@ -499,7 +532,7 @@ design of a backtest, tuning scores</td>
 <td><code>mt_draws</code></td>
 <td>table, array</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>Report</td>
 <td>
 <code><a href="../reference/life_table.html">life_table()</a></code>, <code><a href="../reference/standard_population.html">standard_population()</a></code>
@@ -509,7 +542,7 @@ who2000</td>
 <td>rates, name</td>
 <td>table</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>Report</td>
 <td>
 <code><a href="../reference/mt_contrast.html">mt_contrast()</a></code>, <code><a href="../reference/mt_inequality.html">mt_inequality()</a></code>,
@@ -521,7 +554,7 @@ who2000</td>
 </td>
 <td>table, ggplot</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>Report</td>
 <td>
 <code><a href="../reference/mt_compare.html">mt_compare_forecasts()</a></code>,
@@ -533,7 +566,7 @@ reconciliation methods) side by side</td>
 </td>
 <td>table, ggplot</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>Report</td>
 <td>
 <code><a href="../reference/mt_decompose.html">mt_decompose()</a></code>,
@@ -549,7 +582,7 @@ years with gaps)</td>
 <td>
 <code>mt_decomposition</code>, table, ggplot</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>Report</td>
 <td>
 <code><a href="../reference/mt_plot.html">mt_plot_forecast()</a></code>, <code><a href="../reference/mt_plot.html">mt_plot_age()</a></code>,
@@ -561,7 +594,7 @@ years with gaps)</td>
 <td>draws, data, tables</td>
 <td>ggplot, file</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>Data</td>
 <td>
 <code>ons_data</code>, <code>ons_cause_groups</code>,
@@ -574,7 +607,7 @@ years with gaps)</td>
 <td>tables, <code>mt_data</code>
 </td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>Report</td>
 <td>
 <code><a href="../reference/mt_plot_style.html">theme_mortensor()</a></code>,
@@ -585,7 +618,7 @@ years with gaps)</td>
 <td></td>
 <td>theme, scales</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>Disaggregate</td>
 <td>
 <code><a href="../reference/mt_disaggregate.html">mt_disaggregate()</a></code>, <code><a href="../reference/mt_shape_rates.html">mt_shape_rates()</a></code>,
@@ -597,7 +630,7 @@ years with gaps)</td>
 <td>
 <code>mt_draws</code>, table, ggplot</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>Exchange</td>
 <td>
 <code><a href="../reference/as_demogdata.html">as_demogdata()</a></code>, <code><a href="../reference/as_demogdata.html">as_stmomodata()</a></code>
@@ -608,7 +641,7 @@ years with gaps)</td>
 <code>demogdata</code>, <code>StMoMoData</code>
 </td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>Extend</td>
 <td><code><a href="../reference/new_mt_spec.html">new_mt_spec()</a></code></td>
 <td>constructor for developers adding a model (methods for the internal
@@ -634,17 +667,14 @@ projection, for example of the statistical office, passed as
 <li>
 <strong>Spatial models for small areas.</strong> There is no model
 with spatial smoothing between neighbouring regions (such as BYM
-models); pooling works through common trends (<code><a href="../reference/li_lee.html">li_lee()</a></code>);
-Bayesian APC models smooth over age, period and cohort within each
-stratum.</li>
+models), and no relational model for small populations (such as TOPALS);
+pooling works through common trends (<code><a href="../reference/li_lee.html">li_lee()</a></code>); Bayesian
+APC models smooth over age, period and cohort within each stratum.</li>
 <li>
-<strong>Uncertainty of score differences.</strong>
-<code><a href="../reference/mt_score.html">mt_score()</a></code> reports mean scores; standard errors over
-origins and strata or paired tests of two models are not computed.</li>
-<li>
-<strong>Lifespan variation.</strong> Lifespan variation (e-dagger,
-Gini) is not a built-in quantity; <code><a href="../reference/mt_decompose.html">mt_decompose()</a></code> accepts it
-as a function of the rates.</li>
+<strong>Models of life expectancy.</strong> Models that forecast
+life expectancy itself (such as the Bayesian models of the UN or the
+double-gap model) are not implemented; mortensor forecasts rates and
+derives life expectancy from them.</li>
 <li>
 <strong>Multiple imputation of suppressed cells.</strong>
 <code><a href="../reference/mt_fill_suppressed.html">mt_fill_suppressed()</a></code> returns one estimate; the uncertainty

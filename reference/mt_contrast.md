@@ -1,11 +1,12 @@
 # Differences and ratios between strata, path by path
 
 Compares a derived quantity (life expectancy, age-standardised rate,
-probability of dying, or death rate of one age group) between the levels
-of a stratum variable and a reference level, path by path, so that the
-interval of the difference includes the joint uncertainty of both
-strata. Strata are matched on all other stratum variables (for example
-the deprivation gap within each sex).
+probability of dying, death rate of one age group, or an index of
+lifespan variation) between the levels of a stratum variable and a
+reference level, path by path, so that the interval of the difference
+includes the joint uncertainty of both strata. Strata are matched on all
+other stratum variables (for example the deprivation gap within each
+sex).
 
 ## Usage
 
@@ -14,7 +15,7 @@ mt_contrast(
   x,
   var,
   ref,
-  quantity = c("life_expectancy", "asr", "prob_dying", "rate"),
+  quantity = c("life_expectancy", "asr", "prob_dying", "rate", "lifespan_variation"),
   type = c("difference", "ratio"),
   probs = c(0.025, 0.5, 0.975),
   ...
@@ -39,7 +40,8 @@ mt_contrast(
 
 - quantity:
 
-  `"life_expectancy"`, `"asr"`, `"prob_dying"` or `"rate"`.
+  `"life_expectancy"`, `"asr"`, `"prob_dying"`, `"rate"` or
+  `"lifespan_variation"`.
 
 - type:
 
@@ -53,7 +55,9 @@ mt_contrast(
 
   Arguments of the quantity: `at` for life expectancy, `standard` and
   `per` for [`asr()`](derived.md), `from` and `to` for
-  [`prob_dying()`](derived.md), `age` (an age label) for `"rate"`.
+  [`prob_dying()`](derived.md), `age` (an age label) for `"rate"`,
+  `measure` (one index, default `"edagger"`) and `at` for
+  [`lifespan_variation()`](lifespan_variation.md).
 
 ## Value
 

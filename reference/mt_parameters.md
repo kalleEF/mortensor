@@ -25,12 +25,22 @@ ensembles also `component`, for fits by groups also `group`.
 
 - [`lee_carter()`](lee_carter.md): `a` (age pattern), `b` (age pattern
   of change), `k` (period index), and the drift and innovation standard
-  deviation of `k`;
+  deviation of `k`; with `rotate = TRUE` also the ultimate pattern
+  `b_ultimate`;
 
 - [`li_lee()`](li_lee.md), [`product_ratio()`](li_lee.md): the common
   factor of each group (`B`, `K`, its drift and standard deviation), and
   per stratum the deviations `a`, `b`, `k` and their AR(1) coefficient
   `phi` and standard deviation;
+
+- [`coda()`](coda.md): the centre `a` (geometric mean distribution of
+  life-table deaths), the loadings `b`, the index `k` with its drift and
+  standard deviation, the share of variation explained by the first
+  component and the parameters of the open age interval; the coherent
+  model gives per group of `common_by` the common `a`, `B`, `K` and per
+  stratum `a`, `b`, `k` and their AR(1) parameters.
+  [`coda_causes()`](coda_causes.md): per group, as [`coda()`](coda.md),
+  with parts by age and cause;
 
 - [`rwd()`](rwd.md): drift and innovation standard deviation per age
   (and, with `observation_noise = TRUE`, the variances of level and

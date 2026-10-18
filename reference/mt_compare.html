@@ -74,7 +74,7 @@ forecasts (models, scenarios, jump-off choices) as a table or a figure.</p>
 <span></span>
 <span><span class="fu">mt_compare_forecasts</span><span class="op">(</span></span>
 <span>  <span class="va">forecasts</span>,</span>
-<span>  quantity <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"life_expectancy"</span>, <span class="st">"asr"</span>, <span class="st">"deaths"</span>, <span class="st">"rate"</span><span class="op">)</span>,</span>
+<span>  quantity <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"life_expectancy"</span>, <span class="st">"asr"</span>, <span class="st">"deaths"</span>, <span class="st">"rate"</span>, <span class="st">"lifespan_variation"</span><span class="op">)</span>,</span>
 <span>  periods <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  at <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  ages <span class="op">=</span> <span class="cn">NULL</span>,</span>
@@ -82,18 +82,20 @@ forecasts (models, scenarios, jump-off choices) as a table or a figure.</p>
 <span>  level <span class="op">=</span> <span class="fl">0.95</span>,</span>
 <span>  digits <span class="op">=</span> <span class="fl">1</span>,</span>
 <span>  wide <span class="op">=</span> <span class="cn">TRUE</span>,</span>
-<span>  exposure <span class="op">=</span> <span class="cn">NULL</span></span>
+<span>  exposure <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  measure <span class="op">=</span> <span class="st">"edagger"</span></span>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu">mt_plot_compare</span><span class="op">(</span></span>
 <span>  <span class="va">forecasts</span>,</span>
-<span>  quantity <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"life_expectancy"</span>, <span class="st">"rate"</span>, <span class="st">"asr"</span><span class="op">)</span>,</span>
+<span>  quantity <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"life_expectancy"</span>, <span class="st">"rate"</span>, <span class="st">"asr"</span>, <span class="st">"lifespan_variation"</span><span class="op">)</span>,</span>
 <span>  at <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  ages <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  strata <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  periods <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  level <span class="op">=</span> <span class="fl">0.95</span>,</span>
-<span>  data <span class="op">=</span> <span class="cn">NULL</span></span>
+<span>  data <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  measure <span class="op">=</span> <span class="st">"edagger"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -155,8 +157,9 @@ separately for the bottom series, the aggregates and the grand total
 <dt id="arg-quantity">quantity<a class="anchor" aria-label="anchor" href="#arg-quantity"></a></dt>
 <dd><p><code>"life_expectancy"</code>, <code>"asr"</code> (per 100,000), <code>"deaths"</code>
 (summed over the ages, with the exposures of the last observed year
-unless <code>exposure</code> is given; forecasts only) or <code>"rate"</code> (death rates of
-the ages in <code>ages</code>).</p></dd>
+unless <code>exposure</code> is given; forecasts only), <code>"rate"</code> (death rates of
+the ages in <code>ages</code>) or <code>"lifespan_variation"</code> (the index <code>measure</code> of
+<code><a href="lifespan_variation.html">lifespan_variation()</a></code>).</p></dd>
 
 
 <dt id="arg-periods">periods<a class="anchor" aria-label="anchor" href="#arg-periods"></a></dt>
@@ -165,7 +168,7 @@ one year: then medians and intervals per stratum side by side).</p></dd>
 
 
 <dt id="arg-at">at<a class="anchor" aria-label="anchor" href="#arg-at"></a></dt>
-<dd><p>Age for life expectancy.</p></dd>
+<dd><p>Age for life expectancy and lifespan variation.</p></dd>
 
 
 <dt id="arg-ages">ages<a class="anchor" aria-label="anchor" href="#arg-ages"></a></dt>
@@ -187,6 +190,10 @@ one year: then medians and intervals per stratum side by side).</p></dd>
 <dt id="arg-exposure">exposure<a class="anchor" aria-label="anchor" href="#arg-exposure"></a></dt>
 <dd><p>Future exposures for <code>quantity = "deaths"</code> (see
 <code><a href="mt_deaths.html">mt_deaths()</a></code>).</p></dd>
+
+
+<dt id="arg-measure">measure<a class="anchor" aria-label="anchor" href="#arg-measure"></a></dt>
+<dd><p>Index of lifespan variation for <code>quantity = "lifespan_variation"</code> (see <code><a href="lifespan_variation.html">lifespan_variation()</a></code>).</p></dd>
 
 </dl></div>
     <div class="section level2">

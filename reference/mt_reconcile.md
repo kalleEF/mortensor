@@ -43,7 +43,9 @@ mt_reconcile(
 
   `"wls"` (default), `"mint"`, `"structural"`, `"ols"`, `"bottom_up"` or
   `"proportional"` (with `fixed`). The vignette "Coherent forecasts:
-  totals and their parts" compares them.
+  totals and their parts" compares them. Score-optimal reconciliation
+  (`"energy_score"`) is learnt from past forecasts and is available in
+  [`reconciled()`](reconciled.md) only.
 
 - shrink:
 
@@ -175,7 +177,7 @@ rc$reconciliation
 #> [1] "wls"
 #> 
 #> $max_relative_gap_before
-#> [1] 0.3208982
+#> [1] 0.3081628
 #> 
 #> $share_set_to_zero
 #> [1] 0

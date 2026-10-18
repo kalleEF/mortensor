@@ -28,7 +28,7 @@ mt_score_table(
 
 mt_compare_forecasts(
   forecasts,
-  quantity = c("life_expectancy", "asr", "deaths", "rate"),
+  quantity = c("life_expectancy", "asr", "deaths", "rate", "lifespan_variation"),
   periods = NULL,
   at = NULL,
   ages = NULL,
@@ -36,18 +36,20 @@ mt_compare_forecasts(
   level = 0.95,
   digits = 1,
   wide = TRUE,
-  exposure = NULL
+  exposure = NULL,
+  measure = "edagger"
 )
 
 mt_plot_compare(
   forecasts,
-  quantity = c("life_expectancy", "rate", "asr"),
+  quantity = c("life_expectancy", "rate", "asr", "lifespan_variation"),
   at = NULL,
   ages = NULL,
   strata = NULL,
   periods = NULL,
   level = 0.95,
-  data = NULL
+  data = NULL,
+  measure = "edagger"
 )
 ```
 
@@ -107,8 +109,9 @@ mt_plot_compare(
 
   `"life_expectancy"`, `"asr"` (per 100,000), `"deaths"` (summed over
   the ages, with the exposures of the last observed year unless
-  `exposure` is given; forecasts only) or `"rate"` (death rates of the
-  ages in `ages`).
+  `exposure` is given; forecasts only), `"rate"` (death rates of the
+  ages in `ages`) or `"lifespan_variation"` (the index `measure` of
+  [`lifespan_variation()`](lifespan_variation.md)).
 
 - periods:
 
@@ -117,7 +120,7 @@ mt_plot_compare(
 
 - at:
 
-  Age for life expectancy.
+  Age for life expectancy and lifespan variation.
 
 - ages:
 
@@ -139,6 +142,11 @@ mt_plot_compare(
 
   Future exposures for `quantity = "deaths"` (see
   [`mt_deaths()`](mt_deaths.md)).
+
+- measure:
+
+  Index of lifespan variation for `quantity = "lifespan_variation"` (see
+  [`lifespan_variation()`](lifespan_variation.md)).
 
 ## Value
 

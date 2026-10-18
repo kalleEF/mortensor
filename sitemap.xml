@@ -7,12 +7,14 @@
 <url><loc>/articles/coherence.html</loc></url>
 <url><loc>/articles/comparison.html</loc></url>
 <url><loc>/articles/decomposition.html</loc></url>
+<url><loc>/articles/excess-mortality.html</loc></url>
 <url><loc>/articles/faq.html</loc></url>
 <url><loc>/articles/function-map.html</loc></url>
 <url><loc>/articles/index.html</loc></url>
 <url><loc>/articles/inequality-england.html</loc></url>
 <url><loc>/articles/jump-off.html</loc></url>
 <url><loc>/articles/laender-germany.html</loc></url>
+<url><loc>/articles/lifespan-variation.html</loc></url>
 <url><loc>/articles/model-choice.html</loc></url>
 <url><loc>/articles/models.html</loc></url>
 <url><loc>/articles/mortensor.html</loc></url>
@@ -36,6 +38,8 @@
 <url><loc>/reference/benchmark_ungroup_ew.html</loc></url>
 <url><loc>/reference/bootstrapped.html</loc></url>
 <url><loc>/reference/cause_shares.html</loc></url>
+<url><loc>/reference/coda.html</loc></url>
+<url><loc>/reference/coda_causes.html</loc></url>
 <url><loc>/reference/coherent_fdm.html</loc></url>
 <url><loc>/reference/de_deaths.html</loc></url>
 <url><loc>/reference/derived.html</loc></url>
@@ -48,6 +52,7 @@
 <url><loc>/reference/li_lee.html</loc></url>
 <url><loc>/reference/life_expectancy.html</loc></url>
 <url><loc>/reference/life_table.html</loc></url>
+<url><loc>/reference/lifespan_variation.html</loc></url>
 <url><loc>/reference/mcmc_control.html</loc></url>
 <url><loc>/reference/mortensor-package.html</loc></url>
 <url><loc>/reference/mt_add.html</loc></url>
@@ -65,10 +70,12 @@
 <url><loc>/reference/mt_decompose.html</loc></url>
 <url><loc>/reference/mt_disaggregate.html</loc></url>
 <url><loc>/reference/mt_disaggregate_check.html</loc></url>
+<url><loc>/reference/mt_dm_test.html</loc></url>
 <url><loc>/reference/mt_draws.html</loc></url>
 <url><loc>/reference/mt_example.html</loc></url>
 <url><loc>/reference/mt_example_causes.html</loc></url>
 <url><loc>/reference/mt_example_regions.html</loc></url>
+<url><loc>/reference/mt_excess.html</loc></url>
 <url><loc>/reference/mt_export.html</loc></url>
 <url><loc>/reference/mt_fill_suppressed.html</loc></url>
 <url><loc>/reference/mt_fit.html</loc></url>

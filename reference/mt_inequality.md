@@ -18,7 +18,7 @@ mt_inequality(
   x,
   var,
   order = NULL,
-  quantity = c("asr", "life_expectancy", "prob_dying", "rate"),
+  quantity = c("asr", "life_expectancy", "prob_dying", "rate", "lifespan_variation"),
   probs = c(0.025, 0.5, 0.975),
   ...
 )
@@ -46,7 +46,8 @@ mt_inequality(
 
 - quantity:
 
-  `"life_expectancy"`, `"asr"`, `"prob_dying"` or `"rate"`.
+  `"life_expectancy"`, `"asr"`, `"prob_dying"`, `"rate"` or
+  `"lifespan_variation"`.
 
 - probs:
 
@@ -56,7 +57,9 @@ mt_inequality(
 
   Arguments of the quantity: `at` for life expectancy, `standard` and
   `per` for [`asr()`](derived.md), `from` and `to` for
-  [`prob_dying()`](derived.md), `age` (an age label) for `"rate"`.
+  [`prob_dying()`](derived.md), `age` (an age label) for `"rate"`,
+  `measure` (one index, default `"edagger"`) and `at` for
+  [`lifespan_variation()`](lifespan_variation.md).
 
 ## Value
 
