@@ -782,21 +782,28 @@ shrink_cov <- function(X, shrink = "auto") {
 #' of the predictive distribution the forecast gives: reconciled draws plus
 #' the observation noise of the bottom strata. In the forecast, bottom
 #' values below zero are set to zero and the aggregates are their sums.
-#' The fit holds \eqn{d} and \eqn{G} per age in `$reconcile$scoreopt`, with
-#' a table of the number of training forecasts and the mean in-sample
-#' energy score at the start (OLS) and at the end.
+#' The estimates and a table of the training are in the fit (see Value).
 #'
 #' The method has many parameters and few training forecasts. \eqn{G} has
 #' one parameter per bottom stratum and node at each age (20 x 54 for 2
 #' sexes x 2 regions x 5 quintiles with all aggregates); the defaults give
-#' about 20 training forecasts per age, which overlap. \eqn{G} can then fit
-#' the training forecasts better than it forecasts new years. The only
-#' regularisation is the limited number of small steps from the OLS start
-#' (`control$max_iter`, `control$eta`). The applications in the paper had
-#' longer training windows. Compare the method with `"wls"` or `"mint"` in a
-#' backtest before using it. The training refits the base model `n_origins`
-#' times, which is most of its cost; the optimisation takes a few seconds per
-#' age for a hierarchy of 54 nodes.
+#' about 20 training forecasts per age, which overlap. The only
+#' regularisation is the limited number of steps from the OLS start
+#' (`control$max_iter`, `control$eta`). \eqn{d} and \eqn{G} then fit the
+#' training forecasts much better than OLS, mostly through level corrections
+#' of single strata. These help in new years only if the errors of the
+#' training years recur: they do not after a change of trend, and the inner
+#' models are fitted to shorter series than the final model. In the package's
+#' backtests on simulated regional data and on the ONS data by sex and
+#' deprivation quintile, the method was less accurate than `"wls"` at every
+#' level of the hierarchy, also with fewer and smaller steps. The
+#' applications in the paper had longer training windows. Compare the method
+#' with `"wls"` or `"mint"` in a backtest before using it.
+#'
+#' The training refits the base model at `n_origins` origins; the
+#' optimisation takes about 3 seconds per age for 54 strata with the
+#' defaults. `control$max_iter = 0` gives OLS reconciliation at the cost of
+#' the inner forecasts.
 #'
 #' @param spec Base model specification (fitted to all strata).
 #' @param hierarchy An [mt_hierarchy()].
@@ -823,12 +830,20 @@ shrink_cov <- function(X, shrink = "auto") {
 #'   `draws_per_step` (draws per training forecast in each step, 50),
 #'   `max_iter` (number of steps, 500), `eta` (learning rate, 0.001),
 #'   `beta1` (0.9), `beta2` (0.999), `tol` (1e-4) and `epsilon` (1e-8), as in
-#'   `ProbReco::scoreopt.control()`. `max_iter = 0` gives OLS reconciliation.
+#'   `ProbReco::scoreopt.control()`. The optimisation stops early when no
+#'   parameter moves by more than `tol` in a step, so `tol` must be below
+#'   `eta` (0 runs all steps). `max_iter = 0` gives OLS reconciliation.
 #' @param seed Random seed of the training for `method = "energy_score"`
 #'   (inner forecasts, observation noise and the draws of each step), so
 #'   that fits are reproducible.
 #'
-#' @return A model specification.
+#' @return A model specification. With `method = "energy_score"` its fit
+#'   holds `$reconcile$scoreopt`: `d` `[bottom stratum, age]`, `G` `[bottom
+#'   stratum, stratum, age]` on the scale of the reconciliation, the inner
+#'   `origins`, the `control` settings and a `table` per age with the number
+#'   of training forecasts, the scale of the bottom strata, the number of
+#'   steps, and the mean in-sample energy score with OLS (`energy_ols`) and
+#'   with the estimated \eqn{d} and \eqn{G} (`energy_opt`).
 #' @references
 #' Panagiotelis A, Gamakumara P, Athanasopoulos G, Hyndman RJ (2023).
 #' Probabilistic forecast reconciliation: properties, evaluation and score

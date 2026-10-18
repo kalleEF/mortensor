@@ -38,6 +38,7 @@ Suggests:
     knitr,
     LEdecomp,
     mgcv,
+    ProbReco,
     readxl,
     rmarkdown,
     rstan,

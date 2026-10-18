@@ -145,6 +145,35 @@ so that they move together as they did in the training years
 (`dependence = "empirical"`, Clark et al. 2004); joint models such as
 `li_lee()` tie the parts together in the model itself.
 
+## Reconciliation learnt from past forecasts
+
+The methods above fix in advance how forecasts are adjusted. Score-optimal
+reconciliation (Panagiotelis et al. 2023) learns the adjustment from the
+base model's own forecasts of past years instead: `reconciled()` with
+`method = "energy_score"` refits the base model at `n_origins` inner
+origins within the last `years` of the training data, and estimates for
+each age a correction `d` and a projection `G` of the base draws that
+minimise the energy score of these forecasts, a multivariate CRPS of all
+strata together. The reconciled draws `S (d + G y)` add up by
+construction.
+
+```{r, eval = FALSE}
+so <- reconciled(lee_carter(), h, method = "energy_score", years = 6, n_origins = 5, horizon = 3)
+fit <- mt_fit(so, xa)
+fit$reconcile$scoreopt$table   # in-sample energy score with OLS and after the optimisation
+```
+
+Each fit takes about 20 seconds on these data, so the code is not run
+here. In a backtest from 2011 to 2014 (validation check `scoreopt_ons`),
+the method was less accurate than WLS at every level: CRPS 22% higher for
+the bottom series, 26% for the aggregates and 32% for England. The
+training forecasts were too high in 2006-2011 and the correction learnt
+from them pushed the forecasts down, while mortality improvement stalled
+after 2011. With few, overlapping training forecasts and one parameter per
+pair of strata at each age, the method follows the errors of the training
+years; it suits long and stable histories, and a backtest should confirm
+it.
+
 ## Choosing a method
 
 * **Bottom-up** with a joint model of the parts keeps the detailed
@@ -154,6 +183,8 @@ so that they move together as they did in the training years
   confirm.
 * **fixed** with **proportional** for a trusted total, for example causes
   of death that must add up to an all-cause forecast.
+* **energy_score** only with long training histories, after a backtest
+  against WLS.
 * Check the choice at every level of the hierarchy in a backtest, as
   above. The applied vignettes use these methods for causes of death and
   German Laender.
@@ -168,6 +199,10 @@ Clark M, Gangopadhyay S, Hay L, Rajagopalan B, Wilby R (2004). The Schaake
 shuffle: a method for reconstructing space-time variability in forecasted
 precipitation and temperature fields. *Journal of Hydrometeorology* 5(1):
 243-262.
+
+Panagiotelis A, Gamakumara P, Athanasopoulos G, Hyndman RJ (2023).
+Probabilistic forecast reconciliation: properties, evaluation and score
+optimisation. *European Journal of Operational Research* 306(2): 693-706.
 
 Wickramasuriya SL, Athanasopoulos G, Hyndman RJ (2019). Optimal forecast
 reconciliation for hierarchical and grouped time series through trace

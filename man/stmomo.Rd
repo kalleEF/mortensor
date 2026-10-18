@@ -5,17 +5,26 @@
 \title{Generalised age-period-cohort models (StMoMo)}
 \usage{
 stmomo(
-  model = c("apc", "cbd", "rh", "m6", "lc"),
+  model = c("apc", "cbd", "rh", "m6", "m7", "m8", "lc"),
   clip = 3,
-  gc_order = c(1, 1, 0)
+  gc_order = NULL,
+  xc = NULL
 )
 }
 \arguments{
-\item{model}{\code{"apc"}, \code{"cbd"}, \code{"rh"}, \code{"m6"} or \code{"lc"}.}
+\item{model}{\code{"apc"}, \code{"cbd"}, \code{"rh"}, \code{"m6"}, \code{"m7"}, \code{"m8"} or \code{"lc"}.}
 
 \item{clip}{Cohorts with fewer observations get zero weight.}
 
-\item{gc_order}{ARIMA order for the cohort index.}
+\item{gc_order}{ARIMA order for the cohort index. Default: \code{c(2, 0, 0)}
+for M7, \code{c(1, 1, 0)} for the other cohort models.}
+
+\item{xc}{Age at which the cohort effect of M8 vanishes (\code{model = "m8"}
+only). Cairns et al. (2009) estimate it; StMoMo's \code{m8()} needs a fixed
+value, and its example uses the highest age of the data (89 for ages
+55 to 89). Default (\code{NULL}): the highest age of the data of each fit.
+Forecasts can depend strongly on it; compare values in a backtest
+(\code{\link[=mt_compare]{mt_compare()}}) or choose one with \code{\link[=tuned]{tuned()}}.}
 }
 \value{
 A model specification.
@@ -23,25 +32,51 @@ A model specification.
 \description{
 Wrapper around \pkg{StMoMo} (Villegas, Kaishev and Millossovich 2018):
 age-period-cohort (\code{"apc"}), Cairns-Blake-Dowd (\code{"cbd"}, logit link),
-Renshaw-Haberman (\code{"rh"}), M6 (\code{"m6"}, logit link) and Lee-Carter
-(\code{"lc"}). Models are fitted per stratum with real ages (the lower bounds
-of single-year intervals; models with a cohort effect need single years of
-age), deaths and central exposures; for the logit-link models
-initial exposures are approximated as central exposures plus half the
-deaths, and forecast death probabilities are converted to central rates
-(\code{m = -log(1 - q)}). Cohorts observed in fewer than \code{clip} cells get zero
-weight; their fitted rates use the effect of the nearest estimated cohort.
-Draws come from \code{simulate()} of the fitted model (period and
-cohort indexes simulated as multivariate random walks with drift and
-ARIMA, respectively).
+Renshaw-Haberman (\code{"rh"}), M6, M7 and M8 (\code{"m6"}, \code{"m7"}, \code{"m8"}, logit
+link) and Lee-Carter (\code{"lc"}). Models are fitted per stratum with real
+ages (the lower bounds of single-year intervals; models with a cohort
+effect need single years of age), deaths and central exposures; for the
+logit-link models initial exposures are approximated as central exposures
+plus half the deaths, and forecast death probabilities are converted to
+central rates (\code{m = -log(1 - q)}). Cohorts observed in fewer than \code{clip}
+cells get zero weight; their fitted rates use the effect of the nearest
+estimated cohort. Draws come from \code{simulate()} of the fitted model (period
+indexes simulated as a multivariate random walk with drift, the cohort
+index as an ARIMA process).
+}
+\details{
+M6, M7 and M8 are the cohort extensions of the CBD model of Cairns et al.
+(2009), with \code{x} the age, \code{xbar} the mean age of the data and \code{s2} the
+mean of \code{(x - xbar)^2}:
+\itemize{
+\item M6: \verb{logit q(x,t) = k1(t) + (x - xbar) k2(t) + g(t - x)}.
+\item M7: M6 plus a quadratic age term \verb{((x - xbar)^2 - s2) k3(t)}; the cohort
+effect has no linear or quadratic trend (constraints of StMoMo's
+\code{m7()}).
+\item M8: \verb{logit q(x,t) = k1(t) + (x - xbar) k2(t) + (xc - x) g(t - x)}: the
+cohort effect fades with age and vanishes at age \code{xc}.
+}
+
+The CBD family is meant for older ages (StMoMo's examples use ages 55 to
+89). For M7 the cohort index is forecast with ARIMA(2,0,0) with a non-zero
+mean, as in the StMoMo vignette, since its constraints remove any trend;
+the other cohort models use ARIMA(1,1,0) with drift.
 }
 \examples{
 if (requireNamespace("StMoMo", quietly = TRUE)) {
   x <- mt_example(deaths = "single", years = 1995:2019)
   fc <- mt_forecast(mt_fit(stmomo("cbd"), x), h = 5, n_draws = 50, seed = 1)
+  old <- mt_regroup(mt_set_grid(x, age = single_ages(55, 89, open = FALSE)),
+                    age = single_ages(55, 89, open = FALSE))
+  fc7 <- mt_forecast(mt_fit(stmomo("m7"), old), h = 5, n_draws = 50, seed = 1)
 }
 }
 \references{
+Cairns AJG, Blake D, Dowd K, Coughlan GD, Epstein D, Ong A, Balevich I
+(2009). A quantitative comparison of stochastic mortality models using
+data from England and Wales and the United States. \emph{North American
+Actuarial Journal} 13(1): 1-35.
+
 Villegas AM, Kaishev VK, Millossovich P (2018). StMoMo: an R package for
 stochastic mortality modeling. \emph{Journal of Statistical Software} 84(3):
 1-38. \doi{10.18637/jss.v084.i03}

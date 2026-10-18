@@ -8,8 +8,11 @@ flowchart TD
   CRPS, interval score, coverage, PIT, MASE; for rates, life expectancy or ASR`"]
   PL["`**mt_plot_scores(), mt_plot_coverage()**
   by horizon, age or model`"]
+  DM["`**mt_dm_test()**
+  is the difference between two models larger than chance?`"]
   CH["chosen specification"]
   M --> BT
   SP --> BT
   BT --> SC --> CH
   BT --> PL --> CH
+  BT --> DM --> CH

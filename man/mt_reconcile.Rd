@@ -26,7 +26,9 @@ mt_reconcile(
 
 \item{method}{\code{"wls"} (default), \code{"mint"}, \code{"structural"}, \code{"ols"},
 \code{"bottom_up"} or \code{"proportional"} (with \code{fixed}). The vignette
-"Coherent forecasts: totals and their parts" compares them.}
+"Coherent forecasts: totals and their parts" compares them.
+Score-optimal reconciliation (\code{"energy_score"}) is learnt from past
+forecasts and is available in \code{\link[=reconciled]{reconciled()}} only.}
 
 \item{shrink}{Shrinkage intensity for \code{"mint"} (number between 0 and 1),
 or \code{"auto"}.}

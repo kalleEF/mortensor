@@ -21,7 +21,7 @@
 #'
 #' `coda()` is the Lee-Carter model in compositional form (Oeppen 2008), as
 #' formulated by Bergeron-Boucher, Canudas-Romo, Oeppen and Vaupel (2017). It
-#' models the life-table distribution of deaths, not the death rates. With
+#' models the life-table distribution of deaths by age (which sums to 1). With
 #' `coherent = TRUE` or `common_by`, it is their coherent model for several
 #' populations. The code follows the reference implementation, `model.Oeppen()`
 #' and `model.OeppenC()` of the R package MortalityForecast 0.8.1 (Pascariu

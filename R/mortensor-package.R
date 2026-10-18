@@ -49,7 +49,7 @@
 "_PACKAGE"
 ## data.table non-standard evaluation symbols
 utils::globalVariables(c(
-  ".", ".N", ".SD", ".I", ".GRP", ":=", "..cols",
+  "e1", "e2", "n_h", "h_max", "cells", "skipped", ".", ".N", ".SD", ".I", ".GRP", ":=", "..cols",
   "age_lo", "age_hi", "period_lo", "period_hi", "value", "measure",
   "stratum", "age", "period", "draw", "rate", "deaths", "exposure",
   "provenance", "grid_age", "grid_period", "horizon", "origin", "model",

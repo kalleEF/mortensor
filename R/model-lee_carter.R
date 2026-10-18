@@ -51,7 +51,7 @@
 #' the first age group from 65 equals that mean; it sums to 1 like `b`. The
 #' index is then solved again, path by path and year by year, so that the
 #' rotated rates have the same life expectancy at birth as the unrotated
-#' ones: rotation changes the age pattern of the forecast, not its life
+#' ones: rotation changes the age pattern of the forecast and keeps its life
 #' expectancy at birth. Decline thus moves from young ages to the ages where
 #' `bu` exceeds `b`. Where `b` at 65 is already above its mean over ages
 #' 15-64 (as for French women), it moves mostly to ages 15-64. Rates change

@@ -3,9 +3,9 @@
 #' Excess deaths are the observed deaths minus the deaths expected without
 #' the shock: the predictive deaths of a baseline model fitted to the years
 #' before it, given the observed exposures of the later years. The WHO
-#' estimated the excess mortality of the COVID-19 pandemic this way
-#' (Msemburi et al. 2023); Acosta and Irizarry (2022) describe a model of
-#' the excess itself. Here the expected deaths are draws of
+#' estimates of the excess mortality of the COVID-19 pandemic follow this
+#' approach with their own baseline model (Msemburi et al. 2023); Acosta
+#' and Irizarry (2022) describe a model of the excess itself. Here the expected deaths are draws of
 #' [mt_forecast()] with `predictive = TRUE`: the uncertainty of the
 #' baseline trend plus the Poisson and extra-Poisson variation of the death
 #' counts. The observed deaths minus each draw give draws of the excess.

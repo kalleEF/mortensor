@@ -66,6 +66,40 @@ window of a backtest.
 * **Uncertainty in the draws**: innovations of `k(t)` and the uncertainty
   of its drift. `a(x)` and `b(x)` are fixed; `bootstrap = TRUE` or
   `bootstrapped()` adds their uncertainty.
+* **Rotation** (`rotate = TRUE`; Li, Lee and Gerland 2013): as life
+  expectancy at birth rises from `e0_start` (80) to `e0_end` (102), the age
+  pattern of decline moves from `b(x)` to an ultimate pattern with equal
+  decline below 65 (the mean of `b` over ages 15-64) and the shape of
+  `b(x)` above. The weight follows a sine curve with `power` 0.5. In each
+  path and year the index is solved again so that life expectancy at birth
+  stays that of the unrotated forecast; rotation therefore changes the age
+  pattern of the forecast only. It needs ages from 0 and computes life
+  tables for every path and year, which is about 20 times slower.
+
+### Compositional data model: `coda()`
+
+`clr(d(x,t) / a(x)) = b(x) k(t)` (Oeppen 2008; Bergeron-Boucher et al.
+2017), where `d(x,t)` are the life-table deaths (radix 1), `a(x)` their
+closed geometric mean over the years and `clr` the centred log-ratio
+transformation. The model forecasts the distribution of deaths by age, so
+the forecast deaths always form a life table.
+
+* **Estimation**: first component of the SVD of the centred log-ratios, as
+  `model.Oeppen()` of the R package MortalityForecast 0.8.1 (Pascariu). The log rate of the
+  open age interval is regressed on `k(t)`.
+* **Forecast**: `k(t)` random walk with drift; deaths are transformed back
+  to rates through the life table.
+* **Jump-off**: observed deaths of the last year, changed by the model
+  (default), or fitted deaths (`jump_off = "fitted"`).
+* **Coherent version** (`coherent = TRUE` or `common_by`):
+  `clr(d(x,t,i) / a(x,i)) = B(x) K(t) + b(x,i) k(t,i)`, with the common
+  component from the average distribution of deaths of the strata; `K(t)`
+  random walk with drift, `k(t,i)` AR(1) processes with mean, so strata
+  stay close to the common trend (`model.OeppenC()`).
+* **Uncertainty**: innovations and drift of `k(t)` (and `K(t)`),
+  innovations of the AR(1) processes. `a` and `b` are fixed. All ages have
+  equal weight on the clr scale, so the noise of ages with few deaths
+  enters `k(t)`: intervals can be wider than those of Lee-Carter.
 
 ### Random walk with drift: `rwd()`
 
@@ -113,7 +147,11 @@ so their draws already contain observation noise.
 ### StMoMo models: `stmomo()`
 
 Calls `StMoMo::fit()` and `simulate()` (Villegas, Kaishev and
-Millossovich 2018) for the Lee-Carter, CBD, APC, RH and M6 families. Draws
+Millossovich 2018) for the Lee-Carter, CBD, APC, RH, M6, M7 and M8
+families. M7 adds a quadratic age term and a cohort effect to CBD; M8 a
+cohort effect that falls with age to zero at age `xc` (Cairns et al.
+2009). The cohort effects of M6 to M8 follow an ARIMA model
+(`gc_order`). Draws
 contain the period and cohort index uncertainty that StMoMo simulates;
 parameter uncertainty is not included.
 
@@ -194,6 +232,14 @@ a Tucker model of their isometric log-ratio coordinates, so the causes add
 up to all causes in every draw. Neither has a published evaluation for
 mortality; compare them with the models above in a backtest.
 
+`coda_causes()` is the multiple-decrement form of `coda()` that Oeppen
+(2008) proposed for causes of death: the deaths of a multiple-decrement
+life table by age and cause form one composition with one index `k(t)`,
+so the causes add up to all causes in every draw. Only the abstract of
+Oeppen (2008) is published, so the implementation follows its natural
+reading; in a backtest on simulated causes it was less accurate than
+`cause_shares()`.
+
 ## Jump-off: `anchored()`
 
 Forecasts start from the fitted rates of the last year for most models.
@@ -238,6 +284,15 @@ variable; exposures add up over variables that divide the
 population and are shared by the levels of variables such as causes of
 death (`additive = "rates"`). The exposures of the forecast years are
 those of the last observed year unless projections are given.
+
+Score-optimal reconciliation (`method = "energy_score"`; Panagiotelis et
+al. 2023) learns the reconciliation from the base model's own past
+forecasts: the reconciled draws are `S (d + G y)`, where `y` are the base
+draws of all nodes, and `d` and `G` (per age) minimise the energy score of
+forecasts from `n_origins` inner origins in the last `years` of the
+training data, by stochastic gradient descent from OLS. It has many
+parameters and few training forecasts; in the package's backtests it was
+less accurate than WLS.
 
 ### Calibration on recent years: `recalibrated()`
 
@@ -289,6 +344,7 @@ preprocessing step that tuning compares across windows.
 | `coherent_fdm()` | yes (product and ratios) | as fdm (product) | no | predictive draws | predictive draws |
 | `tucker3()` | yes (period factors) | yes | no | predictive draws | residual variation and predictive draws |
 | `cause_shares()` | of the total model and the share factors | yes | no | predictive draws | residual variation and predictive draws |
+| `coda()`, `coda_causes()` | yes | yes | no | predictive draws | predictive draws |
 | `hyndman_ullah()` | yes | as fdm | no | predictive draws | predictive draws |
 | `stmomo()` | yes | yes | no | predictive draws | predictive draws |
 | `stanmomo()` | yes | posterior | yes (posterior) | predictive draws | predictive draws |
@@ -316,7 +372,10 @@ continuous ranked probability score (CRPS; Gneiting and Raftery 2007), the
 weighted interval score (Bracher et al. 2021), interval coverage, the
 probability integral transform and the absolute error of the median. Cells
 with estimated (suppressed) deaths are not scored unless
-`score_estimated = TRUE`.
+`score_estimated = TRUE`. `mt_dm_test()` tests differences in accuracy
+between two models of the same backtest with the Diebold-Mariano test
+(Diebold and Mariano 1995) and the correction of Harvey, Leybourne and
+Newbold (1997).
 
 ## References
 
@@ -327,6 +386,10 @@ Research* 262(1): 60-74.
 Barigou K, Goffard P-O, Loisel S, Salhi Y (2023). Bayesian model averaging
 for mortality forecasting using leave-future-out validation. *International
 Journal of Forecasting* 39(2): 674-690.
+
+Bergeron-Boucher M-P, Canudas-Romo V, Oeppen J, Vaupel JW (2017).
+Coherent forecasts of mortality with compositional data analysis.
+*Demographic Research* 37(17): 527-566. doi:10.4054/DemRes.2017.37.17.
 
 Booth H, Maindonald J, Smith L (2002). Applying Lee-Carter under
 conditions of variable mortality decline. *Population Studies* 56(3):
@@ -340,12 +403,20 @@ Brouhns N, Denuit M, Vermunt JK (2002). A Poisson log-bilinear regression
 approach to the construction of projected lifetables. *Insurance:
 Mathematics and Economics* 31(3): 373-393.
 
+Cairns AJG, Blake D, Dowd K, Coughlan GD, Epstein D, Ong A, Balevich I
+(2009). A quantitative comparison of stochastic mortality models using
+data from England and Wales and the United States. *North American
+Actuarial Journal* 13(1): 1-35.
+
 Currie ID, Durban M, Eilers PHC (2004). Smoothing and forecasting
 mortality rates. *Statistical Modelling* 4(4): 279-298.
 
 Deming WE, Stephan FF (1940). On a least squares adjustment of a sampled
 frequency table when the expected marginal totals are known. *Annals of
 Mathematical Statistics* 11(4): 427-444.
+
+Diebold FX, Mariano RS (1995). Comparing predictive accuracy. *Journal of
+Business & Economic Statistics* 13(3): 253-263.
 
 Gneiting T, Raftery AE, Westveld AH, Goldman T (2005). Calibrated
 probabilistic forecasting using ensemble model output statistics and
@@ -354,6 +425,10 @@ minimum CRPS estimation. *Monthly Weather Review* 133(5): 1098-1118.
 Gneiting T, Raftery AE (2007). Strictly proper scoring rules, prediction,
 and estimation. *Journal of the American Statistical Association*
 102(477): 359-378.
+
+Harvey D, Leybourne S, Newbold P (1997). Testing the equality of
+prediction mean squared errors. *International Journal of Forecasting*
+13(2): 281-291.
 
 Hyndman RJ, Ahmed RA, Athanasopoulos G, Shang HL (2011). Optimal
 combination forecasts for hierarchical time series. *Computational
@@ -379,6 +454,24 @@ for forecasting mortality. *Demography* 38(4): 537-549.
 Li N, Lee R (2005). Coherent mortality forecasts for a group of
 populations: an extension of the Lee-Carter method. *Demography* 42(3):
 575-594.
+
+Li N, Lee R, Gerland P (2013). Extending the Lee-Carter method to model
+the rotation of age patterns of mortality decline for long-term
+projections. *Demography* 50(6): 2037-2051.
+doi:10.1007/s13524-013-0232-2.
+
+Oeppen J (2008). Coherent forecasting of multiple-decrement life tables:
+a test using Japanese cause of death data. CODAWORK'08, Universitat de
+Girona.
+
+Panagiotelis A, Gamakumara P, Athanasopoulos G, Hyndman RJ (2023).
+Probabilistic forecast reconciliation: properties, evaluation and score
+optimisation. *European Journal of Operational Research* 306(2): 693-706.
+doi:10.1016/j.ejor.2022.07.040.
+
+Pascariu MD. MortalityForecast: Standard tools to compare and evaluate
+various mortality forecasting methods. R package version 0.8.1.
+<https://github.com/mpascariu/MortalityForecast>
 
 Rizzi S, Gampe J, Eilers PHC (2015). Efficient estimation of smooth
 distributions from coarsely grouped data. *American Journal of

@@ -7,10 +7,16 @@
 reconciled(
   spec,
   hierarchy,
-  method = c("wls", "mint", "structural", "ols", "bottom_up", "proportional"),
+  method = c("wls", "mint", "structural", "ols", "bottom_up", "proportional",
+    "energy_score"),
   shrink = "auto",
   dependence = c("auto", "empirical", "none"),
-  fixed = NULL
+  fixed = NULL,
+  years = 10,
+  n_origins = 5,
+  horizon = 5,
+  control = list(),
+  seed = 1
 )
 }
 \arguments{
@@ -18,7 +24,10 @@ reconciled(
 
 \item{hierarchy}{An \code{\link[=mt_hierarchy]{mt_hierarchy()}}.}
 
-\item{method, shrink}{See \code{\link[=mt_reconcile]{mt_reconcile()}}.}
+\item{method}{A method of \code{\link[=mt_reconcile]{mt_reconcile()}}, or \code{"energy_score"}
+(score-optimal reconciliation, see Details).}
+
+\item{shrink}{See \code{\link[=mt_reconcile]{mt_reconcile()}}.}
 
 \item{dependence}{\code{"auto"} (default: \code{"none"} for models fitted jointly
 across strata, whose draws already carry their dependence, such as
@@ -29,10 +38,35 @@ aggregates keep the observed co-movement of the strata; the observation
 noise of predictive draws is independent across cells, as for models
 without a hierarchy.}
 
-\item{fixed}{Strata whose forecasts are kept (see \code{\link[=mt_reconcile]{mt_reconcile()}}).}
+\item{fixed}{Strata whose forecasts are kept (see \code{\link[=mt_reconcile]{mt_reconcile()}}); not
+with \code{"energy_score"}.}
+
+\item{years, n_origins, horizon}{Training of \code{method = "energy_score"}: the
+length of the training window (the last \code{years} observed years), the
+number of inner origins in it (as in \code{\link[=recalibrated]{recalibrated()}}) and the number of
+years each inner forecast covers (horizons 1 to \code{horizon}, cut at the
+last training year).}
+
+\item{control}{Settings of the training for \code{method = "energy_score"}: a
+list with any of \code{n_draws} (draws per inner forecast, default 100),
+\code{draws_per_step} (draws per training forecast in each step, 50),
+\code{max_iter} (number of steps, 500), \code{eta} (learning rate, 0.001),
+\code{beta1} (0.9), \code{beta2} (0.999), \code{tol} (1e-4) and \code{epsilon} (1e-8), as in
+\code{ProbReco::scoreopt.control()}. The optimisation stops early when no
+parameter moves by more than \code{tol} in a step, so \code{tol} must be below
+\code{eta} (0 runs all steps). \code{max_iter = 0} gives OLS reconciliation.}
+
+\item{seed}{Random seed of the training for \code{method = "energy_score"}
+(inner forecasts, observation noise and the draws of each step), so
+that fits are reproducible.}
 }
 \value{
-A model specification.
+A model specification. With \code{method = "energy_score"} its fit
+holds \verb{$reconcile$scoreopt}: \code{d} \verb{[bottom stratum, age]}, \code{G} \verb{[bottom stratum, stratum, age]} on the scale of the reconciliation, the inner
+\code{origins}, the \code{control} settings and a \code{table} per age with the number
+of training forecasts, the scale of the bottom strata, the number of
+steps, and the mean in-sample energy score with OLS (\code{energy_ols}) and
+with the estimated \eqn{d} and \eqn{G} (\code{energy_opt}).
 }
 \description{
 Wraps a model specification so that its forecasts are reconciled over a
@@ -54,10 +88,64 @@ Whether coherence costs accuracy, and which method and base model work
 best, depends on the data: compare them in a backtest at every level of
 the hierarchy (\code{mt_score_table(..., hierarchy = )}), as in the vignette
 "Coherent forecasts: totals and their parts".
+
+\strong{Score-optimal reconciliation.} \code{method = "energy_score"} follows
+Panagiotelis et al. (2023). The reconciled draws are
+\eqn{\tilde y = S (d + G \hat y)}, where \eqn{\hat y} is a base draw of
+all nodes, \eqn{S} sums the bottom strata to the nodes, and \eqn{d} and
+\eqn{G} minimise the total energy score of past forecasts. Each time the
+model is fitted (also at every origin of an outer \code{\link[=mt_backtest]{mt_backtest()}}), the
+base model is refitted at \code{n_origins} origins in the last \code{years} of the
+training data, as in \code{\link[=recalibrated]{recalibrated()}}, and forecasts the next \code{horizon}
+years. Every origin, horizon and age with observed values for all strata
+is one training forecast. \eqn{d} and \eqn{G} are estimated separately for
+each age, from the training forecasts of all origins and horizons, on the
+scale of the other methods (deaths, or rates when the levels share
+exposures). The estimation is stochastic gradient descent (Adam) started
+from OLS reconciliation, as in the package ProbReco. The score is that
+of the predictive distribution the forecast gives: reconciled draws plus
+the observation noise of the bottom strata. In the forecast, bottom
+values below zero are set to zero and the aggregates are their sums.
+The estimates and a table of the training are in the fit (see Value).
+
+The method has many parameters and few training forecasts. \eqn{G} has
+one parameter per bottom stratum and node at each age (20 x 54 for 2
+sexes x 2 regions x 5 quintiles with all aggregates); the defaults give
+about 20 training forecasts per age, which overlap. The only
+regularisation is the limited number of steps from the OLS start
+(\code{control$max_iter}, \code{control$eta}). \eqn{d} and \eqn{G} then fit the
+training forecasts much better than OLS, mostly through level corrections
+of single strata. These help in new years only if the errors of the
+training years recur: they do not after a change of trend, and the inner
+models are fitted to shorter series than the final model. In the package's
+backtests on simulated regional data and on the ONS data by sex and
+deprivation quintile, the method was less accurate than \code{"wls"} at every
+level of the hierarchy, also with fewer and smaller steps. The
+applications in the paper had longer training windows. Compare the method
+with \code{"wls"} or \code{"mint"} in a backtest before using it.
+
+The training refits the base model at \code{n_origins} origins; the
+optimisation takes about 3 seconds per age for 54 strata with the
+defaults. \code{control$max_iter = 0} gives OLS reconciliation at the cost of
+the inner forecasts.
 }
 \examples{
 x <- mt_example_regions(years = 2000:2019, regions = 3)
 h <- mt_hierarchy(sex = "both", region = "all", quintile = "all")
 fit <- mt_fit(reconciled(lee_carter(), h, method = "wls"), mt_aggregate_strata(x, h))
 fc <- mt_forecast(fit, h = 5, n_draws = 50, seed = 1)
+\donttest{
+# score-optimal reconciliation, trained on forecasts of 2012-2019 from 4 origins
+es <- reconciled(lee_carter(), h, method = "energy_score", years = 8, n_origins = 4, horizon = 3,
+                 control = list(max_iter = 200))
+fit_es <- mt_fit(es, mt_aggregate_strata(x, h))
+fit_es$reconcile$scoreopt$table
+fc_es <- mt_forecast(fit_es, h = 5, n_draws = 50, seed = 1)
+}
+}
+\references{
+Panagiotelis A, Gamakumara P, Athanasopoulos G, Hyndman RJ (2023).
+Probabilistic forecast reconciliation: properties, evaluation and score
+optimisation. \emph{European Journal of Operational Research} 306(2):
+693-706. \doi{10.1016/j.ejor.2022.07.040}
 }

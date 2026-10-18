@@ -11,7 +11,9 @@ lee_carter(
   n_boot = 100,
   adjust = c("dt", "dxt", "e0", "none"),
   choose_period = FALSE,
-  min_years = 20
+  min_years = 20,
+  rotate = FALSE,
+  rotation = c(e0_start = 80, e0_end = 102, power = 0.5)
 )
 }
 \arguments{
@@ -32,6 +34,15 @@ Smith 2002).}
 
 \item{min_years}{\code{choose_period} considers fitting periods of more than
 \code{min_years} years (\code{minperiod} of \code{demography::lca()}).}
+
+\item{rotate}{Rotate the age pattern of decline \code{b} towards an ultimate
+pattern as life expectancy at birth rises (Li, Lee and Gerland 2013).}
+
+\item{rotation}{Settings of the rotation, a named vector: life expectancy
+at birth at which the rotation starts (\code{e0_start}) and is complete
+(\code{e0_end}), and the exponent of the weights (\code{power}). The defaults are
+those of Li, Lee and Gerland (2013) and MortCast; elements left out keep
+their defaults.}
 }
 \value{
 A model specification.
@@ -76,11 +87,46 @@ deaths of the fitting period (semi-parametric bootstrap of Brouhns et al.
 Age groups without deaths in the fitting period get a constant rate (0.5
 deaths over the period) and no trend; with \code{adjust = "e0"} they enter the
 life tables at that rate.
+
+\code{rotate = TRUE} rotates the age pattern of decline as life expectancy
+rises (Li, Lee and Gerland 2013). In long-lived populations the decline
+of mortality slows down at young ages and speeds up at old ages, which a
+fixed \code{b[x]} does not capture over long horizons. For each path and year
+\code{t}, the life expectancy at birth \code{e0} of the unrotated forecast gives the
+weight \verb{w = (0.5 (1 + sin(pi / 2 (2 u - 1))))^power} with
+\code{u = (e0 - e0_start) / (e0_end - e0_start)}; \code{w} is 0 below \code{e0_start} and
+1 from \code{e0_end}. The age pattern of that year is \verb{B[x, t] = (1 - w) b[x] + w bu[x]}. The ultimate pattern \code{bu} has the mean of \code{b} over ages 15-64 at
+all ages below 65; from age 65 it keeps the shape of \code{b}, scaled so that
+the first age group from 65 equals that mean; it sums to 1 like \code{b}. The
+index is then solved again, path by path and year by year, so that the
+rotated rates have the same life expectancy at birth as the unrotated
+ones: rotation changes the age pattern of the forecast, not its life
+expectancy at birth. Decline thus moves from young ages to the ages where
+\code{bu} exceeds \code{b}. Where \code{b} at 65 is already above its mean over ages
+15-64 (as for French women), it moves mostly to ages 15-64. Rates change
+from the jump-off year \code{T}, \verb{log m[x, t] = log m[x, T] + B[x, t] (k*[t] - k[T])}, so the jump-off rates stay as they are. Fitted rates, and paths
+with \code{e0} below \code{e0_start}, are unchanged. In MortCast (Sevcikova et al.
+2016) the path of life expectancy comes from a separate model
+(bayesLife); here it is that of the Lee-Carter draws. Rotation needs ages
+from 0 (life expectancy at birth) with age groups starting at 15 and 65.
+With a closed last age group, a warning notes that life expectancy is
+then truncated at the highest age. Rotated forecasts compute life tables
+for every path and year and are much slower (about 20 times for single
+years of age).
 }
 \examples{
 x <- mt_example(deaths = "single")
 fit <- mt_fit(lee_carter(), x)
 fc <- mt_forecast(fit, h = 10, n_draws = 200, seed = 1)
+\donttest{
+# rotation needs ages from 0: French women (HMD, via demography)
+if (requireNamespace("demography", quietly = TRUE)) {
+  fr <- as_mt_data(demography::fr.mort, series = "female", years = 1970:2006)
+  fr <- mt_regroup(fr, age = c(0, 1, seq(5, 100, 5)))
+  fc_rot <- mt_forecast(mt_fit(lee_carter(rotate = TRUE), fr), h = 50, n_draws = 100, seed = 1)
+  life_expectancy(fc_rot)
+}
+}
 }
 \references{
 Lee RD, Carter LR (1992). Modeling and forecasting U.S. mortality.
@@ -102,4 +148,14 @@ method for forecasting mortality. \emph{Demography} 38(4): 537-549.
 Brouhns N, Denuit M, Van Keilegom I (2005). Bootstrapping the Poisson
 log-bilinear model for mortality forecasting. \emph{Scandinavian Actuarial
 Journal} 2005(3): 212-224.
+
+Li N, Lee R, Gerland P (2013). Extending the Lee-Carter method to model
+the rotation of age patterns of mortality decline for long-term
+projections. \emph{Demography} 50(6): 2037-2051.
+\doi{10.1007/s13524-013-0232-2}
+
+Sevcikova H, Li N, Kantorova V, Gerland P, Raftery AE (2016). Age-specific
+mortality and fertility rates for probabilistic population projections.
+In Schoen R (ed.) \emph{Dynamic Demographic Analysis}. Springer, 285-310.
+\doi{10.1007/978-3-319-26603-9_15}
 }
