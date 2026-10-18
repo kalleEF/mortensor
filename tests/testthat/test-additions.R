@@ -38,10 +38,16 @@ test_that("models fitted to smoothed rates take observation noise from the raw r
 
 test_that("anchored() moves the jump-off and keeps wrappers coherent", {
   x <- mt_example(deaths = "single", years = 1995:2015)
-  a1 <- mt_forecast(mt_fit(anchored(lee_carter(), years = 1, decay = Inf, shrink = FALSE), x), h = 3,
-                    n_draws = 40, seed = 1)
+  # the defaults are the jump-off of Lee and Miller (2001): observed rates of the last year, kept
+  expect_identical(anchored(lee_carter())$params[c("years", "decay", "shrink")],
+                   list(years = 1, decay = Inf, shrink = FALSE))
+  a1 <- mt_forecast(mt_fit(anchored(lee_carter()), x), h = 3, n_draws = 40, seed = 1)
   lo <- mt_forecast(mt_fit(lee_carter(jump_off = "observed"), x), h = 3, n_draws = 40, seed = 1)
   expect_equal(apply(a1$rates, 1:3, stats::median), apply(lo$rates, 1:3, stats::median), tolerance = 1e-8)
+  # a constant factor per cell: the widths of the intervals of log rates do not change
+  b1 <- mt_forecast(mt_fit(lee_carter(), x), h = 3, n_draws = 40, seed = 1)
+  iqr <- function(fc) apply(log(fc$rates), 1:3, stats::IQR)
+  expect_equal(iqr(a1), iqr(b1), tolerance = 1e-8)
   a0 <- mt_forecast(mt_fit(anchored(lee_carter(), decay = 0), x), h = 3, n_draws = 40, seed = 1)
   b0 <- mt_forecast(mt_fit(lee_carter(), x), h = 3, n_draws = 40, seed = 1)
   expect_equal(a0$rates, b0$rates, ignore_attr = TRUE)
@@ -56,6 +62,39 @@ test_that("anchored() moves the jump-off and keeps wrappers coherent", {
   fr <- mt_forecast(mt_fit(anchored(reconciled(lee_carter(), h, method = "wls")), mt_aggregate_strata(xr, h)),
                     h = 2, n_draws = 20, seed = 1)
   expect_lt(coherence_gap(fr, h), 1e-8)
+})
+
+test_that("offsets are shrunk with the DerSimonian-Laird estimator", {
+  # equal sampling variances: the estimator is max(0, s^2 - v), and the mean is the plain mean
+  y <- c(0.12, -0.08, 0.30, 0.05, -0.15, 0.02)
+  r <- mortensor:::shrink_dl(y, rep(0.01, 6))
+  expect_equal(r$tau2, stats::var(y) - 0.01)
+  expect_equal(r$mu, mean(y))
+  expect_equal(r$shrunk, mean(y) + (1 - 0.01 / stats::var(y)) * (y - mean(y)))
+  # offsets that vary less than their sampling error are pooled to the weighted mean
+  v <- c(0.04, 0.01, 0.02, 0.05)
+  r0 <- mortensor:::shrink_dl(c(0.01, -0.01, 0.02, 0), v)
+  expect_equal(r0$tau2, 0)
+  expect_equal(r0$shrunk, rep(sum(c(0.01, -0.01, 0.02, 0) / v) / sum(1 / v), 4))
+  # unequal variances: Q in matrix form, tau2 = (Q - (k - 1)) / (sum(w) - sum(w^2) / sum(w))
+  y <- c(0.4, -0.3, 0.1, 0.25, -0.2)
+  v <- c(0.02, 0.01, 0.05, 0.002, 0.03)
+  w <- 1 / v
+  P <- diag(w) - tcrossprod(w) / sum(w)
+  tau2 <- (as.numeric(t(y) %*% P %*% y) - 4) / (sum(w) - sum(w^2) / sum(w))
+  r1 <- mortensor:::shrink_dl(y, v)
+  expect_equal(r1$tau2, tau2)
+  expect_equal(r1$mu, stats::weighted.mean(y, 1 / (tau2 + v)))
+  # anchored(shrink = TRUE) applies it per stratum to the offsets of all ages
+  x <- mt_example(deaths = "single", years = 1995:2015)
+  f0 <- mt_fit(anchored(lee_carter(), years = 3), x)
+  f1 <- mt_fit(anchored(lee_carter(), years = 3, shrink = TRUE), x)
+  Dl <- apply(f0$raw_D %||% f0$train_D, c(1, 3), function(d) sum(utils::tail(d, 3)))
+  for (s in 1:2) {
+    expect_equal(f1$anchor$offset[, s], mortensor:::shrink_dl(f0$anchor$offset[, s], 1 / pmax(Dl[, s], 0.5))$shrunk,
+                 ignore_attr = TRUE)
+  }
+  expect_lt(stats::sd(f1$anchor$offset[, 1]), stats::sd(f0$anchor$offset[, 1]))
 })
 
 test_that("fixed nodes are kept by reconciliation", {

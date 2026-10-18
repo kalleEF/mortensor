@@ -268,40 +268,81 @@ mt_aggregate_strata <- function(data, hierarchy, replace = FALSE) {
 #' their bottom series), and reconciled rates are reconciled deaths divided
 #' by exposures. Methods choose `W`:
 #'
+#' * `"ols"`: identity (Hyndman, Ahmed, Athanasopoulos and Shang 2011);
+#' * `"structural"`: diagonal with the number of bottom series in each node
+#'   (structural scaling, Athanasopoulos, Hyndman, Kourentzes and
+#'   Petropoulos 2017);
+#' * `"wls"`: diagonal with the variance of each stratum's base draws
+#'   (weighted least squares, Hyndman, Lee and Wang 2016; see below);
 #' * `"mint"`: covariance of the base draws across strata, shrunk towards
-#'   its diagonal (Schaefer-Strimmer intensity by default). This follows the
-#'   minimum-trace reconciliation of Wickramasuriya et al. (2019), with the
-#'   covariance of the forecast draws in place of in-sample residuals;
-#' * `"wls"`: diagonal with the variance of each stratum's draws;
-#' * `"structural"`: diagonal with the number of bottom series in each node;
-#' * `"ols"`: identity;
+#'   its diagonal with the intensity of Schäfer and Strimmer (2005) by
+#'   default (minimum-trace reconciliation, Wickramasuriya, Athanasopoulos
+#'   and Hyndman 2019; see below);
 #' * `"bottom_up"`: aggregates are the sums of the bottom forecasts.
 #'
-#' Projections can make bottom values negative where the base forecasts
-#' disagree strongly. Such values are held at zero and the remaining bottom
-#' strata of the draw are projected again, until none is negative (a simple
-#' form of the non-negative reconciliation of Wickramasuriya et al. 2020);
-#' the aggregates are recomputed from the bottom series, so the result is
-#' coherent and non-negative, and fixed nodes are kept. A warning reports
-#' when more than 5% of the draws needed this, because the distributions of
-#' the affected strata (often small causes) are then truncated at zero.
+#' **`W` of `"wls"` and `"mint"`.** In the papers, `W` holds the variances
+#' (Hyndman, Lee and Wang 2016) or the shrunk covariance matrix
+#' (Wickramasuriya et al. 2019) of the in-sample one-step-ahead residuals of
+#' the base models. Here `W` is the variance (`"wls"`) or the
+#' Schäfer-Strimmer shrunk covariance (`"mint"`) of the base forecast draws
+#' across draws, computed separately in each age and forecast year cell: the
+#' variance of the model's own `h`-step forecast of that cell (of expected
+#' deaths, or of rates when the levels share exposures; without the Poisson
+#' variation of the deaths unless predictive draws are reconciled). It
+#' changes with the horizon and follows the uncertainty the model reports,
+#' not its past errors: a stratum whose model is too narrow is changed too
+#' little.
 #'
-#' `"proportional"` keeps the `fixed` nodes and scales the bottom strata
-#' below each of them in proportion to their own forecasts, draw by draw
-#' (top-down allocation with forecast proportions, Athanasopoulos, Ahmed
-#' and Hyndman 2009). It never sets a part to zero and keeps the shape of
-#' the parts' distributions; it is the usual choice when causes of death
-#' must add up to a trusted all-cause forecast. Fixed nodes must not share
-#' parts.
+#' **Non-negative forecasts.** Projections can make bottom values negative
+#' where the base forecasts disagree strongly. Such values are held at zero
+#' and the remaining bottom strata of the draw are projected again, until
+#' none is negative; the aggregates are recomputed from the bottom series,
+#' so the result is coherent and non-negative, and fixed nodes are kept.
+#' This iteration is a package-specific heuristic. Wickramasuriya, Turlach
+#' and Hyndman (2020) solve the quadratic program of the reconciliation with
+#' non-negativity constraints; the heuristic approximates its solution
+#' without guaranteeing the optimum. A warning reports when more than 5% of
+#' the draws needed this, because the distributions of the affected strata
+#' (often small causes) are then truncated at zero.
 #'
-#' Draws of strata forecast by separate models are independent, so their sums
-#' would be too narrow. With `dependence = "empirical"` (default), the paths
-#' of each stratum are first reordered so that their ranks follow the
-#' co-movement of the strata in the training data (an empirical copula, the
-#' "Schaake shuffle" of Clark et al. 2004): every draw is matched to a
-#' training year, and the stratum whose average year-to-year change of log
-#' rates was relatively large in that year receives a relatively high path.
-#' The marginal distribution of each stratum is unchanged.
+#' **Fixed nodes.** `fixed` keeps the forecasts of some nodes, as in the
+#' reconciliation with immutable forecasts of Zhang, Kang, Panagiotelis and
+#' Li (2023). The package approximates it by giving the fixed nodes a
+#' near-zero variance in `W` (1e-10 times the largest variance), so that the
+#' projection leaves them almost unchanged and the other strata absorb the
+#' whole gap.
+#'
+#' **Proportional.** `"proportional"` keeps the `fixed` nodes and scales the
+#' bottom strata below each of them by one factor per draw, so that they add
+#' up to the fixed node; nodes between them are recomputed as sums. This is
+#' a single-level top-down method (Gross and Sohl 1990) with forecast
+#' proportions (Athanasopoulos, Ahmed and Hyndman 2009): the proportions are
+#' those of the bottom forecasts below the fixed node in the same draw,
+#' while Athanasopoulos et al. (2009) derive them level by level down the
+#' hierarchy (the same for two levels). It never sets a part to zero. Fixed
+#' nodes must not share parts.
+#'
+#' **Dependence between strata.** Strata forecast by separate models have
+#' independent draws. With `dependence = "none"` (default), the draws are
+#' reconciled as they are, so sums of separately fitted parts have narrower
+#' intervals than they would if the parts moved together. Joint models (for
+#' example [li_lee()], [coherent_fdm()] and [coda()] with `coherent = TRUE`)
+#' carry the dependence between strata in the model itself; their draws are
+#' never reordered.
+#'
+#' `dependence = "empirical"` reorders the paths of each stratum before the
+#' reconciliation. This is a package-specific method, related to but
+#' different from the Schaake shuffle of Clark et al. (2004): every draw is
+#' matched to a training year, the stratum whose year-to-year change of log
+#' rates (averaged over ages) was relatively large in that year receives a
+#' relatively high path, and the marginal distribution of each stratum is
+#' unchanged. It differs from the Schaake shuffle in three ways: it takes
+#' one template value per stratum and year instead of one per margin (here
+#' each age and forecast year of a stratum), it ranks whole paths by their
+#' mean level (mean log rate over ages and years) instead of ranking the
+#' values of each margin, and it resamples the training years with
+#' replacement instead of using distinct historical dates. Its effect on the
+#' intervals of the aggregates has to be checked in a backtest.
 #'
 #' The one-variable interface with `var` and `total` is still accepted. It
 #' reconciles deaths when the exposures of the parts add up to that of the
@@ -322,12 +363,15 @@ mt_aggregate_strata <- function(data, hierarchy, replace = FALSE) {
 #' @param exposure Exposures `[age, period, stratum]` or `[age, stratum]` for
 #'   the forecast years (default: last training year). Only bottom strata are
 #'   used, and they are enough; aggregates are summed.
-#' @param dependence `"empirical"` or `"none"` (keep the draws as they are).
-#' @param seed Random seed for the reordering.
+#' @param dependence `"none"` (default: keep the draws as they are) or
+#'   `"empirical"` (package-specific reordering of the paths of separately
+#'   fitted strata, see Details). Draws of joint models are not reordered:
+#'   `"empirical"` then gives a warning and is ignored.
+#' @param seed Random seed for the reordering (`dependence = "empirical"`).
 #' @param fixed Strata whose forecasts are kept unchanged (labels, or
 #'   `"total"` for the grand total of the hierarchy), for example a trusted
 #'   all-cause forecast that the causes must add up to. The projection gives
-#'   these nodes zero variance, so the other strata absorb the whole gap;
+#'   these nodes near-zero variance, so the other strata absorb the whole gap;
 #'   `$reconciliation$max_relative_change_fixed` reports how closely they
 #'   were kept; they move, with a warning, when their own forecasts do not
 #'   add up (a node fixed together with all its parts) or when every bottom
@@ -339,25 +383,44 @@ mt_aggregate_strata <- function(data, hierarchy, replace = FALSE) {
 #'   (method, largest relative gap before reconciliation, share of bottom
 #'   values held at zero, mean shrinkage intensity).
 #' @references
+#' Hyndman RJ, Ahmed RA, Athanasopoulos G, Shang HL (2011). Optimal
+#' combination forecasts for hierarchical time series. *Computational
+#' Statistics & Data Analysis* 55(9): 2579-2589.
+#'
+#' Hyndman RJ, Lee AJ, Wang E (2016). Fast computation of reconciled
+#' forecasts for hierarchical and grouped time series. *Computational
+#' Statistics & Data Analysis* 97.
+#'
+#' Athanasopoulos G, Hyndman RJ, Kourentzes N, Petropoulos F (2017).
+#' Forecasting with temporal hierarchies. *European Journal of Operational
+#' Research* 262(1): 60-74.
+#'
 #' Wickramasuriya SL, Athanasopoulos G, Hyndman RJ (2019). Optimal forecast
 #' reconciliation for hierarchical and grouped time series through trace
 #' minimization. *Journal of the American Statistical Association*
 #' 114(526): 804-819. \doi{10.1080/01621459.2018.1448825}
 #'
-#' Athanasopoulos G, Ahmed RA, Hyndman RJ (2009). Hierarchical forecasts for
-#' Australian domestic tourism. *International Journal of Forecasting*
-#' 25: 146-166.
-#'
 #' Wickramasuriya SL, Turlach BA, Hyndman RJ (2020). Optimal non-negative
 #' forecast reconciliation. *Statistics and Computing* 30: 1167-1182.
 #' \doi{10.1007/s11222-020-09930-0}
+#'
+#' Zhang B, Kang Y, Panagiotelis A, Li F (2023). Optimal reconciliation
+#' with immutable forecasts. *European Journal of Operational Research*
+#' 308(2): 650-660. \doi{10.1016/j.ejor.2022.11.035}
+#'
+#' Gross CW, Sohl JE (1990). Disaggregation methods to expedite product line
+#' forecasting. *Journal of Forecasting* 9(3): 233-254.
+#'
+#' Athanasopoulos G, Ahmed RA, Hyndman RJ (2009). Hierarchical forecasts for
+#' Australian domestic tourism. *International Journal of Forecasting*
+#' 25: 146-166.
 #'
 #' Clark M, Gangopadhyay S, Hay L, Rajagopalan B, Wilby R (2004). The Schaake
 #' shuffle: a method for reconstructing space-time variability in forecasted
 #' precipitation and temperature fields. *Journal of Hydrometeorology* 5(1):
 #' 243-262.
 #'
-#' Schaefer J, Strimmer K (2005). A shrinkage approach to large-scale
+#' Schäfer J, Strimmer K (2005). A shrinkage approach to large-scale
 #' covariance matrix estimation and implications for functional genomics.
 #' *Statistical Applications in Genetics and Molecular Biology* 4(1):
 #' Article 32. \doi{10.2202/1544-6115.1175}
@@ -371,7 +434,7 @@ mt_aggregate_strata <- function(data, hierarchy, replace = FALSE) {
 #' @export
 mt_reconcile <- function(draws, hierarchy = NULL,
                          method = c("wls", "mint", "structural", "ols", "bottom_up", "proportional"),
-                         shrink = "auto", exposure = NULL, dependence = c("empirical", "none"), seed = NULL,
+                         shrink = "auto", exposure = NULL, dependence = c("none", "empirical"), seed = NULL,
                          fixed = NULL, var = NULL, total = NULL, parts = NULL) {
   check_class(draws, "mt_draws", "draws")
   if (identical(method, "energy_score")) {
@@ -380,7 +443,7 @@ mt_reconcile <- function(draws, hierarchy = NULL,
                    "which makes them inside the training data."), class = "argument")
   }
   method <- match.arg(method)
-  dependence <- match.arg(dependence)
+  dependence <- joint_dependence(match.arg(dependence), draws$spec)
   if (is.character(hierarchy) && length(hierarchy) == 1 && is.null(var)) {
     var <- hierarchy
     hierarchy <- NULL
@@ -409,6 +472,31 @@ mt_reconcile <- function(draws, hierarchy = NULL,
   draws$rates <- rec$rates
   draws$reconciliation <- rec$info
   draws
+}
+
+# Whether the draws of a specification carry the dependence between strata:
+# joint models, wrappers around them, and ensembles whose components all do
+# (each draw of an ensemble comes from one component for all strata)
+spec_is_joint <- function(spec) {
+  if (!inherits(spec, "mt_spec")) return(FALSE)
+  if (isTRUE(spec$joint)) return(TRUE)
+  comps <- spec$params$components
+  if (inherits(spec, "mt_spec_ensemble") && length(comps)) return(all(vapply(comps, spec_is_joint, logical(1))))
+  if (inherits(spec$params$base, "mt_spec")) return(spec_is_joint(spec$params$base))
+  FALSE
+}
+
+# The dependence used for draws of `spec` (or of any of a list of specs, such
+# as the specs fitted below wrappers): the paths of joint models are never
+# reordered, since their draws carry the dependence of the model
+joint_dependence <- function(dependence, spec) {
+  specs <- if (inherits(spec, "mt_spec")) list(spec) else spec
+  if (identical(dependence, "empirical") && any(vapply(specs, spec_is_joint, logical(1)))) {
+    mt_warn(paste("The draws of joint models carry the dependence between strata and are not reordered:",
+                  "`dependence = \"empirical\"` is ignored."), class = "reconcile")
+    return("none")
+  }
+  dependence
 }
 
 # Additivity of the one-variable form of mt_reconcile(), from the exposures:
@@ -613,8 +701,10 @@ project_rows <- function(Y, W, Ut, keep = integer(), WU = NULL) {
   Y - t(WU %*% lam)
 }
 
-# Empirical copula: reorder whole paths of each stratum so that their ranks follow
-# the strata's average one-year changes of log rates in sampled training years.
+# dependence = "empirical" (package-specific, related to the Schaake shuffle
+# of Clark et al. 2004): reorder whole paths of each stratum, ranked by their
+# mean log rate, so that their ranks follow the strata's one-year changes of
+# log rates (averaged over ages) in training years sampled with replacement.
 # `perm` [stratum, draw]: the original draw of each reordered path
 copula_reorder <- function(arr, D, E) {
   d <- dim(arr)
@@ -753,12 +843,11 @@ shrink_cov <- function(X, shrink = "auto") {
 #' forecasts every node; exposures for the forecast (`exposure` of
 #' [mt_forecast()]) can then be given for the bottom strata only, and those
 #' of the aggregates are their sums. Predictive draws (used by backtests)
-#' are coherent as well: the observation noise of the base model (Poisson
-#' and extra-Poisson variation for models of smooth rates, none for models
-#' of observed rates such as [rwd()]; for [ensemble()] and [stratified()]
-#' models that of the component or group each draw comes from) is drawn for
-#' the bottom strata only, independently per cell, and the aggregates are
-#' their sums.
+#' are coherent as well: given the reconciled rates, the Poisson variation
+#' of the deaths of the bottom strata is drawn independently per cell and
+#' draw (none for models of observed rates such as [rwd()]; for [ensemble()]
+#' and [stratified()] models as for the component or group each draw comes
+#' from), and the aggregates are the sums of the bottom strata.
 #'
 #' Whether coherence costs accuracy, and which method and base model work
 #' best, depends on the data: compare them in a backtest at every level of
@@ -783,6 +872,23 @@ shrink_cov <- function(X, shrink = "auto") {
 #' the observation noise of the bottom strata. In the forecast, bottom
 #' values below zero are set to zero and the aggregates are their sums.
 #' The estimates and a table of the training are in the fit (see Value).
+#'
+#' Two details differ from ProbReco. (1) Each step estimates the energy
+#' score from two samples of `draws_per_step` base draws of every training
+#' forecast, which ProbReco simulates independently. Here they are taken
+#' from the `n_draws` inner draws without replacement when there are at
+#' least `2 * draws_per_step` of them, and otherwise from two disjoint
+#' random halves, so that a draw is never paired with itself (such pairs
+#' would contribute a distance of zero to the score). (2) Before the
+#' optimisation, the bottom values are divided by their mean observed value
+#' and every node, as an input, by its own mean observed value; the
+#' estimates are transformed back afterwards. This leaves the optimum
+#' unchanged, but Adam moves every parameter by steps of about `eta`, so the
+#' rescaling changes the path of the optimisation, and since it stops after
+#' `max_iter` steps or when the steps fall below `tol`, also the estimates,
+#' relative to ProbReco, which optimises on the original scale. The
+#' rescaling is package-specific; it makes the steps comparable across ages
+#' and between small and large nodes.
 #'
 #' The method has many parameters and few training forecasts. \eqn{G} has
 #' one parameter per bottom stratum and node at each age (20 x 54 for 2
@@ -810,14 +916,15 @@ shrink_cov <- function(X, shrink = "auto") {
 #' @param method A method of [mt_reconcile()], or `"energy_score"`
 #'   (score-optimal reconciliation, see Details).
 #' @param shrink See [mt_reconcile()].
-#' @param dependence `"auto"` (default: `"none"` for models fitted jointly
-#'   across strata, whose draws already carry their dependence, such as
-#'   [li_lee()] and [tucker3()]; `"empirical"` for models fitted per stratum),
-#'   `"empirical"` or `"none"`. With `"empirical"` the paths of the strata
-#'   are reordered before reconciliation (see [mt_reconcile()]), so that
-#'   aggregates keep the observed co-movement of the strata; the observation
-#'   noise of predictive draws is independent across cells, as for models
-#'   without a hierarchy.
+#' @param dependence `"none"` (default: the draws are reconciled as they
+#'   are), `"empirical"` or `"auto"` (the same as `"none"`, kept for
+#'   compatibility). With `"empirical"` the paths of separately fitted strata
+#'   are reordered before reconciliation by a package-specific method (see
+#'   [mt_reconcile()]). Draws of joint models such as [li_lee()] and
+#'   [tucker3()], which carry the dependence between strata, are never
+#'   reordered (`"empirical"` then gives a warning and is ignored). The
+#'   observation noise of predictive draws is independent across cells
+#'   either way.
 #' @param fixed Strata whose forecasts are kept (see [mt_reconcile()]); not
 #'   with `"energy_score"`.
 #' @param years,n_origins,horizon Training of `method = "energy_score"`: the
@@ -865,12 +972,13 @@ shrink_cov <- function(X, shrink = "auto") {
 #' @export
 reconciled <- function(spec, hierarchy,
                        method = c("wls", "mint", "structural", "ols", "bottom_up", "proportional", "energy_score"),
-                       shrink = "auto", dependence = c("auto", "empirical", "none"), fixed = NULL,
+                       shrink = "auto", dependence = c("none", "empirical", "auto"), fixed = NULL,
                        years = 10, n_origins = 5, horizon = 5, control = list(), seed = 1) {
   check_class(spec, "mt_spec", "spec")
   method <- match.arg(method)
   dependence <- match.arg(dependence)
-  if (dependence == "auto") dependence <- if (isTRUE(spec$joint)) "none" else "empirical"
+  if (dependence == "auto") dependence <- "none"
+  dependence <- joint_dependence(dependence, spec)
   if (length(fixed) && method == "bottom_up") {
     mt_abort("`fixed` needs a projection method (\"wls\", \"mint\", \"structural\", \"ols\") or \"proportional\".",
              class = "argument")
@@ -905,6 +1013,8 @@ mt_fit.mt_spec_reconciled <- function(spec, data, prep = NULL, cores = 1, ...) {
   if (all(hs$is_bottom)) data <- mt_aggregate_strata(data, p$hierarchy)
   fit <- mt_fit(p$base, data, prep = prep, cores = cores, ...)
   hs <- hierarchy_structure(fit$strata, p$hierarchy)
+  # the fitted specs can be joint where the spec could not tell (tuned())
+  p$dependence <- joint_dependence(p$dependence, c(list(fit$spec), fit$inner_specs))
   rc <- list(hierarchy = p$hierarchy, method = p$method, shrink = p$shrink, dependence = p$dependence,
              structure = hs, fixed = fixed_nodes(p$fixed, fit$strata, p$hierarchy, hs, p$method))
   # score-optimal reconciliation: d and G per age from inner forecasts

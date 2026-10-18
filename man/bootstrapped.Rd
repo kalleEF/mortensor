@@ -27,14 +27,19 @@ forecast draws are pooled across refits:
 \details{
 \itemize{
 \item \code{type = "grid"}: deaths on the grid (after preprocessing) are drawn
-from Poisson distributions with the fitted rates of the model (or the
-preprocessed rates when the model has no fitted rates); the model is
-refitted without preprocessing. This is the semi-parametric bootstrap of
-Brouhns et al. (2005), generalised to any model.
+from Poisson distributions with the fitted deaths of the model (fitted
+rates times exposures) as means, and the model is refitted without
+preprocessing. This is the semi-parametric bootstrap with fitted deaths
+of Renshaw and Haberman (2008), applied to any model. Models of
+observed rates (such as \code{\link[=rwd]{rwd()}}) and models without fitted rates use
+the deaths on the grid as means.
 \item \code{type = "data"}: the observed deaths, at their original resolution, are
-drawn from Poisson distributions with the observed counts as means, and
-preprocessing and model are refitted. This propagates the uncertainty of
-ungrouping and smoothing, for any smoother.
+drawn from Poisson distributions with the observed counts as means, as
+in the bootstrap of Brouhns, Denuit and Van Keilegom (2005), and
+preprocessing and model are refitted. Refitting the preprocessing
+(ungrouping and smoothing) on each resample is the package's
+extension; it propagates the uncertainty of the preprocessing, for any
+smoother.
 }
 }
 \examples{
@@ -43,6 +48,10 @@ fit <- mt_fit(bootstrapped(rwd(), n_boot = 5), x)
 fc <- mt_forecast(fit, h = 3, n_draws = 50, seed = 1)
 }
 \references{
+Renshaw AE, Haberman S (2008). On simulation-based approaches to risk
+measurement in mortality with specific reference to Poisson Lee-Carter
+modelling. \emph{Insurance: Mathematics and Economics} 42(2): 797-816.
+
 Brouhns N, Denuit M, Van Keilegom I (2005). Bootstrapping the Poisson
 log-bilinear model for mortality forecasting. \emph{Scandinavian Actuarial
 Journal} 2005(3): 212-224.

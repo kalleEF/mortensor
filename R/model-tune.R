@@ -12,10 +12,13 @@
 #' origins and forecasts `inner_h` years from each; the last origin is
 #' `inner_h` years before the end of the data. `inner_origins = 1` is a
 #' single hold-out: fit to the years up to `T - inner_h` and forecast the
-#' last `inner_h` years (with `inner_h = 5` or `10`, the usual choice of
-#' smoothing and model parameters for `demography::fdm()`). Several origins
-#' average over more periods and make the choice depend less on the events
-#' of one period (Tashman 2000).
+#' last `inner_h` years. Several origins average over more periods and make
+#' the choice depend less on the events of one period (Tashman 2000).
+#' `tuned()` asks for at least `inner_origins + inner_h + 5` training years,
+#' so that the first inner fit has six years; this minimum is a package
+#' heuristic. Candidates whose models need more years fail at the first
+#' inner origins and are then scored on fewer origins than the others, or
+#' not at all.
 #'
 #' **What can be tuned.** `spec_fun` receives one row of `grid` as named
 #' arguments and returns a model specification, or `list(spec = , prep = )`
@@ -66,7 +69,9 @@
 #'   first evaluates a coarse grid (every second value of each column,
 #'   including the first and the last) and then the rows of `grid` within one
 #'   step of the best coarse combination in every column. For large grids,
-#'   such as Tucker ranks, this needs far fewer fits.
+#'   such as Tucker ranks, this needs far fewer fits. The two-stage search
+#'   is a package heuristic: it can miss the best row when the score has
+#'   several minima along a column.
 #' @param target `"rate"`, `"life_expectancy"` or `"asr"`.
 #' @param select `"min"` or `"one_se"`.
 #' @param by Stratum variables: tune each group of strata separately.
