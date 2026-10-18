@@ -161,10 +161,12 @@ test_that("disaggregation options, shapes and checks", {
   expect_error(mt_disaggregate(fc, mt_grid(x)$age, exposure = e, method = "shape", shape_rates = sh[1:3, , ]),
                class = "mt_error_argument")
   skip_if_not_installed("mgcv")
-  u <- mt_ungroup(mt_example(years = 2012:2019), method = "gam", tail = "gompertz", tail_width = 3)
+  expect_warning(u <- mt_ungroup(mt_example(years = 2012:2019), method = "gam", tail = "gompertz", tail_width = 3),
+                 class = "mt_warning_deprecated")
   expect_s3_class(u, "mt_data")
-  expect_s3_class(mt_ungroup(mt_example(years = 2019), method = "gam"), "mt_data")
-  shg <- mt_shape_rates(x, periods = 2020:2022, method = "gam")
+  expect_s3_class(suppressWarnings(mt_ungroup(mt_example(years = 2019), method = "gam"),
+                                   classes = "mt_warning_deprecated"), "mt_data")
+  expect_warning(shg <- mt_shape_rates(x, periods = 2020:2022, method = "gam"), class = "mt_warning_deprecated")
   expect_true(all(is.finite(shg) & shg > 0))
   skip_if_not_installed("ggplot2")
   expect_s3_class(mt_plot_disaggregation(fc, fs), "ggplot")

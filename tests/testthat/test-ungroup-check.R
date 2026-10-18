@@ -3,9 +3,9 @@ test_that("ungrouping diagnostics compare methods against known single years", {
   x <- mt_regroup(xs, age = c(30, seq(40, 90, 10)), measures = "deaths")
   expect_true(all(mt_obs(x, "deaths")$age_hi - mt_obs(x, "deaths")$age_lo >= 10))
   expect_identical(nrow(mt_obs(x, "exposure")), nrow(mt_obs(xs, "exposure")))
-  u <- list(PCLM = mt_ungroup(x), spline = mt_ungroup(x, method = "hyman_kannisto"))
+  u <- list(PCLM = mt_ungroup(x), rescaled = mt_ungroup(x, preserve_totals = TRUE))
   chk <- mt_ungroup_check(u, reference = xs)
-  expect_setequal(as.character(chk$method), c("PCLM", "spline"))
+  expect_setequal(as.character(chk$method), c("PCLM", "rescaled"))
   expect_true(all(c("mae_log", "noise_log", "bias_log", "at_bound", "max_rel_gap") %in% names(chk)))
   # the estimates are about as close to the known rates as Poisson noise allows
   expect_lt(max(chk$mae_log / chk$noise_log), 2)

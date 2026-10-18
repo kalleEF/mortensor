@@ -12,7 +12,7 @@ ungrouped training data).}
 
 \item{periods}{Forecast years.}
 
-\item{method}{\code{"last"} or \code{"gam"}.}
+\item{method}{\code{"last"} or the deprecated \code{"gam"}.}
 
 \item{years}{Number of last observed years used.}
 }
@@ -24,12 +24,18 @@ Rates on a fine age grid that give \code{\link[=mt_disaggregate]{mt_disaggregate
 }
 \details{
 \itemize{
-\item \code{"last"}: the rates of the last \code{years} years (deaths and exposures
-summed), the same for every forecast year;
-\item \code{"gam"}: a quasi-Poisson age-period GAM (\code{te(age, year)}, exposures as
-offset, package \pkg{mgcv}) fitted to the last \code{years} years per
-stratum and extrapolated to \code{periods}, so the age pattern within groups
-changes over the forecast years.
+\item \code{"last"} (default): the rates of the last \code{years} years (deaths and
+exposures summed), the same for every forecast year: a standard
+schedule for proportional allocation within groups;
+\item \code{"gam"} (deprecated): a quasi-Poisson age-period GAM (\code{te(age, year)},
+exposures as offset, package \pkg{mgcv}) fitted to the last \code{years}
+years per stratum and extrapolated to \code{periods}, so the age pattern
+within groups changes over the forecast years. Extrapolating a
+P-spline surface in time is a heuristic of this package without a
+published source; it still works, with a warning of class
+\code{mt_warning_deprecated}. The representative age of an open interval is
+its lower bound plus half the width of the interval below it (package
+convention, as in \code{\link[=mt_smooth]{mt_smooth()}}).
 }
 }
 \examples{

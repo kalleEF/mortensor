@@ -27,7 +27,11 @@
 #' @param age_open Lower bound of an open age interval coded as a single
 #'   numeric age (for example 110 for the Human Mortality Database "110+").
 #' @param omega Assumed maximum age, used wherever an open interval needs a
-#'   finite upper bound.
+#'   finite upper bound, for example [mt_ungroup()], which expands an open
+#'   interval into single years up to `omega`. Methods that need one
+#'   representative age per cell ([mt_smooth()] with the Whittaker smoother
+#'   or GAMs) do not use it: they place an open interval at its lower bound
+#'   plus half the width of the interval below it (a package convention).
 #' @param missing Values that mark missing cells in character value columns,
 #'   for example the symbols of official statistics for confidential or
 #'   unknown counts (`"."`, `"x"`). Missing cells are left out; suppressed

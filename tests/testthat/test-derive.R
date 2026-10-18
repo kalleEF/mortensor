@@ -143,3 +143,28 @@ test_that("mt_inequality() leaves out levels not in `order`", {
   expect_equal(b$q0.5, a$q0.5, tolerance = 0.01)  # Poisson draws of the observed rates
   expect_error(mt_inequality(x, "quintile", order = c("Q1", "Q9")), class = "mt_error_argument")
 })
+
+
+test_that("Gompertz and Kannisto tails run to omega and are closed with L = l / m", {
+  m <- 1e-5 * exp(0.1 * (30:99 + 0.5))
+  age <- single_ages(30, 100)
+  for (law in c("gompertz", "kannisto")) {
+    lt <- life_table(c(m, 0.5), age, open = law, k = 10, omega = 105)
+    # the same by hand: least squares on the last 10 log (logit) rates
+    x <- 90:99 + 0.5
+    y <- if (law == "kannisto") stats::qlogis(m[61:70]) else log(m[61:70])
+    cf <- stats::coef(stats::lm(y ~ x))
+    tail_rate <- function(a) {
+      eta <- cf[1] + cf[2] * a
+      if (law == "kannisto") stats::plogis(eta) else exp(eta)
+    }
+    mm <- tail_rate(100:104 + 0.5)
+    l <- c(1, cumprod(exp(-mm)))
+    e_open <- sum(l[1:5] * (1 - exp(-mm)) / mm) + l[6] / tail_rate(105.5)
+    expect_equal(tail(lt$ex, 1), unname(e_open), tolerance = 1e-10)
+  }
+  # the closure at omega makes the result insensitive to omega
+  e110 <- tail(life_table(c(m, 0.5), age, open = "gompertz")$ex, 1)
+  e130 <- tail(life_table(c(m, 0.5), age, open = "gompertz", omega = 130)$ex, 1)
+  expect_lt(abs(e110 - e130), 0.01)
+})

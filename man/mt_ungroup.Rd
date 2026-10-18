@@ -16,7 +16,7 @@ mt_ungroup(
   deg = 3,
   pord = 2,
   lambda_range = c(0.01, 1e+08),
-  preserve_totals = TRUE,
+  preserve_totals = FALSE,
   tail = c("kannisto", "gompertz"),
   tail_width = 2
 )
@@ -32,19 +32,19 @@ open interval.}
 \item{dims}{1 or 2 (for \code{method = "pclm"}; \code{"gam"} is always 2D, the
 other methods 1D).}
 
-\item{method}{Method for deaths: \code{"pclm"} (default); \code{"monotone"}
-(cumulative deaths interpolated by a monotone Hyman spline, counts only,
-1D, ignores exposures); or rate-based spline methods, which
-need exposures on the grid: \code{"hyman_kannisto"} (monotone spline of log
-group rates with a Kannisto tail for the open interval),
-\code{"natural_gompertz"} (natural spline with a log-linear tail) and \code{"gam"}
-(2D tensor-product GAM of log group rates over age and year with a
-Kannisto tail, package mgcv). All three preserve the exposure-weighted
-group rates exactly. The vignette "Ungrouping age groups: methods and
-diagnostics" compares the methods on data with known single years;
-\code{\link[=mt_plot_ungroup]{mt_plot_ungroup()}} and \code{\link[=mt_ungroup_check]{mt_ungroup_check()}} check a result.}
+\item{method}{Method for deaths: \code{"pclm"} (default), or \code{"monotone"}, the
+monotone cubic interpolation of Hyman (1983) of the cumulative deaths
+(counts only, 1D, ignores exposures; group totals reproduced exactly).
+Deprecated, without a published source: \code{"hyman_kannisto"} (monotone
+spline of log group rates with a Kannisto tail), \code{"natural_gompertz"}
+(natural spline with a log-linear tail) and \code{"gam"} (2D tensor-product
+GAM of log group rates over age and year with a Kannisto tail, package
+mgcv); they need exposures on the grid and rescale to the
+exposure-weighted group rates. The vignette "Ungrouping age groups:
+methods and diagnostics" compares methods on data with known single
+years; \code{\link[=mt_plot_ungroup]{mt_plot_ungroup()}} and \code{\link[=mt_ungroup_check]{mt_ungroup_check()}} check a result.}
 
-\item{exposure_method}{\code{"pclm"} or \code{"monotone"}.}
+\item{exposure_method}{\code{"pclm"} or \code{"monotone"} (Hyman 1983).}
 
 \item{lambda}{Fixed smoothing parameter(s); \code{NULL} selects them by
 \code{criterion}.}
@@ -58,10 +58,11 @@ penalty.}
 
 \item{lambda_range}{Search range for the smoothing parameters.}
 
-\item{preserve_totals}{Rescale estimates to observed group totals.}
+\item{preserve_totals}{Rescale the estimates to the observed group totals
+after the fit (default \code{FALSE}, the published PCLM); see Details.}
 
-\item{tail, tail_width}{For \code{method = "gam"}: the parametric curve that
-takes over from the GAM above the start of the last age group
+\item{tail, tail_width}{For the deprecated \code{method = "gam"}: the parametric
+curve that takes over from the GAM above the start of the last age group
 (\code{"kannisto"}, logistic, or \code{"gompertz"}, log-linear), fitted to the GAM
 rates from age 70, and the width (years) of the logistic blend between
 the two.}
@@ -70,39 +71,107 @@ the two.}
 An \code{mt_data} object with deaths (and exposures) on the grid.
 Diagnostics per fit are attached as attribute \code{"ungroup"}: smoothing
 parameters, effective dimension, the largest relative difference between
-fitted and observed group totals before rescaling, and a flag when a
-smoothing parameter is at the boundary of the search range.
+fitted and observed group totals (before any rescaling), the number of
+iterations of the open-interval weights (\code{open_iterations}, \code{NA} without
+an expanded open interval), and a flag when a smoothing parameter is at
+the boundary of the search range.
 }
 \description{
 Fills the modelling grid (single years of age by default) from deaths and
-exposures observed in coarser age groups, using the penalized composite
-link model (PCLM; Eilers 2007, Rizzi et al. 2015).
+exposures observed in coarser age groups. The default is the penalized
+composite link model (PCLM; Eilers 2007; Rizzi, Gampe and Eilers 2015) as
+published: the estimates are the fitted values of the model, without
+rescaling.
 }
 \details{
 \itemize{
 \item \strong{Exposures} observed coarser than the grid are ungrouped first, as
-counts (\code{exposure_method = "pclm"}) or by a monotone spline of the
-cumulative counts (\code{"monotone"}, Hyman filter), which preserves group
-totals exactly.
+counts by the PCLM (\code{exposure_method = "pclm"}) or by the monotone cubic
+interpolation of Hyman (1983) applied to the cumulative counts
+(\code{"monotone"}), which reproduces the group totals exactly.
 \item \strong{Deaths} are ungrouped as \strong{rates} when exposures are available on
-the grid: the exposures enter as offset, so cohort-size waves stay in the
-exposures and the estimated rate schedule is smooth. Without exposures,
-deaths are ungrouped as counts per year of age (1D only; 2D smoothing of
-death counts cannot represent cohort waves and is refused).
-\item The open age interval is expanded into single years up to \code{omega}; for
-rates the exposure of the open interval is spread with
-stationary-population weights implied by the fitted rates.
+the grid: the exposures enter the composite link as offset (Rizzi, Gampe
+and Eilers 2015), so cohort-size waves stay in the exposures and the
+estimated rate schedule is smooth. Without exposures, deaths are
+ungrouped as counts per year of age (1D only; 2D smoothing of death
+counts cannot represent cohort waves and is refused).
 \item \code{dims = 1} fits each stratum and period separately; \code{dims = 2} fits a
-smooth age-period surface per stratum (two smoothing parameters).
+smooth age-period surface of rates per stratum with two smoothing
+parameters, the PCLM of rates over age and period with exposures of
+Rizzi et al. (2019).
 }
 
-With \code{preserve_totals = TRUE}, the estimated deaths within each observed
-group are rescaled to the observed total, so aggregation reproduces the
-data exactly. Cells already observed at grid resolution are kept. When
-deaths are ungrouped as rates and the grid starts with age 0 as its own
-interval, an observed first year of life is kept and left out of the fit,
-as in \code{\link[=mt_smooth]{mt_smooth()}}: infant mortality does not follow the age pattern of
-the following ages, and its peak would spill into ages 1-6.
+\strong{Group totals.} The PCLM reproduces the total over all groups of a fit
+(the penalty leaves the level of the latent curve free), but not each
+group total: the gap is reported as \code{max_rel_diff} in the diagnostics.
+With \code{preserve_totals = TRUE} the estimates within each observed group
+are rescaled to the observed total after the fit, so that aggregation
+reproduces the data exactly. This rescaling is a post-hoc step of
+mortensor, not part of the published method: it creates steps at the
+group boundaries, and with \code{dims = 2} it puts the year-to-year noise of
+every group back onto the smooth surface. On England and Wales men
+(2000-2011, 5-year groups) the median absolute difference of the
+single-year log rates between the two settings is about 0.002 with
+\code{dims = 1} and 0.008 with \code{dims = 2}.
+
+\strong{Open age interval.} For counts (exposures, or deaths without
+exposures), an open last group is expanded into single years up to
+\code{omega} (see \code{\link[=mt_data]{mt_data()}}) and the PCLM spreads its total over them, as
+with a last interval of width \code{omega} minus its lower bound in the
+ungroup package. For rates, an open interval of the \emph{grid} (for example
+100+) is expanded into single years up to \code{omega} as well, and its
+exposure is split over these years with stationary-population weights
+\code{l(x) = exp(-cumsum(m(x)))} implied by the fitted rates; starting from
+rates that rise by 10\% per year of age, the weights and the fit are
+iterated until no weight changes by more than 1e-6 (at most 50
+iterations; the smoothing parameters are selected again once the weights
+have converged). This treatment of the open interval is specific to
+mortensor (reference unknown).
+
+When the deaths are grouped more coarsely than the exposures at old ages
+(for example deaths 90+ and single-year exposures), the rates within the
+last group are extrapolated by the smooth latent curve from the lower
+groups, and the comparison with real data is poor at the highest ages.
+On French women in 2006 (Human Mortality Database data in the
+demography package), with deaths in 5-year groups and 90+ and exposures
+in single years to 110+, the median absolute log error of the ungrouped
+rates at ages 90-109 against the single-year rates was 0.09 with
+\code{dims = 1} (0.02 at ages 30-89). The errors were within 0.1 on the log
+scale up to age 101, but the rates were too high by 0.3-0.4 at ages
+104-109, because the latent curve continues the rise of the rates below
+90 while the observed rates rise more slowly at the highest ages. With a grid
+open at 100+ (exposures 100+, expanded with the stationary weights), the
+rate of 100+ was too high by 0.14 on the log scale (median over
+1997-2006). With the exposures also grouped at 90+, the error at 90-109
+was 0.19 (rates too low). With \code{dims = 2} (1997-2006, ages 30 and over)
+and smoothing parameters chosen by BIC, the error at 90-109 was 1.4: BIC
+chose very small smoothing parameters (the large counts vary more than
+Poisson noise) and the rates inside the wide last group oscillated; with
+\code{lambda = c(100, 10)} fixed it was 0.05. Treat ungrouped rates inside a
+wide open group as extrapolations, prefer data with a higher open age,
+check the smoothing parameters (attribute \code{"ungroup"}) and the result
+with \code{\link[=mt_plot_ungroup]{mt_plot_ungroup()}}.
+
+Cells already observed at grid resolution are kept. When deaths are
+ungrouped as rates and the grid starts with age 0 as its own interval, an
+observed first year of life is kept and left out of the fit, as in
+\code{\link[=mt_smooth]{mt_smooth()}}: infant mortality does not follow the age pattern of the
+following ages, and its peak would spill into ages 1-6.
+
+\strong{Defaults.} The basis and penalty follow the defaults of the ungroup
+package (version 1.6.3) for one dimension: cubic B-splines (\code{deg = 3})
+with a knot every \code{kr = 2} years, a second-order difference penalty
+(\code{pord = 2}) and the smoothing parameter chosen by BIC. The search range
+of the smoothing parameter is wider than ungroup's (0.1 to 1e5 in one
+dimension, 0.1 to 1000 in two): \code{lambda_range = c(1e-2, 1e8)}. In two
+dimensions ungroup uses fixed smoothing parameters (1, 1) and a knot every
+7 cells by default; here both parameters are chosen by BIC with a knot
+every \code{kr} years and periods.
+
+The methods \code{"hyman_kannisto"}, \code{"natural_gompertz"} and \code{"gam"} are
+deprecated: they are heuristics of this package without a published
+source. They still work, with a warning of class
+\code{mt_warning_deprecated}.
 
 In backtests use \code{step_ungroup()} so that ungrouping, in particular in 2D,
 sees only the training window.
@@ -112,14 +181,24 @@ x <- mt_example(years = 2010:2014)
 u <- mt_ungroup(x)
 u
 head(attr(u, "ungroup"))
+# rescaled to the observed group totals (post-hoc step of the package)
+ut <- mt_ungroup(x, preserve_totals = TRUE)
 }
 \references{
 Eilers PHC (2007). Ill-posed problems with counts, the composite link model
 and penalized likelihood. \emph{Statistical Modelling} 7(3): 239-254.
 
+Hyman JM (1983). Accurate monotonicity preserving cubic interpolation.
+\emph{SIAM Journal on Scientific and Statistical Computing} 4(4): 645-654.
+
 Rizzi S, Gampe J, Eilers PHC (2015). Efficient estimation of smooth
 distributions from coarsely grouped data. \emph{American Journal of
 Epidemiology} 182(2): 138-147. \doi{10.1093/aje/kwv020}
+
+Rizzi S, Halekoh U, Thinggaard M, Engholm G, Christensen N, Johannesen TB,
+Lindahl-Jacobsen R (2019). How to estimate mortality trends from grouped
+vital statistics. \emph{International Journal of Epidemiology} 48(2): 571-582.
+\doi{10.1093/ije/dyy183}
 }
 \seealso{
 \code{\link[=mt_plot_ungroup]{mt_plot_ungroup()}} and \code{\link[=mt_ungroup_check]{mt_ungroup_check()}} for diagnostics.

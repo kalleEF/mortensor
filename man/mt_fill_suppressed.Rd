@@ -44,18 +44,27 @@ of information:
 \itemize{
 \item \strong{published totals} (\code{hierarchy}): the missing cells of every
 aggregate with a known total must add up to that total minus its known
-cells. They are estimated by iterative proportional fitting (raking):
-starting values, the expected deaths at the pooled death rate of the
-same age and period, are scaled constraint by constraint until every
-total is matched. With two crossed variables (regions and causes) the
-result is the log-linear independence fit of the missing cells given
-both margins. Missing aggregates are then filled as sums of their parts.
+cells. They are estimated by iterative proportional fitting (raking;
+Deming and Stephan 1940; Bishop, Fienberg and Holland 1975): starting
+values, the expected deaths at the pooled death rate of the same age
+and period, are scaled constraint by constraint until every total is
+matched. With two crossed variables (regions and causes) and no binding
+bounds, the limit is the fit of the log-linear model of independence
+(with the starting values as offset) to the missing cells given both
+margins (Bishop, Fienberg and Holland 1975). Missing aggregates are then
+filled as sums of their parts.
 \item \strong{bounds of the suppressed counts} (\code{lower}, \code{upper}): the range that
 the suppression rule implies, for example \verb{lower = 1, upper = 2} when
-counts of 1 and 2 are suppressed, or \code{upper = 4} for \code{"<5"}. Estimates
-are kept inside the bounds during raking. Cells that no published total
-covers get the expected deaths at the pooled rate, limited to the
-bounds; this needs a finite \code{upper}.
+counts of 1 and 2 are suppressed, or \code{upper = 4} for \code{"<5"}. During
+raking, the estimates are clipped to the bounds within each
+proportional-fitting step. This clipping is a heuristic of this package:
+once a bound binds, the result is no longer the log-linear fit above,
+and the iterations have no convergence guarantee (they stop after
+\code{maxit}, and a remaining gap to a published total is reported). Cells
+that no published total covers get the mean of a Poisson distribution
+with the expected deaths at the pooled rate as its mean, truncated to
+the bounds: \verb{E[Y | lower <= Y <= upper]} over the integers in the
+range. This needs a finite \code{upper}.
 }
 
 Without bounds, cells that no published total covers stay missing (with a
@@ -74,9 +83,17 @@ x <- mt_data(deaths = d, exposure = d, by = "region")
 y <- mt_fill_suppressed(x, mt_hierarchy(region = "all"))
 mt_obs(y)
 attr(y, "fill")
-# counts below 3 suppressed, no totals: expected deaths limited to 1-2
+# counts below 3 suppressed, no totals: Poisson mean truncated to 1-2
 d2 <- data.frame(region = c("A", "B"), year = 2020, age = "90+", deaths = c(30, NA),
                  exposure = c(1000, 50))
 z <- mt_fill_suppressed(mt_data(deaths = d2, exposure = d2, by = "region"), lower = 1, upper = 2)
 mt_obs(z)
+}
+\references{
+Bishop YMM, Fienberg SE, Holland PW (1975). \emph{Discrete Multivariate
+Analysis: Theory and Practice}. MIT Press.
+
+Deming WE, Stephan FF (1940). On a least squares adjustment of a sampled
+frequency table when the expected marginal totals are known. \emph{Annals of
+Mathematical Statistics} 11(4): 427-444.
 }
