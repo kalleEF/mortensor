@@ -11,7 +11,9 @@ coherent_fdm(
   smooth = TRUE,
   smooth_args = list(),
   K = 100,
-  drange = c(0, 0.5)
+  drange = c(0, 0.5),
+  weighted = TRUE,
+  beta = 0.05
 )
 }
 \arguments{
@@ -30,6 +32,12 @@ the decomposition (see \code{\link[=hyndman_ullah]{hyndman_ullah()}}).}
 
 \item{drange}{Range of the fractional differencing parameter of the
 ARFIMA models of the ratios (\code{c(0, 0.5)}: stationary).}
+
+\item{weighted, beta}{Weighted principal components of the product and of
+the ratios, with geometrically decaying weights \code{beta (1 - beta)^i} of
+the years (Hyndman, Booth and Yasmeen 2013: \code{beta = 0.05}).
+\code{weighted = FALSE} gives the unweighted decomposition, the default of
+\code{demography::coherentfdm()}.}
 }
 \value{
 A model specification.
@@ -50,20 +58,50 @@ ARFIMA models, so the differences between the strata stay bounded and
 revert towards their recent level.
 }
 
-Forecasts of the strata are products of the two. This is the original
-method of \code{demography::coherentfdm()}; \code{\link[=li_lee]{li_lee()}} is a related model with
-a common Lee-Carter factor. The Lee-Carter version \code{\link[=product_ratio]{product_ratio()}} is
-deprecated in its favour.
+Forecasts of the strata are products of the two. This is the method of
+\code{demography::coherentfdm()} and \code{forecast()} for its result; \code{\link[=li_lee]{li_lee()}}
+is a related model with a common Lee-Carter factor. The Lee-Carter
+version \code{\link[=product_ratio]{product_ratio()}} is deprecated in its favour.
 
 Draws simulate the product and each ratio (uncertainty of the scores and
 resampled model errors, as \code{simulate()} for functional forecasts in
 demography) and multiply them; the ratios of each path are rescaled so
-that they multiply to one, as in \code{demography::forecast.fdmpr()}.
+that they multiply to one, as \code{forecast()} in demography does for the
+point forecasts.
+
+\strong{Relation to the paper.} As in Hyndman, Booth and Yasmeen (2013,
+Sections 2.1-2.4): the rates of each stratum are smoothed over age first
+(weighted penalised regression splines, monotone above age 65, through
+\code{demography::smooth.demogdata()}); the product is the geometric mean of
+the smoothed rates of the group (their Eq. 3), and every stratum has a
+ratio model (their Eq. 4; they note that J - 1 ratio models would
+suffice); the scores of the product are forecast with ARIMA models
+chosen by the algorithm of Hyndman and Khandakar (2008), those of the
+ratios with stationary ARFIMA models (orders by the same algorithm,
+maximum likelihood); there is no jump-off adjustment; \code{order1 = order2 = 6} are the numbers of components of their applications. The principal
+components are weighted, with weight \code{beta (1 - beta)^i} for the year \code{i}
+years before the last and \code{beta = 0.05} as in their applications
+(Section 2.2 and Discussion); \code{demography::coherentfdm()} does not
+weight them by default (\code{weighted = FALSE}). The departures:
+\itemize{
+\item the fractional differencing parameter of the ratio models lies in
+\code{drange = c(0, 0.5)} (the default of demography); the paper names
+\verb{-0.5 < d < 0.5} as the stationary range;
+\item prediction intervals come from simulated paths with resampled model
+errors; the paper gives analytic variances for the rates (their Eq. 8)
+and simulates for life expectancy. Predictive draws add Poisson deaths
+in place of the observational variance of their Eq. 8;
+\item the ratios of each simulated path are rescaled to multiply to one, and
+with a hierarchy (see below) the aggregates get a ratio but do not
+enter the product. Both are package-specific (reference unknown);
+demography rescales the point forecasts in the same way, and the paper
+states the constraint for the observed ratios.
 Predictive draws (\code{mt_forecast(predictive = TRUE)}) add Poisson variation
 of the deaths given the rates and the exposures, and no other observation
 noise. If intervals are too narrow on real data, that is a property of the
 model (see \code{\link[=recalibrated]{recalibrated()}}, \code{\link[=ensemble]{ensemble()}}, or
 overdispersed models such as \code{stanmomo(family = "nb")}).
+}
 
 With \code{common_by} (for example \code{"sex"}), each level of that stratum
 variable forms its own group with its own product (for example the
@@ -83,4 +121,8 @@ if (requireNamespace("demography", quietly = TRUE)) {
 Hyndman RJ, Booth H, Yasmeen F (2013). Coherent mortality forecasting: the
 product-ratio method with functional time series models. \emph{Demography}
 50(1): 261-283. \doi{10.1007/s13524-012-0145-5}
+
+Hyndman RJ, Khandakar Y (2008). Automatic time series forecasting: the
+forecast package for R. \emph{Journal of Statistical Software} 27(3): 1-22.
+\doi{10.18637/jss.v027.i03}
 }

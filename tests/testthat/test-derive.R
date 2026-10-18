@@ -223,26 +223,72 @@ test_that("mt_inequality() leaves out levels not in `order`", {
 })
 
 
-test_that("Gompertz and Kannisto tails run to omega and are closed with L = l / m", {
-  m <- 1e-5 * exp(0.1 * (30:99 + 0.5))
+# Integrated hazard over [x, x + 1] of a Gompertz or Kannisto hazard
+tail_H <- function(a, b, x, law) {
+  if (law == "kannisto") (log1p(a * exp(b * (x + 1))) - log1p(a * exp(b * x))) / b else a / b * exp(b * x) * expm1(b)
+}
+
+test_that("Gompertz and Kannisto closures are fitted by binomial maximum likelihood and run to omega", {
+  set.seed(2)
+  m <- 1e-5 * exp(0.1 * (30:99 + 0.5)) * exp(stats::rnorm(70, 0, 0.05))
   age <- single_ages(30, 100)
   for (law in c("gompertz", "kannisto")) {
     lt <- life_table(c(m, 0.5), age, open = law, k = 10, omega = 105)
-    # the same by hand: least squares on the last 10 log (logit) rates
-    x <- 90:99 + 0.5
-    y <- if (law == "kannisto") stats::qlogis(m[61:70]) else log(m[61:70])
-    cf <- stats::coef(stats::lm(y ~ x))
-    tail_rate <- function(a) {
-      eta <- cf[1] + cf[2] * a
-      if (law == "kannisto") stats::plogis(eta) else exp(eta)
+    tl <- attr(lt, "tail")
+    expect_true(tl$converged)
+    expect_equal(c(tl$age_from, tl$age_to), c(90, 100))
+    # the same by hand: binomial likelihood of the life-table survivors and
+    # deaths at ages 90-99, maximised by optim()
+    x <- 90:99
+    q <- m[61:70] / (1 + m[61:70] / 2)
+    l <- cumprod(c(1, 1 - m[1:69] / (1 + m[1:69] / 2)))[61:70]
+    # parameters log mu(95) and b, which are nearly uncorrelated
+    nll <- function(p) {
+      H <- tail_H(exp(p[1] - 95 * p[2]), p[2], x, law)
+      -sum(l * q * log(-expm1(-H)) - l * (1 - q) * H)
     }
-    mm <- tail_rate(100:104 + 0.5)
-    l <- c(1, cumprod(exp(-mm)))
-    e_open <- sum(l[1:5] * (1 - exp(-mm)) / mm) + l[6] / tail_rate(105.5)
-    expect_equal(tail(lt$ex, 1), unname(e_open), tolerance = 1e-10)
+    p_fit <- c(log(tl$a) + 95 * tl$b, tl$b)
+    o <- stats::optim(p_fit + c(0.2, -0.01), nll, method = "BFGS", control = list(reltol = 1e-15, maxit = 500))
+    expect_equal(p_fit, o$par, tolerance = 1e-5)
+    expect_lte(nll(p_fit), o$value + 1e-12)
+    # open interval: years 100-104 with the fitted integrated hazard, closed at 105
+    H <- tail_H(tl$a, tl$b, 100:105, law)
+    lo <- c(1, cumprod(exp(-H[1:5])))
+    e_open <- sum(lo[1:5] * (1 - exp(-H[1:5])) / H[1:5]) + lo[6] / H[6]
+    expect_equal(tail(lt$ex, 1), e_open, tolerance = 1e-10)
   }
   # the closure at omega makes the result insensitive to omega
   e110 <- tail(life_table(c(m, 0.5), age, open = "gompertz")$ex, 1)
   e130 <- tail(life_table(c(m, 0.5), age, open = "gompertz", omega = 130)$ex, 1)
   expect_lt(abs(e110 - e130), 0.01)
+  # observed exposures weight the fit; draws are fitted column by column
+  E <- 1e5 * exp(-0.08 * (0:70))
+  lte <- life_table(c(m, 0.5), age, open = "kannisto", exposure = E)
+  expect_false(isTRUE(all.equal(attr(lte, "tail")$b, attr(life_table(c(m, 0.5), age, open = "kannisto"), "tail")$b)))
+  M <- cbind(c(m, 0.5), c(m * 1.1, 0.55))
+  e <- life_expectancy(M, age, at = 100, open = "kannisto")
+  expect_equal(e[2], tail(life_table(M[, 2], age, open = "kannisto")$ex, 1))
+  expect_error(life_table(c(m, 0.5), age, open = "kannisto", exposure = 1:3), class = "mt_error_lifetable")
+})
+
+test_that("the closures reproduce the parameters of Thatcher, Kannisto and Vaupel (1998)", {
+  # probabilities of dying at ages 80-98 of the cohorts born in 1871-1880 (11
+  # countries; their Table 6.1); for a cohort the life-table survivors are the
+  # numbers reaching each age, which their maximum-likelihood fit uses
+  q <- list(male = c(0.1224, 0.1326, 0.1452, 0.1565, 0.1702, 0.1822, 0.1965, 0.2116, 0.2276, 0.2424, 0.2580, 0.2749,
+                     0.2907, 0.3073, 0.3253, 0.3434, 0.3571, 0.3691, 0.3817),
+            female = c(0.0987, 0.1074, 0.1180, 0.1291, 0.1409, 0.1520, 0.1653, 0.1787, 0.1926, 0.2070, 0.2225, 0.2354,
+                       0.2524, 0.2687, 0.2867, 0.3050, 0.3228, 0.3358, 0.3504))
+  # their Appendix D, Tables 5 (Kannisto) and 1 (Gompertz): a and b
+  pub <- list(kannisto = list(male = c(3.39306e-05, 1.04287e-01), female = c(2.31232e-05, 1.05869e-01)),
+              gompertz = list(male = c(2.17126e-04, 7.97629e-02), female = c(1.22095e-04, 8.41400e-02)))
+  for (law in names(pub)) {
+    for (sx in names(q)) {
+      m <- c(q[[sx]] / (1 - q[[sx]] / 2), 0.6)
+      tl <- attr(life_table(m, single_ages(80, 99), open = law, k = 19), "tail")
+      # the published probabilities have four decimals
+      expect_equal(tl$a, pub[[law]][[sx]][1], tolerance = 3e-3)
+      expect_equal(tl$b, pub[[law]][[sx]][2], tolerance = 3e-4)
+    }
+  }
 })

@@ -322,23 +322,38 @@ mt_aggregate_strata <- function(data, hierarchy, replace = FALSE) {
 #' strata.
 #'
 #' **Non-negative forecasts.** Projections can make bottom values negative
-#' where the base forecasts disagree strongly. Such values are held at zero
-#' and the remaining bottom strata of the draw are projected again, until
-#' none is negative; the aggregates are recomputed from the bottom series,
-#' so the result is coherent and non-negative, and fixed nodes are kept.
-#' This iteration is a package-specific heuristic. Wickramasuriya, Turlach
-#' and Hyndman (2020) solve the quadratic program of the reconciliation with
-#' non-negativity constraints; the heuristic approximates its solution
-#' without guaranteeing the optimum. A warning reports when more than 5% of
-#' the draws needed this, because the distributions of the affected strata
-#' (often small causes) are then truncated at zero.
+#' where the base forecasts disagree strongly. For the draws where this
+#' happens, the bottom values `b` are those of the non-negative
+#' reconciliation of Wickramasuriya, Turlach and Hyndman (2020): they
+#' minimise the same weighted distance `(y - S b)' W^-1 (y - S b)` subject to
+#' `b >= 0` (their Eq. 3), and the aggregates are their sums. The quadratic
+#' program is solved exactly by their block principal pivoting algorithm
+#' (their Algorithm 3.1: all infeasible values exchanged while their number
+#' falls, at most 3 times without a fall, then one value at a time),
+#' started from the unconstrained solution, with the projection above for
+#' each set of bottom values held at zero. Infeasibilities below 1e-10 times
+#' the largest absolute base forecast of the draw count as zero (the paper
+#' uses 1e-12 in absolute terms). Draws without negative values keep the
+#' unconstrained solution, which is then the optimum. A warning reports when
+#' more than 5% of the draws have bottom values at zero, because the
+#' distributions of the affected strata (often small causes) are then
+#' truncated at zero. Earlier versions of mortensor held negative values at
+#' zero and projected the rest again, a heuristic without a guaranteed
+#' optimum; it was removed.
 #'
 #' **Fixed nodes.** `fixed` keeps the forecasts of some nodes, as in the
 #' reconciliation with immutable forecasts of Zhang, Kang, Panagiotelis and
-#' Li (2023). The package approximates it by giving the fixed nodes a
-#' near-zero variance in `W` (1e-10 times the largest variance), so that the
-#' projection leaves them almost unchanged and the other strata absorb the
-#' whole gap.
+#' Li (2023). The package gives the fixed nodes a near-zero variance in `W`
+#' (1e-10 times the largest variance); with `"mint"` the other nodes get
+#' their covariance conditional on the fixed nodes. The projection is then
+#' the weighted least-squares solution with the fixed nodes as equality
+#' constraints, up to a relative change of the fixed nodes of about 1e-9,
+#' and the other strata absorb the whole gap. With negative bottom values,
+#' the same weights enter the non-negative quadratic program, so the fixed
+#' nodes are kept as equality constraints there as well, as long as
+#' non-negative parts can add up to them. When they cannot (a fixed node
+#' below zero, or a node fixed together with parts whose forecasts do not
+#' add up to it), the fixed nodes move, with a warning.
 #'
 #' **Proportional.** `"proportional"` keeps the `fixed` nodes and scales the
 #' bottom strata below each of them by one factor per draw, so that they add
@@ -620,6 +635,7 @@ reconcile_array <- function(arr, hs, additive, method, shrink, exposure, d, fixe
   zero_share <- 0
   draw_zero <- logical(d[4])
   shrink_used <- numeric(0)
+  nnls_failed <- 0L
   out <- Y
   for (a in seq_len(d[1])) {
     for (t in seq_len(d[2])) {
@@ -640,7 +656,8 @@ reconcile_array <- function(arr, hs, additive, method, shrink, exposure, d, fixe
         }
         Ypb
       } else {
-        # diagonal weights as vectors, MinT as a matrix
+        # diagonal weights as vectors, MinT as a matrix; fixed nodes get a
+        # near-zero variance
         W <- switch(method,
                     ols = rep(1, d[3]),
                     structural = rowSums(S),
@@ -650,30 +667,19 @@ reconcile_array <- function(arr, hs, additive, method, shrink, exposure, d, fixe
                       shrink_used <- c(shrink_used, sh$lambda)
                       sh$W
                     })
-        WU <- if (is.matrix(W)) W %*% t(Ut)
-        Yp <- project_rows(Yc, W, Ut, fixed, WU)[, b, drop = FALSE]
-        # non-negative: bottom values below zero are held at zero and the rest
-        # projected again, so that fixed nodes and aggregates are kept; draws
-        # with the same held strata are projected together
-        held <- matrix(FALSE, nrow(Yp), nb)
-        active <- which(rowSums(Yp < 0) > 0)
-        for (it in seq_len(nb)) {
-          if (!length(active)) break
-          held[active, ] <- held[active, , drop = FALSE] | Yp[active, , drop = FALSE] < 0
-          active <- active[rowSums(held[active, , drop = FALSE]) < nb]
-          key <- do.call(paste0, as.data.frame(held[active, , drop = FALSE] + 0L))
-          for (k in unique(key)) {
-            rr <- active[key == k]
-            hb <- b[held[rr[1], ]]
-            Yk <- Yc[rr, , drop = FALSE]
-            Yk[, hb] <- 0
-            Yp[rr, ] <- project_rows(Yk, W, Ut, union(fixed, hb), WU)[, b, drop = FALSE]
-          }
-          active <- active[rowSums(Yp[active, , drop = FALSE] < 0) > 0]
+        W <- keep_weights(W, fixed)
+        Yp <- project_rows(Yc, W, Ut)
+        # non-negative reconciliation (Wickramasuriya, Turlach and Hyndman
+        # 2020) for the draws with negative bottom values
+        neg <- which(rowSums(Yp[, b, drop = FALSE] < 0) > 0)
+        if (length(neg)) {
+          nn <- nnls_reconcile(Yc[neg, , drop = FALSE], W, Ut, b, Yp[neg, , drop = FALSE])
+          Yp[neg, ] <- nn$X
+          zero_share <- zero_share + sum(nn$held)
+          draw_zero[neg] <- draw_zero[neg] | rowSums(nn$held) > 0
+          nnls_failed <- nnls_failed + sum(!nn$converged)
         }
-        zero_share <- zero_share + sum(held)
-        draw_zero <- draw_zero | rowSums(held) > 0
-        Yp
+        Yp[, b, drop = FALSE]
       }
       zero_share <- zero_share + sum(Yb < 0)
       Yb <- pmax(Yb, 0)
@@ -685,6 +691,10 @@ reconcile_array <- function(arr, hs, additive, method, shrink, exposure, d, fixe
     }
   }
   zero_share <- zero_share / (d[1] * d[2] * d[4] * nb)
+  if (nnls_failed > 0) {
+    mt_warn(sprintf(paste("The non-negative reconciliation did not reach its optimum in %d draw(s) and cell(s);",
+                          "their negative bottom values were set to zero."), nnls_failed), class = "reconcile")
+  }
   if (length(fixed) && fixed_change > 1e-6) {
     mt_warn(sprintf(paste("Fixed nodes moved by up to %.1f%%: they cannot all be kept when their forecasts do not",
                           "add up (a node fixed together with all its parts) or when the parts below them would",
@@ -705,28 +715,125 @@ reconcile_array <- function(arr, hs, additive, method, shrink, exposure, d, fixe
                    max_relative_change_fixed = if (length(fixed)) fixed_change else NA_real_))
 }
 
-# Projection of the rows of Y (draws x strata) onto the coherent subspace with
-# weights W; nodes in `keep` get (almost) zero variance, so the projection
-# leaves them unchanged
-project_rows <- function(Y, W, Ut, keep = integer(), WU = NULL) {
-  Utt <- t(Ut)
+# Weights with (almost) zero variance for the nodes in `keep`, so that a
+# projection leaves them unchanged: their variance becomes 1e-10 times the
+# largest variance. In a matrix, the other nodes get their covariance
+# conditional on the kept nodes and no covariance with them: the inverse of
+# this block is the block of the inverse of W, so that the projection is the
+# weighted least-squares solution with the kept nodes as equality
+# constraints (up to the near-zero variance). Diagonal weights need no
+# conditioning
+keep_weights <- function(W, keep = integer()) {
+  if (!length(keep)) return(W)
+  tiny <- 1e-10 * max(if (is.matrix(W)) diag(W) else W)
   if (!is.matrix(W)) {
-    # diagonal weights given as a vector
-    if (length(keep)) W[keep] <- 1e-10 * max(W)
-    WU <- W * Utt
-  } else {
-    # W with the rows and columns of `keep` set to zero and a tiny diagonal,
-    # updated from the full product W %*% t(Ut)
-    WU <- WU %||% (W %*% Utt)
-    if (length(keep)) {
-      WU <- WU - W[, keep, drop = FALSE] %*% Utt[keep, , drop = FALSE]
-      WU[keep, ] <- 1e-10 * max(diag(W)) * Utt[keep, , drop = FALSE]
+    W[keep] <- tiny
+    return(W)
+  }
+  o <- setdiff(seq_len(ncol(W)), keep)
+  Wk <- W[keep, keep, drop = FALSE]
+  Wok <- W[o, keep, drop = FALSE]
+  Wc <- W[o, o, drop = FALSE] - Wok %*% tryCatch(solve(Wk, t(Wok)), error = function(e) MASS_ginv(Wk) %*% t(Wok))
+  out <- matrix(0, ncol(W), ncol(W))
+  out[o, o] <- (Wc + t(Wc)) / 2
+  out[cbind(keep, keep)] <- tiny
+  out
+}
+
+# Projection of the rows of Y (draws x strata) onto the subspace where the
+# linear constraints Ct x = 0 hold, with weights W (a vector of diagonal
+# weights or a matrix): x = y - W C (C' W C)^-1 C' y. With the aggregation
+# constraints Ut this is the reconciliation of Wickramasuriya, Athanasopoulos
+# and Hyndman (2019) in the form of their Lemma 1 (Eq. 2 of Wickramasuriya,
+# Turlach and Hyndman 2020). With `multipliers = TRUE` the Lagrange
+# multipliers (C' W C)^-1 C' y [constraint, row] are returned as well
+project_rows <- function(Y, W, Ct, multipliers = FALSE) {
+  WC <- if (is.matrix(W)) W %*% t(Ct) else W * t(Ct)
+  M <- Ct %*% WC
+  rhs <- Ct %*% t(Y)
+  lam <- tryCatch(solve(M, rhs), error = function(e) MASS_ginv(M) %*% rhs)
+  X <- Y - t(WC %*% lam)
+  if (multipliers) list(X = X, lambda = lam) else X
+}
+
+# Non-negative reconciliation of Wickramasuriya, Turlach and Hyndman (2020):
+# the bottom values b of each row y of Y minimise (y - S b)' W^-1 (y - S b)
+# subject to b >= 0 (their Eq. 3). Solved by their block principal pivoting
+# algorithm (Algorithm 3.1, Judice and Pires): the bottom values are split
+# into a free set F and a set G held at zero; for a split, the solution with
+# b_G = 0 (Eq. 9) and the multipliers g_G of the held values (Eq. 10) come
+# from the projection with the constraints U' x = 0 and x_G = 0 (the
+# multiplier of x_j = 0 is -g_j). Infeasible values (b_j < 0 in F, g_j < 0
+# in G) are exchanged all at once while their number falls, up to p = 3
+# times without a fall, and then one at a time (the last index, Murty's
+# rule), which ends after finitely many steps. Infeasibilities smaller than
+# 1e-10 times the largest absolute base forecast of the row (for g, in the
+# units of y: g_j times the weight of j) count as zero. The start is the
+# unconstrained solution `X0` (F = all bottom values), as in the paper for
+# diagonal weights. Rows with the same split are solved together. Returns
+# the solutions of all nodes `X`, the held bottom values `held` [row,
+# bottom] and whether each row reached the optimum (`converged`)
+nnls_reconcile <- function(Y, W, Ut, b, X0, p_bar = 3L, max_iter = NULL) {
+  nr <- nrow(Y)
+  nb <- length(b)
+  max_iter <- max_iter %||% (10L * nb + 100L)
+  wb <- if (is.matrix(W)) diag(W)[b] else W[b]
+  tol <- 1e-10 * pmax(apply(abs(Y), 1, max), 1e-300)
+  X <- X0
+  xb <- X0[, b, drop = FALSE]
+  g <- matrix(0, nr, nb)
+  held <- matrix(FALSE, nr, nb)
+  ninf <- rep(nb + 1L, nr)
+  p <- rep(p_bar, nr)
+  converged <- rep(FALSE, nr)
+  for (it in seq_len(max_iter + 1L)) {
+    inf <- (!held & xb < -tol) | (held & g * rep(wb, each = nr) < -tol)
+    n_inf <- rowSums(inf)
+    converged <- n_inf == 0L
+    active <- which(!converged)
+    if (!length(active) || it > max_iter) break
+    for (i in active) {
+      if (n_inf[i] < ninf[i]) {
+        ninf[i] <- n_inf[i]
+        p[i] <- p_bar
+      } else if (p[i] >= 1L) {
+        p[i] <- p[i] - 1L
+      } else {
+        # backup rule: exchange only the last infeasible variable
+        r <- max(which(inf[i, ]))
+        inf[i, ] <- FALSE
+        inf[i, r] <- TRUE
+      }
+    }
+    # exchange: infeasible free values are held at zero, infeasible held ones freed
+    held[active, ] <- xor(held[active, , drop = FALSE], inf[active, , drop = FALSE])
+    key <- do.call(paste0, as.data.frame(held[active, , drop = FALSE] + 0L))
+    for (k in unique(key)) {
+      rr <- active[key == k]
+      hg <- which(held[rr[1], ])
+      Ct <- Ut
+      if (length(hg)) {
+        Eg <- matrix(0, length(hg), ncol(Ut))
+        Eg[cbind(seq_along(hg), b[hg])] <- 1
+        Ct <- rbind(Ut, Eg)
+      }
+      pr <- project_rows(Y[rr, , drop = FALSE], W, Ct, multipliers = TRUE)
+      X[rr, ] <- pr$X
+      X[rr, b[hg]] <- 0
+      xb[rr, ] <- X[rr, b, drop = FALSE]
+      g[rr, ] <- 0
+      if (length(hg)) g[rr, hg] <- -t(pr$lambda[nrow(Ut) + seq_along(hg), , drop = FALSE])
     }
   }
-  M <- Ut %*% WU
-  rhs <- Ut %*% t(Y)
-  lam <- tryCatch(solve(M, rhs), error = function(e) MASS_ginv(M) %*% rhs)
-  Y - t(WU %*% lam)
+  if (any(!converged)) {
+    # safeguard: negative bottom values of rows without the optimum set to
+    # zero (the caller computes the aggregates as their sums)
+    bad <- which(!converged)
+    xb_bad <- pmax(xb[bad, , drop = FALSE], 0)
+    X[bad, b] <- xb_bad
+    held[bad, ] <- xb_bad == 0
+  }
+  list(X = X, held = held, converged = converged, iterations = it - 1L)
 }
 
 # dependence = "empirical" (package-specific, related to the Schaake shuffle
@@ -901,6 +1008,38 @@ shrink_cov <- function(X, shrink = "auto") {
 #' the observation noise of the bottom strata. In the forecast, bottom
 #' values below zero are set to zero and the aggregates are their sums.
 #' The estimates and a table of the training are in the fit (see Value).
+#'
+#' As in the paper (Section 6, Algorithm 1), \eqn{d} and \eqn{G} are free
+#' (no constraint such as \eqn{G S = I}), the objective is the total energy
+#' score with exponent 1 estimated from pairs of base draws (their Eq. 5),
+#' and Adam starts from OLS reconciliation with their settings (`eta =
+#' 0.001`, `beta1 = 0.9`, `beta2 = 0.999`, `epsilon = 1e-8`, their Section
+#' 7). The gradient is written out analytically; ProbReco differentiates the
+#' same estimate automatically (the validation check `scoreopt_probreco`
+#' reproduces its path). The departures from the paper:
+#'
+#' * training forecasts: Algorithm 1 refits the base models on rolling
+#'   windows of the length of the final fit at consecutive origins (250
+#'   one-step forecasts in their simulations), and the objective (their Eq.
+#'   4) is that of one horizon. Here the inner models use all training years
+#'   up to each of `n_origins` origins (expanding windows, shorter than the
+#'   final fit), and the forecasts of horizons 1 to `horizon` enter one
+#'   objective, so that one \eqn{d} and \eqn{G} serve all horizons;
+#' * one \eqn{d} and \eqn{G} per age: every age is a hierarchy of its own;
+#' * the score includes the observation noise of the bottom strata, so it
+#'   is the score of the predictive distribution of the deaths or rates;
+#' * `draws_per_step` is 50 by default (the paper uses 250 draws per score
+#'   in its simulations), and the draws come from a fixed set of inner draws
+#'   (see below);
+#' * stopping: the paper stops when the change in all gradients is less
+#'   than 10% of `eta`; ProbReco and mortensor stop when no parameter moves
+#'   by more than `tol` (1e-4, 10% of the default `eta`) in a step, or after
+#'   `max_iter` steps (500, the default of ProbReco);
+#' * the rescaling before the optimisation and the bottom values set to
+#'   zero in the forecast are package-specific (reference unknown). The
+#'   paper does not treat negative values; the non-negative quadratic
+#'   program of the projection methods (see [mt_reconcile()]) does not apply
+#'   to the map \eqn{S (d + G \hat y)}.
 #'
 #' Two details differ from ProbReco. (1) Each step estimates the energy
 #' score from two samples of `draws_per_step` base draws of every training

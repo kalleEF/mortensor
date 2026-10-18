@@ -3,13 +3,15 @@
 #' Tests whether models of a backtest differ in their expected score with
 #' the Diebold-Mariano test (Diebold and Mariano 1995). By default the
 #' long-run variance is the equal-weighted cosine (EWC) estimate with
-#' fixed-smoothing critical values from a t distribution (Lazarus, Lewis,
-#' Stock and Watson 2018; for the Diebold-Mariano test, Coroneo and Iacone
-#' 2020); the version of `forecast::dm.test()`, with the small-sample
-#' correction of Harvey, Leybourne and Newbold (1997), is an option. It
-#' complements [mt_score_table()], which shows the mean scores: the test
-#' says whether a difference is larger than the variation between forecast
-#' origins.
+#' fixed-smoothing critical values from a t distribution, as Lazarus, Lewis,
+#' Stock and Watson (2018) recommend for tests of a single restriction; the
+#' Diebold-Mariano statistic is such a test, of the mean loss difference.
+#' The fixed-smoothing test of Coroneo and Iacone (2020) for the
+#' Diebold-Mariano test, with a Daniell-kernel periodogram estimate, and
+#' the version of `forecast::dm.test()`, with the small-sample correction of
+#' Harvey, Leybourne and Newbold (1997), are options. It complements
+#' [mt_score_table()], which shows the mean scores: the test says whether a
+#' difference is larger than the variation between forecast origins.
 #'
 #' The test uses one loss per forecast origin, the time index of a
 #' rolling-origin backtest. Scores of the cells of one origin and horizon
@@ -37,10 +39,24 @@
 #'   cos(pi * j * (t - 1/2) / T)` for `j = 1, ..., nu`, the long-run
 #'   variance `Omega = mean(Lambda_j^2)`, the statistic `sqrt(T) * dbar /
 #'   sqrt(Omega)` and p-values from the t distribution with `nu` degrees of
-#'   freedom, `nu = max(1, floor(0.4 * T^(2/3)))` as Lazarus et al. (2018)
-#'   recommend for the EWC test (1 for up to 11 origins, 2 for 12 to 20,
-#'   3 for 21 to 31). The estimate does not use the horizon, so there is a
-#'   test for every horizon with at least 2 origins; `lag` is `NA`.
+#'   freedom, `nu = 0.4 * T^(2/3)` cosine terms as Lazarus et al. (2018)
+#'   recommend for the EWC test, rounded down and at least 1 (1 for up to 11
+#'   origins, 2 for 12 to 20, 3 for 21 to 31). There is no further
+#'   small-sample correction. The estimate does not use the horizon, so
+#'   there is a test for every horizon with at least 2 origins; `lag` is
+#'   `NA`.
+#' * `"daniell"`: the weighted periodogram estimate with the Daniell kernel
+#'   of Coroneo and Iacone (2020, Eq. 8), `Omega = (1 / m) * sum_j I_j` for
+#'   the first `m` Fourier frequencies `lambda_j = 2 * pi * j / T`, with
+#'   `I_j = |sum_t d_t exp(-i lambda_j t)|^2 / T`, and p-values from the t
+#'   distribution with `2 m` degrees of freedom (their Eq. 9). `m =
+#'   floor(T^(1/3))`, at least 1, as in their simulations and application
+#'   (Section 5: the best combination of size and power in a preliminary
+#'   study): 1 for up to 7 origins, 2 for 8 to 26. `lag` is `NA`. Coroneo
+#'   and Iacone (2020) also propose the Bartlett-kernel estimate with
+#'   bandwidth `floor(T^(1/2))` and fixed-b critical values given as a
+#'   polynomial for two quantiles, which give no p-values; it is not
+#'   implemented. They do not use the equal-weighted cosine estimate.
 #' * `"acf"`: the test of `forecast::dm.test(e1, e2, h = h, power = 1)` with
 #'   `e1` and `e2` the losses per origin: the variance is the sum of the
 #'   autocovariances up to lag `h - 1`, the statistic has the correction of
@@ -74,8 +90,15 @@
 #' origins and in 4.8% to 7.0% with 15 or 16 origins (`h` from 1 to 5). Its
 #' size is nearly correct, but with few origins it has few degrees of
 #' freedom and low power: with 7 origins (`nu = 1`) it finds only large
-#' and consistent differences. More origins, or origins spaced `h` years
-#' apart, which avoid overlapping test years, give more informative tests.
+#' and consistent differences. The `"daniell"` test of Coroneo and Iacone
+#' (2020) has more degrees of freedom (2 with 7 origins, 4 with 8 to 26)
+#' and rejected in 4.9%, 6.0%, 7.6%, 10.5% and 15.3% of the samples with 7
+#' origins at `h` from 1 to 5, and in 4.8% to 13.8% with 15 or 16 origins:
+#' its size is close to 5% for `h` up to 2, where test years overlap little,
+#' and too large beyond. Coroneo and Iacone (2020) studied one-step
+#' forecasts with 40 or 120 origins. More origins, or origins spaced `h`
+#' years apart, which avoid overlapping test years, give more informative
+#' tests.
 #' The p-values are not adjusted for the number of tests (models, targets,
 #' horizons); see [stats::p.adjust()].
 #'
@@ -97,14 +120,16 @@
 #' @param alternative `"two.sided"`, `"less"` (the model has a lower expected
 #'   score than `ref`, that is, it is more accurate) or `"greater"`.
 #' @param varestimator `"ewc"` (equal-weighted cosine estimate with
-#'   fixed-smoothing t critical values, default), `"acf"` (sum of the
-#'   autocovariances, as `forecast::dm.test()`) or `"bartlett"` (Bartlett
-#'   weights, as `forecast::dm.test()`). See Variance estimators.
+#'   fixed-smoothing t critical values, default), `"daniell"` (Daniell-kernel
+#'   periodogram estimate with fixed-smoothing t critical values, Coroneo and
+#'   Iacone 2020), `"acf"` (sum of the autocovariances, as
+#'   `forecast::dm.test()`) or `"bartlett"` (Bartlett weights, as
+#'   `forecast::dm.test()`). See Variance estimators.
 #' @return A `data.table` with one row per model (other than `ref`), value
 #'   of `by`, target, metric and horizon: `model`, `ref`, the `by` columns,
 #'   `target`, `metric`, `horizon` (a factor: the horizons, then `"all"`),
 #'   `n_origins` (number of losses tested), `lag` (largest autocovariance
-#'   lag used; `NA` for `"ewc"`), `df` (degrees of freedom of the t
+#'   lag used; `NA` for `"ewc"` and `"daniell"`), `df` (degrees of freedom of the t
 #'   distribution), `score` and `score_ref` (mean loss over the origins),
 #'   `mean_diff` (`score - score_ref`; negative when the model is more
 #'   accurate), `statistic` and `p_value`.
@@ -132,7 +157,8 @@
 #' mt_dm_test(bt, varestimator = "acf")
 #' @export
 mt_dm_test <- function(backtest, ref = NULL, metrics = "crps", targets = NULL, by = NULL,
-                       alternative = c("two.sided", "less", "greater"), varestimator = c("ewc", "acf", "bartlett")) {
+                       alternative = c("two.sided", "less", "greater"),
+                       varestimator = c("ewc", "daniell", "acf", "bartlett")) {
   alternative <- match.arg(alternative)
   varestimator <- match.arg(varestimator)
   if (!is.data.frame(backtest)) mt_abort("`backtest` must be a backtest table.", class = "argument")
@@ -275,7 +301,10 @@ dm_series <- function(e1, e2, origin, h, alternative, varestimator) {
 # Diebold-Mariano test for the loss differences `d` (in the order of the
 # origins). "ewc": equal-weighted cosine long-run variance with nu =
 # max(1, floor(0.4 T^(2/3))) cosines and the t distribution with nu degrees
-# of freedom (Lazarus et al. 2018). "acf", "bartlett": `h` steps (lags 0 to
+# of freedom (Lazarus et al. 2018). "daniell": Daniell-kernel periodogram
+# estimate with m = max(1, floor(T^(1/3))) Fourier frequencies and the t
+# distribution with 2 m degrees of freedom (Coroneo and Iacone 2020, Eqs.
+# 8-9). "acf", "bartlett": `h` steps (lags 0 to
 # h - 1) and the correction of Harvey, Leybourne and Newbold (1997), as
 # forecast::dm.test(), but NA instead of lag 0 when the variance estimate is
 # not positive. `fallback` records why there is no test: "origins" (too few
@@ -293,6 +322,13 @@ dm_stat <- function(d, h, alternative = "two.sided", varestimator = "ewc") {
     if (!(omega > tiny)) return(na)
     stat <- sqrt(n) * mean(d) / sqrt(omega)
     return(list(lag = NA_integer_, df = nu, statistic = stat, p_value = dm_p_value(stat, nu, alternative),
+                fallback = ""))
+  }
+  if (varestimator == "daniell") {
+    dn <- dm_daniell(d)
+    if (!(dn$omega > tiny)) return(na)
+    stat <- sqrt(n) * mean(d) / sqrt(dn$omega)
+    return(list(lag = NA_integer_, df = dn$df, statistic = stat, p_value = dm_p_value(stat, dn$df, alternative),
                 fallback = ""))
   }
   # too few origins for the autocovariances of overlapping test years: no
@@ -327,6 +363,25 @@ dm_ewc_variance <- function(d, nu) {
   dc <- d - mean(d)
   lam <- vapply(seq_len(nu), function(j) sqrt(2 / n) * sum(dc * cos(pi * j * (seq_len(n) - 0.5) / n)), 0)
   mean(lam^2)
+}
+
+# Weighted periodogram estimate of the long-run variance of `d` with the
+# Daniell kernel (Coroneo and Iacone 2020, Eq. 8): 2 pi times the mean of
+# the periodogram I(lambda_j) = |sum_t d_t exp(-i lambda_j t)|^2 / (2 pi T)
+# at the Fourier frequencies lambda_j = 2 pi j / T, j = 1, ..., m, with m =
+# floor(T^(1/3)) (their Section 5), at least 1. Each frequency below pi
+# carries 2 degrees of freedom (Eq. 9: t with 2 m); the frequency pi (T = 2)
+# carries one
+dm_daniell <- function(d) {
+  n <- length(d)
+  m <- max(1, floor(n^(1 / 3) + 1e-9))
+  tt <- seq_len(n)
+  dc <- d - mean(d)
+  pg <- vapply(seq_len(m), function(j) {
+    lam <- 2 * pi * j / n
+    (sum(dc * cos(lam * tt))^2 + sum(dc * sin(lam * tt))^2) / n
+  }, 0)
+  list(omega = mean(pg), df = 2 * m - (2 * m >= n), m = m)
 }
 
 # Variance of the mean loss difference from the autocovariances up to lag
