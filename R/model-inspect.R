@@ -21,7 +21,13 @@
 #' * [apc_bayes()]: posterior medians and 90% intervals of the age, period
 #'   and cohort effects (logit scale, bamp's identification), and the
 #'   Gelman-Rubin statistics (`rhat`, values below 1.1 indicate convergence)
-#'   of the identified quantities.
+#'   of the identified quantities;
+#' * [p_splines()], [cp_splines()]: the smoothing parameters over age
+#'   (`lambda_age`) and years (`lambda_year`), the effective dimension
+#'   (`ed`), the criterion (`bic` or `aic`) and the dispersion (deviance
+#'   divided by the number of cells minus the effective dimension); for
+#'   [cp_splines()] also the bounds of the rates of ageing and of change per
+#'   age (`ageing_lower`, `ageing_upper`, `change_lower`, `change_upper`).
 #'
 #' Fits of wrapped packages (StMoMo, demography) keep the original fitted
 #' object in `fit$fits[[i]]`, where the methods of those packages apply.
@@ -113,6 +119,20 @@ base_parameters <- function(fit, sp) {
     })))
   }
   if (inherits(sp, c("mt_spec_coda", "mt_spec_coda_causes"))) return(coda_parameters(fit, sp))
+  if (inherits(sp, c("mt_spec_p_splines", "mt_spec_cp_splines"))) {
+    return(rbindlist(lapply(seq_along(fit$fits), function(s) {
+      f <- fit$fits[[s]]
+      if (is.null(f)) return(NULL)
+      b <- f$bounds
+      rbind(row(lab[s], "lambda_age", "", f$lambda[1]), row(lab[s], "lambda_year", "", f$lambda[2]),
+            row(lab[s], "ed", "", f$ed), row(lab[s], f$criterion, "", f$ic),
+            row(lab[s], "dispersion", "", f$dispersion),
+            if (!is.null(b)) {
+              rbindlist(lapply(c("ageing_lower", "ageing_upper", "change_lower", "change_upper"),
+                               function(nm) row(lab[s], nm, ages, b[[nm]])))
+            })
+    })))
+  }
   if (inherits(sp, "mt_spec_rwd")) {
     return(rbindlist(lapply(seq_along(fit$fits), function(s) {
       f <- fit$fits[[s]]
@@ -329,6 +349,24 @@ model_assumptions <- function(spec) {
                            "that each path keeps the life expectancy at birth of the unrotated model; rates change",
                            "from the jump-off year."), p$rotation[["e0_start"]], p$rotation[["e0_end"]])
            }),
+         mt_spec_p_splines = paste(
+           "Two-dimensional P-splines (Currie, Durban and Eilers 2004; MortalitySmooth): log m(x,t) is a B-spline",
+           "surface over age and year with difference penalties on its coefficients, fitted by penalised Poisson",
+           sprintf("likelihood with smoothing parameters chosen by %s.", toupper(p$criterion)),
+           "The forecast extends the basis over the forecast years with weight 0, so the penalty (order",
+           sprintf("%d over years) extrapolates the trend of each age.", p$pord[2]),
+           "Draws come from the normal approximation of the coefficients (covariance of the penalised",
+           if (isTRUE(p$overdispersion)) "likelihood, scaled by the overdispersion);" else "likelihood);",
+           "their variance grows with the horizon. Predictive draws add Poisson variation of the deaths."),
+         mt_spec_cp_splines = paste(
+           "CP-splines (Camarda 2019): two-dimensional P-splines, with coefficients of their own for age 0 where",
+           "the grid has that age group; asymmetric penalties keep the forecast rate of ageing of each age within",
+           sprintf("the central %g%% range of the fitting years and its rate of change over time within the",
+                   100 * p$level_ageing),
+           sprintf("central %g%% range. Draws are the forecasts of %d residual-bootstrap samples:",
+                   100 * p$level_change, p$n_boot),
+           "uncertainty of the fit, without innovations, so intervals are narrow. Predictive draws add Poisson",
+           "variation of the deaths."),
          mt_spec_coda = coda_assumptions(spec),
          mt_spec_coda_causes = coda_assumptions(spec),
          mt_spec_rwd = if (isTRUE(p$observation_noise)) {
