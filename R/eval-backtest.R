@@ -400,7 +400,8 @@ test_exposures <- function(test, fit) {
   t2 <- test
   t2$obs$deaths <- NULL
   g <- mt_grid(t2)
-  if (needs_ungroup(t2$obs$exposure, g)) t2 <- mt_ungroup(t2)
+  # the exposures convert forecast rates to deaths: keep their group totals
+  if (needs_ungroup(t2$obs$exposure, g)) t2 <- mt_ungroup(t2, preserve_totals = TRUE)
   E <- mt_array(t2, "exposure")
   if (anyNA(E)) mt_abort("Exposures of the test periods are incomplete.", class = "backtest")
   E

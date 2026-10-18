@@ -289,8 +289,11 @@ print.summary.mt_fit <- function(x, ...) {
     cal <- x$calibration
     grp <- if (!is.null(cal$band) && any(cal$band != "all ages")) paste0(cal$group, ", ages ", cal$band) else cal$group
     ci <- if (!is.null(cal$scale_h1_lo)) sprintf(" (%.2f-%.2f)", cal$scale_h1_lo, cal$scale_h1_hi) else ""
-    cat(sprintf(paste("  calibration (%s): spread factor %.2f%s at horizon 1, x h^%.2f; drift %+.4f; inner CRPS",
-                      "%.4f -> %.4f, 95%% coverage %.2f -> %.2f\n"), grp, cal$scale_h1, ci, cal$slope, cal$drift,
+    # slope and drift are exactly 0 when they were not estimated
+    hz <- ifelse(cal$slope != 0, sprintf(" at horizon 1, x h^%.2f", cal$slope), " at all horizons")
+    dr <- ifelse(cal$drift != 0, sprintf("; drift %+.4f", cal$drift), "")
+    cat(sprintf(paste("  calibration (%s): spread factor %.2f%s%s%s; inner CRPS",
+                      "%.4f -> %.4f, 95%% coverage %.2f -> %.2f\n"), grp, cal$scale_h1, ci, hz, dr,
                 cal$crps_before, cal$crps_after, cal$cov95_before, cal$cov95_after), sep = "")
   }
   bad <- x$diagnostics[status != "ok" | nzchar(message)]
@@ -384,8 +387,9 @@ model_assumptions <- function(spec) {
                   asr = "the log ASR"), p$n_origins, p$years)),
          mt_spec_anchored = paste(model_assumptions(p$base), sprintf(paste(
            "Anchored: forecasts start at the observed level of the last %d training year(s), with offsets per",
-           "age and stratum%s fading out over %s years."), p$years,
-           if (isTRUE(p$shrink)) " (shrunk where deaths are few)" else "", format(p$decay))),
+           "age and stratum%s %s."), p$years,
+           if (isTRUE(p$shrink)) " (shrunk where deaths are few)" else "",
+           if (is.finite(p$decay)) sprintf("fading out over %s years", format(p$decay)) else "kept at all horizons")),
          paste(spec$label, "- see the help page of its constructor for the model and its uncertainty."))
 }
 

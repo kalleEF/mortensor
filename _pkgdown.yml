@@ -163,3 +163,4 @@ articles:
   - title: Help
     contents:
       - faq
+      - articles/methods-sources

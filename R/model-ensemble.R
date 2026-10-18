@@ -72,6 +72,9 @@
 #' Kessy SR, Sherris M, Villegas AM, Ziveyi J (2022). Mortality forecasting
 #' using stacked regression ensembles. *Scandinavian Actuarial Journal*
 #' 2022(7): 591-626.
+#'
+#' Harvey AC (1989). *Forecasting, Structural Time Series Models and the
+#' Kalman Filter*. Cambridge University Press.
 #' @examples
 #' x <- mt_example(deaths = "single")
 #' ens <- ensemble(lc = lee_carter(), rw = rwd())

@@ -47,22 +47,17 @@ checks$coverage_tucker3 <- list(
 
 checks$coverage_rwd <- list(
   suite = "quick",
-  description = paste("As coverage_lee_carter for rwd(). The random walk treats the iid noise of the",
-                      "generator as persistent, so it over-covers; the threshold only guards against",
+  description = paste("As coverage_lee_carter for rwd(). The random walk treats the Poisson noise of the",
+                      "observed rates as persistent, so it over-covers; the threshold only guards against",
                       "under-coverage."),
   run = function() coverage_check(rwd(), 6))
 
-checks$coverage_rwd_noise <- list(
+checks$coverage_local_level <- list(
   suite = "quick",
-  description = paste("As coverage_lee_carter for rwd(observation_noise = TRUE), the random walk plus noise.",
-                      "It separates the iid noise of the generator from the trend, so its intervals should be",
-                      "close to nominal at every level (see dev/calibration.md)."),
-  run = function() coverage_check(rwd(observation_noise = TRUE), 6))
-
-checks$coverage_tucker3_coda <- list(
-  suite = "full",
-  description = "As coverage_lee_carter for tucker3(transform = \"coda\").",
-  run = function() coverage_check(tucker3(transform = "coda"), 10))
+  description = paste("As coverage_lee_carter for arima_series(order = c(0, 1, 1), drift = TRUE), the reduced",
+                      "form of a random walk with drift observed with noise (Harvey 1989). It separates the",
+                      "Poisson noise of the observed rates from the trend."),
+  run = function() coverage_check(arima_series(order = c(0, 1, 1), drift = TRUE), 6))
 
 checks$coverage_ensemble <- list(
   suite = "full",
@@ -133,8 +128,9 @@ checks$smoothing_jumpoff <- list(
   description = paste("Smoothing over time and jump-off control. England & Wales men (as backtest_ew, origins",
                       "1996-2001, h = 10): Lee-Carter fitted to rates smoothed by the age-period GAM, with and",
                       "without recalibrated() (smoothing alone narrows the intervals, because the period index is",
-                      "smooth); Lee-Carter anchored to the observed deaths of the last 3 years. ONS quintiles",
-                      "(origins 2008-2014, h = 5): Li-Lee with and without anchoring."),
+                      "smooth); Lee-Carter anchored to the observed rates of the last year (Lee and Miller 2001,",
+                      "the default of anchored()). ONS quintiles (origins 2008-2014, h = 5): Li-Lee with and",
+                      "without anchoring."),
   run = function() {
     ew <- as_mt_data(mortensor:::pkg_data("EWMaleData", "StMoMo"))
     ew <- mt_set_grid(ew, age = single_ages(30, 100, open = FALSE))
@@ -144,11 +140,10 @@ checks$smoothing_jumpoff <- list(
     lc <- mt_backtest(lee_carter(), ew, origins = o, h = 10, n_draws = 200)
     sm <- mt_backtest(lee_carter(), ew, origins = o, h = 10, n_draws = 200, prep = gam2d)
     smc <- mt_backtest(recalibrated(lee_carter()), ew, origins = o, h = 10, n_draws = 200, prep = gam2d)
-    an <- mt_backtest(anchored(lee_carter(), years = 3, decay = 10), ew, origins = o, h = 10, n_draws = 200)
+    an <- mt_backtest(anchored(lee_carter()), ew, origins = o, h = 10, n_draws = 200)
     x <- ons_quintiles()
     ll <- mt_backtest(li_lee(common_by = "sex"), x, origins = 2008:2014, h = 5, n_draws = 200)
-    lla <- mt_backtest(anchored(li_lee(common_by = "sex"), years = 3, decay = 10), x, origins = 2008:2014, h = 5,
-                       n_draws = 200)
+    lla <- mt_backtest(anchored(li_lee(common_by = "sex")), x, origins = 2008:2014, h = 5, n_draws = 200)
     h12 <- function(b) mean(b$crps[b$horizon <= 2])
     data.frame(metric = c("ew_lc_crps", "ew_lc_cov95", "ew_smooth_cov95", "ew_smooth_cal_crps", "ew_smooth_cal_cov95",
                           "ew_lc_crps_h12", "ew_anchored_crps_h12", "ons_lilee_crps", "ons_lilee_anchored_crps",
@@ -232,15 +227,16 @@ checks$stanmomo_ew <- list(
                          crps("stan_rh"), s[model == "stan_rh", cov95], rhat[["lc"]], rhat[["rh"]]))
   })
 
-checks$cause_shares_coherence <- list(
+checks$causes_reconciled <- list(
   suite = "quick",
-  description = paste("cause_shares(lee_carter()) with step_smooth() on mt_example_causes(): largest relative gap",
-                      "between all-cause",
-                      "draws and the sum of cause draws, and CRPS by cause in a backtest from 2012 (h = 5)."),
+  description = paste("Lee-Carter per cause and for all causes, reconciled with WLS (reconciled(), hierarchy over",
+                      "cause), with step_smooth() on mt_example_causes(): largest relative gap between all-cause",
+                      "draws and the sum of cause draws, and CRPS in a backtest from 2012 (h = 5)."),
   run = function() {
     x <- mt_example_causes(years = 1995:2017)
     prep <- mt_prep(step_smooth())
-    fit <- mt_fit(cause_shares(total = lee_carter()), mt_subset(x, periods = c(NA, 2012)), prep = prep)
+    spec <- reconciled(lee_carter(), mt_hierarchy(cause = "all"))
+    fit <- mt_fit(spec, mt_subset(x, periods = c(NA, 2012)), prep = prep)
     fc <- mt_forecast(fit, h = 5, n_draws = 100, seed = 1)
     st <- fc$strata
     gap <- max(vapply(c("female", "male"), function(sx) {
@@ -248,7 +244,7 @@ checks$cause_shares_coherence <- list(
       j <- st$stratum[st$sex == sx & st$cause != "all"]
       max(abs(apply(fc$rates[, , j, , drop = FALSE], c(1, 2, 4), sum) / fc$rates[, , i, ] - 1))
     }, 0))
-    bt <- mt_backtest(cause_shares(total = lee_carter()), x, origins = 2012, h = 5, n_draws = 100, prep = prep)
+    bt <- mt_backtest(spec, x, origins = 2012, h = 5, n_draws = 100, prep = prep)
     data.frame(metric = c("max_gap", "crps", "cov95"), value = c(gap, mean(bt$crps), mean(bt$cov95)))
   })
 
@@ -360,7 +356,7 @@ checks$de_regions <- list(
   suite = "quick",
   description = paste("German Laender 1998-2019 (de_deaths, de_population), all causes: suppressed cells filled to",
                       "the national totals; Laender by sex with East, West and Germany; backtest from 2008, 2011,",
-                      "2014 (h = 5) of the ensemble of li_lee(common_by = 'sex') and rwd(observation_noise = TRUE),",
+                      "2014 (h = 5) of the ensemble of li_lee(common_by = 'sex') and ARIMA(0,1,1) with drift,",
                       "bottom-up; CRPS and 95% coverage of bottom and aggregate strata; share of 2035 draws with",
                       "rates above 1."),
   run = function() {
@@ -378,7 +374,7 @@ checks$de_regions <- list(
     h <- mt_hierarchy(region = list(total = "Deutschland", groups = list(West = setdiff(laender, east), East = east)),
                       sex = "both")
     xh <- mt_aggregate_strata(xa, h)
-    sp <- reconciled(ensemble(ll = li_lee(common_by = "sex"), rw = rwd(observation_noise = TRUE)), h,
+    sp <- reconciled(ensemble(ll = li_lee(common_by = "sex"), ll0 = arima_series(order = c(0, 1, 1), drift = TRUE)), h,
                      method = "bottom_up")
     bt <- mt_backtest(sp, xh, origins = c(2008, 2011, 2014), h = 5, n_draws = 200)
     bt <- merge(bt, mt_strata(xh, h)[, list(label, level)], by = "label")
@@ -462,7 +458,7 @@ checks$coda_causes_coherence <- list(
   description = paste("coda_causes() (multiple-decrement CoDa, experimental) on mt_example_causes(), 1995-2017:",
                       "largest relative gap between all-cause draws and the sum of the cause draws (expected and",
                       "predictive draws, origin 2012, h = 5), and a backtest (origins 2008-2012, h = 5) against",
-                      "cause_shares(lee_carter()); CRPS and coverage of log rates."),
+                      "Lee-Carter per cause reconciled with WLS; CRPS and coverage of log rates."),
   run = function() {
     x <- mt_example_causes(years = 1995:2017)
     st <- mt_strata(x)
@@ -480,7 +476,7 @@ checks$coda_causes_coherence <- list(
     g2 <- gap(mt_forecast(fit, h = 5, n_draws = 100, seed = 1, predictive = TRUE))
     o <- 2008:2012
     cc <- mt_backtest(coda_causes(), x, origins = o, h = 5, n_draws = 100)
-    cs <- mt_backtest(cause_shares(total = lee_carter()), x, origins = o, h = 5, n_draws = 100)
+    cs <- mt_backtest(reconciled(lee_carter(), mt_hierarchy(cause = "all")), x, origins = o, h = 5, n_draws = 100)
     data.frame(metric = c("max_gap", "max_gap_predictive", "cc_crps", "cc_cov95", "cs_crps", "crps_ratio_cc_cs"),
                value = c(g1, g2, mean(cc$crps), mean(cc$cov95), mean(cs$crps), mean(cc$crps) / mean(cs$crps)))
   })
@@ -548,15 +544,17 @@ checks$dm_ew <- list(
   suite = "quick",
   description = paste("Diebold-Mariano test (mt_dm_test()) on the backtest of backtest_ew (England & Wales men, ages",
                       "30-100, origins 1996-2001, h = 10): Lee-Carter against rwd(), CRPS of log rates. Agreement",
-                      "with forecast::dm.test() on the losses per origin (largest absolute difference of the",
-                      "statistic and the p-value over the tested horizons, with the lag used; horizons beyond 5",
-                      "and all horizons together are not tested with 6 consecutive origins); p-values at",
-                      "horizons 1 and 5, and over all horizons for 7 origins 5 years apart (1971-2001), as info."),
+                      "of varestimator = 'acf' with forecast::dm.test() on the losses per origin (largest absolute",
+                      "difference of the statistic and the p-value over the tested horizons, with the lag used;",
+                      "horizons beyond 5 and all horizons together are not tested with 6 consecutive origins);",
+                      "p-values of the default fixed-smoothing (EWC) test at horizons 1 and 5, and over all",
+                      "horizons for 7 origins 5 years apart (1971-2001), as info."),
   run = function() {
     ew <- ew_single_ages(30, 100)
     models <- list(rwd = rwd(), lee_carter = lee_carter())
     bt <- suppressWarnings(mt_compare(models, ew, origins = 1996:2001, h = 10, n_draws = 200))
-    r <- suppressWarnings(mt_dm_test(bt, ref = "rwd"))
+    r <- suppressWarnings(mt_dm_test(bt, ref = "rwd", varestimator = "acf"))
+    rw <- suppressWarnings(mt_dm_test(bt, ref = "rwd"))
     b <- as.data.frame(bt)
     loss <- function(mod, h = NULL) {
       s <- b[b$model == mod, ]
@@ -576,7 +574,30 @@ checks$dm_ew <- list(
     data.frame(metric = c("max_abs_diff_stat", "max_abs_diff_p", "mean_diff_all", "p_h1", "p_h5", "p_all_spaced"),
                value = c(max(abs(r$statistic - ref[, 1]), na.rm = TRUE),
                          max(abs(r$p_value - ref[, 2]), na.rm = TRUE), r$mean_diff[hs == "all"],
-                         r$p_value[hs == "1"], r$p_value[hs == "5"], r5$p_value[r5$horizon == "all"]))
+                         rw$p_value[rw$horizon == "1"], rw$p_value[rw$horizon == "5"],
+                         r5$p_value[r5$horizon == "all"]))
+  })
+
+checks$dm_size <- list(
+  suite = "quick",
+  description = paste("Size of mt_dm_test() at nominal 5% under the null: loss differences of forecasts h years",
+                      "ahead from n consecutive origins simulated as a moving average of order h - 1 with mean",
+                      "zero (2000 replicates for each n in 7, 16 and h in 1, 3, 5). Rejection rates of the default",
+                      "fixed-smoothing (EWC) test, and of the HLN-corrected test (varestimator = 'acf', info)."),
+  run = function() {
+    set.seed(5)
+    grid <- expand.grid(n = c(7, 16), h = c(1, 3, 5))
+    size <- function(n, h, ve) {
+      mean(vapply(seq_len(2000), function(i) {
+        e <- stats::rnorm(n + h - 1)
+        d <- stats::filter(e, rep(1, h), sides = 1)[h:(n + h - 1)]
+        p <- mortensor:::dm_stat(d, h, varestimator = ve)$p_value
+        !is.na(p) && p < 0.05
+      }, TRUE))
+    }
+    ewc <- mapply(size, grid$n, grid$h, MoreArgs = list(ve = "ewc"))
+    acf <- mapply(size, grid$n, grid$h, MoreArgs = list(ve = "acf"))
+    data.frame(metric = c("ewc_size_max", "ewc_size_min", "acf_size_max"), value = c(max(ewc), min(ewc), max(acf)))
   })
 
 checks$stmomo_cbd_ew <- list(

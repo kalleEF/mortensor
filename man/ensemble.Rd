@@ -100,4 +100,7 @@ Breiman L (1996). Stacked regressions. \emph{Machine Learning} 24(1): 49-64.
 Kessy SR, Sherris M, Villegas AM, Ziveyi J (2022). Mortality forecasting
 using stacked regression ensembles. \emph{Scandinavian Actuarial Journal}
 2022(7): 591-626.
+
+Harvey AC (1989). \emph{Forecasting, Structural Time Series Models and the
+Kalman Filter}. Cambridge University Press.
 }

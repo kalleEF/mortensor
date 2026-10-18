@@ -389,13 +389,17 @@ quantity_groups <- function(o, Ecell, quantity) {
     key <- paste(lo, hi, collapse = ",")
     if (is.null(out[[key]])) {
       ax <- mt_axis(lo, hi, kind = "age")
-      out[[key]] <- list(K = NULL, qo = numeric(), ax = ax, quantity = quantity,
-                         w = if (quantity == "asr") standard_weights(ax, standard_population("esp2013")))
+      out[[key]] <- list(K = NULL, E = NULL, qo = numeric(), ax = ax, quantity = quantity,
+                         standard = if (quantity == "asr") standard_population("esp2013"))
     }
     r_obs <- o$value[k] / Ecell[k]
     g <- out[[key]]
-    qo <- if (quantity == "life_expectancy") life_expectancy(r_obs, g$ax) else log(sum(r_obs * g$w) / sum(g$w))
+    # ASR by direct standardisation on the standard's age groups with the
+    # exposures of the test year, as in mt_backtest()
+    qo <- if (quantity == "life_expectancy") life_expectancy(r_obs, g$ax) else
+      log(asr_columns(matrix(r_obs), g$ax, g$standard, Ecell[k], per = 1))
     out[[key]]$K <- cbind(g$K, k)
+    out[[key]]$E <- cbind(g$E, Ecell[k])
     out[[key]]$qo <- c(g$qo, qo)
   }
   unname(out)
@@ -457,7 +461,8 @@ calibration_scored <- function(X, P) {
   if (is.null(P$qg)) return(list(S = X, obs = P$y))
   S <- do.call(rbind, lapply(P$qg, function(g) {
     M <- matrix(exp(X[as.vector(g$K), , drop = FALSE]), nrow = nrow(g$K))
-    q <- if (g$quantity == "life_expectancy") lt_columns(M, g$ax)$ex[1, ] else log(colSums(M * g$w) / sum(g$w))
+    q <- if (g$quantity == "life_expectancy") lt_columns(M, g$ax)$ex[1, ] else
+      log(asr_columns(M, g$ax, g$standard, g$E, per = 1))
     matrix(q, ncol(g$K))
   }))
   list(S = S, obs = unlist(lapply(P$qg, `[[`, "qo")))
