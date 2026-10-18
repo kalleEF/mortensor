@@ -1,27 +1,43 @@
 #' Excess mortality
 #'
 #' Excess deaths are the observed deaths minus the deaths expected without
-#' the shock: the predictive deaths of a baseline model fitted to the years
-#' before it, given the observed exposures of the later years. The WHO
-#' estimates of the excess mortality of the COVID-19 pandemic follow this
-#' approach with their own baseline model (Msemburi et al. 2023); Acosta
-#' and Irizarry (2022) describe a model of the excess itself. Here the expected deaths are draws of
-#' [mt_forecast()] with `predictive = TRUE`: the uncertainty of the
-#' baseline trend plus the Poisson and extra-Poisson variation of the death
-#' counts. The observed deaths minus each draw give draws of the excess.
-#' When the baseline model holds, the interval of the excess covers the true
-#' excess with its nominal probability, and an interval that contains zero
-#' means deaths within the range of normal variation.
+#' the shock, from a baseline model fitted to the years before it, given
+#' the observed exposures of the later years. The WHO estimates of the
+#' excess mortality of the COVID-19 pandemic also compare observed deaths
+#' with expected deaths from a baseline model (Msemburi et al. 2023);
+#' Acosta and Irizarry (2022) describe a model of the excess itself.
+#'
+#' The estimand: here the expected deaths are draws of [mt_forecast()] with
+#' `predictive = TRUE`, that is draws from the predictive distribution of
+#' the deaths under the baseline model (the uncertainty of the baseline
+#' trend plus the variation of the death counts given the rates). They
+#' describe the counterfactual deaths: the deaths that would have been
+#' observed without the shock. The observed deaths minus each draw give
+#' draws of the excess, so its interval is a prediction interval for the
+#' realised excess, the observed minus the realised counterfactual deaths,
+#' not a confidence interval for an expected excess. It has its nominal
+#' coverage when the baseline model is correct; an interval that contains
+#' zero means deaths within the range of the counterfactual deaths.
 #'
 #' The result gives, for each row, the observed deaths and the mean and
 #' quantiles of
 #'
-#' * `expected`: the expected deaths;
-#' * `excess`: observed minus expected deaths;
-#' * `p_score`: the excess in percent of the expected deaths,
-#'   `100 * excess / expected`, computed draw by draw;
+#' * `expected`: the expected (counterfactual) deaths;
+#' * `excess`: observed minus expected deaths, draw by draw;
+#' * `p_score`: the excess in percent of the expected deaths, `100 *
+#'   (observed / expected - 1)`. Its quantiles are those of the expected
+#'   deaths transformed (the P-score at level `p` is `100 * (observed /
+#'   q - 1)` with `q` the quantile of the expected deaths at level
+#'   `1 - p`, since the P-score decreases as the expected deaths increase),
+#'   and `p_score_mean` is the P-score of the mean expected deaths, so a
+#'   draw without expected deaths (small cells) does not make the row
+#'   missing;
 #'
-#' and `p_positive`, the share of draws with a positive excess.
+#' and `p_positive`, the share of draws with a positive excess: the
+#' predictive probability that the observed deaths (or life expectancy)
+#' exceed the counterfactual ones under the baseline model. `1 -
+#' p_positive` is a one-sided predictive p-value for the hypothesis of no
+#' excess.
 #'
 #' Sums over ages (`ages`), strata (`by`) and years (`cumulative`) are formed
 #' draw by draw before the quantiles are taken. With `quantity =
@@ -93,8 +109,9 @@
 #' @return `mt_excess()`: a `data.table` with the `by` variables, `age`,
 #'   `age_lo` and `age_hi` (deaths), `period`, `observed`, the mean and
 #'   quantiles of `expected` and `excess` (`expected_mean`,
-#'   `expected_q0.025`, ...), for deaths those of `p_score`, then
-#'   `p_positive`, `cells` and `skipped`; for life expectancy also `at`.
+#'   `expected_q0.025`, ...), for deaths those of `p_score` (from the mean
+#'   and quantiles of the expected deaths), then `p_positive`, `cells` and
+#'   `skipped`; for life expectancy also `at`.
 #'   `mt_plot_excess()`: a ggplot object.
 #' @references
 #' Acosta RJ, Irizarry RA (2022). A flexible statistical framework for
@@ -298,6 +315,26 @@ path_summary <- function(X, prefix, probs) {
   out
 }
 
+# P-scores 100 * (observed / expected - 1) from the mean and quantiles of
+# the expected deaths D (rows x draws): the P-score decreases in the
+# expected deaths, so its quantile at level p is that of the expected deaths
+# at level 1 - p; columns p_score_mean and p_score_q<p>
+p_score_summary <- function(observed, D, probs) {
+  pscore <- function(e) {
+    v <- 100 * (observed / e - 1)
+    v[is.nan(v)] <- NA_real_
+    v
+  }
+  ok <- rowSums(!is.finite(D)) == 0
+  Q <- matrix(NA_real_, nrow(D), length(probs))
+  if (any(ok)) Q[ok, ] <- row_quantiles(D[ok, , drop = FALSE], 1 - probs)
+  mn <- rep(NA_real_, nrow(D))
+  mn[ok] <- rowMeans(D[ok, , drop = FALSE])
+  out <- data.table(p_score_mean = pscore(mn))
+  for (k in seq_along(probs)) set(out, j = paste0("p_score_", qnames(probs[k])), value = pscore(Q[, k]))
+  out
+}
+
 excess_deaths <- function(cell_tab, D, left_tab, by, ages, cumulative, probs) {
   all_lo <- cell_tab$age_lo
   all_hi <- cell_tab$age_hi
@@ -339,7 +376,7 @@ excess_deaths <- function(cell_tab, D, left_tab, by, ages, cumulative, probs) {
   out[, age := interval_label(age_lo, age_hi)]
   setcolorder(out, c(by, "age", "age_lo", "age_hi"))
   out <- cbind(out, path_summary(Dg, "expected", probs), path_summary(X, "excess", probs),
-               path_summary(100 * X / Dg, "p_score", probs))
+               p_score_summary(tab$observed, Dg, probs))
   out[, `:=`(p_positive = rowMeans(X > 0), cells = tab$cells, skipped = tab$skipped)]
   out[]
 }

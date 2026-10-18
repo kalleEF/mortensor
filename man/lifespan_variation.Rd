@@ -63,9 +63,14 @@ interpolates life expectancy linearly to the average age at death in
 the interval, \code{e_x + a_x / n_x * (e_(x+n) - e_x)} (the open interval
 uses its \code{e_x});
 \item \code{"var"}, \code{"sd"}: variance and standard deviation of the age at death,
-\code{sum(p_x * (y_x - at - e)^2)};
-\item \code{"cv"}: coefficient of variation, the standard deviation divided by the
-mean age at death \code{at + e} (or by \code{e} with \code{distribution = "remaining_life"});
+\code{sum(p_x * (y_x - at - e)^2)}, for the deaths from the conditioning age
+\code{at} on, measured from \code{at}: the distance of each age at death \code{y_x}
+from the mean age at death \code{at + e}. This differs from \code{ineq_var()} and
+\code{ineq_sd()} of LifeIneq 00.04.09 for abridged tables, where the ages at
+death are measured from the first age of the table;
+\item \code{"cv"}: coefficient of variation, the standard deviation (as for
+\code{"sd"}, measured from \code{at}) divided by the mean age at death \code{at + e}
+(or by \code{e} with \code{distribution = "remaining_life"});
 \item \code{"entropy"}: the life-table entropy of Keyfitz (1977) and Leser (1955),
 \code{H = e-dagger / e}, the elasticity of life expectancy to a
 proportional change of the rates at all ages (Goldman and Lord 1986);
@@ -75,10 +80,12 @@ death \code{at + e} (Hanada 1983; Shkolnikov, Andreev and Begun 2003), or by
 twice the mean remaining life \code{e} with \code{distribution = "remaining_life"};
 \item \code{"iqr"}: interquartile range, the distance between the ages by which a
 quarter and three quarters of the survivors at age \code{at} have died.
-The survival curve is interpolated linearly within closed intervals
-(deaths spread evenly, as with the default \code{a_x = n / 2}) and
-exponentially in the open interval (with the mean \code{a_x} of that
-interval).
+The survival curve is interpolated linearly within closed intervals,
+which spreads the deaths of an interval evenly over it whatever \code{a_x}
+the life table uses (a given \code{ax} changes the survivors at the bounds
+of the intervals, not the interpolation within them, which agrees with
+the life table only for \code{a_x = n / 2}, the default), and exponentially
+in the open interval (with the mean \code{a_x} of that interval).
 }
 
 The absolute measures (\code{edagger}, \code{sd}, \code{iqr}) are in years, \code{var} in

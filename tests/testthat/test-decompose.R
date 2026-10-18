@@ -118,6 +118,29 @@ test_that("subgroups: radix (Arriaga-Kitagawa) and pooled composition", {
                class = "mt_error_argument")
 })
 
+test_that("age-standardised rates are decomposed on the age groups of the standard", {
+  x <- mt_example(deaths = "single", years = 2001:2015)
+  d <- mt_decompose(x, periods = c(2001, 2015), quantity = "asr")
+  s <- summary(d, by = "age")
+  expect_identical(unique(s$age), c(paste0(seq(30, 90, 5), "-", seq(34, 94, 5)), "95+"))
+  tot <- summary(d, by = NULL)
+  a <- asr(mt_observed(x, n_draws = 1))
+  expect_equal(tot[sex == "male"]$from_value, a[sex == "male" & period == 2001]$mean, tolerance = 1e-10)
+  expect_equal(tot[sex == "male"]$to_value, a[sex == "male" & period == 2015]$mean, tolerance = 1e-10)
+  expect_equal(tot$sum_contributions, tot$difference, tolerance = 1e-8)
+  # a group contributes its standard weight times the change of its rate
+  # (deaths over exposures of its single ages)
+  D <- mt_array(x, "deaths")
+  E <- mt_array(x, "exposure")
+  i <- which(mt_grid(x)$age$lower >= 65 & mt_grid(x)$age$lower < 70)
+  r <- function(p) sum(D[i, p, "male"]) / sum(E[i, p, "male"])
+  esp <- standard_population()
+  w <- 5500 / sum(esp$weight[esp$age_lo >= 30]) * 1e5
+  expect_equal(s[sex == "male" & age == "65-69"]$mean, w * (r("2015") - r("2001")), tolerance = 1e-10)
+  st <- mt_decompose(x, periods = c(2001, 2015), quantity = "asr", method = "stepwise")
+  expect_equal(summary(st, by = "age")$mean, s$mean, tolerance = 1e-10)
+})
+
 test_that("other quantities, Kitagawa and custom functions", {
   x <- ons_small()
   dk <- mt_decompose(x, periods = c(2001, 2019), quantity = "crude_rate")

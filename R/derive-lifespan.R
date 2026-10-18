@@ -31,10 +31,14 @@
 #'   the interval, `e_x + a_x / n_x * (e_(x+n) - e_x)` (the open interval
 #'   uses its `e_x`);
 #' * `"var"`, `"sd"`: variance and standard deviation of the age at death,
-#'   `sum(p_x * (y_x - at - e)^2)`;
-#' * `"cv"`: coefficient of variation, the standard deviation divided by the
-#'   mean age at death `at + e` (or by `e` with `distribution =
-#'   "remaining_life"`);
+#'   `sum(p_x * (y_x - at - e)^2)`, for the deaths from the conditioning age
+#'   `at` on, measured from `at`: the distance of each age at death `y_x`
+#'   from the mean age at death `at + e`. This differs from `ineq_var()` and
+#'   `ineq_sd()` of LifeIneq 00.04.09 for abridged tables, where the ages at
+#'   death are measured from the first age of the table;
+#' * `"cv"`: coefficient of variation, the standard deviation (as for
+#'   `"sd"`, measured from `at`) divided by the mean age at death `at + e`
+#'   (or by `e` with `distribution = "remaining_life"`);
 #' * `"entropy"`: the life-table entropy of Keyfitz (1977) and Leser (1955),
 #'   `H = e-dagger / e`, the elasticity of life expectancy to a
 #'   proportional change of the rates at all ages (Goldman and Lord 1986);
@@ -45,10 +49,12 @@
 #'   "remaining_life"`;
 #' * `"iqr"`: interquartile range, the distance between the ages by which a
 #'   quarter and three quarters of the survivors at age `at` have died.
-#'   The survival curve is interpolated linearly within closed intervals
-#'   (deaths spread evenly, as with the default `a_x = n / 2`) and
-#'   exponentially in the open interval (with the mean `a_x` of that
-#'   interval).
+#'   The survival curve is interpolated linearly within closed intervals,
+#'   which spreads the deaths of an interval evenly over it whatever `a_x`
+#'   the life table uses (a given `ax` changes the survivors at the bounds
+#'   of the intervals, not the interpolation within them, which agrees with
+#'   the life table only for `a_x = n / 2`, the default), and exponentially
+#'   in the open interval (with the mean `a_x` of that interval).
 #'
 #' The absolute measures (`edagger`, `sd`, `iqr`) are in years, `var` in
 #' years squared; `cv`, `entropy` and `gini` have no unit.

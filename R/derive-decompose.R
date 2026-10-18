@@ -26,8 +26,10 @@
 #' from an observed year to a forecast year then contains the step from the
 #' observed to the model's fitted rates of that year (the jump-off, see
 #' [mt_jump_off()]) and the sampling noise of the observed year, besides
-#' the forecast change itself. The totals report the jump-off share
-#' (`jump_off`). `observed = "fitted"` uses the fitted rates of observed
+#' the forecast change itself. The totals report the jump-off (`jump_off`):
+#' the amount of the difference, in the unit of the quantity (years for
+#' life expectancy), that is due to the observed instead of the fitted
+#' rates of observed years. `observed = "fitted"` uses the fitted rates of observed
 #' years, so that the decomposition describes the model's change alone;
 #' `observed = "poisson"` uses Poisson draws of the observed deaths, so that
 #' their sampling uncertainty enters the intervals.
@@ -63,6 +65,14 @@
 #'   the average age structure) and the composition effect (age structure
 #'   at the average rates) of Kitagawa (1955). Exact.
 #'
+#' The age-standardised rate (`quantity = "asr"`) is decomposed on the age
+#' groups of the standard population: the rates of each side are first
+#' combined within them with the exposures of that side, as [asr()] does
+#' (deaths over exposures of the grid cells in a standard group), so the
+#' contributions are by standard age group. The rate is then linear in the
+#' group rates, and `"horiuchi"` and `"stepwise"` both give the
+#' renormalised standard weight times the difference of the group rate.
+#'
 #' Draws whose rates give no valid life table (for example rates far above
 #' any observed value, see the warning of [mt_forecast()]) are left out with
 #' a warning, and a warning reports contributions that do not add up to
@@ -72,7 +82,7 @@
 #' With `groups`, the populations being compared consist of the levels of a
 #' stratum variable, and the decomposition separates the effect of their
 #' composition. `composition` must be chosen, because the two options
-#' describe different quantities:
+#' describe different quantities and rest on different grounds:
 #'
 #' * `"radix"` (Riffe, Tursun-zade and Trias Llimós 2024, "Arriaga meets
 #'   Kitagawa"): life expectancy (or the probability of dying) of the
@@ -87,15 +97,20 @@
 #'   mortality: education from age 30 or 35, sex, country of birth. It does
 #'   not hold for areas such as deprivation quintiles or regions, between
 #'   which people move and which are reclassified.
-#' * `"pooled"`: the quantity of the pooled rates, which weight the
-#'   subgroup rates by their population shares at each age (the rates of the
-#'   aggregate strata, as published for whole populations; "current
+#' * `"pooled"`: a parametrisation specific to this package (reference
+#'   unknown) for the quantity of the pooled rates, which weight the
+#'   subgroup rates by their population shares at each age (the rates of
+#'   the aggregate strata, as published for whole populations; "current
 #'   rates"). The rates of every subgroup, age and cause and the shares at
-#'   every age are the parameters of a `"horiuchi"` (default) or
-#'   `"stepwise"` decomposition; the composition effects are reported by
-#'   age, summed over subgroups, whose separate composition terms are not
-#'   identified. With many subgroups, causes and draws this takes minutes;
-#'   lower `n_steps` or the number of draws for a first look.
+#'   every age are taken as the parameters of the quantity and decomposed
+#'   with the generic line integral of Horiuchi, Wilmoth and Pletcher (2008)
+#'   (`"horiuchi"`, default) or with stepwise replacement (`"stepwise"`).
+#'   The composition effects are reported by age, summed over subgroups,
+#'   whose separate composition terms are not identified. Other
+#'   parametrisations of the same pooled quantity would split the
+#'   difference differently between rates and composition. With many
+#'   subgroups, causes and draws this takes minutes; lower `n_steps` or the
+#'   number of draws for a first look.
 #'
 #' Shares come from the exposures: of each observed year, and for forecast
 #' years from `exposure` (default: the last observed year, so composition
@@ -134,8 +149,8 @@
 #' @param groups Stratum variable holding population subgroups.
 #' @param hierarchy An [mt_hierarchy()] that declares total and group levels
 #'   of `cause` and `groups` (default: the hierarchy stored in `x` or `y`).
-#' @param composition `"radix"` or `"pooled"`; required with `groups` (see
-#'   Subgroups).
+#' @param composition `"radix"` (Riffe et al. 2024) or `"pooled"` (specific
+#'   to this package); required with `groups` (see Subgroups).
 #' @param observed How observed years held in forecast draws enter:
 #'   `"data"` (observed rates), `"fitted"` (the model's fitted rates) or
 #'   `"poisson"` (Poisson draws of the observed deaths). See Observed and
@@ -146,7 +161,7 @@
 #'   `prob_dying`); default the first grid age.
 #' @param to Upper age for `"prob_dying"`.
 #' @param standard,per Standard population and multiplier for `"asr"`
-#'   (see [asr()]); `per` also scales `"crude_rate"`.
+#'   (see [asr()] and Methods); `per` also scales `"crude_rate"`.
 #' @param exposure Exposures for forecast years `[age, stratum]` or
 #'   `[age, period, stratum]` (see [mt_deaths()]).
 #' @param n_steps Number of steps of `"horiuchi"`.
@@ -160,7 +175,8 @@
 #'   summed (path by path) over the variables not in `by`, with mean and
 #'   quantiles; `summary(by = NULL)` returns one row per comparison (its
 #'   number in `comparison`) with the values in the two populations, their
-#'   difference (mean and quantiles), the jump-off share where it applies,
+#'   difference (mean and quantiles), the jump-off (`jump_off`, an amount in
+#'   the unit of the quantity, for example years) where it applies,
 #'   the sum of the contributions and the largest difference between the
 #'   two over draws (`max_residual`). `summary(change = c(p1, p2))`
 #'   decomposes the change between two periods of comparisons between
@@ -202,7 +218,7 @@
 #' g <- mt_decompose(fc, var = "sex", ref = "male", periods = c(2016, 2025), at = 30)
 #' summary(g, by = NULL)
 #' summary(g, by = "age", change = c(2016, 2025))[1:5]
-#' # observed 2015 against the forecast of 2025, with the jump-off share
+#' # observed 2015 against the forecast of 2025, with the jump-off (years)
 #' mt_decompose(fc, periods = c(2015, 2025), at = 30)
 #' @export
 mt_decompose <- function(x, y = NULL, var = NULL, ref = NULL, periods = NULL,
@@ -217,9 +233,10 @@ mt_decompose <- function(x, y = NULL, var = NULL, ref = NULL, periods = NULL,
   qname <- if (custom) "custom" else match.arg(quantity)
   grouped <- !is.null(groups) && qname != "crude_rate"
   if (grouped && is.null(composition)) {
-    mt_abort(paste("With `groups`, choose `composition`: \"pooled\" for the quantity of the pooled rates (areas,",
-                   "regions, deprivation groups), or \"radix\" for subgroups blended at the starting age",
-                   "(membership fixed from `at` on, as education or sex; Riffe et al. 2024)."), class = "argument")
+    mt_abort(paste("With `groups`, choose `composition`: \"radix\" for subgroups blended at the starting age",
+                   "(Riffe et al. 2024; membership fixed from `at` on, as education or sex), or \"pooled\" for the",
+                   "quantity of the pooled rates (a parametrisation specific to this package, reference unknown,",
+                   "with the line integral of Horiuchi et al. 2008)."), class = "argument")
   }
   composition <- if (grouped) match.arg(composition, c("radix", "pooled"))
   pooled <- identical(composition, "pooled")
@@ -236,8 +253,8 @@ mt_decompose <- function(x, y = NULL, var = NULL, ref = NULL, periods = NULL,
   }
   if (grouped) {
     if (composition == "radix" && !qname %in% c("life_expectancy", "prob_dying")) {
-      mt_abort("`composition = \"radix\"` applies to life expectancy and prob_dying; use \"pooled\".",
-               class = "argument")
+      mt_abort(paste("`composition = \"radix\"` applies to life expectancy and prob_dying; \"pooled\" (specific to",
+                     "this package) applies to any quantity."), class = "argument")
     }
     if (pooled && method == "arriaga") {
       mt_abort("`composition = \"pooled\"` needs `method = \"horiuchi\"` or \"stepwise\".", class = "argument")
@@ -276,13 +293,16 @@ mt_decompose <- function(x, y = NULL, var = NULL, ref = NULL, periods = NULL,
     nc <- nrow(idx)
     ng <- ncol(idx)
     R <- a$R[, as.vector(idx), , drop = FALSE]
-    list(R = array(R, c(dim(R)[1], nc, ng, dim(R)[3])), E = a$E[, idx[1, ], drop = FALSE], observed = a$observed,
-         forecast = a$forecast)
+    out <- list(R = array(R, c(dim(R)[1], nc, ng, dim(R)[3])), E = a$E[, idx[1, ], drop = FALSE],
+                observed = a$observed, forecast = a$forecast)
+    if (!is.null(q$groups)) out <- decomp_to_groups(out, q$groups)
+    out
   }
   tables <- list()
   paths <- list()
   totals <- list()
   frozen <- FALSE
+  age_labels <- q$labels %||% sx$age$labels[q$rows]
   for (k in seq_along(comps$list)) {
     cmp <- comps$list[[k]]
     a1 <- get_period(cmp$src1, cmp$tag1, cmp$p1, observed)
@@ -293,7 +313,8 @@ mt_decompose <- function(x, y = NULL, var = NULL, ref = NULL, periods = NULL,
     s1$R <- recycle_draws(s1$R, n)
     s2$R <- recycle_draws(s2$R, n)
     res <- decomp_core(s1, s2, q, method, composition, grouped, n_steps)
-    # share of the difference due to observed instead of fitted rates
+    # jump-off: the amount of the difference due to observed instead of
+    # fitted rates (in the unit of the quantity)
     jump <- NA_real_
     if (observed == "data" && (isTRUE(s1$observed) || isTRUE(s2$observed))) {
       jump <- 0
@@ -317,7 +338,7 @@ mt_decompose <- function(x, y = NULL, var = NULL, ref = NULL, periods = NULL,
     tab <- data.table(comparison = k, component = res$rows$component,
                       group = if (!grouped && is.null(groups)) NA_character_ else
                         px$group_levels[res$rows$group_i],
-                      age = sx$age$labels[q$rows][res$rows$age_i],
+                      age = age_labels[res$rows$age_i],
                       cause = if (is.null(cause)) NA_character_ else px$cause_levels[res$rows$cause_i])
     tables[[k]] <- tab
     paths[[k]] <- res$paths
@@ -352,7 +373,7 @@ mt_decompose <- function(x, y = NULL, var = NULL, ref = NULL, periods = NULL,
   structure(list(table = table, paths = P, meta = comps$meta, from = from, to = to,
                  jump_off = vapply(totals, function(t) t$jump, numeric(1)),
                  quantity = qname, method = method, composition = composition, frozen = frozen,
-                 at = q$at, probs = probs, age_labels = sx$age$labels[q$rows],
+                 at = q$at, probs = probs, age_labels = age_labels,
                  cause_levels = px$cause_levels, group_levels = px$group_levels),
             class = "mt_decomposition")
 }
@@ -421,6 +442,31 @@ decomp_period <- function(src, p, how = "data", seed = 1) {
   mt_abort(sprintf("Year %s is not in the data or draws.", p), class = "argument")
 }
 
+# One side (R [age, cause, group, draw], E [age, group]) on the age groups
+# `g` of an age-standardised rate (asr_groups()): deaths over exposures of
+# the grid cells in each group, the plain mean of the rates where the
+# exposures are zero
+decomp_to_groups <- function(s, g) {
+  rows <- which(!is.na(g$group))
+  grp <- g$group[rows]
+  d <- dim(s$R)
+  E <- s$E[rows, , drop = FALSE]
+  Eg <- rowsum(E, grp, reorder = TRUE)
+  out <- array(0, c(nrow(Eg), d[2], d[3], d[4]))
+  for (j in seq_len(d[3])) {
+    zero <- !(Eg[, j] > 0)
+    for (k in seq_len(d[2])) {
+      Rj <- matrix(s$R[rows, k, j, ], length(rows))
+      v <- rowsum(Rj * E[, j], grp, reorder = TRUE) / Eg[, j]
+      if (any(zero)) v[zero, ] <- (rowsum(Rj, grp, reorder = TRUE) / tabulate(grp))[zero, , drop = FALSE]
+      out[, k, j, ] <- v
+    }
+  }
+  s$R <- out
+  s$E <- Eg
+  s
+}
+
 recycle_draws <- function(R, n) {
   if (dim(R)[4] == n) return(R)
   if (dim(R)[4] != 1) mt_abort("The two sides have different numbers of draws.", class = "argument")
@@ -459,11 +505,12 @@ decomp_quantity <- function(qname, quantity, age, at, to, standard, per, ...) {
            })
          },
          asr = {
+           # rates combined to the age groups of the standard (decomp_to_groups())
            if (is.character(standard)) standard <- standard_population(standard)
-           w <- standard_weights(age, standard)
-           rows <- which(w > 0)
-           ws <- w[rows] / sum(w) * per
-           list(rows = rows, at = NA, fun = function(M) colSums(M * ws))
+           g <- asr_groups(age, standard)
+           ws <- g$weight / sum(g$weight) * per
+           list(rows = seq_along(ws), at = NA, fun = function(M) colSums(M * ws), groups = g,
+                labels = axis_default_labels(g$lower, g$upper, "age"))
          },
          crude_rate = list(rows = seq_len(na), at = NA, per = per),
          custom = {
@@ -978,7 +1025,9 @@ print.mt_decomposition <- function(x, ...) {
     cat(sprintf(paste0("Values: means of the subgroups' values weighted by their shares at age %s (subgroups ",
                        "blended at the radix),\nnot the values of the pooled rates.\n"), x$at))
   } else if (identical(x$composition, "pooled")) {
-    cat("Values: of the pooled rates (subgroups weighted by their shares at each age).\n")
+    cat(paste0("Values: of the pooled rates (subgroups weighted by their shares at each age). Pooled composition:\n",
+               "a parametrisation specific to this package (reference unknown), decomposed with the line\n",
+               "integral of Horiuchi et al. (2008) or stepwise replacement.\n"))
   }
   tot <- summary(x, by = NULL)
   num <- setdiff(names(tot)[vapply(tot, is.numeric, logical(1))], c("comparison", "period", "max_residual"))
@@ -988,8 +1037,9 @@ print.mt_decomposition <- function(x, ...) {
   tot[, max_residual := signif(max_residual, 2)]
   print(tot)
   if (any(!is.na(x$jump_off))) {
-    cat(paste("jump_off: part of the difference due to observed instead of fitted rates in observed years of the",
-              "draws\n(see mt_jump_off()); observed = \"fitted\" decomposes the model's change alone.\n"))
+    cat(paste("jump_off: the amount of the difference (in the unit of the quantity) due to observed instead of",
+              "fitted rates\nin observed years of the draws (see mt_jump_off()); observed = \"fitted\" decomposes",
+              "the model's change alone.\n"))
   }
   if (isTRUE(x$frozen)) {
     cat(paste("Shares in forecast years are those of the last observed year; give `exposure` (a population",

@@ -12,6 +12,24 @@ test_that("mt_compare() backtests named models and mt_score_table() puts targets
   expect_error(mt_compare(list(1), x), class = "mt_error_argument")
 })
 
+test_that("mt_score_table() compares models on the cells all of them scored", {
+  x <- mt_example(deaths = "single", years = 1995:2010)
+  bt <- mt_compare(list(a = rwd(), b = lee_carter()), x, origins = 2006, h = 3, n_draws = 20)
+  # model b has no scores for men
+  part <- bt[!(model == "b" & sex == "male")]
+  expect_warning(tab <- mt_score_table(part, metrics = c("crps", "n")), class = "mt_warning_backtest")
+  fem <- bt[model == "a" & sex == "female"]
+  expect_equal(tab$n, rep(nrow(fem), 2))
+  expect_equal(tab[model == "a"]$crps, signif(mean(fem$crps), 3))
+  expect_no_warning(own <- mt_score_table(part, metrics = "n", common = FALSE))
+  expect_equal(own$n, c(nrow(bt[model == "a"]), nrow(fem)))
+  expect_no_warning(mt_score_table(bt))
+  # no cell in common (other age groups): every model on its own cells
+  dis <- data.table::copy(bt)[model == "b", age_lo := age_lo + 0.5]
+  expect_warning(tab2 <- mt_score_table(dis, metrics = "n"), class = "mt_warning_backtest")
+  expect_equal(tab2$n, c(nrow(bt[model == "a"]), nrow(bt[model == "b"])))
+})
+
 test_that("mt_compare_forecasts() tabulates one quantity of several forecasts", {
   x <- mt_example(deaths = "single", years = 1990:2010)
   fc <- list(rw = mt_forecast(mt_fit(rwd(), x), h = 5, n_draws = 50, seed = 1),

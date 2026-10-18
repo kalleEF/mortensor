@@ -71,8 +71,8 @@ up to all causes.}
 \item{hierarchy}{An \code{\link[=mt_hierarchy]{mt_hierarchy()}} that declares total and group levels
 of \code{cause} and \code{groups} (default: the hierarchy stored in \code{x} or \code{y}).}
 
-\item{composition}{\code{"radix"} or \code{"pooled"}; required with \code{groups} (see
-Subgroups).}
+\item{composition}{\code{"radix"} (Riffe et al. 2024) or \code{"pooled"} (specific
+to this package); required with \code{groups} (see Subgroups).}
 
 \item{observed}{How observed years held in forecast draws enter:
 \code{"data"} (observed rates), \code{"fitted"} (the model's fitted rates) or
@@ -88,7 +88,7 @@ are paired.}
 \item{to}{Upper age for \code{"prob_dying"}.}
 
 \item{standard, per}{Standard population and multiplier for \code{"asr"}
-(see \code{\link[=asr]{asr()}}); \code{per} also scales \code{"crude_rate"}.}
+(see \code{\link[=asr]{asr()}} and Methods); \code{per} also scales \code{"crude_rate"}.}
 
 \item{exposure}{Exposures for forecast years \verb{[age, stratum]} or
 \verb{[age, period, stratum]} (see \code{\link[=mt_deaths]{mt_deaths()}}).}
@@ -120,7 +120,8 @@ An \code{mt_decomposition} object. \code{summary()} returns contributions
 summed (path by path) over the variables not in \code{by}, with mean and
 quantiles; \code{summary(by = NULL)} returns one row per comparison (its
 number in \code{comparison}) with the values in the two populations, their
-difference (mean and quantiles), the jump-off share where it applies,
+difference (mean and quantiles), the jump-off (\code{jump_off}, an amount in
+the unit of the quantity, for example years) where it applies,
 the sum of the contributions and the largest difference between the
 two over draws (\code{max_residual}). \code{summary(change = c(p1, p2))}
 decomposes the change between two periods of comparisons between
@@ -158,8 +159,10 @@ Forecast draws hold the observed rates of their training years. A change
 from an observed year to a forecast year then contains the step from the
 observed to the model's fitted rates of that year (the jump-off, see
 \code{\link[=mt_jump_off]{mt_jump_off()}}) and the sampling noise of the observed year, besides
-the forecast change itself. The totals report the jump-off share
-(\code{jump_off}). \code{observed = "fitted"} uses the fitted rates of observed
+the forecast change itself. The totals report the jump-off (\code{jump_off}):
+the amount of the difference, in the unit of the quantity (years for
+life expectancy), that is due to the observed instead of the fitted
+rates of observed years. \code{observed = "fitted"} uses the fitted rates of observed
 years, so that the decomposition describes the model's change alone;
 \code{observed = "poisson"} uses Poisson draws of the observed deaths, so that
 their sampling uncertainty enters the intervals.
@@ -199,6 +202,14 @@ the average age structure) and the composition effect (age structure
 at the average rates) of Kitagawa (1955). Exact.
 }
 
+The age-standardised rate (\code{quantity = "asr"}) is decomposed on the age
+groups of the standard population: the rates of each side are first
+combined within them with the exposures of that side, as \code{\link[=asr]{asr()}} does
+(deaths over exposures of the grid cells in a standard group), so the
+contributions are by standard age group. The rate is then linear in the
+group rates, and \code{"horiuchi"} and \code{"stepwise"} both give the
+renormalised standard weight times the difference of the group rate.
+
 Draws whose rates give no valid life table (for example rates far above
 any observed value, see the warning of \code{\link[=mt_forecast]{mt_forecast()}}) are left out with
 a warning, and a warning reports contributions that do not add up to
@@ -210,7 +221,7 @@ the difference.
 With \code{groups}, the populations being compared consist of the levels of a
 stratum variable, and the decomposition separates the effect of their
 composition. \code{composition} must be chosen, because the two options
-describe different quantities:
+describe different quantities and rest on different grounds:
 \itemize{
 \item \code{"radix"} (Riffe, Tursun-zade and Trias Llimós 2024, "Arriaga meets
 Kitagawa"): life expectancy (or the probability of dying) of the
@@ -225,15 +236,20 @@ fixed from the starting age on and later shares change only through
 mortality: education from age 30 or 35, sex, country of birth. It does
 not hold for areas such as deprivation quintiles or regions, between
 which people move and which are reclassified.
-\item \code{"pooled"}: the quantity of the pooled rates, which weight the
-subgroup rates by their population shares at each age (the rates of the
-aggregate strata, as published for whole populations; "current
+\item \code{"pooled"}: a parametrisation specific to this package (reference
+unknown) for the quantity of the pooled rates, which weight the
+subgroup rates by their population shares at each age (the rates of
+the aggregate strata, as published for whole populations; "current
 rates"). The rates of every subgroup, age and cause and the shares at
-every age are the parameters of a \code{"horiuchi"} (default) or
-\code{"stepwise"} decomposition; the composition effects are reported by
-age, summed over subgroups, whose separate composition terms are not
-identified. With many subgroups, causes and draws this takes minutes;
-lower \code{n_steps} or the number of draws for a first look.
+every age are taken as the parameters of the quantity and decomposed
+with the generic line integral of Horiuchi, Wilmoth and Pletcher (2008)
+(\code{"horiuchi"}, default) or with stepwise replacement (\code{"stepwise"}).
+The composition effects are reported by age, summed over subgroups,
+whose separate composition terms are not identified. Other
+parametrisations of the same pooled quantity would split the
+difference differently between rates and composition. With many
+subgroups, causes and draws this takes minutes; lower \code{n_steps} or the
+number of draws for a first look.
 }
 
 Shares come from the exposures: of each observed year, and for forecast
@@ -265,7 +281,7 @@ fc <- mt_forecast(mt_fit(lee_carter(), x), h = 10, n_draws = 100, seed = 1)
 g <- mt_decompose(fc, var = "sex", ref = "male", periods = c(2016, 2025), at = 30)
 summary(g, by = NULL)
 summary(g, by = "age", change = c(2016, 2025))[1:5]
-# observed 2015 against the forecast of 2025, with the jump-off share
+# observed 2015 against the forecast of 2025, with the jump-off (years)
 mt_decompose(fc, periods = c(2015, 2025), at = 30)
 }
 \references{

@@ -128,6 +128,21 @@ test_that("mt_backtest() works without a seed", {
   expect_setequal(unique(bt$origin), c(2005, 2007))
 })
 
+test_that("mt_backtest() warns when strata without draws are not scored", {
+  x <- mt_example(deaths = "single", years = 1995:2010)
+  forecast_orig <- mortensor::mt_forecast
+  # a model that fails for men at origin 2007 (missing rates)
+  local_mocked_bindings(mt_forecast = function(fit, ...) {
+    fc <- forecast_orig(fit, ...)
+    if (max(fit$periods) == 2007) fc$rates[, , fc$strata$label == "male", ] <- NA
+    fc
+  })
+  expect_warning(bt <- mt_backtest(rwd(), x, origins = c(2005, 2007), h = 2, n_draws = 20),
+                 class = "mt_warning_backtest")
+  expect_setequal(unique(bt[origin == 2007]$sex), "female")
+  expect_setequal(unique(bt[origin == 2005]$sex), c("female", "male"))
+})
+
 test_that("mt_backtest() refuses data with ungrouped deaths", {
   x <- mt_example(years = 2001:2012)
   u <- mt_ungroup(x)

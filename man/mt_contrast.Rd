@@ -30,14 +30,19 @@ or \code{"lifespan_variation"}.}
 \item{probs}{Quantile levels.}
 
 \item{...}{Arguments of the quantity: \code{at} for life expectancy,
-\code{standard} and \code{per} for \code{asr()}, \code{from} and \code{to} for \code{prob_dying()},
+\code{standard}, \code{per}, \code{exposure} and \code{age_groups} for \code{asr()}, \code{from} and
+\code{to} for \code{prob_dying()},
 \code{age} (an age label) for \code{"rate"}, \code{measure} (one index, default
 \code{"edagger"}) and \code{at} for \code{\link[=lifespan_variation]{lifespan_variation()}}.}
 }
 \value{
 A \code{data.table} with the other stratum variables, \code{level}, \code{ref},
 \code{period}, \code{mean}, quantiles and \code{p_positive}, the share of paths with
-a positive difference (or a ratio above 1).
+a positive difference (or a ratio above 1). For forecasts this is the
+predictive probability of a positive difference under the model. For
+observed data it is the share of the Poisson bootstrap draws (see
+\code{\link[=mt_observed]{mt_observed()}}) with a positive difference, which is neither a
+p-value nor a posterior probability.
 }
 \description{
 Compares a derived quantity (life expectancy, age-standardised rate,
