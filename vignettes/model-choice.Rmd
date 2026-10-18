@@ -33,7 +33,7 @@ smoothing and the jump-off aside (see their own vignettes).
 | Bayesian APC | `apc_bayes()` | bamp | age, period and cohort effects with random-walk priors (Schmid and Held 2007) |
 | Time series per age | `arima_series()`, `ets_series()` | forecast | a separate ARIMA or exponential smoothing model for each age |
 | Tensor decomposition | `tucker3()` | mortensor | age, period and stratum factors |
-| Several populations | `li_lee()`, `product_ratio()`, `coda(coherent = TRUE)`, `cause_shares()`, `coda_causes()` | mortensor | strata pooled around a common trend, or causes of death as shares |
+| Several populations | `li_lee()`, `coda(coherent = TRUE)`, `coda_causes()` | mortensor | strata pooled around a common trend, or causes of death as shares |
 | Coherent functional demographic model | `coherent_fdm()` | demography | product-ratio method with functional data models (Hyndman, Booth and Yasmeen 2013) |
 
 The models for several populations are used in the applied vignettes; the
@@ -64,10 +64,10 @@ models <- list("random walk" = rwd(),
                "Bayesian RH" = stanmomo("rh", h_max = 20, cores = 4))
 set.seed(1)  # the MCMC samplers of bamp and Stan draw their seeds from R
 fc <- lapply(models, function(m) mt_forecast(mt_fit(m, ew), h = 20, n_draws = 500, seed = 1))
-#> Warning in report_fit_problems(diagnostics, spec$label): Functional demographic
-#> model: warnings in 1 stratum/strata, for example male: smooth.demogdata()
-#> failed (initial parameters not feasible); smoothed without the monotonicity
-#> constraint. (see the diagnostics of the fit).
+#> Warning in report_fit_problems(diagnostics, spec$label, classes): Functional
+#> demographic model: warnings in 1 stratum/strata, for example male:
+#> smooth.demogdata() failed (initial parameters not feasible); smoothed without
+#> the monotonicity constraint. (see the diagnostics of the fit).
 ```
 
 The warning comes from fdm: its default smoothing over age, a spline that
@@ -88,8 +88,8 @@ mt_compare_forecasts(fc, periods = c(2021, 2031))
 #> 1: 27.5 (26.6-28.3) 27.4 (26.6-28.1) 27.2 (26.3-28.0) 27.5 (26.6-28.3)
 #> 2: 28.7 (27.6-29.7) 28.4 (27.4-29.5) 28.1 (26.8-29.0) 28.8 (27.7-29.9)
 #>                CoDa     Bayesian APC      Bayesian RH
-#> 1: 27.7 (26.6-28.9) 26.6 (25.4-27.6) 27.5 (26.4-28.3)
-#> 2: 29.4 (27.7-30.8) 26.8 (25.0-28.2) 28.5 (26.9-29.8)
+#> 1: 27.7 (26.6-28.9) 26.5 (25.4-27.5) 27.5 (26.4-28.3)
+#> 2: 29.4 (27.7-30.8) 26.7 (25.0-28.1) 28.5 (26.9-29.8)
 ```
 
 
@@ -100,7 +100,7 @@ mt_plot_compare(fc[c("random walk", "Lee-Carter", "fdm", "APC", "Bayesian APC")]
 ![](model-choice-plot-models-1.png)
 
 All models forecast a further rise, at different paces and with
-different uncertainty. By 2031 the medians range from 26.8 to 29.4 years:
+different uncertainty. By 2031 the medians range from 26.7 to 29.4 years:
 
 * **CoDa** and **fdm** give the highest forecasts (29.4 and 29.2 years);
   fdm has the narrowest interval, CoDa one of the widest.
@@ -130,15 +130,15 @@ bt <- mt_compare(models, ew, origins = c(1991, 1996, 2001), h = 10, n_draws = 20
 mt_score_table(bt, metrics = c("crps", "cov95"))
 #>            model   crps cov95 crps_le cov95_le
 #>  1:  random walk 0.0514 0.973   0.388    0.767
-#>  2:   Lee-Carter 0.0564 0.751   0.366    0.933
-#>  3:          fdm 0.0516 0.557   0.320    0.333
-#>  4:          CBD 0.0554 0.782   0.371    0.833
-#>  5:          APC 0.0392 0.959   0.261    1.000
+#>  2:   Lee-Carter 0.0571 0.688   0.365    0.933
+#>  3:          fdm 0.0534 0.463   0.320    0.300
+#>  4:          CBD 0.0565 0.713   0.368    0.833
+#>  5:          APC 0.0393 0.947   0.261    1.000
 #>  6:           M6 0.0316 0.981   0.184    1.000
-#>  7:           M7 0.0523 0.816   0.375    0.800
-#>  8:         CoDa 0.0454 0.873   0.257    1.000
-#>  9: Bayesian APC 0.0721 0.694   0.573    0.600
-#> 10:  Bayesian RH 0.0460 0.876   0.282    1.000
+#>  7:           M7 0.0523 0.816   0.374    0.800
+#>  8:         CoDa 0.0457 0.838   0.257    1.000
+#>  9: Bayesian APC 0.0715 0.678   0.568    0.667
+#> 10:  Bayesian RH 0.0461 0.874   0.282    1.000
 ```
 
 
@@ -149,16 +149,23 @@ mt_plot_scores(bt, by = "model", target = "life_expectancy")
 ![](model-choice-plot-scores-1.png)
 
 * **M6** and **APC** forecast the rates best (CRPS 0.032 and 0.039), M6
-  also life expectancy, and their intervals covered the observed values.
-* **CoDa** comes next for the rates (0.045) and forecast life expectancy
+  also life expectancy, and their intervals covered the observed values
+  (95% coverage of the rates 0.98 and 0.95).
+* **CoDa** comes next for the rates (0.046) and forecast life expectancy
   as well as APC (0.257 against 0.261 years).
-* The **Bayesian RH** follows closely, and its intervals covered well
-  (95% coverage 0.88 for the rates).
+* The **Bayesian RH** follows closely (0.046); its 95% intervals covered
+  0.87 of the observed rates.
 * The period models and the random walk lie close together; the random
-  walk forecast the single rates slightly better than Lee-Carter. **M7**,
-  CBD with a cohort effect, was not more accurate than CBD here.
+  walk forecast the single rates slightly better than Lee-Carter and CBD.
+  The intervals of Lee-Carter and CBD are too narrow for the rates (95%
+  coverage 0.69 and 0.71): their draws add only the Poisson variation of
+  the deaths to the forecast rates. Those of the random walk, which
+  forecasts the observed rates themselves, cover 0.97. **M7**, CBD with a
+  cohort effect, forecast the rates more accurately than CBD (0.052
+  against 0.057), but not life expectancy.
 * **fdm** forecast life expectancy fairly accurately, but its intervals
-  are far too narrow (95% coverage 0.33).
+  are far too narrow (95% coverage 0.46 for the rates and 0.30 for life
+  expectancy).
 * The **Bayesian APC** is the least accurate: a forecast without a trend
   falls behind when mortality keeps declining.
 
@@ -171,41 +178,50 @@ other data, a period model may forecast best.
 
 With three origins, a model can rank first by chance. `mt_dm_test()`
 tests whether the mean score of a model differs from that of a reference
-model by more than the origins vary (Diebold and Mariano 1995, with the
-correction of Harvey, Leybourne and Newbold 1997). Three origins are too
-few for this test: it would have two degrees of freedom, and the
-covariance of forecasts that overlap in their test years cannot be
-estimated from three values. A second backtest of the five fastest models
-from 16 origins (1991-2006), five years ahead, tests life expectancy at 55
-against M6:
+model by more than the origins vary (Diebold and Mariano 1995). By
+default the variance of the mean difference is the equal-weighted cosine
+estimate, with critical values from a t distribution (Lazarus, Lewis,
+Stock and Watson 2018; Coroneo and Iacone 2020), so that the test keeps
+its nominal size with few origins whose test years overlap. Three origins
+are too few: the test would have one degree of freedom. A second backtest
+of the five fastest models from 16 origins (1991-2006), five years ahead,
+tests life expectancy at 55 against M6:
 
 
 ```r
 fast <- models[c("random walk", "Lee-Carter", "APC", "M6", "CoDa")]
 bt_dm <- mt_compare(fast, ew, origins = 1991:2006, h = 5, n_draws = 200, quantities = "life_expectancy")
 dm <- mt_dm_test(bt_dm, ref = "M6", targets = "life_expectancy")
-dm[horizon %in% c("1", "5", "all"), list(model, horizon, score, score_ref, mean_diff, p_value)]
-#>           model horizon      score  score_ref  mean_diff      p_value
-#>  1: random walk       1 0.09724537 0.08206846 0.01517692 1.581224e-02
-#>  2: random walk       5 0.33916424 0.18908199 0.15008225 4.575789e-06
-#>  3: random walk     all 0.20274758 0.12886970 0.07387788 2.513700e-05
-#>  4:  Lee-Carter       1 0.09961131 0.08206846 0.01754286 3.314643e-02
-#>  5:  Lee-Carter       5 0.33607345 0.18908199 0.14699146 6.806371e-04
-#>  6:  Lee-Carter     all 0.20465394 0.12886970 0.07578424 1.154523e-03
-#>  7:         APC       1 0.10400287 0.08206846 0.02193441 4.028557e-03
-#>  8:         APC       5 0.22565613 0.18908199 0.03657414 4.376043e-02
-#>  9:         APC     all 0.15722285 0.12886970 0.02835316 2.362806e-04
-#> 10:        CoDa       1 0.09340164 0.08206846 0.01133318 5.915185e-03
-#> 11:        CoDa       5 0.24324633 0.18908199 0.05416434 6.456470e-02
-#> 12:        CoDa     all 0.15893898 0.12886970 0.03006928 1.667530e-02
+dm[horizon %in% c("1", "5", "all"), list(model, horizon, df, score, score_ref, mean_diff, p_value)]
+#>           model horizon df      score  score_ref  mean_diff    p_value
+#>  1: random walk       1  2 0.09724537 0.08185772 0.01538766 0.04709528
+#>  2: random walk       5  2 0.33916424 0.18850382 0.15066042 0.02335147
+#>  3: random walk     all  2 0.20274758 0.12847414 0.07427344 0.02945383
+#>  4:  Lee-Carter       1  2 0.09869128 0.08185772 0.01683356 0.12919591
+#>  5:  Lee-Carter       5  2 0.33400346 0.18850382 0.14549963 0.04916992
+#>  6:  Lee-Carter     all  2 0.20342037 0.12847414 0.07494623 0.05835174
+#>  7:         APC       1  2 0.10308853 0.08185772 0.02123081 0.02510482
+#>  8:         APC       5  2 0.22542556 0.18850382 0.03692174 0.14707349
+#>  9:         APC     all  2 0.15659917 0.12847414 0.02812503 0.05495459
+#> 10:        CoDa       1  2 0.09290433 0.08185772 0.01104661 0.04062320
+#> 11:        CoDa       5  2 0.24122606 0.18850382 0.05272224 0.15010093
+#> 12:        CoDa     all  2 0.15784842 0.12847414 0.02937428 0.08623775
 ```
 
 A positive `mean_diff` means a higher CRPS than M6, so a less accurate
-forecast. M6 was more accurate than each of the other models one year
-ahead and on average over the five horizons (p below 0.05), and five
-years ahead than all but CoDa (p = 0.06). With 16
-origins the test has 15 degrees of freedom; forecasts from neighbouring
-origins share test years, which the test allows for.
+forecast. M6 had the lowest mean CRPS at each horizon shown, but with 16
+origins the test has 2 degrees of freedom (`df`) and finds only large
+and consistent differences. On average over the five horizons, the
+difference is significant at the 5% level only against the random walk
+(p = 0.029); against Lee-Carter and APC the p-values are 0.058 and
+0.055, against CoDa 0.086. One year ahead it is significant against the
+random walk, APC and CoDa (p from 0.025 to 0.047), five years ahead
+against the random walk and Lee-Carter (p = 0.023 and 0.049). Forecasts
+from neighbouring origins share test years, which the test allows for.
+The version of `forecast::dm.test()` (`varestimator = "acf"`, with the
+correction of Harvey, Leybourne and Newbold 1997) is an option; with few
+overlapping origins it rejects too often when the models are equally
+accurate (see `?mt_dm_test`).
 
 ## Ensembles of any combination
 
@@ -219,7 +235,9 @@ uncertainty about the future.
 Weights can be equal, set by hand, or estimated from an inner backtest on
 the training data only (`weights = "crps"`: inversely proportional to the
 CRPS of each component; `"stack"`: the combination that minimised the
-error of the median forecasts), and `top_k` keeps the best components:
+error of the median forecasts), and `top_k` keeps the best components.
+CRPS weights and `top_k` are package-specific (see the article "Methods
+and sources"):
 
 
 ```r
@@ -233,7 +251,7 @@ ens <- list(
 fit_ens <- mt_fit(ens[[2]], ew)
 round(fit_ens$weights, 2)
 #>   rw   lc  fdm  cbd  apc   m6 
-#> 0.26 0.00 0.00 0.00 0.35 0.38
+#> 0.27 0.00 0.00 0.00 0.35 0.38
 ```
 
 On the data up to 2011, the inner backtest kept the random walk, APC and
@@ -246,28 +264,29 @@ bt_ens <- mt_compare(ens, ew, origins = c(1991, 1996, 2001), h = 10, n_draws = 2
 mt_score_table(rbind(bt, bt_ens), metrics = c("crps", "cov95"))
 #>                                             model   crps cov95 crps_le cov95_le
 #>  1:                                   random walk 0.0514 0.973   0.388    0.767
-#>  2:                                    Lee-Carter 0.0564 0.751   0.366    0.933
-#>  3:                                           fdm 0.0516 0.557   0.320    0.333
-#>  4:                                           CBD 0.0554 0.782   0.371    0.833
-#>  5:                                           APC 0.0392 0.959   0.261    1.000
+#>  2:                                    Lee-Carter 0.0571 0.688   0.365    0.933
+#>  3:                                           fdm 0.0534 0.463   0.320    0.300
+#>  4:                                           CBD 0.0565 0.713   0.368    0.833
+#>  5:                                           APC 0.0393 0.947   0.261    1.000
 #>  6:                                            M6 0.0316 0.981   0.184    1.000
-#>  7:                                            M7 0.0523 0.816   0.375    0.800
-#>  8:                                          CoDa 0.0454 0.873   0.257    1.000
-#>  9:                                  Bayesian APC 0.0721 0.694   0.573    0.600
-#> 10:                                   Bayesian RH 0.0460 0.876   0.282    1.000
-#> 11: equal: Lee-Carter, fdm, APC, M6, Bayesian APC 0.0441 0.941   0.316    0.967
-#> 12:                     CRPS weights, best 3 of 6 0.0342 0.988   0.225    1.000
+#>  7:                                            M7 0.0523 0.816   0.374    0.800
+#>  8:                                          CoDa 0.0457 0.838   0.257    1.000
+#>  9:                                  Bayesian APC 0.0715 0.678   0.568    0.667
+#> 10:                                   Bayesian RH 0.0461 0.874   0.282    1.000
+#> 11: equal: Lee-Carter, fdm, APC, M6, Bayesian APC 0.0448 0.943   0.324    1.000
+#> 12:                     CRPS weights, best 3 of 6 0.0354 0.980   0.238    1.000
 ```
 
 * The **equal-weight ensemble** is more accurate than the average of its
-  components (CRPS of the rates 0.044 against 0.050), and its intervals
+  components (CRPS of the rates 0.045 against 0.051), and its intervals
   cover. This always holds: the CRPS is a convex function of the forecast
   distribution, so the CRPS of a mixture is never larger than the weighted
   mean of the CRPS of its components. It includes the weak Bayesian APC,
   which pulls it behind APC and M6.
-* The **CRPS-weighted ensemble** comes close to M6, the best single model,
-  without knowing beforehand which model that would be: its weights were
-  estimated anew at each origin from the years before it.
+* The **CRPS-weighted ensemble** comes close to M6, the best single model
+  (CRPS of the rates 0.035 against 0.032), without knowing beforehand
+  which model that would be: its weights were estimated anew at each
+  origin from the years before it.
 
 An ensemble rarely beats the best single model in hindsight. Its value is
 that it does not depend on picking that model in advance, and that its
@@ -294,7 +313,7 @@ mt_plot_compare(c(fc[c("Lee-Carter", "APC", "Bayesian APC")], list("equal ensemb
   re-estimated at every backtest origin, so they can be checked in the
   same way.
 * For several populations (sexes, regions, deprivation groups) add the
-  pooled models (`li_lee()`, `product_ratio()`) and make totals coherent
+  pooled models (`li_lee()`, `coherent_fdm()`) and make totals coherent
   (`reconciled()`); see the applied vignettes.
 
 ## References
@@ -312,6 +331,10 @@ Cairns AJG, Blake D, Dowd K, Coughlan GD, Epstein D, Ong A, Balevich I
 data from England and Wales and the United States. *North American
 Actuarial Journal* 13(1): 1-35.
 
+Coroneo L, Iacone F (2020). Comparing predictive accuracy in small
+samples using fixed-smoothing asymptotics. *Journal of Applied
+Econometrics* 35(4): 391-409.
+
 Diebold FX, Mariano RS (1995). Comparing predictive accuracy. *Journal of
 Business & Economic Statistics* 13(3): 253-263.
 
@@ -326,6 +349,10 @@ product-ratio method with functional time series models. *Demography*
 Hyndman RJ, Ullah MS (2007). Robust forecasting of mortality and fertility
 rates: a functional data approach. *Computational Statistics & Data
 Analysis* 51(10): 4942-4956.
+
+Lazarus E, Lewis DJ, Stock JH, Watson MW (2018). HAR inference:
+recommendations for practice. *Journal of Business & Economic
+Statistics* 36(4): 541-559.
 
 Lee RD, Carter LR (1992). Modeling and forecasting U.S. mortality.
 *Journal of the American Statistical Association* 87(419): 659-671.

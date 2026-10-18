@@ -114,34 +114,40 @@ quintile and Q1 path by path (`contrast`, "Backtesting and scores"):
 ```r
 bt <- mt_compare(cand, xa, origins = 2010:2014, h = 5, n_draws = 200, quantities = "life_expectancy",
                  contrast = c(var = "quintile", ref = "Q1"))
+#> Warning in report_fit_problems(diagnostics, spec$label, classes): Li-Lee
+#> (common by sex): warnings in 18 stratum/strata, for example female.Q1: Li-Lee:
+#> the AR(1) coefficient of the stratum index is bounded at |phi| = 0.99 in 1
+#> stratum/strata (female.Q4): their deviations from the common trend are close to
+#> a unit root and revert very slowly; coherence may not suit them. (see the
+#> diagnostics of the fit).
 mt_score_table(bt, metrics = c("crps", "cov95"), targets = c("rate", "life_expectancy"), hierarchy = h)
 #>                model     level   crps cov95 crps_le cov95_le
-#>  1:       Lee-Carter    bottom 0.0665 0.834   0.329    0.808
-#>  2:       Lee-Carter aggregate 0.0550 0.718   0.349    0.600
-#>  3:       Lee-Carter     total 0.0454 0.530   0.368    0.320
-#>  4:              fdm    bottom 0.0726 0.828   0.361    0.744
-#>  5:              fdm aggregate 0.0594 0.712   0.333    0.594
-#>  6:              fdm     total 0.0486 0.524   0.317    0.400
-#>  7:           Li-Lee    bottom 0.0671 0.842   0.388    0.756
-#>  8:           Li-Lee aggregate 0.0556 0.766   0.389    0.703
-#>  9:           Li-Lee     total 0.0474 0.674   0.374    0.720
-#> 10:     coherent fdm    bottom 0.0707 0.763   0.413    0.540
-#> 11:     coherent fdm aggregate 0.0606 0.657   0.402    0.434
-#> 12:     coherent fdm     total 0.0546 0.496   0.381    0.360
-#> 13: Lee-Carter + fdm    bottom 0.0657 0.878   0.321    0.864
-#> 14: Lee-Carter + fdm aggregate 0.0535 0.782   0.321    0.691
-#> 15: Lee-Carter + fdm     total 0.0432 0.566   0.327    0.360
+#>  1:       Lee-Carter    bottom 0.0672 0.793   0.330    0.772
+#>  2:       Lee-Carter aggregate 0.0560 0.659   0.355    0.543
+#>  3:       Lee-Carter     total 0.0477 0.422   0.401    0.240
+#>  4:              fdm    bottom 0.0727 0.813   0.362    0.740
+#>  5:              fdm aggregate 0.0596 0.693   0.337    0.589
+#>  6:              fdm     total 0.0496 0.478   0.336    0.320
+#>  7:           Li-Lee    bottom 0.0678 0.801   0.391    0.760
+#>  8:           Li-Lee aggregate 0.0563 0.729   0.392    0.691
+#>  9:           Li-Lee     total 0.0480 0.662   0.376    0.720
+#> 10:     coherent fdm    bottom 0.0711 0.748   0.415    0.524
+#> 11:     coherent fdm aggregate 0.0610 0.639   0.404    0.440
+#> 12:     coherent fdm     total 0.0549 0.486   0.382    0.400
+#> 13: Lee-Carter + fdm    bottom 0.0657 0.861   0.323    0.860
+#> 14: Lee-Carter + fdm aggregate 0.0536 0.753   0.325    0.589
+#> 15: Lee-Carter + fdm     total 0.0437 0.528   0.348    0.320
 ```
 
 
 ```r
 mt_score_table(bt[quintile == "Q5" & sex != "both"], metrics = c("crps", "cov95"), targets = "life_expectancy_gap")
 #>               model crps_le_gap cov95_le_gap
-#> 1:       Lee-Carter       0.201         0.98
-#> 2:              fdm       0.380         0.70
-#> 3:           Li-Lee       0.753         0.14
-#> 4:     coherent fdm       0.668         0.18
-#> 5: Lee-Carter + fdm       0.271         0.96
+#> 1:       Lee-Carter       0.219         1.00
+#> 2:              fdm       0.372         0.90
+#> 3:           Li-Lee       0.777         0.04
+#> 4:     coherent fdm       0.672         0.18
+#> 5: Lee-Carter + fdm       0.277         0.98
 ```
 
 
@@ -151,48 +157,58 @@ mt_plot_scores(bt[quintile == "Q5" & sex != "both"], by = "model", target = "lif
 
 ![](inequality-england-plot-scores-1.png)
 
+The warning comes from Li-Lee: at the origin 2010, the deviation of
+women in Q4 from the common trend of the quintiles is close to a unit
+root (its AR(1) coefficient is bounded at 0.99), so it reverts very
+slowly.
+
 The models forecast the rates of the quintiles within about 10% of each
 other, the ensemble best. The intervals of life expectancy are too narrow
-for every model, most for the totals (95% coverage of Lee-Carter 0.81 for
-the quintiles and 0.32 for England): five years ahead, the forecasts
-underestimate how far life expectancy can move. The gap separates the
-models clearly: Li-Lee and the coherent fdm forecast it worst, and their
-intervals covered the observed gap in only 14% and 18% of the cases,
-because in 2010-2019 the female gap did not return to its past level.
-Lee-Carter forecast the gap best, with intervals that covered it in 98% of
-the cases, the ensemble of Lee-Carter and fdm second. The pipeline
-continues with Lee-Carter, chosen for the quantity of the question.
+for every model, most for the totals (95% coverage of Lee-Carter 0.77 for
+the quintiles and 0.24 for England): five years ahead, the forecasts
+underestimate how far life expectancy can move. Lee-Carter forecasts
+each quintile independently (`reconciled()` keeps the draws as they
+are), so the deviations of its draws partly cancel in the totals. The
+gap separates the models clearly: Li-Lee and the coherent fdm forecast
+it worst, and their intervals covered the observed gap in only 4% and
+18% of the cases, because in 2010-2019 the female gap did not return to
+its past level. Lee-Carter forecast the gap best, with intervals that
+covered it in every case, the ensemble of Lee-Carter and fdm second. The
+pipeline continues with Lee-Carter, chosen for the quantity of the
+question.
 
 ### Smoothing and jump-off
 
 Two further choices, each checked in the same backtest: smoothing the rates
 over time before fitting ("Smoothing death rates"), and starting the
-forecasts at the observed level of the last three years ("Where a forecast
-starts: the jump-off"):
+forecasts at the observed rates of the last year (Lee and Miller 2001;
+"Where a forecast starts: the jump-off"):
 
 
 ```r
 steps <- list("Lee-Carter" = cand[["Lee-Carter"]],
               "+ smoothed over time" = list(spec = cand[["Lee-Carter"]], prep = mt_prep(step_smooth(along = "period"))),
-              "+ anchored" = bu(anchored(lee_carter(), years = 3)))
+              "+ anchored" = bu(anchored(lee_carter())))
 bt_steps <- mt_compare(steps, xa, origins = 2010:2014, h = 5, n_draws = 200, quantities = "life_expectancy",
                        contrast = c(var = "quintile", ref = "Q1"))
 mt_score_table(bt_steps[sex != "both" & quintile != "England"], metrics = c("crps", "cov95"))
 #>                   model   crps cov95 crps_le cov95_le crps_le_gap cov95_le_gap
-#> 1:           Lee-Carter 0.0665 0.834   0.329    0.808       0.193        0.985
-#> 2: + smoothed over time 0.0753 0.640   0.507    0.200       0.203        0.565
-#> 3:           + anchored 0.0665 0.836   0.328    0.788       0.192        0.985
+#> 1:           Lee-Carter 0.0672 0.793   0.330    0.772       0.205         1.00
+#> 2: + smoothed over time 0.0718 0.631   0.420    0.260       0.194         0.85
+#> 3:           + anchored 0.0783 0.755   0.355    0.740       0.203         1.00
 ```
 
-Smoothing over time made the forecasts of the rates and of life
-expectancy much worse (95% coverage of the rates 0.64 against 0.83, of
-life expectancy 0.20 against 0.81): the year-to-year variation of these
-rates is information about the uncertainty, and removing it made the
-intervals too narrow. The gaps were forecast slightly worse as well, with
-too narrow intervals (95% coverage 0.57 against 0.98).
-Anchoring changed almost nothing, because the fitted rates of Lee-Carter
-in the last year are close to the observed ones. The pipeline uses
-neither.
+Smoothing over time made the forecasts of the rates worse and those of
+life expectancy much worse (CRPS 0.420 against 0.330; 95% coverage of
+the rates 0.63 against 0.79, of life expectancy 0.26 against 0.77): the
+year-to-year variation of these rates is information about the
+uncertainty, and removing it made the intervals too narrow. The gaps
+were forecast slightly more accurately (CRPS 0.194 against 0.205), with
+too narrow intervals (95% coverage 0.85 against 1.00). Anchoring made
+the forecasts of the rates worse (CRPS 0.078 against 0.067) and those of
+life expectancy slightly worse (0.355 against 0.330), and left the gap
+nearly unchanged: the observed rates of a single year carry their random
+variation into every forecast year. The pipeline uses neither.
 
 ### Forecast to 2035
 
@@ -229,17 +245,19 @@ rbind(sii_obs[period == 2019], sii[period %in% c(2025, 2035)])[
   , .(sex, period, sii = sprintf("%.1f (%.1f-%.1f)", q0.5, q0.025, q0.975))]
 #>       sex period            sii
 #> 1: female   2019  7.7 (7.5-7.9)
-#> 2:   male   2019  9.2 (9.1-9.4)
-#> 3: female   2025  8.2 (6.7-9.9)
-#> 4: female   2035 8.9 (6.5-12.1)
-#> 5:   male   2025 9.3 (8.1-11.0)
-#> 6:   male   2035 9.3 (7.3-12.4)
-#> 7:   both   2025 8.8 (7.8-10.4)
-#> 8:   both   2035 9.2 (7.5-12.1)
+#> 2:   male   2019  9.2 (9.0-9.4)
+#> 3: female   2025 8.2 (6.1-10.3)
+#> 4: female   2035 9.1 (5.2-12.9)
+#> 5:   male   2025 9.4 (7.9-10.9)
+#> 6:   male   2035 9.4 (6.5-12.2)
+#> 7:   both   2025 8.9 (7.5-10.2)
+#> 8:   both   2035 9.3 (6.9-11.8)
 ```
 
-The SII of women rises from 7.7 years in 2019 to 8.9 years in 2035 (95%
-interval 6.5-12.1); that of men stays at about 9.3 years.
+The SII of women rises from 7.7 years in 2019 to 9.1 years in 2035 (95%
+interval 5.2-12.9); that of men from 9.2 to 9.4 years (6.5-12.2).
+Lee-Carter forecasts each quintile independently, so the intervals of
+the gap and of the SII combine the uncertainty of the quintiles.
 
 ### Which ages make up the gap
 
@@ -304,7 +322,31 @@ cand_c <- list("summed" = reconciled(ll, hc, method = "bottom_up"),
                                                          method = "proportional", fixed = all_cause))
 bt_c <- mt_compare(cand_c, xc, origins = c(2010, 2012, 2014), h = 5, n_draws = 200,
                    quantities = c("life_expectancy", "asr"), contrast = c(var = "quintile", ref = "Q1"))
+#> Warning in report_fit_problems(diagnostics, spec$label, classes): Li-Lee
+#> (common by sex, cause): warnings in 130 stratum/strata, for example
+#> female.Q1.lung_cancer: Li-Lee: the AR(1) coefficient of the stratum index is
+#> bounded at |phi| = 0.99 in 1 stratum/strata (female.Q1.ihd): their deviations
+#> from the common trend are close to a unit root and revert very slowly;
+#> coherence may not suit them. (see the diagnostics of the fit).
+
+#> Warning in report_fit_problems(diagnostics, spec$label, classes): Li-Lee
+#> (common by sex, cause): warnings in 130 stratum/strata, for example
+#> female.Q1.lung_cancer: Li-Lee: the AR(1) coefficient of the stratum index is
+#> bounded at |phi| = 0.99 in 1 stratum/strata (female.Q1.ihd): their deviations
+#> from the common trend are close to a unit root and revert very slowly;
+#> coherence may not suit them. (see the diagnostics of the fit).
+#> Warning in report_fit_problems(diagnostics, spec$label, classes): Li-Lee
+#> (common by sex, cause): warnings in 120 stratum/strata, for example
+#> female.Q1.lung_cancer: Li-Lee: the AR(1) coefficient of the stratum index is
+#> bounded at |phi| = 0.99 in 1 stratum/strata (female.Q1.ihd): their deviations
+#> from the common trend are close to a unit root and revert very slowly;
+#> coherence may not suit them. (see the diagnostics of the fit).
 ```
+
+The warnings come from Li-Lee: for women in Q1, the deviation of
+ischaemic heart disease from the common trend of the quintiles is close
+to a unit root (its AR(1) coefficient is bounded at 0.99), so it reverts
+very slowly.
 
 For the causes: the age-standardised rates (`_asr`) and their differences
 between each quintile and Q1 (`_asr_gap`, log rate ratios):
@@ -313,9 +355,9 @@ between each quintile and Q1 (`_asr_gap`, log rate ratios):
 ```r
 mt_score_table(bt_c[cause != "all"], metrics = c("crps", "cov95"), targets = c("asr", "asr_gap"))
 #>                         model crps_asr cov95_asr crps_asr_gap cov95_asr_gap
-#> 1:                     summed   0.0663     0.808       0.0558         0.621
-#> 2:     scaled to Li-Lee total   0.0710     0.876       0.0460         0.771
-#> 3: scaled to Lee-Carter total   0.0689     0.847       0.0381         0.997
+#> 1:                     summed   0.0667     0.791       0.0571         0.564
+#> 2:     scaled to Li-Lee total   0.0715     0.868       0.0467         0.723
+#> 3: scaled to Lee-Carter total   0.0694     0.861       0.0353         0.944
 ```
 
 For all causes: life expectancy at 50 (`_le`) and its gap to Q1
@@ -325,25 +367,31 @@ For all causes: life expectancy at 50 (`_le`) and its gap to Q1
 ```r
 mt_score_table(bt_c[cause == "all"], metrics = c("crps", "cov95"), targets = c("life_expectancy", "life_expectancy_gap"))
 #>                         model crps_le cov95_le crps_le_gap cov95_le_gap
-#> 1:                     summed   0.277    0.740       0.494        0.125
-#> 2:     scaled to Li-Lee total   0.327    0.787       0.329        0.450
-#> 3: scaled to Lee-Carter total   0.289    0.740       0.127        0.992
+#> 1:                     summed   0.279     0.76       0.499        0.108
+#> 2:     scaled to Li-Lee total   0.329     0.78       0.331        0.433
+#> 3: scaled to Lee-Carter total   0.292     0.74       0.153        1.000
 ```
 
 For the causes the three are close: the summed forecasts are slightly
 the most accurate for the age-standardised rates but the least accurate
 for their gaps, and those scaled to Lee-Carter forecast the gaps best
-(95% coverage 0.997). The intervals of the age-standardised rates are too
-narrow for all three (95% coverage 0.81-0.88). For all causes the difference is large: the summed causes and the
-Li-Lee total both pull the gap back to its past level, and only the
-Lee-Carter total forecast it well (CRPS of the gap 0.13 against 0.33 and
-0.49).
+(95% coverage 0.94). The intervals of the age-standardised rates are too
+narrow for all three (95% coverage 0.79-0.87). For all causes the
+difference is large: the summed causes and the Li-Lee total both pull the
+gap back to its past level, and only the Lee-Carter total forecast it
+well (CRPS of the gap 0.15 against 0.33 and 0.50).
 
 ### Forecasts to 2035
 
 
 ```r
 fc_c <- mt_forecast(mt_fit(cand_c[["scaled to Lee-Carter total"]], xc), to = 2035, n_draws = 1000, seed = 1)
+#> Warning in report_fit_problems(diagnostics, spec$label, classes): Li-Lee
+#> (common by sex, cause): warnings in 120 stratum/strata, for example
+#> female.Q1.lung_cancer: Li-Lee: the AR(1) coefficient of the stratum index is
+#> bounded at |phi| = 0.99 in 1 stratum/strata (female.Q1.ihd): their deviations
+#> from the common trend are close to a unit root and revert very slowly;
+#> coherence may not suit them. (see the diagnostics of the fit).
 #> Warning in check_draws_plausible(arr, fit$age, fit$strata, fit$spec$label): By
 #> cause (all: Lee-Carter; other: Li-Lee (common by sex, cause)): forecast death
 #> rates above 1 in 0.6% of the draws (strata female.Q1.dementia,
@@ -364,9 +412,10 @@ mt_compare_forecasts(list(observed = mt_subset(xc, cause == "all"), forecast = f
 #> 8:   male.Q5.all   2035             <NA> 37.4 (36.0-38.7)
 ```
 
-The warning concerns dementia at ages 90 and over, whose recorded rates
-rose steeply in 2001-2019 (partly through changes in coding): a few paths
-extrapolate this rise to rates above one.
+The first warning is that of Li-Lee above. The second concerns dementia
+at ages 90 and over, whose recorded rates rose steeply in 2001-2019
+(partly through changes in coding): a few paths extrapolate this rise to
+rates above one.
 
 Life expectancy at 50 from all causes, observed in 2019 and forecast for
 2035. The ratio of the age-standardised death rates (ages 50 and over) of
@@ -378,30 +427,30 @@ ratio <- mt_contrast(fc_c, var = "quintile", ref = "Q5", quantity = "asr", type 
 ratio[level == "Q1" & period == 2035 & cause != "all",
       .(sex, cause, ratio = sprintf("%.2f (%.2f-%.2f)", q0.5, q0.025, q0.975))][order(sex, cause)]
 #>        sex             cause            ratio
-#>  1: female   breast_prostate 1.42 (1.05-2.03)
-#>  2: female colorectal_cancer 1.56 (1.01-2.41)
-#>  3: female          dementia 1.69 (0.72-3.19)
-#>  4: female          diabetes 2.82 (1.25-6.61)
-#>  5: female               ihd 2.79 (1.73-4.78)
-#>  6: female     liver_alcohol 3.60 (1.99-5.94)
-#>  7: female       lung_cancer 3.56 (2.38-5.37)
-#>  8: female     other_cancers 1.78 (1.26-2.91)
-#>  9: female other_circulatory 2.04 (0.60-5.47)
-#> 10: female       respiratory 4.29 (2.63-6.84)
-#> 11: female              rest 1.92 (1.10-5.06)
-#> 12: female            stroke 1.82 (1.01-3.20)
-#> 13:   male   breast_prostate 1.15 (0.75-2.10)
-#> 14:   male colorectal_cancer 1.57 (1.09-2.40)
-#> 15:   male          dementia 1.68 (0.46-4.10)
-#> 16:   male          diabetes 2.60 (0.81-6.73)
-#> 17:   male               ihd 2.24 (1.42-3.63)
-#> 18:   male     liver_alcohol 4.20 (2.87-5.67)
-#> 19:   male       lung_cancer 3.03 (2.27-4.30)
-#> 20:   male     other_cancers 1.68 (1.05-2.41)
-#> 21:   male other_circulatory 1.86 (0.69-3.73)
-#> 22:   male       respiratory 3.46 (1.79-7.47)
-#> 23:   male              rest 1.83 (1.12-2.99)
-#> 24:   male            stroke 1.82 (1.01-3.84)
+#>  1: female   breast_prostate 1.45 (0.93-2.20)
+#>  2: female colorectal_cancer 1.56 (1.02-2.32)
+#>  3: female          dementia 1.67 (1.24-2.24)
+#>  4: female          diabetes 2.84 (1.87-4.52)
+#>  5: female               ihd 2.84 (1.87-4.39)
+#>  6: female     liver_alcohol 3.56 (2.24-5.57)
+#>  7: female       lung_cancer 3.58 (2.19-5.73)
+#>  8: female     other_cancers 1.80 (1.16-2.74)
+#>  9: female other_circulatory 1.93 (1.33-3.02)
+#> 10: female       respiratory 4.31 (2.72-7.20)
+#> 11: female              rest 1.96 (1.35-2.86)
+#> 12: female            stroke 1.83 (1.25-2.72)
+#> 13:   male   breast_prostate 1.19 (0.94-1.49)
+#> 14:   male colorectal_cancer 1.59 (1.24-2.03)
+#> 15:   male          dementia 1.65 (1.38-1.95)
+#> 16:   male          diabetes 2.53 (1.94-3.47)
+#> 17:   male               ihd 2.22 (1.72-2.88)
+#> 18:   male     liver_alcohol 4.16 (3.02-5.63)
+#> 19:   male       lung_cancer 3.05 (2.32-4.05)
+#> 20:   male     other_cancers 1.67 (1.28-2.16)
+#> 21:   male other_circulatory 1.73 (1.40-2.23)
+#> 22:   male       respiratory 3.51 (2.75-4.66)
+#> 23:   male              rest 1.83 (1.46-2.31)
+#> 24:   male            stroke 1.87 (1.47-2.42)
 #>        sex             cause            ratio
 ```
 
@@ -430,12 +479,13 @@ mt_plot_decomposition(dc, by = "cause", comparisons = list(to = "Q5", sex = "fem
 
 ![](inequality-england-plot-decomp-causes-1.png)
 
-In 2019 the residual group, chronic lower respiratory diseases, lung cancer and
-ischaemic heart disease made up most of the female gap at 50. The
-forecast for 2035 gives dementia the largest contribution, but with an
-interval from below zero to about three years: it extrapolates the steep
-rise of recorded dementia deaths, which partly reflects changes in coding.
-This is the least reliable part of the result.
+In 2019 the residual group, chronic lower respiratory diseases, lung
+cancer and ischaemic heart disease made up most of the female gap at 50.
+The forecast for 2035 gives dementia the largest contribution, with a
+wide interval from about half a year to almost three years: it
+extrapolates the steep rise of recorded dementia deaths, which partly
+reflects changes in coding. This is the least reliable part of the
+result.
 
 ## Summary of the pipeline
 
@@ -444,13 +494,16 @@ This is the least reliable part of the result.
 | Data | deciles to quintiles | | `mt_data()`, `mt_group_levels()` | "Getting started" |
 | Totals | England and both sexes as sums | | `mt_hierarchy()`, `reconciled(method = "bottom_up")` | "Coherent forecasts" |
 | Model | Lee-Carter per quintile | best backtest of the gap | `mt_compare(contrast = )` | "Choosing and combining models" |
-| Smoothing | none | made every score worse | `step_smooth()` | "Smoothing death rates" |
-| Jump-off | the model's own | anchoring changed nothing | `anchored()` | "Where a forecast starts" |
+| Smoothing | none | worse rates and life expectancy, too narrow intervals | `step_smooth()` | "Smoothing death rates" |
+| Jump-off | the model's own | anchoring made the rates worse | `anchored()` | "Where a forecast starts" |
 | Inequality | gap Q5 - Q1 and SII, path by path | | `mt_contrast()`, `mt_inequality()` | |
 | Causes | Li-Lee, scaled to a Lee-Carter all-cause forecast | best backtest of the all-cause gap | `stratified()`, `reconciled(method = "proportional", fixed = )` | "Coherent forecasts" |
 | Drivers | ages and causes of the gap | | `mt_decompose()` | "Decomposing differences" |
 
 ## References
+
+Lee R, Miller T (2001). Evaluating the performance of the Lee-Carter
+method for forecasting mortality. *Demography* 38(4): 537-549.
 
 Wilmoth JR (1995). Are mortality projections always more pessimistic when
 disaggregated by cause of death? *Mathematical Population Studies* 5(4):
