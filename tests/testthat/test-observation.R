@@ -195,6 +195,14 @@ test_that("tucker3() centres log rates as the three-way Lee-Carter model", {
   # the decomposition describes the deviations from a[x, i]: their mean over the years is zero
   dev <- sweep(log(fit$fits$fitted), c(1, 3), alpha)
   expect_lt(max(abs(apply(dev, c(1, 3), mean))), 1e-8)
+  # ranks of the application of Russolillo et al. (2011); shares of
+  # variation as in their Table 4 (squared core elements over the sum of
+  # squares of the centred array), whose sum is the fit
+  expect_equal(fit$fits$ranks, c(2, 2, 2))
+  Xc <- sweep(y, c(1, 3), alpha)
+  expect_equal(fit$fits$fit_pct, 100 * (1 - sum((log(fit$fits$fitted) - y)^2) / sum(Xc^2)))
+  expect_equal(sum(fit$fits$core_pct), fit$fits$fit_pct)
+  expect_equal(dim(fit$fits$core_pct), c(2, 2, 2))
   # one stratum, ranks 1: the Lee-Carter model (first SVD component of the centred log rates)
   x1 <- mt_subset(x, sex == "female")
   f1 <- mt_fit(tucker3(ranks = c(1, 1, 1)), x1)

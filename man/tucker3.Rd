@@ -5,7 +5,7 @@
 \title{Tucker3 tensor model across strata (three-way Lee-Carter model)}
 \usage{
 tucker3(
-  ranks = c(3, 3, 2),
+  ranks = c(2, 2, 2),
   transform = c("log", "coda"),
   ts = c("rwd", "arima", "ets"),
   residual_noise = FALSE,
@@ -15,12 +15,12 @@ tucker3(
 )
 }
 \arguments{
-\item{ranks}{Tucker ranks for age, period and stratum, or \code{"bic"} /
-\code{"aic"} to choose them by an information criterion on the training data
-(\verb{n log(RSS / n)} plus the penalty
-times the number of parameters of the factor matrices and the core;
-ranks up to 6 for age and period and up to 4 for strata). For selection
-by forecast accuracy use \code{\link[=tuned]{tuned()}}.}
+\item{ranks}{Tucker ranks for age, period and stratum (default \code{c(2, 2, 2)}, Russolillo et al. 2011, Section 3.2), or \code{"bic"} / \code{"aic"} to
+choose them by an information criterion on the training data
+(package-specific: \verb{n log(RSS / n)} plus the penalty times the number
+of parameters of the factor matrices and the core; ranks up to 6 for
+age and period and up to 4 for strata). For selection by forecast
+accuracy use \code{\link[=tuned]{tuned()}}.}
 
 \item{transform}{\code{"log"}, or the deprecated \code{"coda"}.}
 
@@ -46,43 +46,61 @@ A model specification.
 \description{
 Joint model of the array of log rates \verb{[age, period, stratum]}: the
 three-way extension of the Lee-Carter model of Russolillo, Giordano and
-Haberman (2011). As in Lee-Carter, the mean log rate over the years of
-each age and stratum, \code{a[x, i]}, is removed (\code{centre = TRUE}), and the
-centred array is decomposed by a Tucker3 decomposition
-\verb{X - a = G x1 A x2 B x3 C} with ranks \code{ranks = c(age, period, stratum)}:
-age factors \code{A}, period factors \code{B} and stratum factors \code{C} linked by the
-core array \code{G}. The period factors (columns of \code{B}) are forecast and the
-rates rebuilt with \code{a}, \code{A}, \code{C} and \code{G} fixed.
+Haberman (2011). Status: published, with the deviations listed below;
+section and equation numbers refer to that paper.
 }
 \details{
-The following parts are choices of this package without a published
-source:
+\strong{Model (Section 2, eq. 7-8).} As in Lee-Carter, the mean log rate over
+the years of each age and stratum, \code{a[x, i]}, is removed (\code{centre = TRUE}), and the centred array is decomposed by a Tucker3 decomposition
+\verb{X - a = G x1 A x2 B x3 C} with ranks \code{ranks = c(age, period, stratum)}:
+column-wise orthonormal age factors \code{A}, period factors \code{B} and stratum
+factors \code{C}, linked by the core array \code{G}, estimated by least squares.
+Ranks \code{c(1, 1, 1)} give eq. (7), \verb{log m[x, t, i] - a[x, i] = b[x] k[t] c[i]} (one period index for all strata); the default \code{c(2, 2, 2)} is the
+model of the application (Section 3.2, ten European countries). The
+squared core elements over the sum of squares of the centred array are
+the shares of variation of each combination of components (Table 4);
+their sum is the fit (\code{fit$fits$fit_pct}, \code{core_pct}).
+
+\strong{Forecasts.} The paper proposes a time-series model for the period
+index, as in Lee-Carter, and leaves its form open (Section 3.2.2). Here
+the period factors (columns of \code{B}) follow a multivariate random walk
+with drift, as \code{k[t]} of Lee and Carter (1992); draws resample the joint
+year-to-year changes, which keeps their correlation, and include the
+uncertainty of the drift (\code{ts = "rwd"}). ARIMA or ETS models per column
+(\code{ts = "arima"}, \code{"ets"}, package \pkg{forecast}) are alternatives. The
+rates are rebuilt with \code{a}, \code{A}, \code{C} and \code{G} fixed. Draws carry the
+uncertainty of the forecast period factors only. With fewer period
+factors than independent trends in the data, the strata share their
+forecast uncertainty and intervals are too narrow: on simulated
+Lee-Carter data with Poisson deaths and an own random walk in each of 10
+strata (the package's coverage benchmark), 95\% intervals covered about
+74\% with the default ranks and 95\% with \code{ranks = c(1, 10, 10)}.
+Predictive draws (\code{mt_forecast(predictive = TRUE)}) add Poisson variation
+of the deaths given the rates and the exposures, and no other observation
+noise. If intervals are too narrow on real data, that is a property of
+the model (see \code{\link[=recalibrated]{recalibrated()}}, \code{\link[=ensemble]{ensemble()}}, or overdispersed models
+such as \code{stanmomo(family = "nb")}).
+
+\strong{Deviations from the paper.}
 \itemize{
-\item estimation by higher-order orthogonal iteration (HOOI; De Lathauwer, De
-Moor and Vandewalle 2000), least squares on the log rates;
-\item the forecast of the period factors: a multivariate random walk with
-drift (bootstrap of joint year-to-year changes, which keeps their
-correlation), or ARIMA/ETS models per column (\code{ts = "arima"}, \code{"ets"},
-package \pkg{forecast});
-\item the ranks (default \code{c(3, 3, 2)}) and their choice by an information
-criterion (\code{ranks = "bic"}, \code{"aic"});
-\item zero deaths are replaced by 0.5 before taking logarithms.
+\item Estimation: the paper fits the model by alternating least squares
+(footnote 3; Kiers' Tucker3 program for Matlab, Appendix); here by
+higher-order orthogonal iteration (HOOI; De Lathauwer, De Moor and
+Vandewalle 2000), an alternating least-squares algorithm for the same
+criterion. The paper also rotates the solution to simple structure,
+which leaves the fitted values unchanged; signs are fixed so that the
+largest entry of each factor is positive.
+\item Centring: the text and eq. (7) centre over the years; the Matlab session
+in the Appendix also centres across the age groups. The package follows
+eq. (7), because the term removed by centring across ages varies over
+the years and the paper gives no forecast for it.
+\item Package-specific (reference unknown): the forecast model of the period
+factors (see above), the choice of the ranks by an information
+criterion (\code{ranks = "bic"}, \code{"aic"}), and the replacement of zero deaths
+by 0.5 before taking logarithms. The paper's data end with the closed
+age group 95-99; an open age interval is treated like the other age
+groups.
 }
-
-The model is experimental: compare it with established models such as
-\code{\link[=li_lee]{li_lee()}} in a backtest before using it.
-
-Draws carry the uncertainty of the forecast period factors; the other
-factors are fixed. With fewer period factors than independent trends in
-the data, the strata share their forecast uncertainty and intervals are
-too narrow: on simulated Lee-Carter data with Poisson deaths and an own
-random walk in each of 10 strata (the package's coverage benchmark), 95\%
-intervals covered about 75\% with the default ranks and 95\% with \code{ranks = c(1, 10, 10)}.
-Predictive draws (\code{mt_forecast(predictive = TRUE)}) add
-Poisson variation of the deaths given the rates and the exposures, and no
-other observation noise. If intervals are too narrow on real data, that
-is a property of the model (see \code{\link[=recalibrated]{recalibrated()}}, \code{\link[=ensemble]{ensemble()}}, or
-overdispersed models such as \code{stanmomo(family = "nb")}).
 
 \strong{Deprecated:} \code{transform = "coda"} (centred log-ratio transformed
 life-table deaths in place of log rates, with an auxiliary random walk
@@ -92,11 +110,14 @@ without a published source; it still works and warns (class
 strata), the published compositional model.
 
 Ranks are reduced to the array dimensions where needed, so the model also
-runs with one stratum or one age group.
+runs with one stratum or one age group. The model is experimental: compare
+it with established models such as \code{\link[=li_lee]{li_lee()}} in a backtest before using
+it.
 }
 \examples{
 x <- mt_example(deaths = "single")
-fit <- mt_fit(tucker3(ranks = c(3, 3, 2)), x)
+fit <- mt_fit(tucker3(), x)
+fit$fits$fit_pct
 fc <- mt_forecast(fit, h = 5, n_draws = 100, seed = 1)
 }
 \references{
