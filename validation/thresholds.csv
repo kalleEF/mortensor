@@ -3,7 +3,7 @@ ungroup_ew_1d,male_30_89,<=,0.02,"revamp plan 5.1; 0.015 at 2026-10 (noise floor
 ungroup_ew_1d,male_90_100,<=,0.032,"0.024 at 2026-10 (noise floor 0.021)"
 ungroup_ew_1d,seconds,<=,20,"runtime budget"
 ungroup_sim,mae_log_30_89,<=,0.03,""
-ungroup_sim,mae_log_90_plus,<=,0.03,""
+ungroup_sim,mae_log_90_plus,<=,0.03,"0.0088 at 2026-10-18 with open_split = ""pclm"" (default); 0.0062 with ""stationary"", which this generator assumes"
 ungroup_ew_2d,male_30_89,<=,0.02,""
 ungroup_ew_2d,male_90_100,<=,0.03,"0.023 at 2026-10"
 ungroup_ew_2d,seconds,<=,600,"runtime budget"

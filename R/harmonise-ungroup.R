@@ -42,18 +42,18 @@
 #' example 100+) is expanded into single years up to `omega` as well, and
 #' its exposure is split over these years (`open_split`):
 #'
-#' * `"stationary"` (default): with stationary-population weights `l(x) =
+#' * `"pclm"` (default): by the PCLM of the exposures of all grid cells,
+#'   with a group of 0 counts of 15 years beyond `omega`, as Rizzi, Gampe
+#'   and Eilers (2015) ungroup grouped exposures (their maximum age 115 and
+#'   a group 115-130 with 0 counts); the estimates enter the composite link
+#'   of the rates;
+#' * `"stationary"`: with stationary-population weights `l(x) =
 #'   exp(-cumsum(m(x)))` implied by the fitted rates; starting from rates
 #'   that rise by 10% per year of age, the weights and the fit are iterated
 #'   until no weight changes by more than 1e-6 (at most 50 iterations; the
 #'   smoothing parameters are selected again once the weights have
 #'   converged). This treatment is specific to mortensor (reference
-#'   unknown);
-#' * `"pclm"`: by the PCLM of the exposures of all grid cells, with a group
-#'   of 0 counts of 15 years beyond `omega`, as Rizzi, Gampe and Eilers
-#'   (2015) ungroup grouped exposures (their maximum age 115 and a group
-#'   115-130 with 0 counts); the estimates enter the composite link of the
-#'   rates.
+#'   unknown); it was the default up to E3.
 #'
 #' On French women and men (1997-2006, deaths in 5-year groups and 90+,
 #' grid open at 100+), the rate of 100+ was too high by 0.14 (women) and
@@ -62,7 +62,8 @@
 #' with `"stationary"`, 0.019 and 0.022 with `"pclm"`. On data simulated
 #' with the exposures of a stationary population above 100 ([mt_example()]),
 #' `"stationary"` was closer (median absolute log error at 90+ 0.006,
-#' against 0.009 with `"pclm"`).
+#' against 0.009 with `"pclm"`), because that generator has the stationary
+#' exposures this option assumes.
 #'
 #' **Relation to Rizzi, Gampe and Eilers (2015).** As in the paper, the
 #' observed counts are Poisson with means composed from a latent
@@ -175,9 +176,9 @@
 #' @param preserve_totals Rescale the estimates to the observed group totals
 #'   after the fit (default `FALSE`, the published PCLM); see Details.
 #' @param open_split Split of the exposure of an open interval of the grid
-#'   when deaths are ungrouped as rates: `"stationary"` (default,
-#'   package-specific stationary-population weights) or `"pclm"` (the PCLM
-#'   of the exposures, Rizzi, Gampe and Eilers 2015); see Details.
+#'   when deaths are ungrouped as rates: `"pclm"` (default, the PCLM of the
+#'   exposures, Rizzi, Gampe and Eilers 2015) or `"stationary"`
+#'   (package-specific stationary-population weights); see Details.
 #' @param tail,tail_width For the deprecated `method = "gam"`: the parametric
 #'   curve that takes over from the GAM above the start of the last age group
 #'   (`"kannisto"`, logistic, or `"gompertz"`, log-linear), fitted to the GAM
@@ -218,7 +219,7 @@ mt_ungroup <- function(data, age = NULL, dims = 1,
                        exposure_method = c("pclm", "monotone"),
                        lambda = NULL,
                        criterion = c("bic", "aic"), kr = 2, deg = 3, pord = 2,
-                       lambda_range = c(1e-2, 1e8), preserve_totals = FALSE, open_split = c("stationary", "pclm"),
+                       lambda_range = c(1e-2, 1e8), preserve_totals = FALSE, open_split = c("pclm", "stationary"),
                        tail = c("kannisto", "gompertz"), tail_width = 2) {
   check_class(data, "mt_data", "data")
   method <- match.arg(method)
@@ -454,7 +455,7 @@ ungroup_rate_block <- function(o, e_list, fa, B, pen, ctl, omega, n_open, ps = N
   if (anyNA(e_grid)) mt_abort("Exposures are missing for grid cells needed by the ungrouping.", class = "ungroup")
   open_idx <- which(fa$grid == ng & fa$open)
   w <- matrix(1, nf, length(ps))
-  stationary <- length(open_idx) && !identical(ctl$open_split, "pclm")
+  stationary <- length(open_idx) && identical(ctl$open_split, "stationary")
   if (length(open_idx)) {
     if (stationary) {
       # starting weights: rates rising by 10% per year of age in the open interval

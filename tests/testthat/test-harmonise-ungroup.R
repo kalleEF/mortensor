@@ -108,7 +108,7 @@ test_that("the exposure of the open interval is split with stationary weights or
   D <- mt_obs(x, "deaths")[stratum == 1 & period_lo == 2001]
   E <- mt_obs(x, "exposure")[stratum == 1 & period_lo == 2001]
   # grid open at 100+, expanded to omega = 110 inside the PCLM
-  u <- mt_ungroup(x)
+  u <- mt_ungroup(x, open_split = "stationary")
   dg <- attr(u, "ungroup")
   expect_true(all(dg$open_converged))
   expect_true(all(dg$open_iterations >= 1 & dg$open_iterations < 50))
@@ -120,7 +120,7 @@ test_that("the exposure of the open interval is split with stationary weights or
   fa <- mortensor:::fine_axis(g$age, 110)
   bas <- mortensor:::pclm_basis((fa$lower + fa$upper) / 2, min(fa$lower), max(fa$upper))
   open <- which(fa$grid == length(g$age))
-  # default: at the fixed point the weights are the stationary weights of the fitted rates
+  # "stationary": at the fixed point the weights are the stationary weights of the fitted rates
   ctl <- list(lambda = dg$lambda_age[1], criterion = "bic", kr = 2, deg = 3, pord = 2, lambda_range = c(1e-2, 1e8),
               preserve_totals = FALSE, open_split = "stationary")
   r <- mortensor:::ungroup_rate_block(o, list(e), fa, bas$B, list(bas$P), ctl, 110, NULL)

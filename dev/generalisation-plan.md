@@ -34,7 +34,7 @@ on published methods.
    backtests on at least three of England & Wales men (StMoMo), France
    (demography), `ons_data` and `de_deaths`, with 16 or more origins where
    possible, tested with `mt_dm_test()` and the EWC variance (Lazarus et al.
-   2018; Coroneo and Iacone 2020). Scores: CRPS, coverage by horizon, and the
+   2018). Scores: CRPS, coverage by horizon, and the
    quantity of the question (e0, gaps, totals).
 5. **Evidence status.** "(abstract)" marks works read only as abstracts; the
    plan reports only what these state, and implementation waits for the

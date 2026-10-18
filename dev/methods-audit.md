@@ -62,8 +62,9 @@ warn (class `mt_warning_deprecated`) and name the replacement.
    standard weighted Whittaker smoother and quasi-Poisson GAM; truncated
    Poisson mean for suppressed cells.
 7. `mt_dm_test(varestimator = "ewc")`: fixed-smoothing test with the
-   equal-weighted cosine variance (Lazarus et al. 2018; Coroneo and Iacone
-   2020); simulated size 0.048-0.066 at nominal 5% for 7-16 origins and
+   equal-weighted cosine variance (Lazarus et al. 2018; the earlier
+   attribution to Coroneo and Iacone 2020 was corrected in E4: they use a
+   Daniell-kernel estimate, now `varestimator = "daniell"`); simulated size 0.048-0.066 at nominal 5% for 7-16 origins and
    h up to 5.
 8. ASR by direct standardisation on the standard's age groups (Eurostat
    2013); `yll()` with e(x + a_x) (Murray 1994); "pooled" composition and

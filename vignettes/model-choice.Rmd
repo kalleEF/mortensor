@@ -181,7 +181,7 @@ tests whether the mean score of a model differs from that of a reference
 model by more than the origins vary (Diebold and Mariano 1995). By
 default the variance of the mean difference is the equal-weighted cosine
 estimate, with critical values from a t distribution (Lazarus, Lewis,
-Stock and Watson 2018; Coroneo and Iacone 2020), so that the test keeps
+Stock and Watson 2018), so that the test keeps
 its nominal size with few origins whose test years overlap. Three origins
 are too few: the test would have one degree of freedom. A second backtest
 of the five fastest models from 16 origins (1991-2006), five years ahead,
@@ -330,10 +330,6 @@ Cairns AJG, Blake D, Dowd K, Coughlan GD, Epstein D, Ong A, Balevich I
 (2009). A quantitative comparison of stochastic mortality models using
 data from England and Wales and the United States. *North American
 Actuarial Journal* 13(1): 1-35.
-
-Coroneo L, Iacone F (2020). Comparing predictive accuracy in small
-samples using fixed-smoothing asymptotics. *Journal of Applied
-Econometrics* 35(4): 391-409.
 
 Diebold FX, Mariano RS (1995). Comparing predictive accuracy. *Journal of
 Business & Economic Statistics* 13(3): 253-263.

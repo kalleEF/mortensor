@@ -81,7 +81,7 @@ Evaluation and derived quantities:
 
 * `mt_dm_test(varestimator = "ewc")` by default: the fixed-smoothing test
   with the equal-weighted cosine variance and t critical values (Lazarus
-  et al. 2018; Coroneo and Iacone 2020). In simulations under the null
+  et al. 2018). In simulations under the null
   (help page; check `dm_size`), the HLN-corrected test (`"acf"`) rejected
   in 10-19% of samples at nominal 5% with 7 overlapping origins and
   horizons 2-5, the EWC test in 4.8-7.4% with 7-16 origins. p-values are larger: random walk against Li-Lee at

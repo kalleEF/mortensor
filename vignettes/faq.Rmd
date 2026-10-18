@@ -147,8 +147,8 @@ differ by less than these scores vary between origins. `mt_dm_test()`
 tests whether the difference is larger than chance, horizon by horizon,
 with the Diebold-Mariano test (Diebold and Mariano 1995). By default the
 long-run variance of the loss differences is the equal-weighted cosine
-estimate with fixed-smoothing critical values (Lazarus et al. 2018;
-Coroneo and Iacone 2020), which allows for the overlap of forecasts from
+estimate with fixed-smoothing critical values (Lazarus et al. 2018),
+which allows for the overlap of forecasts from
 neighbouring origins and keeps the size of the test nearly correct with
 few origins:
 
@@ -403,10 +403,6 @@ reports accuracy and interval coverage of the models on four data sets.
 Brouhns N, Denuit M, Vermunt JK (2002). A Poisson log-bilinear regression
 approach to the construction of projected lifetables. *Insurance:
 Mathematics and Economics* 31(3): 373-393.
-
-Coroneo L, Iacone F (2020). Comparing predictive accuracy in small samples
-using fixed-smoothing asymptotics. *Journal of Applied Econometrics*
-35(4): 391-409. doi:10.1002/jae.2756.
 
 Diebold FX, Mariano RS (1995). Comparing predictive accuracy. *Journal of
 Business & Economic Statistics* 13(3): 253-263.

@@ -17,7 +17,7 @@ mt_ungroup(
   pord = 2,
   lambda_range = c(0.01, 1e+08),
   preserve_totals = FALSE,
-  open_split = c("stationary", "pclm"),
+  open_split = c("pclm", "stationary"),
   tail = c("kannisto", "gompertz"),
   tail_width = 2
 )
@@ -63,9 +63,9 @@ penalty.}
 after the fit (default \code{FALSE}, the published PCLM); see Details.}
 
 \item{open_split}{Split of the exposure of an open interval of the grid
-when deaths are ungrouped as rates: \code{"stationary"} (default,
-package-specific stationary-population weights) or \code{"pclm"} (the PCLM
-of the exposures, Rizzi, Gampe and Eilers 2015); see Details.}
+when deaths are ungrouped as rates: \code{"pclm"} (default, the PCLM of the
+exposures, Rizzi, Gampe and Eilers 2015) or \code{"stationary"}
+(package-specific stationary-population weights); see Details.}
 
 \item{tail, tail_width}{For the deprecated \code{method = "gam"}: the parametric
 curve that takes over from the GAM above the start of the last age group
@@ -128,17 +128,17 @@ the ungroup package. For rates, an open interval of the \emph{grid} (for
 example 100+) is expanded into single years up to \code{omega} as well, and
 its exposure is split over these years (\code{open_split}):
 \itemize{
-\item \code{"stationary"} (default): with stationary-population weights \code{l(x) = exp(-cumsum(m(x)))} implied by the fitted rates; starting from rates
+\item \code{"pclm"} (default): by the PCLM of the exposures of all grid cells,
+with a group of 0 counts of 15 years beyond \code{omega}, as Rizzi, Gampe
+and Eilers (2015) ungroup grouped exposures (their maximum age 115 and
+a group 115-130 with 0 counts); the estimates enter the composite link
+of the rates;
+\item \code{"stationary"}: with stationary-population weights \code{l(x) = exp(-cumsum(m(x)))} implied by the fitted rates; starting from rates
 that rise by 10\% per year of age, the weights and the fit are iterated
 until no weight changes by more than 1e-6 (at most 50 iterations; the
 smoothing parameters are selected again once the weights have
 converged). This treatment is specific to mortensor (reference
-unknown);
-\item \code{"pclm"}: by the PCLM of the exposures of all grid cells, with a group
-of 0 counts of 15 years beyond \code{omega}, as Rizzi, Gampe and Eilers
-(2015) ungroup grouped exposures (their maximum age 115 and a group
-115-130 with 0 counts); the estimates enter the composite link of the
-rates.
+unknown); it was the default up to E3.
 }
 
 On French women and men (1997-2006, deaths in 5-year groups and 90+,
@@ -148,7 +148,8 @@ grid open at 100+), the rate of 100+ was too high by 0.14 (women) and
 with \code{"stationary"}, 0.019 and 0.022 with \code{"pclm"}. On data simulated
 with the exposures of a stationary population above 100 (\code{\link[=mt_example]{mt_example()}}),
 \code{"stationary"} was closer (median absolute log error at 90+ 0.006,
-against 0.009 with \code{"pclm"}).
+against 0.009 with \code{"pclm"}), because that generator has the stationary
+exposures this option assumes.
 
 \strong{Relation to Rizzi, Gampe and Eilers (2015).} As in the paper, the
 observed counts are Poisson with means composed from a latent

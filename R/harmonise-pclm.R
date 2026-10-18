@@ -7,10 +7,10 @@
 # J. Schoeley, M. J. Danko). This implementation is written for mortensor and
 # differs in the treatment of rates: the exposure offset enters the composite
 # link directly, and an open age interval of the grid is expanded into single
-# years up to omega, its exposure split with stationary-population weights
-# (package-specific, reference unknown; see open_weights()) or, as an option,
-# by the PCLM of the exposures (Rizzi, Gampe and Eilers 2015;
-# open_weights_pclm()), so no artificial-bin reallocation is applied to rates
+# years up to omega, its exposure split by the PCLM of the exposures (Rizzi,
+# Gampe and Eilers 2015; open_weights_pclm(); default) or, as an option, with
+# stationary-population weights (package-specific, reference unknown; see
+# open_weights()), so no artificial-bin reallocation is applied to rates
 # (the source of the level shift found in revamp plan 5.1).
 
 #' Fit a penalized composite link model
