@@ -632,6 +632,107 @@ checks$stmomo_cbd_ew <- list(
                          rel("m8", StMoMo::m8(xc = 89))))
   })
 
+# Scores of a model and of the Lee-Carter model (`lc`) in a backtest with
+# life expectancy: CRPS and 95% coverage of log rates and of life
+# expectancy at the first age, and the CRPS ratios to Lee-Carter
+scores_vs_lc <- function(bt, models) {
+  s <- mt_score(bt)
+  e <- mt_score(bt, target = "life_expectancy")
+  v <- function(tab, m, col) tab[[col]][tab$model == m]
+  out <- list()
+  for (m in c("lc", models)) {
+    out[[m]] <- data.frame(metric = paste0(m, c("_crps", "_cov95", "_e_crps", "_e_cov95")),
+                           value = c(v(s, m, "crps"), v(s, m, "cov95"), v(e, m, "crps"), v(e, m, "cov95")))
+  }
+  for (m in models) {
+    out[[paste0(m, "_ratio")]] <- data.frame(metric = paste0(c("crps_ratio_", "e_crps_ratio_"), m, "_lc"),
+                                             value = c(v(s, m, "crps") / v(s, "lc", "crps"),
+                                                       v(e, m, "crps") / v(e, "lc", "crps")))
+  }
+  do.call(rbind, unname(out))
+}
+
+checks$stmomo_plat_ew <- list(
+  suite = "full",
+  description = paste("Plat model (stmomo(\"plat\"), the reduced model of the StMoMo vignette) on England & Wales",
+                      "men (HMD via StMoMo), ages 55-89, 1961-2011: rolling-origin backtest (origins 1996-2001,",
+                      "h = 10) against lee_carter(); CRPS and 95% coverage of log rates and of life expectancy at",
+                      "55 (to age 90), CRPS ratios to Lee-Carter. Fitted rates on 1961-2011 against the vignette's",
+                      "code run with StMoMo directly (central2initial(), clip = 3)."),
+  run = function() {
+    ew <- ew_single_ages(55, 89)
+    bt <- mt_compare(list(lc = lee_carter(), plat = stmomo("plat")), ew, origins = 1996:2001, h = 10,
+                     n_draws = 200, quantities = "life_expectancy")
+    sd <- StMoMo::central2initial(mortensor:::pkg_data("EWMaleData", "StMoMo"))
+    wxt <- StMoMo::genWeightMat(55:89, sd$years, clip = 3)
+    direct <- suppressWarnings(StMoMo::fit(mortensor:::stmomo_plat(), data = sd, ages.fit = 55:89, wxt = wxt,
+                                           verbose = FALSE))
+    q <- stats::fitted(direct, type = "rates")
+    f <- stats::fitted(mt_fit(stmomo("plat"), ew))[, , 1]
+    ok <- !is.na(q)
+    rbind(scores_vs_lc(bt, "plat"),
+          data.frame(metric = "plat_max_rel_diff_stmomo", value = max(abs(f[ok] / -log(1 - q[ok]) - 1))))
+  })
+
+checks$bohk_rau_ew <- list(
+  suite = "full",
+  description = paste("Bohk-Ewald and Rau model (bohk_rau(), exponential core model with the paper's settings, and",
+                      "the linear core model) on England & Wales men, ages 30-100, 1961-2011, as backtest_ew",
+                      "(origins 1996-2001, h = 10) against lee_carter(); CRPS and 95% coverage of log rates and of",
+                      "life expectancy at 30 (to age 101), CRPS ratios to Lee-Carter, the number of fits whose",
+                      "chains gave a convergence warning (Gelman-Rubin statistic above 1.1) and seconds per",
+                      "origin for the three models."),
+  run = function() {
+    ew <- ew_single_ages(30, 100)
+    o <- 1996:2001
+    n_warn <- 0
+    t0 <- proc.time()[["elapsed"]]
+    bt <- withCallingHandlers(
+      mt_compare(list(lc = lee_carter(), br = bohk_rau(), br_lin = bohk_rau(core = "linear")), ew, origins = o,
+                 h = 10, n_draws = 200, quantities = "life_expectancy"),
+      mt_warning_convergence = function(w) {
+        n_warn <<- n_warn + 1
+        invokeRestart("muffleWarning")
+      })
+    secs <- (proc.time()[["elapsed"]] - t0) / length(o)
+    rbind(scores_vs_lc(bt, c("br", "br_lin")),
+          data.frame(metric = c("convergence_warnings", "seconds_per_origin"), value = c(n_warn, secs)))
+  })
+
+# Projections of mortensor's nordpred_apc() for England & Wales men in 18 age
+# groups (0-4, ..., 80-84, 85+) and 5-year periods 1962-2011, as computed by
+# the nordpred package 1.1 (Moller and Weedon-Fekjaer; GPL-2) with
+# startestage = 5, startuseage = 6 and its defaults: rates of age groups
+# 25-29, 50-54, 70-74 and 85+ in the five periods from 2012-2016. The same
+# values are in tests/testthat/test-nordpred.R.
+nordpred_reference <- function() {
+  matrix(c(0.0005445302386, 0.0004552115784, 0.0004024828974, 0.0003780180962, 0.0003547576954,
+           0.0038321842080, 0.0038589651100, 0.0039776418660, 0.0040447382340, 0.0040569304810,
+           0.0230578400400, 0.0209277757700, 0.0208264255400, 0.0211386178600, 0.0219131426000,
+           0.1401941702000, 0.1211083416000, 0.1090513773000, 0.1037796141000, 0.1007035372000),
+         4, 5, byrow = TRUE)
+}
+
+checks$nordpred_ew <- list(
+  suite = "quick",
+  description = paste("Nordpred model (nordpred_apc(), power 5 and log link) on England & Wales men in 5-year age",
+                      "groups 30-34, ..., 90-94, 95-100, 1961-2011 (annual data summed to 5-year periods inside",
+                      "the fit): rolling-origin backtest (origins 1996-2001, h = 10) against lee_carter() on the",
+                      "same age groups; CRPS and 95% coverage of log rates and of life expectancy at 30 (to age",
+                      "101), CRPS ratios to Lee-Carter. Point projections for 18 age groups 0-85+ against the",
+                      "nordpred package 1.1 (largest relative difference)."),
+  run = function() {
+    ew <- ew_single_ages(30, 100)
+    ew5 <- mt_regroup(ew, age = age_groups(seq(30, 95, 5), open = FALSE, last_upper = 101))
+    bt <- mt_compare(list(lc = lee_carter(), np = nordpred_apc(), np_log = nordpred_apc(link = "log")), ew5,
+                     origins = 1996:2001, h = 10, n_draws = 200, quantities = "life_expectancy")
+    all <- mt_regroup(as_mt_data(mortensor:::pkg_data("EWMaleData", "StMoMo")), age = c(seq(0, 80, 5), 85))
+    f <- mt_fit(nordpred_apc(est_age = 20, use_age = 25), all)$fits[[1]]
+    proj <- mortensor:::nordpred_projection(f, 5)[c("25-29", "50-54", "70-74", "85-100"), ]
+    rbind(scores_vs_lc(bt, c("np", "np_log")),
+          data.frame(metric = "max_rel_diff_nordpred", value = max(abs(proj / nordpred_reference() - 1))))
+  })
+
 # France (HMD via demography::fr.mort) life tables: single ages 0-109 and
 # 110+, or deaths and exposures summed to the age groups starting at `breaks`
 fr_life_tables <- function() {

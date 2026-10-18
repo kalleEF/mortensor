@@ -5,19 +5,20 @@
 \title{Generalised age-period-cohort models (StMoMo)}
 \usage{
 stmomo(
-  model = c("apc", "cbd", "rh", "m6", "m7", "m8", "lc"),
+  model = c("apc", "cbd", "rh", "m6", "m7", "m8", "plat", "lc"),
   clip = 3,
   gc_order = NULL,
   xc = NULL
 )
 }
 \arguments{
-\item{model}{\code{"apc"}, \code{"cbd"}, \code{"rh"}, \code{"m6"}, \code{"m7"}, \code{"m8"} or \code{"lc"}.}
+\item{model}{\code{"apc"}, \code{"cbd"}, \code{"rh"}, \code{"m6"}, \code{"m7"}, \code{"m8"}, \code{"plat"} or
+\code{"lc"}.}
 
 \item{clip}{Cohorts with fewer observations get zero weight.}
 
 \item{gc_order}{ARIMA order for the cohort index. Default: \code{c(2, 0, 0)}
-for M7, \code{c(1, 1, 0)} for the other cohort models.}
+for M7 and the Plat model, \code{c(1, 1, 0)} for the other cohort models.}
 
 \item{xc}{Age at which the cohort effect of M8 vanishes (\code{model = "m8"}
 only). Cairns et al. (2009) estimate it; StMoMo's \code{m8()} needs a fixed
@@ -33,7 +34,7 @@ A model specification.
 Wrapper around \pkg{StMoMo} (Villegas, Kaishev and Millossovich 2018):
 age-period-cohort (\code{"apc"}), Cairns-Blake-Dowd (\code{"cbd"}, logit link),
 Renshaw-Haberman (\code{"rh"}), M6, M7 and M8 (\code{"m6"}, \code{"m7"}, \code{"m8"}, logit
-link) and Lee-Carter (\code{"lc"}). \code{"rh"} is StMoMo's Renshaw-Haberman model
+link), the Plat model (\code{"plat"}, logit link) and Lee-Carter (\code{"lc"}). \code{"rh"} is StMoMo's Renshaw-Haberman model
 with \code{cohortAgeFun = "1"} (the default of StMoMo's \code{rh()}): \verb{log m(x,t) = a(x) + b(x) k(t) + g(t - x)}, a cohort effect without age modulation, not
 the original 2006 specification of the Renshaw-Haberman model, whose
 cohort effect is modulated by a second age function. Models are fitted per stratum with real
@@ -64,7 +65,27 @@ cohort effect fades with age and vanishes at age \code{xc}.
 The CBD family is meant for older ages (StMoMo's examples use ages 55 to
 89). For M7 the cohort index is forecast with ARIMA(2,0,0) with a non-zero
 mean, as in the StMoMo vignette, since its constraints remove any trend;
-the other cohort models use ARIMA(1,1,0) with drift.
+the other cohort models use ARIMA(1,1,0) with drift, except the Plat
+model.
+
+\strong{Plat model.} Plat (2009) combines the CBD model with features of the
+Lee-Carter model. \code{"plat"} is the reduced Plat model for older ages as the
+StMoMo vignette defines it (Villegas, Kaishev and Millossovich 2018,
+Section 4): \verb{logit q(x,t) = a(x) + k1(t) + (xbar - x) k2(t) + g(t - x)},
+built with \code{StMoMo::StMoMo()} from the vignette's age functions (\code{1} and
+\code{xbar - x}, \code{xbar} the mean age of the data) and its constraint function.
+The constraints centre both period indexes and remove the level, the
+linear and the quadratic trend from the cohort effect (regression of the
+cohort effect on the year of birth and its square, as in Haberman and
+Renshaw 2011). The period indexes are forecast with a multivariate random
+walk with drift and the cohort index with ARIMA(2,0,0) with a non-zero
+mean (the vignette's Table 3). The vignette uses the logit link with
+initial exposures for all its models; Plat (2009) uses the log link with
+Poisson deaths, and for all ages adds a third period term \code{(xbar - x)+ k3(t)}, which he suggests dropping when only older ages are of interest.
+The full model with that term is not offered. In the vignette's 50-year
+forecasts for England and Wales men aged 55-89, the rates of this model
+increase, which the vignette calls implausible: the central trend is
+linked to the estimated cohort effect.
 }
 \examples{
 if (requireNamespace("StMoMo", quietly = TRUE)) {
@@ -73,6 +94,7 @@ if (requireNamespace("StMoMo", quietly = TRUE)) {
   old <- mt_regroup(mt_set_grid(x, age = single_ages(55, 89, open = FALSE)),
                     age = single_ages(55, 89, open = FALSE))
   fc7 <- mt_forecast(mt_fit(stmomo("m7"), old), h = 5, n_draws = 50, seed = 1)
+  fcp <- mt_forecast(mt_fit(stmomo("plat"), old), h = 5, n_draws = 50, seed = 1)
 }
 }
 \references{
@@ -80,6 +102,12 @@ Cairns AJG, Blake D, Dowd K, Coughlan GD, Epstein D, Ong A, Balevich I
 (2009). A quantitative comparison of stochastic mortality models using
 data from England and Wales and the United States. \emph{North American
 Actuarial Journal} 13(1): 1-35.
+
+Haberman S, Renshaw A (2011). A comparative study of parametric mortality
+projection models. \emph{Insurance: Mathematics and Economics} 48(1): 35-55.
+
+Plat R (2009). On stochastic mortality modeling. \emph{Insurance: Mathematics
+and Economics} 45(3): 393-404. \doi{10.1016/j.insmatheco.2009.08.006}
 
 Villegas AM, Kaishev VK, Millossovich P (2018). StMoMo: an R package for
 stochastic mortality modeling. \emph{Journal of Statistical Software} 84(3):

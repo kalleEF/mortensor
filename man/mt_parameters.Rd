@@ -48,6 +48,15 @@ of the identified quantities;
 divided by the number of cells minus the effective dimension); for
 \code{\link[=cp_splines]{cp_splines()}} also the bounds of the rates of ageing and of change per
 age (\code{ageing_lower}, \code{ageing_upper}, \code{change_lower}, \code{change_upper}).
+\item \code{\link[=bohk_rau]{bohk_rau()}}: posterior medians and 90\% intervals of the curve
+parameters \code{b1} and \code{b2} by age and of the variance and hyperparameters,
+the least-squares values \code{theta1}, \code{theta2} (exponential core model) and
+the Gelman-Rubin statistics (\code{rhat});
+\item \code{\link[=nordpred_apc]{nordpred_apc()}}: estimates and 90\% Wald intervals of the age, period
+and cohort effects (cohorts by central year of birth) and of the drift,
+the projected drift, the number of periods fitted, the choice of the
+recent trend and the p-values of the goodness of fit and of the test for
+the recent trend.
 }
 
 Fits of wrapped packages (StMoMo, demography) keep the original fitted

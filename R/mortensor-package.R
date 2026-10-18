@@ -13,7 +13,8 @@
 #'   backtests refit them on every training window.
 #' * **Models**: [rwd()], [lee_carter()], [arima_series()], [ets_series()],
 #'   [hyndman_ullah()], [coherent_fdm()], [stmomo()], [stanmomo()],
-#'   [li_lee()], [coda()], [apc_bayes()] (package bamp), the experimental
+#'   [li_lee()], [coda()], [bohk_rau()], [nordpred_apc()], [apc_bayes()]
+#'   (package bamp), the experimental
 #'   [tucker3()] and [coda_causes()], and [ensemble()], fitted with [mt_fit()]
 #'   (optionally tuned with [tuned()]) and forecast with [mt_forecast()] as
 #'   simulated paths ([mt_draws]). [product_ratio()] and [cause_shares()]
