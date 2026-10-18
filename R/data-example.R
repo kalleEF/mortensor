@@ -93,8 +93,15 @@ with_seed <- function(seed, expr) {
   on.exit({
     if (is.null(old)) rm(".Random.seed", envir = globalenv()) else assign(".Random.seed", old, envir = globalenv())
   })
-  set.seed(seed)
+  seed_default(seed)
   expr
+}
+
+# set.seed() with R's default generators, so that a seed gives the same
+# numbers also where another generator is active (the L'Ecuyer-CMRG streams of
+# par_lapply())
+seed_default <- function(seed) {
+  set.seed(seed, kind = "Mersenne-Twister", normal.kind = "Inversion", sample.kind = "Rejection")
 }
 
 #' Simulated deaths by sex, region and deprivation quintile

@@ -100,7 +100,9 @@ mt_backtest <- function(spec, data, origins = NULL, h = 10, prep = NULL, n_draws
     }
     res
   }
-  out <- rbindlist(par_lapply(origins, one, cores), fill = TRUE)
+  # one random number stream per origin: fits that use random numbers give the
+  # same results with any number of cores
+  out <- rbindlist(par_lapply(origins, one, cores, streams = TRUE), fill = TRUE)
   if (!nrow(out)) mt_abort("All origins failed.", class = "backtest")
   setattr(out, "class", c("mt_backtest", class(out)))
   out
@@ -175,7 +177,7 @@ backtest_origin <- function(spec, data, origin, h, prep, n_draws, seed, score_es
   qdraws <- list()
   # the randomised PIT draws uniforms: seeded like the forecast
   old_seed <- if (exists(".Random.seed", envir = globalenv())) get(".Random.seed", envir = globalenv()) else NULL
-  if (!is.null(seed)) set.seed(seed + 1L)
+  if (!is.null(seed)) seed_default(seed + 1L)
   on.exit(if (!is.null(old_seed)) assign(".Random.seed", old_seed, envir = globalenv()), add = TRUE)
   for (s in unique(obs$stratum)) {
     if (anyNA(D_draws[, , s, ])) next

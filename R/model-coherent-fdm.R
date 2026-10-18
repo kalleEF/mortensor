@@ -155,7 +155,7 @@ simulate_model.mt_spec_coherent_fdm <- function(spec, fit, h, n_draws, ...) {
     r$weights <- 0 * r$weights + 1
     if (fit$K < ny) r$weights[seq_len(ny - fit$K)] <- 0
     fc <- quiet_try(forecast::forecast(r, h = h, method = "arfima", estim = "mle", drange = fit$drange))
-    stats::simulate(fc, nsim = n_draws)
+    stats::simulate(fracdiff_sim_models(fc), nsim = n_draws)
   })
   na <- dim(sim_p[[1]])[1]
   out <- array(NA_real_, c(na, h, ns, n_draws))
@@ -168,4 +168,60 @@ simulate_model.mt_spec_coherent_fdm <- function(spec, fit, h, n_draws, ...) {
     }
   }
   out
+}
+
+# Simulation of the ARFIMA models of the ratio coefficients. Adapted from
+# forecast 8.21.1 (simulate.fracdiff() and unfracdiff()), GPL-3, by Rob J
+# Hyndman and co-authors. Change: demography's simulate() draws each path
+# coefficient by coefficient, and simulate.fracdiff() rebuilds the same
+# fixed-coefficient ARMA model of the differenced series at every call;
+# here it is built once per coefficient. The draws are unchanged.
+fracdiff_sim_models <- function(fc) {
+  for (j in seq_along(fc$coeff)) {
+    cf <- fc$coeff[[j]]
+    nested <- inherits(cf$model, "forecast")
+    mod <- if (nested) cf$model$model else cf$model
+    if (!inherits(mod, "fracdiff")) next
+    x <- forecast::getResponse(mod)
+    if (is.null(x) || anyNA(x)) next
+    meanx <- mean(x)
+    xx <- x - meanx
+    y <- fracdiff::diffseries(xx, d = mod$d)
+    if (!is.null(stats::tsp(x))) stats::tsp(y) <- stats::tsp(x)
+    arma <- forecast::Arima(y, order = c(length(mod$ar), 0, length(mod$ma)), include.mean = FALSE,
+                            fixed = c(mod$ar, -mod$ma))
+    sim <- structure(list(arma = arma, xx = xx, meanx = meanx, d = mod$d), class = "mt_fracdiff_sim")
+    if (nested) fc$coeff[[j]]$model$model <- sim else fc$coeff[[j]]$model <- sim
+  }
+  fc
+}
+
+#' @exportS3Method stats::simulate
+#' @noRd
+simulate.mt_fracdiff_sim <- function(object, nsim, seed = NULL, future = TRUE, bootstrap = FALSE, innov = NULL,
+                                     ...) {
+  ysim <- stats::simulate(object$arma, nsim, seed, future = future, bootstrap = bootstrap, innov = innov)
+  unfracdiff(object$xx, ysim, length(object$xx), nsim, object$d) + object$meanx
+}
+
+# Inverse of fractional differencing of the simulated values y (h steps)
+# given the past values x (forecast 8.21.1, as above)
+unfracdiff <- function(x, y, n, h, d) {
+  bin_c <- (-1)^(0:(n + h)) * choose(d, 0:(n + h))
+  xnew <- lhs <- numeric(h)
+  rhs <- cumsum(y)
+  bs <- cumsum(bin_c[1:h])
+  b <- bin_c[(1:n) + 1]
+  xnew[1] <- rhs[1] <- y[1] - sum(b * rev(x))
+  if (h > 1) {
+    for (k in 2:h) {
+      b <- b + bin_c[(1:n) + k]
+      rhs[k] <- rhs[k] - sum(b * rev(x))
+      lhs[k] <- sum(rev(xnew[1:(k - 1)]) * bs[2:k])
+      xnew[k] <- rhs[k] - lhs[k]
+    }
+  }
+  tspx <- stats::tsp(x)
+  if (is.null(tspx)) tspx <- c(1, length(x), 1)
+  stats::ts(xnew, frequency = tspx[3], start = tspx[2] + 1 / tspx[3])
 }

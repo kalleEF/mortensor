@@ -296,8 +296,9 @@ par_lapply <- function(x, f, cores = 1, streams = FALSE) {
   if (streams) {
     seeds <- rng_streams(length(x))
     g <- f
-    f <- function(i) with_stream(seeds[[i]], g(x[[i]]))
-    x <- seq_along(x)
+    items <- x
+    f <- function(i) with_stream(seeds[[i]], g(items[[i]]))
+    x <- seq_along(items)
   }
   if (cores > 1 && .Platform$OS.type == "unix") {
     parallel::mclapply(x, f, mc.cores = cores, mc.set.seed = TRUE)

@@ -18,9 +18,17 @@
 #' Fits of wrapped packages (StMoMo, demography) keep the original fitted
 #' object in `fit$fits[[i]]`, where the methods of those packages apply.
 #'
+#' Wrappers return the parameters of the model they wrap ([recalibrated()]
+#' adds its factors). For an [ensemble()], the rows of each component carry
+#' its name in column `component`, and rows with `parameter = "weight"` give
+#' the weights; components without interpretable parameters (wrapped
+#' packages) contribute their weight only. For [stratified()] and
+#' `tuned(by = )`, the rows of each group carry its name in column `group`.
+#'
 #' @param fit An `mt_fit` object.
 #' @return A `data.table` with `stratum`, `parameter`, `index` (age label,
-#'   year or position), `value` and, for Bayesian fits, `lower` and `upper`.
+#'   year or position), `value` and, for Bayesian fits, `lower` and `upper`;
+#'   for ensembles also `component`, for fits by groups also `group`.
 #' @seealso [summary.mt_fit()], [residuals.mt_fit()].
 #' @examples
 #' x <- mt_example(deaths = "single")
@@ -29,15 +37,21 @@
 #' @export
 mt_parameters <- function(fit) {
   check_class(fit, "mt_fit", "fit")
-  sp <- fit$spec
-  # wrappers that keep the fit of their base model (the fitted base specs are
-  # stacked in inner_specs; tuned() fits the spec it chose)
-  inner <- fit$inner_specs
-  while (inherits(sp, c("mt_spec_recalibrated", "mt_spec_reconciled", "mt_spec_bootstrap", "mt_spec_anchored"))) {
-    sp <- if (length(inner)) inner[[1]] else sp$params$base
-    inner <- inner[-1]
+  out <- if (!is.null(fit$components)) {
+    ensemble_parameters(fit)
+  } else if (!is.null(fit$group_fits)) {
+    group_parameters(fit)
+  } else {
+    sp <- fit$spec
+    # wrappers that keep the fit of their base model (the fitted base specs are
+    # stacked in inner_specs; tuned() fits the spec it chose)
+    inner <- fit$inner_specs
+    while (inherits(sp, c("mt_spec_recalibrated", "mt_spec_reconciled", "mt_spec_bootstrap", "mt_spec_anchored"))) {
+      sp <- if (length(inner)) inner[[1]] else sp$params$base
+      inner <- inner[-1]
+    }
+    base_parameters(fit, sp)
   }
-  out <- base_parameters(fit, sp)
   cal <- fit$calibration
   if (!is.null(cal)) {
     lab <- if (!is.null(cal$band)) paste0(cal$group, ", ", cal$band) else cal$group
@@ -46,6 +60,32 @@ mt_parameters <- function(fit) {
                                  value = c(cal$scale_h1, cal$slope, cal$drift)), fill = TRUE)
   }
   out
+}
+
+# Parameters of each component of an ensemble (column `component`) and the
+# weights; components without a method contribute their weight only
+ensemble_parameters <- function(fit) {
+  comps <- fit$components
+  w <- fit$weights %||% stats::setNames(rep(1 / length(comps), length(comps)), names(comps))
+  parts <- lapply(names(comps), function(n) {
+    p <- tryCatch(mt_parameters(comps[[n]]), mt_error_argument = function(e) NULL)
+    if (!is.null(p)) p[, component := n]
+    p
+  })
+  weights <- data.table(stratum = "ensemble", parameter = "weight", index = names(w), value = unname(w),
+                        component = names(w))
+  rbindlist(c(parts, list(weights)), fill = TRUE)
+}
+
+# Parameters of each group of a fit by groups (stratified(), tuned(by = )),
+# with the group's name in column `group`
+group_parameters <- function(fit) {
+  nm <- names(fit$groups) %||% as.character(seq_along(fit$groups))
+  rbindlist(lapply(seq_along(fit$group_fits), function(g) {
+    p <- mt_parameters(fit$group_fits[[g]])
+    p[, group := nm[g]]
+    p
+  }), fill = TRUE)
 }
 
 base_parameters <- function(fit, sp) {

@@ -117,10 +117,23 @@ Vignettes:
 * "Bayesian age-period-cohort models with bamp": the effects plot leaves
   out the R-hat rows of `mt_parameters()`, which get their own table; the
   MCMC fits are seeded.
-* The README shows the function map as an image
-  (`man/figures/README-function-map.png`, drawn from
-  `dev/readme-diagram/function-map.mmd`), because the GitHub mobile app does
-  not draw Mermaid diagrams.
+* The README and the function map article show their diagrams as images
+  (drawn from `dev/diagrams/*.mmd` by `dev/diagrams/render.js`), because
+  the GitHub mobile app does not draw Mermaid diagrams; the website no
+  longer loads Mermaid.
+
+## Engineering
+
+* `mt_parameters()` works for `ensemble()` (the parameters of each
+  component, column `component`, and the weights), `stratified()` and
+  `tuned(by = )` (column `group`), also inside other wrappers.
+* `mt_backtest()` and `recalibrated()` run each origin with its own random
+  number stream, as `mt_fit()` does for strata: results of models that use
+  random numbers (bootstrap) no longer depend on `cores`.
+* `coherent_fdm()` forecasts about three times faster: the ARFIMA models of
+  the ratios are prepared once per coefficient instead of once per simulated
+  path (`forecast::simulate()` refits them at every call). The draws are
+  identical.
 
 ## StanMoMo, recalibration
 

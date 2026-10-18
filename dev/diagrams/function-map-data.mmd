@@ -1,0 +1,22 @@
+%%{init: {"flowchart": {"wrappingWidth": 360}}}%%
+flowchart TD
+  A["`**read**
+  mt_data(): long or wide tables, age labels such as 85+ or '85 Jahre und mehr', suppression symbols
+  mt_read_genesis(), mt_read_gbe(): German official exports
+  mt_from_hmd(), mt_read_hmd(), as_mt_data(): HMD, StMoMo, demography`"]
+  E["`**mt_as_exposure(type)**
+  person-years from mid-year, 1 January or 31 December populations`"]
+  S["`**mt_subset()**
+  ages, years and strata to analyse`"]
+  G["`**mt_regroup()**
+  common age groups or years, for example those of the deaths`"]
+  F["`**mt_fill_suppressed()**
+  suppressed counts estimated from published totals or bounds`"]
+  L["`**mt_group_levels(), mt_relabel()**
+  aggregation layers such as cause groups, quintiles or regions; labels`"]
+  U["`**mt_ungroup()**
+  single years of age from age groups (penalised composite link)`"]
+  V["`**mt_validate()**
+  impossible values, missing cells, totals among levels, sums of a hierarchy`"]
+  M["model-ready mt_data"]
+  A --> E --> S --> G --> F --> L --> U --> V --> M

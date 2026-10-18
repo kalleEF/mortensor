@@ -63,7 +63,7 @@ The objects of an analysis and the functions that connect them. The
 Articles, Function map) shows every function with its purpose, the
 possible workflows and what the package does not cover.
 
-<!-- Drawn from dev/readme-diagram/function-map.mmd by dev/readme-diagram/render.js (an image, because
+<!-- Drawn from dev/diagrams/readme-function-map.mmd by dev/diagrams/render.js (an image, because
 the GitHub mobile app does not draw Mermaid diagrams) -->
 <p align="center">
 <img src="man/figures/README-function-map.png" width="538" alt="Function map: your tables become an mt_data object with mt_data(); mt_fit() fits a model specification to it; mt_forecast() gives mt_draws, simulated future rates; mt_backtest() gives backtest scores (mt_score()); results such as life_expectancy(), asr(), mt_contrast(), mt_decompose(), plots and CSV files come from the draws or from the observed data.">
