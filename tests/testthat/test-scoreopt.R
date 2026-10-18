@@ -99,6 +99,25 @@ test_that("the optimisation reproduces ProbReco::scoreopt() and its d and G reco
   }
 })
 
+test_that("the two samples of each step never pair a draw with itself", {
+  set.seed(1)
+  for (n in c(10, 31, 99, 100, 250)) {
+    for (q in c(5, 50)) {
+      ij <- mortensor:::scoreopt_pairs(n, q)
+      expect_length(ij[[1]], q)
+      expect_length(ij[[2]], q)
+      expect_true(all(c(ij[[1]], ij[[2]]) %in% seq_len(n)))
+      # disjoint sets of draws: no pair holds the same draw twice
+      expect_length(intersect(ij[[1]], ij[[2]]), 0)
+      # without replacement when there are enough draws
+      if (n >= 2 * q) expect_equal(anyDuplicated(c(ij[[1]], ij[[2]])), 0)
+    }
+  }
+  # every draw is used: the halves are random, not the first and last draws
+  seen <- unlist(replicate(200, mortensor:::scoreopt_pairs(10, 50)[[1]], simplify = FALSE))
+  expect_setequal(unique(seen), 1:10)
+})
+
 test_that("score-optimal reconciled draws are coherent in every draw", {
   r <- es_small()
   fit <- r$fit

@@ -7,9 +7,9 @@
 anchored(
   spec,
   to = c("observed", "smoothed"),
-  years = 3,
-  decay = 10,
-  shrink = TRUE
+  years = 1,
+  decay = Inf,
+  shrink = FALSE
 )
 }
 \arguments{
@@ -18,11 +18,13 @@ anchored(
 \item{to}{\code{"observed"} or \code{"smoothed"}.}
 
 \item{years}{Number of last training years whose deaths define the
-offset.}
+offset (default 1, the last training year).}
 
-\item{decay}{Years over which the offset fades out (\code{Inf}: constant).}
+\item{decay}{Years over which the offset fades out (default \code{Inf}:
+constant).}
 
-\item{shrink}{Shrink offsets of cells with few deaths.}
+\item{shrink}{Shrink offsets of ages with few deaths towards the mean of
+their stratum (default \code{FALSE}).}
 }
 \value{
 A model specification. The fitted object has the offsets in
@@ -32,10 +34,11 @@ A model specification. The fitted object has the offsets in
 Forecasts of most models start from their fitted rates in the last
 observed year. Where the fit misses the level of the last years (for
 example after a recent change of trend), the forecast starts with a step
-away from the observations; where the observations are noisy, starting
-from them carries the noise into every forecast year. \code{anchored()} wraps
-any model specification and moves the start of its forecasts towards the
-observed level, per age and stratum:
+away from the observations. \code{anchored()} wraps any model specification
+and moves the start of its forecasts to the observed level, per age and
+stratum. With the defaults this is the jump-off adjustment of Lee and
+Miller (2001): the forecasts start from the observed rates of the last
+training year and keep this offset in every forecast year.
 }
 \details{
 \enumerate{
@@ -43,38 +46,62 @@ observed level, per age and stratum:
 the last \code{years} training years (\code{to = "observed"}: the rates before
 smoothing; \code{to = "smoothed"}: the rates after preprocessing, which
 differs when the pipeline smooths);
-\item offsets of cells with few deaths are shrunk towards the deaths-weighted
-mean offset of their stratum (empirical Bayes, with the Poisson
-variance of each offset; \code{shrink = TRUE});
+\item with \code{shrink = TRUE}, offsets of ages with few deaths are shrunk
+towards the mean offset of their stratum (see below);
 \item the forecast draws are multiplied by \code{exp(offset * w(h))}, where the
 weight \code{w(h)} falls linearly from 1 at the first forecast year to 0
-after \code{decay} years (\code{decay = Inf} keeps the offset, \code{decay = 0}
+after \code{decay} years (\code{decay = Inf} keeps the offset; \code{decay = 0}
 leaves the model's own jump-off).
 }
 
-With the default \code{decay = 10}, forecasts more than ten years ahead are
-those of the model itself; during the fade the offsets add a small
-apparent trend. \verb{years = 1, decay = Inf, shrink = FALSE} is the observed jump-off of
-Lee-Carter models (\code{lee_carter(jump_off = "observed")}). Models that
-have no fitted rates (random walks, time series per age) start from the
-observed rates already and are left unchanged; in an \code{\link[=ensemble]{ensemble()}} each
-draw is anchored with the offset of the component it comes from. For
-\code{\link[=reconciled]{reconciled()}} models the bottom strata are anchored and the aggregates
-recomputed, so the draws stay coherent. \code{\link[=mt_jump_off]{mt_jump_off()}} reports the step
-between the last observed or fitted year and the first forecast year.
+The defaults \verb{years = 1, decay = Inf, shrink = FALSE} give, for any
+model, the observed jump-off of Lee-Carter models
+(\code{lee_carter(jump_off = "observed")}). The offset multiplies every draw
+of a cell by the same factor, so it moves the forecast distribution of
+the log rates without changing its width. Models that have no fitted
+rates (random walks, time series per age) start from the observed rates
+already and are left unchanged; in an \code{\link[=ensemble]{ensemble()}} each draw is anchored
+with the offset of the component it comes from, which moves the
+components relative to each other and can change the width of the
+mixture. For \code{\link[=reconciled]{reconciled()}}
+models the bottom strata are anchored and the aggregates recomputed, so
+the draws stay coherent. \code{\link[=mt_jump_off]{mt_jump_off()}} reports the step between the
+last observed or fitted year and the first forecast year.
+
+\strong{Package-specific options} (reference unknown). Starting from the
+observed rates of one year carries their random variation into every
+forecast year, which matters where deaths are few. The other settings
+are package-specific: averaging the offset over the last \code{years} years,
+fading it out over \code{decay} years (forecasts more than \code{decay} years ahead
+are then those of the model itself, and during the fade the offsets add
+a small apparent trend) and shrinking it (\code{shrink = TRUE}). The shrinkage
+is empirical Bayes within each stratum: the offset \eqn{r_x} of age
+\eqn{x} has the approximate Poisson sampling variance \eqn{v_x = 1/D_x},
+where \eqn{D_x} is the number of deaths in the last \code{years} (at least
+0.5); the variance \eqn{\tau^2} of the true offsets between the ages of
+the stratum is estimated with the moment estimator of DerSimonian and
+Laird (1986); and each offset becomes
+\eqn{\hat\mu + \tau^2 / (\tau^2 + v_x) (r_x - \hat\mu)}, where
+\eqn{\hat\mu} is the mean offset weighted by \eqn{1 / (\tau^2 + v_x)}.
 
 Anchoring helps where the fitted rates of the last year are far from the
-observed level. With large counts the last observed year is a good
-anchor; where the last observed rates are noisy, several years are
-better. Where the model's own jump-off is already close to the observed
-level, anchoring changes little and can narrow the intervals of the
-first years too much. The vignette "Where a forecast starts: the
+observed level; where the model's own jump-off is already close to it,
+anchoring changes little. The vignette "Where a forecast starts: the
 jump-off" shows the effect in a backtest.
 }
 \examples{
 x <- mt_example(deaths = "single", years = 1995:2019)
-fit <- mt_fit(anchored(lee_carter(), years = 3, decay = 10), x)
+fit <- mt_fit(anchored(lee_carter()), x)
 summary(as.vector(fit$anchor$offset))
 fc <- mt_forecast(fit, h = 10, n_draws = 100, seed = 1)
 mt_jump_off(fc)
+# package-specific: the mean offset of three years, fading out over ten years
+fit3 <- mt_fit(anchored(lee_carter(), years = 3, decay = 10, shrink = TRUE), x)
+}
+\references{
+Lee R, Miller T (2001). Evaluating the performance of the Lee-Carter
+method for forecasting mortality. \emph{Demography} 38(4): 537-549.
+
+DerSimonian R, Laird N (1986). Meta-analysis in clinical trials.
+\emph{Controlled Clinical Trials} 7(3): 177-188.
 }

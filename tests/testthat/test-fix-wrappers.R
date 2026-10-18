@@ -122,17 +122,19 @@ test_that("reconciled ensembles keep the component of each reordered path", {
   xa <- mt_aggregate_strata(x, h3())
   ens <- ensemble(lc = lee_carter(), rw = rwd())
   pe <- mt_forecast(mt_fit(ens, xa), h = 2, n_draws = 40, seed = 1)
-  pr <- suppressWarnings(mt_forecast(mt_fit(reconciled(ens, h3(), method = "bottom_up"), xa), h = 2, n_draws = 40,
-                                     seed = 1))
+  pr <- suppressWarnings(mt_forecast(mt_fit(reconciled(ens, h3(), method = "bottom_up", dependence = "empirical"), xa),
+                                     h = 2, n_draws = 40, seed = 1))
   expect_equal(dim(pr$component), c(nrow(xa$strata), 40L))
   for (s in utils::head(bottom_of(xa$strata), 3)) {
     A <- matrix(pe$rates[, , s, ], ncol = 40)
     src <- vapply(seq_len(40), function(j) which.min(colSums(abs(A - as.vector(pr$rates[, , s, j])))), 1L)
     expect_equal(pr$component[s, ], pe$component[src])
   }
-  expect_equal(dim(mt_reconcile(pe, h3(), seed = 1)$component), c(nrow(xa$strata), 40L))
-  fa <- suppressWarnings(mt_forecast(mt_fit(anchored(reconciled(ens, h3())), xa), h = 2, n_draws = 20, seed = 1,
-                                     predictive = TRUE))
+  expect_equal(dim(mt_reconcile(pe, h3(), seed = 1, dependence = "empirical")$component), c(nrow(xa$strata), 40L))
+  # without reordering (the default), each draw keeps one component for all strata
+  expect_equal(mt_reconcile(pe, h3(), seed = 1)$component, pe$component)
+  fa <- suppressWarnings(mt_forecast(mt_fit(anchored(reconciled(ens, h3(), dependence = "empirical")), xa), h = 2,
+                                     n_draws = 20, seed = 1, predictive = TRUE))
   expect_true(all(is.finite(fa$rates)))
   expect_lt(coherence_gap(fa, h3()), 1e-8)
 })
@@ -172,6 +174,17 @@ test_that("stacking and CRPS weights compare the components on common cells", {
   ws <- mortensor:::ensemble_inner_weights(list(weights = "stack"), list(a, b, NULL))
   expect_gt(ws[1], 0.95)
   expect_equal(ws[3], 0)
+  # the draws of the inner backtests are an argument
+  expect_identical(ensemble(lee_carter(), rwd())$params$inner_n_draws, 100)
+  expect_error(ensemble(lee_carter(), rwd(), inner_n_draws = 2), class = "mt_error_argument")
+  seen <- NULL
+  local_mocked_bindings(mt_backtest = function(spec, data, origins, h, prep, n_draws, ...) {
+    seen <<- c(seen, n_draws)
+    NULL
+  })
+  x <- mt_example(deaths = "single", years = 2000:2012)
+  mortensor:::ensemble_inner_backtests(ensemble(lee_carter(), rwd(), inner_n_draws = 37)$params, x, NULL)
+  expect_equal(seen, c(37, 37))
 })
 
 test_that("stratified() and tuned(by = ) accept ensembles as group models", {

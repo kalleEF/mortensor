@@ -1,21 +1,30 @@
 #' Ensembles of models
 #'
-#' A mixture of the predictive distributions of several models: each draw of
-#' the ensemble is a draw of one component, chosen in proportion to the
-#' weights. Mixing draws (rather than averaging quantiles) keeps the paths
-#' coherent, so derived quantities such as life expectancy can be computed
-#' from the ensemble draws.
+#' A mixture (linear pool, Gneiting and Ranjan 2013) of the predictive
+#' distributions of several models: each draw of the ensemble is a draw of
+#' one component, chosen with the weights as probabilities. Mixing draws
+#' (rather than averaging quantiles) keeps the paths coherent, so derived
+#' quantities such as life expectancy can be computed from the ensemble
+#' draws.
 #'
 #' Weights:
 #'
 #' * `"equal"`;
 #' * a numeric vector (normalised to sum to 1);
-#' * `"crps"`: inverse mean CRPS of an inner rolling-origin backtest on the
-#'   last `inner_origins` years of the training window, so the weights never
-#'   use data after the forecast origin;
-#' * `"stack"`: weights on the simplex that minimise the squared error of the
-#'   weighted median forecasts (log scale) in the same inner backtest (the
-#'   non-negative stacking, fitted on training data only).
+#' * `"crps"`: proportional to the inverse mean CRPS of each component in an
+#'   inner rolling-origin backtest on the last years of the training window
+#'   (`inner_origins`, `inner_h`), so the weights never use data after the
+#'   forecast origin. This is a package heuristic (reference unknown),
+#'   analogous to the inverse mean squared error weights of Bates and
+#'   Granger (1969) with the mean CRPS in place of the mean squared error;
+#' * `"stack"`: weights that minimise the squared error of the weighted mean
+#'   of the components' median forecasts (log rates) in the same inner
+#'   backtest, constrained to be non-negative and to sum to 1. This is
+#'   stacking of point forecasts (Breiman 1996; for mortality, Kessy,
+#'   Sherris, Villegas and Ziveyi 2022). Using these weights as the
+#'   probabilities of the mixture is a deviation: they are optimal for the
+#'   linear combination of the medians, not for the mixture distribution,
+#'   whose median is not the weighted mean of the medians.
 #'
 #' Each draw of the ensemble comes from one component for all strata, so
 #' paths keep the dependence between strata and the coherence of reconciled
@@ -30,28 +39,44 @@
 #' the cells that all of them forecast.
 #'
 #' A mixture is wider than its components when they disagree, which often
-#' corrects the too narrow intervals of single models, and its CRPS is never
-#' larger than the weighted mean of the CRPS of its components (the CRPS is
-#' convex in the forecast distribution). The vignette "Choosing and
-#' combining models" compares ensembles and single models in a backtest.
-#' In populations with few deaths per cell, use `rwd(observation_noise = TRUE)` as the random-walk
-#' component: the plain random walk accumulates the Poisson noise of
-#' observed rates and its long-horizon paths become implausible.
+#' corrects the too narrow intervals of single models; a linear pool of
+#' different calibrated components is overdispersed (Gneiting and Ranjan
+#' 2013). Its CRPS is never larger than the weighted mean of the CRPS of its
+#' components (the CRPS is convex in the forecast distribution). The
+#' vignette "Choosing and combining models" compares ensembles and single
+#' models in a backtest. In populations with few deaths per cell, use
+#' `rwd(observation_noise = TRUE)` as the random-walk component: the plain
+#' random walk accumulates the Poisson noise of observed rates and its
+#' long-horizon paths become implausible.
 #'
 #' @param ... Model specifications; names are used as labels.
 #' @param weights `"equal"`, `"crps"`, `"stack"` or a numeric vector.
 #' @param inner_origins,inner_h Inner backtest for `weights = "crps"` and
-#'   `weights = "stack"`, and for `top_k`.
+#'   `weights = "stack"`, and for `top_k`: the number of origins and the
+#'   horizon of each inner forecast.
 #' @param top_k Keep only the `top_k` components with the lowest CRPS in the
 #'   inner backtest on the training years (the others get weight 0); `NULL`
 #'   keeps all.
+#' @param inner_n_draws Draws per inner forecast of the inner backtest.
 #' @return A model specification.
+#' @references
+#' Gneiting T, Ranjan R (2013). Combining predictive distributions.
+#' *Electronic Journal of Statistics* 7: 1747-1782.
+#'
+#' Bates JM, Granger CWJ (1969). The combination of forecasts. *Operational
+#' Research Quarterly* 20(4): 451-468.
+#'
+#' Breiman L (1996). Stacked regressions. *Machine Learning* 24(1): 49-64.
+#'
+#' Kessy SR, Sherris M, Villegas AM, Ziveyi J (2022). Mortality forecasting
+#' using stacked regression ensembles. *Scandinavian Actuarial Journal*
+#' 2022(7): 591-626.
 #' @examples
 #' x <- mt_example(deaths = "single")
 #' ens <- ensemble(lc = lee_carter(), rw = rwd())
 #' fc <- mt_forecast(mt_fit(ens, x), h = 5, n_draws = 100, seed = 1)
 #' @export
-ensemble <- function(..., weights = "equal", inner_origins = 3, inner_h = 5, top_k = NULL) {
+ensemble <- function(..., weights = "equal", inner_origins = 3, inner_h = 5, top_k = NULL, inner_n_draws = 100) {
   comps <- list(...)
   if (!length(comps) || !all(vapply(comps, inherits, logical(1), what = "mt_spec"))) {
     mt_abort("ensemble() needs model specifications.", class = "argument")
@@ -65,10 +90,13 @@ ensemble <- function(..., weights = "equal", inner_origins = 3, inner_h = 5, top
     check_choice(weights, c("equal", "crps", "stack"), "weights")
   }
   if (!is.null(top_k)) check_number(top_k, "top_k", lower = 1, upper = length(comps), integerish = TRUE)
+  check_number(inner_origins, "inner_origins", lower = 1, integerish = TRUE)
+  check_number(inner_h, "inner_h", lower = 1, integerish = TRUE)
+  check_number(inner_n_draws, "inner_n_draws", lower = 10, integerish = TRUE)
   # draws describe smooth rates only when those of every component do (the
   # noise of predictive draws follows the component of each draw)
   sp <- new_mt_spec("ensemble", list(components = comps, weights = weights, inner_origins = inner_origins,
-                                     inner_h = inner_h, top_k = top_k),
+                                     inner_h = inner_h, top_k = top_k, inner_n_draws = inner_n_draws),
                     min_periods = max(vapply(comps, `[[`, 0, "min_periods")),
                     smooth = all(vapply(comps, function(s) isTRUE(s$smooth), TRUE)),
                     label = sprintf("Ensemble (%s)", paste(names(comps), collapse = ", ")))
@@ -148,8 +176,8 @@ ensemble_inner_backtests <- function(p, data, prep) {
   last <- max(mt_grid(data)$period$lower)
   origins <- seq(last - p$inner_origins - p$inner_h + 1, last - p$inner_h)
   lapply(p$components, function(cs) {
-    suppressWarnings(tryCatch(mt_backtest(cs, data, origins = origins, h = p$inner_h, prep = prep, n_draws = 100),
-                              error = function(e) NULL))
+    suppressWarnings(tryCatch(mt_backtest(cs, data, origins = origins, h = p$inner_h, prep = prep,
+                                          n_draws = p$inner_n_draws %||% 100), error = function(e) NULL))
   })
 }
 
@@ -184,7 +212,8 @@ ensemble_inner_weights <- function(p, bts) {
   w
 }
 
-# Least squares with weights on the simplex (softmax parametrisation)
+# Least squares with weights on the simplex (softmax parametrisation): the
+# stacking weights of the median forecasts
 simplex_least_squares <- function(M, y) {
   k <- ncol(M)
   if (k == 1) return(1)

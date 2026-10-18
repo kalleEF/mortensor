@@ -10,7 +10,7 @@ mt_reconcile(
   method = c("wls", "mint", "structural", "ols", "bottom_up", "proportional"),
   shrink = "auto",
   exposure = NULL,
-  dependence = c("empirical", "none"),
+  dependence = c("none", "empirical"),
   seed = NULL,
   fixed = NULL,
   var = NULL,
@@ -37,14 +37,17 @@ or \code{"auto"}.}
 the forecast years (default: last training year). Only bottom strata are
 used, and they are enough; aggregates are summed.}
 
-\item{dependence}{\code{"empirical"} or \code{"none"} (keep the draws as they are).}
+\item{dependence}{\code{"none"} (default: keep the draws as they are) or
+\code{"empirical"} (package-specific reordering of the paths of separately
+fitted strata, see Details). Draws of joint models are not reordered:
+\code{"empirical"} then gives a warning and is ignored.}
 
-\item{seed}{Random seed for the reordering.}
+\item{seed}{Random seed for the reordering (\code{dependence = "empirical"}).}
 
 \item{fixed}{Strata whose forecasts are kept unchanged (labels, or
 \code{"total"} for the grand total of the hierarchy), for example a trusted
 all-cause forecast that the causes must add up to. The projection gives
-these nodes zero variance, so the other strata absorb the whole gap;
+these nodes near-zero variance, so the other strata absorb the whole gap;
 \verb{$reconciliation$max_relative_change_fixed} reports how closely they
 were kept; they move, with a warning, when their own forecasts do not
 add up (a node fixed together with all its parts) or when every bottom
@@ -72,41 +75,82 @@ by exposures. Methods choose \code{W}:
 }
 \details{
 \itemize{
+\item \code{"ols"}: identity (Hyndman, Ahmed, Athanasopoulos and Shang 2011);
+\item \code{"structural"}: diagonal with the number of bottom series in each node
+(structural scaling, Athanasopoulos, Hyndman, Kourentzes and
+Petropoulos 2017);
+\item \code{"wls"}: diagonal with the variance of each stratum's base draws
+(weighted least squares, Hyndman, Lee and Wang 2016; see below);
 \item \code{"mint"}: covariance of the base draws across strata, shrunk towards
-its diagonal (Schaefer-Strimmer intensity by default). This follows the
-minimum-trace reconciliation of Wickramasuriya et al. (2019), with the
-covariance of the forecast draws in place of in-sample residuals;
-\item \code{"wls"}: diagonal with the variance of each stratum's draws;
-\item \code{"structural"}: diagonal with the number of bottom series in each node;
-\item \code{"ols"}: identity;
+its diagonal with the intensity of Schäfer and Strimmer (2005) by
+default (minimum-trace reconciliation, Wickramasuriya, Athanasopoulos
+and Hyndman 2019; see below);
 \item \code{"bottom_up"}: aggregates are the sums of the bottom forecasts.
 }
 
-Projections can make bottom values negative where the base forecasts
-disagree strongly. Such values are held at zero and the remaining bottom
-strata of the draw are projected again, until none is negative (a simple
-form of the non-negative reconciliation of Wickramasuriya et al. 2020);
-the aggregates are recomputed from the bottom series, so the result is
-coherent and non-negative, and fixed nodes are kept. A warning reports
-when more than 5\% of the draws needed this, because the distributions of
-the affected strata (often small causes) are then truncated at zero.
+\strong{\code{W} of \code{"wls"} and \code{"mint"}.} In the papers, \code{W} holds the variances
+(Hyndman, Lee and Wang 2016) or the shrunk covariance matrix
+(Wickramasuriya et al. 2019) of the in-sample one-step-ahead residuals of
+the base models. Here \code{W} is the variance (\code{"wls"}) or the
+Schäfer-Strimmer shrunk covariance (\code{"mint"}) of the base forecast draws
+across draws, computed separately in each age and forecast year cell: the
+variance of the model's own \code{h}-step forecast of that cell (of expected
+deaths, or of rates when the levels share exposures; without the Poisson
+variation of the deaths unless predictive draws are reconciled). It
+changes with the horizon and follows the uncertainty the model reports,
+not its past errors: a stratum whose model is too narrow is changed too
+little.
 
-\code{"proportional"} keeps the \code{fixed} nodes and scales the bottom strata
-below each of them in proportion to their own forecasts, draw by draw
-(top-down allocation with forecast proportions, Athanasopoulos, Ahmed
-and Hyndman 2009). It never sets a part to zero and keeps the shape of
-the parts' distributions; it is the usual choice when causes of death
-must add up to a trusted all-cause forecast. Fixed nodes must not share
-parts.
+\strong{Non-negative forecasts.} Projections can make bottom values negative
+where the base forecasts disagree strongly. Such values are held at zero
+and the remaining bottom strata of the draw are projected again, until
+none is negative; the aggregates are recomputed from the bottom series,
+so the result is coherent and non-negative, and fixed nodes are kept.
+This iteration is a package-specific heuristic. Wickramasuriya, Turlach
+and Hyndman (2020) solve the quadratic program of the reconciliation with
+non-negativity constraints; the heuristic approximates its solution
+without guaranteeing the optimum. A warning reports when more than 5\% of
+the draws needed this, because the distributions of the affected strata
+(often small causes) are then truncated at zero.
 
-Draws of strata forecast by separate models are independent, so their sums
-would be too narrow. With \code{dependence = "empirical"} (default), the paths
-of each stratum are first reordered so that their ranks follow the
-co-movement of the strata in the training data (an empirical copula, the
-"Schaake shuffle" of Clark et al. 2004): every draw is matched to a
-training year, and the stratum whose average year-to-year change of log
-rates was relatively large in that year receives a relatively high path.
-The marginal distribution of each stratum is unchanged.
+\strong{Fixed nodes.} \code{fixed} keeps the forecasts of some nodes, as in the
+reconciliation with immutable forecasts of Zhang, Kang, Panagiotelis and
+Li (2023). The package approximates it by giving the fixed nodes a
+near-zero variance in \code{W} (1e-10 times the largest variance), so that the
+projection leaves them almost unchanged and the other strata absorb the
+whole gap.
+
+\strong{Proportional.} \code{"proportional"} keeps the \code{fixed} nodes and scales the
+bottom strata below each of them by one factor per draw, so that they add
+up to the fixed node; nodes between them are recomputed as sums. This is
+a single-level top-down method (Gross and Sohl 1990) with forecast
+proportions (Athanasopoulos, Ahmed and Hyndman 2009): the proportions are
+those of the bottom forecasts below the fixed node in the same draw,
+while Athanasopoulos et al. (2009) derive them level by level down the
+hierarchy (the same for two levels). It never sets a part to zero. Fixed
+nodes must not share parts.
+
+\strong{Dependence between strata.} Strata forecast by separate models have
+independent draws. With \code{dependence = "none"} (default), the draws are
+reconciled as they are, so sums of separately fitted parts have narrower
+intervals than they would if the parts moved together. Joint models (for
+example \code{\link[=li_lee]{li_lee()}}, \code{\link[=coherent_fdm]{coherent_fdm()}} and \code{\link[=coda]{coda()}} with \code{coherent = TRUE})
+carry the dependence between strata in the model itself; their draws are
+never reordered.
+
+\code{dependence = "empirical"} reorders the paths of each stratum before the
+reconciliation. This is a package-specific method, related to but
+different from the Schaake shuffle of Clark et al. (2004): every draw is
+matched to a training year, the stratum whose year-to-year change of log
+rates (averaged over ages) was relatively large in that year receives a
+relatively high path, and the marginal distribution of each stratum is
+unchanged. It differs from the Schaake shuffle in three ways: it takes
+one template value per stratum and year instead of one per margin (here
+each age and forecast year of a stratum), it ranks whole paths by their
+mean level (mean log rate over ages and years) instead of ranking the
+values of each margin, and it resamples the training years with
+replacement instead of using distinct historical dates. Its effect on the
+intervals of the aggregates has to be checked in a backtest.
 
 The one-variable interface with \code{var} and \code{total} is still accepted. It
 reconciles deaths when the exposures of the parts add up to that of the
@@ -123,25 +167,44 @@ rc <- mt_reconcile(fc, h, method = "wls")
 rc$reconciliation
 }
 \references{
+Hyndman RJ, Ahmed RA, Athanasopoulos G, Shang HL (2011). Optimal
+combination forecasts for hierarchical time series. \emph{Computational
+Statistics & Data Analysis} 55(9): 2579-2589.
+
+Hyndman RJ, Lee AJ, Wang E (2016). Fast computation of reconciled
+forecasts for hierarchical and grouped time series. \emph{Computational
+Statistics & Data Analysis} 97.
+
+Athanasopoulos G, Hyndman RJ, Kourentzes N, Petropoulos F (2017).
+Forecasting with temporal hierarchies. \emph{European Journal of Operational
+Research} 262(1): 60-74.
+
 Wickramasuriya SL, Athanasopoulos G, Hyndman RJ (2019). Optimal forecast
 reconciliation for hierarchical and grouped time series through trace
 minimization. \emph{Journal of the American Statistical Association}
 114(526): 804-819. \doi{10.1080/01621459.2018.1448825}
 
-Athanasopoulos G, Ahmed RA, Hyndman RJ (2009). Hierarchical forecasts for
-Australian domestic tourism. \emph{International Journal of Forecasting}
-25: 146-166.
-
 Wickramasuriya SL, Turlach BA, Hyndman RJ (2020). Optimal non-negative
 forecast reconciliation. \emph{Statistics and Computing} 30: 1167-1182.
 \doi{10.1007/s11222-020-09930-0}
+
+Zhang B, Kang Y, Panagiotelis A, Li F (2023). Optimal reconciliation
+with immutable forecasts. \emph{European Journal of Operational Research}
+308(2): 650-660. \doi{10.1016/j.ejor.2022.11.035}
+
+Gross CW, Sohl JE (1990). Disaggregation methods to expedite product line
+forecasting. \emph{Journal of Forecasting} 9(3): 233-254.
+
+Athanasopoulos G, Ahmed RA, Hyndman RJ (2009). Hierarchical forecasts for
+Australian domestic tourism. \emph{International Journal of Forecasting}
+25: 146-166.
 
 Clark M, Gangopadhyay S, Hay L, Rajagopalan B, Wilby R (2004). The Schaake
 shuffle: a method for reconstructing space-time variability in forecasted
 precipitation and temperature fields. \emph{Journal of Hydrometeorology} 5(1):
 243-262.
 
-Schaefer J, Strimmer K (2005). A shrinkage approach to large-scale
+Schäfer J, Strimmer K (2005). A shrinkage approach to large-scale
 covariance matrix estimation and implications for functional genomics.
 \emph{Statistical Applications in Genetics and Molecular Biology} 4(1):
 Article 32. \doi{10.2202/1544-6115.1175}
