@@ -31,8 +31,11 @@
 #' The period index follows a random walk with drift. Draws include the
 #' innovations and the uncertainty of the drift. With `bootstrap = TRUE` the
 #' parameters are re-estimated on `n_boot` Poisson resamples of the fitted
-#' deaths of the fitting period (semi-parametric bootstrap of Brouhns et al.
-#' 2005), which adds the uncertainty of `a` and `b`.
+#' deaths of the fitting period (semi-parametric bootstrap with fitted deaths
+#' of Renshaw and Haberman 2008), which adds the uncertainty of `a` and `b`.
+#' The bootstrap of Brouhns, Denuit and Van Keilegom (2005) resamples the
+#' observed deaths instead: `bootstrapped(lee_carter(), type = "data")`
+#' ([bootstrapped()]).
 #'
 #' Age groups without deaths in the fitting period get a constant rate (0.5
 #' deaths over the period) and no trend; with `adjust = "e0"` they enter the
@@ -94,7 +97,8 @@
 #' @param min_years `choose_period` considers fitting periods of more than
 #'   `min_years` years (`minperiod` of `demography::lca()`).
 #' @param jump_off `"fitted"` (forecasts start from the fitted rates of the
-#'   last year) or `"observed"` (from the observed rates of the last year).
+#'   last year) or `"observed"` (from the observed rates of the last year;
+#'   Lee and Miller 2001).
 #' @param bootstrap Semi-parametric bootstrap of the parameters.
 #' @param n_boot Number of bootstrap fits.
 #' @param rotate Rotate the age pattern of decline `b` towards an ultimate
@@ -129,6 +133,10 @@
 #' Brouhns N, Denuit M, Van Keilegom I (2005). Bootstrapping the Poisson
 #' log-bilinear model for mortality forecasting. *Scandinavian Actuarial
 #' Journal* 2005(3): 212-224.
+#'
+#' Renshaw AE, Haberman S (2008). On simulation-based approaches to risk
+#' measurement in mortality with specific reference to Poisson Lee-Carter
+#' modelling. *Insurance: Mathematics and Economics* 42(2): 797-816.
 #'
 #' Li N, Lee R, Gerland P (2013). Extending the Lee-Carter method to model
 #' the rotation of age patterns of mortality decline for long-term

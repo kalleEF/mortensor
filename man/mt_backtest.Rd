@@ -83,8 +83,9 @@ have no \code{age_lo}, \code{age_hi} and \code{scale}. Summarise with \code{\lin
 For each forecast origin, the data are cut at the origin, the
 preprocessing pipeline and the model are fitted on the
 training window only, and predictive draws for the next \code{h} years are
-compared with the observations. Nothing after the origin enters the fit,
-including ungrouping and smoothing (they are part of \code{prep}).
+compared with the observations (rolling-origin evaluation; Tashman
+2000). Nothing after the origin enters the fit, including ungrouping and
+smoothing (they are part of \code{prep}).
 }
 \details{
 Evaluation happens at the resolution of the observed deaths: grid draws of
@@ -146,4 +147,8 @@ Grimit EP, Gneiting T, Berrocal VJ, Johnson NA (2006). The continuous
 ranked probability score for circular variables and its application to
 mesoscale forecast ensemble verification. \emph{Quarterly Journal of the Royal
 Meteorological Society} 132: 2925-2942.
+
+Tashman LJ (2000). Out-of-sample tests of forecasting accuracy: an
+analysis and review. \emph{International Journal of Forecasting} 16(4):
+437-450.
 }

@@ -79,7 +79,8 @@ object) the paths are Poisson draws of the observed death counts (see
 \itemize{
 \item \code{prob_dying()}: probability of dying between ages \code{from} and \code{to} (for
 example the SDG indicator 3.4.1 uses 30 to 70), \code{1 - l(to) / l(from)}
-from the period life table;
+from the period life table of \code{\link[=life_table]{life_table()}} (Preston, Heuveline and
+Guillot 2001);
 \item \code{asr()}: age-standardised death rate per \code{per} persons (default
 100,000), by direct standardisation with the weights of a standard
 population (see Age-standardised rates);
@@ -158,4 +159,7 @@ Office of the European Union, Luxembourg. \doi{10.2785/11470}
 Murray CJL (1994). Quantifying the burden of disease: the technical
 basis for disability-adjusted life years. \emph{Bulletin of the World Health
 Organization} 72(3): 429-445.
+
+Preston SH, Heuveline P, Guillot M (2001). \emph{Demography: Measuring and
+Modeling Population Processes}. Blackwell.
 }

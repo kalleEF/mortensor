@@ -20,7 +20,8 @@ lee_carter(
 \item{method}{\code{"poisson"} or \code{"svd"}.}
 
 \item{jump_off}{\code{"fitted"} (forecasts start from the fitted rates of the
-last year) or \code{"observed"} (from the observed rates of the last year).}
+last year) or \code{"observed"} (from the observed rates of the last year;
+Lee and Miller 2001).}
 
 \item{bootstrap}{Semi-parametric bootstrap of the parameters.}
 
@@ -81,8 +82,11 @@ demography's life table where age 0 is in the data.
 The period index follows a random walk with drift. Draws include the
 innovations and the uncertainty of the drift. With \code{bootstrap = TRUE} the
 parameters are re-estimated on \code{n_boot} Poisson resamples of the fitted
-deaths of the fitting period (semi-parametric bootstrap of Brouhns et al.
-2005), which adds the uncertainty of \code{a} and \code{b}.
+deaths of the fitting period (semi-parametric bootstrap with fitted deaths
+of Renshaw and Haberman 2008), which adds the uncertainty of \code{a} and \code{b}.
+The bootstrap of Brouhns, Denuit and Van Keilegom (2005) resamples the
+observed deaths instead: \code{bootstrapped(lee_carter(), type = "data")}
+(\code{\link[=bootstrapped]{bootstrapped()}}).
 
 Age groups without deaths in the fitting period get a constant rate (0.5
 deaths over the period) and no trend; with \code{adjust = "e0"} they enter the
@@ -171,6 +175,10 @@ Business and Industry} 23(5): 385-401.
 Brouhns N, Denuit M, Van Keilegom I (2005). Bootstrapping the Poisson
 log-bilinear model for mortality forecasting. \emph{Scandinavian Actuarial
 Journal} 2005(3): 212-224.
+
+Renshaw AE, Haberman S (2008). On simulation-based approaches to risk
+measurement in mortality with specific reference to Poisson Lee-Carter
+modelling. \emph{Insurance: Mathematics and Economics} 42(2): 797-816.
 
 Li N, Lee R, Gerland P (2013). Extending the Lee-Carter method to model
 the rotation of age patterns of mortality decline for long-term

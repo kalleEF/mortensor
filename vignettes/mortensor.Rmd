@@ -129,6 +129,7 @@ recalibration" how to widen the intervals.
 | Scores and backtests | "Backtesting and scores" |
 | Choosing settings, widening intervals | "Tuning and recalibration" |
 | Models and ensembles | "Choosing and combining models", "Model reference" |
+| Published sources of the methods | "Methods and sources" (package website) |
 | Totals and parts | "Coherent forecasts" |
 | What drives a gap | "Decomposing differences in life expectancy" |
 | How unequal lifespans are | "Lifespan variation" |
