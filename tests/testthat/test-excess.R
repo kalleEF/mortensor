@@ -8,8 +8,9 @@ shocked_example <- function(years = 2000:2019, shock = 2016:2017, factor = 1.1, 
   hit <- d$period_lo %in% shock & d$age_lo >= from
   add <- round(factor * d$value[hit]) - d$value[hit]
   x$obs$deaths[hit, value := value + add]
-  attr(x, "added") <- data.table::data.table(sex = x$strata$sex[d$stratum[hit]], period = d$period_lo[hit],
-                                             added = add)[, list(added = sum(added)), by = c("sex", "period")]
+  inj <- stats::aggregate(list(added = add), list(sex = x$strata$sex[d$stratum[hit]], period = d$period_lo[hit]),
+                          sum)
+  attr(x, "added") <- data.table::as.data.table(inj)
   x
 }
 
@@ -99,6 +100,16 @@ test_that("mt_excess leaves out estimated cells", {
   expect_warning(le <- mt_excess(fit, x, quantity = "life_expectancy", n_draws = 20, seed = 1),
                  class = "mt_warning_excess")
   expect_equal(nrow(le), 2 * 4 - 1)
+})
+
+test_that("mt_excess leaves out the totals of a hierarchy when it sums strata", {
+  x <- mt_example_regions(years = 2005:2019, regions = 2)
+  xa <- mt_aggregate_strata(x, mt_hierarchy(sex = "both"))
+  ex <- mt_excess(rwd(), xa, baseline = c(2005, 2015), by = character(), n_draws = 20, seed = 1)
+  d <- mt_obs(x, "deaths")
+  expect_equal(ex$observed, d[period_lo >= 2016, sum(value), by = "period_lo"]$V1)
+  bs <- mt_excess(rwd(), xa, baseline = c(2005, 2015), by = "sex", periods = 2016, n_draws = 20, seed = 1)
+  expect_equal(bs[sex == "both"]$observed, sum(bs[sex != "both"]$observed))
 })
 
 test_that("mt_excess of life expectancy", {

@@ -7,22 +7,22 @@
 #
 # Proposed lines for thresholds.csv (check,metric,comparator,threshold,note):
 #
-# lifespan_reference,max_rel_diff_lifeineq,<=,1e-8,"edagger, entropy, Gini, sd at ages 0 and 65 against LifeIneq 00.04.09; 3e-10 at 2026-10 (reference values with 10 digits)"
-# lifespan_reference,max_iqr_diff_lifeineq,<=,0.03,"single ages; linear survival curve here, spline in LifeIneq; 0.020 at 2026-10"
-# lifespan_reference,mc_sd_diff,<=,0.08,"France women 2000, 1e6 sampled ages at death; 0.036 at 2026-10 (Monte Carlo error about 0.02)"
+# lifespan_reference,max_rel_diff_lifeineq,<=,1e-8,"vs LifeIneq 00.04.09; 3e-10 at 2026-10 (10-digit constants)"
+# lifespan_reference,max_iqr_diff_lifeineq,<=,0.03,"single ages; spline in LifeIneq; 0.017 at 2026-10"
+# lifespan_reference,mc_sd_diff,<=,0.08,"1e6 sampled ages at death; 0.036 at 2026-10 (Monte Carlo error)"
 # lifespan_reference,mc_gini_diff,<=,0.0005,"0.00012 at 2026-10"
 # lifespan_reference,mc_iqr_diff,<=,0.05,"0.015 at 2026-10"
-# excess_simulation,cov95_null,>=,0.9,"rows without a shock, interval covers 0; 0.975 at 2026-10 (20 replicates)"
+# excess_simulation,cov95_null,>=,0.9,"interval covers 0 without a shock; 0.975 at 2026-10 (20 replicates)"
 # excess_simulation,cov95_null,<=,0.995,""
-# excess_simulation,cov95_shock,>=,0.9,"rows with a shock, interval covers the injected deaths; 0.983 at 2026-10"
-# excess_simulation,rel_bias_shock,<=,0.03,"absolute mean relative error of the median excess; 0.007 at 2026-10"
+# excess_simulation,cov95_shock,>=,0.9,"interval covers the injected deaths; 0.983 at 2026-10"
+# excess_simulation,rel_bias_shock,<=,0.03,"mean relative error of the median excess; 0.007 at 2026-10"
 # excess_simulation,seconds,<=,120,"runtime budget; 28 s at 2026-10"
-# excess_france,excess_2003,>=,8000,"France 2003, Lee-Carter baseline 1990-2002: 15,600 at 2026-10 (published August 2003: about 15,000)"
+# excess_france,excess_2003,>=,8000,"15,600 at 2026-10 (published for August 2003: about 15,000)"
 # excess_france,excess_2003,<=,25000,""
 # excess_france,excess_2003_lower,>=,0,"lower 95% limit; 6,200 at 2026-10"
-# excess_france,excess_2004,<=,0,"deficit after the heatwave (harvesting); -29,700 at 2026-10"
-# excess_france,p_score_1918_female,>=,20,"1918 against a 1900-1913 baseline; 43% at 2026-10"
-# excess_france,p_score_1918_male,>=,50,"99% at 2026-10 (a male excess of 160,000-350,000 a year in 1914-1917 points to war deaths in the series)"
+# excess_france,excess_2004,<=,0,"deficit after the heatwave; -29,700 at 2026-10"
+# excess_france,p_score_1918_female,>=,20,"43% at 2026-10"
+# excess_france,p_score_1918_male,>=,50,"99% at 2026-10 (male excess 1914-1917 points to war deaths)"
 
 if (!exists("checks")) checks <- list()
 

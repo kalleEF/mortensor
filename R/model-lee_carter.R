@@ -62,7 +62,9 @@
 #' (bayesLife); here it is that of the Lee-Carter draws. Rotation needs ages
 #' from 0 (life expectancy at birth) with age groups starting at 15 and 65.
 #' With a closed last age group, a warning notes that life expectancy is
-#' then truncated at the highest age.
+#' then truncated at the highest age. Rotated forecasts compute life tables
+#' for every path and year and are much slower (about 20 times for single
+#' years of age).
 #'
 #' @param method `"poisson"` or `"svd"`.
 #' @param adjust Re-estimation of `k[t]` for `method = "svd"`: `"dt"`,
@@ -239,10 +241,12 @@ fit_model.mt_spec_lee_carter <- function(spec, D, E, ages, periods, ...) {
                      "group from 65."), class = "model_fit")
     }
     # bootstrap fits without a valid ultimate pattern are dropped
-    est$boot <- Filter(Negate(is.null), lapply(est$boot, function(s) {
-      s$b_ultimate <- lc_ultimate_b(s$b, ages, zero)
-      if (is.null(s$b_ultimate)) NULL else s
-    }))
+    if (length(est$boot)) {
+      est$boot <- Filter(Negate(is.null), lapply(est$boot, function(s) {
+        s$b_ultimate <- lc_ultimate_b(s$b, ages, zero)
+        if (is.null(s$b_ultimate)) NULL else s
+      }))
+    }
   }
   if (first > 1L) {
     # fitted rates only for the chosen period
@@ -282,7 +286,7 @@ simulate_model.mt_spec_lee_carter <- function(spec, fit, h, n_draws, ...) {
 # MortCast's mean for 5-year groups and single years), age groups without
 # deaths keep no trend, and the sum is that of b. In MortCast the index is
 # solved by bisection (to 0.01 years) for an external path of life
-# expectancy; here lc_rotate() solves it for the life expectancy of each
+# expectancy; here rotate_rates() solves it for the life expectancy of each
 # unrotated Lee-Carter path, and rates change from the jump-off year.
 
 # Ages from 0 (life expectancy at birth) with age groups starting at 15 and
@@ -333,30 +337,34 @@ lc_ultimate_b <- function(b, age, fixed = NULL) {
 }
 
 # Rotated rates for the unrotated draws R [age, h, draw] of parameter set s,
-# with index paths K [h, draw]: per path and year, the weight of the ultimate
-# pattern from the life expectancy of the unrotated rates, and the index
-# solved so that the rotated rates keep that life expectancy. Rates change
-# from the jump-off year: log m = J + B (k* - k[T]), J the jump-off log rates
-# (fitted or observed), so that paths below e0_start are left as they are.
+# with index paths K [h, draw]. Rates change from the jump-off year: log m =
+# J + B (k* - k[T]), J the jump-off log rates (fitted or observed)
 lc_rotate <- function(R, K, s, fit) {
-  rot <- fit$rotation
+  kj <- s$k[length(s$k)]
+  J <- if (fit$jump_off == "observed") fit$last_log_rate else s$a + s$b * kj
   d <- dim(R)
-  M <- matrix(R, d[1])
+  array(rotate_rates(matrix(R, d[1]), J, s$b, s$b_ultimate, as.vector(K) - kj, fit$rotation), d)
+}
+
+# Rotation of unrotated rates M [age, path-year] = exp(J + b kap0): per
+# column, the weight of the ultimate pattern bu from the life expectancy at
+# birth of M, and the index solved so that exp(J + B kap) keeps that life
+# expectancy. Columns below e0_start are returned as they are. `rot` holds
+# the age axis and the settings (fit$rotation).
+rotate_rates <- function(M, J, b, bu, kap0, rot) {
   e0 <- life_expectancy(M, rot$age)
   w <- rotation_weights(e0, rot$e0_start, rot$e0_end, rot$power)
   act <- which(!is.na(w) & w > 0)
-  if (!length(act)) return(R)
-  kj <- s$k[length(s$k)]
-  J <- if (fit$jump_off == "observed") fit$last_log_rate else s$a + s$b * kj
-  B <- outer(s$b, 1 - w[act]) + outer(s$b_ultimate, w[act])
-  kap <- lc_solve_e0(J, B, e0[act], as.vector(K)[act] - kj, rot$age)
+  if (!length(act)) return(M)
+  B <- outer(b, 1 - w[act]) + outer(bu, w[act])
+  kap <- lc_solve_e0(J, B, e0[act], kap0[act], rot$age)
   ok <- !is.na(kap)
   if (!all(ok)) {
     mt_warn(sprintf(paste("Rotation: no index matches the life expectancy of %d of %d path-years; their rates are",
                           "not rotated."), sum(!ok), length(ok)), class = "model", call = NULL)
   }
-  M[, act[ok]] <- exp(J + B[, ok, drop = FALSE] * rep(kap[ok], each = d[1]))
-  array(M, d)
+  M[, act[ok]] <- exp(J + B[, ok, drop = FALSE] * rep(kap[ok], each = nrow(M)))
+  M
 }
 
 # Index kap (one per column of B) such that the life expectancy at birth of

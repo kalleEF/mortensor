@@ -35,10 +35,11 @@ test_that("the energy score and its gradient agree with ProbReco::total_score()"
   Gvec <- stats::runif(m + m * n)
   # each function returns the first set of draws, then the second
   mk <- function(t) {
-    k <- 0
+    calls <- new.env()
+    calls$k <- 0
     function() {
-      k <<- k + 1
-      if (k %% 2 == 1) X1[[t]] else X2[[t]]
+      calls$k <- calls$k + 1
+      if (calls$k %% 2 == 1) X1[[t]] else X2[[t]]
     }
   }
   ref <- ProbReco::total_score(lapply(seq_len(nt), function(t) Y[, t]), lapply(seq_len(nt), mk), S, Gvec)

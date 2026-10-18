@@ -2,10 +2,10 @@
 #'
 #' Excess deaths are the observed deaths minus the deaths expected without
 #' the shock: the predictive deaths of a baseline model fitted to the years
-#' before it, given the observed exposures of the later years. This is the
-#' definition of the WHO estimates of the excess mortality of the COVID-19
-#' pandemic (Msemburi et al. 2023); Acosta and Irizarry (2022) describe a
-#' model of the excess itself. Here the expected deaths are draws of
+#' before it, given the observed exposures of the later years. The WHO
+#' estimated the excess mortality of the COVID-19 pandemic this way
+#' (Msemburi et al. 2023); Acosta and Irizarry (2022) describe a model of
+#' the excess itself. Here the expected deaths are draws of
 #' [mt_forecast()] with `predictive = TRUE`: the uncertainty of the
 #' baseline trend plus the Poisson and extra-Poisson variation of the death
 #' counts. The observed deaths minus each draw give draws of the excess.
@@ -13,10 +13,15 @@
 #' excess with its nominal probability, and an interval that contains zero
 #' means deaths within the range of normal variation.
 #'
+#' The result gives, for each row, the observed deaths and the mean and
+#' quantiles of
+#'
+#' * `expected`: the expected deaths;
 #' * `excess`: observed minus expected deaths;
 #' * `p_score`: the excess in percent of the expected deaths,
 #'   `100 * excess / expected`, computed draw by draw;
-#' * `p_positive`: the share of draws with a positive excess.
+#'
+#' and `p_positive`, the share of draws with a positive excess.
 #'
 #' Sums over ages (`ages`), strata (`by`) and years (`cumulative`) are formed
 #' draw by draw before the quantiles are taken. With `quantity =
@@ -57,8 +62,9 @@
 #' @param quantity `"deaths"` or `"life_expectancy"`.
 #' @param by Stratum variables kept in the result (default all, one row per
 #'   stratum); the deaths of strata with the same values of `by` are summed.
-#'   `character()` sums all strata. Leave out the totals of a hierarchy
-#'   before summing over a variable.
+#'   `character()` sums all strata. Strata at the total or group levels of
+#'   a hierarchy (see [mt_aggregate_strata()]) are left out of the sums
+#'   over their variable.
 #' @param ages Age groups of the result: `NULL` sums over all ages, a
 #'   numeric vector gives the start of each group (`c(0, 65, 85)`: 0-64,
 #'   65-84 and 85+; ages below the first value are left out), and
@@ -138,7 +144,14 @@ mt_excess <- function(model, data, baseline = NULL, periods = NULL, quantity = c
   miss <- setdiff(periods, yrs)
   if (length(miss)) mt_abort(sprintf("`data` has no deaths for %s.", paste(miss, collapse = ", ")), class = "argument")
   sim <- excess_cells(fit, data, periods, n_draws, seed, include_estimated)
-  cell_tab <- cbind(st[match(sim$cells$stratum, st$stratum), by, with = FALSE], sim$cells)
+  # strata at the total or group levels of a variable that is summed over
+  # would be counted twice
+  bottom <- st$stratum[excess_bottom(st, object_hierarchy(data), by, quantity)]
+  keep <- sim$cells$stratum %in% bottom
+  if (!any(keep)) mt_abort("No strata left to sum.", class = "argument")
+  cell_tab <- cbind(st[match(sim$cells$stratum[keep], st$stratum), by, with = FALSE], sim$cells[keep])
+  sim$D <- sim$D[keep, , drop = FALSE]
+  sim$skipped <- sim$skipped[sim$skipped$stratum %in% bottom]
   left_tab <- cbind(st[match(sim$skipped$stratum, st$stratum), by, with = FALSE], sim$skipped)
   out <- if (quantity == "deaths") {
     excess_deaths(cell_tab, sim$D, left_tab, by, ages, cumulative, probs)
@@ -148,6 +161,23 @@ mt_excess <- function(model, data, baseline = NULL, periods = NULL, quantity = c
   setattr(out, "excess", list(quantity = quantity, probs = probs, model = fit$spec$label,
                               baseline = range(fit$periods), by = by, cumulative = cumulative))
   out[]
+}
+
+# Strata to sum: those not at the total or a group level of a hierarchy
+# variable left out of `by`. Life expectancy sums exposures, which is wrong
+# for variables whose levels share exposures (causes of death)
+excess_bottom <- function(st, h, by, quantity) {
+  keep <- rep(TRUE, nrow(st))
+  if (is.null(h)) return(keep)
+  for (v in intersect(setdiff(names(h$vars), by), names(st))) {
+    hv <- h$vars[[v]]
+    if (quantity == "life_expectancy" && identical(hv$additive, "rates")) {
+      mt_abort(sprintf("The levels of `%s` share exposures; keep it in `by` for life expectancy.", v),
+               class = "argument")
+    }
+    keep <- keep & !st[[v]] %in% c(hv$total, names(hv$groups))
+  }
+  keep
 }
 
 # The baseline fit: a fit as given, or a specification fitted to the
@@ -275,30 +305,30 @@ excess_deaths <- function(cell_tab, D, left_tab, by, ages, cumulative, probs) {
   cell_tab <- cell_tab[keep]
   D <- D[keep, , drop = FALSE]
   keys <- c(by, "group_lo", "group_hi", "period")
-  cell_tab[, row_ := .GRP, by = keys]
-  Dg <- rowsum(D, cell_tab$row_, reorder = TRUE)
-  tab <- cell_tab[, list(observed = sum(observed), cells = .N), by = c("row_", keys)]
-  setorderv(tab, "row_")
+  cell_tab[, idx := .GRP, by = keys]
+  Dg <- rowsum(D, cell_tab$idx, reorder = TRUE)
+  tab <- cell_tab[, list(observed = sum(observed), cells = .N), by = c("idx", keys)]
+  setorderv(tab, "idx")
   if (nrow(left_tab)) {
     sg <- excess_age_groups(left_tab$age_lo, left_tab$age_hi, ages, all_lo, all_hi)
     left_tab[, `:=`(group_lo = sg$lo, group_hi = sg$hi)]
-    sk <- left_tab[!is.na(group_lo), list(skipped = .N), by = keys]
+    sk <- left_tab[!is.na(left_tab$group_lo), list(skipped = .N), by = keys]
     tab <- merge(tab, sk, by = keys, all.x = TRUE, sort = FALSE)
     tab[is.na(skipped), skipped := 0L]
   } else {
     tab[, skipped := 0L]
   }
   setorderv(tab, c(by, "group_lo", "period"))
-  Dg <- Dg[tab$row_, , drop = FALSE]
+  Dg <- Dg[tab$idx, , drop = FALSE]
   if (cumulative) {
-    tab[, series_ := .GRP, by = c(by, "group_lo", "group_hi")]
-    for (sr in unique(tab$series_)) {
-      i <- which(tab$series_ == sr)
+    tab[, group_ := .GRP, by = c(by, "group_lo", "group_hi")]
+    for (sr in unique(tab$group_)) {
+      i <- which(tab$group_ == sr)
       if (length(i) > 1) Dg[i, ] <- apply(Dg[i, , drop = FALSE], 2, cumsum)
     }
     tab[, `:=`(from = min(period), observed = cumsum(observed), cells = cumsum(cells), skipped = cumsum(skipped)),
-        by = "series_"]
-    tab[, series_ := NULL]
+        by = "group_"]
+    tab[, group_ := NULL]
   }
   X <- tab$observed - Dg
   out <- tab[, c(by, "group_lo", "group_hi", if (cumulative) "from", "period", "observed"), with = FALSE]
@@ -313,26 +343,23 @@ excess_deaths <- function(cell_tab, D, left_tab, by, ages, cumulative, probs) {
 
 excess_life_expectancy <- function(cell_tab, D, left_tab, by, at, probs, ...) {
   keys <- c(by, "period")
-  cell_tab[, row_ := .GRP, by = c(keys, "age_lo", "age_hi")]
-  Dg <- rowsum(D, cell_tab$row_, reorder = TRUE)
-  tab <- cell_tab[, list(observed = sum(observed), exposure = sum(exposure)), by = c("row_", keys, "age_lo", "age_hi")]
-  setorderv(tab, "row_")
-  tab[, set_ := .GRP, by = keys]
+  cell_tab[, idx := .GRP, by = c(keys, "age_lo", "age_hi")]
+  Dg <- rowsum(D, cell_tab$idx, reorder = TRUE)
+  tab <- cell_tab[, list(observed = sum(observed), exposure = sum(exposure)), by = c("idx", keys, "age_lo", "age_hi")]
+  setorderv(tab, "idx")
+  tab[, group_ := .GRP, by = keys]
   sk <- if (nrow(left_tab)) left_tab[, list(skipped = .N), by = keys] else NULL
   rows <- list()
   lost <- character()
-  for (k in unique(tab$set_)) {
-    i <- which(tab$set_ == k)
+  for (k in unique(tab$group_)) {
+    i <- which(tab$group_ == k)
     i <- i[order(tab$age_lo[i])]
     t1 <- tab[i[1]]
-    n_skip <- if (is.null(sk)) 0L else {
-      m <- sk[t1[, keys, with = FALSE], on = keys, skipped]
-      if (is.na(m)) 0L else m
-    }
+    n_skip <- if (is.null(sk)) NA_integer_ else sk[t1[, keys, with = FALSE], on = keys][["skipped"]]
     lo <- tab$age_lo[i]
     hi <- tab$age_hi[i]
     lab <- paste(c(unlist(t1[, by, with = FALSE]), t1$period), collapse = " ")
-    if (n_skip > 0 || length(i) < 2 || any(abs(hi[-length(hi)] - lo[-1]) > 1e-9)) {
+    if (!is.na(n_skip) || length(i) < 2 || any(abs(hi[-length(hi)] - lo[-1]) > 1e-9)) {
       lost <- c(lost, lab)
       next
     }
@@ -374,10 +401,10 @@ mt_plot_excess <- function(x, type = c("expected", "excess", "p_score"), level =
     mt_abort("The P-score is defined for deaths, not for life expectancy.", class = "argument")
   }
   prefix <- if (type == "expected") "expected" else type
-  lo <- paste0(prefix, "_", qnames((1 - level) / 2))
-  hi <- paste0(prefix, "_", qnames(1 - (1 - level) / 2))
+  lo_col <- paste0(prefix, "_", qnames((1 - level) / 2))
+  hi_col <- paste0(prefix, "_", qnames(1 - (1 - level) / 2))
   mid <- paste0(prefix, "_q0.5")
-  if (!all(c(lo, hi) %in% names(d))) {
+  if (!all(c(lo_col, hi_col) %in% names(d))) {
     mt_abort(sprintf("`x` lacks the quantiles of a %s%% interval; give them as `probs` in mt_excess().",
                      level * 100), class = "argument")
   }
@@ -398,7 +425,7 @@ mt_plot_excess <- function(x, type = c("expected", "excess", "p_score"), level =
   has_age <- "age" %in% names(d) && length(unique(d$age)) > 1
   if (has_age) d[, age := factor(age, levels = unique(age[order(age_lo)]))]
   np <- length(unique(d$period))
-  d[, `:=`(y_ = get(mid), lo_ = get(lo), hi_ = get(hi))]
+  d[, `:=`(med = get(mid), lo = get(lo_col), hi = get(hi_col))]
   vals <- stats::setNames(mt_palette(length(levs), if (looks_ordered(levs)) "ordered" else "categorical"), levs)
   ylab <- switch(type,
                  expected = if (quantity == "deaths") "Deaths" else sprintf("Life expectancy at age %s", d$at[1]),
@@ -415,8 +442,8 @@ mt_plot_excess <- function(x, type = c("expected", "excess", "p_score"), level =
   dodge <- ggplot2::position_dodge(width = 0.5)
   if (type == "expected" && np > 1) {
     p <- ggplot2::ggplot(d, ggplot2::aes(x = period, group = col)) +
-      ggplot2::geom_ribbon(ggplot2::aes(ymin = lo_, ymax = hi_, fill = col), alpha = 0.2) +
-      ggplot2::geom_line(ggplot2::aes(y = y_, colour = col), linetype = "dashed", linewidth = 0.6) +
+      ggplot2::geom_ribbon(ggplot2::aes(ymin = lo, ymax = hi, fill = col), alpha = 0.2) +
+      ggplot2::geom_line(ggplot2::aes(y = med, colour = col), linetype = "dashed", linewidth = 0.6) +
       ggplot2::geom_line(ggplot2::aes(y = observed, colour = col), linewidth = 0.5) +
       ggplot2::geom_point(ggplot2::aes(y = observed, colour = col), size = 1.2)
     sub <- sprintf("Points and solid lines: observed; dashed: expected (median) with %s interval", lvl)
@@ -425,12 +452,12 @@ mt_plot_excess <- function(x, type = c("expected", "excess", "p_score"), level =
     xv <- if (by_age) "age" else "period"
     p <- ggplot2::ggplot(d, ggplot2::aes(x = if (xv == "period") factor(period) else age, colour = col))
     if (type == "expected") {
-      p <- p + ggplot2::geom_pointrange(ggplot2::aes(y = y_, ymin = lo_, ymax = hi_), shape = 1, position = dodge) +
+      p <- p + ggplot2::geom_pointrange(ggplot2::aes(y = med, ymin = lo, ymax = hi), shape = 1, position = dodge) +
         ggplot2::geom_point(ggplot2::aes(y = observed), size = 2, position = dodge)
       sub <- sprintf("Filled points: observed; open points: expected (median) with %s interval", lvl)
     } else {
       p <- p + ggplot2::geom_hline(yintercept = 0, colour = "grey50") +
-        ggplot2::geom_pointrange(ggplot2::aes(y = y_, ymin = lo_, ymax = hi_), position = dodge)
+        ggplot2::geom_pointrange(ggplot2::aes(y = med, ymin = lo, ymax = hi), position = dodge)
       sub <- sprintf("Median and %s interval%s", lvl,
                      if (isTRUE(info$cumulative)) ", cumulative over the years" else "")
     }

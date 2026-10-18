@@ -28,7 +28,7 @@
 #' * `"edagger"`: life disparity, the average remaining life expectancy lost
 #'   at death (Vaupel 1986), `sum(d_x * ebar_x) / l(at)`, where `ebar_x`
 #'   interpolates life expectancy linearly to the average age at death in
-#'   the interval, `e_x + a_x / n_x * (e_{x+n} - e_x)` (the open interval
+#'   the interval, `e_x + a_x / n_x * (e_(x+n) - e_x)` (the open interval
 #'   uses its `e_x`);
 #' * `"var"`, `"sd"`: variance and standard deviation of the age at death,
 #'   `sum(p_x * (y_x - at - e)^2)`;
@@ -119,7 +119,7 @@
 #' expectancy. *Population Studies* 40(1): 147-157.
 #' @examples
 #' m <- 5e-5 * exp(0.095 * (0:100))
-#' lifespan_variation(m, single_ages(0, 100), measure = "edagger")
+#' lifespan_variation(m, "edagger", single_ages(0, 100))
 #' x <- mt_example(deaths = "single", years = 2015:2019)
 #' lifespan_variation(x, measure = c("edagger", "gini"), at = 65)
 #' fc <- mt_forecast(mt_fit(lee_carter(), x), h = 5, n_draws = 100, seed = 1)
