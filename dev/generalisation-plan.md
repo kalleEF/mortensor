@@ -449,11 +449,12 @@ method that forces exact group totals after a PCLM fit; `preserve_totals`
 stays labelled.
 
 **Proposal.**
-- `mt_ungroup(open_exposure = "pclm")`: the two-step method of Rizzi et al.
-  (2015), compared with stationary weights.
-- `life_table(open = c(..., "logquad", "beard"), estimation = c("ls",
-  "ml"))`: maximum likelihood (Thatcher et al. 1998), Feehan's further
-  models, and `open = "aic"`.
+- Done in E4: `mt_ungroup(open_split = "pclm")`, the two-step method of
+  Rizzi et al. (2015), is the default; stationary weights are an option.
+  `life_table(open = "kannisto"/"gompertz")` is fitted by maximum
+  likelihood (Thatcher et al. 1998).
+- `life_table(open = c(..., "logquad", "beard"))`: Feehan's further models,
+  and `open = "aic"`.
 - `mt_open_check()`: fit below a cut age, score observed ages above it (the
   design of Thatcher et al. 1998).
 - Ungrouping uncertainty through `bootstrapped(type = "data")`.
@@ -514,7 +515,7 @@ countries' trends.
 | Phase | Content | Days | Validation checks added |
 |---|---|---|---|
 | 0 Foundation | G1/G2 generators in `R/validation.R`; coverage by horizon; variogram score; `revision`; SAPE; `mt_dispersion()`; `mt_methods()` | 8-10 | none with thresholds; current defaults scored on G1 and recorded in `history.csv` |
-| 1 Published, light | `scale = "per_horizon"`; `weights = "crps_stack"`, `"bias"`; `dependence = "schaake"`, `"ecc"`; MinT from errors; `open_exposure = "pclm"`; closures; relabels | 22-28 | `horizon_calibration_*`, `stacking_*`, `dependence_*`, `open_interval_holdout` |
+| 1 Published, light | `scale = "per_horizon"`; `weights = "crps_stack"`, `"bias"`; `dependence = "schaake"`, `"ecc"`; MinT from errors; further closures; relabels | 22-28 | `horizon_calibration_*`, `stacking_*`, `dependence_*`, `open_interval_holdout` |
 | 2 Models | `lee_carter(family = "nb")`; `cae()`; `relative_model()`; `anchored(decay = "ar1", to = "filtered")`; bootstrapped local level | 32-40 | `overdispersion_sim`, `nb_lc_ew`, `cae_ons`, `relative_ons`, `jumpoff_sim` |
 | 3 After full texts or decisions | `scaled_error`; `method = "errors"`; causes; Tucker3 CoDa review; P-splines with dispersion; e0 options; `local_level()` | 35-50 | `causes_triad`, further checks as built |
 
