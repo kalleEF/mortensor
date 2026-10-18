@@ -85,3 +85,28 @@ Verified references; not implemented in E3.
 | Common age effect model for several populations | Kleinow (2015) Insurance: Mathematics and Economics 63: 147-152 | Applied to socio-economic groups in England |
 | SAINT model for small populations | Jarner and Kryger (2011) ASTIN Bulletin 41(2): 377-418 | Small populations against a reference population |
 | Varying age-specific improvements | Bohk-Ewald and Rau (2017) Genus 73: 1 | Bayesian; heavier |
+
+## Full texts read in E4
+
+Sources and their access are recorded in the literature manifests of the
+session (Crossref-verified citations). Read in full: Oeppen (2008),
+Bergeron-Boucher et al. (2017) with their code, Russolillo, Giordano and
+Haberman (2011, accepted manuscript), Li, Lee and Gerland (2013, accepted
+manuscript), Panagiotelis et al. (2023, preprint), Wickramasuriya, Turlach
+and Hyndman (2020, preprint), Coroneo and Iacone (2020), Rizzi, Gampe and
+Eilers (2015), Thatcher, Kannisto and Vaupel (1998), Hyndman, Booth and
+Yasmeen (2013, preprint), Camarda (2019) with his code, Bohk-Ewald and Rau
+(2017). Implemented from software where the paper was unavailable:
+Currie, Durban and Eilers (2004) through MortalitySmooth 2.3.4; Plat (2009)
+through the StMoMo vignette; Nordpred through the documentation of the
+nordpred package (GPL-2 only, so no code was copied). Still read only as
+abstracts, so not implemented: Delwarde, Denuit and Partrat (2007),
+Richards et al. (2019, APCI), Kleinow (2015), Jarner and Kryger (2011) and
+Jarner and Jallbjørn (2022, SAINT), Kjærgaard et al. (2019), Lazarus et al.
+(2018), Van Schaeybroeck and Vannitsem (2015), Lee and Miller (2001).
+
+Corrections of this audit after reading the full texts: Camarda (2019)
+constrains rates of ageing and of change (row above corrected); the
+equal-weighted cosine variance is that of Lazarus et al. (2018), and
+Coroneo and Iacone (2020) use a Daniell-kernel estimate.
+
