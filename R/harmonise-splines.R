@@ -417,7 +417,8 @@ mt_shape_rates <- function(data, periods, method = c("last", "gam"), years = 5) 
 #' xg <- mt_regroup(x, age = c(seq(30, 85, 5), 90))
 #' fc <- mt_forecast(mt_fit(lee_carter(), xg), h = 3, n_draws = 20, seed = 1)
 #' e <- mt_array(x, "exposure")[, 20, ]
-#' fs <- mt_disaggregate(fc, mt_grid(x)$age, exposure = e, shape_rates = mt_shape_rates(x, periods = 2020:2022))
+#' sh <- mt_shape_rates(x, periods = 2020:2022)
+#' fs <- mt_disaggregate(fc, mt_grid(x)$age, exposure = e, shape_rates = sh)
 #' mt_disaggregate_check(fc, fs, e)
 #' if (requireNamespace("ggplot2", quietly = TRUE)) mt_plot_disaggregation(fc, fs)
 #' @export
