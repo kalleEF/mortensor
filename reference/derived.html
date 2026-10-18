@@ -5,26 +5,7 @@ object) the paths are Poisson draws of the observed death counts (see
 mt_observed()), so the intervals are those of the observed rates."><meta property="og:description" content="All quantities are computed path by path, so their intervals reflect the
 joint uncertainty across ages and years. For observed data (an mt_data
 object) the paths are Poisson draws of the observed death counts (see
-mt_observed()), so the intervals are those of the observed rates."><style>
-/* Bootstrap's paragraph margin inside the labels makes mermaid size the
-   boxes too small, which clips their last line */
-.mermaid-diagram p { margin: 0; }
-.mermaid-diagram { margin: 1rem 0 1.5rem; }
-</style><script type="module">
-import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.esm.min.mjs";
-mermaid.initialize({ startOnLoad: false, securityLevel: "strict" });
-window.addEventListener("load", async () => {
-  const sel = "pre.mermaid, pre.sourceCode.mermaid, pre > code.mermaid, pre > code.language-mermaid";
-  document.querySelectorAll(sel).forEach((el) => {
-    const pre = el.tagName === "PRE" ? el : el.parentElement;
-    const div = document.createElement("div");
-    div.className = "mermaid-diagram";
-    div.textContent = pre.textContent;
-    pre.replaceWith(div);
-  });
-  await mermaid.run({ querySelector: "div.mermaid-diagram" });
-});
-</script></head><body>
+mt_observed()), so the intervals are those of the observed rates."></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 

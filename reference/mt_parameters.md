@@ -18,7 +18,8 @@ mt_parameters(fit)
 ## Value
 
 A `data.table` with `stratum`, `parameter`, `index` (age label, year or
-position), `value` and, for Bayesian fits, `lower` and `upper`.
+position), `value` and, for Bayesian fits, `lower` and `upper`; for
+ensembles also `component`, for fits by groups also `group`.
 
 ## Details
 
@@ -42,6 +43,14 @@ position), `value` and, for Bayesian fits, `lower` and `upper`.
 
 Fits of wrapped packages (StMoMo, demography) keep the original fitted
 object in `fit$fits[[i]]`, where the methods of those packages apply.
+
+Wrappers return the parameters of the model they wrap
+([`recalibrated()`](recalibrated.md) adds its factors). For an
+[`ensemble()`](ensemble.md), the rows of each component carry its name
+in column `component`, and rows with `parameter = "weight"` give the
+weights; components without interpretable parameters (wrapped packages)
+contribute their weight only. For [`stratified()`](stratified.md) and
+`tuned(by = )`, the rows of each group carry its name in column `group`.
 
 ## See also
 

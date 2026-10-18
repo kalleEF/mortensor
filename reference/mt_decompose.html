@@ -3,26 +3,7 @@
 into contributions of ages, causes of death and population subgroups. It
 is a post-processing step for observed data, forecasts, or both:"><meta property="og:description" content="Splits the difference in a mortality summary between two sets of rates
 into contributions of ages, causes of death and population subgroups. It
-is a post-processing step for observed data, forecasts, or both:"><style>
-/* Bootstrap's paragraph margin inside the labels makes mermaid size the
-   boxes too small, which clips their last line */
-.mermaid-diagram p { margin: 0; }
-.mermaid-diagram { margin: 1rem 0 1.5rem; }
-</style><script type="module">
-import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.esm.min.mjs";
-mermaid.initialize({ startOnLoad: false, securityLevel: "strict" });
-window.addEventListener("load", async () => {
-  const sel = "pre.mermaid, pre.sourceCode.mermaid, pre > code.mermaid, pre > code.language-mermaid";
-  document.querySelectorAll(sel).forEach((el) => {
-    const pre = el.tagName === "PRE" ? el : el.parentElement;
-    const div = document.createElement("div");
-    div.className = "mermaid-diagram";
-    div.textContent = pre.textContent;
-    pre.replaceWith(div);
-  });
-  await mermaid.run({ querySelector: "div.mermaid-diagram" });
-});
-</script></head><body>
+is a post-processing step for observed data, forecasts, or both:"></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -428,7 +409,7 @@ do we live?". <em>Demographic Research</em> 7: 365-378.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    max_residual</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>           &lt;num&gt;</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1: 7.105427e-15</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2: 6.661338e-15</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2: 7.105427e-15</span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">g</span>, by <span class="op">=</span> <span class="st">"age"</span>, change <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2016</span>, <span class="fl">2025</span><span class="op">)</span><span class="op">)</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">5</span><span class="op">]</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>      from     to       period    age          mean       q0.025          q0.5</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    &lt;char&gt; &lt;char&gt;       &lt;char&gt; &lt;char&gt;         &lt;num&gt;        &lt;num&gt;         &lt;num&gt;</span>
@@ -457,7 +438,7 @@ do we live?". <em>Demographic Research</em> 7: 365-378.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2:             0.251           1.337             2.231    0.024</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    sum_contributions max_residual</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>                &lt;num&gt;        &lt;num&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1:             0.993      4.8e-15</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1:             0.993      4.3e-15</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2:             1.302      6.9e-15</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> jump_off: part of the difference due to observed instead of fitted rates in observed years of the draws</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> (see mt_jump_off()); observed = "fitted" decomposes the model's change alone.</span>

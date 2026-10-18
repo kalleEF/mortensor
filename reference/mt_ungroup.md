@@ -164,16 +164,16 @@ u
 head(attr(u, "ungroup"))
 #>    measure stratum period       method lambda_age lambda_period       ed
 #>     <char>   <int> <char>       <char>      <num>         <num>    <num>
-#> 1:  deaths       1   2010 pclm_rate_1d  19515.370            NA 6.448288
-#> 2:  deaths       1   2011 pclm_rate_1d  27584.317            NA 6.086148
+#> 1:  deaths       1   2010 pclm_rate_1d  19515.355            NA 6.448289
+#> 2:  deaths       1   2011 pclm_rate_1d  27584.245            NA 6.086151
 #> 3:  deaths       1   2012 pclm_rate_1d   7094.886            NA 7.545750
-#> 4:  deaths       1   2013 pclm_rate_1d   2340.520            NA 8.833281
+#> 4:  deaths       1   2013 pclm_rate_1d   2340.519            NA 8.833281
 #> 5:  deaths       1   2014 pclm_rate_1d   1880.462            NA 9.096312
 #> 6:  deaths       2   2010 pclm_rate_1d  18039.474            NA 6.841390
 #>    max_rel_diff at_bound
 #>           <num>   <lgcl>
 #> 1:   0.05824939    FALSE
-#> 2:   0.06301502    FALSE
+#> 2:   0.06301434    FALSE
 #> 3:   0.04597185    FALSE
 #> 4:   0.06615491    FALSE
 #> 5:   0.02673557    FALSE

@@ -7,26 +7,7 @@ log scale unless fixed."><meta property="og:description" content="Latent values 
 counts by mu = C (o * gamma), where o is an offset (exposures for
 rates, interval widths for counts). The coefficients are estimated by
 penalized Poisson IRLS; the smoothing parameter is chosen by BIC or AIC on a
-log scale unless fixed."><style>
-/* Bootstrap's paragraph margin inside the labels makes mermaid size the
-   boxes too small, which clips their last line */
-.mermaid-diagram p { margin: 0; }
-.mermaid-diagram { margin: 1rem 0 1.5rem; }
-</style><script type="module">
-import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.esm.min.mjs";
-mermaid.initialize({ startOnLoad: false, securityLevel: "strict" });
-window.addEventListener("load", async () => {
-  const sel = "pre.mermaid, pre.sourceCode.mermaid, pre > code.mermaid, pre > code.language-mermaid";
-  document.querySelectorAll(sel).forEach((el) => {
-    const pre = el.tagName === "PRE" ? el : el.parentElement;
-    const div = document.createElement("div");
-    div.className = "mermaid-diagram";
-    div.textContent = pre.textContent;
-    pre.replaceWith(div);
-  });
-  await mermaid.run({ querySelector: "div.mermaid-diagram" });
-});
-</script></head><body>
+log scale unless fixed."></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 

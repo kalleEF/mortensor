@@ -11,27 +11,6 @@
 <script src="../deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Function map">
-<style>
-/* Bootstrap's paragraph margin inside the labels makes mermaid size the
-   boxes too small, which clips their last line */
-.mermaid-diagram p { margin: 0; }
-.mermaid-diagram { margin: 1rem 0 1.5rem; }
-</style>
-<script type="module">
-import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.esm.min.mjs";
-mermaid.initialize({ startOnLoad: false, securityLevel: "strict" });
-window.addEventListener("load", async () => {
-  const sel = "pre.mermaid, pre.sourceCode.mermaid, pre > code.mermaid, pre > code.language-mermaid";
-  document.querySelectorAll(sel).forEach((el) => {
-    const pre = el.tagName === "PRE" ? el : el.parentElement;
-    const div = document.createElement("div");
-    div.className = "mermaid-diagram";
-    div.textContent = pre.textContent;
-    pre.replaceWith(div);
-  });
-  await mermaid.run({ querySelector: "div.mermaid-diagram" });
-});
-</script>
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -101,31 +80,8 @@ tools.</p>
 <p>Every analysis passes the same objects from top to bottom. The boxes
 are objects; the labels on the arrows are the functions that connect
 them.</p>
-<pre class="mermaid"><code>flowchart TD
-  T["`**your tables**
-  deaths, populations or exposures (CSV, Excel, official exports)`"]
-  D["`**mt_data**
-  observations at any age and period resolution, by strata`"]
-  S["`**model specification**
-  lee_carter(), li_lee(), rwd(), ..., optionally inside ensemble(), reconciled(), recalibrated(), anchored()`"]
-  F["`**mt_fit**
-  estimates per stratum or joint`"]
-  P["`**mt_draws**
-  simulated paths of future rates`"]
-  B["`**mt_backtest**
-  scores of past forecasts`"]
-  R["`**tables and plots**
-  life expectancy, rates, deaths, gaps, decompositions`"]
-  T -- "mt_data()" --&gt; D
-  D -- "prepare and check (map 1)" --&gt; D
-  D -- "mt_fit()" --&gt; F
-  S --&gt; F
-  S --&gt; B
-  D -- "mt_backtest()" --&gt; B
-  F -- "mt_forecast()" --&gt; P
-  P -- "map 3" --&gt; R
-  B -- "mt_score()" --&gt; R
-  D -- "the past (map 3)" --&gt; R</code></pre>
+<p align="center">
+<img src="function-map-main.png" width="740" alt="Main path: your tables become an mt_data object with mt_data() and are prepared and checked (map 1); mt_fit() fits a model specification to the data, and mt_backtest() scores specifications on past years; mt_forecast() gives mt_draws, simulated paths of future rates; tables and plots of life expectancy, rates, deaths, gaps and decompositions come from the draws, from the backtest scores (mt_score()) or from the observed data (map 3)."></p>
 </div>
 <div class="section level2">
 <h2 id="map-1-from-tables-to-analysis-ready-data">Map 1: from tables to analysis-ready data<a class="anchor" aria-label="anchor" href="#map-1-from-tables-to-analysis-ready-data"></a>
@@ -133,28 +89,8 @@ them.</p>
 <p>The steps in their usual order. Each is a decision about the data;
 skip those a data set does not need. Every step returns an
 <code>mt_data</code> object.</p>
-<pre class="mermaid"><code>%%{init: {"flowchart": {"wrappingWidth": 360}}}%%
-flowchart TD
-  A["`**read**
-  mt_data(): long or wide tables, age labels such as 85+ or '85 Jahre und mehr', suppression symbols
-  mt_read_genesis(), mt_read_gbe(): German official exports
-  mt_from_hmd(), mt_read_hmd(), as_mt_data(): HMD, StMoMo, demography`"]
-  E["`**mt_as_exposure(type)**
-  person-years from mid-year, 1 January or 31 December populations`"]
-  S["`**mt_subset()**
-  ages, years and strata to analyse`"]
-  G["`**mt_regroup()**
-  common age groups or years, for example those of the deaths`"]
-  F["`**mt_fill_suppressed()**
-  suppressed counts estimated from published totals or bounds`"]
-  L["`**mt_group_levels(), mt_relabel()**
-  aggregation layers such as cause groups, quintiles or regions; labels`"]
-  U["`**mt_ungroup()**
-  single years of age from age groups (penalised composite link)`"]
-  V["`**mt_validate()**
-  impossible values, missing cells, totals among levels, sums of a hierarchy`"]
-  M["model-ready mt_data"]
-  A --&gt; E --&gt; S --&gt; G --&gt; F --&gt; L --&gt; U --&gt; V --&gt; M</code></pre>
+<p align="center">
+<img src="function-map-data.png" width="423" alt="Map 1, from tables to analysis-ready data: read the tables (mt_data(), mt_read_genesis(), mt_read_gbe(), mt_from_hmd(), mt_read_hmd(), as_mt_data()), then mt_as_exposure(), mt_subset(), mt_regroup(), mt_fill_suppressed(), mt_group_levels() and mt_relabel(), mt_ungroup() and mt_validate(), giving model-ready mt_data."></p>
 <p>Smoothing is not a step of this map. <code><a href="../reference/mt_smooth.html">mt_smooth()</a></code> with
 <code><a href="../reference/mt_smooth_check.html">mt_smooth_check()</a></code> and <code><a href="../reference/mt_smooth_check.html">mt_plot_smooth()</a></code> shows
 what a smoother would do to the data; for forecasts, smooth inside the
@@ -169,49 +105,11 @@ them.</p>
 <p>A model specification is one model, optionally inside wrappers.
 Preprocessing steps given as <code>prep</code> are repeated in every
 fit, so that backtests do not see the test years.</p>
-<pre class="mermaid"><code>flowchart TD
-  ONE["`**one population per stratum**
-  lee_carter(), rwd(), hyndman_ullah(), stmomo(), stanmomo(), arima_series(), ets_series(), apc_bayes()`"]
-  MANY["`**several strata jointly**
-  li_lee(common_by), product_ratio(), coherent_fdm(), tucker3(), cause_shares()`"]
-  H["`**mt_hierarchy()**
-  totals and groups of strata; fixed nodes such as a trusted total`"]
-  WRAP["`**wrappers around any model**
-  ensemble(), stratified(), reconciled(), recalibrated(), anchored(), bootstrapped(), tuned()`"]
-  SPEC["model specification"]
-  M["model-ready mt_data"]
-  PREP["`**mt_prep()**
-  step_smooth(), step_ungroup(), step_window(), ...`"]
-  FIT["`**mt_fit(spec, data, prep)**`"]
-  INS["`**inspect**
-  summary(), mt_parameters(), residuals(), mt_plot_residuals()`"]
-  FC["`**mt_forecast()**
-  draws; warns about implausible rates; mt_jump_off()`"]
-  ONE --&gt; SPEC
-  MANY --&gt; SPEC
-  H --&gt; WRAP
-  WRAP -. "optional" .-&gt; SPEC
-  SPEC --&gt; FIT
-  M --&gt; FIT
-  PREP -. "optional" .-&gt; FIT
-  FIT --&gt; INS
-  FIT --&gt; FC</code></pre>
+<p align="center">
+<img src="function-map-models.png" width="885" alt="Map 2, models: models for one population per stratum or for several strata jointly form a model specification, optionally inside wrappers (ensemble(), stratified(), reconciled(), recalibrated(), anchored(), bootstrapped(), tuned()) that may use a hierarchy from mt_hierarchy(); mt_fit() takes the specification, the model-ready data and optional preprocessing from mt_prep(); the fit is inspected (summary(), mt_parameters(), residuals()) or forecast with mt_forecast()."></p>
 <p>Choosing between specifications:</p>
-<pre class="mermaid"><code>flowchart TD
-  M["model-ready mt_data"]
-  SP["`**candidate specifications**
-  each with its preprocessing (prep)`"]
-  BT["`**mt_backtest()**
-  rolling origins; preprocessing and model refitted on each training window; suppressed cells not scored`"]
-  SC["`**mt_score()**
-  CRPS, interval score, coverage, PIT, MASE; for rates, life expectancy or ASR`"]
-  PL["`**mt_plot_scores(), mt_plot_coverage()**
-  by horizon, age or model`"]
-  CH["chosen specification"]
-  M --&gt; BT
-  SP --&gt; BT
-  BT --&gt; SC --&gt; CH
-  BT --&gt; PL --&gt; CH</code></pre>
+<p align="center">
+<img src="function-map-choice.png" width="528" alt="Choosing between specifications: the data and the candidate specifications, each with its preprocessing, go into mt_backtest(); mt_score() and the score plots (mt_plot_scores(), mt_plot_coverage()) lead to the chosen specification."></p>
 <p><code><a href="../reference/mt_tune.html">tuned()</a></code> and <code><a href="../reference/mt_tune.html">mt_tune()</a></code> run the same
 comparison inside a fit, over a grid of model and preprocessing settings
 (for example the number of components and the smoothing of
@@ -226,27 +124,8 @@ width of its intervals.</p>
 <p>Indicators and comparisons are computed path by path, so their
 intervals include the joint uncertainty of all strata. The same
 functions describe observed data.</p>
-<pre class="mermaid"><code>flowchart TD
-  P["`**mt_draws**
-  forecast paths`"]
-  O["`**mt_data**
-  observed data; mt_observed() adds Poisson draws`"]
-  AGG["`**aggregate or refine**
-  mt_aggregate_draws(), mt_disaggregate(); mt_coherence() checks sums`"]
-  IND["`**indicators**
-  life_expectancy(), asr(), prob_dying(), yll(), mt_deaths()`"]
-  COMP["`**comparisons**
-  mt_contrast(), mt_inequality(), mt_decompose()`"]
-  OUT["`**output**
-  mt_summarise(), mt_plot_forecast(), mt_plot_life_expectancy(), mt_plot_shares(), mt_plot_decomposition(), mt_export()`"]
-  P &lt;--&gt; AGG
-  P --&gt; IND
-  O --&gt; IND
-  P --&gt; COMP
-  O --&gt; COMP
-  P --&gt; OUT
-  IND --&gt; OUT
-  COMP --&gt; OUT</code></pre>
+<p align="center">
+<img src="function-map-results.png" width="813" alt="Map 3, from draws to results: forecast draws (mt_draws) and observed data (mt_data) give indicators (life_expectancy(), asr(), prob_dying(), yll(), mt_deaths()), comparisons (mt_contrast(), mt_inequality(), mt_decompose()) and output (mt_summarise(), plots, mt_export()); draws can be aggregated or refined (mt_aggregate_draws(), mt_disaggregate(), mt_coherence())."></p>
 </div>
 <div class="section level2">
 <h2 id="functions-by-purpose">Functions by purpose<a class="anchor" aria-label="anchor" href="#functions-by-purpose"></a>

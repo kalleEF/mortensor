@@ -9,26 +9,7 @@ life_expectancy() gives life expectancy path by path."><meta property="og:descri
 of the training data, and metadata (model, forecast origin, seed,
 diagnostics). Summaries are computed from the paths:
 mt_summarise() gives the mean and quantiles per cell,
-life_expectancy() gives life expectancy path by path."><style>
-/* Bootstrap's paragraph margin inside the labels makes mermaid size the
-   boxes too small, which clips their last line */
-.mermaid-diagram p { margin: 0; }
-.mermaid-diagram { margin: 1rem 0 1.5rem; }
-</style><script type="module">
-import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.esm.min.mjs";
-mermaid.initialize({ startOnLoad: false, securityLevel: "strict" });
-window.addEventListener("load", async () => {
-  const sel = "pre.mermaid, pre.sourceCode.mermaid, pre > code.mermaid, pre > code.language-mermaid";
-  document.querySelectorAll(sel).forEach((el) => {
-    const pre = el.tagName === "PRE" ? el : el.parentElement;
-    const div = document.createElement("div");
-    div.className = "mermaid-diagram";
-    div.textContent = pre.textContent;
-    pre.replaceWith(div);
-  });
-  await mermaid.run({ querySelector: "div.mermaid-diagram" });
-});
-</script></head><body>
+life_expectancy() gives life expectancy path by path."></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 

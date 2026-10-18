@@ -17,26 +17,7 @@ grouped data). In a forecasting
 pipeline, use it as a preprocessing step (mt_prep(step_smooth(...))):
 models are then fitted to the smoothed rates, while the observation noise
 of their predictive draws, residuals and backtest scales come from the
-rates before smoothing ("smooth input, raw residuals").'><style>
-/* Bootstrap's paragraph margin inside the labels makes mermaid size the
-   boxes too small, which clips their last line */
-.mermaid-diagram p { margin: 0; }
-.mermaid-diagram { margin: 1rem 0 1.5rem; }
-</style><script type="module">
-import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.esm.min.mjs";
-mermaid.initialize({ startOnLoad: false, securityLevel: "strict" });
-window.addEventListener("load", async () => {
-  const sel = "pre.mermaid, pre.sourceCode.mermaid, pre > code.mermaid, pre > code.language-mermaid";
-  document.querySelectorAll(sel).forEach((el) => {
-    const pre = el.tagName === "PRE" ? el : el.parentElement;
-    const div = document.createElement("div");
-    div.className = "mermaid-diagram";
-    div.textContent = pre.textContent;
-    pre.replaceWith(div);
-  });
-  await mermaid.run({ querySelector: "div.mermaid-diagram" });
-});
-</script></head><body>
+rates before smoothing ("smooth input, raw residuals").'></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -219,18 +200,18 @@ mortality rates. <em>Statistical Modelling</em> 4(4): 279-298.</p>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="va">s</span>, <span class="st">"smooth"</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    measure stratum period     method lambda_age lambda_period       ed</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     &lt;char&gt;   &lt;int&gt; &lt;char&gt;     &lt;char&gt;      &lt;num&gt;         &lt;num&gt;    &lt;num&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1:  deaths       1   2001 pspline_1d   84044.08            NA 5.767171</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2:  deaths       1   2002 pspline_1d   55319.02            NA 6.280080</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1:  deaths       1   2001 pspline_1d   84044.06            NA 5.767171</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2:  deaths       1   2002 pspline_1d   55318.96            NA 6.280081</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 3:  deaths       1   2003 pspline_1d   27572.52            NA 7.243212</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4:  deaths       2   2001 pspline_1d  101416.32            NA 5.532907</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4:  deaths       2   2001 pspline_1d  101398.86            NA 5.533108</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 5:  deaths       2   2002 pspline_1d   23289.26            NA 7.546782</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 6:  deaths       2   2003 pspline_1d   92069.24            NA 5.638856</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    max_rel_diff at_bound</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>           &lt;num&gt;   &lt;lgcl&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1:    0.1988680    FALSE</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2:    0.2322713    FALSE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1:    0.1988679    FALSE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2:    0.2322712    FALSE</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 3:    0.2057177    FALSE</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4:    0.2271144    FALSE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4:    0.2271092    FALSE</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 5:    0.2455273    FALSE</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 6:    0.2102315    FALSE</span>
 <span class="r-in"><span><span class="va">xt</span> <span class="op">&lt;-</span> <span class="fu"><a href="mt_example.html">mt_example</a></span><span class="op">(</span>deaths <span class="op">=</span> <span class="st">"single"</span>, years <span class="op">=</span> <span class="fl">2000</span><span class="op">:</span><span class="fl">2015</span><span class="op">)</span></span></span>

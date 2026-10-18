@@ -175,7 +175,7 @@ rc$reconciliation
 #> [1] "wls"
 #> 
 #> $max_relative_gap_before
-#> [1] 0.3081628
+#> [1] 0.3208982
 #> 
 #> $share_set_to_zero
 #> [1] 0

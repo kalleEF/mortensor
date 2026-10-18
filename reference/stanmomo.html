@@ -11,26 +11,7 @@ age-period-cohort ("apc"), Cairns-Blake-Dowd ("cbd") and M6 ("m6")
 models, fitted with Stan to the deaths and exposures of each stratum
 with a Poisson or negative binomial likelihood (log link). Period
 indexes follow random walks with drift (CBD and M6: correlated), cohort
-effects AR(2) processes.'><style>
-/* Bootstrap's paragraph margin inside the labels makes mermaid size the
-   boxes too small, which clips their last line */
-.mermaid-diagram p { margin: 0; }
-.mermaid-diagram { margin: 1rem 0 1.5rem; }
-</style><script type="module">
-import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.esm.min.mjs";
-mermaid.initialize({ startOnLoad: false, securityLevel: "strict" });
-window.addEventListener("load", async () => {
-  const sel = "pre.mermaid, pre.sourceCode.mermaid, pre > code.mermaid, pre > code.language-mermaid";
-  document.querySelectorAll(sel).forEach((el) => {
-    const pre = el.tagName === "PRE" ? el : el.parentElement;
-    const div = document.createElement("div");
-    div.className = "mermaid-diagram";
-    div.textContent = pre.textContent;
-    pre.replaceWith(div);
-  });
-  await mermaid.run({ querySelector: "div.mermaid-diagram" });
-});
-</script></head><body>
+effects AR(2) processes.'></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -165,7 +146,6 @@ averaging for mortality forecasting using leave-future-out validation.
 <span class="r-in"><span>  <span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="mt_fit.html">mt_fit</a></span><span class="op">(</span><span class="fu">stanmomo</span><span class="op">(</span><span class="st">"lc"</span>, chains <span class="op">=</span> <span class="fl">1</span>, iter <span class="op">=</span> <span class="fl">400</span>, h_max <span class="op">=</span> <span class="fl">10</span><span class="op">)</span>, <span class="va">x</span><span class="op">)</span></span></span>
 <span class="r-in"><span>  <span class="va">fc</span> <span class="op">&lt;-</span> <span class="fu"><a href="mt_forecast.html">mt_forecast</a></span><span class="op">(</span><span class="va">fit</span>, h <span class="op">=</span> <span class="fl">10</span>, n_draws <span class="op">=</span> <span class="fl">100</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span></span></span>
-<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>StanMoMo Lee-Carter: warnings in 2 stratum/strata, for example female: StanMoMo chains have not converged (largest R-hat 1.07); use more `iter` or `chains`. (see the diagnostics of the fit).</span>
 <span class="r-in"><span><span class="co"># }</span></span></span>
 </code></pre></div>
     </div>

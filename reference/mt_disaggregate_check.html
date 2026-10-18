@@ -15,26 +15,7 @@ the median log rates over age (large values mean kinks or oscillations).
 mt_plot_disaggregation() shows, for one forecast year, the group medians
 as steps and the fine-age medians as lines (type = "profile"), or the
 absolute second differences of the fine log rates by age as a heat map
-(type = "smoothness").'><style>
-/* Bootstrap's paragraph margin inside the labels makes mermaid size the
-   boxes too small, which clips their last line */
-.mermaid-diagram p { margin: 0; }
-.mermaid-diagram { margin: 1rem 0 1.5rem; }
-</style><script type="module">
-import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.esm.min.mjs";
-mermaid.initialize({ startOnLoad: false, securityLevel: "strict" });
-window.addEventListener("load", async () => {
-  const sel = "pre.mermaid, pre.sourceCode.mermaid, pre > code.mermaid, pre > code.language-mermaid";
-  document.querySelectorAll(sel).forEach((el) => {
-    const pre = el.tagName === "PRE" ? el : el.parentElement;
-    const div = document.createElement("div");
-    div.className = "mermaid-diagram";
-    div.textContent = pre.textContent;
-    pre.replaceWith(div);
-  });
-  await mermaid.run({ querySelector: "div.mermaid-diagram" });
-});
-</script></head><body>
+(type = "smoothness").'></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -149,9 +130,9 @@ with <code>max_group_error</code> and <code>max_second_difference</code>.
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1: female female   2020    4.440892e-16             0.4251745</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2: female female   2021    4.440892e-16             0.4369139</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 3: female female   2022    4.440892e-16             0.4216458</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4:   male   male   2020    4.440892e-16             0.4308712</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4:   male   male   2020    5.551115e-16             0.4308712</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 5:   male   male   2021    4.440892e-16             0.4281358</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 6:   male   male   2022    4.440892e-16             0.4248617</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6:   male   male   2022    6.661338e-16             0.4248617</span>
 <span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/ns-load.html" class="external-link">requireNamespace</a></span><span class="op">(</span><span class="st">"ggplot2"</span>, quietly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span> <span class="fu">mt_plot_disaggregation</span><span class="op">(</span><span class="va">fc</span>, <span class="va">fs</span><span class="op">)</span></span></span>
 <span class="r-plt img"><img src="mt_disaggregate_check-1.png" alt="" width="700" height="433"></span>
 </code></pre></div>

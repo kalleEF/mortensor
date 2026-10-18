@@ -13,27 +13,6 @@
 <script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="Flexible Mortality Forecasting Across Data Granularities">
 <meta name="description" content='Tools to combine mortality and population data observed at different granularities (age groups, open age intervals, periods, population strata and causes) and to build probabilistic mortality forecasts from interchangeable parts: harmonisation and ungrouping with the penalized composite link model; models implemented directly (random walk with drift, Lee-Carter, Li-Lee, Tucker3) or wrapped from demography, StMoMo, StanMoMo, bamp and forecast behind one interface; ensembles of any combination of them; coherent forecasts of totals and their parts; honest rolling-origin backtests with proper scoring rules; and life tables computed from simulated paths. Experimental software written largely with AI coding assistants ("vibe-coded"); use at your own risk and check results independently.'>
 <meta property="og:description" content='Tools to combine mortality and population data observed at different granularities (age groups, open age intervals, periods, population strata and causes) and to build probabilistic mortality forecasts from interchangeable parts: harmonisation and ungrouping with the penalized composite link model; models implemented directly (random walk with drift, Lee-Carter, Li-Lee, Tucker3) or wrapped from demography, StMoMo, StanMoMo, bamp and forecast behind one interface; ensembles of any combination of them; coherent forecasts of totals and their parts; honest rolling-origin backtests with proper scoring rules; and life tables computed from simulated paths. Experimental software written largely with AI coding assistants ("vibe-coded"); use at your own risk and check results independently.'>
-<style>
-/* Bootstrap's paragraph margin inside the labels makes mermaid size the
-   boxes too small, which clips their last line */
-.mermaid-diagram p { margin: 0; }
-.mermaid-diagram { margin: 1rem 0 1.5rem; }
-</style>
-<script type="module">
-import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.esm.min.mjs";
-mermaid.initialize({ startOnLoad: false, securityLevel: "strict" });
-window.addEventListener("load", async () => {
-  const sel = "pre.mermaid, pre.sourceCode.mermaid, pre > code.mermaid, pre > code.language-mermaid";
-  document.querySelectorAll(sel).forEach((el) => {
-    const pre = el.tagName === "PRE" ? el : el.parentElement;
-    const div = document.createElement("div");
-    div.className = "mermaid-diagram";
-    div.textContent = pre.textContent;
-    pre.replaceWith(div);
-  });
-  await mermaid.run({ querySelector: "div.mermaid-diagram" });
-});
-</script>
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -186,7 +165,7 @@ window.addEventListener("load", async () => {
 <h2 id="function-map">Function map<a class="anchor" aria-label="anchor" href="#function-map"></a>
 </h2>
 <p>The objects of an analysis and the functions that connect them. The <a href="vignettes/articles/function-map.Rmd">function map</a> (on the website: Articles, Function map) shows every function with its purpose, the possible workflows and what the package does not cover.</p>
-<!-- Drawn from dev/readme-diagram/function-map.mmd by dev/readme-diagram/render.js (an image, because
+<!-- Drawn from dev/diagrams/readme-function-map.mmd by dev/diagrams/render.js (an image, because
 the GitHub mobile app does not draw Mermaid diagrams) -->
 <p align="center">
 <img src="reference/figures/README-function-map.png" width="538" alt="Function map: your tables become an mt_data object with mt_data(); mt_fit() fits a model specification to it; mt_forecast() gives mt_draws, simulated future rates; mt_backtest() gives backtest scores (mt_score()); results such as life_expectancy(), asr(), mt_contrast(), mt_decompose(), plots and CSV files come from the draws or from the observed data."></p>

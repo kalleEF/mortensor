@@ -10,63 +10,24 @@ section “What is not covered” lists steps that need other tools.
 Every analysis passes the same objects from top to bottom. The boxes are
 objects; the labels on the arrows are the functions that connect them.
 
-``` mermaid
-flowchart TD
-  T["`**your tables**
-  deaths, populations or exposures (CSV, Excel, official exports)`"]
-  D["`**mt_data**
-  observations at any age and period resolution, by strata`"]
-  S["`**model specification**
-  lee_carter(), li_lee(), rwd(), ..., optionally inside ensemble(), reconciled(), recalibrated(), anchored()`"]
-  F["`**mt_fit**
-  estimates per stratum or joint`"]
-  P["`**mt_draws**
-  simulated paths of future rates`"]
-  B["`**mt_backtest**
-  scores of past forecasts`"]
-  R["`**tables and plots**
-  life expectancy, rates, deaths, gaps, decompositions`"]
-  T -- "mt_data()" --> D
-  D -- "prepare and check (map 1)" --> D
-  D -- "mt_fit()" --> F
-  S --> F
-  S --> B
-  D -- "mt_backtest()" --> B
-  F -- "mt_forecast()" --> P
-  P -- "map 3" --> R
-  B -- "mt_score()" --> R
-  D -- "the past (map 3)" --> R
-```
+![Main path: your tables become an mt_data object with mt_data() and are
+prepared and checked (map 1); mt_fit() fits a model specification to the
+data, and mt_backtest() scores specifications on past years;
+mt_forecast() gives mt_draws, simulated paths of future rates; tables
+and plots of life expectancy, rates, deaths, gaps and decompositions
+come from the draws, from the backtest scores (mt_score()) or from the
+observed data (map 3).](function-map-main.png)
 
 ## Map 1: from tables to analysis-ready data
 
 The steps in their usual order. Each is a decision about the data; skip
 those a data set does not need. Every step returns an `mt_data` object.
 
-``` mermaid
-%%{init: {"flowchart": {"wrappingWidth": 360}}}%%
-flowchart TD
-  A["`**read**
-  mt_data(): long or wide tables, age labels such as 85+ or '85 Jahre und mehr', suppression symbols
-  mt_read_genesis(), mt_read_gbe(): German official exports
-  mt_from_hmd(), mt_read_hmd(), as_mt_data(): HMD, StMoMo, demography`"]
-  E["`**mt_as_exposure(type)**
-  person-years from mid-year, 1 January or 31 December populations`"]
-  S["`**mt_subset()**
-  ages, years and strata to analyse`"]
-  G["`**mt_regroup()**
-  common age groups or years, for example those of the deaths`"]
-  F["`**mt_fill_suppressed()**
-  suppressed counts estimated from published totals or bounds`"]
-  L["`**mt_group_levels(), mt_relabel()**
-  aggregation layers such as cause groups, quintiles or regions; labels`"]
-  U["`**mt_ungroup()**
-  single years of age from age groups (penalised composite link)`"]
-  V["`**mt_validate()**
-  impossible values, missing cells, totals among levels, sums of a hierarchy`"]
-  M["model-ready mt_data"]
-  A --> E --> S --> G --> F --> L --> U --> V --> M
-```
+![Map 1, from tables to analysis-ready data: read the tables (mt_data(),
+mt_read_genesis(), mt_read_gbe(), mt_from_hmd(), mt_read_hmd(),
+as_mt_data()), then mt_as_exposure(), mt_subset(), mt_regroup(),
+mt_fill_suppressed(), mt_group_levels() and mt_relabel(), mt_ungroup()
+and mt_validate(), giving model-ready mt_data.](function-map-data.png)
 
 Smoothing is not a step of this map.
 [`mt_smooth()`](../reference/mt_smooth.md) with
@@ -85,55 +46,21 @@ A model specification is one model, optionally inside wrappers.
 Preprocessing steps given as `prep` are repeated in every fit, so that
 backtests do not see the test years.
 
-``` mermaid
-flowchart TD
-  ONE["`**one population per stratum**
-  lee_carter(), rwd(), hyndman_ullah(), stmomo(), stanmomo(), arima_series(), ets_series(), apc_bayes()`"]
-  MANY["`**several strata jointly**
-  li_lee(common_by), product_ratio(), coherent_fdm(), tucker3(), cause_shares()`"]
-  H["`**mt_hierarchy()**
-  totals and groups of strata; fixed nodes such as a trusted total`"]
-  WRAP["`**wrappers around any model**
-  ensemble(), stratified(), reconciled(), recalibrated(), anchored(), bootstrapped(), tuned()`"]
-  SPEC["model specification"]
-  M["model-ready mt_data"]
-  PREP["`**mt_prep()**
-  step_smooth(), step_ungroup(), step_window(), ...`"]
-  FIT["`**mt_fit(spec, data, prep)**`"]
-  INS["`**inspect**
-  summary(), mt_parameters(), residuals(), mt_plot_residuals()`"]
-  FC["`**mt_forecast()**
-  draws; warns about implausible rates; mt_jump_off()`"]
-  ONE --> SPEC
-  MANY --> SPEC
-  H --> WRAP
-  WRAP -. "optional" .-> SPEC
-  SPEC --> FIT
-  M --> FIT
-  PREP -. "optional" .-> FIT
-  FIT --> INS
-  FIT --> FC
-```
+![Map 2, models: models for one population per stratum or for several
+strata jointly form a model specification, optionally inside wrappers
+(ensemble(), stratified(), reconciled(), recalibrated(), anchored(),
+bootstrapped(), tuned()) that may use a hierarchy from mt_hierarchy();
+mt_fit() takes the specification, the model-ready data and optional
+preprocessing from mt_prep(); the fit is inspected (summary(),
+mt_parameters(), residuals()) or forecast with
+mt_forecast().](function-map-models.png)
 
 Choosing between specifications:
 
-``` mermaid
-flowchart TD
-  M["model-ready mt_data"]
-  SP["`**candidate specifications**
-  each with its preprocessing (prep)`"]
-  BT["`**mt_backtest()**
-  rolling origins; preprocessing and model refitted on each training window; suppressed cells not scored`"]
-  SC["`**mt_score()**
-  CRPS, interval score, coverage, PIT, MASE; for rates, life expectancy or ASR`"]
-  PL["`**mt_plot_scores(), mt_plot_coverage()**
-  by horizon, age or model`"]
-  CH["chosen specification"]
-  M --> BT
-  SP --> BT
-  BT --> SC --> CH
-  BT --> PL --> CH
-```
+![Choosing between specifications: the data and the candidate
+specifications, each with its preprocessing, go into mt_backtest();
+mt_score() and the score plots (mt_plot_scores(), mt_plot_coverage())
+lead to the chosen specification.](function-map-choice.png)
 
 [`tuned()`](../reference/mt_tune.md) and
 [`mt_tune()`](../reference/mt_tune.md) run the same comparison inside a
@@ -150,29 +77,12 @@ Indicators and comparisons are computed path by path, so their intervals
 include the joint uncertainty of all strata. The same functions describe
 observed data.
 
-``` mermaid
-flowchart TD
-  P["`**mt_draws**
-  forecast paths`"]
-  O["`**mt_data**
-  observed data; mt_observed() adds Poisson draws`"]
-  AGG["`**aggregate or refine**
-  mt_aggregate_draws(), mt_disaggregate(); mt_coherence() checks sums`"]
-  IND["`**indicators**
-  life_expectancy(), asr(), prob_dying(), yll(), mt_deaths()`"]
-  COMP["`**comparisons**
-  mt_contrast(), mt_inequality(), mt_decompose()`"]
-  OUT["`**output**
-  mt_summarise(), mt_plot_forecast(), mt_plot_life_expectancy(), mt_plot_shares(), mt_plot_decomposition(), mt_export()`"]
-  P <--> AGG
-  P --> IND
-  O --> IND
-  P --> COMP
-  O --> COMP
-  P --> OUT
-  IND --> OUT
-  COMP --> OUT
-```
+![Map 3, from draws to results: forecast draws (mt_draws) and observed
+data (mt_data) give indicators (life_expectancy(), asr(), prob_dying(),
+yll(), mt_deaths()), comparisons (mt_contrast(), mt_inequality(),
+mt_decompose()) and output (mt_summarise(), plots, mt_export()); draws
+can be aggregated or refined (mt_aggregate_draws(), mt_disaggregate(),
+mt_coherence()).](function-map-results.png)
 
 ## Functions by purpose
 

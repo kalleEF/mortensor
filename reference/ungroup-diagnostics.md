@@ -107,7 +107,7 @@ u <- list(PCLM = mt_ungroup(x), "Hyman spline" = mt_ungroup(x, method = "hyman_k
 mt_ungroup_check(u)
 #>          method at_bound max_rel_gap
 #>          <fctr>    <num>       <num>
-#> 1:         PCLM        0  0.06695379
+#> 1:         PCLM        0  0.06695381
 #> 2: Hyman spline        0          NA
 if (requireNamespace("ggplot2", quietly = TRUE)) {
   mt_plot_ungroup(x, u, strata = "female")
