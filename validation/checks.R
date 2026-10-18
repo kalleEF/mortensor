@@ -440,7 +440,7 @@ checks$coda_coherent_fr <- list(
                       "of the draws of the coherent and the independent model; information, no threshold)."),
   run = function() {
     fr <- as_mt_data(mortensor:::pkg_data("fr.mort", "demography"))
-    fr <- mt_window(fr, from = 1950, to = 2006)
+    fr <- mortensor:::mt_window(fr, from = 1950, to = 2006)
     fr <- mt_regroup(fr, age = single_ages(0, 100, open = TRUE))
     o <- 1991:1996
     cc <- mt_backtest(coda(coherent = TRUE), fr, origins = o, h = 10, n_draws = 200)
@@ -466,7 +466,7 @@ checks$coda_causes_coherence <- list(
   run = function() {
     x <- mt_example_causes(years = 1995:2017)
     st <- mt_strata(x)
-    fit <- mt_fit(coda_causes(), mt_window(x, to = 2012))
+    fit <- mt_fit(coda_causes(), mortensor:::mt_window(x, to = 2012))
     gap <- function(fc) {
       max(vapply(c("female", "male"), function(sx) {
         i <- st$stratum[st$sex == sx & st$cause == "all"]
