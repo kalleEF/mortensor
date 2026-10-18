@@ -352,3 +352,13 @@ test_that("coda_causes() adds a residual cause when the causes do not cover all 
   expect_error(mt_fit(coda_causes(var = "nonsense"), x), class = "mt_error_model_fit")
   expect_error(mt_fit(coda_causes(total_level = "none"), x), class = "mt_error_model_fit")
 })
+
+test_that("coda() fits and forecasts a closed age range with either open-interval method", {
+  x <- mt_example(deaths = "single", years = 1995:2012)
+  a <- single_ages(30, 90, open = FALSE)
+  xc <- mt_regroup(mt_set_grid(x, age = a), age = a)
+  for (open in c("regression", "auto")) {
+    fc <- mt_forecast(mt_fit(coda(open = open), xc), h = 3, n_draws = 20, seed = 1)
+    expect_true(all(is.finite(fc$rates)))
+  }
+})
