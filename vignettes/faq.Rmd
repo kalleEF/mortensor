@@ -327,11 +327,12 @@ Life expectancy is the average age at death; `lifespan_variation()` gives
 its spread: life disparity (e-dagger), the life-table entropy, the Gini
 coefficient, the standard deviation and the interquartile range of the age
 at death, from age 0 or conditional on survival to an age `at`. It works
-on observed data (with Poisson intervals) and on forecast draws. e-dagger
-and the interquartile range hardly depend on the open age interval;
-the standard deviation and the Gini coefficient are understated with an
-open interval from 85 or 90, so use single years of age up to 100 or more
-for them. See "Lifespan variation".
+on observed data (with Poisson intervals) and on forecast draws. All
+measures depend on the open age interval, e-dagger most: for French women
+in 2006 it was 2.1 years higher with an open interval from 85 than with
+single years of age to 100+. Use data with an open interval from 95 or
+higher, and compare measures only between tables with the same open age.
+See "Lifespan variation".
 
 ### How do I estimate excess deaths?
 

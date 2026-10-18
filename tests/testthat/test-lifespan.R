@@ -182,3 +182,25 @@ test_that("lifespan_variation checks its arguments", {
   mm[50] <- NA
   expect_true(is.na(lifespan_variation(mm, "gini", a)))
 })
+
+test_that("lifespan variation is a quantity of comparisons, contrasts and inequality indices", {
+  x <- mt_example(deaths = "single", years = 2005:2019)
+  fc <- mt_forecast(mt_fit(lee_carter(), x), h = 3, n_draws = 50, seed = 1)
+  lv <- lifespan_variation(fc, measure = "gini", at = 30)
+  tab <- mt_compare_forecasts(list(lc = fc), quantity = "lifespan_variation", measure = "gini", at = 30,
+                              wide = FALSE, level = 0.95)
+  expect_equal(tab$med, lv$q0.5, tolerance = 1e-12)
+  expect_equal(tab$lo, lv$q0.025, tolerance = 1e-12)
+  paths <- lifespan_variation(fc, measure = "edagger", paths = TRUE)
+  ct <- mt_contrast(fc, var = "sex", ref = "female", quantity = "lifespan_variation")
+  d <- paths[, "male", ] - paths[, "female", ]
+  expect_equal(ct$mean, unname(rowMeans(d)), tolerance = 1e-12)
+  expect_error(mt_compare_forecasts(list(fc), quantity = "lifespan_variation", measure = c("sd", "gini")),
+               class = "mt_error_argument")
+  expect_error(mt_contrast(fc, var = "sex", ref = "female", quantity = "lifespan_variation", measure = "x"),
+               class = "mt_error_argument")
+  skip_if_not_installed("ggplot2")
+  p <- mt_plot_compare(list(lc = fc), quantity = "lifespan_variation", measure = "sd", data = x)
+  expect_s3_class(p, "ggplot")
+  expect_match(p$labels$y, "Standard deviation")
+})

@@ -145,6 +145,7 @@ articles:
       - tuning-recalibration
       - coherence
       - decomposition
+      - lifespan-variation
   - title: Models
     desc: Which model to use, and how to combine several.
     contents:
@@ -157,6 +158,7 @@ articles:
     contents:
       - inequality-england
       - laender-germany
+      - excess-mortality
   - title: Help
     contents:
       - faq

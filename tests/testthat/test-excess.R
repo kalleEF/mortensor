@@ -145,6 +145,15 @@ test_that("mt_plot_excess returns ggplot objects", {
   one <- mt_excess(rwd(), x, baseline = c(2005, 2014), periods = 2016, ages = seq(30, 90, 10), n_draws = 50, seed = 1)
   expect_s3_class(mt_plot_excess(one), "ggplot")
   expect_s3_class(mt_plot_excess(one, type = "excess", colour = "sex"), "ggplot")
+  # one year and one age group: strata as rows
+  one_age <- mt_excess(rwd(), x, baseline = c(2005, 2014), periods = 2016, n_draws = 50, seed = 1)
+  for (type in c("expected", "p_score")) {
+    p <- mt_plot_excess(one_age, type = type)
+    expect_s3_class(p, "ggplot")
+    expect_silent(ggplot2::ggplot_build(p))
+    expect_null(p$labels$y)
+  }
+  expect_match(p$labels$x, "P-score")
   le <- mt_excess(rwd(), x, baseline = c(2005, 2014), quantity = "life_expectancy", by = character(), n_draws = 50,
                   seed = 1)
   expect_s3_class(mt_plot_excess(le), "ggplot")

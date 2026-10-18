@@ -56,17 +56,24 @@
 #' The discrete formulas treat everyone dying in an interval as dying at age
 #' `x + a_x`, so `var`, `sd`, `cv` and `gini` leave out the spread of the
 #' ages at death within each interval (about `n^2 / 12` years squared for
-#' deaths spread evenly over `n` years). Compared with ages at death spread
-#' evenly within closed intervals and exponentially in the open one, for
-#' French life tables (HMD) the standard deviation is lower by less than
-#' 0.01 years with single years of age to 110+, by up to 0.14 years with
-#' 5-year groups to 100+, by 0.3 to 0.6 years with an open interval from 90
-#' and by 1 to 2 years with one from 85 (Gini coefficient: up to 0.002 lower
-#' with 5-year groups to 100+, 0.016 with 85+). `edagger`, `entropy`
-#' and `iqr` are not affected by the open interval (remaining life
-#' expectancy does not change within an interval of constant hazard). Use
-#' single years of age up to 100 or more where possible (for example from
-#' [mt_ungroup()]).
+#' deaths spread evenly over `n` years). With single years of age to 110+,
+#' the standard deviation of French life tables (HMD) is lower by less than
+#' 0.01 years than with ages at death spread evenly within the intervals,
+#' with 5-year groups to 100+ by up to 0.14 years.
+#'
+#' The open age interval matters more for every measure. The life table
+#' assumes a constant death rate in it (with the default closure), while
+#' the death rate keeps rising with age, so the ages at death in the open
+#' interval are spread too widely. Compared with single years of age to
+#' 100+, an open interval from 85 gave for French life tables of 1950-2006
+#' an e-dagger and an entropy up to 22% higher (2.1 years for women in
+#' 2006), an interquartile range and a Gini coefficient up to 13% lower and
+#' a standard deviation up to 4% lower. With an open interval from 90 the
+#' differences were at most 8% (e-dagger, entropy), 5% (interquartile
+#' range), 4% (Gini coefficient) and 1% (standard deviation); from 95 at
+#' most 2%. They grow as more deaths occur at the highest ages. Use single
+#' years of age up to 100 or more where possible, and compare measures only
+#' between tables with the same open age.
 #'
 #' The life table needs an open last age interval (otherwise the deaths do
 #' not add up to the survivors at age `at`). The open interval uses the
@@ -160,6 +167,12 @@ lifespan_variation <- function(x, measure = "edagger", age = NULL, at = NULL,
 }
 
 lifespan_measures <- c("edagger", "sd", "var", "cv", "entropy", "gini", "iqr")
+
+# Axis labels of the measures (mt_plot_compare())
+lifespan_labels <- c(edagger = "Life disparity (e-dagger)", sd = "Standard deviation of the age at death",
+                     var = "Variance of the age at death", cv = "Coefficient of variation of the age at death",
+                     entropy = "Life-table entropy", gini = "Gini coefficient of the age at death",
+                     iqr = "Interquartile range of the age at death")
 
 check_lifespan_measure <- function(measure) {
   if (!is.character(measure) || !length(measure) || !all(measure %in% lifespan_measures)) {

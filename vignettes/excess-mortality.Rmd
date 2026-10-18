@@ -1,0 +1,244 @@
+---
+title: "Excess mortality"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Excess mortality}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+has_demography <- requireNamespace("demography", quietly = TRUE)
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width = 7, fig.height = 4, message = FALSE,
+                      eval = has_demography)
+has_gg <- requireNamespace("ggplot2", quietly = TRUE)
+```
+
+Excess deaths are the deaths observed in a period of crisis (a heatwave,
+an epidemic, a war) minus the deaths expected without it. The expected
+deaths are not observed; they come from a model of the years before the
+crisis, the *baseline*. `mt_excess()` fits any mortality model of the
+package to the baseline years, forecasts the later years with the
+observed exposures, and compares the observed deaths with each simulated
+path of expected deaths. The intervals therefore contain the uncertainty
+of the baseline trend and the random variation of the death counts. The
+WHO estimates of the excess mortality of the COVID-19 pandemic follow
+this approach with their own baseline model (Msemburi et al. 2023).
+
+The results are
+
+* the **excess**: observed minus expected deaths;
+* the **P-score**: the excess in percent of the expected deaths;
+* `p_positive`: the share of paths in which the observed deaths exceed the
+  expected deaths;
+
+by year, and optionally by age group, stratum, and summed over years.
+
+## The heatwave of August 2003 in France
+
+Deaths and exposures of France (Human Mortality Database, via the
+demography package), single years of age to 100+. The baseline is a
+Lee-Carter model of the years 1990-2002:
+
+```{r}
+library(mortensor)
+library(data.table)
+fr <- as_mt_data(demography::fr.mort)
+x <- mt_regroup(mt_subset(fr, periods = c(1990, 2006)), age = 0:100)
+fit <- mt_fit(lee_carter(), mt_subset(x, periods = c(1990, 2002)))
+ex <- mt_excess(fit, x, by = character(), seed = 1)
+ex[, list(period, observed, expected_q0.5, excess_q0.025, excess_q0.5, excess_q0.975, p_score_q0.5)]
+```
+
+`by = character()` sums women and men. In 2003, about 15,000 more people
+died than expected (95% interval 5,600 to 25,400), 2.8% more than
+expected. Fouillet et al. (2006) counted about 15,000 excess deaths
+between 1 and 20 August 2003 against the mortality of 2000-2002, so the
+rest of the year was close to the baseline.
+
+```{r plot-expected, eval = has_demography && has_gg}
+mt_plot_excess(ex)
+```
+
+The years after 2003 lie below the baseline: 30,000 fewer deaths than
+expected in 2004 and as many in 2006. Part of the deficit of 2004 may be
+deaths brought forward by the heatwave, but the deficit continues: from
+2003 mortality fell faster than the trend of 1990-2002. A baseline
+extrapolated over several years becomes uncertain, and so do excess deaths
+far from the baseline period.
+
+By sex and age group:
+
+```{r}
+mt_excess(fit, x, periods = 2003, seed = 1)[, list(sex, observed, excess_q0.025, excess_q0.5, excess_q0.975)]
+ex_age <- mt_excess(fit, x, periods = 2003, by = character(), ages = c(0, 45, 65, 75, 85), seed = 1)
+ex_age[, list(age, observed, excess_q0.5, p_score_q0.025, p_score_q0.5, p_score_q0.975)]
+```
+
+```{r plot-age, eval = has_demography && has_gg}
+mt_plot_excess(ex_age, type = "p_score")
+```
+
+Three quarters of the excess were women, and most were 75 and older; the
+P-score was highest at 85+. Fouillet et al. (2006) also found the excess
+concentrated among women and at old ages. `ages` gives the start of each age group; the deaths are summed
+path by path before the quantiles are taken.
+
+The same comparison on the scale of life expectancy: the observed life
+expectancy at birth minus that of each path of expected rates.
+
+```{r}
+le <- mt_excess(fit, x, periods = 2003, quantity = "life_expectancy", seed = 1)
+le[, list(sex, observed, expected_q0.5, excess_q0.025, excess_q0.5, excess_q0.975)]
+```
+
+Life expectancy of women was 0.25 years lower than expected; the interval
+includes zero, because an annual life expectancy hides a shock of two
+weeks.
+
+## The choice of baseline
+
+The baseline is an assumption. A few alternatives, each fitted to the
+years before 2003:
+
+```{r}
+base <- list("Lee-Carter 1990-2002" = fit,
+             "Lee-Carter 1993-2002" = mt_fit(lee_carter(), mt_subset(x, periods = c(1993, 2002))),
+             "random walk 1990-2002" = mt_fit(rwd(), mt_subset(x, periods = c(1990, 2002))),
+             "Li-Lee 1990-2002" = mt_fit(li_lee(), mt_subset(x, periods = c(1990, 2002))))
+rbindlist(lapply(names(base), function(b) {
+  mt_excess(base[[b]], x, periods = 2003, by = character(), seed = 1)[, baseline := b]
+}))[, list(baseline, excess_q0.025, excess_q0.5, excess_q0.975, p_score_q0.5)]
+```
+
+The medians agree within 900 deaths. Li-Lee, whose common factor ties the
+trends of women and men together, gives the widest interval of the sum:
+when the trend errors of the parts are correlated, they do not cancel in
+the total. Report the baseline model and years with the results, and
+compare a few.
+
+## A large shock: France 1918
+
+The influenza pandemic of 1918 against a baseline of 1900-1913 (ages 0-94
+and 95+, because some exposures at the oldest ages are zero in these
+years):
+
+```{r}
+y <- mt_regroup(mt_subset(fr, periods = c(1900, 1919)), age = 0:95)
+e18 <- mt_excess(lee_carter(), y, baseline = c(1900, 1913), seed = 1)
+e18[, list(sex, period, excess_q0.025, excess_q0.5, excess_q0.975, p_score_q0.5)]
+```
+
+```{r plot-1918, eval = has_demography && has_gg}
+mt_plot_excess(e18, type = "p_score")
+```
+
+The excess of men starts in 1914, with the First World War, so for men
+it mixes war deaths and the pandemic. That of women is concentrated in
+1918: 113,000 deaths (95% interval 37,000 to 173,000), 43% more than
+expected. The intervals widen from 1914 on, because the expected deaths
+of 1918 are forecast five years ahead of the baseline. By age, for 1918:
+
+```{r}
+e18a <- mt_excess(lee_carter(), y, baseline = c(1900, 1913), periods = 1918, ages = c(0, 15, 45, 65), seed = 1)
+e18a[, list(sex, age, observed, excess_q0.5, p_score_q0.5)]
+```
+
+Women aged 15-44 died at more than twice the expected rate, a mark of the
+1918 pandemic, which was most lethal for young adults.
+
+## Germany, 2020-2024, by Land
+
+The German data of the package (Destatis) give deaths by Land, sex and
+age group. A few small cells are suppressed; `mt_fill_suppressed()`
+estimates them from the totals of Germany:
+
+```{r, eval = TRUE, warning = FALSE}
+library(mortensor)
+library(data.table)
+de <- mt_data(deaths = de_deaths[de_deaths$cause == "all", ], population = de_population, by = c("region", "sex"))
+de <- mt_as_exposure(de, type = "dec31")
+de <- mt_regroup(mt_subset(de, periods = c(2010, 2024)), age = "deaths")
+de <- mt_fill_suppressed(de, mt_hierarchy(region = "Deutschland"))
+laender <- mt_subset(de, region != "Deutschland", drop = TRUE)
+```
+
+The populations are given by Land, so the national total is formed by
+summing the Länder (`mt_aggregate_strata()`). A Lee-Carter model of the
+national total, both sexes, fitted to 2010-2019:
+
+```{r, eval = TRUE}
+h <- mt_hierarchy(region = "Deutschland", sex = "both")
+germany <- mt_subset(mt_aggregate_strata(laender, h), region == "Deutschland" & sex == "both", drop = TRUE)
+ex_de <- mt_excess(lee_carter(), germany, baseline = c(2010, 2019), by = character(), seed = 1)
+ex_de[, list(period, observed, excess_q0.025, excess_q0.5, excess_q0.975, p_score_q0.5, p_positive)]
+mt_excess(lee_carter(), germany, baseline = c(2010, 2019), by = character(), cumulative = TRUE,
+          seed = 1)[, list(from, period, excess_q0.025, excess_q0.5, excess_q0.975)]
+```
+
+The excess rose from about 26,000 in 2020 to 101,000 in 2022 and fell
+afterwards; from 2020 to 2022 it summed to 183,000, with a wide interval
+(73,000 to 285,000). The interval is wide because the expected deaths of
+2022 are a forecast three years beyond a baseline of ten years.
+
+Summing separate models of the 32 strata (Land by sex) instead gives a
+much narrower interval for the same total:
+
+```{r, eval = TRUE, warning = FALSE}
+mt_excess(lee_carter(), laender, baseline = c(2010, 2019), by = character(),
+          seed = 1)[, list(period, excess_q0.025, excess_q0.5, excess_q0.975)]
+```
+
+Separate models draw their trend errors independently, so these cancel
+in the sum, while in reality the Länder share much of their trend. For a
+total, use a model of the total, or a joint model of its parts such as
+`li_lee()`, whose common factor carries the shared trend. The warning
+suppressed here concerns the oldest men of Bremen, a small population.
+
+P-scores of the Länder in 2021, from a Li-Lee model with one common
+factor per sex:
+
+```{r, eval = TRUE}
+ex_l <- mt_excess(li_lee(common_by = "sex"), laender, baseline = c(2010, 2019), by = "region", periods = 2021,
+                  seed = 1)
+ex_l[order(-p_score_q0.5), list(region, p_score_q0.025, p_score_q0.5, p_score_q0.975, cells, skipped)]
+```
+
+```{r plot-laender, eval = has_gg, fig.height = 5}
+mt_plot_excess(ex_l, type = "p_score")
+```
+
+In 2021 the excess was highest in Thüringen, Sachsen and Sachsen-Anhalt
+(P-scores 11-15%); in most western Länder the interval contains zero.
+`cells` and `skipped` count the observed cells used and left out: cells
+whose deaths were estimated (suppressed cells filled above) are not
+compared unless `include_estimated = TRUE`.
+
+## Do the intervals hold?
+
+When the baseline model describes the years without a shock, the 95%
+interval of the excess should contain the true excess in 95% of cases.
+The validation suite of the package checks this on simulated data
+(`mt_example()`, a Lee-Carter baseline, deaths at ages 70 and older
+raised by 10% in two years, 20 replicates): the intervals contained zero
+where there was no shock in 97.5% of the cases, and the injected deaths in
+98% of the cases where there was one. On real data, the coverage depends
+on how well the baseline model forecasts the years of the shock; a
+backtest of the baseline model on years without a shock
+(`mt_backtest()`) shows how wide its intervals need to be.
+
+## References
+
+Acosta RJ, Irizarry RA (2022). A flexible statistical framework for
+estimating excess mortality. *Epidemiology* 33(3): 346-353.
+doi:10.1097/EDE.0000000000001445.
+
+Fouillet A, Rey G, Laurent F, Pavillon G, Bellec S, Guihenneuc-Jouyaux C,
+Clavel J, Jougla E, Hémon D (2006). Excess mortality related to the
+August 2003 heat wave in France. *International Archives of Occupational
+and Environmental Health* 80(1): 16-24. doi:10.1007/s00420-006-0089-4.
+
+Msemburi W, Karlinsky A, Knutson V, Aleshin-Guendel S, Chatterji S,
+Wakefield J (2023). The WHO estimates of excess mortality associated with
+the COVID-19 pandemic. *Nature* 613: 130-137.
+doi:10.1038/s41586-022-05522-2.

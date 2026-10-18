@@ -146,7 +146,9 @@ whole gap, with correspondingly wide intervals.
 
 \code{mt_plot_excess()} draws the result: observed and expected values over
 the years (\code{type = "expected"}), or the excess or P-score with its
-interval by age group (when there are several) or year.
+interval by age group (when there are several) or year. For one year and
+one age group, each level of the colour variable (for example each
+region) gets its own row.
 }
 \examples{
 x <- mt_example(years = 2000:2019, deaths = "single")

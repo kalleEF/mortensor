@@ -22,7 +22,7 @@ A model specification.
 \description{
 \code{coda()} is the Lee-Carter model in compositional form (Oeppen 2008), as
 formulated by Bergeron-Boucher, Canudas-Romo, Oeppen and Vaupel (2017). It
-models the life-table distribution of deaths, not the death rates. With
+models the life-table distribution of deaths by age (which sums to 1). With
 \code{coherent = TRUE} or \code{common_by}, it is their coherent model for several
 populations. The code follows the reference implementation, \code{model.Oeppen()}
 and \code{model.OeppenC()} of the R package MortalityForecast 0.8.1 (Pascariu

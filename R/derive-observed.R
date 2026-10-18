@@ -43,7 +43,8 @@ as_draws <- function(x) {
 #' Differences and ratios between strata, path by path
 #'
 #' Compares a derived quantity (life expectancy, age-standardised rate,
-#' probability of dying, or death rate of one age group) between the levels
+#' probability of dying, death rate of one age group, or an index of
+#' lifespan variation) between the levels
 #' of a stratum variable and a reference level, path by path, so that the
 #' interval of the difference includes the joint uncertainty of both
 #' strata. Strata are matched on all other stratum variables (for example
@@ -53,13 +54,14 @@ as_draws <- function(x) {
 #'   (observed, see [mt_observed()]).
 #' @param var Stratum variable to compare across (for example `"quintile"`).
 #' @param ref Reference level of `var`.
-#' @param quantity `"life_expectancy"`, `"asr"`, `"prob_dying"` or
-#'   `"rate"`.
+#' @param quantity `"life_expectancy"`, `"asr"`, `"prob_dying"`, `"rate"`
+#'   or `"lifespan_variation"`.
 #' @param type `"difference"` (level minus reference) or `"ratio"`.
 #' @param probs Quantile levels.
 #' @param ... Arguments of the quantity: `at` for life expectancy,
 #'   `standard` and `per` for `asr()`, `from` and `to` for `prob_dying()`,
-#'   `age` (an age label) for `"rate"`.
+#'   `age` (an age label) for `"rate"`, `measure` (one index, default
+#'   `"edagger"`) and `at` for [lifespan_variation()].
 #' @return A `data.table` with the other stratum variables, `level`, `ref`,
 #'   `period`, `mean`, quantiles and `p_positive`, the share of paths with
 #'   a positive difference (or a ratio above 1).
@@ -68,7 +70,8 @@ as_draws <- function(x) {
 #' fc <- mt_forecast(mt_fit(lee_carter(), x), h = 5, n_draws = 100, seed = 1)
 #' mt_contrast(fc, var = "sex", ref = "female", at = 30)
 #' @export
-mt_contrast <- function(x, var, ref, quantity = c("life_expectancy", "asr", "prob_dying", "rate"),
+mt_contrast <- function(x, var, ref, quantity = c("life_expectancy", "asr", "prob_dying", "rate",
+                                                  "lifespan_variation"),
                         type = c("difference", "ratio"), probs = c(0.025, 0.5, 0.975), ...) {
   quantity <- match.arg(quantity)
   type <- match.arg(type)
@@ -114,6 +117,10 @@ quantity_paths <- function(x, quantity, ...) {
            e
          },
          asr = asr(x, standard = a$standard %||% "esp2013", per = a$per %||% 1e5, paths = TRUE),
+         lifespan_variation = {
+           ms <- check_compare_measure("lifespan_variation", a$measure %||% "edagger")
+           lifespan_variation(x, measure = ms, at = a$at, paths = TRUE)
+         },
          prob_dying = {
            if (is.null(a$from) || is.null(a$to)) mt_abort("Give `from` and `to` for prob_dying.", class = "argument")
            prob_dying(x, from = a$from, to = a$to, paths = TRUE)
@@ -162,7 +169,8 @@ quantity_paths <- function(x, quantity, ...) {
 #' x <- mt_example_regions(years = 2010:2019, regions = 2)
 #' mt_inequality(x, "quintile", order = paste0("Q", 5:1), quantity = "asr")
 #' @export
-mt_inequality <- function(x, var, order = NULL, quantity = c("asr", "life_expectancy", "prob_dying", "rate"),
+mt_inequality <- function(x, var, order = NULL, quantity = c("asr", "life_expectancy", "prob_dying", "rate",
+                                                              "lifespan_variation"),
                           probs = c(0.025, 0.5, 0.975), ...) {
   quantity <- match.arg(quantity)
   h <- object_hierarchy(x)

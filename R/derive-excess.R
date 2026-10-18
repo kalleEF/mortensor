@@ -48,7 +48,9 @@
 #'
 #' `mt_plot_excess()` draws the result: observed and expected values over
 #' the years (`type = "expected"`), or the excess or P-score with its
-#' interval by age group (when there are several) or year.
+#' interval by age group (when there are several) or year. For one year and
+#' one age group, each level of the colour variable (for example each
+#' region) gets its own row.
 #'
 #' @param model An [mt_fit] of the baseline model, fitted to the years
 #'   before the shock, or a model specification, which is then fitted to
@@ -448,6 +450,24 @@ mt_plot_excess <- function(x, type = c("expected", "excess", "p_score"), level =
       ggplot2::geom_point(ggplot2::aes(y = observed, colour = col), size = 1.2)
     sub <- sprintf("Points and solid lines: observed; dashed: expected (median) with %s interval", lvl)
     xlab <- NULL
+  } else if (np == 1 && !by_age) {
+    # one year and one age group: one row per level of the colour variable
+    d[, row := factor(col, levels = rev(levs))]
+    p <- ggplot2::ggplot(d, ggplot2::aes(y = row, colour = col))
+    if (type == "expected") {
+      p <- p + ggplot2::geom_pointrange(ggplot2::aes(x = med, xmin = lo, xmax = hi), shape = 1) +
+        ggplot2::geom_point(ggplot2::aes(x = observed), size = 2)
+      sub <- sprintf("Filled points: observed; open points: expected (median) with %s interval", lvl)
+    } else {
+      p <- p + ggplot2::geom_vline(xintercept = 0, colour = "grey50") +
+        ggplot2::geom_pointrange(ggplot2::aes(x = med, xmin = lo, xmax = hi))
+      sub <- sprintf("Median and %s interval%s", lvl,
+                     if (isTRUE(info$cumulative)) ", cumulative over the years" else "")
+    }
+    if (length(panel_vars)) p <- p + ggplot2::facet_wrap(ggplot2::vars(panel), scales = "free_x")
+    p <- p + ggplot2::scale_colour_manual(values = vals, breaks = levs) +
+      ggplot2::labs(x = ylab, y = NULL, title = base, subtitle = paste0(sub, "; ", d$period[1]))
+    return(p + theme_mortensor(legend = "none"))
   } else {
     xv <- if (by_age) "age" else "period"
     p <- ggplot2::ggplot(d, ggplot2::aes(x = if (xv == "period") factor(period) else age, colour = col))

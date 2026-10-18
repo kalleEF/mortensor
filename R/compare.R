@@ -45,11 +45,14 @@
 #'   (observed values).
 #' @param quantity `"life_expectancy"`, `"asr"` (per 100,000), `"deaths"`
 #'   (summed over the ages, with the exposures of the last observed year
-#'   unless `exposure` is given; forecasts only) or `"rate"` (death rates of
-#'   the ages in `ages`).
+#'   unless `exposure` is given; forecasts only), `"rate"` (death rates of
+#'   the ages in `ages`) or `"lifespan_variation"` (the index `measure` of
+#'   [lifespan_variation()]).
+#' @param measure Index of lifespan variation for `quantity =
+#'   "lifespan_variation"` (see [lifespan_variation()]).
 #' @param periods Years shown (for the plot a range `c(first, last)`, or
 #'   one year: then medians and intervals per stratum side by side).
-#' @param at Age for life expectancy.
+#' @param at Age for life expectancy and lifespan variation.
 #' @param ages Age labels for `quantity = "rate"`.
 #' @param strata Stratum labels shown (default all).
 #' @param level Level of the central interval.
@@ -154,11 +157,14 @@ mt_score_table <- function(backtest, metrics = c("crps", "cov95"), targets = NUL
 
 #' @rdname mt_compare
 #' @export
-mt_compare_forecasts <- function(forecasts, quantity = c("life_expectancy", "asr", "deaths", "rate"),
+mt_compare_forecasts <- function(forecasts, quantity = c("life_expectancy", "asr", "deaths", "rate",
+                                                         "lifespan_variation"),
                                  periods = NULL, at = NULL, ages = NULL, strata = NULL, level = 0.95, digits = 1,
-                                 wide = TRUE, exposure = NULL) {
+                                 wide = TRUE, exposure = NULL, measure = "edagger") {
   quantity <- match.arg(quantity)
-  tab <- compare_long(forecasts, quantity, at = at, ages = ages, level = level, exposure = exposure)
+  measure <- check_compare_measure(quantity, measure)
+  tab <- compare_long(forecasts, quantity, at = at, ages = ages, level = level, exposure = exposure,
+                      measure = measure)
   if (!is.null(periods)) tab <- tab[period %in% periods]
   if (!is.null(strata)) tab <- tab[label %in% strata]
   if (!nrow(tab)) mt_abort("Nothing left to compare: check `periods` and `strata`.", class = "argument")
@@ -175,7 +181,8 @@ mt_compare_forecasts <- function(forecasts, quantity = c("life_expectancy", "asr
 
 # One quantity of several forecasts: columns forecast, label, (age),
 # period, med, lo, hi
-compare_long <- function(forecasts, quantity, at = NULL, ages = NULL, level = 0.95, exposure = NULL) {
+compare_long <- function(forecasts, quantity, at = NULL, ages = NULL, level = 0.95, exposure = NULL,
+                         measure = "edagger") {
   if (inherits(forecasts, c("mt_draws", "mt_data"))) forecasts <- list(forecasts)
   if (!is.list(forecasts) || !length(forecasts)) {
     mt_abort("`forecasts` must be a list of mt_draws or mt_data objects.", class = "argument")
@@ -198,6 +205,7 @@ compare_long <- function(forecasts, quantity, at = NULL, ages = NULL, level = 0.
     s <- switch(quantity,
                 life_expectancy = life_expectancy(f, at = at, probs = probs),
                 asr = asr(f, probs = probs),
+                lifespan_variation = lifespan_variation(f, measure = measure, at = at, probs = probs),
                 rate = {
                   d <- as_draws(f)
                   r <- mt_summarise(d, probs = probs)
@@ -217,23 +225,25 @@ compare_long <- function(forecasts, quantity, at = NULL, ages = NULL, level = 0.
 #' @param data Observed data shown as points (`mt_plot_compare()`; default:
 #'   the training data of the first forecast).
 #' @export
-mt_plot_compare <- function(forecasts, quantity = c("life_expectancy", "rate", "asr"), at = NULL, ages = NULL,
-                            strata = NULL, periods = NULL, level = 0.95, data = NULL) {
+mt_plot_compare <- function(forecasts, quantity = c("life_expectancy", "rate", "asr", "lifespan_variation"),
+                            at = NULL, ages = NULL, strata = NULL, periods = NULL, level = 0.95, data = NULL,
+                            measure = "edagger") {
   need_ggplot()
   quantity <- match.arg(quantity)
+  measure <- check_compare_measure(quantity, measure)
   if (inherits(forecasts, "mt_draws")) forecasts <- list(forecasts)
   first <- forecasts[[1]]
   check_class(first, "mt_draws", "forecasts[[1]]")
   if (quantity == "rate" && is.null(ages)) ages <- first$age$labels[unique(round(stats::quantile(
     seq_along(first$age), c(0.25, 0.75))))]
-  tab <- compare_long(forecasts, quantity, at = at, ages = ages, level = level)
-  hist <- compare_history(first, quantity, at = at, ages = ages, data = data)
+  tab <- compare_long(forecasts, quantity, at = at, ages = ages, level = level, measure = measure)
+  hist <- compare_history(first, quantity, at = at, ages = ages, data = data, measure = measure)
   fit <- rbindlist(lapply(seq_along(forecasts), function(i) {
     f <- forecasts[[i]]
     if (!inherits(f, "mt_draws") || is.null(f$fitted)) return(NULL)
     fr <- f$fitted
     dimnames(fr) <- list(f$age$labels, as.character(f$observed_periods), f$strata$label)
-    h <- compare_values(fr, f$age, quantity, at, ages)
+    h <- compare_values(fr, f$age, quantity, at, ages, measure)
     if (is.null(h)) NULL else h[, forecast := names(forecasts)[i] %||% f$model]
   }), fill = TRUE)
   if (nrow(fit)) fit[, forecast := factor(forecast, levels = levels(tab$forecast))]
@@ -253,7 +263,9 @@ mt_plot_compare <- function(forecasts, quantity = c("life_expectancy", "rate", "
     lab(fit)
   }
   ylab <- switch(quantity, life_expectancy = sprintf("Life expectancy at age %s", at %||% first$age$lower[1]),
-                 rate = "Death rate (log scale)", asr = "Age-standardised rate per 100,000")
+                 rate = "Death rate (log scale)", asr = "Age-standardised rate per 100,000",
+                 lifespan_variation = sprintf("%s from age %s", lifespan_labels[[measure]],
+                                              at %||% first$age$lower[1]))
   if (length(periods) == 1) {
     # one year: median and interval per stratum (and age), one colour per forecast
     lev <- unique(if (quantity == "rate") tab$panel else tab$label)
@@ -291,14 +303,22 @@ mt_plot_compare <- function(forecasts, quantity = c("life_expectancy", "rate", "
 }
 
 # Observed values of a quantity, from `data` or the training data of a forecast
-compare_history <- function(draws, quantity, at = NULL, ages = NULL, data = NULL) {
+compare_history <- function(draws, quantity, at = NULL, ages = NULL, data = NULL, measure = "edagger") {
   o <- observed_rates(draws, data)
   if (is.null(o)) return(NULL)
-  compare_values(o, draws$age, quantity, at, ages)
+  compare_values(o, draws$age, quantity, at, ages, measure)
+}
+
+# One index of lifespan variation for quantity = "lifespan_variation"
+check_compare_measure <- function(quantity, measure) {
+  if (quantity != "lifespan_variation") return(measure)
+  measure <- check_lifespan_measure(measure)
+  if (length(measure) != 1) mt_abort("Give one `measure` of lifespan variation.", class = "argument")
+  measure
 }
 
 # A quantity of a rate array [age, period, stratum] (point values)
-compare_values <- function(m, age, quantity, at = NULL, ages = NULL) {
+compare_values <- function(m, age, quantity, at = NULL, ages = NULL, measure = "edagger") {
   dn <- dimnames(m)
   if (quantity == "rate") {
     d <- dim(m)
@@ -310,6 +330,8 @@ compare_values <- function(m, age, quantity, at = NULL, ages = NULL) {
   }
   v <- if (quantity == "life_expectancy") {
     life_expectancy(m, age, at = at)
+  } else if (quantity == "lifespan_variation") {
+    lifespan_variation(m, measure, age, at = at)
   } else {
     w <- standard_weights(age, standard_population("esp2013"))
     M <- matrix(m, nrow = dim(m)[1])
