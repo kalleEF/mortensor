@@ -1,0 +1,101 @@
+---
+title: "Methods and sources"
+---
+
+mortensor implements published methods. This page lists, for every method
+of the package, its source and how the implementation relates to it:
+
+* **published**: the method as published (numerical safeguards aside);
+* **published, deviations**: the published method with stated changes;
+* **package-specific**: no published source is known to us; the help page
+  says so. Package-specific methods are never the default unless stated
+  here, and deprecated ones warn when used.
+
+The help page of each function gives the details and the full references.
+Corrections are welcome: a published source for a method listed as
+package-specific, or a deviation that is not listed.
+
+## Data and harmonisation
+
+| Function, option | Method | Source | Status |
+|---|---|---|---|
+| `mt_as_exposure()` | exposures from populations at 1 January, 31 December or mid-year | standard demographic approximations; HMD Methods Protocol for cohort formulas | published |
+| `mt_data()` | deaths of unknown age distributed in proportion | HMD Methods Protocol | published |
+| `mt_fill_suppressed()` | iterative proportional fitting to known totals | Deming and Stephan (1940); Bishop, Fienberg and Holland (1975) | published, deviations: bounds of suppressed cells enforced by clipping within each step (package-specific); cells without a total get the truncated-Poisson mean |
+| `mt_ungroup(method = "pclm")` (default) | penalised composite link model with exposures, 1D and 2D | Rizzi, Gampe and Eilers (2015); Rizzi et al. (2019); code structure of the ungroup package | published, deviations: open age interval split with stationary-population weights (package-specific); `preserve_totals = TRUE` rescales to group totals (package-specific, opt-in) |
+| `mt_ungroup(method = "monotone")` | monotone cubic interpolation of cumulative counts | Hyman (1983) | published |
+| `mt_ungroup(method = "hyman_kannisto", "natural_gompertz", "gam")` | spline heuristics | none | package-specific, deprecated |
+| `mt_smooth(method = "pspline")` | Poisson P-splines over age, or age and time | Eilers and Marx (1996); Currie, Durban and Eilers (2004) | published |
+| `mt_smooth(method = "whittaker")` | weighted Whittaker smoother, smoothing parameter by GCV | Whittaker (1923); Eilers (2003) | published |
+| `mt_smooth(method = "gam")` | quasi-Poisson GAM with exposure offset, `te(age, year)` in 2D | Wood (2017) | published |
+| `step_shocks()` | shock years removed or interpolated before fitting | none | package-specific (interpolated years enter as data) |
+| `life_table()` | q from m with a_x, open interval L = l/m | Preston, Heuveline and Guillot (2001) | published; a_x = n/2 by default |
+| `life_table(open = "gompertz", "kannisto")` | closure of the open interval | Thatcher, Kannisto and Vaupel (1998) | published, deviations: least squares on the last ages instead of maximum likelihood |
+
+## Models
+
+| Function, option | Method | Source | Status |
+|---|---|---|---|
+| `lee_carter()` | Poisson or SVD Lee-Carter; adjustment of k; period choice | Lee and Carter (1992); Brouhns, Denuit and Vermunt (2002); Booth, Maindonald and Smith (2002); Lee and Miller (2001) | published; ridge and SVD fallbacks for sparse data are package-specific safeguards and warn |
+| `lee_carter(rotate = TRUE)` | rotation of the age pattern of decline | Li, Lee and Gerland (2013); Ševčíková et al. (2016) | published, deviations: life expectancy path from the unrotated draws |
+| `lee_carter(bootstrap = TRUE)`, `bootstrapped()` | parametric bootstrap of deaths | Brouhns, Denuit and Van Keilegom (2005) (observed deaths, `type = "data"`); Renshaw and Haberman (2008) (fitted deaths, `type = "grid"`) | published; refitting preprocessing in each replicate is package-specific |
+| `rwd()` | random walk with drift per age | standard benchmark | published |
+| `rwd(observation_noise = TRUE)` | moment estimator of a local level model | none (the model is ARIMA(0,1,1) with drift; Harvey 1989) | package-specific, deprecated: use `arima_series()` |
+| `arima_series()`, `ets_series()` | ARIMA or exponential smoothing per age | Hyndman and Khandakar (2008) | published |
+| `hyndman_ullah()` | functional demographic model | Hyndman and Ullah (2007), via demography | published |
+| `coherent_fdm()` | product-ratio method | Hyndman, Booth and Yasmeen (2013), via demography | published |
+| `product_ratio()` | product-ratio with Lee-Carter components | none | package-specific, deprecated: use `coherent_fdm()` |
+| `li_lee()` | augmented common factor model | Li and Lee (2005) | published, deviations: AR(1) without intercept, clamped at 0.99 (warns) |
+| `coda()` | compositional Lee-Carter of life-table deaths, coherent version | Oeppen (2008); Bergeron-Boucher et al. (2017); MortalityForecast | published, deviations: open interval regressed on the indexes |
+| `coda_causes()` | multiple-decrement CoDa for causes | Oeppen (2008), abstract only | package reading of a published idea; experimental |
+| `tucker3()` | three-way Lee-Carter by Tucker3 decomposition | Russolillo, Giordano and Haberman (2011); De Lathauwer et al. (2000) | published, deviations: HOOI estimation, forecasts of the period factors and rank choice are the package's; experimental |
+| `cause_shares()` | Tucker model of log-ratio cause shares | none | package-specific, deprecated: use `reconciled()` or `coda_causes()` |
+| `stmomo()` | GAPC models LC, CBD, APC, RH, M6, M7, M8 | Villegas, Kaishev and Millossovich (2018); Cairns et al. (2009) | published (StMoMo) |
+| `stanmomo()` | Bayesian GAPC models | Barigou et al. (2023), via StanMoMo | published |
+| `apc_bayes()` | Bayesian APC with random-walk priors | Schmid and Held (2007), via bamp | published |
+| `mt_order_strata()` | keeps an ordering between strata path by path | none | package-specific |
+| predictive draws (`mt_forecast(predictive = TRUE)`, backtests) | Poisson deaths given the model's rates; posterior negative binomial for `stanmomo(family = "nb")` | Brouhns, Denuit and Vermunt (2002) | published |
+
+## Combining models and coherence
+
+| Function, option | Method | Source | Status |
+|---|---|---|---|
+| `ensemble()` | mixture (linear pool) of predictive distributions | Gneiting and Ranjan (2013) | published |
+| `ensemble(weights = "crps")` | weights inverse to the inner-backtest CRPS | analogous to Bates and Granger (1969) | package-specific |
+| `ensemble(weights = "stack")` | stacking of point forecasts, used as mixture weights | Breiman (1996); Kessy et al. (2022) | published, deviations: weights optimise the medians, used for the mixture |
+| `ensemble(top_k = )` | trimming to the best components | | package-specific |
+| `reconciled()`, `mt_reconcile()` bottom-up, OLS, structural, WLS, MinT | projection of draws onto coherent forecasts | Hyndman et al. (2011); Athanasopoulos et al. (2017); Hyndman, Lee and Wang (2016); Wickramasuriya et al. (2019); Panagiotelis et al. (2023) | published, deviations: weights from the base draws' own variances instead of in-sample residuals |
+| non-negativity | negatives held at zero, the rest projected again | related to Wickramasuriya, Turlach and Hyndman (2020) | package-specific heuristic |
+| `fixed =` | immutable nodes | Zhang et al. (2023) | published, approximated by near-zero variance |
+| `method = "proportional"` | top-down by forecast proportions | Gross and Sohl (1990); Athanasopoulos, Ahmed and Hyndman (2009) | published |
+| `method = "energy_score"` | score-optimal reconciliation | Panagiotelis et al. (2023); ProbReco | published, deviations: per age, observation noise in training, rescaling |
+| `dependence = "empirical"` | reordering of separately simulated strata | related to the Schaake shuffle (Clark et al. 2004) | package-specific, opt-in (default `"none"`) |
+| `recalibrated()` | spread of the draws rescaled to minimise the CRPS of inner forecasts | member-by-member post-processing (Van Schaeybroeck and Vannitsem 2015); EMOS (Gneiting et al. 2005) | published, deviations: one factor for all horizons by default; power law over horizons, drift correction, age bands and life-expectancy targets are package-specific |
+| `anchored()` | jump-off at the observed rates of the last year | Lee and Miller (2001) | published by default; averaging over years, linear decay and shrinkage are package-specific options |
+| `tuned()`, `mt_tune()` | choice of settings by rolling-origin or hold-out accuracy | Tashman (2000) | published; one-SE rule approximate; two-stage grid package-specific |
+| `stratified()` | different models for groups of strata | | package-specific plumbing |
+
+## Evaluation
+
+| Function, option | Method | Source | Status |
+|---|---|---|---|
+| `mt_backtest()` | rolling-origin evaluation | Tashman (2000) | published |
+| CRPS from draws | empirical-CDF estimator | Gneiting and Raftery (2007); Grimit et al. (2006) | published |
+| WIS | weighted interval score | Bracher et al. (2021) | published |
+| PIT | randomised for counts | Czado, Gneiting and Held (2009) | published |
+| MASE | scaled by in-sample naive errors | Hyndman and Koehler (2006) | published |
+| `mt_dm_test()` | Diebold-Mariano test with fixed-smoothing (EWC) variance (default); HLN correction for `varestimator = "acf"` | Diebold and Mariano (1995); Harvey, Leybourne and Newbold (1997); Lazarus et al. (2018); Coroneo and Iacone (2020) | published |
+
+## Results and derived quantities
+
+| Function, option | Method | Source | Status |
+|---|---|---|---|
+| `life_expectancy()`, `prob_dying()` | period life table | Preston, Heuveline and Guillot (2001) | published |
+| `asr()` | direct standardisation on the standard's age groups | Eurostat (2013) | published |
+| `yll()` | period-expected years of life lost | Murray (1994) | published |
+| `mt_contrast()`, `mt_inequality()` | gaps, ratios, SII and RII | Mackenbach and Kunst (1997); Moreno-Betancur et al. (2015) | published |
+| `mt_observed()` | Poisson bootstrap of observed indicators | | package-specific construction (parametric bootstrap) |
+| `lifespan_variation()` | e-dagger, entropy, Gini, sd, IQR | LifeIneq; Vaupel (1986); Shkolnikov et al. (2003) | published, deviations: variance from the conditioning age; IQR by interpolation |
+| `mt_decompose()` Arriaga, Horiuchi, stepwise, Kitagawa, radix composition | decomposition of differences | Arriaga (1984); Horiuchi, Wilmoth and Pletcher (2008); Andreev, Shkolnikov and Begun (2002); Kitagawa (1955); Riffe et al. (2024) | published |
+| `mt_decompose(composition = "pooled")` | composition of areas by the line integral | | package-specific parametrisation |
+| `mt_excess()` | observed minus predictive deaths of a baseline model | Msemburi et al. (2023) and others compare with expected deaths of a baseline | published idea; estimand and P-score draws as documented |
