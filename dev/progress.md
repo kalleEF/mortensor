@@ -245,8 +245,8 @@ work: `claude/vigilant-albattani-2ssw1x` (plays the role of `dev-0.2`).
   95% coverage 0.632 against 0.746); on simulated Lee-Carter data with
   Poisson deaths Lee-Carter covers 0.944, ARIMA(0,1,1) with drift 0.823
   and centred `tucker3()` 0.748. The Diebold-Mariano test with the HLN
-  correction rejected a true null in up to 15% of simulated cases with
-  7-16 overlapping origins, the EWC test in 4.9-7.4%. A cause hierarchy
+  correction rejected a true null in 10-19% of simulated samples with 7
+  overlapping origins (horizons 2-5), the EWC test in 4.8-7.4%. A cause hierarchy
   declared without `additive = "rates"` gave all-cause rates three times
   too low in `reconciled()`; it now warns.
 

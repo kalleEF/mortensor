@@ -7,9 +7,10 @@
 #' exposures must be available on the grid (use [mt_ungroup()] first for
 #' grouped data). In a forecasting
 #' pipeline, use it as a preprocessing step (`mt_prep(step_smooth(...))`):
-#' models are then fitted to the smoothed rates, while the observation noise
-#' of their predictive draws, residuals and backtest scales come from the
-#' rates before smoothing ("smooth input, raw residuals").
+#' models are then fitted to the smoothed rates, while their residuals,
+#' observed rates, backtest scales and jump-off offsets come from the deaths
+#' before smoothing ("smooth input, raw residuals"). Predictive draws add
+#' Poisson deaths given the model's rates, as without smoothing.
 #'
 #' Methods and directions:
 #'

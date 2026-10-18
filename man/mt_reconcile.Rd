@@ -99,7 +99,11 @@ deaths, or of rates when the levels share exposures; without the Poisson
 variation of the deaths unless predictive draws are reconciled). It
 changes with the horizon and follows the uncertainty the model reports,
 not its past errors: a stratum whose model is too narrow is changed too
-little.
+little. For strata fitted by separate models the base draws are
+independent across strata, so the shrunk covariance is close to its
+diagonal and \code{"mint"} gives nearly the result of \code{"wls"}; it differs
+where a joint model (for example \code{\link[=li_lee]{li_lee()}}) simulates correlated
+strata.
 
 \strong{Non-negative forecasts.} Projections can make bottom values negative
 where the base forecasts disagree strongly. Such values are held at zero

@@ -189,9 +189,10 @@ distribution with few degrees of freedom (Lazarus et al. 2018; Coroneo
 and Iacone 2020). The older version, with the autocovariances up to lag
 `h - 1` and the small-sample correction of Harvey, Leybourne and Newbold
 (1997), rejects a true null hypothesis too often with few overlapping
-origins: in simulations with seven origins, in 10% to 27% of the samples
-at the nominal 5% level (see `?mt_dm_test`; `varestimator = "acf"` gives
-that version).
+origins: in simulations with seven origins, in 10% to 19% of the samples
+at the nominal 5% level, and in 27% with the fallback to lag 0 of
+`forecast::dm.test()` (see `?mt_dm_test`; `varestimator = "acf"` gives
+that version without the fallback).
 
 ```{r}
 dm <- mt_dm_test(bt, ref = "Li-Lee")
