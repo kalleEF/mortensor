@@ -85,7 +85,7 @@ mt_plot_compare(fc[c("random walk", "Lee-Carter", "fdm", "APC", "Bayesian APC")]
 ```
 
 All models forecast a further rise, at different paces and with
-different uncertainty. By 2031 the medians range from 26.7 to 29.4 years:
+different uncertainty. By 2031 the medians range from 26.8 to 29.4 years:
 
 * **CoDa** and **fdm** give the highest forecasts (29.4 and 29.2 years);
   fdm has the narrowest interval, CoDa one of the widest.
@@ -157,9 +157,9 @@ dm[horizon %in% c("1", "5", "all"), list(model, horizon, score, score_ref, mean_
 ```
 
 A positive `mean_diff` means a higher CRPS than M6, so a less accurate
-forecast. M6 was more accurate than each of the other models, one year
-ahead and on average over the five horizons (p below 0.02). Five years
-ahead the difference from CoDa was not significant (p = 0.06). With 16
+forecast. M6 was more accurate than each of the other models one year
+ahead and on average over the five horizons (p below 0.05), and five
+years ahead than all but CoDa (p = 0.06). With 16
 origins the test has 15 degrees of freedom; forecasts from neighbouring
 origins share test years, which the test allows for.
 
@@ -199,7 +199,7 @@ mt_score_table(rbind(bt, bt_ens), metrics = c("crps", "cov95"))
 ```
 
 * The **equal-weight ensemble** is more accurate than the average of its
-  components (CRPS of the rates 0.045 against 0.050), and its intervals
+  components (CRPS of the rates 0.044 against 0.050), and its intervals
   cover. This always holds: the CRPS is a convex function of the forecast
   distribution, so the CRPS of a mixture is never larger than the weighted
   mean of the CRPS of its components. It includes the weak Bayesian APC,
