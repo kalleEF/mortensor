@@ -57,6 +57,13 @@ spline splits the counts and does not use the exposures. The methods
 are heuristics of this package without a published source, and they still
 work with a warning.
 
+Here the grid ends at age 99. When it ends with an open interval (for
+example 100+), the PCLM of the rates expands that interval into single
+years up to `omega` and splits its exposure over them by a PCLM of the
+exposures (`open_split = "pclm"`, as Rizzi et al. 2015 ungroup grouped
+exposures). `open_split = "stationary"` uses the weights of a stationary
+population instead, a method specific to this package.
+
 ```{r}
 u <- list("PCLM" = mt_ungroup(x), "monotone" = mt_ungroup(x, method = "monotone"))
 ```

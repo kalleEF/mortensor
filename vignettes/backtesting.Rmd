@@ -187,9 +187,9 @@ autocorrelated. By default the test estimates their variance with the
 equal-weighted cosine (EWC) estimator and takes critical values from a t
 distribution with few degrees of freedom (Lazarus et al. 2018).
 `varestimator = "daniell"` gives the fixed-smoothing test of Coroneo and
-Iacone (2020) with a Daniell-kernel estimate. The older version, with the autocovariances up to lag
-`h - 1` and the small-sample correction of Harvey, Leybourne and Newbold
-(1997), rejects a true null hypothesis too often with few overlapping
+Iacone (2020) with a Daniell-kernel estimate. The older version, with the
+autocovariances up to lag `h - 1` and the small-sample correction of
+Harvey, Leybourne and Newbold (1997), rejects a true null hypothesis too often with few overlapping
 origins: in simulations with seven origins, in 10% to 19% of the samples
 at the nominal 5% level, and in 27% with the fallback to lag 0 of
 `forecast::dm.test()` (see `?mt_dm_test`; `varestimator = "acf"` gives

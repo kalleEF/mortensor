@@ -164,7 +164,7 @@ carry a drift (`ensemble()`) is a way to combine the strengths.
 
 ## Practical notes
 
-* Runtime: about 1.5 to 4 minutes per stratum with `mcmc_control("fast")`
+* Runtime: about 1.4 to 4 minutes per stratum with `mcmc_control("fast")`
   for 13 age groups and 37 years, depending on the machine and its load;
   `"final"` lets bamp choose the chain length and is several times slower.
 * Heterogeneity terms (`"rw1+het"`, `"rw2+het"`) are not offered, because
