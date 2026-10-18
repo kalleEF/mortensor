@@ -23,9 +23,11 @@ test_that("mt_excess sums draws and computes excess and P-scores path by path", 
                     "p_score_q0.975", "p_positive", "cells", "skipped") %in% names(ex)))
   expect_equal(unique(ex$age), c("30-69", "70+"))
   expect_equal(ex$excess_mean, ex$observed - ex$expected_mean)
-  # with 201 draws the quantiles are order statistics, so the P-score
-  # quantiles are those of the expected deaths
+  # the P-score quantiles are those of the expected deaths at the reversed
+  # level, its mean that of the mean expected deaths
   expect_equal(ex$p_score_q0.025, 100 * (ex$observed / ex$expected_q0.975 - 1))
+  expect_equal(ex$p_score_q0.975, 100 * (ex$observed / ex$expected_q0.025 - 1))
+  expect_equal(ex$p_score_mean, 100 * (ex$observed / ex$expected_mean - 1))
   expect_equal(ex$excess_q0.5, ex$observed - ex$expected_q0.5)
   # observed deaths are the sums of the data
   d <- mt_obs(x, "deaths")
@@ -50,6 +52,23 @@ test_that("mt_excess sums draws and computes excess and P-scores path by path", 
   expect_equal(cu$expected_mean, cumsum(tot$expected_mean))
   expect_equal(cu$from, rep(2015, 5))
   expect_true(all(diff(cu$excess_q0.975 - cu$excess_q0.025) > 0))
+})
+
+test_that("a draw without expected deaths leaves the P-score defined", {
+  # small cells: some draws of the expected deaths are zero
+  D <- rbind(c(0, 8, 9, 10, 12), c(0, 0, 0, 0, 0), c(0, 0, 0, 0, 0), c(0, 2, 3, 1, 4))
+  obs <- c(10, 0, 5, 3)
+  ps <- mortensor:::p_score_summary(obs, D, c(0.025, 0.5, 0.975))
+  expect_named(ps, c("p_score_mean", "p_score_q0.025", "p_score_q0.5", "p_score_q0.975"))
+  q <- function(v, p) stats::quantile(v, p, names = FALSE)
+  expect_equal(ps$p_score_mean[c(1, 4)], 100 * (obs[c(1, 4)] / rowMeans(D[c(1, 4), ]) - 1))
+  expect_equal(ps$p_score_q0.5[1], 100 * (10 / q(D[1, ], 0.5) - 1))
+  expect_equal(ps$p_score_q0.025[1], 100 * (10 / q(D[1, ], 0.975) - 1))
+  expect_equal(ps$p_score_q0.975[1], 100 * (10 / q(D[1, ], 0.025) - 1))
+  expect_true(all(is.finite(unlist(ps[c(1, 4)]))))
+  # no expected deaths in any draw: undefined (0 / 0) or infinite
+  expect_true(all(is.na(unlist(ps[2]))))
+  expect_true(all(unlist(ps[3]) == Inf))
 })
 
 test_that("mt_excess takes a fit or a specification and is reproducible", {

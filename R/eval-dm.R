@@ -1,10 +1,15 @@
 #' Test differences in forecast accuracy between models (Diebold-Mariano)
 #'
 #' Tests whether models of a backtest differ in their expected score with
-#' the Diebold-Mariano test (Diebold and Mariano 1995) and the small-sample
-#' correction of Harvey, Leybourne and Newbold (1997). It complements
-#' [mt_score_table()], which shows the mean scores: the test says whether a
-#' difference is larger than the variation between forecast origins.
+#' the Diebold-Mariano test (Diebold and Mariano 1995). By default the
+#' long-run variance is the equal-weighted cosine (EWC) estimate with
+#' fixed-smoothing critical values from a t distribution (Lazarus, Lewis,
+#' Stock and Watson 2018; for the Diebold-Mariano test, Coroneo and Iacone
+#' 2020); the version of `forecast::dm.test()`, with the small-sample
+#' correction of Harvey, Leybourne and Newbold (1997), is an option. It
+#' complements [mt_score_table()], which shows the mean scores: the test
+#' says whether a difference is larger than the variation between forecast
+#' origins.
 #'
 #' The test uses one loss per forecast origin, the time index of a
 #' rolling-origin backtest. Scores of the cells of one origin and horizon
@@ -13,36 +18,66 @@
 #'
 #' * per horizon `h`: the mean score over the cells of each origin at that
 #'   horizon gives one loss per origin and model. The differences between
-#'   the losses of a model and of `ref` form a series over the origins,
-#'   tested with the autocovariances up to lag `h - 1` (the errors of
-#'   forecasts `h` years ahead from consecutive origins build up over
-#'   overlapping years).
+#'   the losses of a model and of `ref` form a series over the origins. The
+#'   errors of forecasts `h` years ahead from consecutive origins build up
+#'   over overlapping years, so the differences are autocorrelated.
 #' * overall (`horizon = "all"`): the mean of these per-horizon losses over
-#'   all horizons gives one loss per origin, tested with the largest horizon
-#'   `H` (lags up to `H - 1`). Only origins scored at every horizon enter.
+#'   all horizons gives one loss per origin. Only origins scored at every
+#'   horizon enter.
 #'
 #' Only cells scored for both models enter (the same origin, horizon,
-#' stratum, age group, year and target). The statistic, its variance (sum of
-#' autocovariances, or Bartlett weights with `varestimator = "bartlett"`),
-#' the correction factor and the t distribution with `T - 1` degrees of
-#' freedom (`T` origins) are those of `forecast::dm.test(e1, e2, h = h,
-#' power = 1)` with `e1` and `e2` the losses per origin (scores are not
-#' negative, so the loss is the score itself). With origins spaced `s`
-#' years apart (for example `origins = seq(1981, 2001, by = 10)`), test years
-#' overlap only up to lag `ceiling(h / s) - 1`, which is used instead; with
-#' unequal spacing the smallest gap counts.
+#' stratum, age group, year and target). Scores are not negative, so the
+#' loss is the score itself.
 #'
-#' With few origins the test has little power: a backtest with 6 origins
-#' finds only large and consistent differences. When the number of origins
-#' `T` is not larger than the number of lags needed (`T <= h` for
-#' consecutive origins), there is no test (`statistic` and `p_value` are
-#' `NA`, with a warning of class `mt_warning_dm`): lag 0 would ignore the
-#' correlation of overlapping test years and give too small p-values. For
-#' long horizons, use more origins or origins spaced `h` years apart. When
-#' the variance estimate with lags up to `h - 1` is not positive, the test
-#' uses lag 0, as `forecast::dm.test()` does, with the same warning. The p-values
-#' are not adjusted for the number of tests (models, targets, horizons); see
-#' [stats::p.adjust()].
+#' @section Variance estimators:
+#' With `d_t` the loss differences of the `T` origins (`t = 1, ..., T`, in
+#' the order of the origins) and `dbar` their mean:
+#'
+#' * `"ewc"` (default): `Lambda_j = sqrt(2 / T) * sum_t (d_t - dbar) *
+#'   cos(pi * j * (t - 1/2) / T)` for `j = 1, ..., nu`, the long-run
+#'   variance `Omega = mean(Lambda_j^2)`, the statistic `sqrt(T) * dbar /
+#'   sqrt(Omega)` and p-values from the t distribution with `nu` degrees of
+#'   freedom, `nu = max(1, floor(0.4 * T^(2/3)))` as Lazarus et al. (2018)
+#'   recommend for the EWC test (1 for up to 11 origins, 2 for 12 to 20,
+#'   3 for 21 to 31). The estimate does not use the horizon, so there is a
+#'   test for every horizon with at least 2 origins; `lag` is `NA`.
+#' * `"acf"`: the test of `forecast::dm.test(e1, e2, h = h, power = 1)` with
+#'   `e1` and `e2` the losses per origin: the variance is the sum of the
+#'   autocovariances up to lag `h - 1`, the statistic has the correction of
+#'   Harvey et al. (1997), and p-values come from the t distribution with
+#'   `T - 1` degrees of freedom. With origins spaced `s` years apart (for
+#'   example `origins = seq(1981, 2001, by = 10)`), test years overlap only
+#'   up to lag `ceiling(h / s) - 1`, which is used instead; with unequal
+#'   spacing the smallest gap counts. When `T` is not larger than the
+#'   number of lags needed (`T <= h` for consecutive origins), or when the
+#'   variance estimate is not positive, there is no test (`statistic` and
+#'   `p_value` are `NA`, with a warning of class `mt_warning_dm`);
+#'   `forecast::dm.test()` falls back to lag 0 in the second case, which
+#'   rejects a true null hypothesis about half the time.
+#' * `"bartlett"`: as `"acf"` with Bartlett weights `1 - k / h` for the
+#'   autocovariances at lags `k = 1, ..., h - 1`, as in `forecast::dm.test()`.
+#'
+#' @section Size and power with few origins:
+#' Backtests have few origins, and with consecutive origins the test years
+#' of horizons above 1 overlap. In a simulation under the null hypothesis
+#' (20,000 series of loss differences that are sums of `h` consecutive
+#' independent normal errors, a moving average of order `h - 1` as for
+#' forecasts `h` years ahead from consecutive origins), the `"acf"` test at
+#' the nominal 5% level rejected in 10% (`h = 2`), 16% (`h = 3`) and 19%
+#' (`h = 5`) of the samples with 7 origins, and in 16% to 17% with 15 or
+#' 16 origins at `h = 5`; `"bartlett"` in 10% to 15% with 7 origins. Their
+#' p-values are too small with few overlapping origins. The fallback to lag
+#' 0 of `forecast::dm.test()`, needed in 4% of the samples with 7 origins
+#' at `h = 3` and in 22% at `h = 5`, rejected in 39% to 55% of them, so
+#' that the test with the fallback rejected in 27% at `h = 5` with 7
+#' origins. The EWC test rejected in 4.9% to 7.2% of the samples with 7
+#' origins and in 4.8% to 7.0% with 15 or 16 origins (`h` from 1 to 5). Its
+#' size is nearly correct, but with few origins it has few degrees of
+#' freedom and low power: with 7 origins (`nu = 1`) it finds only large
+#' and consistent differences. More origins, or origins spaced `h` years
+#' apart, which avoid overlapping test years, give more informative tests.
+#' The p-values are not adjusted for the number of tests (models, targets,
+#' horizons); see [stats::p.adjust()].
 #'
 #' @param backtest An [mt_backtest()] or [mt_compare()] result with at least
 #'   two models. Models are identified by `model`, and by
@@ -61,31 +96,43 @@
 #'   values.
 #' @param alternative `"two.sided"`, `"less"` (the model has a lower expected
 #'   score than `ref`, that is, it is more accurate) or `"greater"`.
-#' @param varestimator `"acf"` (sum of the autocovariances, default) or
-#'   `"bartlett"` (Bartlett weights), as in `forecast::dm.test()`.
+#' @param varestimator `"ewc"` (equal-weighted cosine estimate with
+#'   fixed-smoothing t critical values, default), `"acf"` (sum of the
+#'   autocovariances, as `forecast::dm.test()`) or `"bartlett"` (Bartlett
+#'   weights, as `forecast::dm.test()`). See Variance estimators.
 #' @return A `data.table` with one row per model (other than `ref`), value
 #'   of `by`, target, metric and horizon: `model`, `ref`, the `by` columns,
 #'   `target`, `metric`, `horizon` (a factor: the horizons, then `"all"`),
 #'   `n_origins` (number of losses tested), `lag` (largest autocovariance
-#'   lag used), `score` and `score_ref` (mean loss over the origins),
+#'   lag used; `NA` for `"ewc"`), `df` (degrees of freedom of the t
+#'   distribution), `score` and `score_ref` (mean loss over the origins),
 #'   `mean_diff` (`score - score_ref`; negative when the model is more
-#'   accurate), `statistic` (Diebold-Mariano statistic with the correction
-#'   of Harvey et al.) and `p_value`.
+#'   accurate), `statistic` and `p_value`.
 #' @references
+#' Coroneo L, Iacone F (2020). Comparing predictive accuracy in small
+#' samples using fixed-smoothing asymptotics. *Journal of Applied
+#' Econometrics* 35(4): 391-409. \doi{10.1002/jae.2756}
+#'
 #' Diebold FX, Mariano RS (1995). Comparing predictive accuracy. *Journal of
 #' Business & Economic Statistics* 13(3): 253-263.
 #'
 #' Harvey D, Leybourne S, Newbold P (1997). Testing the equality of
 #' prediction mean squared errors. *International Journal of Forecasting*
 #' 13(2): 281-291.
+#'
+#' Lazarus E, Lewis DJ, Stock JH, Watson MW (2018). HAR inference:
+#' recommendations for practice. *Journal of Business & Economic
+#' Statistics* 36(4): 541-559.
 #' @seealso [mt_compare()], [mt_score_table()], [mt_score()].
 #' @examples
 #' x <- mt_example(deaths = "single", years = 1990:2012)
 #' bt <- mt_compare(list(rw = rwd(), lc = lee_carter()), x, origins = 2001:2007, h = 3, n_draws = 30)
 #' mt_dm_test(bt)
+#' # the version of forecast::dm.test()
+#' mt_dm_test(bt, varestimator = "acf")
 #' @export
 mt_dm_test <- function(backtest, ref = NULL, metrics = "crps", targets = NULL, by = NULL,
-                       alternative = c("two.sided", "less", "greater"), varestimator = c("acf", "bartlett")) {
+                       alternative = c("two.sided", "less", "greater"), varestimator = c("ewc", "acf", "bartlett")) {
   alternative <- match.arg(alternative)
   varestimator <- match.arg(varestimator)
   if (!is.data.frame(backtest)) mt_abort("`backtest` must be a backtest table.", class = "argument")
@@ -169,8 +216,8 @@ mt_dm_test <- function(backtest, ref = NULL, metrics = "crps", targets = NULL, b
   set(out, j = ".tg", value = match(out$target, tg))
   set(out, j = ".me", value = match(out$metric, metrics))
   setorderv(out, c(".mo", by, ".tg", ".me", "horizon"))
-  cols <- c("model", "ref", by, "target", "metric", "horizon", "n_origins", "lag", "score", "score_ref", "mean_diff",
-            "statistic", "p_value")
+  cols <- c("model", "ref", by, "target", "metric", "horizon", "n_origins", "lag", "df", "score", "score_ref",
+            "mean_diff", "statistic", "p_value")
   out[, cols, with = FALSE][]
 }
 
@@ -215,6 +262,7 @@ dm_tests <- function(d, groups, alternative, varestimator) {
 
 # Diebold-Mariano test of one series of losses over origins. `h` is the
 # horizon in years; with origins `s` years apart, ceiling(h / s) steps
+# (autocovariance estimators only)
 dm_series <- function(e1, e2, origin, h, alternative, varestimator) {
   o <- order(origin)
   e1 <- e1[o]
@@ -224,35 +272,61 @@ dm_series <- function(e1, e2, origin, h, alternative, varestimator) {
   c(list(n_origins = length(e1), score = mean(e1), score_ref = mean(e2), mean_diff = mean(e1 - e2)), r)
 }
 
-# Diebold-Mariano statistic with the correction of Harvey, Leybourne and
-# Newbold (1997) for the loss differences `d` and `h` steps (lags 0 to
-# h - 1), as forecast::dm.test(). NA when there are too few losses for the
-# lags (`fallback = "origins"`) or no variance (`"none"`); lag 0 when the
-# variance estimate is not positive (`"variance"`), as forecast::dm.test()
-dm_stat <- function(d, h, alternative = "two.sided", varestimator = "acf") {
+# Diebold-Mariano test for the loss differences `d` (in the order of the
+# origins). "ewc": equal-weighted cosine long-run variance with nu =
+# max(1, floor(0.4 T^(2/3))) cosines and the t distribution with nu degrees
+# of freedom (Lazarus et al. 2018). "acf", "bartlett": `h` steps (lags 0 to
+# h - 1) and the correction of Harvey, Leybourne and Newbold (1997), as
+# forecast::dm.test(), but NA instead of lag 0 when the variance estimate is
+# not positive. `fallback` records why there is no test: "origins" (too few
+# losses for the lags), "variance" (variance estimate not positive) or
+# "none" (fewer than 2 losses or no variation)
+dm_stat <- function(d, h, alternative = "two.sided", varestimator = "ewc") {
   n <- length(d)
-  na <- list(lag = NA_integer_, statistic = NA_real_, p_value = NA_real_, fallback = "none")
+  na <- list(lag = NA_integer_, df = NA_real_, statistic = NA_real_, p_value = NA_real_, fallback = "none")
   if (n < 2 || anyNA(d)) return(na)
-  fallback <- ""
+  # a constant difference leaves only rounding error in the variance
+  tiny <- (1e-8 * max(abs(d)))^2
+  if (varestimator == "ewc") {
+    nu <- dm_ewc_df(n)
+    omega <- dm_ewc_variance(d, nu)
+    if (!(omega > tiny)) return(na)
+    stat <- sqrt(n) * mean(d) / sqrt(omega)
+    return(list(lag = NA_integer_, df = nu, statistic = stat, p_value = dm_p_value(stat, nu, alternative),
+                fallback = ""))
+  }
   # too few origins for the autocovariances of overlapping test years: no
   # test (lag 0 would understate the variance and give too small p-values)
   if (h >= n) return(utils::modifyList(na, list(fallback = "origins")))
   v <- dm_variance(d, h, varestimator)
-  # a constant difference leaves only rounding error in the variance
-  tiny <- (1e-8 * max(abs(d)))^2 / n
-  if (!(v > tiny) && h > 1L) {
-    fallback <- "variance"
-    h <- 1L
-    v <- dm_variance(d, h, varestimator)
+  if (!(v > tiny / n)) {
+    no_var <- h == 1L || !(dm_variance(d, 1L, varestimator) > tiny / n)
+    return(utils::modifyList(na, list(fallback = if (no_var) "none" else "variance")))
   }
-  if (!(v > tiny)) return(na)
   k <- sqrt((n + 1 - 2 * h + h * (h - 1) / n) / n)
   stat <- mean(d) / sqrt(v) * k
-  p <- switch(alternative,
-              two.sided = 2 * stats::pt(-abs(stat), df = n - 1),
-              less = stats::pt(stat, df = n - 1),
-              greater = stats::pt(stat, df = n - 1, lower.tail = FALSE))
-  list(lag = h - 1L, statistic = stat, p_value = p, fallback = fallback)
+  list(lag = h - 1L, df = n - 1, statistic = stat, p_value = dm_p_value(stat, n - 1, alternative), fallback = "")
+}
+
+dm_p_value <- function(stat, df, alternative) {
+  switch(alternative,
+         two.sided = 2 * stats::pt(-abs(stat), df = df),
+         less = stats::pt(stat, df = df),
+         greater = stats::pt(stat, df = df, lower.tail = FALSE))
+}
+
+# Number of cosine terms (degrees of freedom) of the EWC test for T losses,
+# nu = 0.4 T^(2/3) (Lazarus et al. 2018), at least 1
+dm_ewc_df <- function(n) max(1, floor(0.4 * n^(2 / 3)))
+
+# Equal-weighted cosine estimate of the long-run variance of `d` with `nu`
+# cosine terms: the mean of Lambda_j^2, Lambda_j = sqrt(2 / T) sum_t
+# (d_t - dbar) cos(pi j (t - 1/2) / T)
+dm_ewc_variance <- function(d, nu) {
+  n <- length(d)
+  dc <- d - mean(d)
+  lam <- vapply(seq_len(nu), function(j) sqrt(2 / n) * sum(dc * cos(pi * j * (seq_len(n) - 0.5) / n)), 0)
+  mean(lam^2)
 }
 
 # Variance of the mean loss difference from the autocovariances up to lag
@@ -265,7 +339,7 @@ dm_variance <- function(d, h, varestimator) {
   (gam[1] + 2 * sum(w * gam[-1])) / n
 }
 
-# One warning for the tests that fell back to lag 0 or have no statistic
+# One warning for the tests without a statistic
 dm_warn_fallbacks <- function(out) {
   horizons <- function(f) {
     h <- unique(as.character(out$horizon[out$fallback == f]))
@@ -279,11 +353,13 @@ dm_warn_fallbacks <- function(out) {
   msg <- c(
     if (!is.null(h_orig)) {
       sprintf(paste("No test at horizon(s) %s: too few origins for the autocovariances up to lag h - 1 of",
-                    "overlapping test years. Use more origins or origins spaced h years apart."), h_orig)
+                    "overlapping test years. Use varestimator = \"ewc\", more origins or origins spaced h years",
+                    "apart."), h_orig)
     },
     if (!is.null(h_var)) {
-      sprintf(paste("The variance estimate with lags up to h - 1 was not positive at horizon(s) %s: lag 0 was",
-                    "used, as by forecast::dm.test(). Try varestimator = \"bartlett\"."), h_var)
+      sprintf(paste("No test at horizon(s) %s: the variance estimate with lags up to h - 1 was not positive",
+                    "(forecast::dm.test() would use lag 0, which gives too small p-values). Use",
+                    "varestimator = \"ewc\"."), h_var)
     },
     if (!is.null(h_none)) {
       sprintf("No test at horizon(s) %s: fewer than 2 origins or no variation of the loss difference.", h_none)

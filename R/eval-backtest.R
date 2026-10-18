@@ -31,14 +31,15 @@
 #' @param quantities Derived quantities scored in addition to the rates:
 #'   `"life_expectancy"` (at the first age of the grid, in years) and/or
 #'   `"asr"` (age-standardised rate, European Standard Population 2013, on
-#'   the log scale), computed from the predictive draws of deaths aggregated
-#'   to the observed age groups of each stratum and test year, like the
-#'   observed values. Years whose observed cells do not cover the full age
-#'   range without gaps (missing, suppressed or estimated cells) are
-#'   skipped. A zero ASR (no deaths at any age) is replaced by the smallest
-#'   value that half a death gives. They are added as rows with `target`
-#'   `"life_expectancy"` or `"asr"`; summarise them with
-#'   `mt_score(..., target = )`.
+#'   the log scale; direct standardisation on the age groups of the
+#'   standard with the exposures of the test year, see [asr()]), computed
+#'   from the predictive draws of deaths aggregated to the observed age
+#'   groups of each stratum and test year, like the observed values. Years
+#'   whose observed cells do not cover the full age range without gaps
+#'   (missing, suppressed or estimated cells) are skipped. A zero ASR (no
+#'   deaths at any age) is replaced by the smallest value that half a death
+#'   gives. They are added as rows with `target` `"life_expectancy"` or
+#'   `"asr"`; summarise them with `mt_score(..., target = )`.
 #' @param contrast Optional `c(var = , ref = )`: a stratum variable and its
 #'   reference level. With `quantities`, the differences between every other
 #'   level and the reference level (with the same values of the other
@@ -55,9 +56,45 @@
 #' (`prep = mt_prep(step_ungroup())`, `step_smooth()`). With
 #' `step_regroup()`, the test data are summed to the age groups of the fit.
 #'
-#' Observed log rates of cells without deaths use half a death, and so do
-#' the predictive draws, after their deaths have been summed to the observed
-#' cell.
+#' The log rate of an observed cell is `log(max(D, 0.5) / E)`: a cell
+#' without deaths counts as half a death, so that its log rate is finite (a
+#' convention of this package; reference unknown). The predictive draws of
+#' deaths are first summed from the grid to the observed cell and then
+#' floored in the same way, so that draws and observations are treated
+#' alike; a floor per grid cell would put the draws of a grouped cell with
+#' few deaths above the observation.
+#'
+#' Strata without forecast draws at an origin (the model failed in them or
+#' gave missing rates) are not scored, with a warning of class
+#' `mt_warning_backtest`. Compare models on the cells all of them scored
+#' ([mt_score_table()] does so for [mt_compare()] results).
+#'
+#' Scores (see [mt_score()] for their summaries): the CRPS is the
+#' empirical-CDF estimator from the draws (Grimit et al. 2006), the mean
+#' absolute difference between the draws and the observation minus half the
+#' mean absolute difference between pairs of draws. It is the CRPS of the
+#' empirical distribution of the draws, which exceeds that of the
+#' predictive distribution by about `E|X - X'| / (2 n_draws)` on average,
+#' so compare models backtested with the same `n_draws`. The weighted
+#' interval score uses the 23 quantiles of the COVID-19 forecast hubs
+#' (Bracher et al. 2021); the PIT is randomised where draws equal the
+#' observation (Czado, Gneiting and Held 2009), as with zero deaths.
+#' @references
+#' Bracher J, Ray EL, Gneiting T, Reich NG (2021). Evaluating epidemic
+#' forecasts in an interval format. *PLoS Computational Biology* 17(2):
+#' e1008618. \doi{10.1371/journal.pcbi.1008618}
+#'
+#' Czado C, Gneiting T, Held L (2009). Predictive model assessment for count
+#' data. *Biometrics* 65(4): 1254-1261.
+#'
+#' Gneiting T, Raftery AE (2007). Strictly proper scoring rules, prediction,
+#' and estimation. *Journal of the American Statistical Association*
+#' 102(477): 359-378. \doi{10.1198/016214506000001437}
+#'
+#' Grimit EP, Gneiting T, Berrocal VJ, Johnson NA (2006). The continuous
+#' ranked probability score for circular variables and its application to
+#' mesoscale forecast ensemble verification. *Quarterly Journal of the Royal
+#' Meteorological Society* 132: 2925-2942.
 #' @return An object of class `mt_backtest`: a `data.table` with one row per
 #'   observed cell, origin and horizon: `model`, `prep` (the preprocessing
 #'   steps, `"none"` without), `origin`, `horizon`,
@@ -66,7 +103,7 @@
 #'   training data), `target` (`"rate"`, or the derived quantity), the
 #'   forecast `median` and `mean`, and the scores `crps`, `wis`, `ae`
 #'   (absolute error of the median), `cov50`, `cov80`, `cov95` and `pit`
-#'   (randomised for ties, as with zero deaths). Rows of derived quantities
+#'   (randomised for ties). Rows of derived quantities
 #'   have no `age_lo`, `age_hi` and `scale`. Summarise with [mt_score()].
 #' @examples
 #' x <- mt_example(deaths = "single", years = 1990:2012)
@@ -102,10 +139,27 @@ mt_backtest <- function(spec, data, origins = NULL, h = 10, prep = NULL, n_draws
   }
   # one random number stream per origin: fits that use random numbers give the
   # same results with any number of cores
-  out <- rbindlist(par_lapply(origins, one, cores, streams = TRUE), fill = TRUE)
+  res <- par_lapply(origins, one, cores, streams = TRUE)
+  backtest_warn_skipped(res, origins)
+  out <- rbindlist(res, fill = TRUE)
   if (!nrow(out)) mt_abort("All origins failed.", class = "backtest")
   setattr(out, "class", c("mt_backtest", class(out)))
   out
+}
+
+# One warning for the strata that were not scored at some origins because
+# their draws were missing (attribute "skipped" of the origin results; in
+# the main process, so that it is not lost with forked processes)
+backtest_warn_skipped <- function(res, origins) {
+  sk <- lapply(res, function(r) if (is.null(r)) character() else attr(r, "skipped"))
+  hit <- lengths(sk) > 0
+  if (!any(hit)) return(invisible(NULL))
+  labs <- unique(unlist(sk))
+  mt_warn(sprintf(paste("Strata without forecast draws were not scored (the model failed in them or gave missing",
+                        "rates): %s at origin(s) %s. Compare models on the cells all of them scored."),
+                  paste(utils::head(labs, 5), collapse = ", "), paste(origins[hit], collapse = ", ")),
+          class = "backtest", call = NULL)
+  invisible(NULL)
 }
 
 # Default origins: the last `n_origins` years whose full horizon `h` is
@@ -179,8 +233,12 @@ backtest_origin <- function(spec, data, origin, h, prep, n_draws, seed, score_es
   old_seed <- if (exists(".Random.seed", envir = globalenv())) get(".Random.seed", envir = globalenv()) else NULL
   if (!is.null(seed)) seed_default(seed + 1L)
   on.exit(if (!is.null(old_seed)) assign(".Random.seed", old_seed, envir = globalenv()), add = TRUE)
+  skipped <- character()
   for (s in unique(obs$stratum)) {
-    if (anyNA(D_draws[, , s, ])) next
+    if (anyNA(D_draws[, , s, ])) {
+      skipped <- c(skipped, test$strata$label[s])
+      next
+    }
     sel <- obs$stratum == s
     C <- build_operator(idx[sel], na, np)
     Ds <- matrix(D_draws[, , s, ], ncol = n_draws)
@@ -213,6 +271,7 @@ backtest_origin <- function(spec, data, origin, h, prep, n_draws, seed, score_es
   if (!length(rows)) mt_abort("The model failed in every stratum.", class = "backtest")
   out <- rbindlist(rows)
   out <- merge(data$strata, out, by = "stratum", sort = FALSE)
+  if (length(skipped)) setattr(out, "skipped", skipped)
   out[]
 }
 
@@ -297,11 +356,17 @@ quantity_scores <- function(Dcell, o, Ecell, quantities, probs, ages) {
         qd <- as.vector(life_expectancy(array(R, c(length(k), 1, 1, ncol(R))), ax))
         qo <- as.vector(life_expectancy(array(r_obs, c(length(k), 1, 1)), ax))
       } else {
-        w <- standard_weights(ax, standard_population("esp2013"))
+        # direct standardisation on the age groups of the ESP 2013 with the
+        # exposures of the test year
+        esp <- standard_population("esp2013")
+        g <- asr_groups(ax, esp)
+        ig <- which(!is.na(g$group))
+        Eg <- as.vector(rowsum(Ecell[k][ig], g$group[ig], reorder = TRUE))
         # no deaths at any age: the smallest ASR that half a death gives
-        floor_asr <- min((0.5 * w / Ecell[k])[w > 0]) / sum(w)
-        qd <- log(pmax(colSums(R * w) / sum(w), floor_asr))
-        qo <- log(max(sum(r_obs * w) / sum(w), floor_asr))
+        pos <- g$weight > 0 & Eg > 0
+        floor_asr <- min(0.5 / Eg[pos] * g$weight[pos]) / sum(g$weight)
+        qd <- log(pmax(asr_columns(R, ax, esp, Ecell[k], per = 1), floor_asr))
+        qo <- log(max(asr_columns(matrix(r_obs), ax, esp, Ecell[k], per = 1), floor_asr))
       }
       out[[length(out) + 1L]] <- list(period = pp, target = q, at = lo[1], observed = qo, draws = qd,
                                       scores = score_samples(matrix(qd, 1), qo, probs))
@@ -365,9 +430,13 @@ wis_probs <- function() {
 
 #' Proper scores from forecast samples
 #'
-#' Sample-based CRPS, weighted interval score (Bracher et al. 2021, with the
-#' 23 quantiles of the COVID-19 forecast hubs: 11 central intervals plus the
-#' median), interval coverage, PIT and the absolute error of the median.
+#' CRPS (the empirical-CDF estimator, Grimit et al. 2006: the CRPS of the
+#' empirical distribution of the samples, which depends on their number),
+#' weighted interval score (Bracher et al. 2021, with the 23 quantiles of
+#' the COVID-19 forecast hubs: 11 central intervals plus the median),
+#' interval coverage, the PIT (randomised where samples equal the
+#' observation, Czado, Gneiting and Held 2009) and the absolute error of the
+#' median.
 #'
 #' @param X Matrix of samples (one row per target).
 #' @param y Observed values.
@@ -379,9 +448,17 @@ wis_probs <- function() {
 #' forecasts in an interval format. *PLoS Computational Biology* 17(2):
 #' e1008618. \doi{10.1371/journal.pcbi.1008618}
 #'
+#' Czado C, Gneiting T, Held L (2009). Predictive model assessment for count
+#' data. *Biometrics* 65(4): 1254-1261.
+#'
 #' Gneiting T, Raftery AE (2007). Strictly proper scoring rules, prediction,
 #' and estimation. *Journal of the American Statistical Association*
 #' 102(477): 359-378. \doi{10.1198/016214506000001437}
+#'
+#' Grimit EP, Gneiting T, Berrocal VJ, Johnson NA (2006). The continuous
+#' ranked probability score for circular variables and its application to
+#' mesoscale forecast ensemble verification. *Quarterly Journal of the Royal
+#' Meteorological Society* 132: 2925-2942.
 #' @keywords internal
 score_samples <- function(X, y, probs = wis_probs()) {
   n <- ncol(X)

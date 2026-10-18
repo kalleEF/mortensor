@@ -92,35 +92,49 @@ with the most levels).}
 \code{mt_excess()}: a \code{data.table} with the \code{by} variables, \code{age},
 \code{age_lo} and \code{age_hi} (deaths), \code{period}, \code{observed}, the mean and
 quantiles of \code{expected} and \code{excess} (\code{expected_mean},
-\code{expected_q0.025}, ...), for deaths those of \code{p_score}, then
-\code{p_positive}, \code{cells} and \code{skipped}; for life expectancy also \code{at}.
+\code{expected_q0.025}, ...), for deaths those of \code{p_score} (from the mean
+and quantiles of the expected deaths), then \code{p_positive}, \code{cells} and
+\code{skipped}; for life expectancy also \code{at}.
 \code{mt_plot_excess()}: a ggplot object.
 }
 \description{
 Excess deaths are the observed deaths minus the deaths expected without
-the shock: the predictive deaths of a baseline model fitted to the years
-before it, given the observed exposures of the later years. The WHO
-estimates of the excess mortality of the COVID-19 pandemic follow this
-approach with their own baseline model (Msemburi et al. 2023); Acosta
-and Irizarry (2022) describe a model of the excess itself. Here the expected deaths are draws of
-\code{\link[=mt_forecast]{mt_forecast()}} with \code{predictive = TRUE}: the uncertainty of the
-baseline trend plus the Poisson and extra-Poisson variation of the death
-counts. The observed deaths minus each draw give draws of the excess.
-When the baseline model holds, the interval of the excess covers the true
-excess with its nominal probability, and an interval that contains zero
-means deaths within the range of normal variation.
+the shock, from a baseline model fitted to the years before it, given
+the observed exposures of the later years. The WHO estimates of the
+excess mortality of the COVID-19 pandemic also compare observed deaths
+with expected deaths from a baseline model (Msemburi et al. 2023);
+Acosta and Irizarry (2022) describe a model of the excess itself.
 }
 \details{
+The estimand: here the expected deaths are draws of \code{\link[=mt_forecast]{mt_forecast()}} with
+\code{predictive = TRUE}, that is draws from the predictive distribution of
+the deaths under the baseline model (the uncertainty of the baseline
+trend plus the variation of the death counts given the rates). They
+describe the counterfactual deaths: the deaths that would have been
+observed without the shock. The observed deaths minus each draw give
+draws of the excess, so its interval is a prediction interval for the
+realised excess, the observed minus the realised counterfactual deaths,
+not a confidence interval for an expected excess. It has its nominal
+coverage when the baseline model is correct; an interval that contains
+zero means deaths within the range of the counterfactual deaths.
+
 The result gives, for each row, the observed deaths and the mean and
 quantiles of
 \itemize{
-\item \code{expected}: the expected deaths;
-\item \code{excess}: observed minus expected deaths;
-\item \code{p_score}: the excess in percent of the expected deaths,
-\code{100 * excess / expected}, computed draw by draw;
+\item \code{expected}: the expected (counterfactual) deaths;
+\item \code{excess}: observed minus expected deaths, draw by draw;
+\item \code{p_score}: the excess in percent of the expected deaths, \code{100 * (observed / expected - 1)}. Its quantiles are those of the expected
+deaths transformed (the P-score at level \code{p} is \code{100 * (observed / q - 1)} with \code{q} the quantile of the expected deaths at level
+\code{1 - p}, since the P-score decreases as the expected deaths increase),
+and \code{p_score_mean} is the P-score of the mean expected deaths, so a
+draw without expected deaths (small cells) does not make the row
+missing;
 }
 
-and \code{p_positive}, the share of draws with a positive excess.
+and \code{p_positive}, the share of draws with a positive excess: the
+predictive probability that the observed deaths (or life expectancy)
+exceed the counterfactual ones under the baseline model. \code{1 - p_positive} is a one-sided predictive p-value for the hypothesis of no
+excess.
 
 Sums over ages (\code{ages}), strata (\code{by}) and years (\code{cumulative}) are formed
 draw by draw before the quantiles are taken. With \code{quantity = "life_expectancy"}, the excess is the observed life expectancy at age \code{at}
