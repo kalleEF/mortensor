@@ -78,8 +78,9 @@ with all sources of variability gives wider, appropriate intervals (Pedroza
   noise. The age-specific form follows Li et al. (2009) once read in full.
 - `mt_dispersion(fit)`: Pearson dispersion by age and stratum (McCullagh and
   Nelder 1989), to show whether the problem applies.
-- Phase 3: P-spline forecasting (Currie, Durban and Eilers 2004, an audit
-  candidate) with smooth dispersion (Djeundje and Currie 2011).
+- Phase 3: smooth dispersion (Djeundje and Currie 2011) for `p_splines()`
+  (Currie, Durban and Eilers 2004, implemented in E4 with MortalitySmooth's
+  constant overdispersion as an option).
 
 **Validation.** Check `overdispersion_sim`. G0: negative binomial
 Lee-Carter. G1: Poisson-lognormal noise with age-varying variance; a rank-2
@@ -93,7 +94,7 @@ cov95 at least 0.70, CRPS at most 0.0709; no loss on ONS.
 alike; the trend error that grows with the horizon remains (b). Cell noise
 averages out over ages, so e0 intervals barely change.
 
-**Effort.** 8-10 days; P-spline forecasting 10-12 more.
+**Effort.** 8-10 days; smooth dispersion for `p_splines()` 5-7 more.
 
 ### b. Calibration that worsens with the horizon
 
@@ -503,9 +504,10 @@ countries' trends.
 3. e0 benchmarks (scope change, 8-10 days): double-gap and best-practice gap
    specifications that return e0 draws for backtests, with international
    series loaded from other packages.
-4. Constrained P-spline rates (Camarda 2019; 10-15 days). The audit
-   describes this paper as constrained by forecasts of summary measures; the
-   full text constrains age profiles and time trends.
+4. Constrained P-spline rates (Camarda 2019): implemented in E4 as
+   `cp_splines()`, which constrains the rates of ageing and of change by
+   asymmetric penalties. A version constrained by external forecasts of e0
+   or lifespan disparity has no source in the collected literature.
 
 ## 3. Roadmap
 
@@ -541,7 +543,7 @@ is one work package with NEWS, progress log, help, vignettes and pkgdown
    Bergeron-Boucher et al. 2018; Wilmoth 1995; Hall and Mitchell 2007; and
    the two studies on jump-off rates and model confidence sets that Janssen
    (2018) summarises (not yet verified).
-8. Correct the audit's description of Camarda (2019).
+8. (Done in E4: the audit's description of Camarda (2019) is corrected.)
 9. Run `cae()` and negative binomial Lee-Carter backtests in the full suite.
 
 ## 4. References

@@ -76,8 +76,8 @@ Verified references; not implemented in E3.
 | Method | Reference | Fit for mortensor |
 |---|---|---|
 | Nordpred: APC with a power link and damped drift, used for cancer incidence and mortality projections | Møller et al. (2003) Statistics in Medicine 22(17): 2751-2766 | Public-health projections; simple Poisson GLM |
-| 2D P-spline forecasting | Currie, Durban and Eilers (2004) Statistical Modelling 4(4): 279-298 | Smoothing already uses P-splines; forecasting by extending the basis |
-| Smooth constrained forecasting | Camarda (2019) Demographic Research 41(38): 1091-1130 | P-splines constrained by forecasts of summary measures (e0, lifespan variation) |
+| 2D P-spline forecasting | Currie, Durban and Eilers (2004) Statistical Modelling 4(4): 279-298 | Implemented in E4 as `p_splines()`, adapted from MortalitySmooth 2.3.4 |
+| Smooth constrained forecasting | Camarda (2019) Demographic Research 41(38): 1091-1130 | P-spline forecasts constrained by asymmetric penalties on the rates of ageing and of change (corrected after reading the full text; implemented in E4 as `cp_splines()`) |
 | Plat model | Plat (2009) Insurance: Mathematics and Economics 45(3): 393-404 | A StMoMo specification; small addition to `stmomo()` |
 | APCI model | Richards, Currie, Kleinow and Ritchie (2019) British Actuarial Journal 24: e13 | CMI model used in UK practice |
 | Negative-binomial Lee-Carter | Delwarde, Denuit and Partrat (2007) ASMBI 23(5): 385-401 | Published overdispersion in place of the removed layer |
