@@ -110,7 +110,9 @@ mt_plot_life_expectancy(fc, at = 65)
 ## Backtest against Lee-Carter
 
 One forecast origin (1996) with a ten-year horizon, scored against the
-observed deaths in 5-year age groups:
+observed deaths in 5-year age groups. The predictive draws add Poisson
+variation of the deaths to the posterior draws of the rates, as for
+Lee-Carter:
 
 ```{r}
 t0 <- proc.time()
@@ -162,9 +164,9 @@ carry a drift (`ensemble()`) is a way to combine the strengths.
 
 ## Practical notes
 
-* Runtime: about 1.5 to 3 minutes per stratum with `mcmc_control("fast")`
-  for 13 age groups and 37 years, depending on the machine; `"final"` lets
-  bamp choose the chain length and is several times slower.
+* Runtime: about 1.5 to 4 minutes per stratum with `mcmc_control("fast")`
+  for 13 age groups and 37 years, depending on the machine and its load;
+  `"final"` lets bamp choose the chain length and is several times slower.
 * Heterogeneity terms (`"rw1+het"`, `"rw2+het"`) are not offered, because
   bamp 3.0.0 cannot forecast them.
 * bamp needs whole numbers: deaths and exposures are rounded, and the
