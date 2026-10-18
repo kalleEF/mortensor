@@ -81,7 +81,8 @@ are coherent as well: given the reconciled rates, the Poisson variation
 of the deaths of the bottom strata is drawn independently per cell and
 draw (none for models of observed rates such as \code{\link[=rwd]{rwd()}}; for \code{\link[=ensemble]{ensemble()}}
 and \code{\link[=stratified]{stratified()}} models as for the component or group each draw comes
-from), and the aggregates are the sums of the bottom strata.
+from; negative binomial for \code{stanmomo(family = "nb")}), and the
+aggregates are the sums of the bottom strata.
 }
 \details{
 Whether coherence costs accuracy, and which method and base model work

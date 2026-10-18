@@ -37,14 +37,17 @@ weighted by the exposures), the log rates are decomposed into a mean
 function and principal components, and the scores are forecast with
 ARIMA or ETS models. Draws are simulated with \code{demography}'s \code{simulate()}
 method for functional forecasts (uncertainty of the coefficients and
-resampled model errors); predictive draws add the extra-Poisson and
-Poisson variation of the raw deaths as for other models of smooth rates.
+resampled model errors). Predictive draws (\code{mt_forecast(predictive = TRUE)}) add Poisson variation of the deaths given the rates and the
+exposures, as for other models of expected rates, and no other
+observation noise. If intervals are too narrow on real data, that is a
+property of the model (see \code{\link[=recalibrated]{recalibrated()}}, \code{\link[=ensemble]{ensemble()}}, or
+overdispersed models such as \code{stanmomo(family = "nb")}).
 }
 \details{
 Without smoothing, the model errors that \code{simulate()} resamples contain
-the observation noise, which predictive draws then add a second time:
-keep \code{smooth = TRUE} unless the rates were smoothed in a preprocessing
-step. \code{smooth.demogdata()} works on single years of age; for age groups
+the observation noise, which predictive draws then add a second time (as
+Poisson variation): keep \code{smooth = TRUE} unless the rates were smoothed
+in a preprocessing step. \code{smooth.demogdata()} works on single years of age; for age groups
 the smoothed values at the observed ages are used (a weaker smoothing).
 The smoothing settings (\code{smooth_args}, such as \code{k}, the number of knots)
 and the number of components can be chosen by forecast accuracy with

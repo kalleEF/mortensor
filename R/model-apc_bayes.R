@@ -28,6 +28,16 @@
 #' Heterogeneity variants (`"rw1+het"`, `"rw2+het"`) are not offered because
 #' `bamp::predict_apc()` does not forecast them in bamp 3.0.0.
 #'
+#' Draws are posterior draws of the rates. Predictive draws
+#' (`mt_forecast(predictive = TRUE)`) add Poisson variation of the deaths
+#' given the rates of each draw and the exposures, as for the other models
+#' of expected rates; no other observation noise is added. bamp's binomial
+#' likelihood and its overdispersion term (`overdispersion = TRUE`) are not
+#' carried into the predictive draws: the overdispersion only enters the
+#' posterior of the rates. If intervals are too narrow on real data, that is
+#' a property of the model (see [recalibrated()], [ensemble()], or
+#' overdispersed models such as `stanmomo(family = "nb")`).
+#'
 #' @param age,period,cohort Prior for each effect: `"rw1"` or `"rw2"`. The
 #'   defaults use first-order random walks for period and cohort: with
 #'   second-order random walks the extrapolated trends can make forecast
@@ -142,7 +152,7 @@ mt_fit.mt_spec_apc_bayes <- function(spec, data, prep = NULL, cores = 1, ...) {
                  periods = md$periods, strata = st, omega = d$omega, observed = D_obs / md$E,
                  train_D = md$D, raw_D = raw_deaths(pr$raw, md), train_E = md$E,
                  exposure_last = md$E[, length(md$periods), , drop = FALSE], level_totals = data$level_totals,
-                 noise_sd = extra_noise_sd(spec, fits, D_obs, md$E), apc_age = cells$age),
+                 apc_age = cells$age),
             class = "mt_fit")
 }
 

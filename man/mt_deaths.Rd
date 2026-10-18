@@ -16,7 +16,8 @@ mt_deaths(draws, exposure = NULL, noise = TRUE, seed = NULL)
 \code{\link[=mt_array]{mt_array()}} returns. Ages, years and strata are matched by their
 labels. Default: the exposures of the last training year.}
 
-\item{noise}{Add Poisson noise.}
+\item{noise}{Add Poisson noise (draws of expected rates only; ignored for
+predictive draws, which contain it).}
 
 \item{seed}{Random seed.}
 }
@@ -26,6 +27,14 @@ An array \verb{[age, period, stratum, draw]} of deaths.
 \description{
 Multiplies rate draws by exposures and optionally adds Poisson noise, so
 that the result describes observable death counts.
+}
+\details{
+Predictive draws (\code{mt_forecast(predictive = TRUE)}) already contain the
+variation of the observed deaths (Poisson given the rates, or negative
+binomial for \code{stanmomo(family = "nb")}): for them no noise is added,
+whatever \code{noise}, and the result is their deaths. Give the exposures
+that were used for the forecast (its \code{exposure}); other exposures rescale
+the deaths and the result is then not a count.
 }
 \examples{
 x <- mt_example(deaths = "single")

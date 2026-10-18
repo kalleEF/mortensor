@@ -19,21 +19,28 @@ test_that("smoothing over time and the age-period GAM work and are checked", {
   expect_s3_class(mt_plot_smooth(x, st), "ggplot")
 })
 
-test_that("models fitted to smoothed rates take observation noise from the raw rates", {
+test_that("models fitted to smoothed rates refer to the raw rates and draw Poisson deaths", {
   x <- mt_example(deaths = "single", years = 2000:2015)
   # variation beyond Poisson noise in every cell
   set.seed(3)
   x$obs$deaths[, value := round(value * exp(stats::rnorm(.N, 0, 0.1)))]
   raw <- mt_fit(lee_carter(), x)
-  sm <- mt_fit(lee_carter(), x, prep = mt_prep(step_smooth(along = "period", method = "whittaker")))
+  prep <- mt_prep(step_smooth(along = "period", method = "whittaker"))
+  sm <- mt_fit(lee_carter(), x, prep = prep)
   expect_false(is.null(sm$raw_D))
+  expect_true(sm$smoothed_input)
   expect_equal(sm$observed, raw$observed)
-  expect_gt(stats::median(raw$noise_sd), 0.01)
-  expect_gt(stats::median(sm$noise_sd), 0.5 * stats::median(raw$noise_sd))
-  on_smoothed <- mortensor:::extra_noise_sd(sm$spec, sm$fits, sm$train_D, sm$train_E)
-  expect_gt(stats::median(sm$noise_sd), stats::median(on_smoothed))
+  # no extra-Poisson layer is estimated
+  expect_null(sm$noise_sd)
+  expect_false(exists("extra_noise_sd", envir = asNamespace("mortensor"), inherits = FALSE))
   # residuals refer to the raw deaths
   expect_equal(sum(stats::residuals(sm)$deaths), sum(sm$raw_D))
+  # a model of observed rates fitted to smoothed rates forecasts smoothed
+  # rates: its predictive draws are Poisson deaths given them
+  rs <- mt_fit(rwd(), x, prep = prep)
+  fc <- mt_forecast(rs, h = 2, n_draws = 20, seed = 1, predictive = TRUE)
+  d <- mt_deaths(fc)
+  expect_equal(d, round(d), tolerance = 1e-8)
 })
 
 test_that("anchored() moves the jump-off and keeps wrappers coherent", {

@@ -78,10 +78,10 @@ different calibrated components is overdispersed (Gneiting and Ranjan
 2013). Its CRPS is never larger than the weighted mean of the CRPS of its
 components (the CRPS is convex in the forecast distribution). The
 vignette "Choosing and combining models" compares ensembles and single
-models in a backtest. In populations with few deaths per cell, use
-\code{rwd(observation_noise = TRUE)} as the random-walk component: the plain
+models in a backtest. In populations with few deaths per cell, the plain
 random walk accumulates the Poisson noise of observed rates and its
-long-horizon paths become implausible.
+long-horizon paths become implausible; the local level model with drift,
+the random walk observed with noise, is \code{arima_series(order = c(0, 1, 1), drift = TRUE)} (its reduced form, Harvey 1989).
 }
 \examples{
 x <- mt_example(deaths = "single")

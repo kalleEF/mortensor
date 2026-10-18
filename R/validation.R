@@ -36,19 +36,25 @@ benchmark_ungroup_ew <- function(years = 1980:2011, dims = 1, ...) {
        seconds = secs, estimate = est)
 }
 
-#' Simulated Lee-Carter-type data for calibration checks
+#' Simulated Lee-Carter data for calibration checks
 #'
-#' The generator of the 0.1 review: `log m = a_x + b_x k_t + shift_g + e`,
-#' with `k_t` a random walk with drift (-0.015, sd 0.02) per stratum, iid
-#' noise e (sd 0.03), 5-year age groups 30-34 ... 90-94 and 10 strata
-#' (2 sexes x 5 deprivation quintiles). Deaths are Poisson.
+#' The Lee-Carter model with Poisson deaths (Brouhns, Denuit and Vermunt
+#' 2002): `log m = a_x + b_x k_t + shift_g`, deaths Poisson with mean
+#' `m * exposure`, with `k_t` a random walk with drift (-0.015, sd 0.02) per
+#' stratum, 5-year age groups 30-34 ... 90-94 and 10 strata (2 sexes x 5
+#' deprivation quintiles). `sd_obs > 0` adds iid normal noise to the log
+#' rates before the Poisson draw (the generator of the 0.1 review used 0.03),
+#' for studies of misspecified models.
 #'
 #' @param n_t Number of years.
 #' @param seed Random seed.
 #' @param pop Population at age 30 per stratum.
+#' @param sd_k,drift Standard deviation and drift of the random walk `k_t`.
+#' @param sd_obs Standard deviation of iid noise on the log rates (0: none,
+#'   the Lee-Carter model with Poisson deaths).
 #' @return An [mt_data] object.
 #' @keywords internal
-simulate_lc_dgp <- function(n_t = 40, seed = 1, pop = 2e5, sd_k = 0.02, drift = -0.015, sd_obs = 0.03) {
+simulate_lc_dgp <- function(n_t = 40, seed = 1, pop = 2e5, sd_k = 0.02, drift = -0.015, sd_obs = 0) {
   with_seed(seed, {
     ages <- seq(30, 90, 5)
     na <- length(ages)
@@ -82,13 +88,15 @@ simulate_lc_dgp <- function(n_t = 40, seed = 1, pop = 2e5, sd_k = 0.02, drift = 
 #' @param h Horizon.
 #' @param n_draws Draws per forecast.
 #' @param n_train Training years.
+#' @param prep Optional [mt_prep()] pipeline.
+#' @param sd_obs Noise of the generator (see [simulate_lc_dgp()]).
 #' @return A `data.table` with coverage by horizon and a summary list in
 #'   attribute `"summary"` (`cov95_mean`, `cov95_min`, `cov80_mean`,
 #'   `cov50_mean`).
 #' @keywords internal
-benchmark_coverage <- function(spec, n_rep = 10, h = 10, n_draws = 300, n_train = 30, prep = NULL) {
+benchmark_coverage <- function(spec, n_rep = 10, h = 10, n_draws = 300, n_train = 30, prep = NULL, sd_obs = 0) {
   bt <- rbindlist(lapply(seq_len(n_rep), function(r) {
-    x <- simulate_lc_dgp(n_t = n_train + h, seed = 1000 + r)
+    x <- simulate_lc_dgp(n_t = n_train + h, seed = 1000 + r, sd_obs = sd_obs)
     b <- mt_backtest(spec, x, origins = 2000 + n_train, h = h, n_draws = n_draws, prep = prep, seed = r)
     b[, rep := r]
   }))

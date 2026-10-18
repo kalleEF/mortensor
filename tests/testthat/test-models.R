@@ -1,16 +1,18 @@
 test_that("every model satisfies the contract", {
   expect_mt_model(rwd())
   expect_mt_model(rwd(innovations = "gaussian", drift_window = 10))
-  expect_mt_model(rwd(observation_noise = TRUE))
-  expect_mt_model(rwd(observation_noise = TRUE, innovations = "gaussian"))
+  expect_mt_model(suppressWarnings(rwd(observation_noise = TRUE)))
+  expect_mt_model(suppressWarnings(rwd(observation_noise = TRUE, innovations = "gaussian")))
   expect_mt_model(lee_carter())
   expect_mt_model(lee_carter(method = "svd", jump_off = "observed"))
   expect_mt_model(tucker3())
-  expect_mt_model(tucker3(transform = "coda"))
+  expect_mt_model(tucker3(centre = FALSE))
+  expect_mt_model(suppressWarnings(tucker3(transform = "coda")))
   expect_mt_model(ensemble(lee_carter(), rwd()))
   skip_if_not_installed("forecast")
   expect_mt_model(ets_series(), h = 2, n_draws = 5)
   expect_mt_model(arima_series(), h = 2, n_draws = 5)
+  expect_mt_model(arima_series(order = c(0, 1, 1), drift = TRUE), h = 2, n_draws = 5)
   expect_mt_model(tucker3(ts = "ets"), h = 2, n_draws = 5)
 })
 
@@ -151,7 +153,7 @@ test_that("the random walk plus noise separates noise from the trend", {
   level <- outer(log(seq(0.01, 0.05, length.out = na)), rep(1, nt)) + outer(rep(1, na), cumsum(rep(-0.02, nt)))
   E <- matrix(1e4, na, nt)
   D <- matrix(stats::rpois(na * nt, exp(level) * E), na, nt)
-  sp <- rwd(observation_noise = TRUE)
+  expect_warning(sp <- rwd(observation_noise = TRUE), class = "mt_warning_deprecated")
   f <- fit_model(sp, D, E, seq_len(na), seq_len(nt))
   # the level is deterministic here, so most of the variation of the changes is Poisson noise
   expect_true(all(f$s2e > 0.8 * pmin(rowMeans(1 / D), 0.45 * f$sigma^2)))
@@ -180,7 +182,7 @@ test_that("ensemble draws come from one component for all strata", {
 
 test_that("every kind of model can be an ensemble component", {
   x <- mt_example(deaths = "single", years = 2000:2019)
-  comps <- list(tucker3(ranks = c(2, 2, 2)), li_lee(common_by = "sex"), product_ratio(), ets_series(),
+  comps <- list(tucker3(ranks = c(2, 2, 2)), li_lee(common_by = "sex"), suppressWarnings(product_ratio()), ets_series(),
                 bootstrapped(rwd(), n_boot = 2), ensemble(lee_carter(), rwd()),
                 tuned(function(w) rwd(drift_window = w), data.frame(w = c(5, 10)), inner_origins = 2, inner_h = 2))
   if (requireNamespace("demography", quietly = TRUE)) comps <- c(comps, list(hyndman_ullah(order = 2)))
@@ -197,7 +199,7 @@ test_that("parameters, fitted values, residuals and summaries are available", {
   fit <- mt_fit(li_lee(common_by = NULL), x)
   p <- mt_parameters(fit)
   expect_true(all(c("B", "K", "a", "b1", "k1", "phi1") %in% p$parameter))
-  pr <- mt_parameters(mt_fit(rwd(observation_noise = TRUE), x))
+  pr <- mt_parameters(mt_fit(suppressWarnings(rwd(observation_noise = TRUE)), x))
   expect_true(all(c("drift", "sd", "var_level", "var_noise") %in% pr$parameter))
   f <- fitted(fit)
   expect_identical(dim(f), dim(fit$train_D))

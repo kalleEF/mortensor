@@ -323,8 +323,7 @@ combine_group_fits <- function(fits, groups, data, spec) {
                  diagnostics = diag, age = f1$age, periods = f1$periods,
                  strata = st, omega = data$omega, observed = bind("observed"), train_D = bind("train_D"),
                  raw_D = if (any_raw) bind("raw_D", "train_D"), train_E = bind("train_E"),
-                 exposure_last = bind("exposure_last"), level_totals = data$level_totals,
-                 noise_sd = bind("noise_sd")),
+                 exposure_last = bind("exposure_last"), level_totals = data$level_totals),
             class = c("mt_fit_split", "mt_fit"))
 }
 

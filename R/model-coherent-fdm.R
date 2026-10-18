@@ -23,16 +23,19 @@
 #'   revert towards their recent level.
 #'
 #' Forecasts of the strata are products of the two. This is the original
-#' method of `demography::coherentfdm()`; [product_ratio()] is a Lee-Carter
-#' version of it, and [li_lee()] a related model with a common Lee-Carter
-#' factor.
+#' method of `demography::coherentfdm()`; [li_lee()] is a related model with
+#' a common Lee-Carter factor. The Lee-Carter version [product_ratio()] is
+#' deprecated in its favour.
 #'
 #' Draws simulate the product and each ratio (uncertainty of the scores and
 #' resampled model errors, as `simulate()` for functional forecasts in
 #' demography) and multiply them; the ratios of each path are rescaled so
 #' that they multiply to one, as in `demography::forecast.fdmpr()`.
-#' Predictive draws add the extra-Poisson and Poisson variation of the raw
-#' deaths.
+#' Predictive draws (`mt_forecast(predictive = TRUE)`) add Poisson variation
+#' of the deaths given the rates and the exposures, and no other observation
+#' noise. If intervals are too narrow on real data, that is a property of the
+#' model (see [recalibrated()], [ensemble()], or
+#' overdispersed models such as `stanmomo(family = "nb")`).
 #'
 #' With `common_by` (for example `"sex"`), each level of that stratum
 #' variable forms its own group with its own product (for example the

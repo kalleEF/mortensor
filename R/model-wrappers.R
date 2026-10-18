@@ -7,13 +7,17 @@
 #' function and principal components, and the scores are forecast with
 #' ARIMA or ETS models. Draws are simulated with `demography`'s `simulate()`
 #' method for functional forecasts (uncertainty of the coefficients and
-#' resampled model errors); predictive draws add the extra-Poisson and
-#' Poisson variation of the raw deaths as for other models of smooth rates.
+#' resampled model errors). Predictive draws (`mt_forecast(predictive =
+#' TRUE)`) add Poisson variation of the deaths given the rates and the
+#' exposures, as for other models of expected rates, and no other
+#' observation noise. If intervals are too narrow on real data, that is a
+#' property of the model (see [recalibrated()], [ensemble()], or
+#' overdispersed models such as `stanmomo(family = "nb")`).
 #'
 #' Without smoothing, the model errors that `simulate()` resamples contain
-#' the observation noise, which predictive draws then add a second time:
-#' keep `smooth = TRUE` unless the rates were smoothed in a preprocessing
-#' step. `smooth.demogdata()` works on single years of age; for age groups
+#' the observation noise, which predictive draws then add a second time (as
+#' Poisson variation): keep `smooth = TRUE` unless the rates were smoothed
+#' in a preprocessing step. `smooth.demogdata()` works on single years of age; for age groups
 #' the smoothed values at the observed ages are used (a weaker smoothing).
 #' The smoothing settings (`smooth_args`, such as `k`, the number of knots)
 #' and the number of components can be chosen by forecast accuracy with
@@ -108,7 +112,11 @@ simulate_model.mt_spec_fdm <- function(spec, fit, h, n_draws, ...) {
 #' Wrapper around \pkg{StMoMo} (Villegas, Kaishev and Millossovich 2018):
 #' age-period-cohort (`"apc"`), Cairns-Blake-Dowd (`"cbd"`, logit link),
 #' Renshaw-Haberman (`"rh"`), M6, M7 and M8 (`"m6"`, `"m7"`, `"m8"`, logit
-#' link) and Lee-Carter (`"lc"`). Models are fitted per stratum with real
+#' link) and Lee-Carter (`"lc"`). `"rh"` is StMoMo's Renshaw-Haberman model
+#' with `cohortAgeFun = "1"` (the default of StMoMo's `rh()`): `log m(x,t) =
+#' a(x) + b(x) k(t) + g(t - x)`, a cohort effect without age modulation, not
+#' the original 2006 specification of the Renshaw-Haberman model, whose
+#' cohort effect is modulated by a second age function. Models are fitted per stratum with real
 #' ages (the lower bounds of single-year intervals; models with a cohort
 #' effect need single years of age), deaths and central exposures; for the
 #' logit-link models initial exposures are approximated as central exposures
@@ -117,7 +125,9 @@ simulate_model.mt_spec_fdm <- function(spec, fit, h, n_draws, ...) {
 #' cells get zero weight; their fitted rates use the effect of the nearest
 #' estimated cohort. Draws come from `simulate()` of the fitted model (period
 #' indexes simulated as a multivariate random walk with drift, the cohort
-#' index as an ARIMA process).
+#' index as an ARIMA process). Predictive draws (`mt_forecast(predictive =
+#' TRUE)`) add Poisson variation of the deaths given the rates and the
+#' exposures, and no other observation noise.
 #'
 #' M6, M7 and M8 are the cohort extensions of the CBD model of Cairns et al.
 #' (2009), with `x` the age, `xbar` the mean age of the data and `s2` the

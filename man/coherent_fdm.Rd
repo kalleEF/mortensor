@@ -51,16 +51,19 @@ revert towards their recent level.
 }
 
 Forecasts of the strata are products of the two. This is the original
-method of \code{demography::coherentfdm()}; \code{\link[=product_ratio]{product_ratio()}} is a Lee-Carter
-version of it, and \code{\link[=li_lee]{li_lee()}} a related model with a common Lee-Carter
-factor.
+method of \code{demography::coherentfdm()}; \code{\link[=li_lee]{li_lee()}} is a related model with
+a common Lee-Carter factor. The Lee-Carter version \code{\link[=product_ratio]{product_ratio()}} is
+deprecated in its favour.
 
 Draws simulate the product and each ratio (uncertainty of the scores and
 resampled model errors, as \code{simulate()} for functional forecasts in
 demography) and multiply them; the ratios of each path are rescaled so
 that they multiply to one, as in \code{demography::forecast.fdmpr()}.
-Predictive draws add the extra-Poisson and Poisson variation of the raw
-deaths.
+Predictive draws (\code{mt_forecast(predictive = TRUE)}) add Poisson variation
+of the deaths given the rates and the exposures, and no other observation
+noise. If intervals are too narrow on real data, that is a property of the
+model (see \code{\link[=recalibrated]{recalibrated()}}, \code{\link[=ensemble]{ensemble()}}, or
+overdispersed models such as \code{stanmomo(family = "nb")}).
 
 With \code{common_by} (for example \code{"sex"}), each level of that stratum
 variable forms its own group with its own product (for example the

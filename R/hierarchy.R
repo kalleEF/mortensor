@@ -847,7 +847,8 @@ shrink_cov <- function(X, shrink = "auto") {
 #' of the deaths of the bottom strata is drawn independently per cell and
 #' draw (none for models of observed rates such as [rwd()]; for [ensemble()]
 #' and [stratified()] models as for the component or group each draw comes
-#' from), and the aggregates are the sums of the bottom strata.
+#' from; negative binomial for `stanmomo(family = "nb")`), and the
+#' aggregates are the sums of the bottom strata.
 #'
 #' Whether coherence costs accuracy, and which method and base model work
 #' best, depends on the data: compare them in a backtest at every level of

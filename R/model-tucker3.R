@@ -1,24 +1,50 @@
-#' Tucker3 tensor model across strata
+#' Tucker3 tensor model across strata (three-way Lee-Carter model)
 #'
-#' Joint model of the array of log rates `[age, period, stratum]` (or of
-#' centred log-ratio transformed life-table deaths, `transform = "coda"`)
-#' through a Tucker3 decomposition `X = G x1 A x2 B x3 C` with ranks
-#' `ranks = c(age, period, stratum)`, estimated by higher-order orthogonal
-#' iteration (HOOI; De Lathauwer, De Moor and Vandewalle 2000). The period
-#' factors (columns of `B`) are forecast as a multivariate random walk with
-#' drift (bootstrap of joint year-to-year changes, which keeps their
-#' correlation) or with ARIMA/ETS models per column (`ts = "arima"`,
-#' `"ets"`, package \pkg{forecast}).
+#' Joint model of the array of log rates `[age, period, stratum]`: the
+#' three-way extension of the Lee-Carter model of Russolillo, Giordano and
+#' Haberman (2011). As in Lee-Carter, the mean log rate over the years of
+#' each age and stratum, `a[x, i]`, is removed (`centre = TRUE`), and the
+#' centred array is decomposed by a Tucker3 decomposition
+#' `X - a = G x1 A x2 B x3 C` with ranks `ranks = c(age, period, stratum)`:
+#' age factors `A`, period factors `B` and stratum factors `C` linked by the
+#' core array `G`. The period factors (columns of `B`) are forecast and the
+#' rates rebuilt with `a`, `A`, `C` and `G` fixed.
 #'
-#' The model is experimental: tensor decompositions have been proposed for
-#' mortality of several populations, but this specification has no
-#' published evaluation; compare it with established models such as
+#' The following parts are choices of this package, not of the published
+#' model:
+#'
+#' * estimation by higher-order orthogonal iteration (HOOI; De Lathauwer, De
+#'   Moor and Vandewalle 2000), least squares on the log rates;
+#' * the forecast of the period factors: a multivariate random walk with
+#'   drift (bootstrap of joint year-to-year changes, which keeps their
+#'   correlation), or ARIMA/ETS models per column (`ts = "arima"`, `"ets"`,
+#'   package \pkg{forecast});
+#' * the ranks (default `c(3, 3, 2)`) and their choice by an information
+#'   criterion (`ranks = "bic"`, `"aic"`);
+#' * zero deaths are replaced by 0.5 before taking logarithms.
+#'
+#' The model is experimental: compare it with established models such as
 #' [li_lee()] in a backtest before using it.
 #'
-#' With `transform = "coda"`, life-table deaths (from age `x0`, the first
-#' grid age) form a composition over the age cells including the open
-#' interval; the open interval's death rate is forecast as an auxiliary
-#' random walk with drift on its log, so the open age group is kept.
+#' Draws carry the uncertainty of the forecast period factors; the other
+#' factors are fixed. With fewer period factors than independent trends in
+#' the data, the strata share their forecast uncertainty and intervals are
+#' too narrow: on simulated Lee-Carter data with Poisson deaths and an own
+#' random walk in each of 10 strata (the package's coverage benchmark), 95%
+#' intervals covered about 75% with the default ranks and 95% with `ranks =
+#' c(1, 10, 10)`.
+#' Predictive draws (`mt_forecast(predictive = TRUE)`) add
+#' Poisson variation of the deaths given the rates and the exposures, and no
+#' other observation noise. If intervals are too narrow on real data, that
+#' is a property of the model (see [recalibrated()], [ensemble()], or
+#' overdispersed models such as `stanmomo(family = "nb")`).
+#'
+#' **Deprecated:** `transform = "coda"` (centred log-ratio transformed
+#' life-table deaths in place of log rates, with an auxiliary random walk
+#' for the rate of the open age interval) is a combination of this package
+#' without a published source; it still works and warns (class
+#' `mt_warning_deprecated`). Use [coda()] (`coherent = TRUE` for several
+#' strata), the published compositional model.
 #'
 #' Ranks are reduced to the array dimensions where needed, so the model also
 #' runs with one stratum or one age group.
@@ -29,22 +55,28 @@
 #'   times the number of parameters of the factor matrices and the core;
 #'   ranks up to 6 for age and period and up to 4 for strata). For selection
 #'   by forecast accuracy use [tuned()].
-#' @param transform `"log"` or `"coda"`.
+#' @param transform `"log"`, or the deprecated `"coda"`.
 #' @param ts Forecast method for the period factors: `"rwd"`, `"arima"`,
 #'   `"ets"`.
 #' @param residual_noise Add the in-sample residual variation (per age and
-#'   stratum, normal on the transformed scale) to the draws. It represents
-#'   structure that the low-rank model does not capture. The residuals also
-#'   contain the observation noise of the training years, so predictive
-#'   draws, which add observation noise, are wider than the residual
-#'   variation alone implies. On simulated data with period trends that the
-#'   ranks do not capture, this widening brought predictive intervals close
-#'   to their nominal coverage; for data that the low-rank model describes
-#'   well, the intervals are too wide, and `residual_noise = FALSE` fits
-#'   better.
+#'   stratum, normal on the transformed scale) to the draws. The residuals
+#'   contain the observation noise of the training years, which predictive
+#'   draws add again as Poisson variation, so the noise is then counted
+#'   twice. Default `FALSE` (earlier development versions: `TRUE`).
+#' @param centre Remove the mean over the years of each age and stratum
+#'   before the decomposition and add it back afterwards (Russolillo,
+#'   Giordano and Haberman 2011). With `FALSE` the decomposition describes
+#'   the log rates themselves.
 #' @param maxit,tol Settings of the HOOI iterations.
 #' @return A model specification.
 #' @references
+#' Russolillo M, Giordano G, Haberman S (2011). Extending the Lee-Carter
+#' model: a three-way decomposition. *Scandinavian Actuarial Journal*
+#' 2011(2): 96-117. \doi{10.1080/03461231003611933}
+#'
+#' Lee RD, Carter LR (1992). Modeling and forecasting U.S. mortality.
+#' *Journal of the American Statistical Association* 87(419): 659-671.
+#'
 #' De Lathauwer L, De Moor B, Vandewalle J (2000). On the best rank-1 and
 #' rank-(R1, R2, ..., RN) approximation of higher-order tensors. *SIAM Journal
 #' on Matrix Analysis and Applications* 21(4): 1324-1342.
@@ -58,9 +90,16 @@
 #' fc <- mt_forecast(fit, h = 5, n_draws = 100, seed = 1)
 #' @export
 tucker3 <- function(ranks = c(3, 3, 2), transform = c("log", "coda"), ts = c("rwd", "arima", "ets"),
-                    residual_noise = TRUE, maxit = 200, tol = 1e-8) {
+                    residual_noise = FALSE, centre = TRUE, maxit = 200, tol = 1e-8) {
   transform <- match.arg(transform)
   ts <- match.arg(ts)
+  check_flag(residual_noise, "residual_noise")
+  check_flag(centre, "centre")
+  if (transform == "coda") {
+    mt_warn(paste("tucker3(transform = \"coda\") is deprecated: this combination of a Tucker3 decomposition with",
+                  "compositional life-table deaths has no published source. Use coda() (coherent = TRUE for",
+                  "several strata)."), class = "deprecated")
+  }
   if (ts != "rwd") need_pkg("forecast", sprintf("for ts = \"%s\"", ts))
   if (is.character(ranks)) {
     check_choice(ranks, c("bic", "aic"), "ranks")
@@ -68,7 +107,7 @@ tucker3 <- function(ranks = c(3, 3, 2), transform = c("log", "coda"), ts = c("rw
     mt_abort("`ranks` needs three values or \"bic\"/\"aic\".", class = "argument")
   }
   new_mt_spec("tucker3", list(ranks = ranks, transform = transform, ts = ts, residual_noise = residual_noise,
-                              maxit = maxit, tol = tol),
+                              centre = centre, maxit = maxit, tol = tol),
               joint = TRUE, min_periods = 6,
               label = sprintf("Tucker3-%s%s", if (transform == "log") "Direct" else "CoDa",
                               if (is.character(ranks)) sprintf(" (%s ranks)", toupper(ranks)) else ""))
@@ -80,15 +119,18 @@ fit_model.mt_spec_tucker3 <- function(spec, D, E, ages, periods, ...) {
   m <- pmax(D, 0.5) / E
   X <- if (p$transform == "log") log(m) else coda_forward(m, ages)
   dims <- dim(X)
-  rk <- if (is.character(p$ranks)) tucker_select_ranks(X, p$ranks)$ranks else p$ranks
+  # centring (Russolillo, Giordano and Haberman 2011): mean over the years of
+  # each age and stratum, as a[x] of Lee-Carter
+  alpha <- if (isTRUE(p$centre)) apply(X, c(1, 3), mean) else NULL
+  Xc <- if (is.null(alpha)) X else sweep(X, c(1, 3), alpha)
+  rk <- if (is.character(p$ranks)) tucker_select_ranks(Xc, p$ranks)$ranks else p$ranks
   ranks <- pmin(rk, dims - c(1, 1, 0), dims)
   ranks <- pmax(ranks, 1)
-  dec <- hooi(X, ranks, p$maxit, p$tol)
-  dims <- dim(X)
-  Xhat <- tucker_reconstruct(dec$G, dec$U)
+  dec <- hooi(Xc, ranks, p$maxit, p$tol)
+  Xhat <- tucker_add_centre(tucker_reconstruct(dec$G, dec$U), alpha)
   resid <- X - Xhat
-  out <- list(dec = dec, ranks = ranks, transform = p$transform, ts = p$ts, ages = ages,
-              resid_sd = apply(resid, c(1, 3), stats::sd), residual_noise = p$residual_noise,
+  out <- list(dec = dec, ranks = ranks, transform = p$transform, ts = p$ts, ages = ages, alpha = alpha,
+              resid_sd = apply(resid, c(1, 3), stats::sd), residual_noise = isTRUE(p$residual_noise),
               fit_pct = 100 * (1 - sum(resid^2) / sum((X - mean(X))^2)))
   B <- dec$U[[2]]
   out$B_last <- B[nrow(B), ]
@@ -129,7 +171,7 @@ simulate_model.mt_spec_tucker3 <- function(spec, fit, h, n_draws, ...) {
   for (j in seq_len(n_draws)) {
     U <- dec$U
     U[[2]] <- t(matrix(Bp[, , j], ncol = h))
-    Xf <- tucker_reconstruct(dec$G, U)
+    Xf <- tucker_add_centre(tucker_reconstruct(dec$G, U), fit$alpha)
     if (fit$residual_noise) {
       sdarr <- aperm(array(fit$resid_sd, c(na, ns, h)), c(1, 3, 2))
       Xf <- Xf + stats::rnorm(length(Xf), 0, as.vector(sdarr))
@@ -138,6 +180,11 @@ simulate_model.mt_spec_tucker3 <- function(spec, fit, h, n_draws, ...) {
       coda_backward(Xf, fit$ages, open_rates = if (is.null(op)) NULL else t(matrix(op[, , j], ncol = h)))
   }
   out
+}
+
+# Add the means a[x, i] of the centred model to an array [age, period, stratum]
+tucker_add_centre <- function(X, alpha) {
+  if (is.null(alpha)) X else sweep(X, c(1, 3), alpha, "+")
 }
 
 # Higher-order orthogonal iteration for an N-way array

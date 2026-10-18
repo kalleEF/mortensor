@@ -67,6 +67,16 @@ and the largest relative rounding change is recorded.
 
 Heterogeneity variants (\code{"rw1+het"}, \code{"rw2+het"}) are not offered because
 \code{bamp::predict_apc()} does not forecast them in bamp 3.0.0.
+
+Draws are posterior draws of the rates. Predictive draws
+(\code{mt_forecast(predictive = TRUE)}) add Poisson variation of the deaths
+given the rates of each draw and the exposures, as for the other models
+of expected rates; no other observation noise is added. bamp's binomial
+likelihood and its overdispersion term (\code{overdispersion = TRUE}) are not
+carried into the predictive draws: the overdispersion only enters the
+posterior of the rates. If intervals are too narrow on real data, that is
+a property of the model (see \code{\link[=recalibrated]{recalibrated()}}, \code{\link[=ensemble]{ensemble()}}, or
+overdispersed models such as \code{stanmomo(family = "nb")}).
 }
 \examples{
 \donttest{

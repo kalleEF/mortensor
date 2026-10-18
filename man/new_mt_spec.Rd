@@ -24,10 +24,11 @@ new_mt_spec(
 
 \item{label}{Display name.}
 
-\item{smooth}{Whether the draws describe smooth underlying rates (\code{TRUE},
-for example Lee-Carter; such fits return in-sample \code{fitted} rates, from
-which extra-Poisson noise is estimated) or observed rates (\code{FALSE}, for
-example a random walk on observed log rates).}
+\item{smooth}{Whether the draws describe expected (underlying) rates
+(\code{TRUE}, for example Lee-Carter: predictive draws add Poisson variation
+of the deaths given these rates and the exposures) or observed rates
+(\code{FALSE}, for example a random walk on observed log rates: predictive
+draws add nothing).}
 }
 \value{
 An object of class \code{c("mt_spec_<model>", "mt_spec")}.

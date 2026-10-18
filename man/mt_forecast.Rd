@@ -28,12 +28,19 @@ mt_forecast(
 is).}
 
 \item{predictive}{If \code{TRUE}, draws describe observable rates: for
-models of smooth rates, and for any model fitted to smoothed rates
-(\code{step_smooth()}), extra-Poisson noise (estimated from in-sample
-residuals of the raw rates) and Poisson variation of deaths given
-\code{exposure} are added;
-cells can have zero deaths (rate 0). Used by \code{\link[=mt_backtest]{mt_backtest()}}, which
-sums the deaths to the observed cells before taking logarithms.}
+models of expected rates (such as \code{\link[=lee_carter]{lee_carter()}}), and for any model
+fitted to smoothed rates (\code{step_smooth()}), deaths are drawn given the
+rates of each draw and \code{exposure} and divided by the exposures. The
+deaths are Poisson, the observation model of the Poisson Lee-Carter
+model (Brouhns, Denuit and Vermunt 2002); for models with a negative
+binomial likelihood (\code{stanmomo(family = "nb")}) they are negative
+binomial with the model's dispersion. No other observation noise is
+added. Models of observed rates (\code{\link[=rwd]{rwd()}}, \code{\link[=arima_series]{arima_series()}},
+\code{\link[=ets_series]{ets_series()}}) add nothing. Cells can have zero deaths (rate 0). Used
+by \code{\link[=mt_backtest]{mt_backtest()}}, which sums the deaths to the observed cells before
+taking logarithms. If predictive intervals are too narrow on real
+data, that is a property of the model: see \code{\link[=recalibrated]{recalibrated()}},
+\code{\link[=ensemble]{ensemble()}} or overdispersed models such as \code{stanmomo(family = "nb")}.}
 
 \item{exposure}{Exposures for predictive draws: array \verb{[age, period, stratum]} or matrix \verb{[age, stratum]} (default: last training year).}
 
@@ -51,4 +58,10 @@ such as life expectancy.
 x <- mt_example(deaths = "single")
 fc <- mt_forecast(mt_fit(rwd(), x), h = 5, n_draws = 100, seed = 1)
 fc
+}
+\references{
+Brouhns N, Denuit M, Vermunt JK (2002). A Poisson log-bilinear regression
+approach to the construction of projected lifetables. \emph{Insurance:
+Mathematics and Economics} 31(3): 373-393.
+\doi{10.1016/S0167-6687(02)00185-3}
 }

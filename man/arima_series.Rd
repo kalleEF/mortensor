@@ -5,13 +5,22 @@
 \alias{ets_series}
 \title{Per-age ARIMA and ETS models}
 \usage{
-arima_series(..., bootstrap = FALSE)
+arima_series(..., order = NULL, drift = NULL, bootstrap = FALSE)
 
 ets_series(..., bootstrap = FALSE)
 }
 \arguments{
-\item{...}{Arguments passed to \code{forecast::auto.arima()} or
-\code{forecast::ets()}.}
+\item{...}{Arguments passed to \code{forecast::auto.arima()},
+\code{forecast::Arima()} (with \code{order}) or \code{forecast::ets()}.}
+
+\item{order}{ARIMA order \code{c(p, d, q)} fitted to every age with
+\code{forecast::Arima()}; \code{NULL} (default) selects the order with
+\code{forecast::auto.arima()}.}
+
+\item{drift}{With \code{order}: include a drift (a constant in the differenced
+series, \code{include.drift} of \code{forecast::Arima()}). Without \code{order}:
+whether \code{forecast::auto.arima()} may select a drift (\code{allowdrift};
+\code{NULL} keeps its default).}
 
 \item{bootstrap}{Simulate with resampled residuals instead of normal
 errors.}
@@ -22,21 +31,38 @@ A model specification.
 \description{
 Benchmarks that model the log death rate of every age as a separate time
 series with \pkg{forecast}: \code{arima_series()} selects an ARIMA model with
-\code{forecast::auto.arima()} (drift allowed), \code{ets_series()} an exponential
-smoothing state space model without seasonality with \code{forecast::ets()}
-(damped trends allowed). Draws are simulated future paths of the fitted
-models (\code{simulate(..., future = TRUE)}), so uncertainty grows with the
-horizon. Ages are simulated independently; parameter uncertainty is not
-included.
+\code{forecast::auto.arima()} (drift allowed) or fits a given order with
+\code{forecast::Arima()} (\code{order}), \code{ets_series()} an exponential smoothing
+state space model without seasonality with \code{forecast::ets()} (damped
+trends allowed). Draws are simulated future paths of the fitted models
+(\code{simulate(..., future = TRUE)}), so uncertainty grows with the horizon.
+Ages are simulated independently; parameter uncertainty is not included.
+The models describe observed rates, so predictive draws add nothing.
+}
+\details{
+\code{arima_series(order = c(0, 1, 1), drift = TRUE)} is the local level model
+with drift (a random walk with drift observed with noise; Harvey 1989) in
+its reduced form: the year-to-year changes of a random walk with drift
+plus independent noise are an MA(1) process with mean equal to the drift.
+The parameters are estimated by maximum likelihood (\code{method = "ML"} of
+\code{forecast::Arima()}, unless \code{...} gives another \code{method}). Where deaths
+are few, it separates the noise of the observed rates from the trend,
+which the plain random walk (\code{\link[=rwd]{rwd()}}) accumulates.
 }
 \examples{
 if (requireNamespace("forecast", quietly = TRUE)) {
   x <- mt_example(deaths = "single", years = 2000:2019)
   fc <- mt_forecast(mt_fit(ets_series(), x), h = 3, n_draws = 20, seed = 1)
+  # local level model with drift (random walk with drift plus noise)
+  fc2 <- mt_forecast(mt_fit(arima_series(order = c(0, 1, 1), drift = TRUE), x), h = 3, n_draws = 20,
+                     seed = 1)
 }
 }
 \references{
 Hyndman RJ, Khandakar Y (2008). Automatic time series forecasting: the
 forecast package for R. \emph{Journal of Statistical Software} 27(3): 1-22.
 \doi{10.18637/jss.v027.i03}
+
+Harvey AC (1989). \emph{Forecasting, Structural Time Series Models and the
+Kalman Filter}. Cambridge University Press.
 }

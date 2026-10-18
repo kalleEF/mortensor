@@ -64,7 +64,7 @@ One index \code{k[t]} drives all ages and causes, so the causes cannot follow
 different trends beyond the pattern \code{b[x, c]}. The extensions of
 Kjærgaard, Ergemen, Kallestrup-Lamb, Oeppen and Lindahl-Jacobsen (2019)
 are not implemented. In a backtest on \code{\link[=mt_example_causes]{mt_example_causes()}} the model was
-less accurate than \code{\link[=cause_shares]{cause_shares()}}; compare it with \code{\link[=cause_shares]{cause_shares()}} or
+less accurate than the deprecated \code{\link[=cause_shares]{cause_shares()}}; compare it with
 \code{\link[=reconciled]{reconciled()}} separate models in a backtest before using it.
 
 Jump-off, the open age interval and zero deaths are treated as in
@@ -72,10 +72,13 @@ Jump-off, the open age interval and zero deaths are treated as in
 \code{k[t]} (its split by cause comes from the composition), and zero rates of
 a cause are replaced by half its smallest positive rate in the group (as
 \code{replace.zeros()} of the R package MortalityForecast). Draws are expected
-rates. Predictive draws (\code{mt_forecast(predictive = TRUE)}) add
-extra-Poisson and Poisson variation to the all-cause rates and split the
-all-cause deaths multinomially between the causes, so that the causes also
-add up to all causes in predictive draws.
+rates. Predictive draws (\code{mt_forecast(predictive = TRUE)}) draw Poisson
+all-cause deaths given the all-cause rates and exposures and split them
+multinomially between the causes by the cause shares of the draw, so that
+the causes also add up to all causes in predictive draws; no other
+observation noise is added. If intervals are too narrow on real data,
+that is a property of the model (see \code{\link[=recalibrated]{recalibrated()}}, \code{\link[=ensemble]{ensemble()}}, or
+overdispersed models such as \code{stanmomo(family = "nb")}).
 }
 \examples{
 x <- mt_example_causes(years = 2005:2019)
@@ -97,5 +100,5 @@ the case of cancer deaths. \emph{Journal of the Royal Statistical Society
 Series C} 68(5): 1351-1370. \doi{10.1111/rssc.12357}
 }
 \seealso{
-\code{\link[=cause_shares]{cause_shares()}}, \code{\link[=coda]{coda()}}.
+\code{\link[=reconciled]{reconciled()}} with a hierarchy of causes, \code{\link[=coda]{coda()}}.
 }

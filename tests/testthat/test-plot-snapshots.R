@@ -27,6 +27,6 @@ test_that("plots match their snapshots", {
   vdiffr::expect_doppelganger("scores by horizon", mt_plot_scores(s$bt))
   vdiffr::expect_doppelganger("tucker factors", mt_plot_tucker(mt_fit(tucker3(ranks = c(2, 2, 2)), s$x)))
   xc <- mt_example_causes(years = 2008:2019)
-  fcc <- mt_forecast(mt_fit(cause_shares(ranks = c(2, 2, 2, 2)), xc), h = 3, n_draws = 50, seed = 1)
+  fcc <- mt_forecast(mt_fit(suppressWarnings(cause_shares(ranks = c(2, 2, 2, 2))), xc), h = 3, n_draws = 50, seed = 1)
   vdiffr::expect_doppelganger("cause shares", mt_plot_shares(fcc))
 })

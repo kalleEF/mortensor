@@ -109,7 +109,8 @@ Acosta and Irizarry (2022) describe a model of the excess itself.
 The estimand: here the expected deaths are draws of \code{\link[=mt_forecast]{mt_forecast()}} with
 \code{predictive = TRUE}, that is draws from the predictive distribution of
 the deaths under the baseline model (the uncertainty of the baseline
-trend plus the variation of the death counts given the rates). They
+trend plus the Poisson variation of the death counts given the rates;
+negative binomial for \code{stanmomo(family = "nb")}). They
 describe the counterfactual deaths: the deaths that would have been
 observed without the shock. The observed deaths minus each draw give
 draws of the excess, so its interval is a prediction interval for the

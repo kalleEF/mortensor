@@ -10,7 +10,8 @@
 #' The estimand: here the expected deaths are draws of [mt_forecast()] with
 #' `predictive = TRUE`, that is draws from the predictive distribution of
 #' the deaths under the baseline model (the uncertainty of the baseline
-#' trend plus the variation of the death counts given the rates). They
+#' trend plus the Poisson variation of the death counts given the rates;
+#' negative binomial for `stanmomo(family = "nb")`). They
 #' describe the counterfactual deaths: the deaths that would have been
 #' observed without the shock. The observed deaths minus each draw give
 #' draws of the excess, so its interval is a prediction interval for the
