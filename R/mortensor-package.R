@@ -11,15 +11,15 @@
 #'   estimates single-year data with the penalized composite link model,
 #'   [mt_smooth()] smooths rates; [mt_prep()] bundles these steps so that
 #'   backtests refit them on every training window.
-#' * **Models**: [rwd()], [lee_carter()], [arima_series()], [ets_series()],
-#'   [hyndman_ullah()], [coherent_fdm()], [stmomo()], [stanmomo()],
-#'   [li_lee()], [coda()], [bohk_rau()], [nordpred_apc()], [apc_bayes()]
-#'   (package bamp), the experimental
-#'   [tucker3()] and [coda_causes()], and [ensemble()], fitted with [mt_fit()]
-#'   (optionally tuned with [tuned()]) and forecast with [mt_forecast()] as
-#'   simulated paths ([mt_draws]). [product_ratio()] and [cause_shares()]
-#'   are deprecated. The article "Methods and sources" lists the published
-#'   source of every method.
+#' * **Models**: [rwd()], [lee_carter()], [p_splines()], [cp_splines()],
+#'   [arima_series()], [ets_series()], [hyndman_ullah()], [coherent_fdm()],
+#'   [stmomo()] (including the Plat model), [stanmomo()], [li_lee()],
+#'   [coda()], [bohk_rau()], [nordpred_apc()], [apc_bayes()] (package bamp),
+#'   the experimental [tucker3()] and [coda_causes()], and [ensemble()],
+#'   fitted with [mt_fit()] (optionally tuned with [tuned()]) and forecast
+#'   with [mt_forecast()] as simulated paths ([mt_draws]).
+#'   [product_ratio()] and [cause_shares()] are deprecated. The article
+#'   "Methods and sources" lists the published source of every method.
 #' * **Hierarchies**: [mt_hierarchy()] describes crossed or nested strata
 #'   (for example sex x region x deprivation quintile with their totals),
 #'   [mt_aggregate_strata()] adds the aggregates, [mt_reconcile()] and

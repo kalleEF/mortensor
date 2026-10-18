@@ -121,8 +121,8 @@ mt_compare_forecasts(fixed, periods = 2035, strata = c("both.England", "female.E
 
 England keeps the life expectancy of its own model; its parts move
 towards it. The intervals of the bottom series widen (women in Q1, men in
-Q5), because they now carry the uncertainty of England's own forecast. With WLS some bottom forecasts had
-to be held at zero in 10% of the draws (the warning above).
+Q5), because they now carry the uncertainty of England's own forecast. With WLS some bottom forecasts were
+set to zero in 10% of the draws (the warning above).
 
 ## Does coherence cost accuracy?
 

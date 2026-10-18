@@ -42,7 +42,7 @@ checks$coverage_lee_carter <- list(
 
 checks$coverage_tucker3 <- list(
   suite = "quick",
-  description = "As coverage_lee_carter for tucker3() (log rates, ranks 3/3/2, random walk factors).",
+  description = "As coverage_lee_carter for tucker3() (log rates, default ranks 2/2/2, random walk factors).",
   run = function() coverage_check(tucker3(), 6))
 
 checks$coverage_rwd <- list(
