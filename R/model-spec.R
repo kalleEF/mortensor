@@ -181,8 +181,14 @@ report_fit_problems <- function(diagnostics, label, classes = character()) {
   msg <- diagnostics[status == "ok" & nzchar(message)]
   if (nrow(msg)) {
     topics <- setdiff(sub("^mt_warning_", "", classes), "model_fit")
-    mt_warn(sprintf("%s: warnings in %d stratum/strata, for example %s: %s (see the diagnostics of the fit).", label,
-                    nrow(msg), msg$stratum[1], msg$message[1]), class = c("model_fit", topics))
+    # a joint model attaches its one warning to all its strata: no example stratum
+    txt <- if (length(unique(msg$message)) == 1L) {
+      sprintf("%s: %s (diagnostics of %d stratum/strata of the fit).", label, msg$message[1], nrow(msg))
+    } else {
+      sprintf("%s: warnings in %d stratum/strata, for example %s: %s (see the diagnostics of the fit).", label,
+              nrow(msg), msg$stratum[1], msg$message[1])
+    }
+    mt_warn(txt, class = c("model_fit", topics))
   }
 }
 

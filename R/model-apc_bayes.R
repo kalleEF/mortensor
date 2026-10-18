@@ -95,7 +95,9 @@ apc_bayes <- function(age = "rw2", period = "rw1", cohort = "rw1", overdispersio
 #' @param preset `"fast"`, `"final"` or `"test"`.
 #' @param iterations,burn_in,thin Override the preset.
 #' @param tuning Tuning iterations.
-#' @param parallel Run the four chains in parallel.
+#' @param parallel Run the four chains in parallel. bamp runs them in a
+#'   socket cluster without seeded random number streams, so results differ
+#'   slightly between runs even when a seed is set.
 #' @return A list.
 #' @examples
 #' mcmc_control("fast")

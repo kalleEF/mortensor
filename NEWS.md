@@ -99,6 +99,19 @@ Documentation:
 
 * New article "Methods and sources": every method with its source and
   status (published, published with deviations, package-specific).
+* All vignettes use the published defaults and were re-knitted; the
+  package comparison was re-run. Results that changed: in "Choosing and
+  combining models" the Diebold-Mariano test of life expectancy over 16
+  origins separates only the random walk from M6 over all horizons
+  (p = 0.029); the
+  intervals of Lee-Carter, CBD and the functional data model are
+  narrower (95% coverage 0.69, 0.71 and 0.46). In the England inequality
+  analysis the Lee-Miller jump-off made rate forecasts worse and is not
+  used. In the German Laender analysis Lee-Carter forecasts the East-West
+  gap best. "Your own data" pairs Lee-Carter with the random walk in its
+  ensemble.
+* Warnings of joint models name the message once instead of an example
+  stratum.
 
 ## Published methods added
 
