@@ -1,8 +1,43 @@
 # From package-specific solutions to experimental methods: development plan (draft)
 
-Draft of 2026-10-18 for the owner. It builds on the audit of work package E3
-(`dev/methods-audit.md`). Nothing in it is implemented. Numbers are quoted
-from the repository files named next to them.
+Draft of 2026-10-18 for the owner, revised on 2026-10-19 after the owner's
+decisions (Section 0). It builds on the audit of work package E3
+(`dev/methods-audit.md`). Numbers are quoted from the repository files named
+next to them; files under `validation/` were removed in work package E5 and
+remain in the git history (commit 3f007d1).
+
+## 0. Owner's decisions (2026-10-19)
+
+1. **Correctness first.** The package implements published methods, and the
+   code must work and be correct. Whether a method forecasts well on given
+   data is checked by the user, through backtests. No benchmark settles this
+   for all data, so the repository keeps no performance validation suite
+   and no thresholds on coverage or accuracy. Each method gets unit tests
+   that check it against the published method: parameter recovery on data
+   from its own model, limiting cases, agreement with the authors' code or a
+   reference implementation. This holds for all methods of the package.
+2. **New methods stay opt-in.** No default changes for them.
+3. **Dependence:** the common age effect model (Kleinow 2015) and ensemble
+   copula coupling (Schefzik, Thorarinsdottir and Gneiting 2013), with a
+   vignette on why dependence between groups matters and how both work.
+4. **Compositional data:** `tucker3(transform = "coda")` stays deprecated;
+   the CoDa implementation is reviewed against the CoDa forecasting
+   literature, including the multiway model of Bergeron-Boucher et al.
+   (2018).
+5. **Life expectancy models are out of scope** (problem i).
+6. **Defaults chosen for the six open questions of E4** (no options for
+   problems that may not occur in users' data): `p_splines()` keeps Poisson
+   errors; `nordpred_apc()` keeps the published intervals (help page points
+   to `recalibrated()`); `stmomo("plat")` keeps the StMoMo vignette version;
+   `bohk_rau()` keeps the published prior without a reference convergence;
+   the German vignette keeps the jump-off and states that it changes little
+   there.
+7. **Implementation from full texts (E5):** negative binomial Lee-Carter
+   (Delwarde, Denuit and Partrat 2007), APCI (Richards et al. 2019) and SAINT
+   (Jarner and Kryger 2011; Jarner and Jallbjørn 2022), opt-in.
+
+The "Tests" paragraphs below replace the former validation designs with
+three generators and thresholds.
 
 ## 1. Purpose and principles
 
@@ -19,23 +54,19 @@ on published methods.
    "experimental", and the model label ends in "(experimental)", so score
    tables show it. A registry `mt_methods()` (function, option, source,
    status) keeps help pages, article and tests consistent.
-3. **Known truth without the method's assumption.** Earlier package methods
-   were checked on generators that contained their own assumption: the
-   extra-Poisson noise; the regional dependence that the empirical
-   reordering copies (`regions_coherence`: aggregate coverage 0.955 with it,
-   0.843 without); the stationary open interval of the PCLM; the log-linear
-   cause shares of `mt_example_causes()` (`R/model-causes.R`), on which
-   `cause_shares()` beat `coda_causes()` (`NEWS.md`). Every new check uses
-   three generators: **G0**, the method's own model (tests the code); **G1**,
-   a different plausible model, where the method must not lose to the
-   current default; **G2**, a stress case (trend break, small counts, short
-   series).
-4. **Real data decide defaults.** A default changes only after G1 and
-   backtests on at least three of England & Wales men (StMoMo), France
-   (demography), `ons_data` and `de_deaths`, with 16 or more origins where
-   possible, tested with `mt_dm_test()` and the EWC variance (Lazarus et al.
-   2018). Scores: CRPS, coverage by horizon, and the
-   quantity of the question (e0, gaps, totals).
+3. **Correctness tests.** Each method is tested against the published
+   method: parameter recovery on data from its own model, limiting cases,
+   and agreement with the authors' code or a reference implementation where
+   one exists. Earlier package methods looked good on generators that
+   contained their own assumption (the regional dependence that the
+   empirical reordering copies; the log-linear cause shares of
+   `mt_example_causes()`), so simulation results are no evidence of
+   forecasting performance.
+4. **Users judge performance.** Whether a method suits given data is shown
+   by backtests (`mt_backtest()`, `mt_compare()`, `mt_dm_test()` with the
+   EWC variance of Lazarus et al. 2018). Vignettes report such backtests as
+   examples, with the scores of the quantity of the question (e0, gaps,
+   totals), and state their results as they are.
 5. **Evidence status.** "(abstract)" marks works read only as abstracts; the
    plan reports only what these state, and implementation waits for the
    full text.
@@ -82,13 +113,9 @@ with all sources of variability gives wider, appropriate intervals (Pedroza
   (Currie, Durban and Eilers 2004, implemented in E4 with MortalitySmooth's
   constant overdispersion as an option).
 
-**Validation.** Check `overdispersion_sim`. G0: negative binomial
-Lee-Carter. G1: Poisson-lognormal noise with age-varying variance; a rank-2
-Lee-Carter truth fitted with rank 1. G2: populations of 2e4. Metrics:
-coverage (80%, 95%) per horizon, CRPS, PIT. Thresholds: G0 cov95 0.90-0.98;
-G1 cov95 at h 1-3 at least 0.90 with CRPS no worse than Poisson Lee-Carter;
-on Poisson truth (`simulate_lc_dgp()`) CRPS within 1%. Real (`nb_lc_ew`):
-cov95 at least 0.70, CRPS at most 0.0709; no loss on ONS.
+**Tests.** Parameter recovery on data simulated from the negative binomial
+Lee-Carter model; the Poisson Lee-Carter as the limit of large dispersion
+parameters.
 
 **Risks.** The dispersion absorbs structural misfit and widens all horizons
 alike; the trend error that grows with the horizon remains (b). Cell noise
@@ -142,13 +169,8 @@ multi-step coverage was poor after a shift (Xu and Xie 2023).
   Li-Lee on ONS (CRPS 0.0818 against 0.0687; `dev/progress.md`).
 - Coverage by horizon, with a slope, in `mt_score_table()`.
 
-**Validation.** Check `horizon_calibration_sim`. G1: drift that changes at a
-random year (variable decline, Booth, Maindonald and Smith 2002, abstract);
-AR(1) deviations around a trend; a random walk with uncertain drift. G2:
-15-year series, where factors must fall back to one constant. Threshold on
-G1: |cov95(h) - 0.95| at most 0.05 inside the window, CRPS no worse than
-`"constant"`. Real: E&W with 20-year windows (origins 1981-2001), France
-(1960-1996).
+**Tests.** Factors per horizon recover known scale factors from simulated
+draws and outcomes; one constant factor is the limiting case.
 
 **Risks.** With the defaults, horizon 10 rests on one origin. One stall
 (England after 2011) can dominate past errors.
@@ -206,13 +228,9 @@ abstract).
   and correlated innovations; `index = "coherent"` for stationary
   deviations.
 
-**Validation.** Check `dependence_sim` with dependence no method assumes:
-common shocks whose correlation varies by age, spatially correlated regional
-innovations, a break shared by half the strata; correlation 0 to 0.9.
-Metrics: coverage and CRPS of totals, gaps (`contrast`) and SII/RII
-(`mt_inequality()`), energy and variogram scores; margins unchanged.
-Thresholds: totals cov95 0.85-0.98 at correlations of 0.5 and above; no loss
-against `"none"` at 0. Real: `dependence_ons`, German Laender; DM tests.
+**Tests.** Coupled forecasts keep every margin exactly and take the ranks
+of the template; the common age effect model with one population equals
+Lee-Carter; parameter recovery on data from the common age effect model.
 
 **Risks.** Templates are short (ONS: 19 years). Dependence can change. ECC
 inherits the template model's pull on gaps. CAE needs identifiability
@@ -259,12 +277,8 @@ trend by a time series model (Jarner and Kryger 2011, abstract).
 - Backtest metric `revision`: change of the forecast for a target year
   between consecutive origins (robustness as in Stoeldraijer et al. 2013).
 
-**Validation.** Check `jumpoff_sim`. G1: a level shift one to three years
-before the origin; independent year effects; AR(1) deviations with φ 0.3,
-0.7 and 0.95. Metrics: CRPS at h 1-3 and 4-10, e0 error, revision.
-Thresholds: `"ar1"` within 2% of the better of fitted and observed start on
-every generator; on ONS no worse than the fitted start. Real: E&W, France,
-ONS, Germany.
+**Tests.** With φ = 0 the jump-off equals the fitted start and with φ = 1
+the observed start; parameters of simulated AR(1) deviations are recovered.
 
 **Risks.** Short deviation series bias AR(1) estimates towards fast decay.
 Accuracy and robustness can conflict.
@@ -307,12 +321,8 @@ Shang's weights to distributions.
 - Relabel `"crps"` (Bates and Granger 1969; Shang 2012); deprecate `"stack"`
   once `"crps_stack"` passes; bootstrap intervals of the weights.
 
-**Validation.** Check `stacking_sim`: M-closed (truth among the components)
-and M-open (Lee-Carter with a drift break and a cohort effect; components
-Lee-Carter, `rwd()`, `coda()`, ARIMA(0,1,1)). Thresholds: weight of the true
-model at least 0.6 with 10 inner origins; M-open CRPS no worse than equal
-weights. Real: E&W (16 origins), France, ONS, Germany; DM test against equal
-weights.
+**Tests.** Stacking weights agree with a direct numerical optimisation of
+the published criterion; one component gets weight 1.
 
 **Risks.** Three inner origins by default give unstable weights; weights are
 learnt in one regime; recalibrating a wide pool can narrow it.
@@ -355,12 +365,8 @@ published source.
 - `coda_causes()` weights and joint components (Kjærgaard et al. 2019) after
   the full text. `cause_shares()` stays deprecated.
 
-**Validation.** Check `causes_triad`. G0: current log-linear shares. G1a:
-independent Lee-Carter per cause. G1b: causes sharing a period index.
-Methods: reconciled Lee-Carter (WLS; proportional to a fixed total),
-`coda_causes()`, CoDa Tucker3. Metrics: CRPS of cause rates, all-cause e50,
-`mt_pessimism()`. Real: ONS causes at 50+, `de_deaths` chapters. A default
-changes only for a method best on G1a, G1b and ONS.
+**Tests.** Cause forecasts add up to the all-cause forecast; agreement with
+the authors' code where it exists.
 
 **Risks.** Coding changes; zeros in compositions; small causes.
 
@@ -403,11 +409,8 @@ did well because their data came from a Brass model.
   `local_level()` with signal-to-noise ratios pooled over ages (Harvey 1989;
   pooling package-specific).
 
-**Validation.** Check `small_pop_sim`. G1: a reference with AR(1)
-deviations; a reference with drifting deviations; populations 1e3 to 1e5.
-Real: `relative_ons`, Laender, regions. Metrics: CRPS, coverage, gap scores,
-implausible draws. Thresholds: ONS gap coverage at least 0.8 with `"rw"`;
-rate CRPS within 3% of Li-Lee.
+**Tests.** Parameter recovery on data from the relative model; a target
+identical to the reference has zero deviation.
 
 **Risks.** The reference's own error dominates; drifting deviations widen
 gaps without limit.
@@ -427,7 +430,7 @@ French women in 2006 is 22% higher with 85+ than with 100+
 
 **Set aside.** Spline ungrouping with Kannisto or Gompertz tails;
 `preserve_totals = TRUE`; stationary-population weights for the open
-interval inside the PCLM (default, package-specific).
+interval inside the PCLM (default before E4, package-specific).
 
 **Literature.** Rizzi, Gampe and Eilers (2015) close an open interval with a
 maximum age and a zero-count bin, and ungroup grouped exposures first and
@@ -452,10 +455,9 @@ stays labelled.
   design of Thatcher et al. 1998).
 - Ungrouping uncertainty through `bootstrapped(type = "data")`.
 
-**Validation.** Check `open_interval_holdout`: France (ages to 110) and E&W
-(to 100), cuts at 85 and 90; errors of log rates at 90-100, e85 and
-e-dagger. G1 truths: log-quadratic and gamma-Gompertz. Threshold: the
-default closure within 5% of the best on both truths and both countries.
+**Tests.** Each closure reproduces published parameter estimates, as
+`life_table(open = "kannisto")` reproduces Thatcher, Kannisto and Vaupel
+(1998).
 
 **Risks.** Feehan studies cohorts, mortensor period data. Data quality above
 age 100.
@@ -473,8 +475,9 @@ intervals are too narrow, because errors of single ages partly cancel
 (`vignettes/tuning-recalibration.Rmd`); calibrating rates does not
 calibrate e0.
 
-**Scope.** Work package E2 excluded models of life expectancy
-(`dev/progress.md`). The options are for the owner.
+**Scope.** Models of life expectancy are out of scope (owner, 2026-10-19;
+work package E2 excluded them too). Option 1 concerns evaluation only. The
+options are kept as a record.
 
 **Literature.** Raftery et al. (2013) model e0 gains by a double-logistic
 function in a Bayesian hierarchy; out of sample, 80% intervals held 82% and
@@ -504,40 +507,19 @@ countries' trends.
 
 ## 3. Roadmap
 
-| Phase | Content | Validation checks added |
+| Phase | Content | Status |
 |---|---|---|
-| 0 Foundation | G1/G2 generators in `R/validation.R`; coverage by horizon; variogram score; `revision`; SAPE; `mt_dispersion()`; `mt_methods()` | none with thresholds; current defaults scored on G1 and recorded in `history.csv` |
-| 1 Published, light | `scale = "per_horizon"`; `weights = "crps_stack"`, `"bias"`; `dependence = "schaake"`, `"ecc"`; MinT from errors; further closures; relabels | `horizon_calibration_*`, `stacking_*`, `dependence_*`, `open_interval_holdout` |
-| 2 Models | `lee_carter(family = "nb")`; `cae()`; `relative_model()`; `anchored(decay = "ar1", to = "filtered")`; bootstrapped local level | `overdispersion_sim`, `nb_lc_ew`, `cae_ons`, `relative_ons`, `jumpoff_sim` |
-| 3 After full texts or decisions | `scaled_error`; `method = "errors"`; causes; Tucker3 CoDa review; P-splines with dispersion; e0 options; `local_level()` | `causes_triad`, further checks as built |
+| E5 | Negative binomial Lee-Carter; APCI; SAINT; common age effect model; ensemble copula coupling; multiway CoDa; CoDa review; removal of the performance validation suite | done in E5 |
+| Next | coverage by horizon and variogram score in `mt_score()`; `scale = "per_horizon"`; `weights = "crps_stack"`; Schaake shuffle; MinT from errors; further closures | open |
+| Later | `relative_model()`; `anchored(decay = "ar1", to = "filtered")`; bootstrapped local level; `scaled_error`; `method = "errors"` | open |
 
-Phase 0 comes first. The inner-error machinery of b serves c (MinT from
-errors, Schaake templates) and e. `cae()` and `relative_model()` share the
-joint simulation of period indexes. Recalibration and stacking checks are
-re-baselined after `family = "nb"`, because base spreads change. Each item
-is one work package with NEWS, progress log, help, vignettes and pkgdown
-(`CLAUDE.md`).
+Each item is one work package with correctness tests, NEWS, progress log,
+help, vignettes and pkgdown (`CLAUDE.md`). New methods are opt-in.
 
-**Decisions for the owner.**
-1. Adopt Section 1: three generators per check, the label "experimental".
-2. May `lee_carter(family = "nb")` and `recalibrated(scale = "per_horizon")`
-   become defaults if they pass? Both change results again.
-3. Which dependence method first: Schaake shuffle, ECC or `cae()`?
-4. Offer reverting (coherent) deviations for deprivation groups, although
-   they forecast the ONS and German gaps worst? Proposed: yes, with the
-   deviation process as an explicit argument.
-5. Review the deprecation of `tucker3(transform = "coda")`; relabel
-   `anchored(years)` and `ensemble(weights = "crps")`.
-6. Life expectancy: options 1-4 of i.
-7. Obtain full texts first: Delwarde et al. 2007; Li, Hardy and Tan 2009;
-   Djeundje and Currie 2011; Van Schaeybroeck and Vannitsem 2015; Alho and
-   Spencer 2005; Kleinow 2015; Enchev et al. 2017; Wen et al. 2021; Villegas
-   and Haberman 2014; Jarner and Kryger 2011; Kjærgaard et al. 2019;
-   Bergeron-Boucher et al. 2018; Wilmoth 1995; Hall and Mitchell 2007; and
-   the two studies on jump-off rates and model confidence sets that Janssen
-   (2018) summarises (not yet verified).
-8. (Done in E4: the audit's description of Camarda (2019) is corrected.)
-9. Run `cae()` and negative binomial Lee-Carter backtests in the full suite.
+**Decisions.** Taken on 2026-10-19 (Section 0). Open: whether to offer
+reverting (coherent) deviations for deprivation groups, which forecast the
+ONS and German gaps worst; whether to relabel `anchored(years)` and
+`ensemble(weights = "crps")`.
 
 ## 4. References
 
