@@ -226,14 +226,14 @@ mt_score_table(bt[quintile == "Q1"], metrics = c("crps", "cov50", "cov80", "cov9
 The quintiles (`bottom`) are forecast equally well by the separate models
 and by ECC (CRPS 0.0378), because ECC keeps the forecast of each cell; the
 small differences in coverage come from the Poisson variation of the
-deaths, which is drawn after the coupling. CAE (0.0399) and Li-Lee
+deaths, which is drawn after the coupling. CAE (0.0396) and Li-Lee
 (0.0415) forecast the quintiles less accurately than the Lee-Carter
 models.
 
 The totals show the effect of the dependence. With separate models, the
 95% intervals for England contain 41% of the observed rates and 30% of the
 observed life expectancies at 50: sums of independent parts vary too
-little. With CAE they contain 61% and 56%, with ECC 66% and 68%, and with
+little. With CAE they contain 63% and 62%, with ECC 65% and 68%, and with
 Li-Lee 74% and 76%. ECC has the lowest CRPS for the totals. Every model
 stays below 95%, as in the vignette "Coherent forecasts: totals and their
 parts": mortality improved more slowly after 2011 than in the training
@@ -241,7 +241,7 @@ years.
 
 The gap between Q1 and Q5 shows the other side. The intervals of the
 separate models are too wide: their 50% intervals contain 94% of the
-observed gaps. CAE (36%) and ECC (56%) come closer to 50%, and ECC has the
+observed gaps. CAE (38%) and ECC (52%) come closer to 50%, and ECC has the
 lowest CRPS. Li-Lee forecasts the gap to return towards its mean over the
 fitting years, while the observed gap widened (see above); the 95%
 intervals of Li-Lee contain 16% of the observed gaps.
