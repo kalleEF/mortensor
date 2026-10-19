@@ -1,5 +1,7 @@
 # Stress tests with simulated defective data
 
+The scripts of this study were removed in work package E5 (owner's decision: no testing suites in the repository); they are in the git history at commit 3f007d1.
+
 `dev/stress-tests.R` simulates deaths and populations for three regions
 (200,000, 100,000 and 5,000 inhabitants) by sex, 5-year age groups and
 2001-2020, then introduces one realistic defect per scenario and runs the
