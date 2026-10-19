@@ -13,11 +13,13 @@ lee_carter(
   choose_period = FALSE,
   min_years = 20,
   rotate = FALSE,
-  rotation = c(e0_start = 80, e0_end = 102, power = 0.5)
+  rotation = c(e0_start = 80, e0_end = 102, power = 0.5),
+  family = c("poisson", "nb")
 )
 }
 \arguments{
-\item{method}{\code{"poisson"} or \code{"svd"}.}
+\item{method}{\code{"poisson"} (maximum likelihood with the distribution of
+\code{family}) or \code{"svd"}.}
 
 \item{jump_off}{\code{"fitted"} (forecasts start from the fitted rates of the
 last year) or \code{"observed"} (from the observed rates of the last year;
@@ -44,6 +46,10 @@ at birth at which the rotation starts (\code{e0_start}, default 80) and is
 complete (\code{e0_end}, default 102), and the exponent of the weights
 (\code{power}, default 0.5). The defaults are those of Li, Lee and Gerland
 (2013, eq. 2) and MortCast; elements left out keep their defaults.}
+
+\item{family}{Distribution of the deaths for \code{method = "poisson"}:
+\code{"poisson"} (Brouhns, Denuit and Vermunt 2002) or \code{"nb"} (negative
+binomial; Delwarde, Denuit and Partrat 2007).}
 }
 \value{
 A model specification.
@@ -107,9 +113,45 @@ given the rates and the exposures, the observation model of the Poisson
 Lee-Carter model (Brouhns, Denuit and Vermunt 2002); no other observation
 noise is added. If intervals are too narrow on real data, that is a
 property of the model: see \code{\link[=recalibrated]{recalibrated()}}, \code{\link[=ensemble]{ensemble()}}, or
-overdispersed models such as \code{stanmomo("lc", family = "nb")}
-(\code{\link[=stanmomo]{stanmomo()}}; negative binomial Lee-Carter model of Delwarde, Denuit and
-Partrat 2007).
+overdispersed models such as \code{family = "nb"} below or \code{stanmomo("lc", family = "nb")} (\code{\link[=stanmomo]{stanmomo()}}).
+
+\strong{Negative binomial version} (\code{family = "nb"}; Delwarde, Denuit and
+Partrat 2007). Following the paper:
+\itemize{
+\item the deaths are negative binomial with mean \verb{mu = E exp(a[x] + b[x] k[t])} and variance \verb{mu + phi mu^2}, a Poisson distribution mixed over
+a gamma distributed random effect of each cell (Section 2.2). The
+dispersion \code{phi} (the paper's \code{k}) is one parameter for all ages and
+years;
+\item \code{a}, \code{b}, \code{k} and \code{phi} are estimated by maximum likelihood (eq. 5):
+uni-dimensional Newton updates of \code{a}, \code{b} and \code{k} (eq. 6-8), each given
+the other parameters, alternated with the estimate of \code{phi} given the
+fitted deaths;
+\item \code{k[t]} follows a random walk with drift (Section 3.5);
+\item predictive draws (\code{mt_forecast(predictive = TRUE)}) are negative
+binomial deaths with the estimated dispersion (size \code{1 / phi}), the
+observation model of Section 2.2.
+}
+
+Package-specific (reference unknown): the Newton updates start from the
+Poisson estimates (the paper: \code{a = 0}, \code{b = 1}, \code{k = 0}, or random
+values); \code{phi} is maximised by Newton steps on \code{log(phi)} with step
+halving (the paper: Newton steps on \code{1 / phi}, eq. 9); the estimate is 0
+(the Poisson model) where the derivative of the log-likelihood at \code{phi = 0} is not positive; the log-likelihood uses gamma functions, so deaths
+need not be whole numbers. The paper states no identification
+constraints; \code{sum(b) = 1} and \code{sum(k) = 0} of the Poisson model
+(Brouhns, Denuit and Vermunt 2002) agree with its Figures 2 and 3. As for
+the Poisson model, draws include the innovations of \code{k} and the
+uncertainty of its drift; the paper reports point forecasts only. With
+\code{bootstrap = TRUE} the resampled deaths are negative binomial with the
+estimated dispersion, and each draw has the dispersion of its bootstrap
+fit (package-specific). The ridge and SVD fallbacks are not used: a fit
+that does not converge fails. Like other maximum likelihood estimates of
+a variance, \code{phi} is biased downwards when many parameters are estimated
+relative to the number of cells. For France, ages 0-99, the fit to the
+Human Mortality Database series in \code{demography::fr.mort} reproduces the
+paper's dispersions (Section 3.3), AIC (Section 3.4) and drifts and
+standard deviations of \code{k} (Sections 3.5 and 3.6) within 1\%; the paper's
+column labelled \code{sigma^2} holds the standard deviation (divisor \code{T - 1}).
 
 \code{rotate = TRUE} rotates the age pattern of decline as life expectancy
 rises (Li, Lee and Gerland 2013; status: published, with the deviations
@@ -174,6 +216,9 @@ if (requireNamespace("demography", quietly = TRUE)) {
   life_expectancy(fc_rot)
 }
 }
+# negative binomial deaths (Delwarde, Denuit and Partrat 2007)
+fit_nb <- mt_fit(lee_carter(family = "nb"), x)
+mt_parameters(fit_nb)[parameter == "nb_dispersion"]
 }
 \references{
 Lee RD, Carter LR (1992). Modeling and forecasting U.S. mortality.
@@ -194,7 +239,7 @@ method for forecasting mortality. \emph{Demography} 38(4): 537-549.
 
 Delwarde A, Denuit M, Partrat C (2007). Negative binomial version of the
 Lee-Carter model for mortality forecasting. \emph{Applied Stochastic Models in
-Business and Industry} 23(5): 385-401.
+Business and Industry} 23(5): 385-401. \doi{10.1002/asmb.679}
 
 Brouhns N, Denuit M, Van Keilegom I (2005). Bootstrapping the Poisson
 log-bilinear model for mortality forecasting. \emph{Scandinavian Actuarial

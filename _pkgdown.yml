@@ -57,6 +57,7 @@ reference:
       - coda
       - bohk_rau
       - stmomo
+      - apci
       - stanmomo
       - arima_series
       - apc_bayes
