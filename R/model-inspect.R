@@ -39,16 +39,27 @@
 #'   and cohort effects (cohorts by central year of birth) and of the drift,
 #'   the projected drift, the number of periods fitted, the choice of the
 #'   recent trend and the p-values of the goodness of fit and of the test for
-#'   the recent trend.
+#'   the recent trend;
+#' * [cae()]: the common age effects `beta1`, `beta2`, ... of each group
+#'   (rows labelled `common <g> (<strata>)`), and per stratum the centring
+#'   `a`, the period effects `kappa1`, `kappa2`, ..., their drift
+#'   (`drift_kappa1`, ...), the standard deviation of their innovations
+#'   (`sd_kappa1`, ...) and the correlation of their innovations with those
+#'   of the same order of every stratum (`cor_kappa1`, ..., indexed by the
+#'   other stratum); rows of stratum `"model"` give the mean squared error
+#'   of the centred log rates (`mse`) and the approximate BIC of Kleinow
+#'   (2015, eq. 5; `bic`).
 #'
 #' Fits of wrapped packages (StMoMo, demography) keep the original fitted
 #' object in `fit$fits[[i]]`, where the methods of those packages apply.
 #'
 #' Wrappers return the parameters of the model they wrap ([recalibrated()]
-#' adds its factors). For an [ensemble()], the rows of each component carry
-#' its name in column `component`, and rows with `parameter = "weight"` give
-#' the weights; components without interpretable parameters (wrapped
-#' packages) contribute their weight only. For [stratified()] and
+#' adds its factors; [coupled()] adds those of the template, with column
+#' `component` `"base"` or `"template"`). For an [ensemble()], the rows of
+#' each component carry its name in column `component`, and rows with
+#' `parameter = "weight"` give the weights; components without
+#' interpretable parameters (wrapped packages) contribute their weight
+#' only. For [stratified()] and
 #' `tuned(by = )`, the rows of each group carry its name in column `group`.
 #'
 #' @param fit An `mt_fit` object.
@@ -72,11 +83,20 @@ mt_parameters <- function(fit) {
     # wrappers that keep the fit of their base model (the fitted base specs are
     # stacked in inner_specs; tuned() fits the spec it chose)
     inner <- fit$inner_specs
-    while (inherits(sp, c("mt_spec_recalibrated", "mt_spec_reconciled", "mt_spec_bootstrap", "mt_spec_anchored"))) {
+    while (inherits(sp, c("mt_spec_recalibrated", "mt_spec_reconciled", "mt_spec_bootstrap", "mt_spec_anchored",
+                          "mt_spec_coupled"))) {
       sp <- if (length(inner)) inner[[1]] else sp$params$base
       inner <- inner[-1]
     }
     base_parameters(fit, sp)
+  }
+  tpl <- fit$coupling$template
+  if (!is.null(tpl)) {
+    # coupled(): the parameters of the template, which gives the dependence
+    tp <- tryCatch(mt_parameters(tpl), mt_error_argument = function(e) NULL)
+    out <- copy(out)
+    out[, component := "base"]
+    if (!is.null(tp)) out <- rbind(out, tp[, component := "template"], fill = TRUE)
   }
   cal <- fit$calibration
   if (!is.null(cal)) {
@@ -177,6 +197,29 @@ base_parameters <- function(fit, sp) {
             })))
     }))
     return(rbind(common, own))
+  }
+  if (inherits(sp, "mt_spec_cae")) {
+    f <- fit$fits
+    p <- dim(f$kappa)[1]
+    ns <- length(lab)
+    sdv <- sqrt(diag(f$sigma))
+    cr <- f$sigma / outer(sdv, sdv)
+    common <- rbindlist(lapply(seq_along(f$beta), function(g) {
+      gl <- sprintf("common %d (%s)", g, paste(lab[f$group == g], collapse = ", "))
+      rbindlist(lapply(seq_len(p), function(j) row(gl, paste0("beta", j), ages, f$beta[[g]][, j])))
+    }))
+    own <- rbindlist(lapply(seq_len(ns), function(s) {
+      rbind(row(lab[s], "a", ages, f$a[, s]),
+            rbindlist(lapply(seq_len(p), function(j) {
+              i <- (s - 1L) * p + j
+              same <- (seq_len(ns) - 1L) * p + j
+              rbind(row(lab[s], paste0("kappa", j), yrs, f$kappa[j, , s]),
+                    row(lab[s], paste0("drift_kappa", j), "", f$drift[i]),
+                    row(lab[s], paste0("sd_kappa", j), "", sdv[i]),
+                    row(lab[s], paste0("cor_kappa", j), lab, cr[i, same]))
+            })))
+    }))
+    return(rbind(common, own, row("model", c("mse", "bic"), "", c(f$mse, f$bic))))
   }
   if (inherits(sp, "mt_spec_bohk_rau")) return(bohk_rau_parameters(fit))
   if (inherits(sp, "mt_spec_nordpred")) return(nordpred_parameters(fit))
@@ -474,6 +517,21 @@ model_assumptions <- function(spec) {
            "(|phi| <= 0.99, a bound of this package), independent across strata, so deviations from the common",
            "trend stay bounded. Draws include the innovations and drift uncertainty of K and the AR(1) innovations;",
            "a, b and phi are fixed. Predictive draws add Poisson variation of the deaths given the rates."),
+         mt_spec_cae = paste(
+           sprintf("Common age effect model (Kleinow 2015) of order %d: log m(x,t,i) = a(x,i) + sum_j", p$order),
+           "beta_j(x) kappa_j(t,i); the age effects beta (orthonormal columns) are common to the populations",
+           if (!is.null(p$common_by)) "of each group of `common_by`",
+           "and estimated by least-squares common principal components of the centred log rates (equal weight",
+           "per population); kappa = t(beta) times the centred rates. Forecast (package-specific; the paper",
+           "does not forecast): the period effects of all populations follow one multivariate random walk with",
+           "drift with correlated normal innovations; draws include the innovations and the drift uncertainty;",
+           "a and beta are fixed. Each population keeps its own drift, so forecasts can diverge. Predictive",
+           "draws add Poisson variation of the deaths given the rates."),
+         mt_spec_coupled = paste(model_assumptions(p$base), sprintf(paste(
+           "Coupled (ensemble copula coupling, ECC-R; Schefzik et al. 2013): the draws of each age, year and",
+           "stratum keep the values of this model, reordered so that their ranks follow the draws of %s; the",
+           "dependence between ages, years and strata is that of the template. Observation noise of predictive",
+           "draws is added after the coupling."), p$template$label)),
          mt_spec_coherent_fdm = paste(
            "Product-ratio method with functional data models (Hyndman, Booth and Yasmeen 2013; demography):",
            "rates smoothed over age; the geometric mean of the strata (per group of `common_by`) and the ratio",
