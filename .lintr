@@ -4,4 +4,4 @@ linters: linters_with_defaults(
     object_length_linter(40),
     indentation_linter = NULL
   )
-exclusions: list("data-raw", "dev", "validation", "vignettes")
+exclusions: list("data-raw", "dev", "vignettes")

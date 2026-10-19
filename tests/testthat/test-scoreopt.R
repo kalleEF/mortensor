@@ -21,8 +21,7 @@ es_small <- function(control = list(max_iter = 30, n_draws = 30), seed = 1) {
 }
 
 # Reference values of ProbReco 0.1.2 (GitHub; not on CRAN in October 2026), computed with
-# the inputs below by ProbReco::total_score() and ProbReco::scoreopt(); the
-# live comparison is the validation check scoreopt_probreco
+# the inputs below by ProbReco::total_score() and ProbReco::scoreopt()
 test_that("the energy score and its gradient agree with ProbReco::total_score()", {
   S <- toy_S()
   n <- nrow(S)
@@ -85,9 +84,9 @@ test_that("the optimisation reproduces ProbReco::scoreopt() and its d and G reco
   }
   G0 <- solve(crossprod(S), t(S))
   mine <- mortensor:::scoreopt_sgd(Y, draw, S, c(rep(0, m), as.vector(G0)), ctl)
-  expect_equal(mine$d, ref$d, tolerance = 1e-6)
-  expect_equal(mine$G, ref$G, tolerance = 1e-6)
-  expect_equal(mine$value, ref$val, tolerance = 1e-6)
+  expect_equal(mine$d, ref$d, tolerance = 1e-8)
+  expect_equal(mine$G, ref$G, tolerance = 1e-8)
+  expect_equal(mine$value, ref$val, tolerance = 1e-8)
   expect_gt(max(abs(ref$G - G0)), 0.05)
   # mortensor's forecast step with ProbReco's d and G: S (d + G y) draw by draw
   yhat <- aperm(array(stats::rnorm(n * 2 * 3 * 15, mu, 0.7), c(n, 2, 3, 15)), c(2, 3, 1, 4))

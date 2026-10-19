@@ -2,6 +2,18 @@
 
 Clean break: the 0.1.x interface is replaced (see `dev/revamp-plan.md`).
 
+## Testing
+
+* The performance validation suite is removed: the `validation/`
+  directory, its GitHub workflow, the benchmark helpers and the slow tests
+  with thresholds on coverage, CRPS, accuracy and runtime. Forecast
+  performance depends on the data; check it on your own data with
+  `mt_backtest()`.
+* The correctness tests stay: agreement with reference implementations
+  and published values, exact identities, coherence and parameter
+  recovery. Checks of the former suite that were not yet unit tests are
+  now unit tests.
+
 ## Methods checked against the full papers; new published models
 
 Work package E4. The full texts of papers that were earlier available only

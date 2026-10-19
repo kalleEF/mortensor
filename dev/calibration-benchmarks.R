@@ -2,6 +2,18 @@
 # Run from the package root: Rscript dev/calibration-benchmarks.R
 suppressMessages(devtools::load_all(quiet = TRUE))
 library(data.table)
+# Fits `spec` on 30 years of simulate_lc_dgp() data and scores the draws of
+# the next `h` years, over `n_rep` replicates
+benchmark_coverage <- function(spec, n_rep = 10, h = 10, n_draws = 300, n_train = 30) {
+  bt <- rbindlist(lapply(seq_len(n_rep), function(r) {
+    x <- simulate_lc_dgp(n_t = n_train + h, seed = 1000 + r)
+    mt_backtest(spec, x, origins = 2000 + n_train, h = h, n_draws = n_draws, seed = r)
+  }))
+  by_h <- mt_score(bt, by = "horizon")
+  attr(by_h, "summary") <- list(cov95_mean = mean(by_h$cov95), cov80_mean = mean(by_h$cov80),
+                                cov50_mean = mean(by_h$cov50), crps = mean(bt$crps))
+  by_h
+}
 specs <- list(rwd = rwd(), rwdn = rwd(observation_noise = TRUE), rwdn_g = rwd(observation_noise = TRUE, innovations = "gaussian"), lc = lee_carter(), ensn = ensemble(lc = lee_carter(), rw = rwd(observation_noise = TRUE)),
               ens = ensemble(lc = lee_carter(), rw = rwd()))
 cat("simulation benchmark (LC DGP, 10 reps, h = 10)\n")

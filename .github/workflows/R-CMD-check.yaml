@@ -10,7 +10,6 @@ on:
     paths-ignore:
       - "dev/**"
       - "**.md"
-      - "validation/history.csv"
       - ".claude/**"
   pull_request:
     branches: [main, master]
@@ -18,7 +17,6 @@ on:
     paths-ignore:
       - "dev/**"
       - "**.md"
-      - "validation/history.csv"
       - ".claude/**"
   schedule:
     - cron: '41 2 1 * *'

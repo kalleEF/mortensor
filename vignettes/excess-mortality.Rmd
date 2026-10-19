@@ -219,11 +219,11 @@ compared unless `include_estimated = TRUE`.
 
 When the baseline model describes the years without a shock, the 95%
 interval of the excess should contain the true excess in 95% of cases.
-The validation suite of the package checks this on simulated data
-(`mt_example()`, a Lee-Carter baseline, deaths at ages 70 and older
-raised by 10% in two years, 20 replicates): the intervals contained zero
-where there was no shock in 98% of the cases, and the injected deaths in
-98% of the cases where there was one. On real data, the coverage depends
+In an example on simulated data (`mt_example()`, a Lee-Carter baseline,
+deaths at ages 70 and older raised by 10% in two years, 20 replicates),
+the intervals contained zero where there was no shock in 98% of the
+cases, and the injected deaths in 98% of the cases where there was one.
+On real data, the coverage depends
 on how well the baseline model forecasts the years of the shock; a
 backtest of the baseline model on years without a shock
 (`mt_backtest()`) shows how wide its intervals need to be.

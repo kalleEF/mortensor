@@ -11,11 +11,9 @@
 ^data-raw$
 ^\.claude$
 ^dev$
-^validation$
 ^CLAUDE\.md$
 ^\.lintr$
 ^codecov\.yml$
 ^vignettes/.*\.Rmd\.orig$
 ^vignettes/articles$
-^validation-output$
 ^Rplots\.pdf$

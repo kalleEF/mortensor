@@ -1015,8 +1015,8 @@ shrink_cov <- function(X, shrink = "auto") {
 #' and Adam starts from OLS reconciliation with their settings (`eta =
 #' 0.001`, `beta1 = 0.9`, `beta2 = 0.999`, `epsilon = 1e-8`, their Section
 #' 7). The gradient is written out analytically; ProbReco differentiates the
-#' same estimate automatically (the validation check `scoreopt_probreco`
-#' reproduces its path). The departures from the paper:
+#' same estimate automatically; with the same draws both follow the same
+#' optimisation path. The departures from the paper:
 #'
 #' * training forecasts: Algorithm 1 refits the base models on rolling
 #'   windows of the length of the final fit at consecutive origins (250

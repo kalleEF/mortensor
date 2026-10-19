@@ -3,7 +3,6 @@
 <!-- badges: start -->
 [![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
 [![R-CMD-check](https://github.com/kalleEF/mortensor/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/kalleEF/mortensor/actions/workflows/R-CMD-check.yaml)
-[![validation](https://github.com/kalleEF/mortensor/actions/workflows/validation.yaml/badge.svg)](https://github.com/kalleEF/mortensor/actions/workflows/validation.yaml)
 <!-- badges: end -->
 
 Flexible probabilistic mortality forecasting from data observed at different
@@ -20,9 +19,10 @@ of them.
 
 > **Caution: experimental, vibe-coded software. Use at your own risk.**
 > mortensor is written largely with AI coding assistants ("vibe-coded").
-> It has unit tests and a validation pipeline with thresholds (see
-> `validation/`), but it has not been peer reviewed, its interfaces still
-> change, and its results can be wrong in ways the tests do not catch.
+> It has unit tests that check its methods against published results and
+> reference implementations, but it has not been peer reviewed, its
+> interfaces still change, and its results can be wrong in ways the tests
+> do not catch.
 > Check results independently before you use them in publications, reports
 > or decisions.
 
@@ -111,8 +111,8 @@ Vignettes:
 
 ## Development
 
-See `CLAUDE.md` for conventions and commands, `validation/README.md` for the
-validation pipeline, and `dev/implementation-plan.md` for the plan.
+See `CLAUDE.md` for conventions and commands, and
+`dev/implementation-plan.md` for the plan.
 
 ## Licence
 

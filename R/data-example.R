@@ -180,3 +180,45 @@ mt_example_regions <- function(years = 1995:2019, regions = 4, ages = c("grouped
     x
   })
 }
+
+#' Simulated Lee-Carter data with known truth
+#'
+#' The Lee-Carter model with Poisson deaths (Brouhns, Denuit and Vermunt
+#' 2002): `log m = a_x + b_x k_t + shift_g`, deaths Poisson with mean
+#' `m * exposure`, with `k_t` a random walk with drift (-0.015, sd 0.02) per
+#' stratum, 5-year age groups 30-34 ... 90-94 and 10 strata (2 sexes x 5
+#' deprivation quintiles). `sd_obs > 0` adds iid normal noise to the log
+#' rates before the Poisson draw (the generator of the 0.1 review used 0.03),
+#' for studies of misspecified models.
+#'
+#' @param n_t Number of years.
+#' @param seed Random seed.
+#' @param pop Population at age 30 per stratum.
+#' @param sd_k,drift Standard deviation and drift of the random walk `k_t`.
+#' @param sd_obs Standard deviation of iid noise on the log rates (0: none,
+#'   the Lee-Carter model with Poisson deaths).
+#' @return An [mt_data] object.
+#' @keywords internal
+simulate_lc_dgp <- function(n_t = 40, seed = 1, pop = 2e5, sd_k = 0.02, drift = -0.015, sd_obs = 0) {
+  with_seed(seed, {
+    ages <- seq(30, 90, 5)
+    na <- length(ages)
+    groups <- expand.grid(sex = c("male", "female"), quintile = paste0("Q", 1:5), stringsAsFactors = FALSE)
+    a_x <- -10.5 + 0.085 * ages
+    b_x <- seq(1.3, 0.7, length.out = na)
+    rows <- vector("list", nrow(groups))
+    for (g in seq_len(nrow(groups))) {
+      shift <- ifelse(groups$sex[g] == "male", 0.3, 0) + (g - 1) %/% 2 * 0.08
+      k <- cumsum(drift + stats::rnorm(n_t, 0, sd_k))
+      m <- exp(a_x + outer(b_x, k) + shift + matrix(stats::rnorm(na * n_t, 0, sd_obs), na))
+      e <- matrix(round(pop * 5 * exp(-0.03 * (ages - 30))), na, n_t)
+      rows[[g]] <- data.table(sex = groups$sex[g], quintile = groups$quintile[g],
+                              year = rep(2000 + seq_len(n_t), each = na), age_lo = rep(ages, n_t),
+                              age_hi = rep(ages + 5, n_t), deaths = stats::rpois(na * n_t, m * e),
+                              exposure = as.vector(e))
+    }
+    long <- rbindlist(rows)
+    x <- mt_data(deaths = long, exposure = long, by = c("sex", "quintile"), age = c("age_lo", "age_hi"))
+    mt_set_grid(x, age = age_groups(ages, open = FALSE, last_upper = 95))
+  })
+}
