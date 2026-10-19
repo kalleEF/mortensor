@@ -3,7 +3,6 @@ on:
     branches: [main, master]
     paths-ignore:
       - "dev/**"
-      - "validation/history.csv"
       - ".claude/**"
   workflow_dispatch:
 

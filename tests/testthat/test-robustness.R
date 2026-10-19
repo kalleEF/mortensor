@@ -1,4 +1,4 @@
-# Behaviour with defective or unusual input data (see dev/stress-tests.R)
+# Behaviour with defective or unusual input data (dev/stress-tests.md)
 
 test_that("age and period labels of many sources are parsed", {
   p <- parse_age_labels(c("Under 1", "1 to 4", "5 - 9", "85 years and over", "90 & over", "0-4 years", "Age 85+",

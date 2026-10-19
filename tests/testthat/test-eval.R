@@ -46,17 +46,3 @@ test_that("mt_score summarises by model and horizon", {
   expect_true(all(is.finite(s$mase)))
   expect_output(print(structure(bt, class = c("mt_backtest", class(bt)))), "mt_backtest")
 })
-
-test_that("interval calibration on the simulation benchmark", {
-  skip_if(!identical(Sys.getenv("MORTENSOR_SLOW_TESTS"), "true"), "slow benchmark")
-  # the generator is the Lee-Carter model with Poisson deaths and one period
-  # index per stratum (10 strata): Tucker3 needs period and stratum ranks 10
-  # to describe it (with the default ranks c(2, 2, 2) the 95% coverage is
-  # about 0.74)
-  for (sp in list(lee_carter(), tucker3(ranks = c(1, 10, 10)))) {
-    s <- attr(mortensor:::benchmark_coverage(sp, n_rep = 6), "summary")
-    expect_gt(s$cov95_mean, 0.90)
-    expect_lt(s$cov95_mean, 0.98)
-    expect_gt(s$cov95_min, 0.85)
-  }
-})

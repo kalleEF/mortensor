@@ -261,19 +261,19 @@ cause, and shifting interval bounds by the point adjustment (Section 5).
 | Tucker4 cross-validation with the observed all-cause level | an oracle total makes the errors optimistic |
 | Deleting plot files in a fixed directory | the package writes files only where the user asks |
 
-## 6. Order and effort
+## 6. Order
 
-| Order | Package | Effort | Depends on |
-|---|---|---|---|
-| 1 | 4.1 plot layout | 1 day; snapshots and vignettes re-knitted | none |
-| 2 | 4.2 jump-off | 2 days with validation | fitted rates stored in draws (4.1) |
-| 3 | 4.3 fixed total | 2 days with validation | none |
-| 4 | 4.4 smoothing diagnostics | 1-2 days | none |
-| 5 | 4.5 disaggregation diagnostics | 1-2 days | 4.1 |
-| 6 | 4.6 trend scores | 1 day | none |
-| 7 | 4.7 Lee-Carter variants | 1 day | none |
-| 8 | 4.8 top-k, two-stage tuning | 1 day | none |
-| 9 | 4.9 smoothing uncertainty | 1 day | 4.4 |
+| Order | Package | Depends on |
+|---|---|---|
+| 1 | 4.1 plot layout | none |
+| 2 | 4.2 jump-off | fitted rates stored in draws (4.1) |
+| 3 | 4.3 fixed total | none |
+| 4 | 4.4 smoothing diagnostics | none |
+| 5 | 4.5 disaggregation diagnostics | 4.1 |
+| 6 | 4.6 trend scores | none |
+| 7 | 4.7 Lee-Carter variants | none |
+| 8 | 4.8 top-k, two-stage tuning | none |
+| 9 | 4.9 smoothing uncertainty | 4.4 |
 
 ## References
 

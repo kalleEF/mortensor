@@ -65,19 +65,25 @@ test_that("the default EWC test matches a hand computation", {
 })
 
 test_that("the EWC test keeps its size with few overlapping origins", {
-  # loss differences of forecasts 3 years ahead from 16 consecutive origins:
-  # a moving average of order 2 with mean zero (no difference in accuracy)
-  set.seed(20)
-  n <- 16
-  h <- 3
-  p <- vapply(seq_len(500), function(i) {
-    e <- stats::rnorm(n + h - 1)
-    d <- e[h:(n + h - 1)] + e[2:(n + 1)] + e[1:n]
-    mortensor:::dm_stat(d, h, varestimator = "ewc")$p_value
-  }, 0)
-  size <- mean(p < 0.05)
-  expect_gt(size, 0.02)
-  expect_lt(size, 0.10)
+  # loss differences of forecasts h years ahead from n consecutive origins
+  # under the null of equal accuracy: a moving average of order h - 1 with
+  # mean zero; rejection rates at nominal 5% from 1000 samples each
+  size <- function(n, h, ve) {
+    mean(vapply(seq_len(1000), function(i) {
+      e <- stats::rnorm(n + h - 1)
+      d <- stats::filter(e, rep(1, h), sides = 1)[h:(n + h - 1)]
+      p <- mortensor:::dm_stat(d, h, varestimator = ve)$p_value
+      !is.na(p) && p < 0.05
+    }, TRUE))
+  }
+  set.seed(5)
+  grid <- expand.grid(n = c(7, 16), h = c(1, 3, 5))
+  ewc <- mapply(size, grid$n, grid$h, MoreArgs = list(ve = "ewc"))
+  expect_true(all(ewc > 0.02 & ewc < 0.10))
+  # the Daniell-kernel test of Coroneo and Iacone (2020) without overlapping
+  # forecast years
+  dan <- vapply(c(7, 16), size, 0, h = 1, ve = "daniell")
+  expect_true(all(dan > 0.02 & dan < 0.10))
 })
 
 test_that("the Daniell-kernel test of Coroneo and Iacone (2020) matches a computation with the FFT", {

@@ -1,12 +1,12 @@
 flowchart TD
   ONE["`**one population per stratum**
-  lee_carter(), rwd(), p_splines(), cp_splines(), bohk_rau(), hyndman_ullah(), coda(), stmomo(), stanmomo(), arima_series(), ets_series(), apc_bayes(), nordpred_apc()`"]
+  lee_carter(), rwd(), p_splines(), cp_splines(), bohk_rau(), hyndman_ullah(), coda(), stmomo(), apci(), stanmomo(), arima_series(), ets_series(), apc_bayes(), nordpred_apc()`"]
   MANY["`**several strata jointly**
-  li_lee(common_by), coherent_fdm(), coda(coherent = TRUE), tucker3(), coda_causes()`"]
+  li_lee(common_by), cae(), saint(), coherent_fdm(), coda(coherent = TRUE), coda_multiway(), tucker3(), coda_causes()`"]
   H["`**mt_hierarchy()**
   totals and groups of strata; fixed nodes such as a trusted total`"]
   WRAP["`**wrappers around any model**
-  ensemble(), stratified(), reconciled(), recalibrated(), anchored(), bootstrapped(), tuned()`"]
+  ensemble(), stratified(), reconciled(), coupled(), recalibrated(), anchored(), bootstrapped(), tuned()`"]
   SPEC["model specification"]
   M["model-ready mt_data"]
   PREP["`**mt_prep()**

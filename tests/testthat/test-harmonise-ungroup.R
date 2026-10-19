@@ -83,7 +83,10 @@ test_that("ungrouped rates are close to the simulated truth", {
   est <- mt_array(u, "deaths") / mt_array(u, "exposure")
   truth <- attr(x, "truth")
   le <- abs(log(est / truth))
-  expect_lt(median(le[1:60, , ]), 0.05)
+  # deaths in 5-year groups and 90+, exposures in single years and 100+
+  ages <- mt_grid(u)$age$lower
+  expect_lt(median(le[ages < 90, , ]), 0.03)
+  expect_lt(median(le[ages >= 90, , ]), 0.03)
   prov <- unique(mt_obs(u, "deaths")$provenance)
   expect_true("pclm" %in% prov)
 })
@@ -183,14 +186,6 @@ test_that("an open deaths interval at 90+ is extrapolated as documented (French 
     expect_gt(e100[101], 0.05)
     expect_lt(e100[101], 0.25)
   }
-})
-
-test_that("England & Wales benchmark (HMD) meets the accuracy thresholds", {
-  skip_if_not_installed("StMoMo")
-  skip_if(!identical(Sys.getenv("MORTENSOR_SLOW_TESTS"), "true"), "slow benchmark")
-  res <- benchmark_ungroup_ew(years = 2000:2011)
-  expect_lt(res$male_30_89, 0.02)
-  expect_lt(res$male_90_100, 0.035)
 })
 
 test_that("rate-based spline ungrouping preserves group rates and approximates the truth", {

@@ -1,5 +1,7 @@
 # Tuning and recalibration (2026-10-17)
 
+The scripts of this study were removed in work package E5 (owner's decision: no testing suites in the repository); they are in the git history at commit 3f007d1.
+
 Question: does choosing settings by forecast accuracy on the last years of
 the training data (the hold-out workflow often used with
 `demography::fdm()`) improve forecasts out of sample, and what does

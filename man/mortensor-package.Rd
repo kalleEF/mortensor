@@ -23,9 +23,9 @@ backtests refit them on every training window.
 \code{\link[=arima_series]{arima_series()}}, \code{\link[=ets_series]{ets_series()}}, \code{\link[=hyndman_ullah]{hyndman_ullah()}}, \code{\link[=coherent_fdm]{coherent_fdm()}},
 \code{\link[=stmomo]{stmomo()}} (including the Plat model), \code{\link[=stanmomo]{stanmomo()}}, \code{\link[=li_lee]{li_lee()}},
 \code{\link[=coda]{coda()}}, \code{\link[=bohk_rau]{bohk_rau()}}, \code{\link[=nordpred_apc]{nordpred_apc()}}, \code{\link[=apc_bayes]{apc_bayes()}} (package bamp),
-the experimental \code{\link[=tucker3]{tucker3()}} and \code{\link[=coda_causes]{coda_causes()}}, and \code{\link[=ensemble]{ensemble()}},
-fitted with \code{\link[=mt_fit]{mt_fit()}} (optionally tuned with \code{\link[=tuned]{tuned()}}) and forecast
-with \code{\link[=mt_forecast]{mt_forecast()}} as simulated paths (\link{mt_draws}).
+the experimental \code{\link[=tucker3]{tucker3()}}, \code{\link[=coda_multiway]{coda_multiway()}} and \code{\link[=coda_causes]{coda_causes()}}, and
+\code{\link[=ensemble]{ensemble()}}, fitted with \code{\link[=mt_fit]{mt_fit()}} (optionally tuned with \code{\link[=tuned]{tuned()}})
+and forecast with \code{\link[=mt_forecast]{mt_forecast()}} as simulated paths (\link{mt_draws}).
 \code{\link[=product_ratio]{product_ratio()}} and \code{\link[=cause_shares]{cause_shares()}} are deprecated. The article
 "Methods and sources" lists the published source of every method.
 \item \strong{Hierarchies}: \code{\link[=mt_hierarchy]{mt_hierarchy()}} describes crossed or nested strata
@@ -50,8 +50,9 @@ for observed data, forecasts or both.
 \section{Caution}{
 
 mortensor is experimental software written largely with AI coding
-assistants ("vibe-coded"). It has unit tests and a validation pipeline,
-but it has not been peer reviewed and its interfaces still change. Use it
+assistants ("vibe-coded"). It has unit tests that check its methods
+against published results and reference implementations, but it has not
+been peer reviewed and its interfaces still change. Use it
 at your own risk and check results independently before using them in
 publications, reports or decisions.
 }

@@ -423,21 +423,17 @@ summarise(fc, life_expectancy(age = 30), deaths(), asr(standard = "esp2013"),
 
 ## 13. Phased roadmap
 
-Effort assumes one developer familiar with R package development; ranges
-reflect uncertainty.
+| Phase | Content | Deliverable |
+|---|---|---|
+| 0 | Stabilise 0.1.x (review Phase 0: D1, D2, D17, CI, executable vignettes); relicense to GPL-3; record the 0.1.0 regression baseline | 0.1.1 that installs, checks and runs |
+| 1 | Data layer and granularity: axes, strata, observation sets, operator **C**, validation, `regroup()`, `ungroup()` with the methods chosen in Section 5.1, exposures, interval-aware life tables; single-year default grid | `mt_data` API with tests |
+| 2 | Model contract, draws, `backtest()`/`score()`, benchmarks (RWD, ARIMA, ETS), Lee-Carter, Tucker3-CoDa and Tucker3-Direct ported | Honest benchmark harness; first comparison of Tucker3 against standard models |
+| 3 | Seamless bamp wrapper `apc_bayes()` (Section 7) | BAMP functionality available |
+| 4 | Composition and derived quantities for the release-1 models: ensembles (mixture, inverse score, stacking on inner CV), pathwise life tables, e_x, deaths with external population projections, ASR | **Release 0.2.0** (first release) |
+| 5 | Port every remaining model and method that runs in 0.1.0 (committed, see list below) | **Release 0.3.0** |
+| 6 | Validation: public benchmark on openly licensed data, executable vignettes, methods paper draft | **Release 1.0.0** |
 
-| Phase | Content | Deliverable | Effort |
-|---|---|---|---|
-| 0 | Stabilise 0.1.x (review Phase 0: D1, D2, D17, CI, executable vignettes); relicense to GPL-3; record the 0.1.0 regression baseline | 0.1.1 that installs, checks and runs | about 8 days |
-| 1 | Data layer and granularity: axes, strata, observation sets, operator **C**, validation, `regroup()`, `ungroup()` with the methods chosen in Section 5.1, exposures, interval-aware life tables; single-year default grid | `mt_data` API with tests | about 47 days |
-| 2 | Model contract, draws, `backtest()`/`score()`, benchmarks (RWD, ARIMA, ETS), Lee-Carter, Tucker3-CoDa and Tucker3-Direct ported | Honest benchmark harness; first comparison of Tucker3 against standard models | about 34 days |
-| 3 | Seamless bamp wrapper `apc_bayes()` (Section 7) | BAMP functionality available | about 12 days |
-| 4 | Composition and derived quantities for the release-1 models: ensembles (mixture, inverse score, stacking on inner CV), pathwise life tables, e_x, deaths with external population projections, ASR | **Release 0.2.0** (first release) | about 26 days |
-| 5 | Port every remaining model and method that runs in 0.1.0 (committed, see list below) | **Release 0.3.0** | about 34 days |
-| 6 | Validation: public benchmark on openly licensed data, executable vignettes, methods paper draft | **Release 1.0.0** | about 22 days |
-
-Total: about 183 developer-days, roughly 9 months for one full-time
-developer. The work packages behind these numbers are in
+The work packages behind these numbers are in
 `dev/implementation-plan.md`.
 
 **Committed for 0.3.0 (all models and methods running in 0.1.0):**

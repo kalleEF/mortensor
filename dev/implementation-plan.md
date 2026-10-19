@@ -24,10 +24,6 @@ at a time.
 - WPs are grouped into phases that end in a release: **0.1.1** (stabilise the
   current code), **0.2.0** (first release of the new design), **0.3.0** (all
   models and methods of 0.1.0 ported), **1.0.0** (validated).
-- Effort is given in developer-days for one person familiar with R package
-  development. Totals: about 183 days, roughly 9 months for one full-time
-  developer (Phase 0: 8, Phase 1: 47, Phase 2: 34, Phase 3: 12, Phase 4: 26,
-  Phase 5: 34, Phase 6: 22).
 - Progress is tracked in `dev/progress.md` (one line per WP: status, PR link,
   notes); each PR updates it.
 
@@ -182,108 +178,98 @@ Each step has `prep_fit(step, data)` (learns on the training window) and
 
 ## 5. Phase 0: stabilise 0.1.x (release 0.1.1, on `main`)
 
-| WP | Title | Depends | Deliverables | Tests and acceptance | Fixes | Days |
-|---|---|---|---|---|---|---|
-| P0.1 | Generics and `%\|\|%` | none | `@importFrom rlang %\|\|%`; remove own `forecast()`/`accuracy()` generics, import and re-export from `generics`, register methods | CI on R 4.1 and 4.3: `print(example_mortality)` works; `library(forecast); forecast(cal)` dispatches to `forecast.mort_calibration` | D1, D2 | 1 |
-| P0.2 | Package metadata and licence | none | `License: GPL-3`; GPL text via `usethis::use_gpl3_license()`; remove MIT LICENSE; fix undefined globals; remove `.claude/settings.local.json` and `tests/testthat/Rplots.pdf`, add to `.gitignore`/`.Rbuildignore` | R CMD check without the DESCRIPTION warning and the globals note | D17, D26 (part) | 1 |
-| P0.3 | CI | P0.1 | `r-lib/actions` check workflow (Ubuntu R devel/release/oldrel and R 4.1; macOS and Windows release), test-coverage workflow, lintr workflow | All green on `main` | D26 (part) | 1.5 |
-| P0.4 | Executable vignettes | P0.1 | `eval = TRUE`; fast settings (`rank_selection = "bic"`, few models, `n_sim = 50`); remove chunks that need ONS data or rewrite them on `example_mortality`; replace hard-coded "example output" with real output | All vignettes build in CI in under 10 minutes; no chunk errors | D3 | 3 |
-| P0.5 | Regression baseline | P0.1 | `dev/baseline/capture_baseline.R`: point forecasts of every 0.1.0 model with fixed hyperparameters on `example_mortality` (committed as `tests/testthat/fixtures/baseline_0.1.rds`) and, locally, on the owner's data (not committed) | Script reruns reproducibly (fixed seed); fixture documented | protects 0.1.0 behaviour | 1 |
-| P0.6 | Repository hygiene for the rewrite | P0.2 | `CLAUDE.md` (conventions from Section 3), `dev/progress.md`, issue templates, `dev-0.2` branch created | Present and referenced from README | | 0.5 |
+| WP | Title | Depends | Deliverables | Tests and acceptance | Fixes |
+|---|---|---|---|---|---|
+| P0.1 | Generics and `%\|\|%` | none | `@importFrom rlang %\|%`; remove own `forecast()`/`accuracy()` generics, import and re-export from `generics`, register methods | CI on R 4.1 and 4.3: `print(example_mortality)` works; `library(forecast); forecast(cal)` dispatches to `forecast.mort_calibration` | D1, D2 | 1 |
+| P0.2 | Package metadata and licence | none | `License: GPL-3`; GPL text via `usethis::use_gpl3_license()`; remove MIT LICENSE; fix undefined globals; remove `.claude/settings.local.json` and `tests/testthat/Rplots.pdf`, add to `.gitignore`/`.Rbuildignore` | R CMD check without the DESCRIPTION warning and the globals note | D17, D26 (part) |
+| P0.3 | CI | P0.1 | `r-lib/actions` check workflow (Ubuntu R devel/release/oldrel and R 4.1; macOS and Windows release), test-coverage workflow, lintr workflow | All green on `main` | D26 (part) |
+| P0.4 | Executable vignettes | P0.1 | `eval = TRUE`; fast settings (`rank_selection = "bic"`, few models, `n_sim = 50`); remove chunks that need ONS data or rewrite them on `example_mortality`; replace hard-coded "example output" with real output | All vignettes build in CI in under 10 minutes; no chunk errors | D3 |
+| P0.5 | Regression baseline | P0.1 | `dev/baseline/capture_baseline.R`: point forecasts of every 0.1.0 model with fixed hyperparameters on `example_mortality` (committed as `tests/testthat/fixtures/baseline_0.1.rds`) and, locally, on the owner's data (not committed) | Script reruns reproducibly (fixed seed); fixture documented | protects 0.1.0 behaviour |
+| P0.6 | Repository hygiene for the rewrite | P0.2 | `CLAUDE.md` (conventions from Section 3), `dev/progress.md`, issue templates, `dev-0.2` branch created | Present and referenced from README | |
 
 | Q0.1 | Validation pipeline | P0.3 | `validation/run_validation.R` with suites (unit tests, ungrouping accuracy on HMD extracts, interval coverage on the simulated generator, honest backtest on HMD data, runtime budget), thresholds in `validation/thresholds.csv`, results appended to `validation/history.csv`, markdown report; GitHub workflow runs the quick suite on every push and pull request and the full suite weekly and on demand, uploads the report and fails on threshold breaches | Pipeline runs locally and in CI; a deliberately broken metric makes it fail | | 3 |
 
-Phase 0 total: about 11 days (including Q0.1).
-
 ## 6. Phase 1: data layer and harmonisation (on `dev-0.2`)
 
-| WP | Title | Depends | Deliverables | Tests and acceptance | Fixes | Days |
-|---|---|---|---|---|---|---|
-| D1.1 | Skeleton | P0.6 | New DESCRIPTION (Imports: data.table, Matrix, rlang, cli, generics, ggplot2, forecast, rTensor, compositions; Suggests: bamp, demography, StMoMo, ungroup, MortalityLaws, scoringutils, posterior, future.apply, testthat, knitr, rmarkdown), `aaa-imports.R`, `utils-cli.R`, `utils-checks.R`, error classes, name-clash test | Package installs and checks with no functions | | 2 |
-| D1.2 | `mt_axis` | D1.1 | Constructors, `parse_age_labels()`, validation, print, interval utilities (`covers()`, `overlaps()`, `widths()`, `midpoints()`) | Unit tests for every label style listed in 4.1; invariants (contiguity, single open interval) | basis for D10, D15 | 3 |
-| D1.3 | `mt_strata` and hierarchies | D1.1 | Constructor from data, crossed and nested hierarchies, consistency checks | Hierarchy sums validated on the owner's German structure (regions and causes) using a synthetic fixture | basis for D24 | 3 |
-| D1.4 | `mt_obs` and `mt_add_*()` | D1.2, D1.3 | Long-table ingestion with column mapping, measure types, exposure types | Round trip from long table to `mt_obs` and back; malformed inputs (duplicate cells, gaps, overlapping intervals) give classed errors | D15 | 4 |
-| D1.5 | `mt_data`, `mt_set_grid()`, `mt_window()`, `mt_describe_granularity()`, `mt_validate()` | D1.4 | Container and checks: coverage, deaths > exposure, zero exposure, rate consistency, hierarchy sums | Validation report on fixtures; the owner's doubled all-cause counts are flagged by the hierarchy-sum check | | 4 |
-| D1.6 | Aggregation operator, `mt_regroup()`, `mt_aggregate_to()` | D1.5 | Sparse operator builder and cache; exact regrouping of counts; rates recomputed from summed counts | Invariants: totals preserved; open interval mapped correctly; open interval changing over time; performance for 110 ages x 50 years x 50 strata under 1 s | D21 (constraint) | 4 |
-| D1.7 | Exposures | D1.5 | `mt_as_exposure()` from mid-year or January-1 populations; `exposure_future` container for external projections | Known-value tests; declared approximation stored in metadata | | 2 |
-| D1.8 | PCLM engine (`harmonise-pclm.R`) | D1.6 | Native 1D and 2D penalized composite link model adapted from `ungroup` 1.6.3 (MIT, attribution header) using the operator from D1.6; Poisson IRLS; B-spline basis; difference penalty; lambda by BIC/AIC on a log grid (default 1e-2 to 1e8) with a boundary warning; offset handled without the count-based artificial-bin reallocation; standard errors | (a) Counts without offset agree with `ungroup::pclm()` within 1%; (b) noise-free rate test recovers rates within 1% (the 6.1% shift of `ungroup` 1.6.3 is absent); (c) England & Wales benchmark (`StMoMo::EWMaleData`, grouped to 5-year + 90+): median absolute log error at most 0.02 (30-89) and 0.03 (90-100); (d) fitted vs observed group totals within 1% | finding of revamp plan 5.1 | 8 |
-| D1.9 | `mt_ungroup()` user API | D1.8 | Methods: `"pclm"` (rates with exposure offset, default), `"monotone"` (cumulative Hyman spline, used for populations), dims 1 or 2; refuses 2D on death counts without exposures with an explanatory error; exposures ungrouped first when only grouped; optional bootstrap replicates; provenance recorded per cell | Reproduces the revamp-plan 5.1 results on the fixtures; refusal tested | D21 | 4 |
-| D1.10 | `mt_smooth()` and `step_*()` framework (`mt_prep`) | D1.9 | Poisson P-spline smoothing with log-exposure offset (1D/2D); `step_ungroup()`, `step_smooth()`, `step_shocks()` with fit/apply semantics | Steps fitted on a window never read data outside it (test with a sentinel value in later years) | D4 | 5 |
-| D1.11 | Interval-aware life tables | D1.2 | `life_table(rates, axis, ax = NULL, open = c("reciprocal", "kannisto", "gompertz"))` using interval widths and midpoints; documented default | Identities (l_x, d_x, L_x, T_x consistency); single-year vs abridged agreement on a smooth schedule within 0.1 years of e0; open-interval methods checked against an exact Gompertz integral | D10, D20 | 4 |
-| D1.12 | Adapters and example data | D1.5 | `mt_read_long()` generic reader; `mt_read_ons()` (ported loaders); simulated multi-granularity dataset `mt_example` with known truth (generator in `data-raw/`); keep `example_mortality` | Adapters tested on small fixtures; `mt_example` documented | | 4 |
+| WP | Title | Depends | Deliverables | Tests and acceptance | Fixes |
+|---|---|---|---|---|---|
+| D1.1 | Skeleton | P0.6 | New DESCRIPTION (Imports: data.table, Matrix, rlang, cli, generics, ggplot2, forecast, rTensor, compositions; Suggests: bamp, demography, StMoMo, ungroup, MortalityLaws, scoringutils, posterior, future.apply, testthat, knitr, rmarkdown), `aaa-imports.R`, `utils-cli.R`, `utils-checks.R`, error classes, name-clash test | Package installs and checks with no functions | |
+| D1.2 | `mt_axis` | D1.1 | Constructors, `parse_age_labels()`, validation, print, interval utilities (`covers()`, `overlaps()`, `widths()`, `midpoints()`) | Unit tests for every label style listed in 4.1; invariants (contiguity, single open interval) | basis for D10, D15 |
+| D1.3 | `mt_strata` and hierarchies | D1.1 | Constructor from data, crossed and nested hierarchies, consistency checks | Hierarchy sums validated on the owner's German structure (regions and causes) using a synthetic fixture | basis for D24 |
+| D1.4 | `mt_obs` and `mt_add_*()` | D1.2, D1.3 | Long-table ingestion with column mapping, measure types, exposure types | Round trip from long table to `mt_obs` and back; malformed inputs (duplicate cells, gaps, overlapping intervals) give classed errors | D15 |
+| D1.5 | `mt_data`, `mt_set_grid()`, `mt_window()`, `mt_describe_granularity()`, `mt_validate()` | D1.4 | Container and checks: coverage, deaths > exposure, zero exposure, rate consistency, hierarchy sums | Validation report on fixtures; the owner's doubled all-cause counts are flagged by the hierarchy-sum check | |
+| D1.6 | Aggregation operator, `mt_regroup()`, `mt_aggregate_to()` | D1.5 | Sparse operator builder and cache; exact regrouping of counts; rates recomputed from summed counts | Invariants: totals preserved; open interval mapped correctly; open interval changing over time; performance for 110 ages x 50 years x 50 strata under 1 s | D21 (constraint) |
+| D1.7 | Exposures | D1.5 | `mt_as_exposure()` from mid-year or January-1 populations; `exposure_future` container for external projections | Known-value tests; declared approximation stored in metadata | |
+| D1.8 | PCLM engine (`harmonise-pclm.R`) | D1.6 | Native 1D and 2D penalized composite link model adapted from `ungroup` 1.6.3 (MIT, attribution header) using the operator from D1.6; Poisson IRLS; B-spline basis; difference penalty; lambda by BIC/AIC on a log grid (default 1e-2 to 1e8) with a boundary warning; offset handled without the count-based artificial-bin reallocation; standard errors | (a) Counts without offset agree with `ungroup::pclm()` within 1%; (b) noise-free rate test recovers rates within 1% (the 6.1% shift of `ungroup` 1.6.3 is absent); (c) England & Wales benchmark (`StMoMo::EWMaleData`, grouped to 5-year + 90+): median absolute log error at most 0.02 (30-89) and 0.03 (90-100); (d) fitted vs observed group totals within 1% | finding of revamp plan 5.1 |
+| D1.9 | `mt_ungroup()` user API | D1.8 | Methods: `"pclm"` (rates with exposure offset, default), `"monotone"` (cumulative Hyman spline, used for populations), dims 1 or 2; refuses 2D on death counts without exposures with an explanatory error; exposures ungrouped first when only grouped; optional bootstrap replicates; provenance recorded per cell | Reproduces the revamp-plan 5.1 results on the fixtures; refusal tested | D21 |
+| D1.10 | `mt_smooth()` and `step_*()` framework (`mt_prep`) | D1.9 | Poisson P-spline smoothing with log-exposure offset (1D/2D); `step_ungroup()`, `step_smooth()`, `step_shocks()` with fit/apply semantics | Steps fitted on a window never read data outside it (test with a sentinel value in later years) | D4 |
+| D1.11 | Interval-aware life tables | D1.2 | `life_table(rates, axis, ax = NULL, open = c("reciprocal", "kannisto", "gompertz"))` using interval widths and midpoints; documented default | Identities (l_x, d_x, L_x, T_x consistency); single-year vs abridged agreement on a smooth schedule within 0.1 years of e0; open-interval methods checked against an exact Gompertz integral | D10, D20 |
+| D1.12 | Adapters and example data | D1.5 | `mt_read_long()` generic reader; `mt_read_ons()` (ported loaders); simulated multi-granularity dataset `mt_example` with known truth (generator in `data-raw/`); keep `example_mortality` | Adapters tested on small fixtures; `mt_example` documented | |
 
-Phase 1 total: about 47 days. D1.2-D1.4 and D1.11 can run in parallel after
+D1.2-D1.4 and D1.11 can run in parallel after
 D1.1.
 
 ## 7. Phase 2: model contract, benchmarks, Lee-Carter, Tucker3, evaluation
 
-| WP | Title | Depends | Deliverables | Tests and acceptance | Fixes | Days |
-|---|---|---|---|---|---|---|
-| M2.1 | Model contract and registry | D1.10 | `new_mt_spec()`, `mt_fit()`/`mt_forecast()` generics, requirement checks, per-stratum loop (`future.apply`), failures recorded in diagnostics (never NA or 0), `mt_register_model()` | A dummy model passes the contract test suite (`expect_mt_model()` helper reused by every model) | D6, D19, D26 | 4 |
-| M2.2 | `mt_draws` and summaries | M2.1 | Class, `mt_summarise()` (mean, median, quantiles), `as.data.table()`, `mt_aggregate_to()` on draws, deaths from `exposure_future` with Poisson noise | Quantiles of known simulated draws; aggregation of draws preserves totals per draw | D22 (basis) | 3 |
-| M2.3 | Benchmarks `rwd()`, `arima_series()`, `ets_series()` | M2.2 | Per-series fits on log rates; draws via `simulate()` of the fitted model (uncertainty grows with horizon); valid ETS specifications only; distinct drift windows | Coverage test on the simulated random-walk generator (from the review): 95% intervals cover 0.90-0.98 averaged over h = 1-10, no horizon below 0.85 | D8, D13 | 4 |
-| M2.4 | `lee_carter()` | M2.2 | Native Poisson log-bilinear fit (Brouhns et al. 2002) and classic SVD fit (Lee and Carter 1992); k_t as random walk with drift; draws include k_t innovation and drift uncertainty, optional semi-parametric bootstrap of a_x, b_x (Brouhns et al. 2005) | Agreement with `StMoMo::lc()` (Poisson) and `demography::lca()` (SVD) on England & Wales within numerical tolerance; coverage test as in M2.3 | D8 | 6 |
-| M2.5 | `tucker3()` port | M2.2 | Port `tucker3_coda_forecast()`, `tucker3_direct_forecast()`, `forecast_B_mode()`; CoDa variant keeps the open age group (auxiliary series for the open-interval rate); rank grids valid for 1 and 2 groups; draws from simulated B-mode paths plus residual noise | Regression vs 0.1.0 baseline for Tucker3-Direct (same ranks) within 1e-6; CoDa round trip reproduces all ages including the open interval; one-group data works; coverage test | D11, D12 | 6 |
-| M2.6 | `mt_backtest()` | M2.1, D1.10 | Rolling-origin evaluation that refits `mt_prep` and the spec at each origin on `mt_window()` data; parallel over origins; caching of fits | Leakage test: changing data after the origin does not change the forecast; on `example_mortality` the honest MASE of the review (about 0.7) is reproduced | D4 | 5 |
-| M2.7 | `mt_score()` | M2.6 | CRPS (sample-based), WIS (Bracher et al. 2021 normalisation), log score where available, coverage and PIT by horizon, MASE against a declared baseline; via `scoringutils` when installed, native fallback | WIS equals the published definition on hand-computed cases | D16 | 3 |
-| M2.8 | `mt_tune()` | M2.6 | Grid search over spec parameters by inner rolling origin within the training window, or by information criterion where the model offers one | Nested use inside `mt_backtest()` touches only training data | D4, D5 | 3 |
-
-Phase 2 total: about 34 days.
+| WP | Title | Depends | Deliverables | Tests and acceptance | Fixes |
+|---|---|---|---|---|---|
+| M2.1 | Model contract and registry | D1.10 | `new_mt_spec()`, `mt_fit()`/`mt_forecast()` generics, requirement checks, per-stratum loop (`future.apply`), failures recorded in diagnostics (never NA or 0), `mt_register_model()` | A dummy model passes the contract test suite (`expect_mt_model()` helper reused by every model) | D6, D19, D26 |
+| M2.2 | `mt_draws` and summaries | M2.1 | Class, `mt_summarise()` (mean, median, quantiles), `as.data.table()`, `mt_aggregate_to()` on draws, deaths from `exposure_future` with Poisson noise | Quantiles of known simulated draws; aggregation of draws preserves totals per draw | D22 (basis) |
+| M2.3 | Benchmarks `rwd()`, `arima_series()`, `ets_series()` | M2.2 | Per-series fits on log rates; draws via `simulate()` of the fitted model (uncertainty grows with horizon); valid ETS specifications only; distinct drift windows | Coverage test on the simulated random-walk generator (from the review): 95% intervals cover 0.90-0.98 averaged over h = 1-10, no horizon below 0.85 | D8, D13 |
+| M2.4 | `lee_carter()` | M2.2 | Native Poisson log-bilinear fit (Brouhns et al. 2002) and classic SVD fit (Lee and Carter 1992); k_t as random walk with drift; draws include k_t innovation and drift uncertainty, optional semi-parametric bootstrap of a_x, b_x (Brouhns et al. 2005) | Agreement with `StMoMo::lc()` (Poisson) and `demography::lca()` (SVD) on England & Wales within numerical tolerance; coverage test as in M2.3 | D8 |
+| M2.5 | `tucker3()` port | M2.2 | Port `tucker3_coda_forecast()`, `tucker3_direct_forecast()`, `forecast_B_mode()`; CoDa variant keeps the open age group (auxiliary series for the open-interval rate); rank grids valid for 1 and 2 groups; draws from simulated B-mode paths plus residual noise | Regression vs 0.1.0 baseline for Tucker3-Direct (same ranks) within 1e-6; CoDa round trip reproduces all ages including the open interval; one-group data works; coverage test | D11, D12 |
+| M2.6 | `mt_backtest()` | M2.1, D1.10 | Rolling-origin evaluation that refits `mt_prep` and the spec at each origin on `mt_window()` data; parallel over origins; caching of fits | Leakage test: changing data after the origin does not change the forecast; on `example_mortality` the honest MASE of the review (about 0.7) is reproduced | D4 |
+| M2.7 | `mt_score()` | M2.6 | CRPS (sample-based), WIS (Bracher et al. 2021 normalisation), log score where available, coverage and PIT by horizon, MASE against a declared baseline; via `scoringutils` when installed, native fallback | WIS equals the published definition on hand-computed cases | D16 |
+| M2.8 | `mt_tune()` | M2.6 | Grid search over spec parameters by inner rolling origin within the training window, or by information criterion where the model offers one | Nested use inside `mt_backtest()` touches only training data | D4, D5 |
 
 ## 8. Phase 3: seamless bamp wrapper
 
-| WP | Title | Depends | Deliverables | Tests and acceptance | Days |
-|---|---|---|---|---|---|
-| B3.1 | `apc_bayes()` spec and data conversion | M2.1 | Constructor (`age`, `period`, `cohort` in `"rw1"`, `"rw2"`; `overdispersion`; `mcmc = mcmc_control("fast" \| "final" \| custom)`); conversion per stratum to bamp matrices (periods x age groups), `periods_per_agegroup` from the axes; integer rounding recorded | Conversion tested on fixtures with 5-year and single-year ages | 3 |
-| B3.2 | Fitting and convergence policy | B3.1 | Calls `bamp::bamp()` with captured output; explicit `bamp::checkConvergence()`; automatic refit with longer chains up to a limit; classed error with R-hat table if still not converged; core budget shared between strata and chains | Fixture fit converges; forced non-convergence (very short chains) produces the classed error | 3 |
-| B3.3 | Forecast draws | B3.2 | `bamp::predict_apc()` samples to `mt_draws`; mapping from age groups to the single-year grid through the D1.9 ungrouping applied draw by draw; deaths with binomial noise from `exposure_future` | Draw dimensions and metadata; mean of draws matches bamp's own posterior summary | 3 |
-| B3.4 | Effects, selection, documentation | B3.3 | `tidy()`/`plot()` of APC effects (bamp conventions stated); `mt_tune(apc_bayes(), method = "dic")` via `bamp::selectModel()`; heterogeneity variants blocked for forecasting with an explanatory error until bamp supports them | Tests skip without bamp; CI job with bamp installed runs a short fixture fit (under 60 s) | 3 |
+| WP | Title | Depends | Deliverables | Tests and acceptance |
+|---|---|---|---|---|
+| B3.1 | `apc_bayes()` spec and data conversion | M2.1 | Constructor (`age`, `period`, `cohort` in `"rw1"`, `"rw2"`; `overdispersion`; `mcmc = mcmc_control("fast" \| "final" \| Conversion tested on fixtures with 5-year and single-year ages | 3 |
+| B3.2 | Fitting and convergence policy | B3.1 | Calls `bamp::bamp()` with captured output; explicit `bamp::checkConvergence()`; automatic refit with longer chains up to a limit; classed error with R-hat table if still not converged; core budget shared between strata and chains | Fixture fit converges; forced non-convergence (very short chains) produces the classed error |
+| B3.3 | Forecast draws | B3.2 | `bamp::predict_apc()` samples to `mt_draws`; mapping from age groups to the single-year grid through the D1.9 ungrouping applied draw by draw; deaths with binomial noise from `exposure_future` | Draw dimensions and metadata; mean of draws matches bamp's own posterior summary |
+| B3.4 | Effects, selection, documentation | B3.3 | `tidy()`/`plot()` of APC effects (bamp conventions stated); `mt_tune(apc_bayes(), method = "dic")` via `bamp::selectModel()`; heterogeneity variants blocked for forecasting with an explanatory error until bamp supports them | Tests skip without bamp; CI job with bamp installed runs a short fixture fit (under 60 s) |
 
-Phase 3 total: about 12 days. Can start once M2.1 and M2.2 are merged, in
+Can start once M2.1 and M2.2 are merged, in
 parallel with M2.3-M2.8.
 
 ## 9. Phase 4: composition, derived quantities, release 0.2.0
 
-| WP | Title | Depends | Deliverables | Tests and acceptance | Fixes | Days |
-|---|---|---|---|---|---|---|
-| C4.1 | `mt_ensemble()` | M2.6 | Mixture of component draws; weights equal, inverse score, or stacking on inner-CV scores; components with failures are dropped per stratum with a diagnostic and weights renormalised | Mixture spread test (two components give the width of their mixture); weights never computed on the outer holdout | D5, D6, D7, D9 | 5 |
-| C4.2 | Derived quantities | M2.2, D1.11 | `life_expectancy()`, `prob_dying()`, `deaths()`, `asr()` (standard populations shipped with source and licence noted), `yll()`; all pathwise over draws | Intervals for e_x come from draws; single-year and grouped results agree on a smooth schedule | D10, D22 | 5 |
-| C4.3 | Plots | M2.2, M2.7 | Fan charts, Lexis-surface heatmaps, age profiles, backtest calibration (coverage by horizon, PIT), APC effects; all return ggplot objects | `vdiffr` snapshot tests | D26 | 4 |
-| C4.4 | `mt_export()` | M2.2 | Tidy CSV/parquet export of summaries and, optionally, draws; file names reflect the grid | Round trip | D23 | 1 |
-| C4.5 | Vignettes | all above | Getting started (end to end on `mt_example`); data and granularity; ungrouping (the evidence from revamp plan 5.1); models and backtesting; Bayesian APC with bamp; derived quantities. Slow chunks precomputed (`.Rmd.orig` pattern) | All vignettes build in CI in under 15 minutes | D3 | 6 |
-| C4.6 | Performance pass | C4.1 | Profiling of fit, forecast and backtest; `matrixStats` for quantiles over draws; caching | Backtest of `lee_carter()`, `rwd()`, `tucker3()` on `mt_example` with 4 origins under 2 minutes on 4 cores | D25 | 3 |
-| C4.7 | Release 0.2.0 | all | Migration note (0.1 calls to 0.2 calls), NEWS, pkgdown site, CRAN-ready check | Section 13 acceptance criteria met | | 2 |
-
-Phase 4 total: about 26 days.
+| WP | Title | Depends | Deliverables | Tests and acceptance | Fixes |
+|---|---|---|---|---|---|
+| C4.1 | `mt_ensemble()` | M2.6 | Mixture of component draws; weights equal, inverse score, or stacking on inner-CV scores; components with failures are dropped per stratum with a diagnostic and weights renormalised | Mixture spread test (two components give the width of their mixture); weights never computed on the outer holdout | D5, D6, D7, D9 |
+| C4.2 | Derived quantities | M2.2, D1.11 | `life_expectancy()`, `prob_dying()`, `deaths()`, `asr()` (standard populations shipped with source and licence noted), `yll()`; all pathwise over draws | Intervals for e_x come from draws; single-year and grouped results agree on a smooth schedule | D10, D22 |
+| C4.3 | Plots | M2.2, M2.7 | Fan charts, Lexis-surface heatmaps, age profiles, backtest calibration (coverage by horizon, PIT), APC effects; all return ggplot objects | `vdiffr` snapshot tests | D26 |
+| C4.4 | `mt_export()` | M2.2 | Tidy CSV/parquet export of summaries and, optionally, draws; file names reflect the grid | Round trip | D23 |
+| C4.5 | Vignettes | all above | Getting started (end to end on `mt_example`); data and granularity; ungrouping (the evidence from revamp plan 5.1); models and backtesting; Bayesian APC with bamp; derived quantities. Slow chunks precomputed (`.Rmd.orig` pattern) | All vignettes build in CI in under 15 minutes | D3 |
+| C4.6 | Performance pass | C4.1 | Profiling of fit, forecast and backtest; `matrixStats` for quantiles over draws; caching | Backtest of `lee_carter()`, `rwd()`, `tucker3()` on `mt_example` with 4 origins under 2 minutes on 4 cores | D25 |
+| C4.7 | Release 0.2.0 | all | Migration note (0.1 calls to 0.2 calls), NEWS, pkgdown site, CRAN-ready check | Section 13 acceptance criteria met | |
 
 ## 10. Phase 5: port everything that runs in 0.1.0 (release 0.3.0)
 
 Each port reuses the M2.1 contract test suite and the 0.1.0 regression
 baseline where behaviour should not change.
 
-| WP | Title | Deliverables | Tests and acceptance | Fixes | Days |
-|---|---|---|---|---|---|
-| P5.1 | `fdm()` | Wrapper on `demography::fdm()` with draws from simulated coefficient series | Agreement with `demography` forecasts; coverage test | | 3 |
-| P5.2 | `stmomo()` APC and CBD | Real ages, initial exposures for logit models, fitted values of the selected model, `simulate()`-based draws, gnm output captured | Agreement with direct StMoMo calls | (review 5.3) | 4 |
-| P5.3 | Multi-cause: `tucker4()` and `mt_cause_shares()` | Port Tucker4/ILR coherent cause forecasting; no near-zero residual component when a residual cause exists | Regression vs baseline; cause shares sum to 1 per draw | (review 5.4) | 6 |
-| P5.4 | `mt_reconcile()` | WLS (ported) and MinT (Wickramasuriya et al. 2019) reconciliation applied draw by draw over `mt_strata` hierarchies | Reconciled draws satisfy the hierarchy exactly; regression vs 0.1.0 WLS | D24 | 5 |
-| P5.5 | `mt_cohere()`, `li_lee()`, `product_ratio()` | The 0.1.0 female <= male constraint as an explicit option on any stratum pair; Li-Lee (Li and Lee 2005) and product-ratio (Hyndman et al. 2013) models | Constraint holds per draw; models agree with reference implementations where available | D24 | 6 |
-| P5.6 | NNLS stacking | Fixed stacking (fitted on the scale applied, on inner CV) as an `mt_ensemble()` weighting option | Weights computed only on training windows | D5 | 2 |
-| P5.7 | Smoothing options | Gaussian GAM and Whittaker smoothers as `step_smooth()` methods; GAM-Bayes smoothing uncertainty as an option that adds to model draws | Regression vs 0.1.0 smoothers on fixtures | | 3 |
-| P5.8 | Disaggregation options | Natural-Gompertz, Hyman-Kannisto and GAM disaggregation as `mt_ungroup()` methods with the exposure-weighted constraint | Benchmarked against PCLM on the D1.8 fixtures (documented as alternatives) | D21 | 3 |
-| P5.9 | Release 0.3.0 | Vignette for multi-cause forecasting on a shipped synthetic multi-cause dataset | Section 13 criteria | | 2 |
-
-Phase 5 total: about 34 days.
+| WP | Title | Deliverables | Tests and acceptance | Fixes |
+|---|---|---|---|---|
+| P5.1 | `fdm()` | Wrapper on `demography::fdm()` with draws from simulated coefficient series | Agreement with `demography` forecasts; coverage test | |
+| P5.2 | `stmomo()` APC and CBD | Real ages, initial exposures for logit models, fitted values of the selected model, `simulate()`-based draws, gnm output captured | Agreement with direct StMoMo calls | (review 5.3) |
+| P5.3 | Multi-cause: `tucker4()` and `mt_cause_shares()` | Port Tucker4/ILR coherent cause forecasting; no near-zero residual component when a residual cause exists | Regression vs baseline; cause shares sum to 1 per draw | (review 5.4) |
+| P5.4 | `mt_reconcile()` | WLS (ported) and MinT (Wickramasuriya et al. 2019) reconciliation applied draw by draw over `mt_strata` hierarchies | Reconciled draws satisfy the hierarchy exactly; regression vs 0.1.0 WLS | D24 |
+| P5.5 | `mt_cohere()`, `li_lee()`, `product_ratio()` | The 0.1.0 female <= male constraint as an explicit option on any stratum pair; Li-Lee (Li and Lee 2005) and product-ratio (Hyndman et al. 2013) models | Constraint holds per draw; models agree with reference implementations where available | D24 |
+| P5.6 | NNLS stacking | Fixed stacking (fitted on the scale applied, on inner CV) as an `mt_ensemble()` weighting option | Weights computed only on training windows | D5 |
+| P5.7 | Smoothing options | Gaussian GAM and Whittaker smoothers as `step_smooth()` methods; GAM-Bayes smoothing uncertainty as an option that adds to model draws | Regression vs 0.1.0 smoothers on fixtures | |
+| P5.8 | Disaggregation options | Natural-Gompertz, Hyman-Kannisto and GAM disaggregation as `mt_ungroup()` methods with the exposure-weighted constraint | Benchmarked against PCLM on the D1.8 fixtures (documented as alternatives) | D21 |
+| P5.9 | Release 0.3.0 | Vignette for multi-cause forecasting on a shipped synthetic multi-cause dataset | Section 13 criteria | |
 
 ## 11. Phase 6: validation and release 1.0.0
 
-| WP | Title | Deliverables | Days |
-|---|---|---|---|
-| V6.1 | Public benchmark | Rolling-origin benchmark of all models and ensembles on openly licensed data (and on the owner's data locally): point accuracy, interval calibration, runtime | 10 |
-| V6.2 | Documentation | Reference pages reviewed, methods article draft, FAQ on granularity and ungrouping | 8 |
-| V6.3 | CRAN submission and 1.0.0 | Reverse-dependency-free check, submission, fixes | 4 |
-
-Phase 6 total: about 22 days.
+| WP | Title | Deliverables |
+|---|---|---|
+| V6.1 | Public benchmark | Rolling-origin benchmark of all models and ensembles on openly licensed data (and on the owner's data locally): point accuracy, interval calibration, runtime |
+| V6.2 | Documentation | Reference pages reviewed, methods article draft, FAQ on granularity and ungrouping |
+| V6.3 | CRAN submission and 1.0.0 | Reverse-dependency-free check, submission, fixes |
 
 ## 12. Sequencing
 

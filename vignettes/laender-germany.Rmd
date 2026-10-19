@@ -231,8 +231,13 @@ Anchoring made the forecasts of the rates worse (CRPS 0.084 against
 into every forecast year, and those of small Laender are noisy. It made
 the forecasts of life expectancy slightly more accurate (0.312 against
 0.317) and left those of the East-West gap nearly unchanged (0.102
-against 0.103). The question concerns life expectancy and the gap, so the
-pipeline uses it; the gain is small.
+against 0.103). In this example the jump-off changes little: the
+forecasts with and without it differ by about 0.005 years in the CRPS of
+life expectancy and 0.001 in that of the gap. The pipeline keeps it because the
+question concerns life expectancy and the gap and anchoring to the last
+observed year is the published practice (Lee and Miller 2001). With other
+data the effect can be larger or go the other way, so check it in a
+backtest.
 
 ## Forecasts to 2035
 

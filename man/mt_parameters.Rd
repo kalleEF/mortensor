@@ -22,7 +22,8 @@ model type that has interpretable parameters:
 \itemize{
 \item \code{\link[=lee_carter]{lee_carter()}}: \code{a} (age pattern), \code{b} (age pattern of change), \code{k}
 (period index), and the drift and innovation standard deviation of \code{k};
-with \code{rotate = TRUE} also the ultimate pattern \code{b_ultimate};
+with \code{rotate = TRUE} also the ultimate pattern \code{b_ultimate}; with
+\code{family = "nb"} also the dispersion \code{nb_dispersion} (variance \verb{mu + phi mu^2});
 \item \code{\link[=li_lee]{li_lee()}}, \code{\link[=product_ratio]{product_ratio()}}: the common factor of each group (\code{B},
 \code{K}, its drift and standard deviation), and per stratum the deviations
 \code{a}, \code{b}, \code{k} and their AR(1) coefficient \code{phi} and standard deviation;
@@ -36,6 +37,11 @@ model gives per group of \code{common_by} the common \code{a}, \code{B}, \code{K
 \code{order_K}, \code{arima_K}, \code{sd_K}) and per stratum \code{a}, \code{b}, \code{k} and the
 ARIMA model of \code{k}. \code{\link[=coda_causes]{coda_causes()}}: per group, as \code{\link[=coda]{coda()}}, with parts
 by age and cause (\code{b1}, \code{k1}, \code{b2}, \code{k2}, ... with several components);
+\item \code{\link[=coda_multiway]{coda_multiway()}}: the common age patterns \code{b}, time indexes \code{k} (with
+\code{order_k}, \code{arima_k}, \code{sd_k}), population markers \code{gamma} and core \code{g}
+(index \verb{p,q,r}), numbered with several components, and the share of
+variation explained; per stratum the centre \code{a}, the parameters of the
+open age interval or of the Kannisto model of each year;
 \item \code{\link[=rwd]{rwd()}}: drift and innovation standard deviation per age (and, with
 \code{observation_noise = TRUE}, the variances of level and noise);
 \item \code{\link[=apc_bayes]{apc_bayes()}}: posterior medians and 90\% intervals of the age, period
@@ -48,25 +54,50 @@ of the identified quantities;
 divided by the number of cells minus the effective dimension); for
 \code{\link[=cp_splines]{cp_splines()}} also the bounds of the rates of ageing and of change per
 age (\code{ageing_lower}, \code{ageing_upper}, \code{change_lower}, \code{change_upper}).
+\item \code{\link[=saint]{saint()}}: per trend (\code{"trend <group>"}) the indexes \code{alpha}, \code{beta},
+\code{kappa}, \code{zeta} by year, the frailty variance \code{sigma2}, the
+pseudo-log-likelihood \code{loglik}, the \code{drift} and covariance \code{cov} of
+\code{alpha} and \code{beta} (or, with \code{ecm}, the parameters of the
+error-correction model: \code{a11}, \code{a21}, \code{a32}, \code{a42}, \code{C_D}, \code{C_delta},
+\code{lambda}, \code{Omega}) and the standard deviations \code{sd_kappa}, \code{sd_zeta};
+per stratum with a spread the spread parameters \code{y1} ... \code{y5} by year
+and their VAR(1) (\code{ar} or \code{A}, and \code{Omega});
 \item \code{\link[=bohk_rau]{bohk_rau()}}: posterior medians and 90\% intervals of the curve
 parameters \code{b1} and \code{b2} by age and of the variance and hyperparameters,
 the least-squares values \code{theta1}, \code{theta2} (exponential core model) and
 the Gelman-Rubin statistics (\code{rhat});
+\item \code{\link[=apci]{apci()}}: \code{alpha}, \code{beta} (by age), \code{kappa} (by year), \code{gamma} (by
+year of birth; 0 for the cohorts with four or fewer observations), the
+mean year \code{ybar}, the smoothing parameters (\code{lambda_alpha},
+\code{lambda_beta}), the effective dimension \code{ed} and the \code{bic}, and the
+ARIMA models of \code{kappa} and \code{gamma} (\code{order_kappa}, \code{arima_kappa},
+\code{sd_kappa}, \code{order_gamma}, \code{arima_gamma}, \code{sd_gamma});
 \item \code{\link[=nordpred_apc]{nordpred_apc()}}: estimates and 90\% Wald intervals of the age, period
 and cohort effects (cohorts by central year of birth) and of the drift,
 the projected drift, the number of periods fitted, the choice of the
 recent trend and the p-values of the goodness of fit and of the test for
-the recent trend.
+the recent trend;
+\item \code{\link[=cae]{cae()}}: the common age effects \code{beta1}, \code{beta2}, ... of each group
+(rows labelled \verb{common <g> (<strata>)}), and per stratum the centring
+\code{a}, the period effects \code{kappa1}, \code{kappa2}, ..., their drift
+(\code{drift_kappa1}, ...), the standard deviation of their innovations
+(\code{sd_kappa1}, ...) and the correlation of their innovations with those
+of the same order of every stratum (\code{cor_kappa1}, ..., indexed by the
+other stratum); rows of stratum \code{"model"} give the mean squared error
+of the centred log rates (\code{mse}) and the approximate BIC of Kleinow
+(2015, eq. 5; \code{bic}).
 }
 
 Fits of wrapped packages (StMoMo, demography) keep the original fitted
 object in \code{fit$fits[[i]]}, where the methods of those packages apply.
 
 Wrappers return the parameters of the model they wrap (\code{\link[=recalibrated]{recalibrated()}}
-adds its factors). For an \code{\link[=ensemble]{ensemble()}}, the rows of each component carry
-its name in column \code{component}, and rows with \code{parameter = "weight"} give
-the weights; components without interpretable parameters (wrapped
-packages) contribute their weight only. For \code{\link[=stratified]{stratified()}} and
+adds its factors; \code{\link[=coupled]{coupled()}} adds those of the template, with column
+\code{component} \code{"base"} or \code{"template"}). For an \code{\link[=ensemble]{ensemble()}}, the rows of
+each component carry its name in column \code{component}, and rows with
+\code{parameter = "weight"} give the weights; components without
+interpretable parameters (wrapped packages) contribute their weight
+only. For \code{\link[=stratified]{stratified()}} and
 \code{tuned(by = )}, the rows of each group carry its name in column \code{group}.
 }
 \examples{

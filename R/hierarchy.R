@@ -371,7 +371,10 @@ mt_aggregate_strata <- function(data, hierarchy, replace = FALSE) {
 #' intervals than they would if the parts moved together. Joint models (for
 #' example [li_lee()], [coherent_fdm()] and [coda()] with `coherent = TRUE`)
 #' carry the dependence between strata in the model itself; their draws are
-#' never reordered.
+#' never reordered. Ensemble copula coupling (Schefzik, Thorarinsdottir and
+#' Gneiting 2013) gives separately fitted strata the dependence of a joint
+#' model's draws: [mt_couple()] for draws before `mt_reconcile()`, and
+#' [coupled()] or `reconciled(dependence = "ecc")` for models.
 #'
 #' `dependence = "empirical"` reorders the paths of each stratum before the
 #' reconciliation. This is a package-specific method, related to but
@@ -463,6 +466,10 @@ mt_aggregate_strata <- function(data, hierarchy, replace = FALSE) {
 #' precipitation and temperature fields. *Journal of Hydrometeorology* 5(1):
 #' 243-262.
 #'
+#' Schefzik R, Thorarinsdottir TL, Gneiting T (2013). Uncertainty
+#' quantification in complex simulation models using ensemble copula
+#' coupling. *Statistical Science* 28(4): 616-640. \doi{10.1214/13-STS443}
+#'
 #' Schäfer J, Strimmer K (2005). A shrinkage approach to large-scale
 #' covariance matrix estimation and implications for functional genomics.
 #' *Statistical Applications in Genetics and Molecular Biology* 4(1):
@@ -523,6 +530,8 @@ mt_reconcile <- function(draws, hierarchy = NULL,
 spec_is_joint <- function(spec) {
   if (!inherits(spec, "mt_spec")) return(FALSE)
   if (isTRUE(spec$joint)) return(TRUE)
+  # coupled draws carry the dependence of their template
+  if (inherits(spec, "mt_spec_coupled")) return(TRUE)
   comps <- spec$params$components
   if (inherits(spec, "mt_spec_ensemble") && length(comps)) return(all(vapply(comps, spec_is_joint, logical(1))))
   if (inherits(spec$params$base, "mt_spec")) return(spec_is_joint(spec$params$base))
@@ -1015,8 +1024,8 @@ shrink_cov <- function(X, shrink = "auto") {
 #' and Adam starts from OLS reconciliation with their settings (`eta =
 #' 0.001`, `beta1 = 0.9`, `beta2 = 0.999`, `epsilon = 1e-8`, their Section
 #' 7). The gradient is written out analytically; ProbReco differentiates the
-#' same estimate automatically (the validation check `scoreopt_probreco`
-#' reproduces its path). The departures from the paper:
+#' same estimate automatically; with the same draws both follow the same
+#' optimisation path. The departures from the paper:
 #'
 #' * training forecasts: Algorithm 1 refits the base models on rolling
 #'   windows of the length of the final fit at consecutive origins (250
@@ -1088,14 +1097,21 @@ shrink_cov <- function(X, shrink = "auto") {
 #'   (score-optimal reconciliation, see Details).
 #' @param shrink See [mt_reconcile()].
 #' @param dependence `"none"` (default: the draws are reconciled as they
-#'   are), `"empirical"` or `"auto"` (the same as `"none"`, kept for
-#'   compatibility). With `"empirical"` the paths of separately fitted strata
-#'   are reordered before reconciliation by a package-specific method (see
+#'   are), `"ecc"`, `"empirical"` or `"auto"` (the same as `"none"`, kept for
+#'   compatibility). With `"ecc"` the draws of the base model take the
+#'   dependence of the draws of `template` before reconciliation (ensemble
+#'   copula coupling, Schefzik, Thorarinsdottir and Gneiting 2013): the
+#'   same as `reconciled(coupled(spec, template), ...)`, see [coupled()].
+#'   With `"empirical"` the paths of separately fitted strata are reordered
+#'   before reconciliation by a package-specific method (see
 #'   [mt_reconcile()]). Draws of joint models such as [li_lee()] and
 #'   [tucker3()], which carry the dependence between strata, are never
-#'   reordered (`"empirical"` then gives a warning and is ignored). The
-#'   observation noise of predictive draws is independent across cells
+#'   reordered by `"empirical"` (it then gives a warning and is ignored).
+#'   The observation noise of predictive draws is independent across cells
 #'   either way.
+#' @param template With `dependence = "ecc"`: the model specification whose
+#'   draws give the dependence, usually a joint model such as [cae()] or
+#'   [li_lee()].
 #' @param fixed Strata whose forecasts are kept (see [mt_reconcile()]); not
 #'   with `"energy_score"`.
 #' @param years,n_origins,horizon Training of `method = "energy_score"`: the
@@ -1127,6 +1143,10 @@ shrink_cov <- function(X, shrink = "auto") {
 #' Probabilistic forecast reconciliation: properties, evaluation and score
 #' optimisation. *European Journal of Operational Research* 306(2):
 #' 693-706. \doi{10.1016/j.ejor.2022.07.040}
+#'
+#' Schefzik R, Thorarinsdottir TL, Gneiting T (2013). Uncertainty
+#' quantification in complex simulation models using ensemble copula
+#' coupling. *Statistical Science* 28(4): 616-640. \doi{10.1214/13-STS443}
 #' @examples
 #' x <- mt_example_regions(years = 2000:2019, regions = 3)
 #' h <- mt_hierarchy(sex = "both", region = "all", quintile = "all")
@@ -1143,12 +1163,18 @@ shrink_cov <- function(X, shrink = "auto") {
 #' @export
 reconciled <- function(spec, hierarchy,
                        method = c("wls", "mint", "structural", "ols", "bottom_up", "proportional", "energy_score"),
-                       shrink = "auto", dependence = c("none", "empirical", "auto"), fixed = NULL,
-                       years = 10, n_origins = 5, horizon = 5, control = list(), seed = 1) {
+                       shrink = "auto", dependence = c("none", "ecc", "empirical", "auto"), fixed = NULL,
+                       years = 10, n_origins = 5, horizon = 5, control = list(), seed = 1, template = NULL) {
   check_class(spec, "mt_spec", "spec")
   method <- match.arg(method)
   dependence <- match.arg(dependence)
   if (dependence == "auto") dependence <- "none"
+  if (dependence == "ecc") {
+    if (is.null(template)) mt_abort("`dependence = \"ecc\"` needs a `template` model.", class = "argument")
+    spec <- coupled(spec, template)
+  } else if (!is.null(template)) {
+    mt_abort("`template` is used with `dependence = \"ecc\"` only.", class = "argument")
+  }
   dependence <- joint_dependence(dependence, spec)
   if (length(fixed) && method == "bottom_up") {
     mt_abort("`fixed` needs a projection method (\"wls\", \"mint\", \"structural\", \"ols\") or \"proportional\".",

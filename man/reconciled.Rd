@@ -10,13 +10,14 @@ reconciled(
   method = c("wls", "mint", "structural", "ols", "bottom_up", "proportional",
     "energy_score"),
   shrink = "auto",
-  dependence = c("none", "empirical", "auto"),
+  dependence = c("none", "ecc", "empirical", "auto"),
   fixed = NULL,
   years = 10,
   n_origins = 5,
   horizon = 5,
   control = list(),
-  seed = 1
+  seed = 1,
+  template = NULL
 )
 }
 \arguments{
@@ -33,13 +34,17 @@ for example causes of death declared without \code{additive = "rates"}.}
 \item{shrink}{See \code{\link[=mt_reconcile]{mt_reconcile()}}.}
 
 \item{dependence}{\code{"none"} (default: the draws are reconciled as they
-are), \code{"empirical"} or \code{"auto"} (the same as \code{"none"}, kept for
-compatibility). With \code{"empirical"} the paths of separately fitted strata
-are reordered before reconciliation by a package-specific method (see
+are), \code{"ecc"}, \code{"empirical"} or \code{"auto"} (the same as \code{"none"}, kept for
+compatibility). With \code{"ecc"} the draws of the base model take the
+dependence of the draws of \code{template} before reconciliation (ensemble
+copula coupling, Schefzik, Thorarinsdottir and Gneiting 2013): the
+same as \code{reconciled(coupled(spec, template), ...)}, see \code{\link[=coupled]{coupled()}}.
+With \code{"empirical"} the paths of separately fitted strata are reordered
+before reconciliation by a package-specific method (see
 \code{\link[=mt_reconcile]{mt_reconcile()}}). Draws of joint models such as \code{\link[=li_lee]{li_lee()}} and
 \code{\link[=tucker3]{tucker3()}}, which carry the dependence between strata, are never
-reordered (\code{"empirical"} then gives a warning and is ignored). The
-observation noise of predictive draws is independent across cells
+reordered by \code{"empirical"} (it then gives a warning and is ignored).
+The observation noise of predictive draws is independent across cells
 either way.}
 
 \item{fixed}{Strata whose forecasts are kept (see \code{\link[=mt_reconcile]{mt_reconcile()}}); not
@@ -63,6 +68,10 @@ parameter moves by more than \code{tol} in a step, so \code{tol} must be below
 \item{seed}{Random seed of the training for \code{method = "energy_score"}
 (inner forecasts, observation noise and the draws of each step), so
 that fits are reproducible.}
+
+\item{template}{With \code{dependence = "ecc"}: the model specification whose
+draws give the dependence, usually a joint model such as \code{\link[=cae]{cae()}} or
+\code{\link[=li_lee]{li_lee()}}.}
 }
 \value{
 A model specification. With \code{method = "energy_score"} its fit
@@ -117,8 +126,8 @@ As in the paper (Section 6, Algorithm 1), \eqn{d} and \eqn{G} are free
 score with exponent 1 estimated from pairs of base draws (their Eq. 5),
 and Adam starts from OLS reconciliation with their settings (\code{eta = 0.001}, \code{beta1 = 0.9}, \code{beta2 = 0.999}, \code{epsilon = 1e-8}, their Section
 7). The gradient is written out analytically; ProbReco differentiates the
-same estimate automatically (the validation check \code{scoreopt_probreco}
-reproduces its path). The departures from the paper:
+same estimate automatically; with the same draws both follow the same
+optimisation path. The departures from the paper:
 \itemize{
 \item training forecasts: Algorithm 1 refits the base models on rolling
 windows of the length of the final fit at consecutive origins (250
@@ -201,4 +210,8 @@ Panagiotelis A, Gamakumara P, Athanasopoulos G, Hyndman RJ (2023).
 Probabilistic forecast reconciliation: properties, evaluation and score
 optimisation. \emph{European Journal of Operational Research} 306(2):
 693-706. \doi{10.1016/j.ejor.2022.07.040}
+
+Schefzik R, Thorarinsdottir TL, Gneiting T (2013). Uncertainty
+quantification in complex simulation models using ensemble copula
+coupling. \emph{Statistical Science} 28(4): 616-640. \doi{10.1214/13-STS443}
 }

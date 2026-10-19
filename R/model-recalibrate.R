@@ -704,17 +704,21 @@ unwrap_fit <- function(fit, cls) {
 
 # Observation noise of the base model added to rate draws: Poisson (or
 # negative binomial) deaths given the rates and exposures, divided by the
-# exposures. Cells can have zero deaths (rate 0), as in predictive_rates()
-add_observation_noise <- function(arr, base_fit, fc, targets, E) {
+# exposures. Cells can have zero deaths (rate 0), as in predictive_rates().
+# `draw` [age, period, stratum, draw]: the draw of `fc` each value comes
+# from, where values were reordered cell by cell (coupled()); by default
+# the draw itself
+add_observation_noise <- function(arr, base_fit, fc, targets, E, draw = NULL) {
   d <- dim(arr)
   nz <- draw_noise(base_fit, fc, d[4])
   for (s in targets) {
     R <- arr[, , s, ]
     if (anyNA(R) || !any(nz$noise(s))) next
+    j <- if (is.null(draw)) rep(seq_len(d[4]), each = d[1] * d[2]) else as.vector(draw[, , s, ])
     Es <- as.vector(E[, , s])
     mu <- R * Es
-    D <- r_deaths(mu, rep(nz$size(s), each = d[1] * d[2])) / pmax(Es, 1e-12)
-    k <- rep(nz$noise(s), each = d[1] * d[2])
+    D <- r_deaths(mu, nz$size(s)[j]) / pmax(Es, 1e-12)
+    k <- nz$noise(s)[j]
     R[k] <- D[k]
     arr[, , s, ] <- R
   }

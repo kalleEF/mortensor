@@ -38,7 +38,13 @@
 #' the ARIMA(0,1,1) index with drift is shifted so that its first step equals
 #' the drift (eq. 20), which removes the break that the moving-average term
 #' causes in the first forecast year; the package applies the same
-#' correction to any ARIMA(0,1,q) index with drift.
+#' correction to any ARIMA(0,1,q) index with drift. Appendix G also smooths
+#' the last observed year with P-splines for Poisson counts (Camarda 2012)
+#' to avoid extrapolating its random variation. The sentence follows the
+#' jump-off equation of the Lee-Carter models (eq. 18), and the authors'
+#' code starts the CoDa forecasts from the deaths of the last year with the
+#' Kannisto rates from age 80 and without further smoothing; the package
+#' follows the code.
 #'
 #' **Coherent model (Section 2.4, Appendix C).** The common component
 #' `B[x] K[t]` is the model above fitted to the average mortality of a group:
@@ -55,7 +61,9 @@
 #' and whose deviations stay bounded in distribution. Groups are all strata,
 #' or each level of `common_by`; if the data carry a hierarchy (see
 #' [mt_aggregate_strata()]), the average uses the bottom strata only, as
-#' [li_lee()] does.
+#' [li_lee()] does. [coda_multiway()] is the other published coherent CoDa
+#' model: one Tucker3 decomposition of all strata with shared time indexes
+#' (Bergeron-Boucher, Simonacci, Oeppen and Gallo 2018).
 #'
 #' **Draws (Appendix B, pp. 556-557).** Draws carry the uncertainty of the
 #' estimates and of the index forecasts: the residuals of eq. (5) are
@@ -113,7 +121,9 @@
 #' those of eq. (5), as the paper describes (the authors' code takes them
 #' around the in-sample one-step forecasts of the ARIMA model); the number of
 #' refits follows `n_draws`; the draws are centred as in the authors' code
-#' (see above).
+#' (see above). Zero deaths follow the formula of Appendix C; the authors'
+#' code closes the composition after imputing `delta`, so that a zero there
+#' gets the share `delta / (1 + z delta)`.
 #'
 #' @param jump_off `"observed"` (forecasts start from the observed deaths of
 #'   the last year) or `"fitted"` (from the fitted deaths).
@@ -153,8 +163,13 @@
 #'
 #' Lee RD, Carter LR (1992). Modeling and forecasting U.S. mortality.
 #' *Journal of the American Statistical Association* 87(419): 659-671.
-#' @seealso [coda_causes()] for causes of death, [lee_carter()] for the model
-#'   of death rates, [li_lee()] for its coherent version.
+#'
+#' Camarda CG (2012). MortalitySmooth: an R package for smoothing Poisson
+#' counts with P-splines. *Journal of Statistical Software* 50(1): 1-24.
+#' \doi{10.18637/jss.v050.i01}
+#' @seealso [coda_multiway()] for the multiway model of several populations,
+#'   [coda_causes()] for causes of death, [lee_carter()] for the model of
+#'   death rates, [li_lee()] for its coherent version.
 #' @examples
 #' x <- mt_example(deaths = "single", years = 1995:2012)
 #' fc <- mt_forecast(mt_fit(coda(), x), h = 5, n_draws = 50, seed = 1)
@@ -402,7 +417,9 @@ coda_simulate_coherent <- function(fit, h, n_draws) {
 #' predictive draws; no other observation noise is added (package-specific).
 #'
 #' The extensions of Kjærgaard, Ergemen, Kallestrup-Lamb, Oeppen and
-#' Lindahl-Jacobsen (2019) are not implemented. Compare the model with
+#' Lindahl-Jacobsen (2019) are not implemented, nor is the alpha-transformation
+#' that Dong, Shang, Hui and Bruhn (2025) use in place of the clr for
+#' compositions of causes with zero counts. Compare the model with
 #' [reconciled()] separate models in a backtest before using it.
 #'
 #' @param var Stratum variable with the causes.
@@ -430,6 +447,10 @@ coda_simulate_coherent <- function(fit, h, n_draws) {
 #' (2019). Forecasting causes of death by using compositional data analysis:
 #' the case of cancer deaths. *Journal of the Royal Statistical Society
 #' Series C* 68(5): 1351-1370. \doi{10.1111/rssc.12357}
+#'
+#' Dong Z, Shang HL, Hui F, Bruhn A (2025). A compositional approach to
+#' modeling cause-specific mortality with zero counts. *Annals of Actuarial
+#' Science* 19(3): 416-441. \doi{10.1017/S1748499524000320}
 #' @seealso [reconciled()] with a hierarchy of causes, [coda()].
 #' @examples
 #' x <- mt_example_causes(years = 2005:2019)
@@ -710,6 +731,17 @@ coda_assumptions <- function(spec) {
                 regression = "The log rate of an open age interval is regressed on the indexes.",
                 paste("Ages from 80 by a Kannisto model extended to 120 where the age groups are single years from 80",
                       "(otherwise the log rate of an open interval is regressed on the indexes)."))
+  if (inherits(spec, "mt_spec_coda_multiway")) {
+    r <- p$ranks %||% c(1, 1, 1)
+    return(paste("Multiway CoDa model (Bergeron-Boucher, Simonacci, Oeppen and Gallo 2018): clr of the life-table",
+                 "deaths of population i = clr(a_i) + sum g[p,q,r] b_p k_q(t) gamma_r[i], a Tucker3 decomposition",
+                 sprintf("with ranks %s (age, time, population) fitted by alternating least squares;",
+                         paste(r, collapse = "/")),
+                 sprintf("each time index %s, shared by all populations.",
+                         arima_label(p$order %||% c(0, 1, 0), p$drift %||% TRUE)),
+                 "Draws: index paths with resampled innovations; the other parameters are fixed.",
+                 "Jump-off:", p$jump_off %||% "fitted", "deaths.", old))
+  }
   if (!isTRUE(p$coherent)) {
     return(paste("CoDa Lee-Carter model (Oeppen 2008; Bergeron-Boucher et al. 2017): clr of the life-table deaths",
                  sprintf("= clr(a) + b k(t), first SVD component; k(t) %s.", ts), draws, "Jump-off:", p$jump_off,

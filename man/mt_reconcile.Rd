@@ -155,7 +155,10 @@ reconciled as they are, so sums of separately fitted parts have narrower
 intervals than they would if the parts moved together. Joint models (for
 example \code{\link[=li_lee]{li_lee()}}, \code{\link[=coherent_fdm]{coherent_fdm()}} and \code{\link[=coda]{coda()}} with \code{coherent = TRUE})
 carry the dependence between strata in the model itself; their draws are
-never reordered.
+never reordered. Ensemble copula coupling (Schefzik, Thorarinsdottir and
+Gneiting 2013) gives separately fitted strata the dependence of a joint
+model's draws: \code{\link[=mt_couple]{mt_couple()}} for draws before \code{mt_reconcile()}, and
+\code{\link[=coupled]{coupled()}} or \code{reconciled(dependence = "ecc")} for models.
 
 \code{dependence = "empirical"} reorders the paths of each stratum before the
 reconciliation. This is a package-specific method, related to but
@@ -222,6 +225,10 @@ Clark M, Gangopadhyay S, Hay L, Rajagopalan B, Wilby R (2004). The Schaake
 shuffle: a method for reconstructing space-time variability in forecasted
 precipitation and temperature fields. \emph{Journal of Hydrometeorology} 5(1):
 243-262.
+
+Schefzik R, Thorarinsdottir TL, Gneiting T (2013). Uncertainty
+quantification in complex simulation models using ensemble copula
+coupling. \emph{Statistical Science} 28(4): 616-640. \doi{10.1214/13-STS443}
 
 Schäfer J, Strimmer K (2005). A shrinkage approach to large-scale
 covariance matrix estimation and implications for functional genomics.

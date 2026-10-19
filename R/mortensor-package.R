@@ -15,9 +15,9 @@
 #'   [arima_series()], [ets_series()], [hyndman_ullah()], [coherent_fdm()],
 #'   [stmomo()] (including the Plat model), [stanmomo()], [li_lee()],
 #'   [coda()], [bohk_rau()], [nordpred_apc()], [apc_bayes()] (package bamp),
-#'   the experimental [tucker3()] and [coda_causes()], and [ensemble()],
-#'   fitted with [mt_fit()] (optionally tuned with [tuned()]) and forecast
-#'   with [mt_forecast()] as simulated paths ([mt_draws]).
+#'   the experimental [tucker3()], [coda_multiway()] and [coda_causes()], and
+#'   [ensemble()], fitted with [mt_fit()] (optionally tuned with [tuned()])
+#'   and forecast with [mt_forecast()] as simulated paths ([mt_draws]).
 #'   [product_ratio()] and [cause_shares()] are deprecated. The article
 #'   "Methods and sources" lists the published source of every method.
 #' * **Hierarchies**: [mt_hierarchy()] describes crossed or nested strata
@@ -40,8 +40,9 @@
 #'
 #' @section Caution:
 #' mortensor is experimental software written largely with AI coding
-#' assistants ("vibe-coded"). It has unit tests and a validation pipeline,
-#' but it has not been peer reviewed and its interfaces still change. Use it
+#' assistants ("vibe-coded"). It has unit tests that check its methods
+#' against published results and reference implementations, but it has not
+#' been peer reviewed and its interfaces still change. Use it
 #' at your own risk and check results independently before using them in
 #' publications, reports or decisions.
 #'
