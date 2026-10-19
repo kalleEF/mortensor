@@ -232,18 +232,36 @@ strata</td>
 <tr class="odd">
 <td>Small populations, many cells with few deaths</td>
 <td>
-<code>li_lee(common_by = ...)</code>, wider age groups
-(<code><a href="../reference/mt_regroup.html">mt_regroup()</a></code>), <code><a href="../reference/mt_prep.html">step_smooth()</a></code>;
+<code>li_lee(common_by = ...)</code>; adults:
+<code>saint(reference = ...)</code> against a national total; wider age
+groups (<code><a href="../reference/mt_regroup.html">mt_regroup()</a></code>), <code><a href="../reference/mt_prep.html">step_smooth()</a></code>;
 <code>arima_series(order = c(0, 1, 1), drift = TRUE)</code> in
 ensembles</td>
-<td>pooling and smoothing reduce noise; the plain random walk
-accumulates it, the random walk observed with noise separates it from
-the trend</td>
+<td>pooling and smoothing reduce noise; SAINT takes the trend from a
+large reference population; the plain random walk accumulates it, the
+random walk observed with noise separates it from the trend</td>
 </tr>
 <tr class="even">
 <td>Totals and parts must add up</td>
 <td><code>reconciled(model, hierarchy)</code></td>
 <td>bottom-up for joint models, WLS for separate models</td>
+</tr>
+<tr class="odd">
+<td>Totals or gaps of strata forecast by separate models</td>
+<td>
+<code>coupled(model, template = li_lee())</code> or a joint model
+such as <code><a href="../reference/cae.html">cae()</a></code> (<code><a href="../articles/dependence.html">vignette("dependence")</a></code>)</td>
+<td>separate models give independent errors, so intervals of totals are
+too narrow and those of gaps too wide</td>
+</tr>
+<tr class="even">
+<td>More variation of the deaths than Poisson</td>
+<td>
+<code>lee_carter(family = "nb")</code>,
+<code>stanmomo(family = "nb")</code>
+</td>
+<td>negative binomial deaths (Delwarde, Denuit and Partrat 2007) widen
+the predictive intervals</td>
 </tr>
 <tr class="odd">
 <td>Causes of death</td>
@@ -257,7 +275,8 @@ the trend</td>
 <td>Cohort effects (for example generations born around 1925-1945)</td>
 <td>
 <code><a href="../reference/apc_bayes.html">apc_bayes()</a></code>, <code>stmomo("apc")</code>; at older ages
-<code>stmomo("m7")</code> or <code>stmomo("plat")</code>
+<code>stmomo("m7")</code>, <code>stmomo("plat")</code> or
+<code><a href="../reference/apci.html">apci()</a></code>
 </td>
 <td>age-period models attribute cohort patterns to period trends</td>
 </tr>
@@ -322,11 +341,11 @@ the noise from the trend (Harvey 1989). Some models leave out sources of
 uncertainty by design: the draws of <code><a href="../reference/cp_splines.html">cp_splines()</a></code> contain
 the uncertainty of the fit only (Camarda 2019 notes narrow intervals),
 those of <code><a href="../reference/nordpred_apc.html">nordpred_apc()</a></code> the uncertainty of the coefficients
-only (95% coverage 0.11 in the package’s validation on England &amp;
-Wales men), and the intervals of life expectancy of
-<code><a href="../reference/p_splines.html">p_splines()</a></code> are narrow (coverage 0.40 at age 30 in the same
-validation). The draws of <code><a href="../reference/bohk_rau.html">bohk_rau()</a></code> apply one quantile of
-the improvements to all ages and years, as in Bohk-Ewald and Rau (2017);
+only (95% coverage 0.11 in an example backtest on England &amp; Wales
+men), and the intervals of life expectancy of <code><a href="../reference/p_splines.html">p_splines()</a></code>
+are narrow (coverage 0.40 at age 30 in the same backtest). The draws of
+<code><a href="../reference/bohk_rau.html">bohk_rau()</a></code> apply one quantile of the improvements to all
+ages and years, as in Bohk-Ewald and Rau (2017);
 <code>draws = "samples"</code> gives much narrower intervals of life
 expectancy. Mixtures of models (<code><a href="../reference/ensemble.html">ensemble()</a></code>) widen the
 intervals where the models disagree, and the negative binomial family of
@@ -667,13 +686,17 @@ for each of its <code>n_boot</code> bootstrap samples (100 by default),
 so forecasts with many draws take time.</p>
 </div>
 <div class="section level3">
-<h3 id="where-do-the-validation-numbers-come-from">Where do the validation numbers come from?<a class="anchor" aria-label="anchor" href="#where-do-the-validation-numbers-come-from"></a>
+<h3 id="where-do-the-accuracy-numbers-come-from">Where do the accuracy numbers come from?<a class="anchor" aria-label="anchor" href="#where-do-the-accuracy-numbers-come-from"></a>
 </h3>
-<p>The <code>validation/</code> directory of the source repository runs
-benchmarks with thresholds on every change (ungrouping accuracy,
-interval calibration, coherence). The vignette “Comparison with
-demography, bamp and StMoMo” reports accuracy and interval coverage of
-the models on four data sets.</p>
+<p>The accuracy and coverage numbers in the help pages and vignettes are
+example results of backtests on Human Mortality Database data (England
+&amp; Wales men from StMoMo, France from demography) or on simulated
+data. They hold for these data only; a backtest on your own data
+(<code><a href="../reference/mt_backtest.html">mt_backtest()</a></code>) shows how a model performs there. The
+vignette “Comparison with demography, bamp and StMoMo” reports accuracy
+and interval coverage of the models on four data sets. The unit tests of
+the package check the methods against published results and reference
+implementations.</p>
 </div>
 </div>
 <div class="section level2">

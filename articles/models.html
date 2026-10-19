@@ -210,6 +210,28 @@ resamples of the fitted deaths; Renshaw and Haberman 2008) or
 Poisson variation of the deaths given the rates, the observation model
 of the Poisson Lee-Carter model (Brouhns, Denuit and Vermunt 2002).</li>
 <li>
+<strong>Negative binomial deaths</strong>
+(<code>family = "nb"</code>, opt-in; Delwarde, Denuit and Partrat 2007):
+the deaths are negative binomial with variance
+<code>mu + phi mu^2</code> and one dispersion parameter <code>phi</code>
+for all cells. <code>a</code>, <code>b</code>, <code>k</code> and
+<code>phi</code> are estimated by maximum likelihood with the paper’s
+Newton updates of one parameter set at a time; <code>k(t)</code> follows
+a random walk with drift. Predictive draws add negative binomial
+variation with the estimated <code>phi</code>. Package-specific: the
+updates start from the Poisson estimates, <code>phi</code> is found by
+Newton steps on its logarithm and is 0 when the data show no
+overdispersion, the constraints are <code>sum b = 1</code> and
+<code>sum k = 0</code> (the paper states none), and the draws contain
+the drift uncertainty (the paper gives point forecasts). Not available
+with <code>method = "svd"</code> or <code>choose_period = TRUE</code>.
+On French men and women (ages 0-99, 1950-2002, data of the demography
+package) the estimates of <code>phi</code> and of the drift agree with
+those of the paper within 1%. In an example backtest on England &amp;
+Wales men aged 55-89 (origins 1996-2001, 10 years ahead), the CRPS of
+log rates was 0.072 with both families and the 95% intervals covered
+0.67 of the observed rates (Poisson 0.63).</li>
+<li>
 <strong>Rotation</strong> (<code>rotate = TRUE</code>; Li, Lee and
 Gerland 2013): as life expectancy at birth rises from
 <code>e0_start</code> (80) to <code>e0_end</code> (102), the age pattern
@@ -270,7 +292,11 @@ and Carter (1992), the default of the R package MortalityForecast
 <li>
 <strong>Jump-off</strong>: observed deaths of the last year, changed
 by the model (default; Appendix G of the paper), or fitted deaths
-(<code>jump_off = "fitted"</code>).</li>
+(<code>jump_off = "fitted"</code>). Appendix G also mentions smoothing
+the last year with P-splines for Poisson counts (Camarda 2012), next to
+the jump-off of the Lee-Carter models; the authors’ code starts the CoDa
+forecasts from the deaths of the last year with the Kannisto rates from
+age 80, and so does the package.</li>
 <li>
 <strong>Coherent version</strong> (<code>coherent = TRUE</code> or
 <code>common_by</code>):
@@ -296,8 +322,8 @@ authors’ code (the paper shifts the bounds of the intervals of life
 expectancy). Predictive draws add Poisson variation of the deaths given
 the rates. All ages have equal weight on the clr scale, so the noise of
 ages with few deaths enters <code>k(t)</code>: intervals can be wider
-than those of Lee-Carter. On England &amp; Wales men (ages 30-100,
-validation backtest from 1996-2001, 10 years ahead) the 95% intervals
+than those of Lee-Carter. In an example backtest on England &amp; Wales
+men (ages 30-100, origins 1996-2001, 10 years ahead) the 95% intervals
 covered 0.97 of the observed rates at horizons 1-4 and 0.71 at horizon
 10: the moving-average coefficient of the index was at -1, so the index
 paths added little uncertainty beyond that of the drift.</li>
@@ -305,7 +331,15 @@ paths added little uncertainty beyond that of the drift.</li>
 <strong>Deviations</strong>: life tables with
 <code>a_x = n / 2</code> at age 0 (the authors’ code: 0.06); the number
 of refits; the centring of the draws and the regression of the open
-interval described above.</li>
+interval described above. Zero deaths follow the formula of Appendix C;
+the authors’ code closes the composition after the imputation, so that a
+zero gets <code>delta / (1 + z delta)</code> there.</li>
+<li>
+<strong>Related methods not implemented</strong>: more components
+with functional time series models of their scores (Shang and Haberman
+2020) and the alpha-transformation in place of the clr, which handles
+zero counts (Shang and Haberman 2025; Dong et al. 2025 for causes of
+death).</li>
 </ul>
 </div>
 <div class="section level3">
@@ -374,13 +408,13 @@ log10 scale, then a continuous search; MortalitySmooth uses two
 grids).</li>
 <li>
 <strong>Use</strong>: each age continues the trend of its last
-years. In the package’s validation backtests (10 years ahead from six
-origins), the CRPS of log rates was 0.035 against 0.071 for Lee-Carter
-on England &amp; Wales men aged 30-100, and 0.115 against 0.085 on
-French women aged 0-100, where the surface extrapolated local trends at
-ages 65 and over. On England &amp; Wales men the 95% intervals of life
-expectancy at 30 covered 0.40 of the observed values (Lee-Carter 0.90):
-the intervals of summary measures are narrow.</li>
+years. In example backtests (10 years ahead from six origins), the CRPS
+of log rates was 0.035 against 0.071 for Lee-Carter on England &amp;
+Wales men aged 30-100, and 0.115 against 0.085 on French women aged
+0-100, where the surface extrapolated local trends at ages 65 and over.
+On England &amp; Wales men the 95% intervals of life expectancy at 30
+covered 0.40 of the observed values (Lee-Carter 0.90): the intervals of
+summary measures are narrow.</li>
 </ul>
 </div>
 <div class="section level3">
@@ -418,7 +452,7 @@ and the bootstrap deaths of cells without deaths.</li>
 <li>
 <strong>Use</strong>: the model needs at least 10 data years, and
 the first year of life as its own age group for the infant coefficients.
-In the validation backtests, the CRPS of log rates was 0.066 against
+In the same example backtests, the CRPS of log rates was 0.066 against
 0.085 for Lee-Carter on French women, and the CRPS of life expectancy at
 birth 0.122 against 0.239. On England &amp; Wales men the rates of
 change of 1961-2001 held back the faster decline after 2001 (CRPS 0.058,
@@ -473,8 +507,8 @@ of a population to the trend of reference populations is not
 implemented.</li>
 <li>
 <strong>Use</strong>: the paper recommends a base period at least as
-long as the forecast horizon, and single years of age from 0. In the
-validation backtest on England &amp; Wales men aged 30-100 (10 years
+long as the forecast horizon, and single years of age from 0. In an
+example backtest on England &amp; Wales men aged 30-100 (10 years
 ahead), the CRPS of log rates was 0.045 against 0.071 for Lee-Carter,
 and the 95% intervals covered 0.71 of the observed rates (Lee-Carter
 0.63) and 0.90 of the observed life expectancy at 30.</li>
@@ -550,10 +584,56 @@ ages adds a third period term, which he suggests dropping when only
 older ages are of interest; the full model is not offered. The fitted
 rates equal those of the vignette’s code. In the vignette’s 50-year
 forecasts for England &amp; Wales men aged 55-89 the rates of this model
-increase, which the vignette calls implausible. In the validation
-backtest on the same men (1996-2001, 10 years ahead), its CRPS of log
-rates was 0.071 against 0.073 for Lee-Carter, and its 95% intervals
-covered 0.76 of the observed rates (Lee-Carter 0.62).</p>
+increase, which the vignette calls implausible. In an example backtest
+on the same men (1996-2001, 10 years ahead), its CRPS of log rates was
+0.071 against 0.073 for Lee-Carter, and its 95% intervals covered 0.76
+of the observed rates (Lee-Carter 0.62).</p>
+</div>
+<div class="section level3">
+<h3 id="age-period-cohort-improvement-model-apci-opt-in">Age-period-cohort-improvement model: <code>apci()</code>
+(opt-in)<a class="anchor" aria-label="anchor" href="#age-period-cohort-improvement-model-apci-opt-in"></a>
+</h3>
+<p><code>log m(x,t) = alpha(x) + beta(x) (t - tbar) + kappa(t) + gamma(t - x)</code>,
+with <code>tbar</code> the mean year (Richards et al. 2019), on single
+years of age.</p>
+<ul>
+<li>
+<strong>Estimation</strong>: Poisson maximum likelihood with the
+five constraints of the paper’s Appendix C. They are more than
+identification needs (“over-constrained”, Section 6), as in the paper’s
+main results. Cohorts with four or fewer cells get
+<code>gamma = 0</code> (Appendix B). With <code>smooth = TRUE</code>
+(the paper’s APCI(S)), <code>alpha</code> and <code>beta</code> are
+P-splines with second-order penalties whose smoothing parameters
+minimise the BIC (Appendix D).</li>
+<li>
+<strong>Forecast</strong>: <code>beta(x) (t - tbar)</code> continues
+linearly. <code>kappa</code> and <code>gamma</code> follow ARIMA models
+without a mean, with orders chosen as in Appendix E: for
+<code>kappa</code> the best orders by AICc with one and with two
+differences, then the number of differences by the smaller RMSE (Solo
+1984); for <code>gamma</code> one difference and orders by AICc.
+<code>kappa_order</code> and <code>gamma_order</code> fix the
+orders.</li>
+<li>
+<strong>Uncertainty</strong>: innovations of <code>kappa</code> and
+<code>gamma</code>. The other parameters are fixed. Predictive draws add
+Poisson variation of the deaths given the rates.</li>
+<li>
+<strong>Package-specific</strong>: cubic B-splines with knots about
+five years apart (the paper gives no knots); the constraints enter as
+Lagrange conditions in penalised IRLS (the paper uses the augmented
+model matrix of Currie 2013); the paper’s value-at-risk framework is not
+implemented.</li>
+<li>
+<strong>Use</strong>: older ages with cohort effects. With two
+differences the forecasts of <code>kappa</code> can accelerate; fix
+<code>kappa_order</code> if that is not wanted. In an example backtest
+on England &amp; Wales men aged 55-89 (origins 1996-2001, 10 years
+ahead), the CRPS of log rates was 0.035 against 0.072 for Lee-Carter,
+the 95% intervals covered 0.88 of the observed rates (Lee-Carter 0.63),
+and those of life expectancy at 55 0.98.</li>
+</ul>
 </div>
 <div class="section level3">
 <h3 id="bayesian-stmomo-models-stanmomo">Bayesian StMoMo models: <code>stanmomo()</code><a class="anchor" aria-label="anchor" href="#bayesian-stmomo-models-stanmomo"></a>
@@ -640,11 +720,11 @@ midpoints. The age groups must be 5 years wide
 Each draw takes the coefficients from their asymptotic normal
 distribution (package-specific): the draws contain no variation of
 future period effects and no overdispersion. Predictive draws add
-Poisson variation of the deaths given the rates. In the validation
-backtest on England &amp; Wales men in 5-year groups from 30 (1996-2001,
-10 years ahead), the 95% intervals covered 0.11 of the observed rates,
-and the CRPS of log rates was 0.079 against 0.069 for Lee-Carter on the
-same groups (0.066 with the log link). Use the projections as point
+Poisson variation of the deaths given the rates. In an example backtest
+on England &amp; Wales men in 5-year groups from 30 (1996-2001, 10 years
+ahead), the 95% intervals covered 0.11 of the observed rates, and the
+CRPS of log rates was 0.079 against 0.069 for Lee-Carter on the same
+groups (0.066 with the log link). Use the projections as point
 forecasts, or widen the intervals with <code><a href="../reference/recalibrated.html">recalibrated()</a></code>.</li>
 </ul>
 </div>
@@ -688,6 +768,106 @@ the deaths given the rates.</li>
 </ul>
 </div>
 <div class="section level3">
+<h3 id="common-age-effect-model-cae-opt-in">Common age effect model: <code>cae()</code> (opt-in)<a class="anchor" aria-label="anchor" href="#common-age-effect-model-cae-opt-in"></a>
+</h3>
+<p><code>log m(x,t,i) = a(x,i) + sum_j beta_j(x) kappa_j(t,i)</code>,
+with age effects <code>beta_j</code> common to all populations and
+period effects of each population (Kleinow 2015).</p>
+<ul>
+<li>
+<strong>Estimation</strong>: the log rates of each population are
+centred over the years (<code>a(x,i)</code> are their means). The common
+age effects are the common principal components of the populations,
+estimated by least squares with equal weight per population (Section
+3.2; the paper modifies the maximum likelihood estimator of Flury 1984
+so that large populations do not dominate). <code>kappa(t,i)</code> is
+the projection of the centred log rates on them. The columns of
+<code>beta</code> are orthonormal, and the period effects of each
+population sum to zero. <code>order</code> is the number of common age
+effects; the fit reports the mean squared error and the approximate BIC
+of eq. (4)-(5). As in the paper, the data need more years than age
+groups.</li>
+<li>
+<strong>Forecast</strong> (package-specific; the paper does not
+forecast): all period effects follow one multivariate random walk with
+drift with correlated innovations, as StMoMo forecasts several indexes.
+Each population keeps its own drift, so forecasts of different
+populations can diverge.</li>
+<li>
+<strong>Uncertainty</strong>: correlated innovations and the drift
+uncertainty; <code>a</code> and <code>beta</code> are fixed. Predictive
+draws add Poisson variation of the deaths given the rates.</li>
+<li>
+<strong>Package-specific</strong>: the paper’s criterion is
+minimised by Jacobi rotations (Cardoso and Souloumiac 1996); the paper
+uses the F-G algorithm; the columns are ordered by the variation summed
+over populations; zero deaths are replaced by 0.5;
+<code>common_by</code> gives each group its own age effects, an
+extension the paper names; in a hierarchy the age effects come from the
+bottom strata.</li>
+<li>
+<strong>Use</strong>: populations that share the age pattern of
+change and differ in its speed. <code><a href="../articles/dependence.html">vignette("dependence")</a></code>
+shows the dependence it gives to totals and gaps.</li>
+</ul>
+</div>
+<div class="section level3">
+<h3 id="trend-of-a-reference-population-and-spreads-saint-opt-in">Trend of a reference population and spreads: <code>saint()</code>
+(opt-in)<a class="anchor" aria-label="anchor" href="#trend-of-a-reference-population-and-spreads-saint-opt-in"></a>
+</h3>
+<p>The SAINT model (Spread Adjusted InterNational Trend; Jarner and
+Kryger 2011) forecasts the adult mortality of small populations as
+stationary deviations (spreads) from the trend of a large reference
+population. mortensor implements the revised version of Jarner and
+Jallbjørn (2022), which its authors describe as the model in use.</p>
+<ul>
+<li>
+<strong>Trend</strong>: the deaths and exposures of the reference
+strata (for example a national total or several countries) are pooled.
+Their rates follow a Gamma frailty model with a baseline that is
+log-linear in age with a kink at 75, and a background term (eqs.
+5.1-5.3). For a given frailty variance the indexes of each year are the
+EM estimates of Appendix B; the variance maximises the profile
+pseudo-likelihood (eq. 4.14). <code>by</code> gives each group (for
+example each sex) its own trend. The level and slope of the baseline
+follow a random walk with drift, or with <code>ecm</code> an
+error-correction model that keeps the trends of two groups together
+(Section 5.2.1); the other indexes follow random walks without
+drift.</li>
+<li>
+<strong>Spread</strong>: the rates of each target stratum are the
+trend times <code>exp(y(t)' r(x))</code>, with five piecewise linear age
+regressors (eq. 5.11). <code>y(t)</code> is estimated year by year by
+Poisson maximum likelihood given the trend and follows a VAR(1) without
+mean (eq. 5.12), by default with a diagonal coefficient matrix with
+entries in <code>[0, 0.99]</code>, as the paper recommends. The spreads
+revert to zero, so the targets stay close to the trend.</li>
+<li>
+<strong>Uncertainty</strong>: innovations of the trend indexes and
+of the spreads; parameters are fixed, as in the papers. Predictive draws
+add Poisson variation of the deaths given the rates. Jump-off: fitted
+rates (Section 5.3).</li>
+<li>
+<strong>Ages</strong>: consecutive single years from age 20 without
+an open interval; both papers use ages 20-100.</li>
+<li>
+<strong>Package-specific</strong> (listed on <code><a href="../reference/saint.html">?saint</a></code>):
+the EM fixed point computed by Newton-Raphson sweeps, the search of the
+frailty variance, the bounds of the spread coefficients, independent
+innovations of the indexes, three formulas of the 2022 paper read as
+misprints, and <code>background = FALSE</code>, a model of the class of
+Section 4.2 without the background term.</li>
+<li>
+<strong>Use</strong>: regions or small countries against a national
+or international reference. In an example on the German Laender against
+the national total (ages 20-89, 1998-2019, single ages by
+<code><a href="../reference/mt_ungroup.html">mt_ungroup()</a></code>), the data did not identify the background of
+women (its estimate reached the lower bound from 2011 on), and 2.8% of
+the draws had rates above 1 at ages 20-23; warnings said so. With
+<code>background = FALSE</code> the forecasts were stable.</li>
+</ul>
+</div>
+<div class="section level3">
 <h3 id="product-ratio-coherent_fdm">Product-ratio: <code>coherent_fdm()</code><a class="anchor" aria-label="anchor" href="#product-ratio-coherent_fdm"></a>
 </h3>
 <p>The product-ratio method (Hyndman, Booth and Yasmeen 2013) models the
@@ -724,6 +904,61 @@ deaths given the rates.</li>
 <p><code><a href="../reference/product_ratio.html">product_ratio()</a></code>, a Lee-Carter version of the method
 without a published source, is deprecated in favour of
 <code><a href="../reference/coherent_fdm.html">coherent_fdm()</a></code>.</p>
+</div>
+<div class="section level3">
+<h3 id="multiway-compositional-model-coda_multiway-experimental">Multiway compositional model: <code>coda_multiway()</code>
+(experimental)<a class="anchor" aria-label="anchor" href="#multiway-compositional-model-coda_multiway-experimental"></a>
+</h3>
+<p><code><a href="../reference/coda_multiway.html">coda_multiway()</a></code> is the three-way compositional model of
+Bergeron-Boucher, Simonacci, Oeppen and Gallo (2018). The centred
+log-ratios of the life-table deaths of all strata, each centred by its
+geometric mean over the years, form an array
+<code>[age, year, stratum]</code>, and a Tucker3 decomposition describes
+it:
+<code>clr(d(x,t,i) / a(x,i)) = sum g(p,q,r) b(x,p) k(t,q) gamma(i,r)</code>,
+with age patterns <code>b</code>, time indexes <code>k</code>, stratum
+markers <code>gamma</code> and a core array <code>g</code>. With one
+component per mode (<code>ranks = c(1, 1, 1)</code>, the model of the
+paper’s forecasts), every stratum follows one time index and one age
+pattern, at a pace set by its marker <code>gamma(i)</code>. With one
+stratum the fit and the point forecasts are those of <code><a href="../reference/coda.html">coda()</a></code>
+with the same index model.</p>
+<ul>
+<li>
+<strong>Estimation</strong>: least squares by alternating least
+squares (higher-order orthogonal iteration); the paper uses the Tucker3
+model for compositional data of Gallo (2015), which minimises the same
+criterion. <code>fit$fits$fit_pct</code> is the share of the variation
+that the model explains (Section 4.1 of the paper). The unit tests
+recover known parameters from simulated compositions and check the
+least-squares optimum.</li>
+<li>
+<strong>Forecast</strong>: the time index follows a random walk with
+drift, the ARIMA model that the paper selected for the index of Canadian
+women (<code>order</code>, <code>drift</code>). The paper states no
+jump-off adjustment, so forecasts start from the fitted deaths;
+<code>jump_off = "observed"</code> starts from the observed deaths as
+<code><a href="../reference/coda.html">coda()</a></code> does.</li>
+<li>
+<strong>Uncertainty</strong>: as in the paper, draws simulate the
+time index with resampled innovations; the other parameters and the
+drift are fixed, and all strata share the paths of the index. Predictive
+draws add Poisson variation of the deaths given the rates.</li>
+<li>
+<strong>Choices where the paper is silent</strong>: several time
+indexes get independent ARIMA models; old ages, open age intervals and
+zero deaths are treated as in <code><a href="../reference/coda.html">coda()</a></code>. The paper uses
+five-year age groups and periods; the models of this package need single
+calendar years. The choice of the ranks by the DifFit criterion,
+bootstrap confidence intervals of the parameters and the AIC comparison
+of the paper are not implemented.</li>
+</ul>
+<p>The paper fits women and men separately
+(<code>stratified("sex", female = coda_multiway(), male = coda_multiway())</code>).
+For populations whose age and time patterns differ, the paper points to
+models with a common component and deviations per population, such as
+<code>coda(coherent = TRUE)</code> and <code><a href="../reference/li_lee.html">li_lee()</a></code> (its
+Section 6).</p>
 </div>
 <div class="section level3">
 <h3 id="three-way-lee-carter-model-tucker3-experimental">Three-way Lee-Carter model: <code>tucker3()</code>
@@ -769,9 +1004,9 @@ adds the in-sample residual variation, which counts the observation
 noise twice.</li>
 </ul>
 <p><code>transform = "coda"</code> is deprecated (use
-<code><a href="../reference/coda.html">coda()</a></code>). The model is experimental: compare it with
-established models such as <code><a href="../reference/li_lee.html">li_lee()</a></code> in a backtest before
-using it.</p>
+<code><a href="../reference/coda_multiway.html">coda_multiway()</a></code>). The model is experimental: compare it
+with established models such as <code><a href="../reference/li_lee.html">li_lee()</a></code> in a backtest
+before using it.</p>
 </div>
 <div class="section level3">
 <h3 id="causes-of-death">Causes of death<a class="anchor" aria-label="anchor" href="#causes-of-death"></a>
@@ -804,7 +1039,7 @@ unexplained, and predictive draws split Poisson all-cause deaths
 multinomially between the causes, so that the causes add up in
 predictive draws as well (all package-specific).</li>
 <li>
-<strong>Accuracy</strong>: in the package’s validation on simulated
+<strong>Accuracy</strong>: in an example backtest on simulated
 causes (<code><a href="../reference/mt_example_causes.html">mt_example_causes()</a></code>, origins 2008-2012, 5 years
 ahead), its CRPS of log rates was 0.082, against 0.063 for Lee-Carter
 models per cause reconciled with WLS.</li>
@@ -920,6 +1155,27 @@ and few training forecasts; in the package’s backtests it was less
 accurate than WLS.</p>
 </div>
 <div class="section level3">
+<h3 id="dependence-from-a-joint-model-coupled-opt-in">Dependence from a joint model: <code>coupled()</code> (opt-in)<a class="anchor" aria-label="anchor" href="#dependence-from-a-joint-model-coupled-opt-in"></a>
+</h3>
+<p>Separate models per stratum give forecasts whose errors are
+independent across strata. <code>coupled(spec, template)</code> keeps
+the forecast distribution of <code>spec</code> in every cell and takes
+the dependence between cells from a template, usually a joint model such
+as <code><a href="../reference/li_lee.html">li_lee()</a></code> or <code><a href="../reference/cae.html">cae()</a></code>. The method is ensemble
+copula coupling (Schefzik, Thorarinsdottir and Gneiting 2013): in each
+cell (age, year, stratum) the draws of <code>spec</code> are sorted and
+assigned in the rank order of the template’s draws. This is the paper’s
+ECC-R variant, for draws that are a random sample of each margin; tied
+template values are ranked at random (footnote 6). Every cell keeps its
+values exactly, and the rank correlations between cells are those of the
+template. <code><a href="../reference/coupled.html">mt_couple()</a></code> couples two sets of forecast draws,
+and <code>reconciled(..., dependence = "ecc", template = )</code>
+couples before reconciliation. Package-specific: the coupling acts on
+the draws of the rates before observation noise, which predictive draws
+add afterwards. <code><a href="../articles/dependence.html">vignette("dependence")</a></code> explains why the
+dependence matters for totals, gaps and inequality measures.</p>
+</div>
+<div class="section level3">
 <h3 id="calibration-on-recent-years-recalibrated">Calibration on recent years: <code>recalibrated()</code><a class="anchor" aria-label="anchor" href="#calibration-on-recent-years-recalibrated"></a>
 </h3>
 <p>Refits a model at several origins in the last <code>years</code>
@@ -1001,7 +1257,8 @@ tuning compares across windows.</p>
 <td>yes</td>
 <td>with <code>bootstrap = TRUE</code>
 </td>
-<td>Poisson, predictive draws</td>
+<td>Poisson, predictive draws (negative binomial with
+<code>family = "nb"</code>)</td>
 </tr>
 <tr class="even">
 <td><code><a href="../reference/rwd.html">rwd()</a></code></td>
@@ -1049,6 +1306,20 @@ growing with the horizon</td>
 <td>Poisson, predictive draws</td>
 </tr>
 <tr class="even">
+<td><code><a href="../reference/cae.html">cae()</a></code></td>
+<td>yes (correlated across populations)</td>
+<td>yes</td>
+<td>no</td>
+<td>Poisson, predictive draws</td>
+</tr>
+<tr class="odd">
+<td><code><a href="../reference/saint.html">saint()</a></code></td>
+<td>yes (trend indexes and spreads)</td>
+<td>level and slope of the trend</td>
+<td>no</td>
+<td>Poisson, predictive draws</td>
+</tr>
+<tr class="even">
 <td><code><a href="../reference/coherent_fdm.html">coherent_fdm()</a></code></td>
 <td>yes (product and ratios)</td>
 <td>as fdm (product)</td>
@@ -1076,17 +1347,31 @@ bootstrap); <code>a</code> fixed</td>
 deaths split multinomially between the causes)</td>
 </tr>
 <tr class="odd">
+<td><code><a href="../reference/coda_multiway.html">coda_multiway()</a></code></td>
+<td>yes (resampled innovations, shared by the strata)</td>
+<td>no</td>
+<td>no</td>
+<td>Poisson, predictive draws</td>
+</tr>
+<tr class="even">
 <td><code><a href="../reference/hyndman_ullah.html">hyndman_ullah()</a></code></td>
 <td>yes</td>
 <td>as fdm</td>
 <td>no</td>
 <td>Poisson, predictive draws</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>
 <code><a href="../reference/stmomo.html">stmomo()</a></code> (including <code>"plat"</code>)</td>
 <td>yes</td>
 <td>yes</td>
+<td>no</td>
+<td>Poisson, predictive draws</td>
+</tr>
+<tr class="even">
+<td><code><a href="../reference/apci.html">apci()</a></code></td>
+<td>yes (<code>kappa</code> and <code>gamma</code>)</td>
+<td>the linear term continues</td>
 <td>no</td>
 <td>Poisson, predictive draws</td>
 </tr>
@@ -1141,13 +1426,20 @@ draws</td>
 <td>of the bottom strata, summed</td>
 </tr>
 <tr class="even">
+<td><code><a href="../reference/coupled.html">coupled()</a></code></td>
+<td>of the base model, reordered</td>
+<td>of the base model</td>
+<td>of the base model</td>
+<td>as the base model</td>
+</tr>
+<tr class="odd">
 <td><code><a href="../reference/recalibrated.html">recalibrated()</a></code></td>
 <td>of the base model, rescaled</td>
 <td>rescaled (optional correction)</td>
 <td></td>
 <td>as the base model</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code><a href="../reference/anchored.html">anchored()</a></code></td>
 <td>of the base model</td>
 <td>of the base model</td>
@@ -1164,18 +1456,20 @@ backtests) describe observable rates. For models of expected rates they
 are deaths drawn given the rates of each draw and the exposures, divided
 by the exposures: Poisson, the observation model of the Poisson
 Lee-Carter model (Brouhns, Denuit and Vermunt 2002), or negative
-binomial with the dispersion of the posterior draw for
-<code>stanmomo(family = "nb")</code>. No other observation noise is
-added. For models of observed rates (<code><a href="../reference/rwd.html">rwd()</a></code>,
-<code><a href="../reference/arima_series.html">arima_series()</a></code>, <code><a href="../reference/arima_series.html">ets_series()</a></code>) the draws
-already describe observable rates and nothing is added, unless the model
-was fitted to smoothed rates (<code><a href="../reference/mt_prep.html">step_smooth()</a></code>): then
-predictive draws add Poisson deaths as well. Forecast draws of models of
-expected rates without <code>predictive</code> describe the expected
-rates. If intervals are too narrow on real data, that is a property of
-the model; <code><a href="../reference/recalibrated.html">recalibrated()</a></code>, <code><a href="../reference/ensemble.html">ensemble()</a></code> and
-overdispersed models such as <code>stanmomo(family = "nb")</code> widen
-them.</p>
+binomial with the estimated dispersion for
+<code>lee_carter(family = "nb")</code> and with the dispersion of the
+posterior draw for <code>stanmomo(family = "nb")</code>. No other
+observation noise is added. For models of observed rates
+(<code><a href="../reference/rwd.html">rwd()</a></code>, <code><a href="../reference/arima_series.html">arima_series()</a></code>,
+<code><a href="../reference/arima_series.html">ets_series()</a></code>) the draws already describe observable rates
+and nothing is added, unless the model was fitted to smoothed rates
+(<code><a href="../reference/mt_prep.html">step_smooth()</a></code>): then predictive draws add Poisson deaths
+as well. Forecast draws of models of expected rates without
+<code>predictive</code> describe the expected rates. If intervals are
+too narrow on real data, that is a property of the model;
+<code><a href="../reference/recalibrated.html">recalibrated()</a></code>, <code><a href="../reference/ensemble.html">ensemble()</a></code> and overdispersed
+models such as <code>lee_carter(family = "nb")</code> and
+<code>stanmomo(family = "nb")</code> widen them.</p>
 </div>
 <div class="section level2">
 <h2 id="evaluation">Evaluation<a class="anchor" aria-label="anchor" href="#evaluation"></a>
@@ -1217,6 +1511,11 @@ averaging for mortality forecasting using leave-future-out validation.
 <p>Bergeron-Boucher M-P, Canudas-Romo V, Oeppen J, Vaupel JW (2017).
 Coherent forecasts of mortality with compositional data analysis.
 <em>Demographic Research</em> 37(17): 527-566. <a href="doi:10.4054/DemRes.2017.37.17" class="uri">doi:10.4054/DemRes.2017.37.17</a>.</p>
+<p>Bergeron-Boucher M-P, Simonacci V, Oeppen J, Gallo M (2018). Coherent
+modeling and forecasting of mortality patterns for subpopulations using
+multiway analysis of compositions: an application to Canadian provinces
+and territories. <em>North American Actuarial Journal</em> 22(1):
+92-118. <a href="doi:10.1080/10920277.2017.1377620" class="uri">doi:10.1080/10920277.2017.1377620</a>.</p>
 <p>Bohk-Ewald C, Rau R (2017). Probabilistic mortality forecasting with
 varying age-specific survival improvements. <em>Genus</em> 73(1): 1. <a href="doi:10.1186/s41118-016-0017-8" class="uri">doi:10.1186/s41118-016-0017-8</a>.</p>
 <p>Booth H, Maindonald J, Smith L (2002). Applying Lee-Carter under
@@ -1237,10 +1536,16 @@ regression approach to the construction of projected lifetables.
 I (2009). A quantitative comparison of stochastic mortality models using
 data from England and Wales and the United States. <em>North American
 Actuarial Journal</em> 13(1): 1-35.</p>
+<p>Camarda CG (2012). MortalitySmooth: an R package for smoothing
+Poisson counts with P-splines. <em>Journal of Statistical Software</em>
+50(1): 1-24. <a href="doi:10.18637/jss.v050.i01" class="uri">doi:10.18637/jss.v050.i01</a>.</p>
 <p>Camarda CG (2015). MortalitySmooth: Smoothing and forecasting Poisson
 counts with P-splines. R package version 2.3.4 (CRAN archive).</p>
 <p>Camarda CG (2019). Smooth constrained mortality forecasting.
 <em>Demographic Research</em> 41(38): 1091-1130. <a href="doi:10.4054/DemRes.2019.41.38" class="uri">doi:10.4054/DemRes.2019.41.38</a>.</p>
+<p>Cardoso J-F, Souloumiac A (1996). Jacobi angles for simultaneous
+diagonalization. <em>SIAM Journal on Matrix Analysis and
+Applications</em> 17(1): 161-164. <a href="doi:10.1137/S0895479893259546" class="uri">doi:10.1137/S0895479893259546</a>.</p>
 <p>Clark M, Gangopadhyay S, Hay L, Rajagopalan B, Wilby R (2004). The
 Schaake shuffle: a method for reconstructing space-time variability in
 forecasted precipitation and temperature fields. <em>Journal of
@@ -1248,6 +1553,9 @@ Hydrometeorology</em> 5(1): 243-262.</p>
 <p>Coroneo L, Iacone F (2020). Comparing predictive accuracy in small
 samples using fixed-smoothing asymptotics. <em>Journal of Applied
 Econometrics</em> 35(4): 391-409. <a href="doi:10.1002/jae.2756" class="uri">doi:10.1002/jae.2756</a>.</p>
+<p>Currie ID (2013). Smoothing constrained generalized linear models
+with an application to the Lee-Carter model. <em>Statistical
+Modelling</em> 13(1): 69-93. <a href="doi:10.1177/1471082X12471373" class="uri">doi:10.1177/1471082X12471373</a>.</p>
 <p>Currie ID, Durban M, Eilers PHC (2004). Smoothing and forecasting
 mortality rates. <em>Statistical Modelling</em> 4(4): 279-298.</p>
 <p>De Lathauwer L, De Moor B, Vandewalle J (2000). On the best rank-1
@@ -1264,13 +1572,21 @@ sampled frequency table when the expected marginal totals are known.
 <p>Diebold FX, Mariano RS (1995). Comparing predictive accuracy.
 <em>Journal of Business &amp; Economic Statistics</em> 13(3):
 253-263.</p>
+<p>Dong Z, Shang HL, Hui F, Bruhn A (2025). A compositional approach to
+modeling cause-specific mortality with zero counts. <em>Annals of
+Actuarial Science</em> 19(3): 416-441. <a href="doi:10.1017/S1748499524000320" class="uri">doi:10.1017/S1748499524000320</a>.</p>
+<p>Flury BN (1984). Common principal components in k groups. <em>Journal
+of the American Statistical Association</em> 79(388): 892-898. <a href="doi:10.1080/01621459.1984.10477108" class="uri">doi:10.1080/01621459.1984.10477108</a>.</p>
+<p>Gallo M (2015). Tucker3 model for compositional data.
+<em>Communications in Statistics - Theory and Methods</em> 44(21):
+4441-4453. <a href="doi:10.1080/03610926.2013.798664" class="uri">doi:10.1080/03610926.2013.798664</a>.</p>
+<p>Gneiting T, Raftery AE (2007). Strictly proper scoring rules,
+prediction, and estimation. <em>Journal of the American Statistical
+Association</em> 102(477): 359-378.</p>
 <p>Gneiting T, Raftery AE, Westveld AH, Goldman T (2005). Calibrated
 probabilistic forecasting using ensemble model output statistics and
 minimum CRPS estimation. <em>Monthly Weather Review</em> 133(5):
 1098-1118.</p>
-<p>Gneiting T, Raftery AE (2007). Strictly proper scoring rules,
-prediction, and estimation. <em>Journal of the American Statistical
-Association</em> 102(477): 359-378.</p>
 <p>Gneiting T, Ranjan R (2013). Combining predictive distributions.
 <em>Electronic Journal of Statistics</em> 7: 1747-1782.</p>
 <p>Gross CW, Sohl JE (1990). Disaggregation methods to expedite product
@@ -1303,21 +1619,28 @@ Statistics &amp; Data Analysis</em> 97: 16-32.</p>
 <p>Hyndman RJ, Ullah MS (2007). Robust forecasting of mortality and
 fertility rates: a functional data approach. <em>Computational
 Statistics &amp; Data Analysis</em> 51(10): 4942-4956.</p>
+<p>Jarner SF, Jallbjørn S (2022). The SAINT model: a decade later.
+<em>ASTIN Bulletin</em> 52(2): 483-517. <a href="doi:10.1017/asb.2021.37" class="uri">doi:10.1017/asb.2021.37</a>.</p>
+<p>Jarner SF, Kryger EM (2011). Modelling adult mortality in small
+populations: the SAINT model. <em>ASTIN Bulletin</em> 41(2): 377-418. <a href="doi:10.2143/AST.41.2.2136982" class="uri">doi:10.2143/AST.41.2.2136982</a>.</p>
 <p>Kessy SR, Sherris M, Villegas AM, Ziveyi J (2022). Mortality
 forecasting using stacked regression ensembles. <em>Scandinavian
 Actuarial Journal</em> 2022(7): 591-626.</p>
+<p>Kleinow T (2015). A common age effect model for the mortality of
+multiple populations. <em>Insurance: Mathematics and Economics</em> 63:
+147-152. <a href="doi:10.1016/j.insmatheco.2015.03.023" class="uri">doi:10.1016/j.insmatheco.2015.03.023</a>.</p>
 <p>Knorr-Held L, Rainer E (2001). Prognosis of lung cancer mortality in
 West Germany: a case study in Bayesian prediction.
 <em>Biostatistics</em> 2(1): 109-129.</p>
 <p>Lazarus E, Lewis DJ, Stock JH, Watson MW (2018). HAR inference:
 recommendations for practice. <em>Journal of Business &amp; Economic
 Statistics</em> 36(4): 541-559.</p>
-<p>Lee RD, Carter LR (1992). Modeling and forecasting U.S. mortality.
-<em>Journal of the American Statistical Association</em> 87(419):
-659-671.</p>
 <p>Lee R, Miller T (2001). Evaluating the performance of the Lee-Carter
 method for forecasting mortality. <em>Demography</em> 38(4):
 537-549.</p>
+<p>Lee RD, Carter LR (1992). Modeling and forecasting U.S. mortality.
+<em>Journal of the American Statistical Association</em> 87(419):
+659-671.</p>
 <p>Li N, Lee R (2005). Coherent mortality forecasts for a group of
 populations: an extension of the Lee-Carter method. <em>Demography</em>
 42(3): 575-594.</p>
@@ -1346,23 +1669,37 @@ and Modeling Population Processes</em>. Blackwell.</p>
 measurement in mortality with specific reference to Poisson Lee-Carter
 modelling. <em>Insurance: Mathematics and Economics</em> 42(2):
 797-816.</p>
+<p>Richards SJ, Currie ID, Kleinow T, Ritchie GP (2019). A stochastic
+implementation of the APCI model for mortality projections. <em>British
+Actuarial Journal</em> 24: e13. <a href="doi:10.1017/S1357321718000260" class="uri">doi:10.1017/S1357321718000260</a>.</p>
 <p>Rizzi S, Gampe J, Eilers PHC (2015). Efficient estimation of smooth
 distributions from coarsely grouped data. <em>American Journal of
 Epidemiology</em> 182(2): 138-147.</p>
 <p>Russolillo M, Giordano G, Haberman S (2011). Extending the Lee-Carter
 model: a three-way decomposition. <em>Scandinavian Actuarial
 Journal</em> 2011(2): 96-117. <a href="doi:10.1080/03461231003611933" class="uri">doi:10.1080/03461231003611933</a>.</p>
+<p>Schefzik R, Thorarinsdottir TL, Gneiting T (2013). Uncertainty
+quantification in complex simulation models using ensemble copula
+coupling. <em>Statistical Science</em> 28(4): 616-640. <a href="doi:10.1214/13-STS443" class="uri">doi:10.1214/13-STS443</a>.</p>
+<p>Schmid VJ, Held L (2007). Bayesian age-period-cohort modeling and
+prediction: BAMP. <em>Journal of Statistical Software</em> 21(8):
+1-15.</p>
 <p>Schäfer J, Strimmer K (2005). A shrinkage approach to large-scale
 covariance matrix estimation and implications for functional genomics.
 <em>Statistical Applications in Genetics and Molecular Biology</em>
 4(1): Article 32. <a href="doi:10.2202/1544-6115.1175" class="uri">doi:10.2202/1544-6115.1175</a>.</p>
-<p>Schmid VJ, Held L (2007). Bayesian age-period-cohort modeling and
-prediction: BAMP. <em>Journal of Statistical Software</em> 21(8):
-1-15.</p>
 <p>Sevcikova H, Li N, Kantorova V, Gerland P, Raftery AE (2016).
 Age-specific mortality and fertility rates for probabilistic population
 projections. In Schoen R (ed.) <em>Dynamic Demographic Analysis</em>.
 Springer, 285-310.</p>
+<p>Shang HL, Haberman S (2020). Forecasting age distribution of death
+counts: an application to annuity pricing. <em>Annals of Actuarial
+Science</em> 14(1): 150-169. <a href="doi:10.1017/S1748499519000101" class="uri">doi:10.1017/S1748499519000101</a>.</p>
+<p>Shang HL, Haberman S (2025). Forecasting age distribution of
+life-table death counts via α-transformation. <em>Scandinavian Actuarial
+Journal</em> 2025(4): 387-403. <a href="doi:10.1080/03461238.2024.2425723" class="uri">doi:10.1080/03461238.2024.2425723</a>.</p>
+<p>Solo V (1984). The order of differencing in ARIMA models. <em>Journal
+of the American Statistical Association</em> 79(388): 916-921. <a href="doi:10.1080/01621459.1984.10477111" class="uri">doi:10.1080/01621459.1984.10477111</a>.</p>
 <p>Spiegelhalter DJ, Best NG, Carlin BP, van der Linde A (2002).
 Bayesian measures of model complexity and fit. <em>Journal of the Royal
 Statistical Society B</em> 64(4): 583-639.</p>

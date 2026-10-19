@@ -128,10 +128,12 @@ ones you will report) decides. As a starting point:
 |----|----|----|
 | One population, many deaths per cell, single years or 5-year groups | [`lee_carter()`](../reference/lee_carter.md), [`rwd()`](../reference/rwd.md) and `ensemble(lc = lee_carter(), rw = rwd())` | Lee-Carter is the standard; single models give too narrow intervals on real data, the ensemble is better calibrated |
 | Several strata that should not diverge (sexes, regions, deprivation groups) | `li_lee(common_by = ...)` | a common trend with bounded deviations; pools information across strata |
-| Small populations, many cells with few deaths | `li_lee(common_by = ...)`, wider age groups ([`mt_regroup()`](../reference/mt_regroup.md)), [`step_smooth()`](../reference/mt_prep.md); `arima_series(order = c(0, 1, 1), drift = TRUE)` in ensembles | pooling and smoothing reduce noise; the plain random walk accumulates it, the random walk observed with noise separates it from the trend |
+| Small populations, many cells with few deaths | `li_lee(common_by = ...)`; adults: `saint(reference = ...)` against a national total; wider age groups ([`mt_regroup()`](../reference/mt_regroup.md)), [`step_smooth()`](../reference/mt_prep.md); `arima_series(order = c(0, 1, 1), drift = TRUE)` in ensembles | pooling and smoothing reduce noise; SAINT takes the trend from a large reference population; the plain random walk accumulates it, the random walk observed with noise separates it from the trend |
 | Totals and parts must add up | `reconciled(model, hierarchy)` | bottom-up for joint models, WLS for separate models |
+| Totals or gaps of strata forecast by separate models | `coupled(model, template = li_lee())` or a joint model such as [`cae()`](../reference/cae.md) ([`vignette("dependence")`](../articles/dependence.md)) | separate models give independent errors, so intervals of totals are too narrow and those of gaps too wide |
+| More variation of the deaths than Poisson | `lee_carter(family = "nb")`, `stanmomo(family = "nb")` | negative binomial deaths (Delwarde, Denuit and Partrat 2007) widen the predictive intervals |
 | Causes of death | separate or Li-Lee models per cause, `reconciled(..., method = "bottom_up")` with `cause = list(total = "all", additive = "rates")`; [`coda_causes()`](../reference/coda_causes.md) (experimental) | cause rates add up to the all-cause rate |
-| Cohort effects (for example generations born around 1925-1945) | [`apc_bayes()`](../reference/apc_bayes.md), `stmomo("apc")`; at older ages `stmomo("m7")` or `stmomo("plat")` | age-period models attribute cohort patterns to period trends |
+| Cohort effects (for example generations born around 1925-1945) | [`apc_bayes()`](../reference/apc_bayes.md), `stmomo("apc")`; at older ages `stmomo("m7")`, `stmomo("plat")` or [`apci()`](../reference/apci.md) | age-period models attribute cohort patterns to period trends |
 | Cause-specific mortality such as cancer, in 5-year age groups | [`nordpred_apc()`](../reference/nordpred_apc.md) | the Nordpred age-period-cohort model (Møller et al. 2003) damps the trend in later periods; its intervals contain the uncertainty of the coefficients only, so use it for point projections or recalibrate it |
 | Trend change in the recent past | `step_window(years)` with a backtest of several windows; [`p_splines()`](../reference/p_splines.md) | a shorter fitting period follows the recent trend; P-splines continue the trend of the last years of each age |
 | Smooth age patterns, forecasts that keep the past age pattern and pace of change | [`cp_splines()`](../reference/cp_splines.md) | constrained P-splines (Camarda 2019) keep the forecast rates of ageing and of change within their past ranges; the intervals contain the uncertainty of the fit only |
@@ -159,10 +161,10 @@ uncertainty by design: the draws of
 [`cp_splines()`](../reference/cp_splines.md) contain the uncertainty of
 the fit only (Camarda 2019 notes narrow intervals), those of
 [`nordpred_apc()`](../reference/nordpred_apc.md) the uncertainty of the
-coefficients only (95% coverage 0.11 in the package’s validation on
-England & Wales men), and the intervals of life expectancy of
+coefficients only (95% coverage 0.11 in an example backtest on England &
+Wales men), and the intervals of life expectancy of
 [`p_splines()`](../reference/p_splines.md) are narrow (coverage 0.40 at
-age 30 in the same validation). The draws of
+age 30 in the same backtest). The draws of
 [`bohk_rau()`](../reference/bohk_rau.md) apply one quantile of the
 improvements to all ages and years, as in Bohk-Ewald and Rau (2017);
 `draws = "samples"` gives much narrower intervals of life expectancy.
@@ -467,13 +469,17 @@ stratum for 71 ages and 36 years.
 forecast for each of its `n_boot` bootstrap samples (100 by default), so
 forecasts with many draws take time.
 
-### Where do the validation numbers come from?
+### Where do the accuracy numbers come from?
 
-The `validation/` directory of the source repository runs benchmarks
-with thresholds on every change (ungrouping accuracy, interval
-calibration, coherence). The vignette “Comparison with demography, bamp
-and StMoMo” reports accuracy and interval coverage of the models on four
-data sets.
+The accuracy and coverage numbers in the help pages and vignettes are
+example results of backtests on Human Mortality Database data (England &
+Wales men from StMoMo, France from demography) or on simulated data.
+They hold for these data only; a backtest on your own data
+([`mt_backtest()`](../reference/mt_backtest.md)) shows how a model
+performs there. The vignette “Comparison with demography, bamp and
+StMoMo” reports accuracy and interval coverage of the models on four
+data sets. The unit tests of the package check the methods against
+published results and reference implementations.
 
 ## References
 

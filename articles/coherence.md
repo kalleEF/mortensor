@@ -197,7 +197,9 @@ itself. `dependence = "empirical"` reorders the paths of separately
 fitted parts so that they move together as they did in the training
 years. This reordering is specific to this package, related to the
 Schaake shuffle (Clark et al. 2004); it is used only when chosen, and a
-backtest should check its effect.
+backtest should check its effect. The vignette “Dependence between
+groups” compares joint models and ensemble copula coupling for totals
+and gaps.
 
 ## Reconciliation learnt from past forecasts
 
@@ -220,15 +222,14 @@ fit$reconcile$scoreopt$table   # in-sample energy score with OLS and after the o
 ```
 
 Each fit takes about 20 seconds on these data, so the code is not run
-here. In a backtest from 2011 to 2014 (validation check `scoreopt_ons`),
-the method was less accurate than WLS at every level: CRPS 21% higher
-for the bottom series, 23% for the aggregates and 26% for England. The
-training forecasts were too high in 2006-2011 and the correction learnt
-from them pushed the forecasts down, while mortality improvement stalled
-after 2011. With few, overlapping training forecasts and one parameter
-per pair of strata at each age, the method follows the errors of the
-training years; it suits long and stable histories, and a backtest
-should confirm it.
+here. In an example backtest from 2011 to 2014, the method was less
+accurate than WLS at every level: CRPS 21% higher for the bottom series,
+23% for the aggregates and 26% for England. The training forecasts were
+too high in 2006-2011 and the correction learnt from them pushed the
+forecasts down, while mortality improvement stalled after 2011. With
+few, overlapping training forecasts and one parameter per pair of strata
+at each age, the method follows the errors of the training years; it
+suits long and stable histories, and a backtest should confirm it.
 
 ## Choosing a method
 

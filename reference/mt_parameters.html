@@ -72,7 +72,8 @@ for ensembles also <code>component</code>, for fits by groups also <code>group</
 
 <ul><li><p><code><a href="lee_carter.html">lee_carter()</a></code>: <code>a</code> (age pattern), <code>b</code> (age pattern of change), <code>k</code>
 (period index), and the drift and innovation standard deviation of <code>k</code>;
-with <code>rotate = TRUE</code> also the ultimate pattern <code>b_ultimate</code>;</p></li>
+with <code>rotate = TRUE</code> also the ultimate pattern <code>b_ultimate</code>; with
+<code>family = "nb"</code> also the dispersion <code>nb_dispersion</code> (variance <code>mu + phi mu^2</code>);</p></li>
 <li><p><code><a href="li_lee.html">li_lee()</a></code>, <code><a href="product_ratio.html">product_ratio()</a></code>: the common factor of each group (<code>B</code>,
 <code>K</code>, its drift and standard deviation), and per stratum the deviations
 <code>a</code>, <code>b</code>, <code>k</code> and their AR(1) coefficient <code>phi</code> and standard deviation;</p></li>
@@ -86,6 +87,11 @@ model gives per group of <code>common_by</code> the common <code>a</code>, <code
 <code>order_K</code>, <code>arima_K</code>, <code>sd_K</code>) and per stratum <code>a</code>, <code>b</code>, <code>k</code> and the
 ARIMA model of <code>k</code>. <code><a href="coda_causes.html">coda_causes()</a></code>: per group, as <code><a href="coda.html">coda()</a></code>, with parts
 by age and cause (<code>b1</code>, <code>k1</code>, <code>b2</code>, <code>k2</code>, ... with several components);</p></li>
+<li><p><code><a href="coda_multiway.html">coda_multiway()</a></code>: the common age patterns <code>b</code>, time indexes <code>k</code> (with
+<code>order_k</code>, <code>arima_k</code>, <code>sd_k</code>), population markers <code>gamma</code> and core <code>g</code>
+(index <code>p,q,r</code>), numbered with several components, and the share of
+variation explained; per stratum the centre <code>a</code>, the parameters of the
+open age interval or of the Kannisto model of each year;</p></li>
 <li><p><code><a href="rwd.html">rwd()</a></code>: drift and innovation standard deviation per age (and, with
 <code>observation_noise = TRUE</code>, the variances of level and noise);</p></li>
 <li><p><code><a href="apc_bayes.html">apc_bayes()</a></code>: posterior medians and 90% intervals of the age, period
@@ -98,22 +104,47 @@ of the identified quantities;</p></li>
 divided by the number of cells minus the effective dimension); for
 <code><a href="cp_splines.html">cp_splines()</a></code> also the bounds of the rates of ageing and of change per
 age (<code>ageing_lower</code>, <code>ageing_upper</code>, <code>change_lower</code>, <code>change_upper</code>).</p></li>
+<li><p><code><a href="saint.html">saint()</a></code>: per trend (<code>"trend &lt;group&gt;"</code>) the indexes <code>alpha</code>, <code>beta</code>,
+<code>kappa</code>, <code>zeta</code> by year, the frailty variance <code>sigma2</code>, the
+pseudo-log-likelihood <code>loglik</code>, the <code>drift</code> and covariance <code>cov</code> of
+<code>alpha</code> and <code>beta</code> (or, with <code>ecm</code>, the parameters of the
+error-correction model: <code>a11</code>, <code>a21</code>, <code>a32</code>, <code>a42</code>, <code>C_D</code>, <code>C_delta</code>,
+<code>lambda</code>, <code>Omega</code>) and the standard deviations <code>sd_kappa</code>, <code>sd_zeta</code>;
+per stratum with a spread the spread parameters <code>y1</code> ... <code>y5</code> by year
+and their VAR(1) (<code>ar</code> or <code>A</code>, and <code>Omega</code>);</p></li>
 <li><p><code><a href="bohk_rau.html">bohk_rau()</a></code>: posterior medians and 90% intervals of the curve
 parameters <code>b1</code> and <code>b2</code> by age and of the variance and hyperparameters,
 the least-squares values <code>theta1</code>, <code>theta2</code> (exponential core model) and
 the Gelman-Rubin statistics (<code>rhat</code>);</p></li>
+<li><p><code><a href="apci.html">apci()</a></code>: <code>alpha</code>, <code>beta</code> (by age), <code>kappa</code> (by year), <code>gamma</code> (by
+year of birth; 0 for the cohorts with four or fewer observations), the
+mean year <code>ybar</code>, the smoothing parameters (<code>lambda_alpha</code>,
+<code>lambda_beta</code>), the effective dimension <code>ed</code> and the <code>bic</code>, and the
+ARIMA models of <code>kappa</code> and <code>gamma</code> (<code>order_kappa</code>, <code>arima_kappa</code>,
+<code>sd_kappa</code>, <code>order_gamma</code>, <code>arima_gamma</code>, <code>sd_gamma</code>);</p></li>
 <li><p><code><a href="nordpred_apc.html">nordpred_apc()</a></code>: estimates and 90% Wald intervals of the age, period
 and cohort effects (cohorts by central year of birth) and of the drift,
 the projected drift, the number of periods fitted, the choice of the
 recent trend and the p-values of the goodness of fit and of the test for
-the recent trend.</p></li>
+the recent trend;</p></li>
+<li><p><code><a href="cae.html">cae()</a></code>: the common age effects <code>beta1</code>, <code>beta2</code>, ... of each group
+(rows labelled <code>common &lt;g&gt; (&lt;strata&gt;)</code>), and per stratum the centring
+<code>a</code>, the period effects <code>kappa1</code>, <code>kappa2</code>, ..., their drift
+(<code>drift_kappa1</code>, ...), the standard deviation of their innovations
+(<code>sd_kappa1</code>, ...) and the correlation of their innovations with those
+of the same order of every stratum (<code>cor_kappa1</code>, ..., indexed by the
+other stratum); rows of stratum <code>"model"</code> give the mean squared error
+of the centred log rates (<code>mse</code>) and the approximate BIC of Kleinow
+(2015, eq. 5; <code>bic</code>).</p></li>
 </ul><p>Fits of wrapped packages (StMoMo, demography) keep the original fitted
 object in <code>fit$fits[[i]]</code>, where the methods of those packages apply.</p>
 <p>Wrappers return the parameters of the model they wrap (<code><a href="recalibrated.html">recalibrated()</a></code>
-adds its factors). For an <code><a href="ensemble.html">ensemble()</a></code>, the rows of each component carry
-its name in column <code>component</code>, and rows with <code>parameter = "weight"</code> give
-the weights; components without interpretable parameters (wrapped
-packages) contribute their weight only. For <code><a href="stratified.html">stratified()</a></code> and
+adds its factors; <code><a href="coupled.html">coupled()</a></code> adds those of the template, with column
+<code>component</code> <code>"base"</code> or <code>"template"</code>). For an <code><a href="ensemble.html">ensemble()</a></code>, the rows of
+each component carry its name in column <code>component</code>, and rows with
+<code>parameter = "weight"</code> give the weights; components without
+interpretable parameters (wrapped packages) contribute their weight
+only. For <code><a href="stratified.html">stratified()</a></code> and
 <code>tuned(by = )</code>, the rows of each group carry its name in column <code>group</code>.</p>
     </div>
     <div class="section level2">

@@ -26,13 +26,14 @@ reconciled(
   method = c("wls", "mint", "structural", "ols", "bottom_up", "proportional",
     "energy_score"),
   shrink = "auto",
-  dependence = c("none", "empirical", "auto"),
+  dependence = c("none", "ecc", "empirical", "auto"),
   fixed = NULL,
   years = 10,
   n_origins = 5,
   horizon = 5,
   control = list(),
-  seed = 1
+  seed = 1,
+  template = NULL
 )
 ```
 
@@ -61,15 +62,20 @@ reconciled(
 
 - dependence:
 
-  `"none"` (default: the draws are reconciled as they are),
+  `"none"` (default: the draws are reconciled as they are), `"ecc"`,
   `"empirical"` or `"auto"` (the same as `"none"`, kept for
-  compatibility). With `"empirical"` the paths of separately fitted
-  strata are reordered before reconciliation by a package-specific
-  method (see [`mt_reconcile()`](mt_reconcile.md)). Draws of joint
-  models such as [`li_lee()`](li_lee.md) and [`tucker3()`](tucker3.md),
-  which carry the dependence between strata, are never reordered
-  (`"empirical"` then gives a warning and is ignored). The observation
-  noise of predictive draws is independent across cells either way.
+  compatibility). With `"ecc"` the draws of the base model take the
+  dependence of the draws of `template` before reconciliation (ensemble
+  copula coupling, Schefzik, Thorarinsdottir and Gneiting 2013): the
+  same as `reconciled(coupled(spec, template), ...)`, see
+  [`coupled()`](coupled.md). With `"empirical"` the paths of separately
+  fitted strata are reordered before reconciliation by a
+  package-specific method (see [`mt_reconcile()`](mt_reconcile.md)).
+  Draws of joint models such as [`li_lee()`](li_lee.md) and
+  [`tucker3()`](tucker3.md), which carry the dependence between strata,
+  are never reordered by `"empirical"` (it then gives a warning and is
+  ignored). The observation noise of predictive draws is independent
+  across cells either way.
 
 - fixed:
 
@@ -101,6 +107,12 @@ reconciled(
   Random seed of the training for `method = "energy_score"` (inner
   forecasts, observation noise and the draws of each step), so that fits
   are reproducible.
+
+- template:
+
+  With `dependence = "ecc"`: the model specification whose draws give
+  the dependence, usually a joint model such as [`cae()`](cae.md) or
+  [`li_lee()`](li_lee.md).
 
 ## Value
 
@@ -145,8 +157,8 @@ with exponent 1 estimated from pairs of base draws (their Eq. 5), and
 Adam starts from OLS reconciliation with their settings (`eta = 0.001`,
 `beta1 = 0.9`, `beta2 = 0.999`, `epsilon = 1e-8`, their Section 7). The
 gradient is written out analytically; ProbReco differentiates the same
-estimate automatically (the validation check `scoreopt_probreco`
-reproduces its path). The departures from the paper:
+estimate automatically; with the same draws both follow the same
+optimisation path. The departures from the paper:
 
 - training forecasts: Algorithm 1 refits the base models on rolling
   windows of the length of the final fit at consecutive origins (250
@@ -222,6 +234,11 @@ Probabilistic forecast reconciliation: properties, evaluation and score
 optimisation. *European Journal of Operational Research* 306(2):
 693-706.
 [doi:10.1016/j.ejor.2022.07.040](https://doi.org/10.1016/j.ejor.2022.07.040)
+
+Schefzik R, Thorarinsdottir TL, Gneiting T (2013). Uncertainty
+quantification in complex simulation models using ensemble copula
+coupling. *Statistical Science* 28(4): 616-640.
+[doi:10.1214/13-STS443](https://doi.org/10.1214/13-STS443)
 
 ## Examples
 

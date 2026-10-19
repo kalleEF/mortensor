@@ -81,7 +81,7 @@ accuracy use <code><a href="mt_tune.html">tuned()</a></code>.</p></dd>
 
 
 <dt id="arg-transform">transform<a class="anchor" aria-label="anchor" href="#arg-transform"></a></dt>
-<dd><p><code>"log"</code>, or the deprecated <code>"coda"</code>.</p></dd>
+<dd><p><code>"log"</code>, or the deprecated <code>"coda"</code> (use <code><a href="coda_multiway.html">coda_multiway()</a></code>).</p></dd>
 
 
 <dt id="arg-ts">ts<a class="anchor" aria-label="anchor" href="#arg-ts"></a></dt>
@@ -130,14 +130,18 @@ the period factors (columns of <code>B</code>) follow a multivariate random walk
 with drift, as <code>k[t]</code> of Lee and Carter (1992); draws resample the joint
 year-to-year changes, which keeps their correlation, and include the
 uncertainty of the drift (<code>ts = "rwd"</code>). ARIMA or ETS models per column
-(<code>ts = "arima"</code>, <code>"ets"</code>, package <span class="pkg">forecast</span>) are alternatives. The
+(<code>ts = "arima"</code>, <code>"ets"</code>, package <span class="pkg">forecast</span>) are alternatives.
+Bergeron-Boucher, Simonacci, Oeppen and Gallo (2018) forecast this model
+with one component per mode and a random walk with drift of the period
+index, as <code>tucker3(ranks = c(1, 1, 1))</code> does; their draws resample the
+errors of the index and keep the drift fixed. The
 rates are rebuilt with <code>a</code>, <code>A</code>, <code>C</code> and <code>G</code> fixed. Draws carry the
 uncertainty of the forecast period factors only. With fewer period
 factors than independent trends in the data, the strata share their
-forecast uncertainty and intervals are too narrow: on simulated
-Lee-Carter data with Poisson deaths and an own random walk in each of 10
-strata (the package's coverage benchmark), 95% intervals covered about
-74% with the default ranks and 95% with <code>ranks = c(1, 10, 10)</code>.
+forecast uncertainty and intervals are too narrow: in an example on
+simulated Lee-Carter data with Poisson deaths and an own random walk in
+each of 10 strata, 95% intervals covered about 74% with the default
+ranks and 95% with <code>ranks = c(1, 10, 10)</code>.
 Predictive draws (<code>mt_forecast(predictive = TRUE)</code>) add Poisson variation
 of the deaths given the rates and the exposures, and no other observation
 noise. If intervals are too narrow on real data, that is a property of
@@ -161,11 +165,13 @@ by 0.5 before taking logarithms. The paper's data end with the closed
 age group 95-99; an open age interval is treated like the other age
 groups.</p></li>
 </ul><p><strong>Deprecated:</strong> <code>transform = "coda"</code> (centred log-ratio transformed
-life-table deaths in place of log rates, with an auxiliary random walk
-for the rate of the open age interval) is a combination of this package
-without a published source; it still works and warns (class
-<code>mt_warning_deprecated</code>). Use <code><a href="coda.html">coda()</a></code> (<code>coherent = TRUE</code> for several
-strata), the published compositional model.</p>
+life-table deaths in place of log rates) still works and warns (class
+<code>mt_warning_deprecated</code>). Its forecast of all period factors by a
+multivariate random walk, its auxiliary random walk for the rate of the
+open age interval and its 0.5 deaths in empty cells are package-specific.
+Use <code><a href="coda_multiway.html">coda_multiway()</a></code>, the published multiway compositional model of
+Bergeron-Boucher, Simonacci, Oeppen and Gallo (2018), or <code><a href="coda.html">coda()</a></code>
+(<code>coherent = TRUE</code>) for a common component with deviations per stratum.</p>
 <p>Ranks are reduced to the array dimensions where needed, so the model also
 runs with one stratum or one age group. The model is experimental: compare
 it with established models such as <code><a href="li_lee.html">li_lee()</a></code> in a backtest before using
@@ -184,6 +190,11 @@ on Matrix Analysis and Applications</em> 21(4): 1324-1342.
 <a href="https://doi.org/10.1137/S0895479898346995" class="external-link">doi:10.1137/S0895479898346995</a></p>
 <p>Kolda TG, Bader BW (2009). Tensor decompositions and applications. <em>SIAM
 Review</em> 51(3): 455-500. <a href="https://doi.org/10.1137/07070111X" class="external-link">doi:10.1137/07070111X</a></p>
+<p>Bergeron-Boucher M-P, Simonacci V, Oeppen J, Gallo M (2018). Coherent
+modeling and forecasting of mortality patterns for subpopulations using
+multiway analysis of compositions: an application to Canadian provinces
+and territories. <em>North American Actuarial Journal</em> 22(1): 92-118.
+<a href="https://doi.org/10.1080/10920277.2017.1377620" class="external-link">doi:10.1080/10920277.2017.1377620</a></p>
     </div>
 
     <div class="section level2">

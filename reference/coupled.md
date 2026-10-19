@@ -1,0 +1,162 @@
+# Give separate forecasts the dependence of a joint model
+
+`coupled()` wraps a model (the base model) and a joint model (the
+template): its forecasts keep the margins of the base model and take the
+dependence between ages, years and strata from the template, by ensemble
+copula coupling (ECC; Schefzik, Thorarinsdottir and Gneiting 2013).
+`mt_couple()` does the same with two sets of forecast draws. Status:
+published (the ECC-R variant), with the package-specific choices listed
+below; section and equation numbers refer to the paper.
+
+## Usage
+
+``` r
+coupled(spec, template)
+
+mt_couple(draws, template, seed = NULL)
+```
+
+## Arguments
+
+- spec:
+
+  The base model specification (margins).
+
+- template:
+
+  For `coupled()`, a model specification whose draws give the
+  dependence, usually a joint model of the same strata; for
+  `mt_couple()`, its forecast draws ([mt_draws](mt_draws.md)).
+
+- draws:
+
+  Forecast draws ([mt_draws](mt_draws.md)) that give the margins.
+
+- seed:
+
+  Random seed for the ranks of tied template values (`NULL` leaves the
+  random number generator as it is).
+
+## Value
+
+`coupled()`: a model specification; its fit holds the fit of the
+template in `$coupling$template`, and its forecasts report the coupling
+in `$coupling` (template, number of margins and share of margins with
+tied template values). `mt_couple()`: the draws with the values of each
+margin reordered, and the coupling in `$coupling`.
+
+## Details
+
+**Method (Sections 4.1 and 4.2).** Both models are fitted to the same
+data and forecast with the same number of draws `M`. A margin is one
+cell of the forecast: an age, a forecast year and a stratum. For each
+margin, the `M` values of the base model are sorted, and draw `m`
+receives the value whose rank among them equals the rank of draw `m` of
+the template among the template's values (eq. 4.3). Each margin keeps
+exactly the values of the base model. The draws take the multivariate
+rank structure (the empirical copula) of the template, and so its
+Spearman rank correlation between any two margins. The margins of the
+paper are weather variables at locations and lead times; here they are
+the cells of the grid, so the template sets the dependence between
+strata, between ages and between years. The template's draws must be
+exchangeable (Section 4); draws of a fitted model are.
+
+**Variant (Section 4.3).** The base model's draws are a random sample
+from its forecast distribution of each margin, so the method is ECC-R,
+with the sample taken by the base model's simulation. The paper
+recommends ECC-Q, which uses the equidistant quantiles
+`F^-1(m / (M + 1))` of each margin and did better in its case study
+(Section 5.3); it needs the quantile function of each margin, which
+models that forecast by simulation do not give.
+
+**Ties.** Template values that are tied within a margin get their ranks
+at random, as the paper suggests (Section 4.1, footnote 6), with the
+random number generator of the forecast (`seed`). Tied base values need
+nothing, since only their sorted values are used. Draws of expected
+rates seldom have ties; predictive draws often have them, since deaths
+are counts. Margins without template draws (a stratum where the template
+failed) keep the order of the base model, with a warning.
+
+**Package-specific choices.**
+
+- `coupled()` couples the draws of the models before observation noise:
+  for models of expected rates (such as [`lee_carter()`](lee_carter.md)
+  and [`cae()`](cae.md)) the expected rates. Predictive draws
+  (`mt_forecast(predictive = TRUE)`) then add the base model's Poisson
+  (or negative binomial) deaths given the coupled rates, independent
+  across cells, as for every model of the package. Without noise the
+  margins are those of the base model exactly; with noise they are the
+  same in distribution. The paper applies the ranks to the forecast of
+  the observed quantity itself.
+
+- Around a reconciled base model (`coupled(reconciled(...), ...)`), the
+  bottom strata are coupled and the aggregates recomputed, so the draws
+  stay coherent. Coupling before reconciling,
+  `reconciled(spec, hierarchy, dependence = "ecc", template = )`, is the
+  order that gives the totals the template's dependence between the
+  parts.
+
+**What changes.** Coupling changes no single cell: the forecast
+distribution of each cell is that of the base model, so scores of single
+cells, such as their CRPS or the coverage of their intervals, change
+only by simulation noise. It changes quantities computed from several
+cells: totals over strata, gaps between strata, life expectancy (over
+ages) and cumulative changes (over years). The template should be a
+joint model ([`li_lee()`](li_lee.md), [`cae()`](cae.md),
+[`coherent_fdm()`](coherent_fdm.md), [`tucker3()`](tucker3.md),
+`coda(coherent = TRUE)`); a template fitted per stratum has independent
+strata and gives a warning (class `mt_warning_coupled`).
+
+The Schaake shuffle (Clark et al. 2004) reorders draws in the same way
+by the ranks of past observations; ECC takes the ranks from a model's
+forecast of the same years (Schefzik et al. 2013, Section 3.4). The
+package-specific `reconciled(dependence = "empirical")` is related to
+the Schaake shuffle.
+
+`mt_couple()` couples two sets of draws with the same ages, years,
+strata and number of draws. Both should describe the same quantity (both
+predictive or both not). Couple before reconciling: draws reconciled
+before give a warning, because each stratum is reordered separately and
+their totals no longer add up.
+
+## References
+
+Schefzik R, Thorarinsdottir TL, Gneiting T (2013). Uncertainty
+quantification in complex simulation models using ensemble copula
+coupling. *Statistical Science* 28(4): 616-640.
+[doi:10.1214/13-STS443](https://doi.org/10.1214/13-STS443)
+
+Clark M, Gangopadhyay S, Hay L, Rajagopalan B, Wilby R (2004). The
+Schaake shuffle: a method for reconstructing space-time variability in
+forecasted precipitation and temperature fields. *Journal of
+Hydrometeorology* 5(1): 243-262.
+
+## See also
+
+[`cae()`](cae.md), [`li_lee()`](li_lee.md);
+[`reconciled()`](reconciled.md) with `dependence = "ecc"`.
+
+## Examples
+
+``` r
+x <- mt_subset(mt_example_regions(years = 2000:2019, regions = 2), ages = c(60, Inf))
+fit <- mt_fit(coupled(lee_carter(), template = cae()), x)
+fc <- mt_forecast(fit, h = 5, n_draws = 100, seed = 1)
+fc$coupling
+#> $template
+#> [1] "CAE (order 1)"
+#> 
+#> $method
+#> [1] "ECC-R"
+#> 
+#> $margins
+#> [1] 700
+#> 
+#> $tied
+#> [1] 0
+#> 
+# the same with draws
+fc_lc <- mt_forecast(mt_fit(lee_carter(), x), h = 5, n_draws = 100, seed = 1)
+fc_cae <- mt_forecast(mt_fit(cae(), x), h = 5, n_draws = 100, seed = 2)
+fc2 <- mt_couple(fc_lc, fc_cae, seed = 3)
+```

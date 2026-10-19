@@ -48,15 +48,15 @@ Preprocessing steps given as `prep` are repeated in every fit, so that
 backtests do not see the test years.
 
 ![Map 2, models: models for one population per stratum (including
-coda(), p_splines(), cp_splines(), bohk_rau() and nordpred_apc()) or for
-several strata jointly (including coda(coherent = TRUE) and
-coda_causes()) form a model specification, optionally inside wrappers
-(ensemble(), stratified(), reconciled(), recalibrated(), anchored(),
-bootstrapped(), tuned()) that may use a hierarchy from mt_hierarchy();
-mt_fit() takes the specification, the model-ready data and optional
-preprocessing from mt_prep(); the fit is inspected (summary(),
-mt_parameters(), residuals()) or forecast with
-mt_forecast().](function-map-models.png)
+coda(), p_splines(), cp_splines(), bohk_rau(), apci() and
+nordpred_apc()) or for several strata jointly (including cae(), saint(),
+coda(coherent = TRUE), coda_multiway() and coda_causes()) form a model
+specification, optionally inside wrappers (ensemble(), stratified(),
+reconciled(), coupled(), recalibrated(), anchored(), bootstrapped(),
+tuned()) that may use a hierarchy from mt_hierarchy(); mt_fit() takes
+the specification, the model-ready data and optional preprocessing from
+mt_prep(); the fit is inspected (summary(), mt_parameters(),
+residuals()) or forecast with mt_forecast().](function-map-models.png)
 
 Choosing between specifications:
 
@@ -111,9 +111,9 @@ mt_coherence()).](function-map-results.png)
 | Harmonise | [`mt_plot_ungroup()`](../reference/ungroup-diagnostics.md), [`mt_ungroup_check()`](../reference/ungroup-diagnostics.md) | ungrouped against grouped rates, stability over time, errors against known single years; several methods side by side | `mt_data` and ungrouped data (or a list) | ggplot, table |
 | Harmonise | [`mt_smooth_check()`](../reference/mt_smooth_check.md), [`mt_plot_smooth()`](../reference/mt_smooth_check.md) | how much smoothing removed (dispersion, trend ratio); several smoothers in one figure | `mt_data` pair or list | table, ggplot |
 | Harmonise | [`mt_prep()`](../reference/mt_prep.md), [`mt_prep_apply()`](../reference/mt_prep.md) with [`step_ungroup()`](../reference/mt_prep.md), [`step_smooth()`](../reference/mt_prep.md), [`step_regroup()`](../reference/mt_prep.md), [`step_grid()`](../reference/mt_prep.md), [`step_shocks()`](../reference/mt_prep.md), [`step_window()`](../reference/mt_prep.md) | preprocessing inside fits and backtests | steps | pipeline |
-| Model | [`lee_carter()`](../reference/lee_carter.md) (optionally rotated), [`rwd()`](../reference/rwd.md), [`p_splines()`](../reference/p_splines.md), [`cp_splines()`](../reference/cp_splines.md), [`bohk_rau()`](../reference/bohk_rau.md), [`li_lee()`](../reference/li_lee.md), [`hyndman_ullah()`](../reference/hyndman_ullah.md), [`coherent_fdm()`](../reference/coherent_fdm.md), [`coda()`](../reference/coda.md) (also coherent), [`stmomo()`](../reference/stmomo.md) (including the Plat model), [`stanmomo()`](../reference/stanmomo.md), [`arima_series()`](../reference/arima_series.md), [`ets_series()`](../reference/arima_series.md), [`apc_bayes()`](../reference/apc_bayes.md), [`nordpred_apc()`](../reference/nordpred_apc.md), [`tucker3()`](../reference/tucker3.md), [`coda_causes()`](../reference/coda_causes.md); deprecated: [`product_ratio()`](../reference/product_ratio.md) (use [`coherent_fdm()`](../reference/coherent_fdm.md)), [`cause_shares()`](../reference/cause_shares.md) (use [`reconciled()`](../reference/reconciled.md) or [`coda_causes()`](../reference/coda_causes.md)), `rwd(observation_noise = TRUE)` (use `arima_series(order = c(0, 1, 1), drift = TRUE)`), `tucker3(transform = "coda")` (use [`coda()`](../reference/coda.md)) | model specifications | settings | `mt_spec` |
+| Model | [`lee_carter()`](../reference/lee_carter.md) (optionally rotated or with negative binomial deaths), [`rwd()`](../reference/rwd.md), [`p_splines()`](../reference/p_splines.md), [`cp_splines()`](../reference/cp_splines.md), [`bohk_rau()`](../reference/bohk_rau.md), [`li_lee()`](../reference/li_lee.md), [`cae()`](../reference/cae.md), [`saint()`](../reference/saint.md), [`hyndman_ullah()`](../reference/hyndman_ullah.md), [`coherent_fdm()`](../reference/coherent_fdm.md), [`coda()`](../reference/coda.md) (also coherent), [`coda_multiway()`](../reference/coda_multiway.md), [`stmomo()`](../reference/stmomo.md) (including the Plat model), [`apci()`](../reference/apci.md), [`stanmomo()`](../reference/stanmomo.md), [`arima_series()`](../reference/arima_series.md), [`ets_series()`](../reference/arima_series.md), [`apc_bayes()`](../reference/apc_bayes.md), [`nordpred_apc()`](../reference/nordpred_apc.md), [`tucker3()`](../reference/tucker3.md), [`coda_causes()`](../reference/coda_causes.md); deprecated: [`product_ratio()`](../reference/product_ratio.md) (use [`coherent_fdm()`](../reference/coherent_fdm.md)), [`cause_shares()`](../reference/cause_shares.md) (use [`reconciled()`](../reference/reconciled.md) or [`coda_causes()`](../reference/coda_causes.md)), `rwd(observation_noise = TRUE)` (use `arima_series(order = c(0, 1, 1), drift = TRUE)`), `tucker3(transform = "coda")` (use [`coda_multiway()`](../reference/coda_multiway.md)) | model specifications | settings | `mt_spec` |
 | Model | [`apc_select()`](../reference/apc_select.md), [`mcmc_control()`](../reference/mcmc_control.md), [`mt_tune()`](../reference/mt_tune.md) | choose random-walk orders, MCMC settings; model and preprocessing settings by forecast accuracy on the last years (hold-out or rolling origins; rates, life expectancy or ASR) | data, grid | table, `mt_spec` |
-| Combine | [`ensemble()`](../reference/ensemble.md) (optionally `top_k`), [`stratified()`](../reference/stratified.md), [`reconciled()`](../reference/reconciled.md) (also score-optimal, `method = "energy_score"`), [`bootstrapped()`](../reference/bootstrapped.md), [`tuned()`](../reference/mt_tune.md) | mixtures, different models for groups of strata, coherence, parameter uncertainty (and of smoothing, `type = "data"`), tuning | `mt_spec` | `mt_spec` |
+| Combine | [`ensemble()`](../reference/ensemble.md) (optionally `top_k`), [`stratified()`](../reference/stratified.md), [`reconciled()`](../reference/reconciled.md) (also score-optimal, `method = "energy_score"`), [`coupled()`](../reference/coupled.md), [`bootstrapped()`](../reference/bootstrapped.md), [`tuned()`](../reference/mt_tune.md) | mixtures, different models for groups of strata, coherence, dependence between strata from a joint model (ensemble copula coupling), parameter uncertainty (and of smoothing, `type = "data"`), tuning | `mt_spec` | `mt_spec` |
 | Combine | [`mt_order_strata()`](../reference/mt_order_strata.md) | keep an ordering between strata (for example women below men) path by path | `mt_draws` | `mt_draws` |
 | Calibrate | [`recalibrated()`](../reference/recalibrated.md) | rescale the spread (optionally the drift) of any model’s draws to its forecast errors in the last years, overall or by age band, for rates, life expectancy or ASR | `mt_spec` | `mt_spec` |
 | Jump-off | [`anchored()`](../reference/anchored.md), [`mt_jump_off()`](../reference/mt_jump_off.md) | start forecasts at the observed rates of the last year (optionally of several years, shrunk and fading out); report the first-year step | `mt_spec`, `mt_draws` | `mt_spec`, table |

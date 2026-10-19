@@ -26,7 +26,8 @@ ensembles also `component`, for fits by groups also `group`.
 - [`lee_carter()`](lee_carter.md): `a` (age pattern), `b` (age pattern
   of change), `k` (period index), and the drift and innovation standard
   deviation of `k`; with `rotate = TRUE` also the ultimate pattern
-  `b_ultimate`;
+  `b_ultimate`; with `family = "nb"` also the dispersion `nb_dispersion`
+  (variance `mu + phi mu^2`);
 
 - [`li_lee()`](li_lee.md), [`product_ratio()`](product_ratio.md): the
   common factor of each group (`B`, `K`, its drift and standard
@@ -46,6 +47,13 @@ ensembles also `component`, for fits by groups also `group`.
   with parts by age and cause (`b1`, `k1`, `b2`, `k2`, ... with several
   components);
 
+- [`coda_multiway()`](coda_multiway.md): the common age patterns `b`,
+  time indexes `k` (with `order_k`, `arima_k`, `sd_k`), population
+  markers `gamma` and core `g` (index `p,q,r`), numbered with several
+  components, and the share of variation explained; per stratum the
+  centre `a`, the parameters of the open age interval or of the Kannisto
+  model of each year;
+
 - [`rwd()`](rwd.md): drift and innovation standard deviation per age
   (and, with `observation_noise = TRUE`, the variances of level and
   noise);
@@ -63,22 +71,50 @@ ensembles also `component`, for fits by groups also `group`.
   also the bounds of the rates of ageing and of change per age
   (`ageing_lower`, `ageing_upper`, `change_lower`, `change_upper`).
 
+- [`saint()`](saint.md): per trend (`"trend <group>"`) the indexes
+  `alpha`, `beta`, `kappa`, `zeta` by year, the frailty variance
+  `sigma2`, the pseudo-log-likelihood `loglik`, the `drift` and
+  covariance `cov` of `alpha` and `beta` (or, with `ecm`, the parameters
+  of the error-correction model: `a11`, `a21`, `a32`, `a42`, `C_D`,
+  `C_delta`, `lambda`, `Omega`) and the standard deviations `sd_kappa`,
+  `sd_zeta`; per stratum with a spread the spread parameters `y1` ...
+  `y5` by year and their VAR(1) (`ar` or `A`, and `Omega`);
+
 - [`bohk_rau()`](bohk_rau.md): posterior medians and 90% intervals of
   the curve parameters `b1` and `b2` by age and of the variance and
   hyperparameters, the least-squares values `theta1`, `theta2`
   (exponential core model) and the Gelman-Rubin statistics (`rhat`);
 
+- [`apci()`](apci.md): `alpha`, `beta` (by age), `kappa` (by year),
+  `gamma` (by year of birth; 0 for the cohorts with four or fewer
+  observations), the mean year `ybar`, the smoothing parameters
+  (`lambda_alpha`, `lambda_beta`), the effective dimension `ed` and the
+  `bic`, and the ARIMA models of `kappa` and `gamma` (`order_kappa`,
+  `arima_kappa`, `sd_kappa`, `order_gamma`, `arima_gamma`, `sd_gamma`);
+
 - [`nordpred_apc()`](nordpred_apc.md): estimates and 90% Wald intervals
   of the age, period and cohort effects (cohorts by central year of
   birth) and of the drift, the projected drift, the number of periods
   fitted, the choice of the recent trend and the p-values of the
-  goodness of fit and of the test for the recent trend.
+  goodness of fit and of the test for the recent trend;
+
+- [`cae()`](cae.md): the common age effects `beta1`, `beta2`, ... of
+  each group (rows labelled `common <g> (<strata>)`), and per stratum
+  the centring `a`, the period effects `kappa1`, `kappa2`, ..., their
+  drift (`drift_kappa1`, ...), the standard deviation of their
+  innovations (`sd_kappa1`, ...) and the correlation of their
+  innovations with those of the same order of every stratum
+  (`cor_kappa1`, ..., indexed by the other stratum); rows of stratum
+  `"model"` give the mean squared error of the centred log rates (`mse`)
+  and the approximate BIC of Kleinow (2015, eq. 5; `bic`).
 
 Fits of wrapped packages (StMoMo, demography) keep the original fitted
 object in `fit$fits[[i]]`, where the methods of those packages apply.
 
 Wrappers return the parameters of the model they wrap
-([`recalibrated()`](recalibrated.md) adds its factors). For an
+([`recalibrated()`](recalibrated.md) adds its factors;
+[`coupled()`](coupled.md) adds those of the template, with column
+`component` `"base"` or `"template"`). For an
 [`ensemble()`](ensemble.md), the rows of each component carry its name
 in column `component`, and rows with `parameter = "weight"` give the
 weights; components without interpretable parameters (wrapped packages)

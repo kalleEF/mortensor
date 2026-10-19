@@ -229,7 +229,10 @@ reconciled as they are, so sums of separately fitted parts have narrower
 intervals than they would if the parts moved together. Joint models (for
 example <code><a href="li_lee.html">li_lee()</a></code>, <code><a href="coherent_fdm.html">coherent_fdm()</a></code> and <code><a href="coda.html">coda()</a></code> with <code>coherent = TRUE</code>)
 carry the dependence between strata in the model itself; their draws are
-never reordered.</p>
+never reordered. Ensemble copula coupling (Schefzik, Thorarinsdottir and
+Gneiting 2013) gives separately fitted strata the dependence of a joint
+model's draws: <code><a href="coupled.html">mt_couple()</a></code> for draws before <code>mt_reconcile()</code>, and
+<code><a href="coupled.html">coupled()</a></code> or <code>reconciled(dependence = "ecc")</code> for models.</p>
 <p><code>dependence = "empirical"</code> reorders the paths of each stratum before the
 reconciliation. This is a package-specific method, related to but
 different from the Schaake shuffle of Clark et al. (2004): every draw is
@@ -279,6 +282,9 @@ Australian domestic tourism. <em>International Journal of Forecasting</em>
 shuffle: a method for reconstructing space-time variability in forecasted
 precipitation and temperature fields. <em>Journal of Hydrometeorology</em> 5(1):
 243-262.</p>
+<p>Schefzik R, Thorarinsdottir TL, Gneiting T (2013). Uncertainty
+quantification in complex simulation models using ensemble copula
+coupling. <em>Statistical Science</em> 28(4): 616-640. <a href="https://doi.org/10.1214/13-STS443" class="external-link">doi:10.1214/13-STS443</a></p>
 <p>Schäfer J, Strimmer K (2005). A shrinkage approach to large-scale
 covariance matrix estimation and implications for functional genomics.
 <em>Statistical Applications in Genetics and Molecular Biology</em> 4(1):

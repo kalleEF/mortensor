@@ -15,8 +15,6 @@ for the design.
 | `R/hierarchy.R` | Hierarchies of strata, aggregation, reconciliation |
 | `R/eval-*.R` | Backtests and scoring |
 | `R/derive-*.R` | Life tables and derived quantities |
-| `R/validation.R` | Benchmarks shared by slow tests and `validation/` |
-| `validation/` | Validation pipeline (thresholds, runner, history); see its README |
 | `dev/` | Plans, review, progress log, calibration study, package comparison script (not built into the package) |
 
 ## Conventions
@@ -62,24 +60,23 @@ for the design.
 ``` sh
 Rscript -e 'roxygen2::roxygenise()'                 # docs and NAMESPACE
 Rscript -e 'devtools::test()'                       # unit tests
-MORTENSOR_SLOW_TESTS=true Rscript -e 'devtools::test()'   # with benchmarks
-Rscript validation/run_validation.R --load-all      # quick validation suite
+R CMD INSTALL . && Rscript -e 'lintr::lint_package()'   # lint
 R CMD build . && R CMD check --as-cran mortensor_*.tar.gz
 ```
 
 ## Workflow
 
 - CI budget: pushes to development branches start no workflows. Run the
-  unit tests, lint and the quick validation suite locally before each
-  commit. Pull requests (when ready for review) and pushes to main run
-  the Ubuntu checks; Windows and R-devel run monthly; macOS only by hand
-  (`workflow_dispatch` with `platforms = all`).
+  unit tests and lint locally before each commit. Pull requests (when
+  ready for review) and pushes to main run the Ubuntu checks; Windows
+  and R-devel run monthly; macOS only by hand (`workflow_dispatch` with
+  `platforms = all`).
 
 - One work package per commit or pull request; update `dev/progress.md`
   and `NEWS.md` in the same change.
 
 - Documentation is part of every feature. After a feature works (tests,
-  lint, validation), review and update in the same change: roxygen docs
+  lint), review and update in the same change: roxygen docs
   (`roxygenise()`), README, NEWS, the vignettes that use or should use
   it (re-knit precomputed ones with `dev/precompute-vignettes.R`), the
   function map (`vignettes/articles/function-map.Rmd`), the FAQ, and
@@ -94,8 +91,13 @@ R CMD build . && R CMD check --as-cran mortensor_*.tar.gz
   software (README notice and lifecycle badge, DESCRIPTION, package
   help, startup message). Keep these notices.
 
-- New statistical code gets a validation check or a slow test with a
-  threshold, not only unit tests.
+- Correctness first: run the unit tests; new methods get tests that
+  check them against the published method or a reference implementation
+  (published numbers, the authors’ code, an established package), and
+  exact identities where they hold. Forecast performance (coverage,
+  CRPS, accuracy) depends on the data and is checked by the user with
+  backtests; the repository has no performance benchmarks with
+  thresholds.
 
 - Data from other packages (HMD extracts in StMoMo and demography) is
   loaded in tests and vignettes, never copied into the repository. The

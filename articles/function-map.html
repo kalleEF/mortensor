@@ -106,7 +106,7 @@ them.</p>
 Preprocessing steps given as <code>prep</code> are repeated in every
 fit, so that backtests do not see the test years.</p>
 <p align="center">
-<img src="function-map-models.png" width="885" alt="Map 2, models: models for one population per stratum (including coda(), p_splines(), cp_splines(), bohk_rau() and nordpred_apc()) or for several strata jointly (including coda(coherent = TRUE) and coda_causes()) form a model specification, optionally inside wrappers (ensemble(), stratified(), reconciled(), recalibrated(), anchored(), bootstrapped(), tuned()) that may use a hierarchy from mt_hierarchy(); mt_fit() takes the specification, the model-ready data and optional preprocessing from mt_prep(); the fit is inspected (summary(), mt_parameters(), residuals()) or forecast with mt_forecast()."></p>
+<img src="function-map-models.png" width="885" alt="Map 2, models: models for one population per stratum (including coda(), p_splines(), cp_splines(), bohk_rau(), apci() and nordpred_apc()) or for several strata jointly (including cae(), saint(), coda(coherent = TRUE), coda_multiway() and coda_causes()) form a model specification, optionally inside wrappers (ensemble(), stratified(), reconciled(), coupled(), recalibrated(), anchored(), bootstrapped(), tuned()) that may use a hierarchy from mt_hierarchy(); mt_fit() takes the specification, the model-ready data and optional preprocessing from mt_prep(); the fit is inspected (summary(), mt_parameters(), residuals()) or forecast with mt_forecast()."></p>
 <p>Choosing between specifications:</p>
 <p align="center">
 <img src="function-map-choice.png" width="793" alt="Choosing between specifications: the data and the candidate specifications, each with its preprocessing, go into mt_backtest(); mt_score(), the score plots (mt_plot_scores(), mt_plot_coverage()) and mt_dm_test() (is the difference between two models larger than chance?) lead to the chosen specification."></p>
@@ -316,12 +316,14 @@ smoothers in one figure</td>
 <tr class="even">
 <td>Model</td>
 <td>
-<code><a href="../reference/lee_carter.html">lee_carter()</a></code> (optionally rotated), <code><a href="../reference/rwd.html">rwd()</a></code>,
-<code><a href="../reference/p_splines.html">p_splines()</a></code>, <code><a href="../reference/cp_splines.html">cp_splines()</a></code>,
-<code><a href="../reference/bohk_rau.html">bohk_rau()</a></code>, <code><a href="../reference/li_lee.html">li_lee()</a></code>,
+<code><a href="../reference/lee_carter.html">lee_carter()</a></code> (optionally rotated or with negative
+binomial deaths), <code><a href="../reference/rwd.html">rwd()</a></code>, <code><a href="../reference/p_splines.html">p_splines()</a></code>,
+<code><a href="../reference/cp_splines.html">cp_splines()</a></code>, <code><a href="../reference/bohk_rau.html">bohk_rau()</a></code>,
+<code><a href="../reference/li_lee.html">li_lee()</a></code>, <code><a href="../reference/cae.html">cae()</a></code>, <code><a href="../reference/saint.html">saint()</a></code>,
 <code><a href="../reference/hyndman_ullah.html">hyndman_ullah()</a></code>, <code><a href="../reference/coherent_fdm.html">coherent_fdm()</a></code>,
-<code><a href="../reference/coda.html">coda()</a></code> (also coherent), <code><a href="../reference/stmomo.html">stmomo()</a></code> (including
-the Plat model), <code><a href="../reference/stanmomo.html">stanmomo()</a></code>, <code><a href="../reference/arima_series.html">arima_series()</a></code>,
+<code><a href="../reference/coda.html">coda()</a></code> (also coherent), <code><a href="../reference/coda_multiway.html">coda_multiway()</a></code>,
+<code><a href="../reference/stmomo.html">stmomo()</a></code> (including the Plat model), <code><a href="../reference/apci.html">apci()</a></code>,
+<code><a href="../reference/stanmomo.html">stanmomo()</a></code>, <code><a href="../reference/arima_series.html">arima_series()</a></code>,
 <code><a href="../reference/arima_series.html">ets_series()</a></code>, <code><a href="../reference/apc_bayes.html">apc_bayes()</a></code>,
 <code><a href="../reference/nordpred_apc.html">nordpred_apc()</a></code>, <code><a href="../reference/tucker3.html">tucker3()</a></code>,
 <code><a href="../reference/coda_causes.html">coda_causes()</a></code>; deprecated: <code><a href="../reference/product_ratio.html">product_ratio()</a></code>
@@ -329,7 +331,8 @@ the Plat model), <code><a href="../reference/stanmomo.html">stanmomo()</a></code
 <code><a href="../reference/reconciled.html">reconciled()</a></code> or <code><a href="../reference/coda_causes.html">coda_causes()</a></code>),
 <code>rwd(observation_noise = TRUE)</code> (use
 <code>arima_series(order = c(0, 1, 1), drift = TRUE)</code>),
-<code>tucker3(transform = "coda")</code> (use <code><a href="../reference/coda.html">coda()</a></code>)</td>
+<code>tucker3(transform = "coda")</code> (use
+<code><a href="../reference/coda_multiway.html">coda_multiway()</a></code>)</td>
 <td>model specifications</td>
 <td>settings</td>
 <td><code>mt_spec</code></td>
@@ -353,9 +356,11 @@ origins; rates, life expectancy or ASR)</td>
 <code><a href="../reference/ensemble.html">ensemble()</a></code> (optionally <code>top_k</code>),
 <code><a href="../reference/stratified.html">stratified()</a></code>, <code><a href="../reference/reconciled.html">reconciled()</a></code> (also
 score-optimal, <code>method = "energy_score"</code>),
-<code><a href="../reference/bootstrapped.html">bootstrapped()</a></code>, <code><a href="../reference/mt_tune.html">tuned()</a></code>
+<code><a href="../reference/coupled.html">coupled()</a></code>, <code><a href="../reference/bootstrapped.html">bootstrapped()</a></code>,
+<code><a href="../reference/mt_tune.html">tuned()</a></code>
 </td>
 <td>mixtures, different models for groups of strata, coherence,
+dependence between strata from a joint model (ensemble copula coupling),
 parameter uncertainty (and of smoothing, <code>type = "data"</code>),
 tuning</td>
 <td><code>mt_spec</code></td>

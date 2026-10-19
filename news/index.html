@@ -44,6 +44,31 @@
 <h2 class="pkg-version" data-toc-text="0.1.9000" id="mortensor-019000-development-of-020">mortensor 0.1.9000 (development of 0.2.0)<a class="anchor" aria-label="anchor" href="#mortensor-019000-development-of-020"></a></h2>
 <p>Clean break: the 0.1.x interface is replaced (see <code>dev/revamp-plan.md</code>).</p>
 <div class="section level3">
+<h3 id="new-published-models-dependence-between-groups-0-1-9000">New published models; dependence between groups<a class="anchor" aria-label="anchor" href="#new-published-models-dependence-between-groups-0-1-9000"></a></h3>
+<p>Work package E5, implemented from the full papers. All new methods are opt-in; defaults are unchanged.</p>
+<ul><li>
+<code>lee_carter(family = "nb")</code>: negative binomial Lee-Carter model (Delwarde, Denuit and Partrat 2007), maximum likelihood with one dispersion parameter; predictive draws are negative binomial. On French data (demography package) the dispersion and drift agree with the paper’s estimates within 1%.</li>
+<li>
+<code><a href="../reference/apci.html">apci()</a></code>: age-period-cohort-improvement model (Richards et al. 2019) with the constraints of the paper, optional P-spline smoothing of the age terms (APCI(S)), and ARIMA forecasts of the period and cohort terms with the paper’s choice of orders. The unsmoothed fit equals a constrained <code><a href="https://rdrr.io/r/stats/glm.html" class="external-link">glm()</a></code>.</li>
+<li>
+<code><a href="../reference/cae.html">cae()</a></code>: common age effect model (Kleinow 2015) for several populations, by least-squares common principal components. The paper does not forecast; the period effects follow a multivariate random walk with drift (package-specific). With one population it equals Lee-Carter.</li>
+<li>
+<code><a href="../reference/saint.html">saint()</a></code>: SAINT model (Jarner and Kryger 2011) in the revised version of Jarner and Jallbjørn (2022): a Gamma frailty trend of pooled reference strata and stationary spreads of the target strata, with an optional error-correction model for two sexes.</li>
+<li>
+<code><a href="../reference/coupled.html">coupled()</a></code>, <code><a href="../reference/coupled.html">mt_couple()</a></code> and <code>reconciled(dependence = "ecc", template = )</code>: ensemble copula coupling (Schefzik, Thorarinsdottir and Gneiting 2013) gives separate forecasts the dependence of a joint model. Every cell keeps its draws exactly.</li>
+<li>
+<code><a href="../reference/coda_multiway.html">coda_multiway()</a></code>: multiway compositional model for subpopulations (Bergeron-Boucher et al. 2018). <code>tucker3(transform = "coda")</code> stays deprecated and names it as replacement.</li>
+<li>CoDa review against the CoDa forecasting literature: <code><a href="../reference/coda.html">coda()</a></code> and <code><a href="../reference/coda_causes.html">coda_causes()</a></code> have no numerical departures from the published methods; their help pages state the jump-off without smoothing (as the authors’ code), the zero replacement of Appendix C, and that the alpha-transformation is not implemented.</li>
+<li>New vignette “Dependence between groups” (<code><a href="../articles/dependence.html">vignette("dependence")</a></code>): why the dependence between groups matters for totals, gaps and inequality, and how joint models and coupling provide it, with backtests on the ONS deprivation quintiles.</li>
+<li>The Laender vignette states that the jump-off changes little there.</li>
+<li>The performance study scripts in <code>dev/</code> (calibration, tuning, stress tests, the 0.1 regression baseline) are removed; their reports stay.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="testing-0-1-9000">Testing<a class="anchor" aria-label="anchor" href="#testing-0-1-9000"></a></h3>
+<ul><li>The performance validation suite is removed: the <code>validation/</code> directory, its GitHub workflow, the benchmark helpers and the slow tests with thresholds on coverage, CRPS, accuracy and runtime. Forecast performance depends on the data; check it on your own data with <code><a href="../reference/mt_backtest.html">mt_backtest()</a></code>.</li>
+<li>The correctness tests stay: agreement with reference implementations and published values, exact identities, coherence and parameter recovery. Checks of the former suite that were not yet unit tests are now unit tests.</li>
+</ul></div>
+<div class="section level3">
 <h3 id="methods-checked-against-the-full-papers-new-published-models-0-1-9000">Methods checked against the full papers; new published models<a class="anchor" aria-label="anchor" href="#methods-checked-against-the-full-papers-new-published-models-0-1-9000"></a></h3>
 <p>Work package E4. The full texts of papers that were earlier available only as abstracts were read (sources and access in <code>dev/methods-audit.md</code>), and the implementations follow them. Results change.</p>
 <p>Corrected to the papers:</p>

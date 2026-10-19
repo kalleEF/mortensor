@@ -33,7 +33,8 @@ tucker3(
 
 - transform:
 
-  `"log"`, or the deprecated `"coda"`.
+  `"log"`, or the deprecated `"coda"` (use
+  [`coda_multiway()`](coda_multiway.md)).
 
 - ts:
 
@@ -84,20 +85,23 @@ the period factors (columns of `B`) follow a multivariate random walk
 with drift, as `k[t]` of Lee and Carter (1992); draws resample the joint
 year-to-year changes, which keeps their correlation, and include the
 uncertainty of the drift (`ts = "rwd"`). ARIMA or ETS models per column
-(`ts = "arima"`, `"ets"`, package forecast) are alternatives. The rates
-are rebuilt with `a`, `A`, `C` and `G` fixed. Draws carry the
-uncertainty of the forecast period factors only. With fewer period
-factors than independent trends in the data, the strata share their
-forecast uncertainty and intervals are too narrow: on simulated
-Lee-Carter data with Poisson deaths and an own random walk in each of 10
-strata (the package's coverage benchmark), 95% intervals covered about
-74% with the default ranks and 95% with `ranks = c(1, 10, 10)`.
-Predictive draws (`mt_forecast(predictive = TRUE)`) add Poisson
-variation of the deaths given the rates and the exposures, and no other
-observation noise. If intervals are too narrow on real data, that is a
-property of the model (see [`recalibrated()`](recalibrated.md),
-[`ensemble()`](ensemble.md), or overdispersed models such as
-`stanmomo(family = "nb")`).
+(`ts = "arima"`, `"ets"`, package forecast) are alternatives.
+Bergeron-Boucher, Simonacci, Oeppen and Gallo (2018) forecast this model
+with one component per mode and a random walk with drift of the period
+index, as `tucker3(ranks = c(1, 1, 1))` does; their draws resample the
+errors of the index and keep the drift fixed. The rates are rebuilt with
+`a`, `A`, `C` and `G` fixed. Draws carry the uncertainty of the forecast
+period factors only. With fewer period factors than independent trends
+in the data, the strata share their forecast uncertainty and intervals
+are too narrow: in an example on simulated Lee-Carter data with Poisson
+deaths and an own random walk in each of 10 strata, 95% intervals
+covered about 74% with the default ranks and 95% with
+`ranks = c(1, 10, 10)`. Predictive draws
+(`mt_forecast(predictive = TRUE)`) add Poisson variation of the deaths
+given the rates and the exposures, and no other observation noise. If
+intervals are too narrow on real data, that is a property of the model
+(see [`recalibrated()`](recalibrated.md), [`ensemble()`](ensemble.md),
+or overdispersed models such as `stanmomo(family = "nb")`).
 
 **Deviations from the paper.**
 
@@ -122,11 +126,14 @@ property of the model (see [`recalibrated()`](recalibrated.md),
   age groups.
 
 **Deprecated:** `transform = "coda"` (centred log-ratio transformed
-life-table deaths in place of log rates, with an auxiliary random walk
-for the rate of the open age interval) is a combination of this package
-without a published source; it still works and warns (class
-`mt_warning_deprecated`). Use [`coda()`](coda.md) (`coherent = TRUE` for
-several strata), the published compositional model.
+life-table deaths in place of log rates) still works and warns (class
+`mt_warning_deprecated`). Its forecast of all period factors by a
+multivariate random walk, its auxiliary random walk for the rate of the
+open age interval and its 0.5 deaths in empty cells are
+package-specific. Use [`coda_multiway()`](coda_multiway.md), the
+published multiway compositional model of Bergeron-Boucher, Simonacci,
+Oeppen and Gallo (2018), or [`coda()`](coda.md) (`coherent = TRUE`) for
+a common component with deviations per stratum.
 
 Ranks are reduced to the array dimensions where needed, so the model
 also runs with one stratum or one age group. The model is experimental:
@@ -151,6 +158,12 @@ Journal on Matrix Analysis and Applications* 21(4): 1324-1342.
 Kolda TG, Bader BW (2009). Tensor decompositions and applications. *SIAM
 Review* 51(3): 455-500.
 [doi:10.1137/07070111X](https://doi.org/10.1137/07070111X)
+
+Bergeron-Boucher M-P, Simonacci V, Oeppen J, Gallo M (2018). Coherent
+modeling and forecasting of mortality patterns for subpopulations using
+multiway analysis of compositions: an application to Canadian provinces
+and territories. *North American Actuarial Journal* 22(1): 92-118.
+[doi:10.1080/10920277.2017.1377620](https://doi.org/10.1080/10920277.2017.1377620)
 
 ## Examples
 

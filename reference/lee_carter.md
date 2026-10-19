@@ -15,7 +15,8 @@ lee_carter(
   choose_period = FALSE,
   min_years = 20,
   rotate = FALSE,
-  rotation = c(e0_start = 80, e0_end = 102, power = 0.5)
+  rotation = c(e0_start = 80, e0_end = 102, power = 0.5),
+  family = c("poisson", "nb")
 )
 ```
 
@@ -23,7 +24,8 @@ lee_carter(
 
 - method:
 
-  `"poisson"` or `"svd"`.
+  `"poisson"` (maximum likelihood with the distribution of `family`) or
+  `"svd"`.
 
 - jump_off:
 
@@ -66,6 +68,12 @@ lee_carter(
   (`e0_end`, default 102), and the exponent of the weights (`power`,
   default 0.5). The defaults are those of Li, Lee and Gerland (2013,
   eq. 2) and MortCast; elements left out keep their defaults.
+
+- family:
+
+  Distribution of the deaths for `method = "poisson"`: `"poisson"`
+  (Brouhns, Denuit and Vermunt 2002) or `"nb"` (negative binomial;
+  Delwarde, Denuit and Partrat 2007).
 
 ## Value
 
@@ -135,9 +143,52 @@ Lee-Carter model (Brouhns, Denuit and Vermunt 2002); no other
 observation noise is added. If intervals are too narrow on real data,
 that is a property of the model: see
 [`recalibrated()`](recalibrated.md), [`ensemble()`](ensemble.md), or
-overdispersed models such as `stanmomo("lc", family = "nb")`
-([`stanmomo()`](stanmomo.md); negative binomial Lee-Carter model of
-Delwarde, Denuit and Partrat 2007).
+overdispersed models such as `family = "nb"` below or
+`stanmomo("lc", family = "nb")` ([`stanmomo()`](stanmomo.md)).
+
+**Negative binomial version** (`family = "nb"`; Delwarde, Denuit and
+Partrat 2007). Following the paper:
+
+- the deaths are negative binomial with mean
+  `mu = E exp(a[x] + b[x] k[t])` and variance `mu + phi mu^2`, a Poisson
+  distribution mixed over a gamma distributed random effect of each cell
+  (Section 2.2). The dispersion `phi` (the paper's `k`) is one parameter
+  for all ages and years;
+
+- `a`, `b`, `k` and `phi` are estimated by maximum likelihood (eq. 5):
+  uni-dimensional Newton updates of `a`, `b` and `k` (eq. 6-8), each
+  given the other parameters, alternated with the estimate of `phi`
+  given the fitted deaths;
+
+- `k[t]` follows a random walk with drift (Section 3.5);
+
+- predictive draws (`mt_forecast(predictive = TRUE)`) are negative
+  binomial deaths with the estimated dispersion (size `1 / phi`), the
+  observation model of Section 2.2.
+
+Package-specific (reference unknown): the Newton updates start from the
+Poisson estimates (the paper: `a = 0`, `b = 1`, `k = 0`, or random
+values); `phi` is maximised by Newton steps on `log(phi)` with step
+halving (the paper: Newton steps on `1 / phi`, eq. 9); the estimate is 0
+(the Poisson model) where the derivative of the log-likelihood at
+`phi = 0` is not positive; the log-likelihood uses gamma functions, so
+deaths need not be whole numbers. The paper states no identification
+constraints; `sum(b) = 1` and `sum(k) = 0` of the Poisson model
+(Brouhns, Denuit and Vermunt 2002) agree with its Figures 2 and 3. As
+for the Poisson model, draws include the innovations of `k` and the
+uncertainty of its drift; the paper reports point forecasts only. With
+`bootstrap = TRUE` the resampled deaths are negative binomial with the
+estimated dispersion, and each draw has the dispersion of its bootstrap
+fit (package-specific). The ridge and SVD fallbacks are not used: a fit
+that does not converge fails. Like other maximum likelihood estimates of
+a variance, `phi` is biased downwards when many parameters are estimated
+relative to the number of cells. For France, ages 0-99, the fit to the
+Human Mortality Database series in
+[`demography::fr.mort`](https://pkg.robjhyndman.com/demography/reference/fr.mort.html)
+reproduces the paper's dispersions (Section 3.3), AIC (Section 3.4) and
+drifts and standard deviations of `k` (Sections 3.5 and 3.6) within 1%;
+the paper's column labelled `sigma^2` holds the standard deviation
+(divisor `T - 1`).
 
 `rotate = TRUE` rotates the age pattern of decline as life expectancy
 rises (Li, Lee and Gerland 2013; status: published, with the deviations
@@ -219,6 +270,7 @@ method for forecasting mortality. *Demography* 38(4): 537-549.
 Delwarde A, Denuit M, Partrat C (2007). Negative binomial version of the
 Lee-Carter model for mortality forecasting. *Applied Stochastic Models
 in Business and Industry* 23(5): 385-401.
+[doi:10.1002/asmb.679](https://doi.org/10.1002/asmb.679)
 
 Brouhns N, Denuit M, Van Keilegom I (2005). Bootstrapping the Poisson
 log-bilinear model for mortality forecasting. *Scandinavian Actuarial
@@ -367,4 +419,11 @@ if (requireNamespace("demography", quietly = TRUE)) {
 #>       q0.975    at
 #>        <num> <num>
 # }
+# negative binomial deaths (Delwarde, Denuit and Partrat 2007)
+fit_nb <- mt_fit(lee_carter(family = "nb"), x)
+mt_parameters(fit_nb)[parameter == "nb_dispersion"]
+#>    stratum     parameter  index        value
+#>     <char>        <char> <char>        <num>
+#> 1:  female nb_dispersion        2.913877e-05
+#> 2:    male nb_dispersion        0.000000e+00
 ```

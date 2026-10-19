@@ -16,6 +16,7 @@ Each article explains one step with a simple model and figures.
 - [Backtesting and scores](backtesting.md):
 - [Tuning and recalibration](tuning-recalibration.md):
 - [Coherent forecasts: totals and their parts](coherence.md):
+- [Dependence between groups](dependence.md):
 - [Decomposing differences in life expectancy](decomposition.md):
 - [Lifespan variation](lifespan-variation.md):
 

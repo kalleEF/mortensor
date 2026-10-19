@@ -64,11 +64,6 @@
 <td>Backtests and scoring</td>
 </tr><tr><td><code>R/derive-*.R</code></td>
 <td>Life tables and derived quantities</td>
-</tr><tr><td><code>R/validation.R</code></td>
-<td>Benchmarks shared by slow tests and <code>validation/</code>
-</td>
-</tr><tr><td><code>validation/</code></td>
-<td>Validation pipeline (thresholds, runner, history); see its README</td>
 </tr><tr><td><code>dev/</code></td>
 <td>Plans, review, progress log, calibration study, package comparison script (not built into the package)</td>
 </tr></tbody></table></div>
@@ -88,17 +83,16 @@
 <h2 id="commands">Commands<a class="anchor" aria-label="anchor" href="#commands"></a></h2>
 <div class="sourceCode" id="cb1"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="ex">Rscript</span> <span class="at">-e</span> <span class="st">'roxygen2::roxygenise()'</span>                 <span class="co"># docs and NAMESPACE</span></span>
 <span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a><span class="ex">Rscript</span> <span class="at">-e</span> <span class="st">'devtools::test()'</span>                       <span class="co"># unit tests</span></span>
-<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a><span class="va">MORTENSOR_SLOW_TESTS</span><span class="op">=</span>true <span class="ex">Rscript</span> <span class="at">-e</span> <span class="st">'devtools::test()'</span>   <span class="co"># with benchmarks</span></span>
-<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a><span class="ex">Rscript</span> validation/run_validation.R <span class="at">--load-all</span>      <span class="co"># quick validation suite</span></span>
-<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a><span class="ex">R</span> CMD build . <span class="kw">&amp;&amp;</span> <span class="ex">R</span> CMD check <span class="at">--as-cran</span> mortensor_<span class="pp">*</span>.tar.gz</span></code></pre></div>
+<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a><span class="ex">R</span> CMD INSTALL . <span class="kw">&amp;&amp;</span> <span class="ex">Rscript</span> <span class="at">-e</span> <span class="st">'lintr::lint_package()'</span>   <span class="co"># lint</span></span>
+<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a><span class="ex">R</span> CMD build . <span class="kw">&amp;&amp;</span> <span class="ex">R</span> CMD check <span class="at">--as-cran</span> mortensor_<span class="pp">*</span>.tar.gz</span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="workflow">Workflow<a class="anchor" aria-label="anchor" href="#workflow"></a></h2>
-<ul><li><p>CI budget: pushes to development branches start no workflows. Run the unit tests, lint and the quick validation suite locally before each commit. Pull requests (when ready for review) and pushes to main run the Ubuntu checks; Windows and R-devel run monthly; macOS only by hand (<code>workflow_dispatch</code> with <code>platforms = all</code>).</p></li>
+<ul><li><p>CI budget: pushes to development branches start no workflows. Run the unit tests and lint locally before each commit. Pull requests (when ready for review) and pushes to main run the Ubuntu checks; Windows and R-devel run monthly; macOS only by hand (<code>workflow_dispatch</code> with <code>platforms = all</code>).</p></li>
 <li><p>One work package per commit or pull request; update <code>dev/progress.md</code> and <code>NEWS.md</code> in the same change.</p></li>
-<li><p>Documentation is part of every feature. After a feature works (tests, lint, validation), review and update in the same change: roxygen docs (<code>roxygenise()</code>), README, NEWS, the vignettes that use or should use it (re-knit precomputed ones with <code>dev/precompute-vignettes.R</code>), the function map (<code>vignettes/articles/function-map.Rmd</code>), the FAQ, and <code>_pkgdown.yml</code> (reference index and articles). Then build the pkgdown site locally (<code><a href="https://pkgdown.r-lib.org/reference/build_site.html" class="external-link">pkgdown::build_site()</a></code>, offline: <code>options(pkgdown.internet = FALSE)</code>) and check that every exported function is indexed and every page renders. The site is deployed from <code>main</code> by <code>.github/workflows/pkgdown.yaml</code>.</p></li>
+<li><p>Documentation is part of every feature. After a feature works (tests, lint), review and update in the same change: roxygen docs (<code>roxygenise()</code>), README, NEWS, the vignettes that use or should use it (re-knit precomputed ones with <code>dev/precompute-vignettes.R</code>), the function map (<code>vignettes/articles/function-map.Rmd</code>), the FAQ, and <code>_pkgdown.yml</code> (reference index and articles). Then build the pkgdown site locally (<code><a href="https://pkgdown.r-lib.org/reference/build_site.html" class="external-link">pkgdown::build_site()</a></code>, offline: <code>options(pkgdown.internet = FALSE)</code>) and check that every exported function is indexed and every page renders. The site is deployed from <code>main</code> by <code>.github/workflows/pkgdown.yaml</code>.</p></li>
 <li><p>The package is public and labelled as experimental, vibe-coded software (README notice and lifecycle badge, DESCRIPTION, package help, startup message). Keep these notices.</p></li>
-<li><p>New statistical code gets a validation check or a slow test with a threshold, not only unit tests.</p></li>
+<li><p>Correctness first: run the unit tests; new methods get tests that check them against the published method or a reference implementation (published numbers, the authors’ code, an established package), and exact identities where they hold. Forecast performance (coverage, CRPS, accuracy) depends on the data and is checked by the user with backtests; the repository has no performance benchmarks with thresholds.</p></li>
 <li><p>Data from other packages (HMD extracts in StMoMo and demography) is loaded in tests and vignettes, never copied into the repository. The owner’s German data stays outside the repository. Exceptions, with the owner’s agreement: <code>ons_data</code> (ONS, Open Government Licence) and the German regional data <code>de_deaths</code>/<code>de_population</code> (Destatis, Datenlizenz Deutschland by-2-0), built by the scripts in <code>data-raw/</code>.</p></li>
 </ul></div>
 </div>

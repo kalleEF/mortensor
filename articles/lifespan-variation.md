@@ -190,8 +190,8 @@ mt_contrast(fc[["CoDa"]], var = "sex", ref = "female", quantity = "lifespan_vari
   period %in% c(2030, 2050), list(level, ref, period, q0.025, q0.5, q0.975)]
 #>     level    ref period    q0.025     q0.5   q0.975
 #>    <char> <char>  <num>     <num>    <num>    <num>
-#> 1:   male female   2030 0.6219860 1.898914 3.047744
-#> 2:   male female   2050 0.2134672 1.426234 2.848197
+#> 1:   male female   2030 0.6219860 1.898913 3.047744
+#> 2:   male female   2050 0.2134671 1.426234 2.848197
 ```
 
 ## Which forecast was right in the past?

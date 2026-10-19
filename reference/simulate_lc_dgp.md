@@ -1,4 +1,4 @@
-# Simulated Lee-Carter data for calibration checks
+# Simulated Lee-Carter data with known truth
 
 The Lee-Carter model with Poisson deaths (Brouhns, Denuit and Vermunt
 2002): `log m = a_x + b_x k_t + shift_g`, deaths Poisson with mean

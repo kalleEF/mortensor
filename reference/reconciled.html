@@ -89,13 +89,14 @@ aggregates are the sums of the bottom strata.</p>
 <span>  method <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"wls"</span>, <span class="st">"mint"</span>, <span class="st">"structural"</span>, <span class="st">"ols"</span>, <span class="st">"bottom_up"</span>, <span class="st">"proportional"</span>,</span>
 <span>    <span class="st">"energy_score"</span><span class="op">)</span>,</span>
 <span>  shrink <span class="op">=</span> <span class="st">"auto"</span>,</span>
-<span>  dependence <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"none"</span>, <span class="st">"empirical"</span>, <span class="st">"auto"</span><span class="op">)</span>,</span>
+<span>  dependence <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"none"</span>, <span class="st">"ecc"</span>, <span class="st">"empirical"</span>, <span class="st">"auto"</span><span class="op">)</span>,</span>
 <span>  fixed <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  years <span class="op">=</span> <span class="fl">10</span>,</span>
 <span>  n_origins <span class="op">=</span> <span class="fl">5</span>,</span>
 <span>  horizon <span class="op">=</span> <span class="fl">5</span>,</span>
 <span>  control <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
-<span>  seed <span class="op">=</span> <span class="fl">1</span></span>
+<span>  seed <span class="op">=</span> <span class="fl">1</span>,</span>
+<span>  template <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -125,13 +126,17 @@ for example causes of death declared without <code>additive = "rates"</code>.</p
 
 <dt id="arg-dependence">dependence<a class="anchor" aria-label="anchor" href="#arg-dependence"></a></dt>
 <dd><p><code>"none"</code> (default: the draws are reconciled as they
-are), <code>"empirical"</code> or <code>"auto"</code> (the same as <code>"none"</code>, kept for
-compatibility). With <code>"empirical"</code> the paths of separately fitted strata
-are reordered before reconciliation by a package-specific method (see
+are), <code>"ecc"</code>, <code>"empirical"</code> or <code>"auto"</code> (the same as <code>"none"</code>, kept for
+compatibility). With <code>"ecc"</code> the draws of the base model take the
+dependence of the draws of <code>template</code> before reconciliation (ensemble
+copula coupling, Schefzik, Thorarinsdottir and Gneiting 2013): the
+same as <code>reconciled(coupled(spec, template), ...)</code>, see <code><a href="coupled.html">coupled()</a></code>.
+With <code>"empirical"</code> the paths of separately fitted strata are reordered
+before reconciliation by a package-specific method (see
 <code><a href="mt_reconcile.html">mt_reconcile()</a></code>). Draws of joint models such as <code><a href="li_lee.html">li_lee()</a></code> and
 <code><a href="tucker3.html">tucker3()</a></code>, which carry the dependence between strata, are never
-reordered (<code>"empirical"</code> then gives a warning and is ignored). The
-observation noise of predictive draws is independent across cells
+reordered by <code>"empirical"</code> (it then gives a warning and is ignored).
+The observation noise of predictive draws is independent across cells
 either way.</p></dd>
 
 
@@ -163,6 +168,12 @@ parameter moves by more than <code>tol</code> in a step, so <code>tol</code> mus
 <dd><p>Random seed of the training for <code>method = "energy_score"</code>
 (inner forecasts, observation noise and the draws of each step), so
 that fits are reproducible.</p></dd>
+
+
+<dt id="arg-template">template<a class="anchor" aria-label="anchor" href="#arg-template"></a></dt>
+<dd><p>With <code>dependence = "ecc"</code>: the model specification whose
+draws give the dependence, usually a joint model such as <code><a href="cae.html">cae()</a></code> or
+<code><a href="li_lee.html">li_lee()</a></code>.</p></dd>
 
 </dl></div>
     <div class="section level2">
@@ -203,8 +214,8 @@ The estimates and a table of the training are in the fit (see Value).</p>
 score with exponent 1 estimated from pairs of base draws (their Eq. 5),
 and Adam starts from OLS reconciliation with their settings (<code>eta = 0.001</code>, <code>beta1 = 0.9</code>, <code>beta2 = 0.999</code>, <code>epsilon = 1e-8</code>, their Section
 7). The gradient is written out analytically; ProbReco differentiates the
-same estimate automatically (the validation check <code>scoreopt_probreco</code>
-reproduces its path). The departures from the paper:</p><ul><li><p>training forecasts: Algorithm 1 refits the base models on rolling
+same estimate automatically; with the same draws both follow the same
+optimisation path. The departures from the paper:</p><ul><li><p>training forecasts: Algorithm 1 refits the base models on rolling
 windows of the length of the final fit at consecutive origins (250
 one-step forecasts in their simulations), and the objective (their Eq.
 4) is that of one horizon. Here the inner models use all training years
@@ -268,6 +279,9 @@ the inner forecasts.</p>
 Probabilistic forecast reconciliation: properties, evaluation and score
 optimisation. <em>European Journal of Operational Research</em> 306(2):
 693-706. <a href="https://doi.org/10.1016/j.ejor.2022.07.040" class="external-link">doi:10.1016/j.ejor.2022.07.040</a></p>
+<p>Schefzik R, Thorarinsdottir TL, Gneiting T (2013). Uncertainty
+quantification in complex simulation models using ensemble copula
+coupling. <em>Statistical Science</em> 28(4): 616-640. <a href="https://doi.org/10.1214/13-STS443" class="external-link">doi:10.1214/13-STS443</a></p>
     </div>
 
     <div class="section level2">

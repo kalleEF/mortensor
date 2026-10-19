@@ -4,6 +4,70 @@
 
 Clean break: the 0.1.x interface is replaced (see `dev/revamp-plan.md`).
 
+### New published models; dependence between groups
+
+Work package E5, implemented from the full papers. All new methods are
+opt-in; defaults are unchanged.
+
+- `lee_carter(family = "nb")`: negative binomial Lee-Carter model
+  (Delwarde, Denuit and Partrat 2007), maximum likelihood with one
+  dispersion parameter; predictive draws are negative binomial. On
+  French data (demography package) the dispersion and drift agree with
+  the paper’s estimates within 1%.
+- [`apci()`](../reference/apci.md): age-period-cohort-improvement model
+  (Richards et al. 2019) with the constraints of the paper, optional
+  P-spline smoothing of the age terms (APCI(S)), and ARIMA forecasts of
+  the period and cohort terms with the paper’s choice of orders. The
+  unsmoothed fit equals a constrained
+  [`glm()`](https://rdrr.io/r/stats/glm.html).
+- [`cae()`](../reference/cae.md): common age effect model (Kleinow 2015)
+  for several populations, by least-squares common principal components.
+  The paper does not forecast; the period effects follow a multivariate
+  random walk with drift (package-specific). With one population it
+  equals Lee-Carter.
+- [`saint()`](../reference/saint.md): SAINT model (Jarner and
+  Kryger 2011) in the revised version of Jarner and Jallbjørn (2022): a
+  Gamma frailty trend of pooled reference strata and stationary spreads
+  of the target strata, with an optional error-correction model for two
+  sexes.
+- [`coupled()`](../reference/coupled.md),
+  [`mt_couple()`](../reference/coupled.md) and
+  `reconciled(dependence = "ecc", template = )`: ensemble copula
+  coupling (Schefzik, Thorarinsdottir and Gneiting 2013) gives separate
+  forecasts the dependence of a joint model. Every cell keeps its draws
+  exactly.
+- [`coda_multiway()`](../reference/coda_multiway.md): multiway
+  compositional model for subpopulations (Bergeron-Boucher et al. 2018).
+  `tucker3(transform = "coda")` stays deprecated and names it as
+  replacement.
+- CoDa review against the CoDa forecasting literature:
+  [`coda()`](../reference/coda.md) and
+  [`coda_causes()`](../reference/coda_causes.md) have no numerical
+  departures from the published methods; their help pages state the
+  jump-off without smoothing (as the authors’ code), the zero
+  replacement of Appendix C, and that the alpha-transformation is not
+  implemented.
+- New vignette “Dependence between groups”
+  ([`vignette("dependence")`](../articles/dependence.md)): why the
+  dependence between groups matters for totals, gaps and inequality, and
+  how joint models and coupling provide it, with backtests on the ONS
+  deprivation quintiles.
+- The Laender vignette states that the jump-off changes little there.
+- The performance study scripts in `dev/` (calibration, tuning, stress
+  tests, the 0.1 regression baseline) are removed; their reports stay.
+
+### Testing
+
+- The performance validation suite is removed: the `validation/`
+  directory, its GitHub workflow, the benchmark helpers and the slow
+  tests with thresholds on coverage, CRPS, accuracy and runtime.
+  Forecast performance depends on the data; check it on your own data
+  with [`mt_backtest()`](../reference/mt_backtest.md).
+- The correctness tests stay: agreement with reference implementations
+  and published values, exact identities, coherence and parameter
+  recovery. Checks of the former suite that were not yet unit tests are
+  now unit tests.
+
 ### Methods checked against the full papers; new published models
 
 Work package E4. The full texts of papers that were earlier available

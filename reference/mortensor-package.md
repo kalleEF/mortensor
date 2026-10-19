@@ -30,9 +30,10 @@ The package is organised in layers:
   [`li_lee()`](li_lee.md), [`coda()`](coda.md),
   [`bohk_rau()`](bohk_rau.md), [`nordpred_apc()`](nordpred_apc.md),
   [`apc_bayes()`](apc_bayes.md) (package bamp), the experimental
-  [`tucker3()`](tucker3.md) and [`coda_causes()`](coda_causes.md), and
-  [`ensemble()`](ensemble.md), fitted with [`mt_fit()`](mt_fit.md)
-  (optionally tuned with [`tuned()`](mt_tune.md)) and forecast with
+  [`tucker3()`](tucker3.md), [`coda_multiway()`](coda_multiway.md) and
+  [`coda_causes()`](coda_causes.md), and [`ensemble()`](ensemble.md),
+  fitted with [`mt_fit()`](mt_fit.md) (optionally tuned with
+  [`tuned()`](mt_tune.md)) and forecast with
   [`mt_forecast()`](mt_forecast.md) as simulated paths
   ([mt_draws](mt_draws.md)). [`product_ratio()`](product_ratio.md) and
   [`cause_shares()`](cause_shares.md) are deprecated. The article
@@ -71,10 +72,11 @@ The package is organised in layers:
 ## Caution
 
 mortensor is experimental software written largely with AI coding
-assistants ("vibe-coded"). It has unit tests and a validation pipeline,
-but it has not been peer reviewed and its interfaces still change. Use
-it at your own risk and check results independently before using them in
-publications, reports or decisions.
+assistants ("vibe-coded"). It has unit tests that check its methods
+against published results and reference implementations, but it has not
+been peer reviewed and its interfaces still change. Use it at your own
+risk and check results independently before using them in publications,
+reports or decisions.
 
 ## See also
 

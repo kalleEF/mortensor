@@ -132,6 +132,7 @@ Models for one population
   rates of mortality improvement
 - [`stmomo()`](stmomo.md) : Generalised age-period-cohort models
   (StMoMo)
+- [`apci()`](apci.md) : Age-period-cohort-improvement (APCI) model
 - [`stanmomo()`](stanmomo.md) : Bayesian stochastic mortality models in
   Stan (StanMoMo)
 - [`arima_series()`](arima_series.md) [`ets_series()`](arima_series.md)
@@ -149,8 +150,13 @@ Models for one population
 Models for several populations and causes
 
 - [`li_lee()`](li_lee.md) : Li-Lee coherent multi-population model
+- [`cae()`](cae.md) : Common age effect model for several populations
 - [`coherent_fdm()`](coherent_fdm.md) : Coherent functional demographic
   model (product-ratio, demography)
+- [`coda_multiway()`](coda_multiway.md) : Multiway compositional (CoDa)
+  model of life-table deaths for subpopulations
+- [`saint()`](saint.md) : SAINT model: trend of a reference population
+  and stationary spreads
 - [`tucker3()`](tucker3.md) : Tucker3 tensor model across strata
   (three-way Lee-Carter model)
 - [`cause_shares()`](cause_shares.md) : Coherent multi-cause forecasts
@@ -165,13 +171,15 @@ Models for several populations and causes
 Combine models and make forecasts coherent
 
 Model wrappers (ensembles, different models for groups of strata,
-reconciliation, calibration, jump-off, bootstrap, tuning) and
+reconciliation, coupling, calibration, jump-off, bootstrap, tuning) and
 hierarchies of strata.
 
 - [`ensemble()`](ensemble.md) : Ensembles of models
 - [`stratified()`](stratified.md) : Different models for different
   groups of strata
 - [`reconciled()`](reconciled.md) : Models with reconciled forecasts
+- [`coupled()`](coupled.md) [`mt_couple()`](coupled.md) : Give separate
+  forecasts the dependence of a joint model
 - [`recalibrated()`](recalibrated.md) : Recalibrate forecast
   distributions on recent years
 - [`anchored()`](anchored.md) : Control the jump-off of any model

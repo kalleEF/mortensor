@@ -145,7 +145,13 @@ forecasts start from the fitted deaths of year <code>T</code>. The point forecas
 the ARIMA(0,1,1) index with drift is shifted so that its first step equals
 the drift (eq. 20), which removes the break that the moving-average term
 causes in the first forecast year; the package applies the same
-correction to any ARIMA(0,1,q) index with drift.</p>
+correction to any ARIMA(0,1,q) index with drift. Appendix G also smooths
+the last observed year with P-splines for Poisson counts (Camarda 2012)
+to avoid extrapolating its random variation. The sentence follows the
+jump-off equation of the Lee-Carter models (eq. 18), and the authors'
+code starts the CoDa forecasts from the deaths of the last year with the
+Kannisto rates from age 80 and without further smoothing; the package
+follows the code.</p>
 <p><strong>Coherent model (Section 2.4, Appendix C).</strong> The common component
 <code>B[x] K[t]</code> is the model above fitted to the average mortality of a group:
 the arithmetic mean of the death rates of its strata (equal weights, p.
@@ -160,7 +166,9 @@ which Li and Lee (2005) suggest for their deviations (as cited on p. 531)
 and whose deviations stay bounded in distribution. Groups are all strata,
 or each level of <code>common_by</code>; if the data carry a hierarchy (see
 <code><a href="mt_aggregate_strata.html">mt_aggregate_strata()</a></code>), the average uses the bottom strata only, as
-<code><a href="li_lee.html">li_lee()</a></code> does.</p>
+<code><a href="li_lee.html">li_lee()</a></code> does. <code><a href="coda_multiway.html">coda_multiway()</a></code> is the other published coherent CoDa
+model: one Tucker3 decomposition of all strata with shared time indexes
+(Bergeron-Boucher, Simonacci, Oeppen and Gallo 2018).</p>
 <p><strong>Draws (Appendix B, pp. 556-557).</strong> Draws carry the uncertainty of the
 estimates and of the index forecasts: the residuals of eq. (5) are
 resampled cell by cell and added to the fitted component, <code>b</code> and <code>k</code> are
@@ -213,7 +221,9 @@ authors' code uses 0.06 at age 0); the residuals of the bootstrap are
 those of eq. (5), as the paper describes (the authors' code takes them
 around the in-sample one-step forecasts of the ARIMA model); the number of
 refits follows <code>n_draws</code>; the draws are centred as in the authors' code
-(see above).</p>
+(see above). Zero deaths follow the formula of Appendix C; the authors'
+code closes the composition after imputing <code>delta</code>, so that a zero there
+gets the share <code>delta / (1 + z delta)</code>.</p>
     </div>
     <div class="section level2">
     <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a></h2>
@@ -230,11 +240,15 @@ populations: an extension of the Lee-Carter method. <em>Demography</em> 42(3):
 575-594. <a href="https://doi.org/10.1353/dem.2005.0021" class="external-link">doi:10.1353/dem.2005.0021</a></p>
 <p>Lee RD, Carter LR (1992). Modeling and forecasting U.S. mortality.
 <em>Journal of the American Statistical Association</em> 87(419): 659-671.</p>
+<p>Camarda CG (2012). MortalitySmooth: an R package for smoothing Poisson
+counts with P-splines. <em>Journal of Statistical Software</em> 50(1): 1-24.
+<a href="https://doi.org/10.18637/jss.v050.i01" class="external-link">doi:10.18637/jss.v050.i01</a></p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
-    <div class="dont-index"><p><code><a href="coda_causes.html">coda_causes()</a></code> for causes of death, <code><a href="lee_carter.html">lee_carter()</a></code> for the model
-of death rates, <code><a href="li_lee.html">li_lee()</a></code> for its coherent version.</p></div>
+    <div class="dont-index"><p><code><a href="coda_multiway.html">coda_multiway()</a></code> for the multiway model of several populations,
+<code><a href="coda_causes.html">coda_causes()</a></code> for causes of death, <code><a href="lee_carter.html">lee_carter()</a></code> for the model of
+death rates, <code><a href="li_lee.html">li_lee()</a></code> for its coherent version.</p></div>
     </div>
 
     <div class="section level2">
