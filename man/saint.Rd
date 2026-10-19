@@ -183,7 +183,8 @@ frailty distributions other than Gamma (Appendix A).
 
 \examples{
 x <- mt_example_regions(years = 1995:2019, regions = 3, ages = "single")
-x <- mt_aggregate_strata(mt_subset(x, ages = c(40, 100)), mt_hierarchy(region = "all", quintile = "all"))
+h <- mt_hierarchy(region = "all", quintile = "all")
+x <- mt_aggregate_strata(mt_subset(x, ages = c(40, 100)), h)
 x <- mt_subset(x, quintile == "all", drop = TRUE)
 fit <- mt_fit(saint(reference = list(region = "all"), by = "sex"), x)
 fc <- mt_forecast(fit, h = 10, n_draws = 100, seed = 1)
