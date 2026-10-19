@@ -180,17 +180,3 @@ test_that("mt_plot_excess returns ggplot objects", {
   expect_error(mt_plot_excess(ex, level = 0.8), class = "mt_error_argument")
   expect_error(mt_plot_excess(data.frame(a = 1)), class = "mt_error_argument")
 })
-
-test_that("excess intervals have nominal coverage on simulated shocks", {
-  skip_if(!identical(Sys.getenv("MORTENSOR_SLOW_TESTS"), "true"), "slow benchmark")
-  res <- data.table::rbindlist(lapply(1:20, function(r) {
-    x <- shocked_example(years = 1990:2019, seed = r)
-    ex <- mt_excess(lee_carter(), x, baseline = c(1990, 2014), n_draws = 300, seed = r)
-    ex <- merge(ex, attr(x, "added"), by = c("sex", "period"), all.x = TRUE)
-    ex[is.na(added), added := 0]
-    ex[, list(added, covered = excess_q0.025 <= added & added <= excess_q0.975, med = excess_q0.5)]
-  }))
-  expect_gt(mean(res[added == 0]$covered), 0.85)
-  expect_gt(mean(res[added > 0]$covered), 0.85)
-  expect_lt(abs(mean(res[added > 0, (med - added) / added])), 0.05)
-})

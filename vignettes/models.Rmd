@@ -143,11 +143,11 @@ and for the coherent model.
   intervals of life expectancy). Predictive draws add Poisson variation of
   the deaths given the rates. All ages have equal weight on the clr
   scale, so the noise of ages with few deaths enters `k(t)`: intervals can
-  be wider than those of Lee-Carter. On England & Wales men (ages 30-100,
-  validation backtest from 1996-2001, 10 years ahead) the 95% intervals
-  covered 0.97 of the observed rates at horizons 1-4 and 0.71 at horizon
-  10: the moving-average coefficient of the index was at -1, so the index
-  paths added little uncertainty beyond that of the drift.
+  be wider than those of Lee-Carter. In an example backtest on England &
+  Wales men (ages 30-100, origins 1996-2001, 10 years ahead) the 95%
+  intervals covered 0.97 of the observed rates at horizons 1-4 and 0.71
+  at horizon 10: the moving-average coefficient of the index was at -1,
+  so the index paths added little uncertainty beyond that of the drift.
 * **Deviations**: life tables with `a_x = n / 2` at age 0 (the authors'
   code: 0.06); the number of refits; the centring of the draws and the
   regression of the open interval described above.
@@ -200,12 +200,12 @@ forecasts and standard errors for given smoothing parameters.
   (counted in the single years that the cells span), and the search of
   the smoothing parameters (a grid with steps of 1 on the log10 scale,
   then a continuous search; MortalitySmooth uses two grids).
-* **Use**: each age continues the trend of its last years. In the
-  package's validation backtests (10 years ahead from six
-  origins), the CRPS of log rates was 0.035 against 0.071 for Lee-Carter
-  on England & Wales men aged 30-100, and 0.115 against 0.085 on French
-  women aged 0-100, where the surface extrapolated local trends at ages
-  65 and over. On England & Wales men the 95% intervals of life
+* **Use**: each age continues the trend of its last years. In example
+  backtests (10 years ahead from six origins), the CRPS of log rates was
+  0.035 against 0.071 for Lee-Carter on England & Wales men aged 30-100,
+  and 0.115 against 0.085 on French women aged 0-100, where the surface
+  extrapolated local trends at ages 65 and over. On England & Wales men
+  the 95% intervals of life
   expectancy at 30 covered 0.40 of the observed values (Lee-Carter 0.90):
   the intervals of summary measures are narrow.
 
@@ -235,8 +235,8 @@ is written from the paper; the author's code was used to check results.
   at age 0 for age groups, and the bootstrap deaths of cells without
   deaths.
 * **Use**: the model needs at least 10 data years, and the first year of
-  life as its own age group for the infant coefficients. In the
-  validation backtests, the CRPS of log rates was 0.066 against 0.085
+  life as its own age group for the infant coefficients. In the same
+  example backtests, the CRPS of log rates was 0.066 against 0.085
   for Lee-Carter on French women, and the CRPS of life expectancy at birth
   0.122 against 0.239. On England & Wales men the rates of change of
   1961-2001 held back the faster decline after 2001 (CRPS 0.058, against
@@ -281,7 +281,7 @@ over the forecast.
   model and the knots of the P-spline surface. The convergence of a
   population to the trend of reference populations is not implemented.
 * **Use**: the paper recommends a base period at least as long as the
-  forecast horizon, and single years of age from 0. In the validation
+  forecast horizon, and single years of age from 0. In an example
   backtest on England & Wales men aged 30-100 (10 years ahead), the CRPS
   of log rates was 0.045 against 0.071 for Lee-Carter, and the 95%
   intervals covered 0.71 of the observed rates (Lee-Carter 0.63) and
@@ -349,8 +349,8 @@ ages adds a third period term, which he suggests dropping when only
 older ages are of interest; the full model is not offered. The fitted
 rates equal those of the vignette's code. In the vignette's 50-year
 forecasts for England & Wales men aged 55-89 the rates of this model
-increase, which the vignette calls implausible. In the validation
-backtest on the same men (1996-2001, 10 years ahead), its CRPS of log
+increase, which the vignette calls implausible. In an example backtest
+on the same men (1996-2001, 10 years ahead), its CRPS of log
 rates was 0.071 against 0.073 for Lee-Carter, and its 95% intervals
 covered 0.76 of the observed rates (Lee-Carter 0.62).
 
@@ -419,7 +419,7 @@ agree with those of nordpred to a relative difference below 1e-7.
   the coefficients from their asymptotic normal distribution
   (package-specific): the draws contain no variation of future period
   effects and no overdispersion. Predictive draws add Poisson variation
-  of the deaths given the rates. In the validation backtest on England &
+  of the deaths given the rates. In an example backtest on England &
   Wales men in 5-year groups from 30 (1996-2001, 10 years ahead), the 95%
   intervals covered 0.11 of the observed rates, and the CRPS of log rates
   was 0.079 against 0.069 for Lee-Carter on the same groups (0.066 with
@@ -540,7 +540,7 @@ multiple-decrement life table (eq. 7 of the paper).
   that the listed causes leave unexplained, and predictive draws split
   Poisson all-cause deaths multinomially between the causes, so that the
   causes add up in predictive draws as well (all package-specific).
-* **Accuracy**: in the package's validation on simulated causes
+* **Accuracy**: in an example backtest on simulated causes
   (`mt_example_causes()`, origins 2008-2012, 5 years ahead), its CRPS of
   log rates was 0.082, against 0.063 for Lee-Carter models per cause
   reconciled with WLS.

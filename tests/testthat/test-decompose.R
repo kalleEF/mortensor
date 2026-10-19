@@ -18,13 +18,18 @@ ons_small <- function(by_cause = FALSE) {
 
 test_that("decompositions of life expectancy add up and agree with their definitions", {
   x <- mt_example(deaths = "single", years = 2000:2015)
+  by_age <- list()
   for (m in c("arriaga", "stepwise", "horiuchi")) {
     d <- mt_decompose(x, periods = c(2000, 2015), at = 30, method = m)
     tot <- summary(d, by = NULL)
     e <- life_expectancy(mt_array(x, "deaths") / mt_array(x, "exposure"), mt_grid(x)$age, at = 30)
     expect_equal(tot$difference, unname(e["2015", ] - e["2000", ]), tolerance = 1e-10)
     expect_lt(max(tot$max_residual), if (m == "horiuchi") 1e-4 else 1e-10)
+    by_age[[m]] <- summary(d, by = "age")$mean
   }
+  # for life expectancy, symmetric stepwise replacement and the symmetric
+  # Arriaga decomposition both average the two orders of replacement
+  expect_lt(max(abs(by_age$stepwise - by_age$arriaga)), 1e-10)
   # forward Arriaga is stepwise replacement from the oldest age
   m <- mt_array(x, "deaths") / mt_array(x, "exposure")
   age <- mt_grid(x)$age

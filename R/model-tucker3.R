@@ -28,10 +28,10 @@
 #' rates are rebuilt with `a`, `A`, `C` and `G` fixed. Draws carry the
 #' uncertainty of the forecast period factors only. With fewer period
 #' factors than independent trends in the data, the strata share their
-#' forecast uncertainty and intervals are too narrow: on simulated
-#' Lee-Carter data with Poisson deaths and an own random walk in each of 10
-#' strata (the package's coverage benchmark), 95% intervals covered about
-#' 74% with the default ranks and 95% with `ranks = c(1, 10, 10)`.
+#' forecast uncertainty and intervals are too narrow: in an example on
+#' simulated Lee-Carter data with Poisson deaths and an own random walk in
+#' each of 10 strata, 95% intervals covered about 74% with the default
+#' ranks and 95% with `ranks = c(1, 10, 10)`.
 #' Predictive draws (`mt_forecast(predictive = TRUE)`) add Poisson variation
 #' of the deaths given the rates and the exposures, and no other observation
 #' noise. If intervals are too narrow on real data, that is a property of

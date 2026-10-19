@@ -179,9 +179,9 @@ fit$reconcile$scoreopt$table   # in-sample energy score with OLS and after the o
 ```
 
 Each fit takes about 20 seconds on these data, so the code is not run
-here. In a backtest from 2011 to 2014 (validation check `scoreopt_ons`),
-the method was less accurate than WLS at every level: CRPS 21% higher for
-the bottom series, 23% for the aggregates and 26% for England. The
+here. In an example backtest from 2011 to 2014, the method was less
+accurate than WLS at every level: CRPS 21% higher for the bottom series,
+23% for the aggregates and 26% for England. The
 training forecasts were too high in 2006-2011 and the correction learnt
 from them pushed the forecasts down, while mortality improvement stalled
 after 2011. With few, overlapping training forecasts and one parameter per
