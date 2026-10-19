@@ -66,6 +66,7 @@ reference:
   - title: 6. Models for several populations and causes
     contents:
       - li_lee
+      - cae
       - coherent_fdm
       - coda_multiway
       - tucker3
@@ -73,11 +74,12 @@ reference:
       - coda_causes
       - product_ratio
   - title: 7. Combine models and make forecasts coherent
-    desc: Model wrappers (ensembles, different models for groups of strata, reconciliation, calibration, jump-off, bootstrap, tuning) and hierarchies of strata.
+    desc: Model wrappers (ensembles, different models for groups of strata, reconciliation, coupling, calibration, jump-off, bootstrap, tuning) and hierarchies of strata.
     contents:
       - ensemble
       - stratified
       - reconciled
+      - coupled
       - recalibrated
       - anchored
       - bootstrapped
@@ -150,6 +152,7 @@ articles:
       - backtesting
       - tuning-recalibration
       - coherence
+      - dependence
       - decomposition
       - lifespan-variation
   - title: Models

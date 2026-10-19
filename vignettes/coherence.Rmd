@@ -158,7 +158,9 @@ the model itself. `dependence = "empirical"` reorders the paths of
 separately fitted parts so that they move together as they did in the
 training years. This reordering is specific to this package, related to
 the Schaake shuffle (Clark et al. 2004); it is used only when chosen, and
-a backtest should check its effect.
+a backtest should check its effect. The vignette "Dependence between
+groups" compares joint models and ensemble copula coupling for totals and
+gaps.
 
 ## Reconciliation learnt from past forecasts
 

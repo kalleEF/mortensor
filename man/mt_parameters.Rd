@@ -61,17 +61,28 @@ the Gelman-Rubin statistics (\code{rhat});
 and cohort effects (cohorts by central year of birth) and of the drift,
 the projected drift, the number of periods fitted, the choice of the
 recent trend and the p-values of the goodness of fit and of the test for
-the recent trend.
+the recent trend;
+\item \code{\link[=cae]{cae()}}: the common age effects \code{beta1}, \code{beta2}, ... of each group
+(rows labelled \verb{common <g> (<strata>)}), and per stratum the centring
+\code{a}, the period effects \code{kappa1}, \code{kappa2}, ..., their drift
+(\code{drift_kappa1}, ...), the standard deviation of their innovations
+(\code{sd_kappa1}, ...) and the correlation of their innovations with those
+of the same order of every stratum (\code{cor_kappa1}, ..., indexed by the
+other stratum); rows of stratum \code{"model"} give the mean squared error
+of the centred log rates (\code{mse}) and the approximate BIC of Kleinow
+(2015, eq. 5; \code{bic}).
 }
 
 Fits of wrapped packages (StMoMo, demography) keep the original fitted
 object in \code{fit$fits[[i]]}, where the methods of those packages apply.
 
 Wrappers return the parameters of the model they wrap (\code{\link[=recalibrated]{recalibrated()}}
-adds its factors). For an \code{\link[=ensemble]{ensemble()}}, the rows of each component carry
-its name in column \code{component}, and rows with \code{parameter = "weight"} give
-the weights; components without interpretable parameters (wrapped
-packages) contribute their weight only. For \code{\link[=stratified]{stratified()}} and
+adds its factors; \code{\link[=coupled]{coupled()}} adds those of the template, with column
+\code{component} \code{"base"} or \code{"template"}). For an \code{\link[=ensemble]{ensemble()}}, the rows of
+each component carry its name in column \code{component}, and rows with
+\code{parameter = "weight"} give the weights; components without
+interpretable parameters (wrapped packages) contribute their weight
+only. For \code{\link[=stratified]{stratified()}} and
 \code{tuned(by = )}, the rows of each group carry its name in column \code{group}.
 }
 \examples{
