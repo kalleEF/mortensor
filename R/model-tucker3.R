@@ -24,7 +24,11 @@
 #' with drift, as `k[t]` of Lee and Carter (1992); draws resample the joint
 #' year-to-year changes, which keeps their correlation, and include the
 #' uncertainty of the drift (`ts = "rwd"`). ARIMA or ETS models per column
-#' (`ts = "arima"`, `"ets"`, package \pkg{forecast}) are alternatives. The
+#' (`ts = "arima"`, `"ets"`, package \pkg{forecast}) are alternatives.
+#' Bergeron-Boucher, Simonacci, Oeppen and Gallo (2018) forecast this model
+#' with one component per mode and a random walk with drift of the period
+#' index, as `tucker3(ranks = c(1, 1, 1))` does; their draws resample the
+#' errors of the index and keep the drift fixed. The
 #' rates are rebuilt with `a`, `A`, `C` and `G` fixed. Draws carry the
 #' uncertainty of the forecast period factors only. With fewer period
 #' factors than independent trends in the data, the strata share their
@@ -59,11 +63,13 @@
 #'   groups.
 #'
 #' **Deprecated:** `transform = "coda"` (centred log-ratio transformed
-#' life-table deaths in place of log rates, with an auxiliary random walk
-#' for the rate of the open age interval) is a combination of this package
-#' without a published source; it still works and warns (class
-#' `mt_warning_deprecated`). Use [coda()] (`coherent = TRUE` for several
-#' strata), the published compositional model.
+#' life-table deaths in place of log rates) still works and warns (class
+#' `mt_warning_deprecated`). Its forecast of all period factors by a
+#' multivariate random walk, its auxiliary random walk for the rate of the
+#' open age interval and its 0.5 deaths in empty cells are package-specific.
+#' Use [coda_multiway()], the published multiway compositional model of
+#' Bergeron-Boucher, Simonacci, Oeppen and Gallo (2018), or [coda()]
+#' (`coherent = TRUE`) for a common component with deviations per stratum.
 #'
 #' Ranks are reduced to the array dimensions where needed, so the model also
 #' runs with one stratum or one age group. The model is experimental: compare
@@ -77,7 +83,7 @@
 #'   of parameters of the factor matrices and the core; ranks up to 6 for
 #'   age and period and up to 4 for strata). For selection by forecast
 #'   accuracy use [tuned()].
-#' @param transform `"log"`, or the deprecated `"coda"`.
+#' @param transform `"log"`, or the deprecated `"coda"` (use [coda_multiway()]).
 #' @param ts Forecast method for the period factors: `"rwd"`, `"arima"`,
 #'   `"ets"`.
 #' @param residual_noise Add the in-sample residual variation (per age and
@@ -106,6 +112,12 @@
 #'
 #' Kolda TG, Bader BW (2009). Tensor decompositions and applications. *SIAM
 #' Review* 51(3): 455-500. \doi{10.1137/07070111X}
+#'
+#' Bergeron-Boucher M-P, Simonacci V, Oeppen J, Gallo M (2018). Coherent
+#' modeling and forecasting of mortality patterns for subpopulations using
+#' multiway analysis of compositions: an application to Canadian provinces
+#' and territories. *North American Actuarial Journal* 22(1): 92-118.
+#' \doi{10.1080/10920277.2017.1377620}
 #' @examples
 #' x <- mt_example(deaths = "single")
 #' fit <- mt_fit(tucker3(), x)
@@ -119,9 +131,10 @@ tucker3 <- function(ranks = c(2, 2, 2), transform = c("log", "coda"), ts = c("rw
   check_flag(residual_noise, "residual_noise")
   check_flag(centre, "centre")
   if (transform == "coda") {
-    mt_warn(paste("tucker3(transform = \"coda\") is deprecated: this combination of a Tucker3 decomposition with",
-                  "compositional life-table deaths has no published source. Use coda() (coherent = TRUE for",
-                  "several strata)."), class = "deprecated")
+    mt_warn(paste("tucker3(transform = \"coda\") is deprecated: its forecast of the period factors, the open age",
+                  "interval and the empty cells are package-specific. Use coda_multiway(), the multiway",
+                  "compositional model of Bergeron-Boucher, Simonacci, Oeppen and Gallo (2018)."),
+            class = "deprecated")
   }
   if (ts != "rwd") need_pkg("forecast", sprintf("for ts = \"%s\"", ts))
   if (is.character(ranks)) {

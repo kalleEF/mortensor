@@ -19,6 +19,11 @@
 #'   `order_K`, `arima_K`, `sd_K`) and per stratum `a`, `b`, `k` and the
 #'   ARIMA model of `k`. [coda_causes()]: per group, as [coda()], with parts
 #'   by age and cause (`b1`, `k1`, `b2`, `k2`, ... with several components);
+#' * [coda_multiway()]: the common age patterns `b`, time indexes `k` (with
+#'   `order_k`, `arima_k`, `sd_k`), population markers `gamma` and core `g`
+#'   (index `p,q,r`), numbered with several components, and the share of
+#'   variation explained; per stratum the centre `a`, the parameters of the
+#'   open age interval or of the Kannisto model of each year;
 #' * [rwd()]: drift and innovation standard deviation per age (and, with
 #'   `observation_noise = TRUE`, the variances of level and noise);
 #' * [apc_bayes()]: posterior medians and 90% intervals of the age, period
@@ -131,6 +136,7 @@ base_parameters <- function(fit, sp) {
     })))
   }
   if (inherits(sp, c("mt_spec_coda", "mt_spec_coda_causes"))) return(coda_parameters(fit, sp))
+  if (inherits(sp, "mt_spec_coda_multiway")) return(coda_multiway_parameters(fit))
   if (inherits(sp, c("mt_spec_p_splines", "mt_spec_cp_splines"))) {
     return(rbindlist(lapply(seq_along(fit$fits), function(s) {
       f <- fit$fits[[s]]
@@ -454,6 +460,7 @@ model_assumptions <- function(spec) {
            "variation of the deaths."),
          mt_spec_coda = coda_assumptions(spec),
          mt_spec_coda_causes = coda_assumptions(spec),
+         mt_spec_coda_multiway = coda_assumptions(spec),
          mt_spec_rwd = if (isTRUE(p$observation_noise)) {
            paste("Each age: log rate = level + noise, level a random walk with drift (local level model;",
                  "deprecated variant). Variances from a moment estimator of this package (Poisson part plus a",

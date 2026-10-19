@@ -67,6 +67,7 @@ reference:
     contents:
       - li_lee
       - coherent_fdm
+      - coda_multiway
       - tucker3
       - cause_shares
       - coda_causes

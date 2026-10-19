@@ -79,7 +79,13 @@ forecasts start from the fitted deaths of year \code{T}. The point forecast of
 the ARIMA(0,1,1) index with drift is shifted so that its first step equals
 the drift (eq. 20), which removes the break that the moving-average term
 causes in the first forecast year; the package applies the same
-correction to any ARIMA(0,1,q) index with drift.
+correction to any ARIMA(0,1,q) index with drift. Appendix G also smooths
+the last observed year with P-splines for Poisson counts (Camarda 2012)
+to avoid extrapolating its random variation. The sentence follows the
+jump-off equation of the Lee-Carter models (eq. 18), and the authors'
+code starts the CoDa forecasts from the deaths of the last year with the
+Kannisto rates from age 80 and without further smoothing; the package
+follows the code.
 
 \strong{Coherent model (Section 2.4, Appendix C).} The common component
 \verb{B[x] K[t]} is the model above fitted to the average mortality of a group:
@@ -95,7 +101,9 @@ which Li and Lee (2005) suggest for their deviations (as cited on p. 531)
 and whose deviations stay bounded in distribution. Groups are all strata,
 or each level of \code{common_by}; if the data carry a hierarchy (see
 \code{\link[=mt_aggregate_strata]{mt_aggregate_strata()}}), the average uses the bottom strata only, as
-\code{\link[=li_lee]{li_lee()}} does.
+\code{\link[=li_lee]{li_lee()}} does. \code{\link[=coda_multiway]{coda_multiway()}} is the other published coherent CoDa
+model: one Tucker3 decomposition of all strata with shared time indexes
+(Bergeron-Boucher, Simonacci, Oeppen and Gallo 2018).
 
 \strong{Draws (Appendix B, pp. 556-557).} Draws carry the uncertainty of the
 estimates and of the index forecasts: the residuals of eq. (5) are
@@ -152,7 +160,9 @@ authors' code uses 0.06 at age 0); the residuals of the bootstrap are
 those of eq. (5), as the paper describes (the authors' code takes them
 around the in-sample one-step forecasts of the ARIMA model); the number of
 refits follows \code{n_draws}; the draws are centred as in the authors' code
-(see above).
+(see above). Zero deaths follow the formula of Appendix C; the authors'
+code closes the composition after imputing \code{delta}, so that a zero there
+gets the share \verb{delta / (1 + z delta)}.
 }
 \examples{
 x <- mt_example(deaths = "single", years = 1995:2012)
@@ -179,8 +189,13 @@ populations: an extension of the Lee-Carter method. \emph{Demography} 42(3):
 
 Lee RD, Carter LR (1992). Modeling and forecasting U.S. mortality.
 \emph{Journal of the American Statistical Association} 87(419): 659-671.
+
+Camarda CG (2012). MortalitySmooth: an R package for smoothing Poisson
+counts with P-splines. \emph{Journal of Statistical Software} 50(1): 1-24.
+\doi{10.18637/jss.v050.i01}
 }
 \seealso{
-\code{\link[=coda_causes]{coda_causes()}} for causes of death, \code{\link[=lee_carter]{lee_carter()}} for the model
-of death rates, \code{\link[=li_lee]{li_lee()}} for its coherent version.
+\code{\link[=coda_multiway]{coda_multiway()}} for the multiway model of several populations,
+\code{\link[=coda_causes]{coda_causes()}} for causes of death, \code{\link[=lee_carter]{lee_carter()}} for the model of
+death rates, \code{\link[=li_lee]{li_lee()}} for its coherent version.
 }
