@@ -98,7 +98,9 @@ shares of the draw, so that the causes also add up to all causes in
 predictive draws; no other observation noise is added (package-specific).
 
 The extensions of Kjærgaard, Ergemen, Kallestrup-Lamb, Oeppen and
-Lindahl-Jacobsen (2019) are not implemented. Compare the model with
+Lindahl-Jacobsen (2019) are not implemented, nor is the alpha-transformation
+that Dong, Shang, Hui and Bruhn (2025) use in place of the clr for
+compositions of causes with zero counts. Compare the model with
 \code{\link[=reconciled]{reconciled()}} separate models in a backtest before using it.
 }
 \examples{
@@ -119,6 +121,10 @@ Kjærgaard S, Ergemen YE, Kallestrup-Lamb M, Oeppen J, Lindahl-Jacobsen R
 (2019). Forecasting causes of death by using compositional data analysis:
 the case of cancer deaths. \emph{Journal of the Royal Statistical Society
 Series C} 68(5): 1351-1370. \doi{10.1111/rssc.12357}
+
+Dong Z, Shang HL, Hui F, Bruhn A (2025). A compositional approach to
+modeling cause-specific mortality with zero counts. \emph{Annals of Actuarial
+Science} 19(3): 416-441. \doi{10.1017/S1748499524000320}
 }
 \seealso{
 \code{\link[=reconciled]{reconciled()}} with a hierarchy of causes, \code{\link[=coda]{coda()}}.

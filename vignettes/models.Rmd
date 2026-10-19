@@ -122,7 +122,11 @@ and for the coherent model.
   (Pascariu).
 * **Jump-off**: observed deaths of the last year, changed by the model
   (default; Appendix G of the paper), or fitted deaths
-  (`jump_off = "fitted"`).
+  (`jump_off = "fitted"`). Appendix G also mentions smoothing the last
+  year with P-splines for Poisson counts (Camarda 2012), next to the
+  jump-off of the Lee-Carter models; the authors' code starts the CoDa
+  forecasts from the deaths of the last year with the Kannisto rates from
+  age 80, and so does the package.
 * **Coherent version** (`coherent = TRUE` or `common_by`):
   `clr(d(x,t,i) / a(x,i)) = B(x) K(t) + b(x,i) k(t,i)`. The common
   component is the model above fitted to the arithmetic mean of the death
@@ -150,7 +154,13 @@ and for the coherent model.
   paths added little uncertainty beyond that of the drift.
 * **Deviations**: life tables with `a_x = n / 2` at age 0 (the authors'
   code: 0.06); the number of refits; the centring of the draws and the
-  regression of the open interval described above.
+  regression of the open interval described above. Zero deaths follow the
+  formula of Appendix C; the authors' code closes the composition after
+  the imputation, so that a zero gets `delta / (1 + z delta)` there.
+* **Related methods not implemented**: more components with functional
+  time series models of their scores (Shang and Haberman 2020) and the
+  alpha-transformation in place of the clr, which handles zero counts
+  (Shang and Haberman 2025; Dong et al. 2025 for causes of death).
 
 ### Random walk with drift: `rwd()`
 
@@ -480,6 +490,50 @@ method with the functional data models of demography:
 `product_ratio()`, a Lee-Carter version of the method without a published
 source, is deprecated in favour of `coherent_fdm()`.
 
+### Multiway compositional model: `coda_multiway()` (experimental)
+
+`coda_multiway()` is the three-way compositional model of
+Bergeron-Boucher, Simonacci, Oeppen and Gallo (2018). The centred
+log-ratios of the life-table deaths of all strata, each centred by its
+geometric mean over the years, form an array `[age, year, stratum]`, and a
+Tucker3 decomposition describes it:
+`clr(d(x,t,i) / a(x,i)) = sum g(p,q,r) b(x,p) k(t,q) gamma(i,r)`, with age
+patterns `b`, time indexes `k`, stratum markers `gamma` and a core array
+`g`. With one component per mode (`ranks = c(1, 1, 1)`, the model of the
+paper's forecasts), every stratum follows one time index and one age
+pattern, at a pace set by its marker `gamma(i)`. With one stratum the fit
+and the point forecasts are those of `coda()` with the same index model.
+
+* **Estimation**: least squares by alternating least squares
+  (higher-order orthogonal iteration); the paper uses the Tucker3 model
+  for compositional data of Gallo (2015), which minimises the same
+  criterion. `fit$fits$fit_pct` is the share of the variation that the
+  model explains (Section 4.1 of the paper). The unit tests recover known
+  parameters from simulated compositions and check the least-squares
+  optimum.
+* **Forecast**: the time index follows a random walk with drift, the
+  ARIMA model that the paper selected for the index of Canadian women
+  (`order`, `drift`). The paper states no jump-off adjustment, so
+  forecasts start from the fitted deaths; `jump_off = "observed"` starts
+  from the observed deaths as `coda()` does.
+* **Uncertainty**: as in the paper, draws simulate the time index with
+  resampled innovations; the other parameters and the drift are fixed,
+  and all strata share the paths of the index. Predictive draws add
+  Poisson variation of the deaths given the rates.
+* **Choices where the paper is silent**: several time indexes get
+  independent ARIMA models; old ages, open age intervals and zero deaths
+  are treated as in `coda()`. The paper uses five-year age groups and
+  periods; the models of this package need single calendar years. The
+  choice of the ranks by the DifFit criterion, bootstrap confidence
+  intervals of the parameters and the AIC comparison of the paper are not
+  implemented.
+
+The paper fits women and men separately (`stratified("sex", female =
+coda_multiway(), male = coda_multiway())`). For populations whose age
+and time patterns differ, the paper points to models with a common
+component and deviations per population, such as `coda(coherent = TRUE)`
+and `li_lee()` (its Section 6).
+
 ### Three-way Lee-Carter model: `tucker3()` (experimental)
 
 `tucker3()` is the three-way extension of the Lee-Carter model of
@@ -514,7 +568,7 @@ that the model explains, the paper's measure of fit (its Table 4).
   `residual_noise = TRUE` adds the in-sample residual variation, which
   counts the observation noise twice.
 
-`transform = "coda"` is deprecated (use `coda()`). The model is
+`transform = "coda"` is deprecated (use `coda_multiway()`). The model is
 experimental: compare it with established models such as `li_lee()` in a
 backtest before using it.
 
@@ -704,6 +758,7 @@ across windows.
 | `coherent_fdm()` | yes (product and ratios) | as fdm (product) | no | Poisson, predictive draws |
 | `tucker3()` | yes (period factors) | yes | no | Poisson, predictive draws (with `residual_noise = TRUE` also the residual variation) |
 | `coda()`, `coda_causes()` | yes (resampled innovations) | yes (index model refitted) | `b`, `k` and the index model (residual bootstrap); `a` fixed | Poisson, predictive draws (`coda_causes()`: all-cause deaths split multinomially between the causes) |
+| `coda_multiway()` | yes (resampled innovations, shared by the strata) | no | no | Poisson, predictive draws |
 | `hyndman_ullah()` | yes | as fdm | no | Poisson, predictive draws |
 | `stmomo()` (including `"plat"`) | yes | yes | no | Poisson, predictive draws |
 | `stanmomo()` | yes | posterior | yes (posterior) | Poisson or negative binomial (posterior predictive), predictive draws |
@@ -774,6 +829,12 @@ Bergeron-Boucher M-P, Canudas-Romo V, Oeppen J, Vaupel JW (2017).
 Coherent forecasts of mortality with compositional data analysis.
 *Demographic Research* 37(17): 527-566. doi:10.4054/DemRes.2017.37.17.
 
+Bergeron-Boucher M-P, Simonacci V, Oeppen J, Gallo M (2018). Coherent
+modeling and forecasting of mortality patterns for subpopulations using
+multiway analysis of compositions: an application to Canadian provinces
+and territories. *North American Actuarial Journal* 22(1): 92-118.
+doi:10.1080/10920277.2017.1377620.
+
 Bohk-Ewald C, Rau R (2017). Probabilistic mortality forecasting with
 varying age-specific survival improvements. *Genus* 73(1): 1.
 doi:10.1186/s41118-016-0017-8.
@@ -800,6 +861,10 @@ Cairns AJG, Blake D, Dowd K, Coughlan GD, Epstein D, Ong A, Balevich I
 (2009). A quantitative comparison of stochastic mortality models using
 data from England and Wales and the United States. *North American
 Actuarial Journal* 13(1): 1-35.
+
+Camarda CG (2012). MortalitySmooth: an R package for smoothing Poisson
+counts with P-splines. *Journal of Statistical Software* 50(1): 1-24.
+doi:10.18637/jss.v050.i01.
 
 Camarda CG (2015). MortalitySmooth: Smoothing and forecasting Poisson
 counts with P-splines. R package version 2.3.4 (CRAN archive).
@@ -836,6 +901,14 @@ DerSimonian R, Laird N (1986). Meta-analysis in clinical trials.
 
 Diebold FX, Mariano RS (1995). Comparing predictive accuracy. *Journal of
 Business & Economic Statistics* 13(3): 253-263.
+
+Dong Z, Shang HL, Hui F, Bruhn A (2025). A compositional approach to
+modeling cause-specific mortality with zero counts. *Annals of Actuarial
+Science* 19(3): 416-441. doi:10.1017/S1748499524000320.
+
+Gallo M (2015). Tucker3 model for compositional data. *Communications in
+Statistics - Theory and Methods* 44(21): 4441-4453.
+doi:10.1080/03610926.2013.798664.
 
 Gneiting T, Raftery AE, Westveld AH, Goldman T (2005). Calibrated
 probabilistic forecasting using ensemble model output statistics and
@@ -960,6 +1033,14 @@ prediction: BAMP. *Journal of Statistical Software* 21(8): 1-15.
 Sevcikova H, Li N, Kantorova V, Gerland P, Raftery AE (2016). Age-specific
 mortality and fertility rates for probabilistic population projections.
 In Schoen R (ed.) *Dynamic Demographic Analysis*. Springer, 285-310.
+
+Shang HL, Haberman S (2020). Forecasting age distribution of death
+counts: an application to annuity pricing. *Annals of Actuarial Science*
+14(1): 150-169. doi:10.1017/S1748499519000101.
+
+Shang HL, Haberman S (2025). Forecasting age distribution of life-table
+death counts via α-transformation. *Scandinavian Actuarial Journal*
+2025(4): 387-403. doi:10.1080/03461238.2024.2425723.
 
 Spiegelhalter DJ, Best NG, Carlin BP, van der Linde A (2002). Bayesian
 measures of model complexity and fit. *Journal of the Royal Statistical

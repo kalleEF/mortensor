@@ -36,6 +36,11 @@ model gives per group of \code{common_by} the common \code{a}, \code{B}, \code{K
 \code{order_K}, \code{arima_K}, \code{sd_K}) and per stratum \code{a}, \code{b}, \code{k} and the
 ARIMA model of \code{k}. \code{\link[=coda_causes]{coda_causes()}}: per group, as \code{\link[=coda]{coda()}}, with parts
 by age and cause (\code{b1}, \code{k1}, \code{b2}, \code{k2}, ... with several components);
+\item \code{\link[=coda_multiway]{coda_multiway()}}: the common age patterns \code{b}, time indexes \code{k} (with
+\code{order_k}, \code{arima_k}, \code{sd_k}), population markers \code{gamma} and core \code{g}
+(index \verb{p,q,r}), numbered with several components, and the share of
+variation explained; per stratum the centre \code{a}, the parameters of the
+open age interval or of the Kannisto model of each year;
 \item \code{\link[=rwd]{rwd()}}: drift and innovation standard deviation per age (and, with
 \code{observation_noise = TRUE}, the variances of level and noise);
 \item \code{\link[=apc_bayes]{apc_bayes()}}: posterior medians and 90\% intervals of the age, period
