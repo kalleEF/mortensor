@@ -54,6 +54,14 @@ of the identified quantities;
 divided by the number of cells minus the effective dimension); for
 \code{\link[=cp_splines]{cp_splines()}} also the bounds of the rates of ageing and of change per
 age (\code{ageing_lower}, \code{ageing_upper}, \code{change_lower}, \code{change_upper}).
+\item \code{\link[=saint]{saint()}}: per trend (\code{"trend <group>"}) the indexes \code{alpha}, \code{beta},
+\code{kappa}, \code{zeta} by year, the frailty variance \code{sigma2}, the
+pseudo-log-likelihood \code{loglik}, the \code{drift} and covariance \code{cov} of
+\code{alpha} and \code{beta} (or, with \code{ecm}, the parameters of the
+error-correction model: \code{a11}, \code{a21}, \code{a32}, \code{a42}, \code{C_D}, \code{C_delta},
+\code{lambda}, \code{Omega}) and the standard deviations \code{sd_kappa}, \code{sd_zeta};
+per stratum with a spread the spread parameters \code{y1} ... \code{y5} by year
+and their VAR(1) (\code{ar} or \code{A}, and \code{Omega});
 \item \code{\link[=bohk_rau]{bohk_rau()}}: posterior medians and 90\% intervals of the curve
 parameters \code{b1} and \code{b2} by age and of the variance and hyperparameters,
 the least-squares values \code{theta1}, \code{theta2} (exponential core model) and

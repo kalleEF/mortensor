@@ -38,6 +38,14 @@
 #'   divided by the number of cells minus the effective dimension); for
 #'   [cp_splines()] also the bounds of the rates of ageing and of change per
 #'   age (`ageing_lower`, `ageing_upper`, `change_lower`, `change_upper`).
+#' * [saint()]: per trend (`"trend <group>"`) the indexes `alpha`, `beta`,
+#'   `kappa`, `zeta` by year, the frailty variance `sigma2`, the
+#'   pseudo-log-likelihood `loglik`, the `drift` and covariance `cov` of
+#'   `alpha` and `beta` (or, with `ecm`, the parameters of the
+#'   error-correction model: `a11`, `a21`, `a32`, `a42`, `C_D`, `C_delta`,
+#'   `lambda`, `Omega`) and the standard deviations `sd_kappa`, `sd_zeta`;
+#'   per stratum with a spread the spread parameters `y1` ... `y5` by year
+#'   and their VAR(1) (`ar` or `A`, and `Omega`);
 #' * [bohk_rau()]: posterior medians and 90% intervals of the curve
 #'   parameters `b1` and `b2` by age and of the variance and hyperparameters,
 #'   the least-squares values `theta1`, `theta2` (exponential core model) and
@@ -236,6 +244,7 @@ base_parameters <- function(fit, sp) {
     }))
     return(rbind(common, own, row("model", c("mse", "bic"), "", c(f$mse, f$bic))))
   }
+  if (inherits(sp, "mt_spec_saint")) return(saint_parameters(fit))
   if (inherits(sp, "mt_spec_bohk_rau")) return(bohk_rau_parameters(fit))
   if (inherits(sp, "mt_spec_apci")) return(apci_parameters(fit))
   if (inherits(sp, "mt_spec_nordpred")) return(nordpred_parameters(fit))
@@ -560,6 +569,25 @@ model_assumptions <- function(spec) {
            "stratum keep the values of this model, reordered so that their ranks follow the draws of %s; the",
            "dependence between ages, years and strata is that of the template. Observation noise of predictive",
            "draws is added after the coupling."), p$template$label)),
+         mt_spec_saint = paste(
+           "SAINT (Jarner and Kryger 2011; Jarner and Jallbjorn 2022): log m(x,t) of each stratum is the log",
+           "trend plus a spread y(t)' r(x) with five piecewise linear age regressors (eq. 5.11). Trend of the pooled",
+           if (is.null(p$by)) "reference strata:" else
+             sprintf("reference strata of each group of %s:", paste(p$by, collapse = ", ")),
+           if (isFALSE(p$background)) "Gamma frailty model exp(-sigma2 M) mu0 (no background)," else
+             "Gamma frailty model exp(-sigma2 M) mu0 + exp(zeta),",
+           "log mu0 = alpha + beta (x - 75) + kappa (x - 75) 1{x < 75}, fitted by pseudo-likelihood (EM estimates,",
+           "profile over sigma2);", if (isFALSE(p$background)) "kappa a random walk without drift;" else
+             "kappa and zeta random walks without drift;",
+           if (is.null(p$ecm)) "alpha and beta a bivariate random walk with drift." else
+             sprintf(paste("alpha and beta of the two groups an error-correction model with the jump-off differences",
+                           "as equilibrium and the mean change of %s as common drift."), p$ecm),
+           "Spread fitted by Poisson maximum likelihood per year; a VAR(1) without mean,",
+           if (is.numeric(p$spread_ar)) sprintf("A = %g I,", p$spread_ar) else if (p$spread_ar == "diagonal")
+             "A diagonal in [0, 0.99]," else "A unrestricted,",
+           "so the spread reverts towards zero. Draws include the innovations of the trend indexes and of the",
+           "spread; parameters are fixed. Frailty selection makes rates of improvement change over time.",
+           "Predictive draws add Poisson variation of the deaths given the rates. Jump-off: fitted rates."),
          mt_spec_coherent_fdm = paste(
            "Product-ratio method with functional data models (Hyndman, Booth and Yasmeen 2013; demography):",
            "rates smoothed over age; the geometric mean of the strata (per group of `common_by`) and the ratio",
