@@ -66,7 +66,7 @@ beats standard models is currently unknown, because the package's own
 evaluation cannot answer it: on honest scores all models were within 0.71 to
 0.79 on the example data.
 
-**Recommendation.** Do Phase 0 (about 1-2 weeks) immediately. Then do
+**Recommendation.** Do Phase 0 immediately. Then do
 Phases 1 and 2 (honest evaluation and calibrated intervals) before adding any
 features, because they decide whether the Tucker3/CoDa contribution holds up.
 Consider narrowing the scope (for example dropping the multi-cause pipeline
@@ -412,10 +412,9 @@ Running the code changed or sharpened several statements in
 
 The order below follows dependencies: nothing downstream can be trusted until
 the evaluation design is honest, and nothing can be evaluated until the
-package runs and is tested. Effort estimates assume one developer familiar
-with the code.
+package runs and is tested.
 
-### Phase 0: make it install, check and run (1-2 weeks)
+### Phase 0: make it install, check and run
 
 1. Import `%||%` from rlang (already in Imports) via
    `@importFrom rlang %||%` (D1).
@@ -436,7 +435,7 @@ with the code.
    life_expectancy()` with fast settings and checks numerical invariants
    (positivity, dimensions, e_x in a plausible range, PI ordering).
 
-### Phase 1: honest evaluation and model selection (3-5 weeks)
+### Phase 1: honest evaluation and model selection
 
 1. Split before anything else: the holdout years must never enter smoothing,
    rank selection, hyperparameter tuning, ensemble weighting or stacking.
@@ -455,7 +454,7 @@ with the code.
    parallelism (`future.apply`) (D13, D25).
 7. Fix single-group support and fail loudly when a model cannot be fitted (D12).
 
-### Phase 2: probabilistic forecasts (3-4 weeks)
+### Phase 2: probabilistic forecasts
 
 1. Replace "point forecast + i.i.d. in-sample residuals" with model-consistent
    simulation: simulate the time-series components forward (k_t random walk
@@ -471,7 +470,7 @@ with the code.
    histograms, CRPS and WIS (Bracher et al. 2021 normalisation, or delegate to
    `scoringutils`) on rolling-origin backtests (D16).
 
-### Phase 3: demographic correctness (3-5 weeks)
+### Phase 3: demographic correctness
 
 1. Represent age intervals explicitly (start, width, open interval) and derive
    widths from data everywhere; single-year life tables must use width 1 (D10).
@@ -592,8 +591,6 @@ on 4 cores:
    projections when holding out the last 10 years of lung cancer mortality
    data; replicating that kind of check on mortensor's data is the relevant
    benchmark.
-4. Effort: about 1-2 weeks for wrapper, tests and a vignette once the
-   prerequisites exist; parallelise across groups.
 
 ## 9. References
 

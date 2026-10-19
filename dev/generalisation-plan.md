@@ -94,7 +94,6 @@ cov95 at least 0.70, CRPS at most 0.0709; no loss on ONS.
 alike; the trend error that grows with the horizon remains (b). Cell noise
 averages out over ages, so e0 intervals barely change.
 
-**Effort.** 8-10 days; smooth dispersion for `p_splines()` 5-7 more.
 
 ### b. Calibration that worsens with the horizon
 
@@ -154,7 +153,6 @@ G1: |cov95(h) - 0.95| at most 0.05 inside the window, CRPS no worse than
 **Risks.** With the defaults, horizon 10 rests on one origin. One stall
 (England after 2011) can dominate past errors.
 
-**Effort.** 14-19 days.
 
 ### c. Dependence between strata: totals, gaps, inequality
 
@@ -220,7 +218,6 @@ against `"none"` at 0. Real: `dependence_ons`, German Laender; DM tests.
 inherits the template model's pull on gaps. CAE needs identifiability
 constraints (Enchev et al. 2017).
 
-**Effort.** 20-23 days.
 
 ### d. Jump-off bias and the first forecast years
 
@@ -272,7 +269,6 @@ ONS, Germany.
 **Risks.** Short deviation series bias AR(1) estimates towards fast decay.
 Accuracy and robustness can conflict.
 
-**Effort.** 9-12 days.
 
 ### e. Combining models
 
@@ -321,7 +317,6 @@ weights.
 **Risks.** Three inner origins by default give unstable weights; weights are
 learnt in one regime; recalibrating a wide pool can narrow it.
 
-**Effort.** 8-10 days.
 
 ### f. Coherent forecasts of causes of death
 
@@ -369,7 +364,6 @@ changes only for a method best on G1a, G1b and ONS.
 
 **Risks.** Coding changes; zeros in compositions; small causes.
 
-**Effort.** 7-8 days; Kjærgaard extension 6-8 more.
 
 ### g. Small populations and pooling
 
@@ -418,7 +412,6 @@ rate CRPS within 3% of Li-Lee.
 **Risks.** The reference's own error dominates; drifting deviations widen
 gaps without limit.
 
-**Effort.** 10-12 days; `local_level()` 5-7 more.
 
 ### h. Old ages, open intervals and ungrouping
 
@@ -467,7 +460,6 @@ default closure within 5% of the best on both truths and both countries.
 **Risks.** Feehan studies cohorts, mortensor period data. Data quality above
 age 100.
 
-**Effort.** 10-13 days.
 
 ### i. Life expectancy as the target
 
@@ -497,12 +489,12 @@ Bohk-Ewald and Rau (2017) forecast age-specific improvement rates with other
 countries' trends.
 
 **Options.**
-1. Evaluation only (in scope, 1-2 days): SAPE (Raftery et al. 2013) and e0
+1. Evaluation only (in scope): SAPE (Raftery et al. 2013) and e0
    coverage by horizon in `mt_score()`.
-2. External e0 drives rates (in scope, 4-5 days):
+2. External e0 drives rates (in scope):
    `lee_carter(rotate = TRUE, e0 = <draws>)`, as MortCast takes e0 from a
    separate model (Li, Lee and Gerland 2013).
-3. e0 benchmarks (scope change, 8-10 days): double-gap and best-practice gap
+3. e0 benchmarks (scope change): double-gap and best-practice gap
    specifications that return e0 draws for backtests, with international
    series loaded from other packages.
 4. Constrained P-spline rates (Camarda 2019): implemented in E4 as
@@ -512,19 +504,19 @@ countries' trends.
 
 ## 3. Roadmap
 
-| Phase | Content | Days | Validation checks added |
-|---|---|---|---|
-| 0 Foundation | G1/G2 generators in `R/validation.R`; coverage by horizon; variogram score; `revision`; SAPE; `mt_dispersion()`; `mt_methods()` | 8-10 | none with thresholds; current defaults scored on G1 and recorded in `history.csv` |
-| 1 Published, light | `scale = "per_horizon"`; `weights = "crps_stack"`, `"bias"`; `dependence = "schaake"`, `"ecc"`; MinT from errors; further closures; relabels | 22-28 | `horizon_calibration_*`, `stacking_*`, `dependence_*`, `open_interval_holdout` |
-| 2 Models | `lee_carter(family = "nb")`; `cae()`; `relative_model()`; `anchored(decay = "ar1", to = "filtered")`; bootstrapped local level | 32-40 | `overdispersion_sim`, `nb_lc_ew`, `cae_ons`, `relative_ons`, `jumpoff_sim` |
-| 3 After full texts or decisions | `scaled_error`; `method = "errors"`; causes; Tucker3 CoDa review; P-splines with dispersion; e0 options; `local_level()` | 35-50 | `causes_triad`, further checks as built |
+| Phase | Content | Validation checks added |
+|---|---|---|
+| 0 Foundation | G1/G2 generators in `R/validation.R`; coverage by horizon; variogram score; `revision`; SAPE; `mt_dispersion()`; `mt_methods()` | none with thresholds; current defaults scored on G1 and recorded in `history.csv` |
+| 1 Published, light | `scale = "per_horizon"`; `weights = "crps_stack"`, `"bias"`; `dependence = "schaake"`, `"ecc"`; MinT from errors; further closures; relabels | `horizon_calibration_*`, `stacking_*`, `dependence_*`, `open_interval_holdout` |
+| 2 Models | `lee_carter(family = "nb")`; `cae()`; `relative_model()`; `anchored(decay = "ar1", to = "filtered")`; bootstrapped local level | `overdispersion_sim`, `nb_lc_ew`, `cae_ons`, `relative_ons`, `jumpoff_sim` |
+| 3 After full texts or decisions | `scaled_error`; `method = "errors"`; causes; Tucker3 CoDa review; P-splines with dispersion; e0 options; `local_level()` | `causes_triad`, further checks as built |
 
 Phase 0 comes first. The inner-error machinery of b serves c (MinT from
 errors, Schaake templates) and e. `cae()` and `relative_model()` share the
 joint simulation of period indexes. Recalibration and stacking checks are
 re-baselined after `family = "nb"`, because base spreads change. Each item
 is one work package with NEWS, progress log, help, vignettes and pkgdown
-(`CLAUDE.md`). Total: about 105-140 days.
+(`CLAUDE.md`).
 
 **Decisions for the owner.**
 1. Adopt Section 1: three generators per check, the label "experimental".
