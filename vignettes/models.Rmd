@@ -547,6 +547,50 @@ agree with those of nordpred to a relative difference below 1e-7.
   its speed. `vignette("dependence")` shows the dependence it gives to
   totals and gaps.
 
+### Trend of a reference population and spreads: `saint()` (opt-in)
+
+The SAINT model (Spread Adjusted InterNational Trend; Jarner and Kryger
+2011) forecasts the adult mortality of small populations as stationary
+deviations (spreads) from the trend of a large reference population.
+mortensor implements the revised version of Jarner and Jallbjørn (2022),
+which its authors describe as the model in use.
+
+* **Trend**: the deaths and exposures of the reference strata (for example
+  a national total or several countries) are pooled. Their rates follow a
+  Gamma frailty model with a baseline that is log-linear in age with a
+  kink at 75, and a background term (eqs. 5.1-5.3). For a given frailty
+  variance the indexes of each year are the EM estimates of Appendix B;
+  the variance maximises the profile pseudo-likelihood (eq. 4.14). `by`
+  gives each group (for example each sex) its own trend. The level and
+  slope of the baseline follow a random walk with drift, or with `ecm` an
+  error-correction model that keeps the trends of two groups together
+  (Section 5.2.1); the other indexes follow random walks without drift.
+* **Spread**: the rates of each target stratum are the trend times
+  `exp(y(t)' r(x))`, with five piecewise linear age regressors (eq. 5.11).
+  `y(t)` is estimated year by year by Poisson maximum likelihood given the
+  trend and follows a VAR(1) without mean (eq. 5.12), by default with a
+  diagonal coefficient matrix with entries in `[0, 0.99]`, as the paper
+  recommends. The spreads revert to zero, so the targets stay close to the
+  trend.
+* **Uncertainty**: innovations of the trend indexes and of the spreads;
+  parameters are fixed, as in the papers. Predictive draws add Poisson
+  variation of the deaths given the rates. Jump-off: fitted rates (Section
+  5.3).
+* **Ages**: consecutive single years from age 20 without an open interval;
+  both papers use ages 20-100.
+* **Package-specific** (listed on `?saint`): the EM fixed point computed by
+  Newton-Raphson sweeps, the search of the frailty variance, the bounds of
+  the spread coefficients, independent innovations of the indexes, three
+  formulas of the 2022 paper read as misprints, and `background = FALSE`,
+  a model of the class of Section 4.2 without the background term.
+* **Use**: regions or small countries against a national or international
+  reference. In an example on the German Laender against the national
+  total (ages 20-89, 1998-2019, single ages by `mt_ungroup()`), the data
+  did not identify the background of women (its estimate reached the
+  lower bound from 2011 on), and 2.8% of the draws had rates above 1 at
+  ages 20-23; warnings said so. With `background = FALSE` the forecasts
+  were stable.
+
 ### Product-ratio: `coherent_fdm()`
 
 The product-ratio method (Hyndman, Booth and Yasmeen 2013) models the
@@ -860,6 +904,7 @@ across windows.
 | `arima_series()`, `ets_series()` | yes | as the fitted model | no | contained in the series |
 | `li_lee()` | yes (common and stratum) | common factor | no | Poisson, predictive draws |
 | `cae()` | yes (correlated across populations) | yes | no | Poisson, predictive draws |
+| `saint()` | yes (trend indexes and spreads) | level and slope of the trend | no | Poisson, predictive draws |
 | `coherent_fdm()` | yes (product and ratios) | as fdm (product) | no | Poisson, predictive draws |
 | `tucker3()` | yes (period factors) | yes | no | Poisson, predictive draws (with `residual_noise = TRUE` also the residual variation) |
 | `coda()`, `coda_causes()` | yes (resampled innovations) | yes (index model refitted) | `b`, `k` and the index model (residual bootstrap); `a` fixed | Poisson, predictive draws (`coda_causes()`: all-cause deaths split multinomially between the causes) |
@@ -1078,6 +1123,13 @@ Statistics & Data Analysis* 97: 16-32.
 Hyndman RJ, Ullah MS (2007). Robust forecasting of mortality and fertility
 rates: a functional data approach. *Computational Statistics & Data
 Analysis* 51(10): 4942-4956.
+
+Jarner SF, Jallbjørn S (2022). The SAINT model: a decade later. *ASTIN
+Bulletin* 52(2): 483-517. doi:10.1017/asb.2021.37.
+
+Jarner SF, Kryger EM (2011). Modelling adult mortality in small
+populations: the SAINT model. *ASTIN Bulletin* 41(2): 377-418.
+doi:10.2143/AST.41.2.2136982.
 
 Kessy SR, Sherris M, Villegas AM, Ziveyi J (2022). Mortality forecasting
 using stacked regression ensembles. *Scandinavian Actuarial Journal*
