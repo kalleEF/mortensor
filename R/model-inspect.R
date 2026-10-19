@@ -5,7 +5,9 @@
 #'
 #' * [lee_carter()]: `a` (age pattern), `b` (age pattern of change), `k`
 #'   (period index), and the drift and innovation standard deviation of `k`;
-#'   with `rotate = TRUE` also the ultimate pattern `b_ultimate`;
+#'   with `rotate = TRUE` also the ultimate pattern `b_ultimate`; with
+#'   `family = "nb"` also the dispersion `nb_dispersion` (variance `mu + phi
+#'   mu^2`);
 #' * [li_lee()], [product_ratio()]: the common factor of each group (`B`,
 #'   `K`, its drift and standard deviation), and per stratum the deviations
 #'   `a`, `b`, `k` and their AR(1) coefficient `phi` and standard deviation;
@@ -35,6 +37,12 @@
 #'   parameters `b1` and `b2` by age and of the variance and hyperparameters,
 #'   the least-squares values `theta1`, `theta2` (exponential core model) and
 #'   the Gelman-Rubin statistics (`rhat`);
+#' * [apci()]: `alpha`, `beta` (by age), `kappa` (by year), `gamma` (by
+#'   year of birth; 0 for the cohorts with four or fewer observations), the
+#'   mean year `ybar`, the smoothing parameters (`lambda_alpha`,
+#'   `lambda_beta`), the effective dimension `ed` and the `bic`, and the
+#'   ARIMA models of `kappa` and `gamma` (`order_kappa`, `arima_kappa`,
+#'   `sd_kappa`, `order_gamma`, `arima_gamma`, `sd_gamma`);
 #' * [nordpred_apc()]: estimates and 90% Wald intervals of the age, period
 #'   and cohort effects (cohorts by central year of birth) and of the drift,
 #'   the projected drift, the number of periods fitted, the choice of the
@@ -127,6 +135,7 @@ base_parameters <- function(fit, sp) {
       if (is.null(f)) return(NULL)
       rbind(row(lab[s], "a", ages, f$a), row(lab[s], "b", ages, f$b), row(lab[s], "k", yrs, f$k),
             row(lab[s], "drift_k", "", f$drift), row(lab[s], "sd_k", "", f$sigma_k),
+            if (!is.null(f$dispersion)) row(lab[s], "nb_dispersion", "", f$dispersion),
             if (!is.null(f$b_ultimate)) row(lab[s], "b_ultimate", ages, f$b_ultimate))
     })))
   }
@@ -179,6 +188,7 @@ base_parameters <- function(fit, sp) {
     return(rbind(common, own))
   }
   if (inherits(sp, "mt_spec_bohk_rau")) return(bohk_rau_parameters(fit))
+  if (inherits(sp, "mt_spec_apci")) return(apci_parameters(fit))
   if (inherits(sp, "mt_spec_nordpred")) return(nordpred_parameters(fit))
   if (inherits(sp, "mt_spec_apc_bayes")) {
     e <- apc_effects(fit)
@@ -415,7 +425,12 @@ model_assumptions <- function(spec) {
   switch(class(spec)[1],
          mt_spec_lee_carter = paste(
            "log m(x,t) = a(x) + b(x) k(t), estimated by",
-           if (p$method == "poisson") "Poisson maximum likelihood (Brouhns et al. 2002)." else
+           if (identical(p$family, "nb")) {
+             paste("negative binomial maximum likelihood (Delwarde, Denuit and Partrat 2007): deaths with mean mu",
+                   "and variance mu + phi mu^2, one dispersion phi for all ages and years.")
+           } else if (p$method == "poisson") {
+             "Poisson maximum likelihood (Brouhns et al. 2002)."
+           } else {
              paste0("SVD of the centred log rates (Lee and Carter 1992), ", switch(
                p$adjust %||% "dt",
                dt = "with k(t) refitted so that the fitted total deaths of each year match the observed ones",
@@ -423,11 +438,17 @@ model_assumptions <- function(spec) {
                            "b(x) (Booth, Maindonald and Smith 2002)"),
                e0 = paste("with k(t) refitted so that the fitted life expectancy at the first age matches the",
                           "observed one (Lee and Miller 2001)"),
-               none = "with k(t) from the SVD (not refitted)"), "."),
+               none = "with k(t) from the SVD (not refitted)"), ".")
+           },
            "k(t) follows a random walk with drift; draws include",
            "its innovations and the uncertainty of the drift. a(x) and b(x) are fixed",
-           "(parameter uncertainty with bootstrapped()). Predictive draws add Poisson variation of the deaths",
-           "given the rates. Jump-off:", p$jump_off, "rates.",
+           "(parameter uncertainty with bootstrapped()). Predictive draws add",
+           if (identical(p$family, "nb")) {
+             "negative binomial variation of the deaths given the rates, with the estimated dispersion."
+           } else {
+             "Poisson variation of the deaths given the rates."
+           },
+           "Jump-off:", p$jump_off, "rates.",
            if (isTRUE(p$rotate)) {
              sprintf(paste("b(x) rotates towards an ultimate pattern (flat below 65) as life expectancy at birth",
                            "of each path rises from %g to %g (Li, Lee and Gerland 2013); k(t) is solved again so",
@@ -509,6 +530,17 @@ model_assumptions <- function(spec) {
            },
            "Predictive draws add Poisson variation of the deaths given the rates. Convergence to reference",
            "populations is not implemented."),
+         mt_spec_apci = paste(
+           "APCI model (Richards, Currie, Kleinow and Ritchie 2019): log m(x,y) = alpha(x) + beta(x) (y - ybar) +",
+           "kappa(y) + gamma(y - x), Poisson maximum likelihood subject to five constraints on kappa and gamma",
+           paste0("(over-constrained), gamma = 0 for cohorts with four or fewer observations",
+                  if (isTRUE(p$smooth)) "; alpha and beta P-splines over age with smoothing parameters by BIC." else
+                    "."),
+           "kappa and gamma follow ARIMA models without a mean",
+           if (is.null(p$kappa_order) || is.null(p$gamma_order)) "(orders chosen by AICc and RMSE)" else "",
+           "and are projected independently; draws hold their innovations with the ARIMA coefficients, alpha,",
+           "beta and the estimated kappa and gamma fixed, so beta(x) (y - ybar) continues linearly. Predictive",
+           "draws add Poisson variation of the deaths given the rates."),
          mt_spec_nordpred = paste(
            "Nordpred (Moller et al. 2003): age-period-cohort model of 5-year age groups and 5-year periods (annual",
            "data summed to periods ending with the last year), Poisson deaths with",

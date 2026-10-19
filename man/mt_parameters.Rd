@@ -22,7 +22,8 @@ model type that has interpretable parameters:
 \itemize{
 \item \code{\link[=lee_carter]{lee_carter()}}: \code{a} (age pattern), \code{b} (age pattern of change), \code{k}
 (period index), and the drift and innovation standard deviation of \code{k};
-with \code{rotate = TRUE} also the ultimate pattern \code{b_ultimate};
+with \code{rotate = TRUE} also the ultimate pattern \code{b_ultimate}; with
+\code{family = "nb"} also the dispersion \code{nb_dispersion} (variance \verb{mu + phi mu^2});
 \item \code{\link[=li_lee]{li_lee()}}, \code{\link[=product_ratio]{product_ratio()}}: the common factor of each group (\code{B},
 \code{K}, its drift and standard deviation), and per stratum the deviations
 \code{a}, \code{b}, \code{k} and their AR(1) coefficient \code{phi} and standard deviation;
@@ -52,6 +53,12 @@ age (\code{ageing_lower}, \code{ageing_upper}, \code{change_lower}, \code{change
 parameters \code{b1} and \code{b2} by age and of the variance and hyperparameters,
 the least-squares values \code{theta1}, \code{theta2} (exponential core model) and
 the Gelman-Rubin statistics (\code{rhat});
+\item \code{\link[=apci]{apci()}}: \code{alpha}, \code{beta} (by age), \code{kappa} (by year), \code{gamma} (by
+year of birth; 0 for the cohorts with four or fewer observations), the
+mean year \code{ybar}, the smoothing parameters (\code{lambda_alpha},
+\code{lambda_beta}), the effective dimension \code{ed} and the \code{bic}, and the
+ARIMA models of \code{kappa} and \code{gamma} (\code{order_kappa}, \code{arima_kappa},
+\code{sd_kappa}, \code{order_gamma}, \code{arima_gamma}, \code{sd_gamma});
 \item \code{\link[=nordpred_apc]{nordpred_apc()}}: estimates and 90\% Wald intervals of the age, period
 and cohort effects (cohorts by central year of birth) and of the drift,
 the projected drift, the number of periods fitted, the choice of the
