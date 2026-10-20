@@ -10,14 +10,15 @@ reconciled(
   method = c("wls", "mint", "structural", "ols", "bottom_up", "proportional",
     "energy_score"),
   shrink = "auto",
-  dependence = c("none", "ecc", "empirical", "auto"),
+  dependence = c("none", "ecc", "schaake", "empirical", "auto"),
   fixed = NULL,
   years = 10,
   n_origins = 5,
   horizon = 5,
   control = list(),
   seed = 1,
-  template = NULL
+  template = NULL,
+  covariance = c("draws", "errors")
 )
 }
 \arguments{
@@ -31,32 +32,35 @@ for example causes of death declared without \code{additive = "rates"}.}
 \item{method}{A method of \code{\link[=mt_reconcile]{mt_reconcile()}}, or \code{"energy_score"}
 (score-optimal reconciliation, see Details).}
 
-\item{shrink}{See \code{\link[=mt_reconcile]{mt_reconcile()}}.}
+\item{shrink}{See \code{\link[=mt_reconcile]{mt_reconcile()}}; with \code{covariance = "errors"} the
+shrinkage intensity for the errors.}
 
 \item{dependence}{\code{"none"} (default: the draws are reconciled as they
-are), \code{"ecc"}, \code{"empirical"} or \code{"auto"} (the same as \code{"none"}, kept for
-compatibility). With \code{"ecc"} the draws of the base model take the
-dependence of the draws of \code{template} before reconciliation (ensemble
-copula coupling, Schefzik, Thorarinsdottir and Gneiting 2013): the
-same as \code{reconciled(coupled(spec, template), ...)}, see \code{\link[=coupled]{coupled()}}.
-With \code{"empirical"} the paths of separately fitted strata are reordered
-before reconciliation by a package-specific method (see
-\code{\link[=mt_reconcile]{mt_reconcile()}}). Draws of joint models such as \code{\link[=li_lee]{li_lee()}} and
-\code{\link[=tucker3]{tucker3()}}, which carry the dependence between strata, are never
-reordered by \code{"empirical"} (it then gives a warning and is ignored).
-The observation noise of predictive draws is independent across cells
-either way.}
+are), \code{"ecc"}, \code{"schaake"}, \code{"empirical"} (deprecated) or \code{"auto"} (the
+same as \code{"none"}, kept for compatibility). With \code{"ecc"} the draws of the
+base model take the dependence of the draws of \code{template} before
+reconciliation (ensemble copula coupling, Schefzik, Thorarinsdottir and
+Gneiting 2013): the same as \code{reconciled(coupled(spec, template), ...)},
+see \code{\link[=coupled]{coupled()}}. With \code{"schaake"} they take the ranks of the observed
+changes of distinct training years (the Schaake shuffle of Clark et al.
+2004, see \code{\link[=mt_reconcile]{mt_reconcile()}}); the template comes from the training data
+of each fit, also inside \code{\link[=mt_backtest]{mt_backtest()}}. Draws of joint models such as
+\code{\link[=li_lee]{li_lee()}} and \code{\link[=tucker3]{tucker3()}}, which carry the dependence between strata,
+are never reordered by \code{"schaake"} (it then gives a warning and is
+ignored). The observation noise of predictive draws is independent
+across cells either way.}
 
 \item{fixed}{Strata whose forecasts are kept (see \code{\link[=mt_reconcile]{mt_reconcile()}}); not
 with \code{"energy_score"}.}
 
-\item{years, n_origins, horizon}{Training of \code{method = "energy_score"}: the
-length of the training window (the last \code{years} observed years), the
-number of inner origins in it (as in \code{\link[=recalibrated]{recalibrated()}}) and the number of
-years each inner forecast covers (horizons 1 to \code{horizon}, cut at the
-last training year).}
+\item{years, n_origins, horizon}{Training of \code{method = "energy_score"} and
+of \code{covariance = "errors"}: the length of the training window (the last
+\code{years} observed years), the number of inner origins in it (as in
+\code{\link[=recalibrated]{recalibrated()}}) and the number of years each inner forecast covers
+(horizons 1 to \code{horizon}, cut at the last training year).}
 
-\item{control}{Settings of the training for \code{method = "energy_score"}: a
+\item{control}{Settings of the training for \code{method = "energy_score"}
+(\code{n_draws} also for \code{covariance = "errors"}): a
 list with any of \code{n_draws} (draws per inner forecast, default 100),
 \code{draws_per_step} (draws per training forecast in each step, 50),
 \code{max_iter} (number of steps, 500), \code{eta} (learning rate, 0.001),
@@ -66,12 +70,18 @@ parameter moves by more than \code{tol} in a step, so \code{tol} must be below
 \code{eta} (0 runs all steps). \code{max_iter = 0} gives OLS reconciliation.}
 
 \item{seed}{Random seed of the training for \code{method = "energy_score"}
-(inner forecasts, observation noise and the draws of each step), so
-that fits are reproducible.}
+and \code{covariance = "errors"} (inner forecasts, observation noise and the
+draws of each step), so that fits are reproducible. The Schaake shuffle
+uses the \code{seed} of \code{\link[=mt_forecast]{mt_forecast()}}.}
 
 \item{template}{With \code{dependence = "ecc"}: the model specification whose
 draws give the dependence, usually a joint model such as \code{\link[=cae]{cae()}} or
 \code{\link[=li_lee]{li_lee()}}.}
+
+\item{covariance}{\code{"draws"} (default: the weights of \code{"wls"} and \code{"mint"}
+from the base draws of each age and forecast year, see
+\code{\link[=mt_reconcile]{mt_reconcile()}}) or \code{"errors"} (from the errors of inner forecasts in
+the training data, see Details).}
 }
 \value{
 A model specification. With \code{method = "energy_score"} its fit
@@ -79,7 +89,12 @@ holds \verb{$reconcile$scoreopt}: \code{d} \verb{[bottom stratum, age]}, \code{G
 \code{origins}, the \code{control} settings and a \code{table} per age with the number
 of training forecasts, the scale of the bottom strata, the number of
 steps, and the mean in-sample energy score with OLS (\code{energy_ols}) and
-with the estimated \eqn{d} and \eqn{G} (\code{energy_opt}).
+with the estimated \eqn{d} and \eqn{G} (\code{energy_opt}). With
+\code{covariance = "errors"} its fit holds \verb{$reconcile$errors}: the errors
+\verb{[age, horizon, stratum, origin]}, the number of error vectors with
+observed values for every stratum per age and horizon (\code{n}) and the
+inner \code{origins}. Forecasts with \code{dependence = "schaake"} report the
+shuffle in \verb{$schaake} (see \code{\link[=mt_reconcile]{mt_reconcile()}}).
 }
 \description{
 Wraps a model specification so that its forecasts are reconciled over a
@@ -190,12 +205,63 @@ The training refits the base model at \code{n_origins} origins; the
 optimisation takes about 3 seconds per age for 54 strata with the
 defaults. \code{control$max_iter = 0} gives OLS reconciliation at the cost of
 the inner forecasts.
+
+\strong{Weights from past errors.} \code{covariance = "errors"} with \code{method = "wls"} or \code{"mint"}. MinT weights the base forecasts by the covariance
+matrix of their \code{h}-step forecast errors (Wickramasuriya, Turlach and
+Hyndman 2020, Section 2.1, after Wickramasuriya et al. 2019); Hyndman et
+al. (2011, Section 3) note that reconciled intervals need this matrix.
+With \code{covariance = "errors"} it is estimated from errors of past
+forecasts. Each time the model is fitted (also at every origin of an
+outer \code{\link[=mt_backtest]{mt_backtest()}}), the base model is refitted at \code{n_origins} inner
+origins in the last \code{years} of the training data, as for
+\code{"energy_score"}, and forecasts the next \code{horizon} years (cut at the last
+training year) with \code{control$n_draws} draws and the observed exposures.
+The error of a stratum is its observed value minus the mean of its
+draws, on the scale of the reconciliation (deaths, or rates when the
+levels share exposures). For each age and inner horizon \code{h}, \code{"mint"}
+takes the shrinkage estimator of MinT: the sample covariance of the \code{n}
+error vectors \code{e}, \eqn{\hat W = n^{-1} \sum e e'} (errors of mean zero),
+shrunk towards its diagonal, \eqn{\lambda \, diag(\hat W) + (1 - \lambda)
+\hat W}, with \eqn{\lambda = \sum_{i \ne j} \widehat{Var}(r_{ij}) /
+\sum_{i \ne j} r_{ij}^2} from the correlations \eqn{r_{ij}} of the errors
+(Schäfer and Strimmer 2005; Wickramasuriya et al. 2019; Wickramasuriya et
+al. 2020, Section 5: the estimator "shrinks the sample correlation matrix
+towards an identity matrix"). Panagiotelis et al. (2023, Table 1) give
+the same form and write \eqn{\lambda} with the covariances. \code{"wls"} takes
+the diagonal, the mean squared errors. \code{shrink} fixes \eqn{\lambda};
+\code{shrink = 1} gives the result of \code{"wls"}. The draws are then projected as
+with the default weights, as Panagiotelis et al. (2023, Section 7.3,
+MinTShr) do for probabilistic forecasts. The errors are reported in the
+fit (see Value).
+
+Deviations: the papers estimate the weights from the in-sample
+one-step-ahead residuals of the base models and take them as
+proportional for all horizons (Wickramasuriya et al. 2019). Here the
+\code{h}-step errors of inner forecasts estimate the weights of each horizon,
+one set per age (every age is a hierarchy of its own). Package-specific
+(reference unknown): forecast years beyond \code{horizon} take the weights of
+the longest inner horizon (a projection does not change when its weights
+are multiplied by a constant, so this is the papers' proportionality
+beyond \code{horizon}); an inner horizon with fewer than 2 error vectors with
+observed values for every stratum takes the weights of the next shorter
+one; ages without any take the weights from the draws, with a warning.
+Each age and horizon has at most \code{n_origins} errors, from overlapping
+forecasts; with many strata the shrinkage intensity is then often high,
+and \code{"mint"} near \code{"wls"} with the error variances.
 }
 \examples{
 x <- mt_example_regions(years = 2000:2019, regions = 3)
 h <- mt_hierarchy(sex = "both", region = "all", quintile = "all")
 fit <- mt_fit(reconciled(lee_carter(), h, method = "wls"), mt_aggregate_strata(x, h))
 fc <- mt_forecast(fit, h = 5, n_draws = 50, seed = 1)
+# the Schaake shuffle of the separate Lee-Carter forecasts, then MinT with
+# the covariance of the errors of forecasts from 4 inner origins
+sm <- reconciled(lee_carter(), h, method = "mint", dependence = "schaake", covariance = "errors",
+                 years = 8, n_origins = 4, horizon = 3)
+fit_sm <- mt_fit(sm, mt_aggregate_strata(x, h))
+fit_sm$reconcile$errors$n[1:3, ]
+fc_sm <- mt_forecast(fit_sm, h = 5, n_draws = 50, seed = 1)
+fc_sm$schaake$dates
 \donttest{
 # score-optimal reconciliation, trained on forecasts of 2012-2019 from 4 origins
 es <- reconciled(lee_carter(), h, method = "energy_score", years = 8, n_origins = 4, horizon = 3,
@@ -214,4 +280,27 @@ optimisation. \emph{European Journal of Operational Research} 306(2):
 Schefzik R, Thorarinsdottir TL, Gneiting T (2013). Uncertainty
 quantification in complex simulation models using ensemble copula
 coupling. \emph{Statistical Science} 28(4): 616-640. \doi{10.1214/13-STS443}
+
+Clark M, Gangopadhyay S, Hay L, Rajagopalan B, Wilby R (2004). The Schaake
+shuffle: a method for reconstructing space-time variability in forecasted
+precipitation and temperature fields. \emph{Journal of Hydrometeorology} 5(1):
+243-262.
+
+Hyndman RJ, Ahmed RA, Athanasopoulos G, Shang HL (2011). Optimal
+combination forecasts for hierarchical time series. \emph{Computational
+Statistics & Data Analysis} 55(9): 2579-2589.
+
+Wickramasuriya SL, Athanasopoulos G, Hyndman RJ (2019). Optimal forecast
+reconciliation for hierarchical and grouped time series through trace
+minimization. \emph{Journal of the American Statistical Association}
+114(526): 804-819. \doi{10.1080/01621459.2018.1448825}
+
+Wickramasuriya SL, Turlach BA, Hyndman RJ (2020). Optimal non-negative
+forecast reconciliation. \emph{Statistics and Computing} 30: 1167-1182.
+\doi{10.1007/s11222-020-09930-0}
+
+Schäfer J, Strimmer K (2005). A shrinkage approach to large-scale
+covariance matrix estimation and implications for functional genomics.
+\emph{Statistical Applications in Genetics and Molecular Biology} 4(1):
+Article 32. \doi{10.2202/1544-6115.1175}
 }

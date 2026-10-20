@@ -115,9 +115,9 @@ test_that("reconciled(dependence = \"ecc\") couples before reconciling", {
   expect_true(all(is.finite(ap$rates)))
   expect_error(reconciled(lee_carter(), h, dependence = "ecc"), class = "mt_error_argument")
   expect_error(reconciled(lee_carter(), h, template = cae()), class = "mt_error_argument")
-  # coupled draws carry dependence: the package's empirical reordering is not applied
+  # coupled draws carry dependence: the Schaake shuffle is not applied
   expect_true(mortensor:::spec_is_joint(coupled(lee_carter(), cae())))
-  expect_warning(reconciled(coupled(lee_carter(), cae()), h, dependence = "empirical"),
+  expect_warning(reconciled(coupled(lee_carter(), cae()), h, dependence = "schaake"),
                  class = "mt_warning_reconcile")
 })
 

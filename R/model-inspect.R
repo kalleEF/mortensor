@@ -663,12 +663,19 @@ model_assumptions <- function(spec) {
          mt_spec_ensemble = paste("Mixture of the component models: each draw comes from one component, chosen in",
                                   "proportion to the weights; uncertainty of the components and their spread.",
                                   ensemble_weights_text(p)),
-         mt_spec_reconciled = paste("Base model reconciled draw by draw over the hierarchy on the deaths (or rates)",
+         mt_spec_reconciled = paste(c("Base model reconciled draw by draw over the hierarchy on the deaths (or rates)",
                                     switch(spec$params$method,
                                            bottom_up = "scale: aggregates are the sums of the bottom strata.",
                                            proportional = "scale: parts of fixed nodes scaled in proportion.",
                                            energy_score = "scale: map learnt by score-optimal reconciliation.",
-                                           paste0("scale: ", spec$params$method, " projection."))),
+                                           paste0("scale: ", spec$params$method, " projection",
+                                                  if (identical(spec$params$covariance, "errors")) {
+                                                    " with weights from the errors of inner forecasts"
+                                                  }, ".")),
+                                    if (identical(spec$params$dependence, "schaake")) {
+                                      paste("Before it, the draws of each age, year and stratum take the ranks of",
+                                            "observed changes of distinct training years (Schaake shuffle).")
+                                    }), collapse = " "),
          mt_spec_recalibrated = paste(model_assumptions(p$base), sprintf(paste(
            "Calibrated: the spread%s of the draws%s is rescaled to minimise the %s of %s in forecasts from %d",
            "origins in the last %d training years."), if (p$bias) " and drift" else "",
