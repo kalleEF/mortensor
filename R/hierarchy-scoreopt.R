@@ -107,10 +107,13 @@ scoreopt_train <- function(p, data, prep, fit, hs, cores = 1) {
 }
 
 # One inner origin: base draws (reordered as in the forecast with
-# dependence = "empirical") and observed values of every node for the next `horizon` years,
-# on the deaths scale (additive = "deaths") or the rate scale. `noise`:
-# observation noise of the bottom strata per draw, as the forecast adds it
-scoreopt_origin <- function(p, data, origin, last, prep, n_draws, hs, strata, additive) {
+# dependence = "schaake" or "empirical", the template from the inner
+# training years) and observed values of every node for the next `horizon`
+# years, on the deaths scale (additive = "deaths") or the rate scale.
+# `noise`: observation noise of the bottom strata per draw, as the forecast
+# adds it (with `noise = FALSE` not computed: errors_train() uses the mean
+# of the draws)
+scoreopt_origin <- function(p, data, origin, last, prep, n_draws, hs, strata, additive, noise = TRUE) {
   train <- mt_window(data, to = origin)
   fit <- mt_fit(p$base, train, prep = prep)
   if (!identical(fit$strata$label, strata$label)) {
@@ -128,6 +131,12 @@ scoreopt_origin <- function(p, data, origin, last, prep, n_draws, hs, strata, ad
   # exposures and observed deaths in the order of the forecast's periods and strata
   E <- E[, match(dn[[2]], dimnames(E)[[2]]), match(strata$label, dimnames(E)[[3]]), drop = FALSE]
   component <- fc$component
+  src <- NULL
+  if (identical(p$dependence, "schaake")) {
+    sr <- schaake_reorder(arr, schaake_log_rates(fit$observed, fit$train_E, fit$train_D), fit$periods)
+    arr <- sr$arr
+    src <- sr$draw
+  }
   if (identical(p$dependence, "empirical")) {
     cr <- copula_reorder(arr, fit$raw_D %||% fit$train_D, fit$train_E)
     arr <- cr$arr
@@ -135,7 +144,7 @@ scoreopt_origin <- function(p, data, origin, last, prep, n_draws, hs, strata, ad
   }
   b <- hs$bottom
   fc$component <- component
-  noisy <- add_observation_noise(arr, fit, fc, b, E)
+  noisy <- if (noise) add_observation_noise(arr, fit, fc, b, E, draw = src) else arr
   # observed values; deaths filled from totals (mt_fill_suppressed()) are not observations
   t2 <- test
   t2$obs$deaths <- t2$obs$deaths[is.na(provenance) | provenance != "estimated"]

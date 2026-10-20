@@ -67,9 +67,10 @@
 #'
 #' The Schaake shuffle (Clark et al. 2004) reorders draws in the same way by
 #' the ranks of past observations; ECC takes the ranks from a model's
-#' forecast of the same years (Schefzik et al. 2013, Section 3.4). The
-#' package-specific `reconciled(dependence = "empirical")` is related to the
-#' Schaake shuffle.
+#' forecast of the same years (Schefzik et al. 2013, Section 3.4).
+#' `reconciled(dependence = "schaake")` and `mt_reconcile(dependence =
+#' "schaake")` apply the Schaake shuffle with the observed changes of
+#' distinct training years.
 #'
 #' `mt_couple()` couples two sets of draws with the same ages, years, strata
 #' and number of draws. Both should describe the same quantity (both

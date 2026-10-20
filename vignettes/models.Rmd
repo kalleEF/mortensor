@@ -782,7 +782,16 @@ and Hyndman 2019, with the shrinkage of Schäfer and Strimmer 2005), the
 structure (structural scaling; Athanasopoulos et al. 2017) or equal
 weights (OLS; Hyndman et al. 2011). The variances and covariances of WLS
 and MinT are those of the base forecast draws in each age and forecast
-year; the papers use the in-sample residuals of the base models.
+year by default; the papers use the errors of the base forecasts. With
+`covariance = "errors"` they come from such errors: the base model is
+refitted at `n_origins` inner origins in the last `years` of the training
+data, and for each age and horizon the errors of its forecasts (observed
+minus the mean of the draws) give the mean squared errors (WLS) or their
+covariance with the correlations shrunk towards the identity (MinT, as in
+Wickramasuriya et al. 2019). The papers estimate one-step errors from
+in-sample residuals and take the weights as proportional over the
+horizons; here each horizon has its own errors, and the years beyond the
+inner horizons use the last one.
 
 Where a projection makes bottom values of a draw negative, that draw is
 reconciled by the non-negative reconciliation of Wickramasuriya, Turlach
@@ -803,10 +812,18 @@ over every hierarchy variable; exposures add up over variables that
 divide the population and are shared by the levels of variables such as
 causes of death (`additive = "rates"`). The exposures of the forecast
 years are those of the last observed year unless projections are given.
-The draws are reconciled as they are (`dependence = "none"`, default);
-`dependence = "empirical"` reorders the paths of separately fitted strata
-first, a package-specific method related to the Schaake shuffle (Clark et
-al. 2004).
+The draws are reconciled as they are (`dependence = "none"`, default).
+`dependence = "schaake"` first applies the Schaake shuffle (Clark et al.
+2004) to the draws of separately fitted strata: in every age, forecast
+year and stratum, the draws are sorted and assigned in the rank order of
+the observed changes of the log rates from distinct training years, the
+same years for all strata and ages and consecutive years for the horizons.
+Every cell keeps its values, and the draws take the rank correlations of
+the observed changes. Package-specific: the template holds changes of log
+rates (the paper uses observed values, whose trend would dominate the
+ranks), and with more draws than template years the draws are shuffled in
+blocks of the number of years. The former `dependence = "empirical"`, a
+package-specific reordering of whole paths, is deprecated.
 
 Score-optimal reconciliation (`method = "energy_score"`; Panagiotelis et
 al. 2023) learns the reconciliation from the base model's own past
@@ -840,6 +857,10 @@ the template. `mt_couple()` couples two sets of forecast draws, and
 `reconciled(..., dependence = "ecc", template = )` couples before
 reconciliation. Package-specific: the coupling acts on the draws of the
 rates before observation noise, which predictive draws add afterwards.
+The Schaake shuffle (`reconciled(..., dependence = "schaake")`, above)
+reorders the draws in the same way with the ranks of observed changes of
+past years in place of a model's draws (Schefzik et al. 2013, Section
+3.4).
 `vignette("dependence")` explains why the dependence matters for totals,
 gaps and inequality measures.
 

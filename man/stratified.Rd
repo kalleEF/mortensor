@@ -32,12 +32,11 @@ Joint models (for example \code{\link[=li_lee]{li_lee()}}) are joint within thei
 the draws of different groups are independent, so sums over strata of
 different groups have narrower intervals than they would if the groups
 moved together. \code{\link[=reconciled]{reconciled()}} keeps the draws as they are by default
-(\code{dependence = "none"}). Its \code{dependence = "empirical"} reorders the
-paths of every stratum so that their ranks follow the changes of a
-resampled training year: a package-specific heuristic (see
-\code{\link[=mt_reconcile]{mt_reconcile()}}) that imposes a rank dependence taken from the training
-data without a model of it, and that also replaces the dependence within
-joint groups.
+(\code{dependence = "none"}). Its \code{dependence = "schaake"} reorders the
+draws of every age, year and stratum so that their ranks follow the
+observed changes of distinct training years (the Schaake shuffle of
+Clark et al. 2004, see \code{\link[=mt_reconcile]{mt_reconcile()}}); this also replaces the
+dependence within joint groups.
 Each group is fitted and forecast as if it were the whole data, so
 backtests, \code{\link[=anchored]{anchored()}}, \code{\link[=recalibrated]{recalibrated()}} and \code{\link[=reconciled]{reconciled()}} work as for
 any model.
