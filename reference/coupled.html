@@ -155,7 +155,9 @@ warning (class <code>mt_warning_coupled</code>).</p>
 the ranks of past observations; ECC takes the ranks from a model's
 forecast of the same years (Schefzik et al. 2013, Section 3.4).
 <code>reconciled(dependence = "schaake")</code> and <code>mt_reconcile(dependence = "schaake")</code> apply the Schaake shuffle with the observed changes of
-distinct training years.</p>
+distinct training years; <code>dependence = "empirical"</code> applies it to the
+whole paths of each stratum, which keeps the dependence between the ages
+and years of each stratum.</p>
 <p><code>mt_couple()</code> couples two sets of draws with the same ages, years, strata
 and number of draws. Both should describe the same quantity (both
 predictive or both not). Couple before reconciling: draws reconciled

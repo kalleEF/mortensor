@@ -44,6 +44,14 @@
 <h2 class="pkg-version" data-toc-text="0.1.9000" id="mortensor-019000-development-of-020">mortensor 0.1.9000 (development of 0.2.0)<a class="anchor" aria-label="anchor" href="#mortensor-019000-development-of-020"></a></h2>
 <p>Clean break: the 0.1.x interface is replaced (see <code>dev/revamp-plan.md</code>).</p>
 <div class="section level3">
+<h3 id="dependence-between-strata-from-training-years-faster-bottom-up-reconciliation-0-1-9000">Dependence between strata from training years; faster bottom-up reconciliation<a class="anchor" aria-label="anchor" href="#dependence-between-strata-from-training-years-faster-bottom-up-reconciliation-0-1-9000"></a></h3>
+<p>Work package E7.</p>
+<ul><li>
+<code>dependence = "empirical"</code> in <code><a href="../reference/reconciled.html">reconciled()</a></code> and <code><a href="../reference/mt_reconcile.html">mt_reconcile()</a></code> is no longer deprecated and is reimplemented as the Schaake shuffle (Clark et al. 2004) with the stratum as margin: each draw’s whole path of a stratum (all ages and forecast years) moves intact, so every stratum keeps exactly its forecast and the dependence between its ages and years; only the pairing across strata changes. Paths are ranked by the change of their log age-standardised death rate over the forecast years, and the ranks follow the observed annual changes of the same summary in distinct training years (one standard population for all strata). Series of three or more years give a template; with fewer the draws are left unchanged with a warning. The choices of margin and summary are package-specific. Results on four data sets (backtests of totals): it improves the totals where strata move together (simulated correlated strata, ONS quintiles, German Laender) and leaves single strata unchanged; on <code><a href="../reference/mt_example_regions.html">mt_example_regions()</a></code>, whose separate forecasts already covered the totals, the totals became too wide. The Poisson variation of the observed changes weakens the dependence it gives.</li>
+<li>
+<code>reconciled(method = "bottom_up")</code> fits the base model to the bottom strata only and builds the aggregates from their draws, so no time is spent on forecasts that bottom-up discards and inner backtests (ensemble weights, tuning, recalibration) use the bottom strata. Models whose structure involves aggregates (<code><a href="../reference/tucker3.html">tucker3()</a></code>, <code><a href="../reference/coda_multiway.html">coda_multiway()</a></code>, <code><a href="../reference/saint.html">saint()</a></code>, <code><a href="../reference/coda_causes.html">coda_causes()</a></code>) are still fitted to all strata. Point draws of per-stratum models are unchanged; predictive draws use a different random stream with the same distribution. The vignettes that use bottom-up reconciliation are re-knitted.</li>
+</ul></div>
+<div class="section level3">
 <h3 id="published-methods-from-the-generalisation-plan-0-1-9000">Published methods from the generalisation plan<a class="anchor" aria-label="anchor" href="#published-methods-from-the-generalisation-plan-0-1-9000"></a></h3>
 <p>Work package E6: the items of <code>dev/generalisation-plan.md</code> whose sources are available, implemented from the papers. All are opt-in; defaults are unchanged.</p>
 <p>Combining models:</p>
@@ -62,7 +70,7 @@
 <code>mt_score_table(by = c("model", "horizon"))</code> documented and tested.</li>
 </ul><p>Dependence and reconciliation:</p>
 <ul><li>
-<code>reconciled(dependence = "schaake")</code> and <code>mt_reconcile(dependence = "schaake")</code>: the Schaake shuffle (Clark et al. 2004), with observed changes of distinct training years as template. It also replaces the dependence between ages within a stratum. <code>dependence = "empirical"</code> is deprecated in favour of it.</li>
+<code>reconciled(dependence = "schaake")</code> and <code>mt_reconcile(dependence = "schaake")</code>: the Schaake shuffle (Clark et al. 2004), with observed changes of distinct training years as template. It also replaces the dependence between ages within a stratum.</li>
 <li>
 <code>reconciled(method = "wls"/"mint", covariance = "errors")</code>: weights from the errors of inner forecasts, with the shrinkage estimator of MinT.</li>
 </ul><p>Old ages and evaluation:</p>

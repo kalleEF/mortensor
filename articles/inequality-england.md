@@ -110,35 +110,35 @@ bt <- mt_compare(cand, xa, origins = 2010:2014, h = 5, n_draws = 200, quantities
 #> (common by sex): Li-Lee: the AR(1) coefficient of the stratum index is bounded
 #> at |phi| = 0.99 in 1 stratum/strata (female.Q4): their deviations from the
 #> common trend are close to a unit root and revert very slowly; coherence may not
-#> suit them. (diagnostics of 18 stratum/strata of the fit).
+#> suit them. (diagnostics of 10 stratum/strata of the fit).
 mt_score_table(bt, metrics = c("crps", "cov95"), targets = c("rate", "life_expectancy"), hierarchy = h)
 #>                model     level   crps cov95 crps_le cov95_le
-#>  1:       Lee-Carter    bottom 0.0672 0.793   0.330    0.772
-#>  2:       Lee-Carter aggregate 0.0560 0.659   0.355    0.543
-#>  3:       Lee-Carter     total 0.0477 0.422   0.401    0.240
-#>  4:              fdm    bottom 0.0727 0.813   0.362    0.740
-#>  5:              fdm aggregate 0.0596 0.693   0.337    0.589
-#>  6:              fdm     total 0.0496 0.478   0.336    0.320
-#>  7:           Li-Lee    bottom 0.0678 0.801   0.391    0.760
-#>  8:           Li-Lee aggregate 0.0563 0.729   0.392    0.691
-#>  9:           Li-Lee     total 0.0480 0.662   0.376    0.720
-#> 10:     coherent fdm    bottom 0.0707 0.763   0.406    0.528
-#> 11:     coherent fdm aggregate 0.0608 0.651   0.399    0.480
-#> 12:     coherent fdm     total 0.0545 0.498   0.380    0.400
-#> 13: Lee-Carter + fdm    bottom 0.0657 0.861   0.323    0.860
-#> 14: Lee-Carter + fdm aggregate 0.0536 0.753   0.325    0.589
-#> 15: Lee-Carter + fdm     total 0.0437 0.528   0.348    0.320
+#>  1:       Lee-Carter    bottom 0.0673 0.793   0.330    0.780
+#>  2:       Lee-Carter aggregate 0.0560 0.661   0.355    0.520
+#>  3:       Lee-Carter     total 0.0476 0.412   0.401    0.240
+#>  4:              fdm    bottom 0.0728 0.809   0.362    0.748
+#>  5:              fdm aggregate 0.0597 0.697   0.337    0.594
+#>  6:              fdm     total 0.0496 0.486   0.336    0.320
+#>  7:           Li-Lee    bottom 0.0677 0.802   0.390    0.760
+#>  8:           Li-Lee aggregate 0.0563 0.729   0.391    0.674
+#>  9:           Li-Lee     total 0.0479 0.658   0.376    0.720
+#> 10:     coherent fdm    bottom 0.0707 0.755   0.407    0.532
+#> 11:     coherent fdm aggregate 0.0608 0.651   0.400    0.480
+#> 12:     coherent fdm     total 0.0544 0.504   0.380    0.440
+#> 13: Lee-Carter + fdm    bottom 0.0664 0.858   0.330    0.860
+#> 14: Lee-Carter + fdm aggregate 0.0542 0.749   0.332    0.611
+#> 15: Lee-Carter + fdm     total 0.0442 0.556   0.353    0.360
 ```
 
 ``` r
 
 mt_score_table(bt[quintile == "Q5" & sex != "both"], metrics = c("crps", "cov95"), targets = "life_expectancy_gap")
 #>               model crps_le_gap cov95_le_gap
-#> 1:       Lee-Carter       0.219         1.00
-#> 2:              fdm       0.372         0.90
-#> 3:           Li-Lee       0.777         0.04
-#> 4:     coherent fdm       0.683         0.16
-#> 5: Lee-Carter + fdm       0.277         0.98
+#> 1:       Lee-Carter       0.218         1.00
+#> 2:              fdm       0.371         0.92
+#> 3:           Li-Lee       0.778         0.06
+#> 4:     coherent fdm       0.684         0.18
+#> 5: Lee-Carter + fdm       0.283         1.00
 ```
 
 ``` r
@@ -156,14 +156,14 @@ slowly.
 The models forecast the rates of the quintiles within about 10% of each
 other, the ensemble best. The intervals of life expectancy are too
 narrow for every model, most for the totals (95% coverage of Lee-Carter
-0.77 for the quintiles and 0.24 for England): five years ahead, the
+0.78 for the quintiles and 0.24 for England): five years ahead, the
 forecasts underestimate how far life expectancy can move. Lee-Carter
 forecasts each quintile independently
 ([`reconciled()`](../reference/reconciled.md) keeps the draws as they
 are), so the deviations of its draws partly cancel in the totals. The
 gap separates the models clearly: Li-Lee and the coherent fdm forecast
-it worst, and their intervals covered the observed gap in only 4% and
-16% of the cases, because in 2010-2019 the female gap did not return to
+it worst, and their intervals covered the observed gap in only 6% and
+18% of the cases, because in 2010-2019 the female gap did not return to
 its past level. Lee-Carter forecast the gap best, with intervals that
 covered it in every case, the ensemble of Lee-Carter and fdm second. The
 pipeline continues with Lee-Carter, chosen for the quantity of the
@@ -185,18 +185,18 @@ bt_steps <- mt_compare(steps, xa, origins = 2010:2014, h = 5, n_draws = 200, qua
                        contrast = c(var = "quintile", ref = "Q1"))
 mt_score_table(bt_steps[sex != "both" & quintile != "England"], metrics = c("crps", "cov95"))
 #>                   model   crps cov95 crps_le cov95_le crps_le_gap cov95_le_gap
-#> 1:           Lee-Carter 0.0672 0.793   0.330    0.772       0.205         1.00
-#> 2: + smoothed over time 0.0718 0.631   0.420    0.260       0.194         0.85
-#> 3:           + anchored 0.0783 0.755   0.355    0.740       0.203         1.00
+#> 1:           Lee-Carter 0.0673 0.793   0.330    0.780       0.205        1.000
+#> 2: + smoothed over time 0.0718 0.629   0.420    0.252       0.194        0.855
+#> 3:           + anchored 0.0783 0.755   0.355    0.732       0.203        1.000
 ```
 
 Smoothing over time made the forecasts of the rates worse and those of
 life expectancy much worse (CRPS 0.420 against 0.330; 95% coverage of
-the rates 0.63 against 0.79, of life expectancy 0.26 against 0.77): the
+the rates 0.63 against 0.79, of life expectancy 0.25 against 0.78): the
 year-to-year variation of these rates is information about the
 uncertainty, and removing it made the intervals too narrow. The gaps
 were forecast slightly more accurately (CRPS 0.194 against 0.205), with
-too narrow intervals (95% coverage 0.85 against 1.00). Anchoring made
+too narrow intervals (95% coverage 0.855 against 1.000). Anchoring made
 the forecasts of the rates worse (CRPS 0.078 against 0.067) and those of
 life expectancy slightly worse (0.355 against 0.330), and left the gap
 nearly unchanged: the observed rates of a single year carry their random
@@ -319,8 +319,7 @@ bt_c <- mt_compare(cand_c, xc, origins = c(2010, 2012, 2014), h = 5, n_draws = 2
 #> (common by sex, cause): Li-Lee: the AR(1) coefficient of the stratum index is
 #> bounded at |phi| = 0.99 in 1 stratum/strata (female.Q1.ihd): their deviations
 #> from the common trend are close to a unit root and revert very slowly;
-#> coherence may not suit them. (diagnostics of 130 stratum/strata of the fit).
-
+#> coherence may not suit them. (diagnostics of 120 stratum/strata of the fit).
 #> Warning in report_fit_problems(diagnostics, spec$label, classes): Li-Lee
 #> (common by sex, cause): Li-Lee: the AR(1) coefficient of the stratum index is
 #> bounded at |phi| = 0.99 in 1 stratum/strata (female.Q1.ihd): their deviations
@@ -345,7 +344,7 @@ differences between each quintile and Q1 (`_asr_gap`, log rate ratios):
 
 mt_score_table(bt_c[cause != "all"], metrics = c("crps", "cov95"), targets = c("asr", "asr_gap"))
 #>                         model crps_asr cov95_asr crps_asr_gap cov95_asr_gap
-#> 1:                     summed   0.0667     0.791       0.0571         0.564
+#> 1:                     summed   0.0667     0.797       0.0572         0.562
 #> 2:     scaled to Li-Lee total   0.0715     0.868       0.0467         0.723
 #> 3: scaled to Lee-Carter total   0.0694     0.861       0.0353         0.944
 ```
@@ -357,16 +356,16 @@ For all causes: life expectancy at 50 (`_le`) and its gap to Q1
 
 mt_score_table(bt_c[cause == "all"], metrics = c("crps", "cov95"), targets = c("life_expectancy", "life_expectancy_gap"))
 #>                         model crps_le cov95_le crps_le_gap cov95_le_gap
-#> 1:                     summed   0.279     0.76       0.499        0.108
-#> 2:     scaled to Li-Lee total   0.329     0.78       0.331        0.433
-#> 3: scaled to Lee-Carter total   0.292     0.74       0.153        1.000
+#> 1:                     summed   0.276    0.733       0.502        0.108
+#> 2:     scaled to Li-Lee total   0.329    0.780       0.331        0.433
+#> 3: scaled to Lee-Carter total   0.292    0.740       0.153        1.000
 ```
 
 For the causes the three are close: the summed forecasts are slightly
 the most accurate for the age-standardised rates but the least accurate
 for their gaps, and those scaled to Lee-Carter forecast the gaps best
 (95% coverage 0.94). The intervals of the age-standardised rates are too
-narrow for all three (95% coverage 0.79-0.87). For all causes the
+narrow for all three (95% coverage 0.80-0.87). For all causes the
 difference is large: the summed causes and the Li-Lee total both pull
 the gap back to its past level, and only the Lee-Carter total forecast
 it well (CRPS of the gap 0.15 against 0.33 and 0.50).

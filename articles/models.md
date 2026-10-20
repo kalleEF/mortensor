@@ -891,8 +891,17 @@ values, and the draws take the rank correlations of the observed
 changes. Package-specific: the template holds changes of log rates (the
 paper uses observed values, whose trend would dominate the ranks), and
 with more draws than template years the draws are shuffled in blocks of
-the number of years. The former `dependence = "empirical"`, a
-package-specific reordering of whole paths, is deprecated.
+the number of years. `dependence = "empirical"` applies the same shuffle
+with the stratum as margin: the whole path of a stratum in a draw, all
+its ages and forecast years, moves intact, ranked by the mean annual
+change of its log age-standardised rate (one standard population for all
+strata) and matched to the observed annual changes of the same summary
+in distinct training years. Every stratum keeps its forecast
+distribution and the dependence between its ages and years; only the
+pairing of the paths of different strata changes. The stratum as margin
+and the summary are package-specific. With `method = "bottom_up"` the
+base model is fitted to the bottom strata only, and the aggregates are
+sums of their draws.
 
 Score-optimal reconciliation (`method = "energy_score"`; Panagiotelis et
 al. 2023) learns the reconciliation from the base model’s own past
@@ -928,11 +937,12 @@ couples two sets of forecast draws, and
 `reconciled(..., dependence = "ecc", template = )` couples before
 reconciliation. Package-specific: the coupling acts on the draws of the
 rates before observation noise, which predictive draws add afterwards.
-The Schaake shuffle (`reconciled(..., dependence = "schaake")`, above)
-reorders the draws in the same way with the ranks of observed changes of
-past years in place of a model’s draws (Schefzik et al. 2013, Section
-3.4). [`vignette("dependence")`](../articles/dependence.md) explains why
-the dependence matters for totals, gaps and inequality measures.
+The Schaake shuffle (`reconciled(..., dependence = "schaake")` or
+`"empirical"`, above) reorders the draws in the same way with the ranks
+of observed changes of past years in place of a model’s draws (Schefzik
+et al. 2013, Section 3.4).
+[`vignette("dependence")`](../articles/dependence.md) explains why the
+dependence matters for totals, gaps and inequality measures.
 
 ### Calibration on recent years: `recalibrated()`
 

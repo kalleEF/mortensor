@@ -154,9 +154,11 @@ end at zero (the warning above).
 ## Does coherence cost accuracy?
 
 A backtest from the origins 2010-2014, five years ahead, with the
-reconciliation inside each fit. Two variants are added: MinT with the
+reconciliation inside each fit. Four variants are added: MinT with the
 covariance of the errors of past forecasts (`covariance = "errors"`, see
-below), and WLS after the Schaake shuffle (`dependence = "schaake"`):
+below), WLS after the Schaake shuffle of every cell
+(`dependence = "schaake"`), and bottom-up and WLS after the Schaake
+shuffle of whole stratum paths (`dependence = "empirical"`):
 
 ``` r
 
@@ -165,29 +167,40 @@ bt <- mt_compare(list(separate = lee_carter(),
                       wls = reconciled(lee_carter(), h, method = "wls"),
                       mint = reconciled(lee_carter(), h, method = "mint"),
                       "mint, errors" = reconciled(lee_carter(), h, method = "mint", covariance = "errors", years = 5),
-                      "wls, Schaake" = reconciled(lee_carter(), h, method = "wls", dependence = "schaake")),
+                      "wls, Schaake" = reconciled(lee_carter(), h, method = "wls", dependence = "schaake"),
+                      "bottom-up, empirical" = reconciled(lee_carter(), h, method = "bottom_up",
+                                                          dependence = "empirical"),
+                      "wls, empirical" = reconciled(lee_carter(), h, method = "wls", dependence = "empirical")),
                  xa, origins = 2010:2014, h = 5, n_draws = 200)
 mt_score_table(bt, metrics = c("crps", "cov95"), hierarchy = h)
-#>            model     level   crps cov95
-#>           <fctr>    <fctr>  <num> <num>
-#>  1:     separate    bottom 0.0672 0.793
-#>  2:     separate aggregate 0.0549 0.764
-#>  3:     separate     total 0.0449 0.672
-#>  4:    bottom-up    bottom 0.0672 0.793
-#>  5:    bottom-up aggregate 0.0560 0.659
-#>  6:    bottom-up     total 0.0477 0.422
-#>  7:          wls    bottom 0.0677 0.766
-#>  8:          wls aggregate 0.0570 0.602
-#>  9:          wls     total 0.0488 0.370
-#> 10:         mint    bottom 0.0677 0.763
-#> 11:         mint aggregate 0.0571 0.603
-#> 12:         mint     total 0.0489 0.376
-#> 13: mint, errors    bottom 0.0674 0.809
-#> 14: mint, errors aggregate 0.0565 0.662
-#> 15: mint, errors     total 0.0478 0.438
-#> 16: wls, Schaake    bottom 0.0673 0.788
-#> 17: wls, Schaake aggregate 0.0555 0.673
-#> 18: wls, Schaake     total 0.0459 0.490
+#>                    model     level   crps cov95
+#>                   <fctr>    <fctr>  <num> <num>
+#>  1:             separate    bottom 0.0672 0.793
+#>  2:             separate aggregate 0.0549 0.764
+#>  3:             separate     total 0.0449 0.672
+#>  4:            bottom-up    bottom 0.0673 0.793
+#>  5:            bottom-up aggregate 0.0560 0.661
+#>  6:            bottom-up     total 0.0476 0.412
+#>  7:                  wls    bottom 0.0677 0.766
+#>  8:                  wls aggregate 0.0570 0.602
+#>  9:                  wls     total 0.0488 0.370
+#> 10:                 mint    bottom 0.0677 0.763
+#> 11:                 mint aggregate 0.0571 0.603
+#> 12:                 mint     total 0.0489 0.376
+#> 13:         mint, errors    bottom 0.0674 0.809
+#> 14:         mint, errors aggregate 0.0565 0.662
+#> 15:         mint, errors     total 0.0478 0.438
+#> 16:         wls, Schaake    bottom 0.0673 0.788
+#> 17:         wls, Schaake aggregate 0.0555 0.673
+#> 18:         wls, Schaake     total 0.0459 0.490
+#> 19: bottom-up, empirical    bottom 0.0673 0.793
+#> 20: bottom-up, empirical aggregate 0.0547 0.720
+#> 21: bottom-up, empirical     total 0.0435 0.582
+#> 22:       wls, empirical    bottom 0.0676 0.780
+#> 23:       wls, empirical aggregate 0.0552 0.698
+#> 24:       wls, empirical     total 0.0440 0.560
+#>                    model     level   crps cov95
+#>                   <fctr>    <fctr>  <num> <num>
 ```
 
 `hierarchy = h` scores the bottom series (sex by quintile), the
@@ -195,15 +208,15 @@ aggregates (quintiles for both sexes, England by sex) and the total
 (England) separately.
 
 The bottom series are forecast about as well with every method (CRPS
-0.067-0.068), and their coverage falls a little with WLS and MinT (0.77
-against 0.79). The totals lose accuracy and much coverage: the 95%
-intervals of England contain 0.37-0.42 of the observed rates after
-reconciliation with the default settings (bottom-up, WLS, MinT), against
-0.67 with its own model. The model of England captures the common
-movements of the quintiles in its trend; sums of parts with independent
-draws do not reproduce them, so their intervals are too narrow. Joint
-models such as [`li_lee()`](../reference/li_lee.md) tie the parts
-together in the model itself.
+0.067-0.068), and their coverage falls a little with WLS and MinT
+(0.76-0.77 against 0.79). The totals lose accuracy and much coverage:
+the 95% intervals of England contain 0.37-0.41 of the observed rates
+after reconciliation with the default settings (bottom-up, WLS, MinT),
+against 0.67 with its own model. The model of England captures the
+common movements of the quintiles in its trend; sums of parts with
+independent draws do not reproduce them, so their intervals are too
+narrow. Joint models such as [`li_lee()`](../reference/li_lee.md) tie
+the parts together in the model itself.
 
 The Schaake shuffle (Clark et al. 2004) gives separately fitted parts
 the dependence of the training years before the reconciliation. In every
@@ -220,6 +233,21 @@ intervals of the life expectancy of single strata. The template has one
 value per training year whose next five years are observed: 5 at the
 origin 2010, 9 at 2014. It assumes that the dependence of the training
 years holds in the forecast years.
+
+The shuffle of stratum paths (`dependence = "empirical"`) applies the
+Schaake shuffle with the stratum as margin. The path of a stratum in one
+draw, all its ages and years, moves as a whole: the paths of each
+stratum are ranked by the mean annual change of its log age-standardised
+rate over the forecast years and take the ranks of the observed annual
+changes of the same rate in distinct training years, the same years for
+all strata. Every stratum keeps its draws, so with bottom-up the scores
+of the bottom series are those of bottom-up without it (CRPS 0.0673,
+coverage 0.793). The 95% intervals of England then contain 0.58 of the
+observed rates, against 0.41 without it, and its CRPS falls from 0.0476
+to 0.0435, below the 0.0449 of England’s own model; the aggregates cover
+0.72 instead of 0.66. With WLS, the 95% intervals of England contain
+0.56 of the observed rates (CRPS 0.0440). The template has one value per
+training year after the first: 9 at the origin 2010, 13 at 2014.
 
 The weights of WLS and MinT come from the base draws by default. The
 papers use the covariance of the errors of the base forecasts
@@ -274,9 +302,12 @@ suits long and stable histories, and a backtest should confirm it.
   whose draws are independent, **MinT** gives about the same result, and
   the intervals of the totals are too narrow; check their coverage in a
   backtest.
-- **dependence** for separate forecasts whose totals matter: `"schaake"`
-  takes the dependence from the observed changes of the training years,
-  `"ecc"` from a joint model (vignette “Dependence between groups”).
+- **dependence** for separate forecasts whose totals matter:
+  `"empirical"` takes how the strata move together from the observed
+  annual changes of the training years and keeps the forecast of each
+  stratum; `"schaake"` takes the dependence of every age, year and
+  stratum from the observed changes; `"ecc"` takes it from a joint model
+  (vignette “Dependence between groups”).
 - **covariance = “errors”** for weights of WLS and MinT from the errors
   of past forecasts.
 - **fixed** with **proportional** for a trusted total, for example

@@ -967,13 +967,28 @@ draws of the number of dates, each shuffled with all dates (the paper:
 as many dates as members); opt-in (default <code>"none"</code>)</td>
 </tr>
 <tr class="even">
-<td><code>dependence = "empirical"</code></td>
-<td>reordering of whole paths of separately simulated strata by training
-years drawn with replacement</td>
-<td>related to the Schaake shuffle (Clark et al. 2004)</td>
-<td>package-specific, deprecated: use
-<code>dependence = "schaake"</code>
+<td>
+<code>reconciled(dependence = "empirical")</code>,
+<code>mt_reconcile(dependence = "empirical")</code>
 </td>
+<td>Schaake shuffle with the stratum as margin: the whole path of each
+stratum in a draw (all ages and forecast years) is one member and moves
+intact; the members of each stratum are ranked by the mean annual change
+of their log age-standardised rate over the forecast years and take the
+ranks of the observed annual changes of the same summary in distinct
+training years, the same years for all strata; every stratum keeps its
+set of paths; tied template values ranked at random</td>
+<td>Clark et al. (2004); Schefzik, Thorarinsdottir and Gneiting (2013,
+Section 3.4); reordering of bottom-level samples to an empirical copula:
+Ben Taieb, Taylor and Hyndman (2021), as discussed by Panagiotelis et
+al. (2023)</td>
+<td>published method, package-specific (reference unknown): the stratum
+as margin; the summary (log age-standardised rate, standard population
+the mean exposure by age over strata and training years); the draws
+ranked by their mean annual change from the last training year; deaths
+of 0 count as 0.5; with more draws than dates, blocks as for
+<code>"schaake"</code>; fewer than three training years leave the draws
+unchanged, with a warning; opt-in (default <code>"none"</code>)</td>
 </tr>
 <tr class="odd">
 <td><code><a href="../reference/recalibrated.html">recalibrated()</a></code></td>

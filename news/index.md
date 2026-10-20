@@ -4,6 +4,45 @@
 
 Clean break: the 0.1.x interface is replaced (see `dev/revamp-plan.md`).
 
+### Dependence between strata from training years; faster bottom-up reconciliation
+
+Work package E7.
+
+- `dependence = "empirical"` in
+  [`reconciled()`](../reference/reconciled.md) and
+  [`mt_reconcile()`](../reference/mt_reconcile.md) is no longer
+  deprecated and is reimplemented as the Schaake shuffle (Clark et
+  al. 2004) with the stratum as margin: each draw’s whole path of a
+  stratum (all ages and forecast years) moves intact, so every stratum
+  keeps exactly its forecast and the dependence between its ages and
+  years; only the pairing across strata changes. Paths are ranked by the
+  change of their log age-standardised death rate over the forecast
+  years, and the ranks follow the observed annual changes of the same
+  summary in distinct training years (one standard population for all
+  strata). Series of three or more years give a template; with fewer the
+  draws are left unchanged with a warning. The choices of margin and
+  summary are package-specific. Results on four data sets (backtests of
+  totals): it improves the totals where strata move together (simulated
+  correlated strata, ONS quintiles, German Laender) and leaves single
+  strata unchanged; on
+  [`mt_example_regions()`](../reference/mt_example_regions.md), whose
+  separate forecasts already covered the totals, the totals became too
+  wide. The Poisson variation of the observed changes weakens the
+  dependence it gives.
+- `reconciled(method = "bottom_up")` fits the base model to the bottom
+  strata only and builds the aggregates from their draws, so no time is
+  spent on forecasts that bottom-up discards and inner backtests
+  (ensemble weights, tuning, recalibration) use the bottom strata.
+  Models whose structure involves aggregates
+  ([`tucker3()`](../reference/tucker3.md),
+  [`coda_multiway()`](../reference/coda_multiway.md),
+  [`saint()`](../reference/saint.md),
+  [`coda_causes()`](../reference/coda_causes.md)) are still fitted to
+  all strata. Point draws of per-stratum models are unchanged;
+  predictive draws use a different random stream with the same
+  distribution. The vignettes that use bottom-up reconciliation are
+  re-knitted.
+
 ### Published methods from the generalisation plan
 
 Work package E6: the items of `dev/generalisation-plan.md` whose sources
@@ -40,7 +79,7 @@ Dependence and reconciliation:
   `mt_reconcile(dependence = "schaake")`: the Schaake shuffle (Clark et
   al. 2004), with observed changes of distinct training years as
   template. It also replaces the dependence between ages within a
-  stratum. `dependence = "empirical"` is deprecated in favour of it.
+  stratum.
 - `reconciled(method = "wls"/"mint", covariance = "errors")`: weights
   from the errors of inner forecasts, with the shrinkage estimator of
   MinT.

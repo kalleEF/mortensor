@@ -5,7 +5,7 @@ hierarchy every time it is forecast, also inside
 [`mt_backtest()`](mt_backtest.md). If the training data contain only the
 bottom strata, the aggregate strata are added with
 [`mt_aggregate_strata()`](mt_aggregate_strata.md) before fitting, so
-that the base model forecasts every node; exposures for the forecast
+that the forecasts cover every node; exposures for the forecast
 (`exposure` of [`mt_forecast()`](mt_forecast.md)) can then be given for
 the bottom strata only, and those of the aggregates are their sums.
 Predictive draws (used by backtests) are coherent as well: given the
@@ -42,7 +42,8 @@ reconciled(
 
 - spec:
 
-  Base model specification (fitted to all strata).
+  Base model specification (fitted to all strata, or to the bottom
+  strata with `method = "bottom_up"`, see Details).
 
 - hierarchy:
 
@@ -65,21 +66,27 @@ reconciled(
 - dependence:
 
   `"none"` (default: the draws are reconciled as they are), `"ecc"`,
-  `"schaake"`, `"empirical"` (deprecated) or `"auto"` (the same as
-  `"none"`, kept for compatibility). With `"ecc"` the draws of the base
-  model take the dependence of the draws of `template` before
-  reconciliation (ensemble copula coupling, Schefzik, Thorarinsdottir
-  and Gneiting 2013): the same as
-  `reconciled(coupled(spec, template), ...)`, see
-  [`coupled()`](coupled.md). With `"schaake"` they take the ranks of the
-  observed changes of distinct training years (the Schaake shuffle of
-  Clark et al. 2004, see [`mt_reconcile()`](mt_reconcile.md)); the
-  template comes from the training data of each fit, also inside
+  `"schaake"`, `"empirical"` or `"auto"` (the same as `"none"`, kept for
+  compatibility). With `"ecc"` the draws of the base model take the
+  dependence of the draws of `template` before reconciliation (ensemble
+  copula coupling, Schefzik, Thorarinsdottir and Gneiting 2013): the
+  same as `reconciled(coupled(spec, template), ...)`, see
+  [`coupled()`](coupled.md). With `"schaake"` the draws of every age,
+  forecast year and stratum take the ranks of the observed changes of
+  distinct training years (the Schaake shuffle of Clark et al. 2004),
+  which also replaces the dependence between the ages and years of each
+  stratum. With `"empirical"` the whole paths of each stratum take the
+  ranks of the observed annual changes of its log age-standardised rate
+  in distinct training years (the Schaake shuffle with the stratum as
+  margin): every stratum keeps its paths, and only their pairing across
+  strata changes. [`mt_reconcile()`](mt_reconcile.md) describes both.
+  Their templates come from the training data of each fit, also inside
   [`mt_backtest()`](mt_backtest.md). Draws of joint models such as
   [`li_lee()`](li_lee.md) and [`tucker3()`](tucker3.md), which carry the
-  dependence between strata, are never reordered by `"schaake"` (it then
-  gives a warning and is ignored). The observation noise of predictive
-  draws is independent across cells either way.
+  dependence between strata, are never reordered by `"schaake"` or
+  `"empirical"` (they then give a warning and are ignored). The
+  observation noise of predictive draws is independent across cells
+  either way.
 
 - fixed:
 
@@ -112,7 +119,8 @@ reconciled(
   Random seed of the training for `method = "energy_score"` and
   `covariance = "errors"` (inner forecasts, observation noise and the
   draws of each step), so that fits are reproducible. The Schaake
-  shuffle uses the `seed` of [`mt_forecast()`](mt_forecast.md).
+  shuffles of `dependence` use the `seed` of
+  [`mt_forecast()`](mt_forecast.md).
 
 - template:
 
@@ -139,10 +147,42 @@ and with the estimated \\d\\ and \\G\\ (`energy_opt`). With
 `covariance = "errors"` its fit holds `$reconcile$errors`: the errors
 `[age, horizon, stratum, origin]`, the number of error vectors with
 observed values for every stratum per age and horizon (`n`) and the
-inner `origins`. Forecasts with `dependence = "schaake"` report the
-shuffle in `$schaake` (see [`mt_reconcile()`](mt_reconcile.md)).
+inner `origins`. With `method = "bottom_up"`, `$reconcile$bottom_only`
+tells whether the base model was fitted to the bottom strata only.
+Forecasts with `dependence = "schaake"` report the shuffle in
+`$schaake`, those with `dependence = "empirical"` in `$empirical` (see
+[`mt_reconcile()`](mt_reconcile.md)).
 
 ## Details
+
+**Bottom-up.** With `method = "bottom_up"`, the base model is fitted to
+the bottom strata only, and the aggregates are the sums of their draws
+(of deaths, or of rates for variables with `additive = "rates"`).
+Wrappers inside the base model ([`ensemble()`](ensemble.md) weights,
+[`tuned()`](mt_tune.md), [`recalibrated()`](recalibrated.md)) then run
+their inner backtests on the bottom strata. The fit describes the
+aggregates by sums as well: their deaths and exposures in the training
+years, and their fitted rates (fitted deaths of the bottom strata over
+the exposures). Levels of [`stratified()`](stratified.md) models that
+are aggregates of the hierarchy, such as
+`stratified("cause", all = ...)`, have no strata in this fit and are
+skipped. Joint models that pool the bottom strata and give each
+aggregate parameters of its own ([`li_lee()`](li_lee.md),
+[`cae()`](cae.md), [`coherent_fdm()`](coherent_fdm.md),
+`coda(coherent = TRUE)`) estimate the same parameters of the bottom
+strata as when fitted to all strata; their draws of the bottom strata
+have the same distribution and differ by the random numbers drawn. The
+other methods fit the base model to all strata, and so does bottom-up
+for models whose fit of the bottom strata uses the aggregates:
+[`tucker3()`](tucker3.md) and [`coda_multiway()`](coda_multiway.md)
+decompose all strata together, [`saint()`](saint.md) takes its trend
+from reference strata, and [`coda_causes()`](coda_causes.md) needs the
+all-cause stratum. Observation noise of predictive draws is drawn before
+the reordering of `dependence`, for the base draws, and moves with their
+values; reordering and noise are independent, so this gives the
+distribution of noise drawn after the reordering, and with the same seed
+every bottom stratum keeps exactly the predictive draws of
+`dependence = "none"`.
 
 Whether coherence costs accuracy, and which method and base model work
 best, depends on the data: compare them in a backtest at every level of

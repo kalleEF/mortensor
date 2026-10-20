@@ -44,11 +44,16 @@ draws as they are by default (`dependence = "none"`). Its
 `dependence = "schaake"` reorders the draws of every age, year and
 stratum so that their ranks follow the observed changes of distinct
 training years (the Schaake shuffle of Clark et al. 2004, see
-[`mt_reconcile()`](mt_reconcile.md)); this also replaces the dependence
-within joint groups. Each group is fitted and forecast as if it were the
-whole data, so backtests, [`anchored()`](anchored.md),
+[`mt_reconcile()`](mt_reconcile.md)), and `dependence = "empirical"`
+reorders the whole paths of each stratum by the observed annual changes
+of its log age-standardised rate; both also replace the dependence
+between the strata of a joint group. Each group is fitted and forecast
+as if it were the whole data, so backtests, [`anchored()`](anchored.md),
 [`recalibrated()`](recalibrated.md) and [`reconciled()`](reconciled.md)
-work as for any model.
+work as for any model. `reconciled(method = "bottom_up")` fits its base
+model to the bottom strata of the hierarchy: named levels that are
+aggregates of the hierarchy (a total or a group of levels) then have no
+strata and are skipped.
 
 ## Examples
 

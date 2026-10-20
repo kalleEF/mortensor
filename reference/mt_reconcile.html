@@ -120,12 +120,14 @@ used, and they are enough; aggregates are summed.</p></dd>
 
 <dt id="arg-dependence">dependence<a class="anchor" aria-label="anchor" href="#arg-dependence"></a></dt>
 <dd><p><code>"none"</code> (default: keep the draws as they are),
-<code>"schaake"</code> (the Schaake shuffle of the draws of separately fitted
-strata before the reconciliation, see Details) or <code>"empirical"</code>
-(deprecated). Draws of joint models are not reordered: <code>"schaake"</code> then
-gives a warning and is ignored. The shuffle needs the training data of
-the draws (as <code><a href="mt_forecast.html">mt_forecast()</a></code> returns them), with at least two more
-training years than forecast years.</p></dd>
+<code>"schaake"</code> (the Schaake shuffle of every age, year and stratum of the
+draws of separately fitted strata before the reconciliation) or
+<code>"empirical"</code> (the Schaake shuffle of the whole paths of each stratum);
+see Details. Draws of joint models are not reordered: both then give a
+warning and are ignored. Both need the training data of the draws (as
+<code><a href="mt_forecast.html">mt_forecast()</a></code> returns them); <code>"schaake"</code> needs at least two more
+training years than forecast years, <code>"empirical"</code> at least three
+training years.</p></dd>
 
 
 <dt id="arg-seed">seed<a class="anchor" aria-label="anchor" href="#arg-seed"></a></dt>
@@ -160,7 +162,13 @@ years (<code>years</code>), the start year of the date of each draw (<code>draw_
 the block of each draw (<code>block</code>), the number of blocks (<code>blocks</code>), the
 number of shuffled margins (<code>margins</code>) and the share of margins with
 tied template values (<code>tied</code>); <code>$component</code> is then dropped, since the
-values of one draw come from different base draws.</p>
+values of one draw come from different base draws. After the shuffle of
+stratum paths, <code>$empirical</code> holds the same items, with the years of the
+observed changes as <code>years</code> and the number of reordered strata as
+<code>margins</code>, and also the standard population (<code>standard</code>) and the
+template (<code>template</code>, the observed annual changes of the log
+age-standardised rate <code>[stratum, year]</code>); <code>$component</code> then gives the
+component of each stratum and draw (ensembles).</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
@@ -240,13 +248,14 @@ reconciled as they are, so sums of separately fitted parts have narrower
 intervals than they would if the parts moved together. Joint models (for
 example <code><a href="li_lee.html">li_lee()</a></code>, <code><a href="coherent_fdm.html">coherent_fdm()</a></code> and <code><a href="coda.html">coda()</a></code> with <code>coherent = TRUE</code>)
 carry the dependence between strata in the model itself; their draws are
-never reordered (<code>"schaake"</code> then gives a warning and is ignored).
-Two methods give separately fitted strata a dependence before the
-reconciliation: the Schaake shuffle takes it from the observed changes of
-the training years (<code>dependence = "schaake"</code>, below), ensemble copula
-coupling (Schefzik, Thorarinsdottir and Gneiting 2013) from the draws of
-a joint model (<code><a href="coupled.html">mt_couple()</a></code> for draws before <code>mt_reconcile()</code>, and
-<code><a href="coupled.html">coupled()</a></code> or <code>reconciled(dependence = "ecc")</code> for models).</p>
+never reordered (<code>"schaake"</code> and <code>"empirical"</code> then give a warning and are
+ignored). Three methods give separately fitted strata a dependence before
+the reconciliation, all by reordering their draws. The Schaake shuffle
+takes the dependence from the observed changes of the training years,
+either in every age, forecast year and stratum (<code>dependence = "schaake"</code>) or for the whole path of each stratum (<code>dependence = "empirical"</code>), both below. Ensemble copula coupling (Schefzik,
+Thorarinsdottir and Gneiting 2013) takes it from the draws of a joint
+model (<code><a href="coupled.html">mt_couple()</a></code> for draws before <code>mt_reconcile()</code>, and <code><a href="coupled.html">coupled()</a></code>
+or <code>reconciled(dependence = "ecc")</code> for models).</p>
 <p><strong>The Schaake shuffle</strong> (<code>dependence = "schaake"</code>; Clark, Gangopadhyay,
 Hay, Rajagopalan and Wilby 2004, Section 3b). Status: published, adapted
 to mortality forecasts as listed below. In the paper, the ensemble
@@ -296,11 +305,72 @@ deaths, which is independent between strata and ages; where deaths are
 few, it weakens the dependence the template gives. Templates are short:
 with 19 training years and 5 forecast years there are 14 dates, with 16
 forecast years 3.</p>
-<p><code>dependence = "empirical"</code> is deprecated (it warns): a package-specific
-reordering of whole paths of each stratum by one-year changes of log
-rates, averaged over ages, of training years drawn with replacement. It
-keeps the dependence between the ages and years of each stratum. Use
-<code>"schaake"</code>, the published method.</p>
+<p><strong>The Schaake shuffle of stratum paths</strong> (<code>dependence = "empirical"</code>).
+Status: the Schaake shuffle of Clark et al. (2004, Section 3b) with the
+stratum as margin; the margin and the summary that ranks the paths are
+package-specific (see below). The path of a stratum in one draw, all its
+ages and forecast years, is one ensemble member and is moved as a whole.
+The members of each stratum are ranked by a summary of their path, and
+they are reordered so that their ranks follow those of the same summary
+in the observed data of <code>n</code> distinct training years (the dates), the
+same dates for all strata, as in the paper. Every stratum keeps exactly
+its set of paths: its forecast distribution and the dependence between
+its ages and years stay those of the model, and with <code>method = "bottom_up"</code> so do all scores of the bottom strata (<code><a href="reconciled.html">reconciled()</a></code> keeps
+this for predictive draws as well). The pairing
+of the paths of different strata changes, so that strata whose summaries
+moved together in the same training years move together in the
+forecast. In the terms of Schefzik et al. (2013, Section 3.4), the
+summaries of the strata take the empirical copula of their observed
+changes. Ben Taieb, Taylor and Hyndman (2021) reorder samples of the
+bottom series of a hierarchy in the same way, with the empirical copula
+of in-sample residuals, and sum them bottom-up; Panagiotelis,
+Gamakumara, Athanasopoulos and Hyndman (2023, Sections 1 and 7.3)
+discuss that method and note that it needs as many draws as training
+observations.</p>
+<p>The summary is the log age-standardised death rate <code>z</code>, with one standard
+population for all strata: the mean exposure of each age over the strata
+and training years of the draws, so that ages enter with their weight in
+the population. The template value of a stratum and training year <code>tau</code>
+is the observed annual change <code>z[tau] - z[tau - 1]</code>, so <code>n</code> is the number
+of training years minus one. A draw is ranked by the mean annual change of
+its summary over the forecast years, <code>(z[H] - z[0]) / H</code>, where <code>z[H]</code> is
+the summary in the last forecast year and <code>z[0]</code> that of the observed
+rates of the last training year. Both ranks so refer to annual changes of
+the summary; <code>z[0]</code> is the same for all draws of a stratum, so the ranks
+of the draws are those of <code>z[H]</code>. Draws and dates are matched in blocks
+as for <code>"schaake"</code> (item 3 above); ties among template values are ranked
+at random (Clark et al. 2004, Section 4c); deaths of zero count as 0.5.
+With fewer than three training years (one observed change) the draws keep
+their order, with a warning. A stratum with a missing template value
+keeps the order of its draws, with a warning.</p>
+<p>Package-specific (reference unknown): the stratum as margin, the summary
+and its standard population, the ranking of the draws by their mean
+annual change, and the blocks with more draws than dates.</p>
+<p>The three methods differ in what they reorder. <code>"schaake"</code> reorders every
+age, forecast year and stratum separately: it replaces the dependence
+between the ages and years of a stratum with that of the observed changes
+as well, which changes measures over ages and years of a single stratum
+(life expectancy, cumulative changes). <code>"empirical"</code> leaves each stratum
+to its model and gives only the strata a dependence, from one summary per
+stratum and year, which carries less Poisson variation than the rates of
+single ages. <code>"ecc"</code> takes the dependence of all cells from the draws of a
+joint model, in place of observed years. Each assumes that the
+dependence it takes holds in the forecast years. The template of
+<code>"empirical"</code> holds the changes of single years, and the draws are ranked
+by their changes over all forecast years: the strata of one draw take the
+ranks that their annual changes had in one training year, so they move
+together as far as their annual changes did. The observed changes carry
+the Poisson variation of the deaths, which is independent between strata
+and weakens the dependence where deaths are few.</p>
+<p>In the package's backtests of bottom-up Lee-Carter forecasts, on data
+simulated with correlated period shocks, on the deprivation quintiles of
+England (<a href="ons_data.html">ons_data</a>) and on the German Laender, <code>"empirical"</code> widened the
+intervals of the totals towards their nominal coverage and lowered their
+CRPS, with the scores of every stratum unchanged; on
+<code><a href="mt_example_regions.html">mt_example_regions()</a></code>, whose separate forecasts already covered the
+totals, it made the intervals of the totals too wide. The vignettes
+"Coherent forecasts: totals and their parts" and "Dependence between
+groups" show such backtests.</p>
 <p>The one-variable interface with <code>var</code> and <code>total</code> is still accepted. It
 reconciles deaths when the exposures of the parts add up to that of the
 total (sexes, regions) and rates when each part has the exposure of the
@@ -340,6 +410,14 @@ precipitation and temperature fields. <em>Journal of Hydrometeorology</em> 5(1):
 <p>Schefzik R, Thorarinsdottir TL, Gneiting T (2013). Uncertainty
 quantification in complex simulation models using ensemble copula
 coupling. <em>Statistical Science</em> 28(4): 616-640. <a href="https://doi.org/10.1214/13-STS443" class="external-link">doi:10.1214/13-STS443</a></p>
+<p>Ben Taieb S, Taylor JW, Hyndman RJ (2021). Hierarchical probabilistic
+forecasting of electricity demand with smart meter data. <em>Journal of the
+American Statistical Association</em> 116(533): 27-43.
+<a href="https://doi.org/10.1080/01621459.2020.1736081" class="external-link">doi:10.1080/01621459.2020.1736081</a></p>
+<p>Panagiotelis A, Gamakumara P, Athanasopoulos G, Hyndman RJ (2023).
+Probabilistic forecast reconciliation: properties, evaluation and score
+optimisation. <em>European Journal of Operational Research</em> 306(2):
+693-706. <a href="https://doi.org/10.1016/j.ejor.2022.07.040" class="external-link">doi:10.1016/j.ejor.2022.07.040</a></p>
 <p>Schäfer J, Strimmer K (2005). A shrinkage approach to large-scale
 covariance matrix estimation and implications for functional genomics.
 <em>Statistical Applications in Genetics and Molecular Biology</em> 4(1):
@@ -376,6 +454,14 @@ Article 32. <a href="https://doi.org/10.2202/1544-6115.1175" class="external-lin
 <span class="r-in"><span><span class="va">rs</span> <span class="op">&lt;-</span> <span class="fu">mt_reconcile</span><span class="op">(</span><span class="va">fc</span>, <span class="va">h</span>, method <span class="op">=</span> <span class="st">"wls"</span>, dependence <span class="op">=</span> <span class="st">"schaake"</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">rs</span><span class="op">$</span><span class="va">schaake</span><span class="op">$</span><span class="va">years</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>  [1] 2005 2006 2007 2008 2009 2010 2011 2012 2013 2014 2015 2016</span>
+<span class="r-in"><span><span class="co"># whole paths of each stratum, ranked by the annual changes of 14 training years</span></span></span>
+<span class="r-in"><span><span class="va">re</span> <span class="op">&lt;-</span> <span class="fu">mt_reconcile</span><span class="op">(</span><span class="va">fc</span>, <span class="va">h</span>, method <span class="op">=</span> <span class="st">"bottom_up"</span>, dependence <span class="op">=</span> <span class="st">"empirical"</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">re</span><span class="op">$</span><span class="va">empirical</span><span class="op">$</span><span class="va">template</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">3</span>, <span class="fl">1</span><span class="op">:</span><span class="fl">5</span><span class="op">]</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>               year</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> stratum              2006         2007        2008         2009         2010</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   female.R1.Q1 0.00100760  0.004208635 -0.01625161 -0.007325809 -0.007361821</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   female.R1.Q2 0.01916212  0.003678371 -0.01387691  0.001738056 -0.001813413</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   female.R1.Q3 0.02737474 -0.013021711 -0.02361212  0.015747796 -0.001853880</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

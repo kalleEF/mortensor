@@ -73,9 +73,9 @@
 deprivation quintiles, are often combined: into totals over the groups,
 into gaps between them and into measures of inequality. The uncertainty
 of these combinations depends on how the forecasts of the groups move
-together. This vignette shows why, describes the two ways in which
-mortensor gives forecasts of several groups their dependence, and
-compares them on the deprivation quintiles of England.</p>
+together. This vignette shows why, describes the ways in which mortensor
+gives forecasts of several groups their dependence, and compares them on
+the deprivation quintiles of England.</p>
 <div class="section level2">
 <h2 id="why-dependence-matters">Why dependence matters<a class="anchor" aria-label="anchor" href="#why-dependence-matters"></a>
 </h2>
@@ -171,6 +171,31 @@ al. 2004). The observed changes carry the random variation of the
 deaths, which is independent between groups and weakens their dependence
 where deaths are few. ECC takes the dependence from a joint model
 instead.</p>
+<p>Both reorder every cell on its own, so they also set how the ages and
+years of one group move together.
+<code>reconciled(..., dependence = "empirical")</code> applies the
+Schaake shuffle with the group as margin: the path of a group in one
+draw, all its ages and years, moves as a whole. The paths of each group
+are ranked by the mean annual change of the group’s log age-standardised
+rate over the forecast years, and they take the ranks of the observed
+annual changes of the same rate in distinct training years, the same
+years for all groups. Five paths of one group and the observed annual
+changes in five training years:</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">path_change</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">-</span><span class="fl">0.021</span>, <span class="op">-</span><span class="fl">0.015</span>, <span class="op">-</span><span class="fl">0.018</span>, <span class="op">-</span><span class="fl">0.009</span>, <span class="op">-</span><span class="fl">0.012</span><span class="op">)</span></span>
+<span><span class="va">past_change</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">-</span><span class="fl">0.031</span>, <span class="op">-</span><span class="fl">0.012</span>, <span class="op">-</span><span class="fl">0.024</span>, <span class="op">-</span><span class="fl">0.040</span>, <span class="op">-</span><span class="fl">0.018</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/order.html" class="external-link">order</a></span><span class="op">(</span><span class="va">path_change</span><span class="op">)</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/rank.html" class="external-link">rank</a></span><span class="op">(</span><span class="va">past_change</span><span class="op">)</span><span class="op">]</span></span>
+<span><span class="co">#&gt; [1] 3 4 2 1 5</span></span></code></pre></div>
+<p>The fourth training year had the largest fall, and the draw matched
+to it receives path 1, the path with the steepest fall. In every group,
+the draw matched to a year receives the path whose rank equals the rank
+of that year’s change in the group, so groups whose changes ranked alike
+in the same years move together in the forecast. Each group keeps
+exactly its paths, so its forecast, also of measures over ages such as
+life expectancy, stays that of its model; only which path of one group
+goes with which path of another changes. The age-standardised rate gives
+each age its weight in the population, and it carries less random
+variation than the rate of a single age.</p>
 </div>
 <div class="section level2">
 <h2 id="example-deprivation-quintiles-in-england">Example: deprivation quintiles in England<a class="anchor" aria-label="anchor" href="#example-deprivation-quintiles-in-england"></a>
@@ -178,7 +203,7 @@ instead.</p>
 <p>Deaths and populations by sex and deprivation quintile
 (<code>ons_data</code>), at ages 50 and over. Q1 is the most deprived
 quintile. The totals are England by sex.</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/kalleEF/mortensor" class="external-link">mortensor</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://r-datatable.com" class="external-link">data.table</a></span><span class="op">)</span></span>
 <span><span class="va">x</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_data.html">mt_data</a></span><span class="op">(</span>deaths <span class="op">=</span> <span class="va">ons_data</span>, population <span class="op">=</span> <span class="va">ons_data</span>, by <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"sex"</span>, <span class="st">"imd_decile"</span><span class="op">)</span>, age <span class="op">=</span> <span class="st">"age_group"</span>,</span>
@@ -193,7 +218,7 @@ of ten years and more. The number of common age effects
 (<code>order</code>) and whether women and men share them
 (<code>common_by</code>) can be chosen by the approximate BIC of Kleinow
 (2015, eq. 5):</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">bic</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/data.table/man/J.html" class="external-link">CJ</a></span><span class="op">(</span>order <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">3</span>, common_by <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"none"</span>, <span class="st">"sex"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">bic</span><span class="op">[</span>, <span class="va">bic</span> <span class="op">:=</span> <span class="fu"><a href="https://rdrr.io/r/base/mapply.html" class="external-link">mapply</a></span><span class="op">(</span><span class="kw">function</span><span class="op">(</span><span class="va">p</span>, <span class="va">cb</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="fu"><a href="../reference/mt_fit.html">mt_fit</a></span><span class="op">(</span><span class="fu"><a href="../reference/cae.html">cae</a></span><span class="op">(</span>order <span class="op">=</span> <span class="va">p</span>, common_by <span class="op">=</span> <span class="kw">if</span> <span class="op">(</span><span class="va">cb</span> <span class="op">==</span> <span class="st">"none"</span><span class="op">)</span> <span class="cn">NULL</span> <span class="kw">else</span> <span class="va">cb</span><span class="op">)</span>, <span class="va">x</span><span class="op">)</span><span class="op">$</span><span class="va">fits</span><span class="op">$</span><span class="va">bic</span></span>
@@ -211,7 +236,7 @@ of ten years and more. The number of common age effects
 <p>One common age effect for both sexes has the lowest BIC. The
 correlations of the innovations of the period effects between the
 quintiles of women:</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">fit_cae</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_fit.html">mt_fit</a></span><span class="op">(</span><span class="fu"><a href="../reference/cae.html">cae</a></span><span class="op">(</span><span class="op">)</span>, <span class="va">x</span><span class="op">)</span></span>
 <span><span class="va">cr</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_parameters.html">mt_parameters</a></span><span class="op">(</span><span class="va">fit_cae</span><span class="op">)</span><span class="op">[</span><span class="va">parameter</span> <span class="op">==</span> <span class="st">"cor_kappa1"</span> <span class="op">&amp;</span> <span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">grepl</a></span><span class="op">(</span><span class="st">"female"</span>, <span class="va">stratum</span><span class="op">)</span> <span class="op">&amp;</span> <span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">grepl</a></span><span class="op">(</span><span class="st">"female"</span>, <span class="va">index</span><span class="op">)</span><span class="op">]</span></span>
 <span><span class="fu"><a href="https://rdrr.io/pkg/data.table/man/dcast.data.table.html" class="external-link">dcast</a></span><span class="op">(</span><span class="va">cr</span><span class="op">[</span>, <span class="fu">.</span><span class="op">(</span><span class="va">stratum</span>, <span class="va">index</span>, value <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">value</span>, <span class="fl">2</span><span class="op">)</span><span class="op">)</span><span class="op">]</span>, <span class="va">stratum</span> <span class="op">~</span> <span class="va">index</span><span class="op">)</span></span>
@@ -229,12 +254,16 @@ too.</p>
 <div class="section level3">
 <h3 id="forecasts">Forecasts<a class="anchor" aria-label="anchor" href="#forecasts"></a>
 </h3>
-<p>Four models, each with the totals for England as the sums of the
+<p>Five models, each with the totals for England as the sums of the
 quintiles in every draw (<code>method = "bottom_up"</code>), so that the
 totals show the dependence of the parts:</p>
 <ul>
 <li>
 <strong>separate</strong>: a Lee-Carter model for each group;</li>
+<li>
+<strong>empirical</strong>: the Lee-Carter models of each group,
+their paths reordered by the observed annual changes of the training
+years;</li>
 <li>
 <strong>CAE</strong>: the common age effect model;</li>
 <li>
@@ -244,44 +273,45 @@ to the CAE model;</li>
 <strong>Li-Lee</strong>: the Li-Lee model with a common factor for
 each sex.</li>
 </ul>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">specs</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>  separate <span class="op">=</span> <span class="fu"><a href="../reference/reconciled.html">reconciled</a></span><span class="op">(</span><span class="fu"><a href="../reference/lee_carter.html">lee_carter</a></span><span class="op">(</span><span class="op">)</span>, <span class="va">h</span>, method <span class="op">=</span> <span class="st">"bottom_up"</span><span class="op">)</span>,</span>
+<span>  empirical <span class="op">=</span> <span class="fu"><a href="../reference/reconciled.html">reconciled</a></span><span class="op">(</span><span class="fu"><a href="../reference/lee_carter.html">lee_carter</a></span><span class="op">(</span><span class="op">)</span>, <span class="va">h</span>, method <span class="op">=</span> <span class="st">"bottom_up"</span>, dependence <span class="op">=</span> <span class="st">"empirical"</span><span class="op">)</span>,</span>
 <span>  CAE <span class="op">=</span> <span class="fu"><a href="../reference/reconciled.html">reconciled</a></span><span class="op">(</span><span class="fu"><a href="../reference/cae.html">cae</a></span><span class="op">(</span><span class="op">)</span>, <span class="va">h</span>, method <span class="op">=</span> <span class="st">"bottom_up"</span><span class="op">)</span>,</span>
 <span>  ECC <span class="op">=</span> <span class="fu"><a href="../reference/reconciled.html">reconciled</a></span><span class="op">(</span><span class="fu"><a href="../reference/lee_carter.html">lee_carter</a></span><span class="op">(</span><span class="op">)</span>, <span class="va">h</span>, method <span class="op">=</span> <span class="st">"bottom_up"</span>, dependence <span class="op">=</span> <span class="st">"ecc"</span>, template <span class="op">=</span> <span class="fu"><a href="../reference/cae.html">cae</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span>,</span>
 <span>  <span class="st">"Li-Lee"</span> <span class="op">=</span> <span class="fu"><a href="../reference/reconciled.html">reconciled</a></span><span class="op">(</span><span class="fu"><a href="../reference/li_lee.html">li_lee</a></span><span class="op">(</span>common_by <span class="op">=</span> <span class="st">"sex"</span><span class="op">)</span>, <span class="va">h</span>, method <span class="op">=</span> <span class="st">"bottom_up"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">fcs</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span><span class="va">specs</span>, <span class="kw">function</span><span class="op">(</span><span class="va">s</span><span class="op">)</span> <span class="fu"><a href="../reference/mt_forecast.html">mt_forecast</a></span><span class="op">(</span><span class="fu"><a href="../reference/mt_fit.html">mt_fit</a></span><span class="op">(</span><span class="va">s</span>, <span class="va">x</span><span class="op">)</span>, to <span class="op">=</span> <span class="fl">2030</span>, n_draws <span class="op">=</span> <span class="fl">500</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <p>The correlation between the paths of life expectancy at 50 of women
 in Q1 and Q5 in 2030:</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">e50</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span><span class="va">fcs</span>, <span class="va">life_expectancy</span>, at <span class="op">=</span> <span class="fl">50</span>, paths <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">sapply</a></span><span class="op">(</span><span class="va">e50</span>, <span class="kw">function</span><span class="op">(</span><span class="va">e</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/stats/cor.html" class="external-link">cor</a></span><span class="op">(</span><span class="va">e</span><span class="op">[</span><span class="st">"2030"</span>, <span class="st">"female.Q1"</span>, <span class="op">]</span>, <span class="va">e</span><span class="op">[</span><span class="st">"2030"</span>, <span class="st">"female.Q5"</span>, <span class="op">]</span><span class="op">)</span><span class="op">)</span>, <span class="fl">2</span><span class="op">)</span></span>
-<span><span class="co">#&gt; separate      CAE      ECC   Li-Lee </span></span>
-<span><span class="co">#&gt;    -0.02     0.78     0.79     0.94</span></span></code></pre></div>
+<span><span class="co">#&gt;  separate empirical       CAE       ECC    Li-Lee </span></span>
+<span><span class="co">#&gt;     -0.02      0.79      0.80      0.82      0.95</span></span></code></pre></div>
 <p>Life expectancy at 50 in 2030, median and 95% interval, for women in
 Q1 and Q5 and in England:</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/mt_compare.html">mt_compare_forecasts</a></span><span class="op">(</span><span class="va">fcs</span>, periods <span class="op">=</span> <span class="fl">2030</span>, at <span class="op">=</span> <span class="fl">50</span>, strata <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"female.Q1"</span>, <span class="st">"female.Q5"</span>, <span class="st">"female.England"</span><span class="op">)</span>,</span>
 <span>                     digits <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Key: &lt;label, period&gt;</span></span>
-<span><span class="co">#&gt;             label period            separate                 CAE</span></span>
+<span><span class="co">#&gt;             label period            separate           empirical</span></span>
 <span><span class="co">#&gt;            &lt;char&gt;  &lt;num&gt;              &lt;char&gt;              &lt;char&gt;</span></span>
-<span><span class="co">#&gt; 1: female.England   2030 36.37 (35.63-37.16) 36.48 (35.34-37.61)</span></span>
-<span><span class="co">#&gt; 2:      female.Q1   2030 32.66 (30.16-34.77) 32.79 (31.22-34.44)</span></span>
-<span><span class="co">#&gt; 3:      female.Q5   2030 39.07 (37.54-40.75) 38.91 (37.83-39.96)</span></span>
-<span><span class="co">#&gt;                    ECC              Li-Lee</span></span>
-<span><span class="co">#&gt;                 &lt;char&gt;              &lt;char&gt;</span></span>
-<span><span class="co">#&gt; 1: 36.40 (34.85-37.87) 36.53 (33.73-38.90)</span></span>
-<span><span class="co">#&gt; 2: 32.66 (30.16-34.77) 33.77 (30.41-36.62)</span></span>
-<span><span class="co">#&gt; 3: 39.07 (37.54-40.75) 38.24 (35.72-40.39)</span></span></code></pre></div>
+<span><span class="co">#&gt; 1: female.England   2030 36.37 (35.63-37.16) 36.29 (34.71-37.92)</span></span>
+<span><span class="co">#&gt; 2:      female.Q1   2030 32.66 (30.16-34.77) 32.66 (30.16-34.77)</span></span>
+<span><span class="co">#&gt; 3:      female.Q5   2030 39.07 (37.54-40.75) 39.07 (37.54-40.75)</span></span>
+<span><span class="co">#&gt;                    CAE                 ECC              Li-Lee</span></span>
+<span><span class="co">#&gt;                 &lt;char&gt;              &lt;char&gt;              &lt;char&gt;</span></span>
+<span><span class="co">#&gt; 1: 36.43 (35.21-37.64) 36.41 (34.78-37.83) 36.50 (33.83-38.93)</span></span>
+<span><span class="co">#&gt; 2: 32.82 (31.10-34.53) 32.66 (30.16-34.77) 33.71 (30.62-36.63)</span></span>
+<span><span class="co">#&gt; 3: 38.84 (37.83-40.00) 39.07 (37.54-40.75) 38.27 (35.81-40.40)</span></span></code></pre></div>
 <p>Life expectancy at 50 in 2030 for England, the sum of the
 quintiles:</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/mt_compare.html">mt_plot_compare</a></span><span class="op">(</span><span class="va">fcs</span>, at <span class="op">=</span> <span class="fl">50</span>, strata <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"female.England"</span>, <span class="st">"male.England"</span><span class="op">)</span>, periods <span class="op">=</span> <span class="fl">2030</span><span class="op">)</span></span></code></pre></div>
-<p><img src="dependence_files/figure-html/unnamed-chunk-9-1.png" class="r-plt" alt="" width="672"></p>
+<p><img src="dependence_files/figure-html/unnamed-chunk-10-1.png" class="r-plt" alt="" width="672"></p>
 <p>The observed gap in life expectancy at 50 between Q1 and Q5
 widened:</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">e_obs</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/life_expectancy.html">life_expectancy</a></span><span class="op">(</span><span class="fu"><a href="../reference/mt_array.html">mt_array</a></span><span class="op">(</span><span class="va">x</span>, <span class="st">"deaths"</span><span class="op">)</span> <span class="op">/</span> <span class="fu"><a href="../reference/mt_array.html">mt_array</a></span><span class="op">(</span><span class="va">x</span>, <span class="st">"exposure"</span><span class="op">)</span>, <span class="fu"><a href="../reference/mt_strata.html">mt_grid</a></span><span class="op">(</span><span class="va">x</span><span class="op">)</span><span class="op">$</span><span class="va">age</span>, at <span class="op">=</span> <span class="fl">50</span><span class="op">)</span></span>
 <span><span class="va">yrs</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"2001"</span>, <span class="st">"2010"</span>, <span class="st">"2019"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">e_obs</span><span class="op">[</span><span class="va">yrs</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"female.Q1"</span>, <span class="st">"male.Q1"</span><span class="op">)</span><span class="op">]</span> <span class="op">-</span> <span class="va">e_obs</span><span class="op">[</span><span class="va">yrs</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"female.Q5"</span>, <span class="st">"male.Q5"</span><span class="op">)</span><span class="op">]</span>, <span class="fl">2</span><span class="op">)</span></span>
@@ -291,7 +321,7 @@ widened:</p>
 <span><span class="co">#&gt;   2010     -4.53   -5.73</span></span>
 <span><span class="co">#&gt;   2019     -5.57   -6.14</span></span></code></pre></div>
 <p>The forecast gap in 2030, path by path:</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">gap</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/data.table/man/rbindlist.html" class="external-link">rbindlist</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">fcs</span><span class="op">)</span>, <span class="kw">function</span><span class="op">(</span><span class="va">n</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="va">g</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_contrast.html">mt_contrast</a></span><span class="op">(</span><span class="va">fcs</span><span class="op">[[</span><span class="va">n</span><span class="op">]</span><span class="op">]</span>, var <span class="op">=</span> <span class="st">"quintile"</span>, ref <span class="op">=</span> <span class="st">"Q5"</span>, at <span class="op">=</span> <span class="fl">50</span><span class="op">)</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">cbind</a></span><span class="op">(</span>model <span class="op">=</span> <span class="va">n</span>, <span class="va">g</span><span class="op">[</span><span class="va">period</span> <span class="op">==</span> <span class="fl">2030</span> <span class="op">&amp;</span> <span class="va">level</span> <span class="op">==</span> <span class="st">"Q1"</span>, <span class="fu">.</span><span class="op">(</span><span class="va">sex</span>, <span class="va">q0.025</span>, <span class="va">q0.5</span>, <span class="va">q0.975</span><span class="op">)</span><span class="op">]</span><span class="op">)</span></span>
@@ -299,27 +329,31 @@ widened:</p>
 <span><span class="va">gap</span><span class="op">[</span>, <span class="va">width</span> <span class="op">:=</span> <span class="va">q0.975</span> <span class="op">-</span> <span class="va">q0.025</span><span class="op">]</span></span>
 <span><span class="va">gap</span><span class="op">[</span>, <span class="op">(</span><span class="fl">3</span><span class="op">:</span><span class="fl">6</span><span class="op">)</span> <span class="op">:=</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span><span class="va">.SD</span>, <span class="va">round</span>, <span class="fl">2</span><span class="op">)</span>, .SDcols <span class="op">=</span> <span class="fl">3</span><span class="op">:</span><span class="fl">6</span><span class="op">]</span></span>
 <span><span class="va">gap</span></span>
-<span><span class="co">#&gt;       model    sex q0.025  q0.5 q0.975 width</span></span>
-<span><span class="co">#&gt;      &lt;char&gt; &lt;char&gt;  &lt;num&gt; &lt;num&gt;  &lt;num&gt; &lt;num&gt;</span></span>
-<span><span class="co">#&gt; 1: separate female  -9.28 -6.48  -3.78  5.51</span></span>
-<span><span class="co">#&gt; 2: separate   male  -8.23 -6.51  -4.88  3.35</span></span>
-<span><span class="co">#&gt; 3:      CAE female  -7.12 -6.08  -5.04  2.08</span></span>
-<span><span class="co">#&gt; 4:      CAE   male  -7.30 -6.30  -5.20  2.10</span></span>
-<span><span class="co">#&gt; 5:      ECC female  -8.01 -6.48  -5.25  2.76</span></span>
-<span><span class="co">#&gt; 6:      ECC   male  -7.59 -6.54  -5.56  2.03</span></span>
-<span><span class="co">#&gt; 7:   Li-Lee female  -5.62 -4.45  -3.41  2.21</span></span>
-<span><span class="co">#&gt; 8:   Li-Lee   male  -5.77 -5.22  -4.70  1.07</span></span></code></pre></div>
+<span><span class="co">#&gt;         model    sex q0.025  q0.5 q0.975 width</span></span>
+<span><span class="co">#&gt;        &lt;char&gt; &lt;char&gt;  &lt;num&gt; &lt;num&gt;  &lt;num&gt; &lt;num&gt;</span></span>
+<span><span class="co">#&gt;  1:  separate female  -9.28 -6.48  -3.78  5.51</span></span>
+<span><span class="co">#&gt;  2:  separate   male  -8.23 -6.51  -4.88  3.35</span></span>
+<span><span class="co">#&gt;  3: empirical female  -8.23 -6.45  -5.30  2.92</span></span>
+<span><span class="co">#&gt;  4: empirical   male  -7.37 -6.51  -5.68  1.69</span></span>
+<span><span class="co">#&gt;  5:       CAE female  -7.09 -6.09  -5.13  1.96</span></span>
+<span><span class="co">#&gt;  6:       CAE   male  -7.32 -6.33  -5.34  1.98</span></span>
+<span><span class="co">#&gt;  7:       ECC female  -7.84 -6.46  -5.28  2.56</span></span>
+<span><span class="co">#&gt;  8:       ECC   male  -7.47 -6.51  -5.65  1.81</span></span>
+<span><span class="co">#&gt;  9:    Li-Lee female  -5.58 -4.59  -3.62  1.96</span></span>
+<span><span class="co">#&gt; 10:    Li-Lee   male  -5.78 -5.23  -4.71  1.07</span></span></code></pre></div>
 <p>Separate models draw the quintiles independently: the correlation of
-their paths is close to zero. With CAE and ECC it is about 0.8, with
-Li-Lee 0.94. ECC keeps the forecast of each quintile from the Lee-Carter
-models, so Q1 and Q5 have the same intervals as with the separate
-models; the totals and the gaps change. The 95% interval of the life
-expectancy of women in England is 1.5 years wide with separate models,
-2.3 years with CAE, 3.0 years with ECC and 5.2 years with Li-Lee. For
-the gap between Q1 and Q5 the separate models give the widest interval:
-5.5 years for women, against 2.1 to 2.8 years with the other three.
-Li-Lee forecasts a smaller gap than the other models, because its
-deviations return towards their mean over the fitting years.</p>
+their paths is close to zero. With the shuffle of stratum paths
+(<code>empirical</code>), CAE and ECC it is about 0.8, with Li-Lee 0.95.
+The shuffle and ECC keep the forecast of each quintile from the
+Lee-Carter models, so Q1 and Q5 have the same intervals as with the
+separate models; the totals and the gaps change. The 95% interval of the
+life expectancy of women in England is 1.53 years wide with separate
+models, 3.21 years with the shuffle of stratum paths, 2.43 years with
+CAE, 3.05 years with ECC and 5.10 years with Li-Lee. For the gap between
+Q1 and Q5 the separate models give the widest interval: 5.5 years for
+women, against 2.0 to 2.9 years with the other four. Li-Lee forecasts a
+smaller gap than the other models, because its deviations return towards
+their mean over the fitting years.</p>
 </div>
 <div class="section level3">
 <h3 id="backtests">Backtests<a class="anchor" aria-label="anchor" href="#backtests"></a>
@@ -329,53 +363,62 @@ against the observed rates and life expectancy at 50, and against the
 gaps in life expectancy between each quintile and Q5
 (<code>contrast</code>). The data hold the totals, so that they are
 scored too.</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">xa</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_aggregate_strata.html">mt_aggregate_strata</a></span><span class="op">(</span><span class="va">x</span>, <span class="va">h</span><span class="op">)</span></span>
 <span><span class="va">bt</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_compare.html">mt_compare</a></span><span class="op">(</span><span class="va">specs</span>, <span class="va">xa</span>, origins <span class="op">=</span> <span class="fl">2010</span><span class="op">:</span><span class="fl">2014</span>, h <span class="op">=</span> <span class="fl">5</span>, n_draws <span class="op">=</span> <span class="fl">200</span>, quantities <span class="op">=</span> <span class="st">"life_expectancy"</span>,</span>
 <span>                 contrast <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>var <span class="op">=</span> <span class="st">"quintile"</span>, ref <span class="op">=</span> <span class="st">"Q5"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/mt_compare.html">mt_score_table</a></span><span class="op">(</span><span class="va">bt</span>, metrics <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"crps"</span>, <span class="st">"cov80"</span>, <span class="st">"cov95"</span><span class="op">)</span>, hierarchy <span class="op">=</span> <span class="va">h</span>, targets <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"rate"</span>, <span class="st">"life_expectancy"</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="co">#&gt;       model  level   crps cov80 cov95 crps_le cov80_le cov95_le</span></span>
-<span><span class="co">#&gt;      &lt;fctr&gt; &lt;fctr&gt;  &lt;num&gt; &lt;num&gt; &lt;num&gt;   &lt;num&gt;    &lt;num&gt;    &lt;num&gt;</span></span>
-<span><span class="co">#&gt; 1: separate bottom 0.0378 0.548 0.746   0.301    0.520    0.768</span></span>
-<span><span class="co">#&gt; 2: separate  total 0.0392 0.264 0.407   0.349    0.160    0.300</span></span>
-<span><span class="co">#&gt; 3:      CAE bottom 0.0403 0.480 0.702   0.328    0.396    0.672</span></span>
-<span><span class="co">#&gt; 4:      CAE  total 0.0390 0.376 0.598   0.340    0.300    0.520</span></span>
-<span><span class="co">#&gt; 5:      ECC bottom 0.0378 0.553 0.748   0.301    0.508    0.776</span></span>
-<span><span class="co">#&gt; 6:      ECC  total 0.0359 0.460 0.656   0.309    0.460    0.660</span></span>
-<span><span class="co">#&gt; 7:   Li-Lee bottom 0.0415 0.570 0.768   0.337    0.552    0.788</span></span>
-<span><span class="co">#&gt; 8:   Li-Lee  total 0.0381 0.522 0.742   0.318    0.520    0.760</span></span></code></pre></div>
+<span><span class="co">#&gt;         model  level   crps cov80 cov95 crps_le cov80_le cov95_le</span></span>
+<span><span class="co">#&gt;        &lt;fctr&gt; &lt;fctr&gt;  &lt;num&gt; &lt;num&gt; &lt;num&gt;   &lt;num&gt;    &lt;num&gt;    &lt;num&gt;</span></span>
+<span><span class="co">#&gt;  1:  separate bottom 0.0378 0.559 0.746   0.301    0.512    0.752</span></span>
+<span><span class="co">#&gt;  2:  separate  total 0.0392 0.262 0.416   0.349    0.140    0.320</span></span>
+<span><span class="co">#&gt;  3: empirical bottom 0.0378 0.559 0.746   0.301    0.512    0.752</span></span>
+<span><span class="co">#&gt;  4: empirical  total 0.0360 0.416 0.571   0.310    0.340    0.520</span></span>
+<span><span class="co">#&gt;  5:       CAE bottom 0.0405 0.465 0.692   0.330    0.372    0.668</span></span>
+<span><span class="co">#&gt;  6:       CAE  total 0.0393 0.353 0.596   0.343    0.280    0.540</span></span>
+<span><span class="co">#&gt;  7:       ECC bottom 0.0378 0.556 0.746   0.301    0.512    0.772</span></span>
+<span><span class="co">#&gt;  8:       ECC  total 0.0359 0.462 0.669   0.308    0.440    0.660</span></span>
+<span><span class="co">#&gt;  9:    Li-Lee bottom 0.0414 0.576 0.765   0.337    0.548    0.780</span></span>
+<span><span class="co">#&gt; 10:    Li-Lee  total 0.0380 0.529 0.727   0.317    0.520    0.800</span></span></code></pre></div>
 <p>The columns ending in <code>_le</code> score life expectancy at 50.
 <code>bottom</code> are the quintiles by sex and <code>total</code>
 England by sex. The gap between Q1 and Q5:</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/mt_compare.html">mt_score_table</a></span><span class="op">(</span><span class="va">bt</span><span class="op">[</span><span class="va">quintile</span> <span class="op">==</span> <span class="st">"Q1"</span><span class="op">]</span>, metrics <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"crps"</span>, <span class="st">"cov50"</span>, <span class="st">"cov80"</span>, <span class="st">"cov95"</span><span class="op">)</span>,</span>
 <span>               targets <span class="op">=</span> <span class="st">"life_expectancy_gap"</span><span class="op">)</span></span>
-<span><span class="co">#&gt;       model crps_le_gap cov50_le_gap cov80_le_gap cov95_le_gap</span></span>
-<span><span class="co">#&gt;      &lt;fctr&gt;       &lt;num&gt;        &lt;num&gt;        &lt;num&gt;        &lt;num&gt;</span></span>
-<span><span class="co">#&gt; 1: separate       0.153         0.94         1.00         1.00</span></span>
-<span><span class="co">#&gt; 2:      CAE       0.140         0.46         0.82         1.00</span></span>
-<span><span class="co">#&gt; 3:      ECC       0.117         0.50         0.98         1.00</span></span>
-<span><span class="co">#&gt; 4:   Li-Lee       0.532         0.02         0.10         0.16</span></span></code></pre></div>
+<span><span class="co">#&gt;        model crps_le_gap cov50_le_gap cov80_le_gap cov95_le_gap</span></span>
+<span><span class="co">#&gt;       &lt;fctr&gt;       &lt;num&gt;        &lt;num&gt;        &lt;num&gt;        &lt;num&gt;</span></span>
+<span><span class="co">#&gt; 1:  separate       0.153         0.92         1.00         1.00</span></span>
+<span><span class="co">#&gt; 2: empirical       0.130         0.72         1.00         1.00</span></span>
+<span><span class="co">#&gt; 3:       CAE       0.152         0.34         0.80         0.98</span></span>
+<span><span class="co">#&gt; 4:       ECC       0.115         0.50         0.98         1.00</span></span>
+<span><span class="co">#&gt; 5:    Li-Lee       0.534         0.02         0.08         0.14</span></span></code></pre></div>
 <p>The quintiles (<code>bottom</code>) are forecast equally well by the
-separate models and by ECC (CRPS 0.0378), because ECC keeps the forecast
-of each cell; the small differences in coverage come from the Poisson
-variation of the deaths, which is drawn after the coupling. CAE (0.0396)
-and Li-Lee (0.0415) forecast the quintiles less accurately than the
-Lee-Carter models.</p>
+separate models, by the shuffle of stratum paths and by ECC (CRPS
+0.0378). The shuffle keeps the draws of every quintile, so all its
+scores of the quintiles equal those of the separate models. ECC keeps
+the forecast of each cell; the small differences in coverage come from
+the Poisson variation of the deaths, which is drawn after the coupling.
+CAE (0.0405) and Li-Lee (0.0414) forecast the quintiles less accurately
+than the Lee-Carter models.</p>
 <p>The totals show the effect of the dependence. With separate models,
-the 95% intervals for England contain 41% of the observed rates and 30%
+the 95% intervals for England contain 42% of the observed rates and 32%
 of the observed life expectancies at 50: sums of independent parts vary
-too little. With CAE they contain 63% and 62%, with ECC 65% and 68%, and
-with Li-Lee 74% and 76%. ECC has the lowest CRPS for the totals. Every
-model stays below 95%, as in the vignette “Coherent forecasts: totals
-and their parts”: mortality improved more slowly after 2011 than in the
-training years.</p>
+too little. With the shuffle of stratum paths they contain 57% and 52%,
+with CAE 61% and 54%, with ECC 66% and 68%, and with Li-Lee 73% and 80%.
+ECC has the lowest CRPS for the totals (0.0358 for the rates, 0.308 for
+life expectancy), the shuffle of stratum paths the second lowest (0.0360
+and 0.310). Every model stays below 95%, as in the vignette “Coherent
+forecasts: totals and their parts”: mortality improved more slowly after
+2011 than in the training years.</p>
 <p>The gap between Q1 and Q5 shows the other side. The intervals of the
-separate models are too wide: their 50% intervals contain 94% of the
-observed gaps. CAE (38%) and ECC (52%) come closer to 50%, and ECC has
-the lowest CRPS. Li-Lee forecasts the gap to return towards its mean
-over the fitting years, while the observed gap widened (see above); the
-95% intervals of Li-Lee contain 16% of the observed gaps.</p>
+separate models are too wide: their 50% intervals contain 92% of the
+observed gaps. The shuffle of stratum paths (72%), CAE (38%) and ECC
+(52%) come closer to 50%, and ECC has the lowest CRPS (0.115, the
+shuffle of stratum paths 0.130). Li-Lee forecasts the gap to return
+towards its mean over the fitting years, while the observed gap widened
+(see above); the 95% intervals of Li-Lee contain 14% of the observed
+gaps.</p>
 <p>Each score of the totals and of the gap rests on 50 values per model
 (two sexes, five origins, five horizons) from overlapping forecasts. The
 results describe these data and years; for other data, a backtest of the
@@ -387,7 +430,13 @@ totals and gaps that matter shows which method suits them.</p>
 </h2>
 <ul>
 <li>For totals and gaps, use draws that carry the dependence between the
-groups: a joint model, or separate models coupled to one.</li>
+groups: a joint model, or separate models given a dependence by
+reordering their draws.</li>
+<li>The shuffle of stratum paths (<code>dependence = "empirical"</code>)
+keeps the forecast of each group, also over ages and years, and takes
+how the groups move together from their observed annual changes; the
+random variation of the deaths in these changes weakens the dependence
+where deaths are few.</li>
 <li>ECC keeps the forecast of each cell from the base model and takes
 how groups, ages and years move together from the template; check the
 template’s dependence in a backtest of totals and gaps, as above.</li>

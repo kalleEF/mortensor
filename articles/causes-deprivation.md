@@ -342,9 +342,9 @@ mt_score_table(bt1, metrics = c("crps", "cov95"), targets = "rate", hierarchy = 
 #>  1:     separate    bottom 0.1130 0.849
 #>  2:     separate aggregate 0.0851 0.750
 #>  3:     separate     total 0.0374 0.733
-#>  4:    bottom-up    bottom 0.1130 0.846
-#>  5:    bottom-up aggregate 0.0823 0.734
-#>  6:    bottom-up     total 0.0295 0.387
+#>  4:    bottom-up    bottom 0.1130 0.849
+#>  5:    bottom-up aggregate 0.0823 0.733
+#>  6:    bottom-up     total 0.0295 0.404
 #>  7:          WLS    bottom 0.1160 0.804
 #>  8:          WLS aggregate 0.0881 0.607
 #>  9:          WLS     total 0.0392 0.156
@@ -365,8 +365,8 @@ mt_score_table(bt1[cause != "all"], metrics = c("crps", "cov95"), targets = "asr
 #>            model     level crps_asr cov95_asr
 #>  1:     separate    bottom   0.0562     0.879
 #>  2:     separate aggregate   0.0530     0.770
-#>  3:    bottom-up    bottom   0.0562     0.876
-#>  4:    bottom-up aggregate   0.0513     0.735
+#>  3:    bottom-up    bottom   0.0563     0.876
+#>  4:    bottom-up aggregate   0.0514     0.732
 #>  5:          WLS    bottom   0.0595     0.797
 #>  6:          WLS aggregate   0.0583     0.551
 #>  7:         MinT    bottom   0.0595     0.794
@@ -376,7 +376,7 @@ mt_score_table(bt1[cause != "all"], metrics = c("crps", "cov95"), targets = "asr
 mt_score_table(bt1[cause != "all" & quintile == "Q5"], metrics = c("crps", "cov95"), targets = "asr_gap")
 #>           model crps_asr_gap cov95_asr_gap
 #> 1:     separate       0.0398         0.984
-#> 2:    bottom-up       0.0387         0.987
+#> 2:    bottom-up       0.0381         0.988
 #> 3:          WLS       0.0362         0.957
 #> 4:         MinT       0.0362         0.960
 #> 5: proportional       0.0405         0.992
@@ -390,8 +390,8 @@ mt_score_table(bt1[cause == "all"], metrics = c("crps", "cov95"), targets = "lif
 #>            model     level crps_le cov95_le
 #>  1:     separate aggregate   0.300    0.769
 #>  2:     separate     total   0.316    0.800
-#>  3:    bottom-up aggregate   0.178    0.831
-#>  4:    bottom-up     total   0.184    0.480
+#>  3:    bottom-up aggregate   0.177    0.833
+#>  4:    bottom-up     total   0.186    0.480
 #>  5:          WLS aggregate   0.304    0.341
 #>  6:          WLS     total   0.345    0.120
 #>  7:         MinT aggregate   0.305    0.339
@@ -404,9 +404,9 @@ mt_score_table(bt1[cause == "all" & quintile == "Q5"], metrics = c("crps", "cov9
 #>  1:     separate female       0.185         1.00
 #>  2:     separate   male       0.127         1.00
 #>  3:     separate   both       0.153         1.00
-#>  4:    bottom-up female       0.150         1.00
-#>  5:    bottom-up   male       0.122         1.00
-#>  6:    bottom-up   both       0.114         1.00
+#>  4:    bottom-up female       0.146         1.00
+#>  5:    bottom-up   male       0.113         1.00
+#>  6:    bottom-up   both       0.107         1.00
 #>  7:          WLS female       0.122         1.00
 #>  8:          WLS   male       0.110         1.00
 #>  9:          WLS   both       0.112         0.84
@@ -445,7 +445,7 @@ bias <- bt1[cause == "all" & target == "life_expectancy", .(error = round(mean(m
 dcast(bias, model ~ horizon, value.var = "error")
 #>           model    1    2    3    4    5
 #> 1:     separate 0.11 0.26 0.40 0.55 0.68
-#> 2:    bottom-up 0.07 0.15 0.21 0.26 0.29
+#> 2:    bottom-up 0.07 0.16 0.21 0.26 0.29
 #> 3:          WLS 0.11 0.24 0.35 0.46 0.55
 #> 4:         MinT 0.11 0.24 0.34 0.45 0.56
 #> 5: proportional 0.10 0.26 0.40 0.54 0.68
@@ -460,20 +460,21 @@ of all causes (Wilmoth 1995), and in a decade in which improvement
 slowed this made them more accurate. The results by target:
 
 - **All-cause life expectancy at 50**: bottom-up forecast it best by far
-  (CRPS 0.178 years for the series by sex and quintile and their sums
+  (CRPS 0.177 years for the series by sex and quintile and their sums
   over sexes or quintiles, against 0.300-0.307), with the highest 95%
   coverage (0.83). For England as a whole its intervals were too narrow
   (0.48): the 120 bottom forecasts are drawn independently, so their
   errors partly cancel in the sum (“Dependence between groups”).
 - **Gaps between Q5 and Q1**: WLS and MinT forecast the gaps of life
   expectancy and of the cause-specific rates best (CRPS of the life
-  expectancy gap of women 0.122 and 0.121, against 0.150 for bottom-up
+  expectancy gap of women 0.122 and 0.121, against 0.146 for bottom-up
   and 0.185 for separate forecasts), but the 95% intervals of their life
   expectancy covered only 0.34 of the observed values.
 - **Cause-specific rates**: WLS and MinT made them less accurate (CRPS
-  of the ASR of the bottom series 0.0595 against 0.0562). Proportional
-  scaling made them least accurate (0.0641) and left all-cause life
-  expectancy as inaccurate as the all-cause forecasts it keeps.
+  of the ASR of the bottom series 0.0595 against 0.0562 for separate
+  forecasts and 0.0563 for bottom-up). Proportional scaling made them
+  least accurate (0.0641) and left all-cause life expectancy as
+  inaccurate as the all-cause forecasts it keeps.
 - **Single rates of the bottom series**: the methods differ little (CRPS
   0.113-0.117).
 
@@ -535,29 +536,23 @@ and one weight vector. Each cause also gets its own tuned window and its
 own Li-Lee trends.
 
 Part 1 chose bottom-up reconciliation: every total is the sum of the 120
-bottom series, and the totals’ own forecasts are not used.
-[`reconciled()`](../reference/reconciled.md) still fits its base model
-to every stratum, so `bottom_only()` fits the ensemble to the ten bottom
-series of each cause (two nested
-[`stratified()`](../reference/stratified.md) calls) and Lee-Carter to
-the totals, whose forecasts are discarded. The stacking weights are then
-estimated on the series they are used for. `recalibrated(by = "cause")`
-around the reconciled model rescales the spread of the bottom series
-with one factor per cause and recomputes the totals as their sums, so
-the forecasts stay coherent.
+bottom series. `reconciled(method = "bottom_up")` fits its base model to
+these bottom series only, so each cause’s ensemble is fitted to its ten
+series by sex and quintile, and its stacking weights are estimated on
+the series they are used for. `recalibrated(by = "cause")` around the
+reconciled model rescales the spread of the bottom series with one
+factor per cause and recomputes the totals as their sums, so the
+forecasts stay coherent.
 
 ``` r
 
 cause_groups <- setdiff(unique(mt_strata(xa)$cause), "all")
-bottom_only <- function(model) {
-  stratified("quintile", England = lee_carter(), .default = stratified("sex", both = lee_carter(), .default = model))
-}
 bu <- function(spec) reconciled(spec, h, method = "bottom_up")
 recal <- function(spec) recalibrated(spec, years = 3, n_origins = 2, by = "cause", n_draws = 50)
 full_ensemble <- function(weights) {
   ens <- do.call(ensemble, c(components, list(weights = weights, inner_origins = 1, inner_h = 2, inner_n_draws = 50)))
-  per_cause <- setNames(rep(list(bottom_only(ens)), length(cause_groups)), cause_groups)
-  recal(bu(do.call(stratified, c(list("cause", all = lee_carter()), per_cause))))
+  per_cause <- setNames(rep(list(ens), length(cause_groups)), cause_groups)
+  recal(bu(do.call(stratified, c(list("cause"), per_cause))))
 }
 ```
 
@@ -608,25 +603,25 @@ and their ratio between Q5 and Q1:
 metrics <- c("crps", "cov50", "cov80", "cov95")
 mt_score_table(bt2[cause != "all"], metrics = metrics, targets = "asr", hierarchy = h)
 #>                       model     level crps_asr cov50_asr cov80_asr cov95_asr
-#> 1:               Lee-Carter    bottom   0.0393     0.470     0.751     0.915
-#> 2:               Lee-Carter aggregate   0.0354     0.365     0.587     0.757
-#> 3: Lee-Carter, recalibrated    bottom   0.0412     0.503     0.794     0.923
-#> 4: Lee-Carter, recalibrated aggregate   0.0356     0.400     0.633     0.798
-#> 5:  ensemble, equal weights    bottom   0.0371     0.488     0.785     0.928
-#> 6:  ensemble, equal weights aggregate   0.0332     0.428     0.672     0.841
-#> 7:       ensemble, stacking    bottom   0.0367     0.481     0.762     0.918
-#> 8:       ensemble, stacking aggregate   0.0325     0.392     0.654     0.841
+#> 1:               Lee-Carter    bottom   0.0394     0.465     0.755     0.914
+#> 2:               Lee-Carter aggregate   0.0355     0.349     0.583     0.756
+#> 3: Lee-Carter, recalibrated    bottom   0.0413     0.501     0.787     0.929
+#> 4: Lee-Carter, recalibrated aggregate   0.0357     0.392     0.636     0.808
+#> 5:  ensemble, equal weights    bottom   0.0374     0.478     0.769     0.927
+#> 6:  ensemble, equal weights aggregate   0.0334     0.419     0.669     0.831
+#> 7:       ensemble, stacking    bottom   0.0363     0.480     0.766     0.924
+#> 8:       ensemble, stacking aggregate   0.0321     0.415     0.660     0.839
 mt_score_table(bt2[cause != "all" & quintile == "Q5"], metrics = metrics, targets = "asr_gap")
 #>                       model crps_asr_gap cov50_asr_gap cov80_asr_gap
-#> 1:               Lee-Carter       0.0317         0.708         0.919
-#> 2: Lee-Carter, recalibrated       0.0348         0.743         0.917
-#> 3:  ensemble, equal weights       0.0327         0.657         0.903
-#> 4:       ensemble, stacking       0.0387         0.553         0.810
+#> 1:               Lee-Carter       0.0320         0.720         0.914
+#> 2: Lee-Carter, recalibrated       0.0353         0.743         0.910
+#> 3:  ensemble, equal weights       0.0331         0.641         0.903
+#> 4:       ensemble, stacking       0.0384         0.523         0.826
 #>    cov95_asr_gap
 #> 1:         0.988
-#> 2:         0.984
-#> 3:         0.981
-#> 4:         0.951
+#> 2:         0.986
+#> 3:         0.984
+#> 4:         0.972
 ```
 
 Life expectancy at 50 from all causes, and its gap between Q5 and Q1:
@@ -635,20 +630,20 @@ Life expectancy at 50 from all causes, and its gap between Q5 and Q1:
 
 mt_score_table(bt2[cause == "all"], metrics = metrics, targets = "life_expectancy", hierarchy = h)
 #>                       model     level crps_le cov50_le cov80_le cov95_le
-#> 1:               Lee-Carter aggregate   0.148   0.3970    0.672    0.843
-#> 2:               Lee-Carter     total   0.157   0.0833    0.167    0.583
-#> 3: Lee-Carter, recalibrated aggregate   0.149   0.4710    0.716    0.843
-#> 4: Lee-Carter, recalibrated     total   0.148   0.1670    0.333    0.667
-#> 5:  ensemble, equal weights aggregate   0.152   0.4410    0.711    0.809
-#> 6:  ensemble, equal weights     total   0.146   0.4170    0.500    0.750
-#> 7:       ensemble, stacking aggregate   0.157   0.3480    0.672    0.824
-#> 8:       ensemble, stacking     total   0.150   0.2500    0.583    0.667
+#> 1:               Lee-Carter aggregate   0.148   0.3870    0.672    0.838
+#> 2:               Lee-Carter     total   0.156   0.0833    0.333    0.583
+#> 3: Lee-Carter, recalibrated aggregate   0.150   0.5000    0.735    0.838
+#> 4: Lee-Carter, recalibrated     total   0.145   0.1670    0.583    0.667
+#> 5:  ensemble, equal weights aggregate   0.149   0.4310    0.740    0.838
+#> 6:  ensemble, equal weights     total   0.143   0.5000    0.500    0.750
+#> 7:       ensemble, stacking aggregate   0.161   0.3480    0.632    0.809
+#> 8:       ensemble, stacking     total   0.151   0.3330    0.500    0.583
 mt_score_table(bt2[cause == "all" & quintile == "Q5"], metrics = metrics, targets = "life_expectancy_gap")
 #>                       model crps_le_gap cov50_le_gap cov80_le_gap cov95_le_gap
-#> 1:               Lee-Carter      0.0846        1.000        1.000        1.000
-#> 2: Lee-Carter, recalibrated      0.0934        0.944        1.000        1.000
-#> 3:  ensemble, equal weights      0.1110        0.639        0.972        1.000
-#> 4:       ensemble, stacking      0.2110        0.167        0.556        0.944
+#> 1:               Lee-Carter      0.0831        1.000          1.0        1.000
+#> 2: Lee-Carter, recalibrated      0.0940        1.000          1.0        1.000
+#> 3:  ensemble, equal weights      0.1150        0.500          1.0        1.000
+#> 4:       ensemble, stacking      0.2230        0.194          0.5        0.806
 ```
 
 The mean error of the median forecast of the gap in life expectancy at
@@ -659,35 +654,37 @@ The mean error of the median forecast of the gap in life expectancy at
 gap <- bt2[cause == "all" & quintile == "Q5" & target == "life_expectancy_gap"]
 dcast(gap[, .(error = round(mean(median - observed), 2)), by = .(model, sex)], model ~ sex, value.var = "error")
 #>                       model  both female  male
-#> 1:               Lee-Carter -0.06  -0.06 -0.07
-#> 2: Lee-Carter, recalibrated -0.06  -0.05 -0.06
-#> 3:  ensemble, equal weights -0.15  -0.16 -0.15
-#> 4:       ensemble, stacking -0.33  -0.38 -0.26
+#> 1:               Lee-Carter -0.05  -0.02 -0.08
+#> 2: Lee-Carter, recalibrated -0.04  -0.02 -0.07
+#> 3:  ensemble, equal weights -0.17  -0.16 -0.17
+#> 4:       ensemble, stacking -0.34  -0.38 -0.27
 ```
 
 One to three years ahead:
 
 - **Rates of the causes**: both ensembles forecast the age-standardised
-  rates of the causes more accurately than Lee-Carter, by 7% (stacking,
-  CRPS 0.0367) and 6% (equal weights, 0.0371) for the bottom series, and
-  by 8% and 6% for the totals over sexes or quintiles (0.0325 and 0.0332
-  against 0.0354). The 95% intervals of the bottom series covered 0.92
-  to 0.93 of the observed values under every model; for the totals,
-  those of Lee-Carter covered 0.76, those of the ensembles 0.84.
+  rates of the causes more accurately than Lee-Carter, by 8% (stacking,
+  CRPS 0.0363) and 5% (equal weights, 0.0374) for the bottom series, and
+  by 10% and 6% for the totals over sexes or quintiles (0.0321 and
+  0.0334 against 0.0355). The 95% intervals of the bottom series covered
+  0.91 to 0.93 of the observed values under every model; for the totals,
+  those of Lee-Carter covered 0.76, those of the ensembles 0.83 and
+  0.84.
 - **Gaps of the cause-specific rates between Q5 and Q1**: Lee-Carter
-  forecast them best (CRPS 0.0317), the equal-weight ensemble nearly as
-  well (0.0327) and the stacking ensemble worst (0.0387, 50% coverage
-  0.55).
-- **All-cause life expectancy at 50**: the four models are close (CRPS
-  0.148 to 0.157 years for the series by sex and quintile and their sums
-  over sexes or quintiles).
+  forecast them best (CRPS 0.0320), the equal-weight ensemble nearly as
+  well (0.0331) and the stacking ensemble worst (0.0384, 50% coverage
+  0.52).
+- **All-cause life expectancy at 50**: Lee-Carter, recalibrated
+  Lee-Carter and the equal-weight ensemble are close (CRPS 0.148 to
+  0.150 years for the series by sex and quintile and their sums over
+  sexes or quintiles), the stacking ensemble less accurate (0.161).
 - **Gap in life expectancy at 50 between Q5 and Q1**: Lee-Carter
-  forecast it best (CRPS 0.085 years), the equal-weight ensemble less
-  well (0.111) and the stacking ensemble worst (0.211, 50% coverage
-  0.17): it forecast the gap too small, by 0.38 years for women and 0.26
+  forecast it best (CRPS 0.083 years), the equal-weight ensemble less
+  well (0.115) and the stacking ensemble worst (0.223, 50% coverage
+  0.19): it forecast the gap too small, by 0.38 years for women and 0.27
   years for men on average.
 - **Recalibration of Lee-Carter** made the rates of the causes slightly
-  less accurate (0.0412 against 0.0393) and changed life expectancy
+  less accurate (0.0413 against 0.0394) and changed life expectancy
   little.
 
 The warnings of this backtest are not shown. Two kinds occur at the
@@ -721,42 +718,42 @@ ggplot2::ggplot(sc[model != "Lee-Carter"], ggplot2::aes(relative, cause, colour 
 
 dcast(sc[model != "Lee-Carter", .(cause, model, relative = round(relative, 2))], cause ~ model, value.var = "relative")
 #>                 cause Lee-Carter, recalibrated ensemble, equal weights
-#>  1:   breast_prostate                     1.02                    0.86
-#>  2: colorectal_cancer                     0.98                    0.86
-#>  3:          dementia                     1.24                    1.05
-#>  4:          diabetes                     0.97                    0.97
-#>  5:               ihd                     1.17                    0.99
-#>  6:     liver_alcohol                     1.01                    0.71
-#>  7:       lung_cancer                     0.99                    0.93
-#>  8:     other_cancers                     0.99                    0.94
-#>  9: other_circulatory                     0.98                    0.94
-#> 10:       respiratory                     1.02                    1.00
-#> 11:              rest                     1.04                    0.94
-#> 12:            stroke                     1.13                    1.00
+#>  1:   breast_prostate                     1.02                    0.90
+#>  2: colorectal_cancer                     0.98                    0.84
+#>  3:          dementia                     1.22                    1.05
+#>  4:          diabetes                     0.98                    0.97
+#>  5:               ihd                     1.18                    1.03
+#>  6:     liver_alcohol                     1.01                    0.73
+#>  7:       lung_cancer                     0.99                    0.94
+#>  8:     other_cancers                     0.98                    0.90
+#>  9: other_circulatory                     1.00                    0.97
+#> 10:       respiratory                     1.02                    0.98
+#> 11:              rest                     1.03                    0.95
+#> 12:            stroke                     1.13                    0.99
 #>     ensemble, stacking
-#>  1:               1.01
-#>  2:               0.87
-#>  3:               1.18
-#>  4:               0.82
-#>  5:               0.98
-#>  6:               0.76
-#>  7:               0.91
-#>  8:               0.97
+#>  1:               0.98
+#>  2:               0.86
+#>  3:               1.11
+#>  4:               0.83
+#>  5:               1.00
+#>  6:               0.77
+#>  7:               0.89
+#>  8:               0.95
 #>  9:               0.87
-#> 10:               1.08
-#> 11:               0.94
-#> 12:               0.91
+#> 10:               1.06
+#> 11:               0.96
+#> 12:               0.88
 ```
 
 The stacking ensemble was more accurate than Lee-Carter for nine of the
-twelve causes, most for liver disease (by 24%), diabetes (18%), other
-circulatory diseases and colorectal cancer (13%), and less accurate for
-dementia (18%), respiratory diseases (8%) and breast and prostate cancer
-(1%). The equal-weight ensemble was at least as accurate as Lee-Carter
-for eleven causes (ischaemic heart disease, respiratory diseases and
-stroke within 1%) and less accurate for dementia (5%). Recalibrated
-Lee-Carter was less accurate than Lee-Carter for dementia (24%),
-ischaemic heart disease (17%) and stroke (13%).
+twelve causes, most for liver disease (by 23%), diabetes (17%),
+colorectal cancer (14%), other circulatory diseases (13%) and stroke
+(12%), as accurate for ischaemic heart disease, and less accurate for
+dementia (11%) and respiratory diseases (6%). The equal-weight ensemble
+was more accurate than Lee-Carter for ten causes (stroke within 1%) and
+less accurate for dementia (5%) and ischaemic heart disease (3%).
+Recalibrated Lee-Carter was less accurate than Lee-Carter for dementia
+(22%), ischaemic heart disease (18%) and stroke (13%).
 
 ### Is the difference larger than chance?
 
@@ -778,24 +775,24 @@ dm <- rbind(
 dm[horizon == "all", .(model, target, df, score = signif(score, 3), score_ref = signif(score_ref, 3),
                         p_value = round(p_value, 2))]
 #>                        model              target df  score score_ref p_value
-#>  1: Lee-Carter, recalibrated                 asr  1 0.0412    0.0393    0.41
-#>  2:  ensemble, equal weights                 asr  1 0.0371    0.0393    0.44
-#>  3:       ensemble, stacking                 asr  1 0.0367    0.0393    0.23
-#>  4: Lee-Carter, recalibrated             asr_gap  1 0.0348    0.0317    0.37
-#>  5:  ensemble, equal weights             asr_gap  1 0.0327    0.0317    0.48
-#>  6:       ensemble, stacking             asr_gap  1 0.0387    0.0317    0.22
-#>  7: Lee-Carter, recalibrated     life_expectancy  1 0.1490    0.1480    0.59
-#>  8:  ensemble, equal weights     life_expectancy  1 0.1510    0.1480    0.45
-#>  9:       ensemble, stacking     life_expectancy  1 0.1560    0.1480    0.74
-#> 10: Lee-Carter, recalibrated life_expectancy_gap  1 0.0934    0.0846    0.72
-#> 11:  ensemble, equal weights life_expectancy_gap  1 0.1110    0.0846    0.38
-#> 12:       ensemble, stacking life_expectancy_gap  1 0.2110    0.0846    0.18
+#>  1: Lee-Carter, recalibrated                 asr  1 0.0413    0.0394    0.39
+#>  2:  ensemble, equal weights                 asr  1 0.0374    0.0394    0.30
+#>  3:       ensemble, stacking                 asr  1 0.0363    0.0394    0.11
+#>  4: Lee-Carter, recalibrated             asr_gap  1 0.0353    0.0320    0.29
+#>  5:  ensemble, equal weights             asr_gap  1 0.0331    0.0320    0.55
+#>  6:       ensemble, stacking             asr_gap  1 0.0384    0.0320    0.18
+#>  7: Lee-Carter, recalibrated     life_expectancy  1 0.1500    0.1490    0.17
+#>  8:  ensemble, equal weights     life_expectancy  1 0.1480    0.1490    0.23
+#>  9:       ensemble, stacking     life_expectancy  1 0.1600    0.1490    0.57
+#> 10: Lee-Carter, recalibrated life_expectancy_gap  1 0.0940    0.0831    0.65
+#> 11:  ensemble, equal weights life_expectancy_gap  1 0.1150    0.0831    0.34
+#> 12:       ensemble, stacking life_expectancy_gap  1 0.2230    0.0831    0.15
 ```
 
 No difference is significant at the 5% level on average over the three
-horizons (p from 0.18 to 0.74). The 7% lower CRPS of the stacking
-ensemble for the rates of the causes has p = 0.23, its higher CRPS of
-the gap in life expectancy p = 0.18. Four origins of three years are
+horizons (p from 0.11 to 0.65). The 8% lower CRPS of the stacking
+ensemble for the rates of the causes has p = 0.11, its higher CRPS of
+the gap in life expectancy p = 0.15. Four origins of three years are
 few: the differences between the models are within the variation between
 the origins.
 
@@ -834,18 +831,18 @@ dcast(weights, cause ~ component, value.var = "weight")[, c("cause", names(compo
 #> 12:   0.28        0.00
 fit_ens$calibration[group != "all", .(cause = group, scale_h1, crps_before, crps_after, cov95_before, cov95_after)]
 #>                 cause  scale_h1 crps_before crps_after cov95_before cov95_after
-#>  1:   breast_prostate 0.7420155  0.06172032 0.06148200    0.9422222   0.9155556
-#>  2: colorectal_cancer 0.2359251  0.05950908 0.05813445    0.9333333   0.8866667
-#>  3:          dementia 0.6252263  0.15639359 0.15348601    0.9777778   0.9288889
-#>  4:          diabetes 0.9316157  0.14713984 0.14710959    0.9044444   0.8822222
-#>  5:               ihd 0.8651978  0.05689420 0.05673168    0.9022222   0.8888889
-#>  6:     liver_alcohol 0.7830481  0.09594753 0.09541231    0.9444444   0.8933333
-#>  7:       lung_cancer 1.2863029  0.07804079 0.07740141    0.8466667   0.9066667
-#>  8:     other_cancers 0.8794309  0.02848042 0.02843622    0.9088889   0.8800000
-#>  9: other_circulatory 0.6955683  0.10807185 0.10683857    0.9533333   0.8977778
-#> 10:       respiratory 0.7965749  0.07461080 0.07431964    0.9222222   0.8800000
-#> 11:              rest 0.6867152  0.03867120 0.03781412    0.9733333   0.9133333
-#> 12:            stroke 0.8560036  0.07119017 0.07093992    0.9644444   0.9377778
+#>  1:   breast_prostate 0.8398067  0.06085165 0.06052980    0.9600000   0.9333333
+#>  2: colorectal_cancer 0.4849923  0.05906867 0.05783868    0.9355556   0.8933333
+#>  3:          dementia 0.5630659  0.15420653 0.14906039    0.9844444   0.9111111
+#>  4:          diabetes 0.9084098  0.14752864 0.14760189    0.8666667   0.8533333
+#>  5:               ihd 0.9119534  0.05593513 0.05586235    0.9044444   0.8822222
+#>  6:     liver_alcohol 0.8120310  0.09568647 0.09513878    0.9400000   0.8977778
+#>  7:       lung_cancer 1.2707264  0.07776270 0.07726088    0.8644444   0.9177778
+#>  8:     other_cancers 0.8963445  0.02826413 0.02822796    0.9155556   0.9044444
+#>  9: other_circulatory 0.7386995  0.10620261 0.10513597    0.9600000   0.9244444
+#> 10:       respiratory 0.8483272  0.07428158 0.07408973    0.9177778   0.8955556
+#> 11:              rest 0.6930626  0.03874546 0.03795035    0.9711111   0.9177778
+#> 12:            stroke 0.9137532  0.07232938 0.07231423    0.9466667   0.9288889
 ```
 
 The weights and spread factors of the stacking ensemble fitted to all
@@ -866,14 +863,15 @@ quintiles of each sex towards a common trend and forecast the gap worst
 in “Inequality in England”. The weights at the backtest origins were
 estimated anew at each origin and are not shown.
 
-The spread factors (`scale_h1`) are below 1 for eleven causes, from 0.24
-(colorectal cancer) to 0.93 (diabetes): in the calibration window
+The spread factors (`scale_h1`) are below 1 for eleven causes, from 0.48
+(colorectal cancer) to 0.91 (stroke): in the calibration window
 (forecasts of 2017-2019 from the origins 2016 and 2017) the intervals of
 the ensemble were wider than the errors required, and recalibration
-narrows them. Only lung cancer gets wider intervals (1.29), which raises
-the 95% coverage of its calibration forecasts from 0.85 to 0.91. The
-factors lower the CRPS of the calibration forecasts only slightly (for
-colorectal cancer from 0.0595 to 0.0581).
+narrows them. Only lung cancer gets wider intervals (1.27), which raises
+the 95% coverage of its calibration forecasts from 0.86 to 0.92. The
+factors change the CRPS of the calibration forecasts only slightly (for
+colorectal cancer from 0.0591 to 0.0578; for diabetes it rises from
+0.14753 to 0.14760).
 
 ## Summary
 
@@ -886,12 +884,13 @@ colorectal cancer from 0.0595 to 0.0581).
 
 In these data, an ensemble for each cause forecast the rates of most
 causes more accurately than Lee-Carter one to three years ahead, and
-all-cause life expectancy about as well. With stacking weights it
-forecast the gaps between the most and the least deprived quintile worst
-of the four models. The data allow only short inner backtests: the
-stacking weights rest on one inner origin with two years ahead, and the
-spread factors on two origins. Whether the gains for the rates hold over
-longer horizons cannot be checked with 19 years of data.
+all-cause life expectancy about as well with equal weights. With
+stacking weights it forecast the gaps between the most and the least
+deprived quintile worst of the four models. The data allow only short
+inner backtests: the stacking weights rest on one inner origin with two
+years ahead, and the spread factors on two origins. Whether the gains
+for the rates hold over longer horizons cannot be checked with 19 years
+of data.
 
 ## References
 

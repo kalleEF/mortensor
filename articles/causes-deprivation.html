@@ -373,9 +373,9 @@ causes):</p>
 <span><span class="co">#&gt;  1:     separate    bottom 0.1130 0.849</span></span>
 <span><span class="co">#&gt;  2:     separate aggregate 0.0851 0.750</span></span>
 <span><span class="co">#&gt;  3:     separate     total 0.0374 0.733</span></span>
-<span><span class="co">#&gt;  4:    bottom-up    bottom 0.1130 0.846</span></span>
-<span><span class="co">#&gt;  5:    bottom-up aggregate 0.0823 0.734</span></span>
-<span><span class="co">#&gt;  6:    bottom-up     total 0.0295 0.387</span></span>
+<span><span class="co">#&gt;  4:    bottom-up    bottom 0.1130 0.849</span></span>
+<span><span class="co">#&gt;  5:    bottom-up aggregate 0.0823 0.733</span></span>
+<span><span class="co">#&gt;  6:    bottom-up     total 0.0295 0.404</span></span>
 <span><span class="co">#&gt;  7:          WLS    bottom 0.1160 0.804</span></span>
 <span><span class="co">#&gt;  8:          WLS aggregate 0.0881 0.607</span></span>
 <span><span class="co">#&gt;  9:          WLS     total 0.0392 0.156</span></span>
@@ -392,8 +392,8 @@ and Q1:</p>
 <span><span class="co">#&gt;            model     level crps_asr cov95_asr</span></span>
 <span><span class="co">#&gt;  1:     separate    bottom   0.0562     0.879</span></span>
 <span><span class="co">#&gt;  2:     separate aggregate   0.0530     0.770</span></span>
-<span><span class="co">#&gt;  3:    bottom-up    bottom   0.0562     0.876</span></span>
-<span><span class="co">#&gt;  4:    bottom-up aggregate   0.0513     0.735</span></span>
+<span><span class="co">#&gt;  3:    bottom-up    bottom   0.0563     0.876</span></span>
+<span><span class="co">#&gt;  4:    bottom-up aggregate   0.0514     0.732</span></span>
 <span><span class="co">#&gt;  5:          WLS    bottom   0.0595     0.797</span></span>
 <span><span class="co">#&gt;  6:          WLS aggregate   0.0583     0.551</span></span>
 <span><span class="co">#&gt;  7:         MinT    bottom   0.0595     0.794</span></span>
@@ -403,7 +403,7 @@ and Q1:</p>
 <span><span class="fu"><a href="../reference/mt_compare.html">mt_score_table</a></span><span class="op">(</span><span class="va">bt1</span><span class="op">[</span><span class="va">cause</span> <span class="op">!=</span> <span class="st">"all"</span> <span class="op">&amp;</span> <span class="va">quintile</span> <span class="op">==</span> <span class="st">"Q5"</span><span class="op">]</span>, metrics <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"crps"</span>, <span class="st">"cov95"</span><span class="op">)</span>, targets <span class="op">=</span> <span class="st">"asr_gap"</span><span class="op">)</span></span>
 <span><span class="co">#&gt;           model crps_asr_gap cov95_asr_gap</span></span>
 <span><span class="co">#&gt; 1:     separate       0.0398         0.984</span></span>
-<span><span class="co">#&gt; 2:    bottom-up       0.0387         0.987</span></span>
+<span><span class="co">#&gt; 2:    bottom-up       0.0381         0.988</span></span>
 <span><span class="co">#&gt; 3:          WLS       0.0362         0.957</span></span>
 <span><span class="co">#&gt; 4:         MinT       0.0362         0.960</span></span>
 <span><span class="co">#&gt; 5: proportional       0.0405         0.992</span></span></code></pre></div>
@@ -414,8 +414,8 @@ Q1:</p>
 <span><span class="co">#&gt;            model     level crps_le cov95_le</span></span>
 <span><span class="co">#&gt;  1:     separate aggregate   0.300    0.769</span></span>
 <span><span class="co">#&gt;  2:     separate     total   0.316    0.800</span></span>
-<span><span class="co">#&gt;  3:    bottom-up aggregate   0.178    0.831</span></span>
-<span><span class="co">#&gt;  4:    bottom-up     total   0.184    0.480</span></span>
+<span><span class="co">#&gt;  3:    bottom-up aggregate   0.177    0.833</span></span>
+<span><span class="co">#&gt;  4:    bottom-up     total   0.186    0.480</span></span>
 <span><span class="co">#&gt;  5:          WLS aggregate   0.304    0.341</span></span>
 <span><span class="co">#&gt;  6:          WLS     total   0.345    0.120</span></span>
 <span><span class="co">#&gt;  7:         MinT aggregate   0.305    0.339</span></span>
@@ -428,9 +428,9 @@ Q1:</p>
 <span><span class="co">#&gt;  1:     separate female       0.185         1.00</span></span>
 <span><span class="co">#&gt;  2:     separate   male       0.127         1.00</span></span>
 <span><span class="co">#&gt;  3:     separate   both       0.153         1.00</span></span>
-<span><span class="co">#&gt;  4:    bottom-up female       0.150         1.00</span></span>
-<span><span class="co">#&gt;  5:    bottom-up   male       0.122         1.00</span></span>
-<span><span class="co">#&gt;  6:    bottom-up   both       0.114         1.00</span></span>
+<span><span class="co">#&gt;  4:    bottom-up female       0.146         1.00</span></span>
+<span><span class="co">#&gt;  5:    bottom-up   male       0.113         1.00</span></span>
+<span><span class="co">#&gt;  6:    bottom-up   both       0.107         1.00</span></span>
 <span><span class="co">#&gt;  7:          WLS female       0.122         1.00</span></span>
 <span><span class="co">#&gt;  8:          WLS   male       0.110         1.00</span></span>
 <span><span class="co">#&gt;  9:          WLS   both       0.112         0.84</span></span>
@@ -462,7 +462,7 @@ years) by horizon:</p>
 <span><span class="fu"><a href="https://rdrr.io/pkg/data.table/man/dcast.data.table.html" class="external-link">dcast</a></span><span class="op">(</span><span class="va">bias</span>, <span class="va">model</span> <span class="op">~</span> <span class="va">horizon</span>, value.var <span class="op">=</span> <span class="st">"error"</span><span class="op">)</span></span>
 <span><span class="co">#&gt;           model    1    2    3    4    5</span></span>
 <span><span class="co">#&gt; 1:     separate 0.11 0.26 0.40 0.55 0.68</span></span>
-<span><span class="co">#&gt; 2:    bottom-up 0.07 0.15 0.21 0.26 0.29</span></span>
+<span><span class="co">#&gt; 2:    bottom-up 0.07 0.16 0.21 0.26 0.29</span></span>
 <span><span class="co">#&gt; 3:          WLS 0.11 0.24 0.35 0.46 0.55</span></span>
 <span><span class="co">#&gt; 4:         MinT 0.11 0.24 0.34 0.45 0.56</span></span>
 <span><span class="co">#&gt; 5: proportional 0.10 0.26 0.40 0.54 0.68</span></span></code></pre></div>
@@ -476,7 +476,7 @@ slowed this made them more accurate. The results by target:</p>
 <ul>
 <li>
 <strong>All-cause life expectancy at 50</strong>: bottom-up forecast
-it best by far (CRPS 0.178 years for the series by sex and quintile and
+it best by far (CRPS 0.177 years for the series by sex and quintile and
 their sums over sexes or quintiles, against 0.300-0.307), with the
 highest 95% coverage (0.83). For England as a whole its intervals were
 too narrow (0.48): the 120 bottom forecasts are drawn independently, so
@@ -485,15 +485,15 @@ groups”).</li>
 <li>
 <strong>Gaps between Q5 and Q1</strong>: WLS and MinT forecast the
 gaps of life expectancy and of the cause-specific rates best (CRPS of
-the life expectancy gap of women 0.122 and 0.121, against 0.150 for
+the life expectancy gap of women 0.122 and 0.121, against 0.146 for
 bottom-up and 0.185 for separate forecasts), but the 95% intervals of
 their life expectancy covered only 0.34 of the observed values.</li>
 <li>
 <strong>Cause-specific rates</strong>: WLS and MinT made them less
-accurate (CRPS of the ASR of the bottom series 0.0595 against 0.0562).
-Proportional scaling made them least accurate (0.0641) and left
-all-cause life expectancy as inaccurate as the all-cause forecasts it
-keeps.</li>
+accurate (CRPS of the ASR of the bottom series 0.0595 against 0.0562 for
+separate forecasts and 0.0563 for bottom-up). Proportional scaling made
+them least accurate (0.0641) and left all-cause life expectancy as
+inaccurate as the all-cause forecasts it keeps.</li>
 <li>
 <strong>Single rates of the bottom series</strong>: the methods
 differ little (CRPS 0.113-0.117).</li>
@@ -555,26 +555,21 @@ with <code><a href="https://rdrr.io/r/base/do.call.html" class="external-link">d
 instead, all causes would share one ensemble and one weight vector. Each
 cause also gets its own tuned window and its own Li-Lee trends.</p>
 <p>Part 1 chose bottom-up reconciliation: every total is the sum of the
-120 bottom series, and the totals’ own forecasts are not used.
-<code><a href="../reference/reconciled.html">reconciled()</a></code> still fits its base model to every stratum, so
-<code>bottom_only()</code> fits the ensemble to the ten bottom series of
-each cause (two nested <code><a href="../reference/stratified.html">stratified()</a></code> calls) and Lee-Carter
-to the totals, whose forecasts are discarded. The stacking weights are
-then estimated on the series they are used for.
+120 bottom series. <code>reconciled(method = "bottom_up")</code> fits
+its base model to these bottom series only, so each cause’s ensemble is
+fitted to its ten series by sex and quintile, and its stacking weights
+are estimated on the series they are used for.
 <code>recalibrated(by = "cause")</code> around the reconciled model
 rescales the spread of the bottom series with one factor per cause and
 recomputes the totals as their sums, so the forecasts stay coherent.</p>
 <div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">cause_groups</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sets.html" class="external-link">setdiff</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/unique.html" class="external-link">unique</a></span><span class="op">(</span><span class="fu"><a href="../reference/mt_strata.html">mt_strata</a></span><span class="op">(</span><span class="va">xa</span><span class="op">)</span><span class="op">$</span><span class="va">cause</span><span class="op">)</span>, <span class="st">"all"</span><span class="op">)</span></span>
-<span><span class="va">bottom_only</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">model</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="fu"><a href="../reference/stratified.html">stratified</a></span><span class="op">(</span><span class="st">"quintile"</span>, England <span class="op">=</span> <span class="fu"><a href="../reference/lee_carter.html">lee_carter</a></span><span class="op">(</span><span class="op">)</span>, .default <span class="op">=</span> <span class="fu"><a href="../reference/stratified.html">stratified</a></span><span class="op">(</span><span class="st">"sex"</span>, both <span class="op">=</span> <span class="fu"><a href="../reference/lee_carter.html">lee_carter</a></span><span class="op">(</span><span class="op">)</span>, .default <span class="op">=</span> <span class="va">model</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="op">}</span></span>
 <span><span class="va">bu</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">spec</span><span class="op">)</span> <span class="fu"><a href="../reference/reconciled.html">reconciled</a></span><span class="op">(</span><span class="va">spec</span>, <span class="va">h</span>, method <span class="op">=</span> <span class="st">"bottom_up"</span><span class="op">)</span></span>
 <span><span class="va">recal</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">spec</span><span class="op">)</span> <span class="fu"><a href="../reference/recalibrated.html">recalibrated</a></span><span class="op">(</span><span class="va">spec</span>, years <span class="op">=</span> <span class="fl">3</span>, n_origins <span class="op">=</span> <span class="fl">2</span>, by <span class="op">=</span> <span class="st">"cause"</span>, n_draws <span class="op">=</span> <span class="fl">50</span><span class="op">)</span></span>
 <span><span class="va">full_ensemble</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">weights</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="va">ens</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/do.call.html" class="external-link">do.call</a></span><span class="op">(</span><span class="va">ensemble</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">components</span>, <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>weights <span class="op">=</span> <span class="va">weights</span>, inner_origins <span class="op">=</span> <span class="fl">1</span>, inner_h <span class="op">=</span> <span class="fl">2</span>, inner_n_draws <span class="op">=</span> <span class="fl">50</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
-<span>  <span class="va">per_cause</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/setNames.html" class="external-link">setNames</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="fu">bottom_only</span><span class="op">(</span><span class="va">ens</span><span class="op">)</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">cause_groups</span><span class="op">)</span><span class="op">)</span>, <span class="va">cause_groups</span><span class="op">)</span></span>
-<span>  <span class="fu">recal</span><span class="op">(</span><span class="fu">bu</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/do.call.html" class="external-link">do.call</a></span><span class="op">(</span><span class="va">stratified</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="st">"cause"</span>, all <span class="op">=</span> <span class="fu"><a href="../reference/lee_carter.html">lee_carter</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span>, <span class="va">per_cause</span><span class="op">)</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
+<span>  <span class="va">per_cause</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/setNames.html" class="external-link">setNames</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">ens</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">cause_groups</span><span class="op">)</span><span class="op">)</span>, <span class="va">cause_groups</span><span class="op">)</span></span>
+<span>  <span class="fu">recal</span><span class="op">(</span><span class="fu">bu</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/do.call.html" class="external-link">do.call</a></span><span class="op">(</span><span class="va">stratified</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="st">"cause"</span><span class="op">)</span>, <span class="va">per_cause</span><span class="op">)</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="op">}</span></span></code></pre></div>
 </div>
 <div class="section level3">
@@ -655,83 +650,85 @@ aggregates), and their ratio between Q5 and Q1:</p>
 <code class="sourceCode R"><span><span class="va">metrics</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"crps"</span>, <span class="st">"cov50"</span>, <span class="st">"cov80"</span>, <span class="st">"cov95"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/mt_compare.html">mt_score_table</a></span><span class="op">(</span><span class="va">bt2</span><span class="op">[</span><span class="va">cause</span> <span class="op">!=</span> <span class="st">"all"</span><span class="op">]</span>, metrics <span class="op">=</span> <span class="va">metrics</span>, targets <span class="op">=</span> <span class="st">"asr"</span>, hierarchy <span class="op">=</span> <span class="va">h</span><span class="op">)</span></span>
 <span><span class="co">#&gt;                       model     level crps_asr cov50_asr cov80_asr cov95_asr</span></span>
-<span><span class="co">#&gt; 1:               Lee-Carter    bottom   0.0393     0.470     0.751     0.915</span></span>
-<span><span class="co">#&gt; 2:               Lee-Carter aggregate   0.0354     0.365     0.587     0.757</span></span>
-<span><span class="co">#&gt; 3: Lee-Carter, recalibrated    bottom   0.0412     0.503     0.794     0.923</span></span>
-<span><span class="co">#&gt; 4: Lee-Carter, recalibrated aggregate   0.0356     0.400     0.633     0.798</span></span>
-<span><span class="co">#&gt; 5:  ensemble, equal weights    bottom   0.0371     0.488     0.785     0.928</span></span>
-<span><span class="co">#&gt; 6:  ensemble, equal weights aggregate   0.0332     0.428     0.672     0.841</span></span>
-<span><span class="co">#&gt; 7:       ensemble, stacking    bottom   0.0367     0.481     0.762     0.918</span></span>
-<span><span class="co">#&gt; 8:       ensemble, stacking aggregate   0.0325     0.392     0.654     0.841</span></span>
+<span><span class="co">#&gt; 1:               Lee-Carter    bottom   0.0394     0.465     0.755     0.914</span></span>
+<span><span class="co">#&gt; 2:               Lee-Carter aggregate   0.0355     0.349     0.583     0.756</span></span>
+<span><span class="co">#&gt; 3: Lee-Carter, recalibrated    bottom   0.0413     0.501     0.787     0.929</span></span>
+<span><span class="co">#&gt; 4: Lee-Carter, recalibrated aggregate   0.0357     0.392     0.636     0.808</span></span>
+<span><span class="co">#&gt; 5:  ensemble, equal weights    bottom   0.0374     0.478     0.769     0.927</span></span>
+<span><span class="co">#&gt; 6:  ensemble, equal weights aggregate   0.0334     0.419     0.669     0.831</span></span>
+<span><span class="co">#&gt; 7:       ensemble, stacking    bottom   0.0363     0.480     0.766     0.924</span></span>
+<span><span class="co">#&gt; 8:       ensemble, stacking aggregate   0.0321     0.415     0.660     0.839</span></span>
 <span><span class="fu"><a href="../reference/mt_compare.html">mt_score_table</a></span><span class="op">(</span><span class="va">bt2</span><span class="op">[</span><span class="va">cause</span> <span class="op">!=</span> <span class="st">"all"</span> <span class="op">&amp;</span> <span class="va">quintile</span> <span class="op">==</span> <span class="st">"Q5"</span><span class="op">]</span>, metrics <span class="op">=</span> <span class="va">metrics</span>, targets <span class="op">=</span> <span class="st">"asr_gap"</span><span class="op">)</span></span>
 <span><span class="co">#&gt;                       model crps_asr_gap cov50_asr_gap cov80_asr_gap</span></span>
-<span><span class="co">#&gt; 1:               Lee-Carter       0.0317         0.708         0.919</span></span>
-<span><span class="co">#&gt; 2: Lee-Carter, recalibrated       0.0348         0.743         0.917</span></span>
-<span><span class="co">#&gt; 3:  ensemble, equal weights       0.0327         0.657         0.903</span></span>
-<span><span class="co">#&gt; 4:       ensemble, stacking       0.0387         0.553         0.810</span></span>
+<span><span class="co">#&gt; 1:               Lee-Carter       0.0320         0.720         0.914</span></span>
+<span><span class="co">#&gt; 2: Lee-Carter, recalibrated       0.0353         0.743         0.910</span></span>
+<span><span class="co">#&gt; 3:  ensemble, equal weights       0.0331         0.641         0.903</span></span>
+<span><span class="co">#&gt; 4:       ensemble, stacking       0.0384         0.523         0.826</span></span>
 <span><span class="co">#&gt;    cov95_asr_gap</span></span>
 <span><span class="co">#&gt; 1:         0.988</span></span>
-<span><span class="co">#&gt; 2:         0.984</span></span>
-<span><span class="co">#&gt; 3:         0.981</span></span>
-<span><span class="co">#&gt; 4:         0.951</span></span></code></pre></div>
+<span><span class="co">#&gt; 2:         0.986</span></span>
+<span><span class="co">#&gt; 3:         0.984</span></span>
+<span><span class="co">#&gt; 4:         0.972</span></span></code></pre></div>
 <p>Life expectancy at 50 from all causes, and its gap between Q5 and
 Q1:</p>
 <div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/mt_compare.html">mt_score_table</a></span><span class="op">(</span><span class="va">bt2</span><span class="op">[</span><span class="va">cause</span> <span class="op">==</span> <span class="st">"all"</span><span class="op">]</span>, metrics <span class="op">=</span> <span class="va">metrics</span>, targets <span class="op">=</span> <span class="st">"life_expectancy"</span>, hierarchy <span class="op">=</span> <span class="va">h</span><span class="op">)</span></span>
 <span><span class="co">#&gt;                       model     level crps_le cov50_le cov80_le cov95_le</span></span>
-<span><span class="co">#&gt; 1:               Lee-Carter aggregate   0.148   0.3970    0.672    0.843</span></span>
-<span><span class="co">#&gt; 2:               Lee-Carter     total   0.157   0.0833    0.167    0.583</span></span>
-<span><span class="co">#&gt; 3: Lee-Carter, recalibrated aggregate   0.149   0.4710    0.716    0.843</span></span>
-<span><span class="co">#&gt; 4: Lee-Carter, recalibrated     total   0.148   0.1670    0.333    0.667</span></span>
-<span><span class="co">#&gt; 5:  ensemble, equal weights aggregate   0.152   0.4410    0.711    0.809</span></span>
-<span><span class="co">#&gt; 6:  ensemble, equal weights     total   0.146   0.4170    0.500    0.750</span></span>
-<span><span class="co">#&gt; 7:       ensemble, stacking aggregate   0.157   0.3480    0.672    0.824</span></span>
-<span><span class="co">#&gt; 8:       ensemble, stacking     total   0.150   0.2500    0.583    0.667</span></span>
+<span><span class="co">#&gt; 1:               Lee-Carter aggregate   0.148   0.3870    0.672    0.838</span></span>
+<span><span class="co">#&gt; 2:               Lee-Carter     total   0.156   0.0833    0.333    0.583</span></span>
+<span><span class="co">#&gt; 3: Lee-Carter, recalibrated aggregate   0.150   0.5000    0.735    0.838</span></span>
+<span><span class="co">#&gt; 4: Lee-Carter, recalibrated     total   0.145   0.1670    0.583    0.667</span></span>
+<span><span class="co">#&gt; 5:  ensemble, equal weights aggregate   0.149   0.4310    0.740    0.838</span></span>
+<span><span class="co">#&gt; 6:  ensemble, equal weights     total   0.143   0.5000    0.500    0.750</span></span>
+<span><span class="co">#&gt; 7:       ensemble, stacking aggregate   0.161   0.3480    0.632    0.809</span></span>
+<span><span class="co">#&gt; 8:       ensemble, stacking     total   0.151   0.3330    0.500    0.583</span></span>
 <span><span class="fu"><a href="../reference/mt_compare.html">mt_score_table</a></span><span class="op">(</span><span class="va">bt2</span><span class="op">[</span><span class="va">cause</span> <span class="op">==</span> <span class="st">"all"</span> <span class="op">&amp;</span> <span class="va">quintile</span> <span class="op">==</span> <span class="st">"Q5"</span><span class="op">]</span>, metrics <span class="op">=</span> <span class="va">metrics</span>, targets <span class="op">=</span> <span class="st">"life_expectancy_gap"</span><span class="op">)</span></span>
 <span><span class="co">#&gt;                       model crps_le_gap cov50_le_gap cov80_le_gap cov95_le_gap</span></span>
-<span><span class="co">#&gt; 1:               Lee-Carter      0.0846        1.000        1.000        1.000</span></span>
-<span><span class="co">#&gt; 2: Lee-Carter, recalibrated      0.0934        0.944        1.000        1.000</span></span>
-<span><span class="co">#&gt; 3:  ensemble, equal weights      0.1110        0.639        0.972        1.000</span></span>
-<span><span class="co">#&gt; 4:       ensemble, stacking      0.2110        0.167        0.556        0.944</span></span></code></pre></div>
+<span><span class="co">#&gt; 1:               Lee-Carter      0.0831        1.000          1.0        1.000</span></span>
+<span><span class="co">#&gt; 2: Lee-Carter, recalibrated      0.0940        1.000          1.0        1.000</span></span>
+<span><span class="co">#&gt; 3:  ensemble, equal weights      0.1150        0.500          1.0        1.000</span></span>
+<span><span class="co">#&gt; 4:       ensemble, stacking      0.2230        0.194          0.5        0.806</span></span></code></pre></div>
 <p>The mean error of the median forecast of the gap in life expectancy
 at 50 between Q5 and Q1 (forecast minus observed, years):</p>
 <div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">gap</span> <span class="op">&lt;-</span> <span class="va">bt2</span><span class="op">[</span><span class="va">cause</span> <span class="op">==</span> <span class="st">"all"</span> <span class="op">&amp;</span> <span class="va">quintile</span> <span class="op">==</span> <span class="st">"Q5"</span> <span class="op">&amp;</span> <span class="va">target</span> <span class="op">==</span> <span class="st">"life_expectancy_gap"</span><span class="op">]</span></span>
 <span><span class="fu"><a href="https://rdrr.io/pkg/data.table/man/dcast.data.table.html" class="external-link">dcast</a></span><span class="op">(</span><span class="va">gap</span><span class="op">[</span>, <span class="fu">.</span><span class="op">(</span>error <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">median</span> <span class="op">-</span> <span class="va">observed</span><span class="op">)</span>, <span class="fl">2</span><span class="op">)</span><span class="op">)</span>, by <span class="op">=</span> <span class="fu">.</span><span class="op">(</span><span class="va">model</span>, <span class="va">sex</span><span class="op">)</span><span class="op">]</span>, <span class="va">model</span> <span class="op">~</span> <span class="va">sex</span>, value.var <span class="op">=</span> <span class="st">"error"</span><span class="op">)</span></span>
 <span><span class="co">#&gt;                       model  both female  male</span></span>
-<span><span class="co">#&gt; 1:               Lee-Carter -0.06  -0.06 -0.07</span></span>
-<span><span class="co">#&gt; 2: Lee-Carter, recalibrated -0.06  -0.05 -0.06</span></span>
-<span><span class="co">#&gt; 3:  ensemble, equal weights -0.15  -0.16 -0.15</span></span>
-<span><span class="co">#&gt; 4:       ensemble, stacking -0.33  -0.38 -0.26</span></span></code></pre></div>
+<span><span class="co">#&gt; 1:               Lee-Carter -0.05  -0.02 -0.08</span></span>
+<span><span class="co">#&gt; 2: Lee-Carter, recalibrated -0.04  -0.02 -0.07</span></span>
+<span><span class="co">#&gt; 3:  ensemble, equal weights -0.17  -0.16 -0.17</span></span>
+<span><span class="co">#&gt; 4:       ensemble, stacking -0.34  -0.38 -0.27</span></span></code></pre></div>
 <p>One to three years ahead:</p>
 <ul>
 <li>
 <strong>Rates of the causes</strong>: both ensembles forecast the
 age-standardised rates of the causes more accurately than Lee-Carter, by
-7% (stacking, CRPS 0.0367) and 6% (equal weights, 0.0371) for the bottom
-series, and by 8% and 6% for the totals over sexes or quintiles (0.0325
-and 0.0332 against 0.0354). The 95% intervals of the bottom series
-covered 0.92 to 0.93 of the observed values under every model; for the
-totals, those of Lee-Carter covered 0.76, those of the ensembles
-0.84.</li>
+8% (stacking, CRPS 0.0363) and 5% (equal weights, 0.0374) for the bottom
+series, and by 10% and 6% for the totals over sexes or quintiles (0.0321
+and 0.0334 against 0.0355). The 95% intervals of the bottom series
+covered 0.91 to 0.93 of the observed values under every model; for the
+totals, those of Lee-Carter covered 0.76, those of the ensembles 0.83
+and 0.84.</li>
 <li>
 <strong>Gaps of the cause-specific rates between Q5 and Q1</strong>:
-Lee-Carter forecast them best (CRPS 0.0317), the equal-weight ensemble
-nearly as well (0.0327) and the stacking ensemble worst (0.0387, 50%
-coverage 0.55).</li>
+Lee-Carter forecast them best (CRPS 0.0320), the equal-weight ensemble
+nearly as well (0.0331) and the stacking ensemble worst (0.0384, 50%
+coverage 0.52).</li>
 <li>
-<strong>All-cause life expectancy at 50</strong>: the four models
-are close (CRPS 0.148 to 0.157 years for the series by sex and quintile
-and their sums over sexes or quintiles).</li>
+<strong>All-cause life expectancy at 50</strong>: Lee-Carter,
+recalibrated Lee-Carter and the equal-weight ensemble are close (CRPS
+0.148 to 0.150 years for the series by sex and quintile and their sums
+over sexes or quintiles), the stacking ensemble less accurate
+(0.161).</li>
 <li>
 <strong>Gap in life expectancy at 50 between Q5 and Q1</strong>:
-Lee-Carter forecast it best (CRPS 0.085 years), the equal-weight
-ensemble less well (0.111) and the stacking ensemble worst (0.211, 50%
-coverage 0.17): it forecast the gap too small, by 0.38 years for women
-and 0.26 years for men on average.</li>
+Lee-Carter forecast it best (CRPS 0.083 years), the equal-weight
+ensemble less well (0.115) and the stacking ensemble worst (0.223, 50%
+coverage 0.19): it forecast the gap too small, by 0.38 years for women
+and 0.27 years for men on average.</li>
 <li>
 <strong>Recalibration of Lee-Carter</strong> made the rates of the
-causes slightly less accurate (0.0412 against 0.0393) and changed life
+causes slightly less accurate (0.0413 against 0.0394) and changed life
 expectancy little.</li>
 </ul>
 <p>The warnings of this backtest are not shown. Two kinds occur at the
@@ -758,40 +755,40 @@ relative to Lee-Carter:</p>
 <div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/pkg/data.table/man/dcast.data.table.html" class="external-link">dcast</a></span><span class="op">(</span><span class="va">sc</span><span class="op">[</span><span class="va">model</span> <span class="op">!=</span> <span class="st">"Lee-Carter"</span>, <span class="fu">.</span><span class="op">(</span><span class="va">cause</span>, <span class="va">model</span>, relative <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">relative</span>, <span class="fl">2</span><span class="op">)</span><span class="op">)</span><span class="op">]</span>, <span class="va">cause</span> <span class="op">~</span> <span class="va">model</span>, value.var <span class="op">=</span> <span class="st">"relative"</span><span class="op">)</span></span>
 <span><span class="co">#&gt;                 cause Lee-Carter, recalibrated ensemble, equal weights</span></span>
-<span><span class="co">#&gt;  1:   breast_prostate                     1.02                    0.86</span></span>
-<span><span class="co">#&gt;  2: colorectal_cancer                     0.98                    0.86</span></span>
-<span><span class="co">#&gt;  3:          dementia                     1.24                    1.05</span></span>
-<span><span class="co">#&gt;  4:          diabetes                     0.97                    0.97</span></span>
-<span><span class="co">#&gt;  5:               ihd                     1.17                    0.99</span></span>
-<span><span class="co">#&gt;  6:     liver_alcohol                     1.01                    0.71</span></span>
-<span><span class="co">#&gt;  7:       lung_cancer                     0.99                    0.93</span></span>
-<span><span class="co">#&gt;  8:     other_cancers                     0.99                    0.94</span></span>
-<span><span class="co">#&gt;  9: other_circulatory                     0.98                    0.94</span></span>
-<span><span class="co">#&gt; 10:       respiratory                     1.02                    1.00</span></span>
-<span><span class="co">#&gt; 11:              rest                     1.04                    0.94</span></span>
-<span><span class="co">#&gt; 12:            stroke                     1.13                    1.00</span></span>
+<span><span class="co">#&gt;  1:   breast_prostate                     1.02                    0.90</span></span>
+<span><span class="co">#&gt;  2: colorectal_cancer                     0.98                    0.84</span></span>
+<span><span class="co">#&gt;  3:          dementia                     1.22                    1.05</span></span>
+<span><span class="co">#&gt;  4:          diabetes                     0.98                    0.97</span></span>
+<span><span class="co">#&gt;  5:               ihd                     1.18                    1.03</span></span>
+<span><span class="co">#&gt;  6:     liver_alcohol                     1.01                    0.73</span></span>
+<span><span class="co">#&gt;  7:       lung_cancer                     0.99                    0.94</span></span>
+<span><span class="co">#&gt;  8:     other_cancers                     0.98                    0.90</span></span>
+<span><span class="co">#&gt;  9: other_circulatory                     1.00                    0.97</span></span>
+<span><span class="co">#&gt; 10:       respiratory                     1.02                    0.98</span></span>
+<span><span class="co">#&gt; 11:              rest                     1.03                    0.95</span></span>
+<span><span class="co">#&gt; 12:            stroke                     1.13                    0.99</span></span>
 <span><span class="co">#&gt;     ensemble, stacking</span></span>
-<span><span class="co">#&gt;  1:               1.01</span></span>
-<span><span class="co">#&gt;  2:               0.87</span></span>
-<span><span class="co">#&gt;  3:               1.18</span></span>
-<span><span class="co">#&gt;  4:               0.82</span></span>
-<span><span class="co">#&gt;  5:               0.98</span></span>
-<span><span class="co">#&gt;  6:               0.76</span></span>
-<span><span class="co">#&gt;  7:               0.91</span></span>
-<span><span class="co">#&gt;  8:               0.97</span></span>
+<span><span class="co">#&gt;  1:               0.98</span></span>
+<span><span class="co">#&gt;  2:               0.86</span></span>
+<span><span class="co">#&gt;  3:               1.11</span></span>
+<span><span class="co">#&gt;  4:               0.83</span></span>
+<span><span class="co">#&gt;  5:               1.00</span></span>
+<span><span class="co">#&gt;  6:               0.77</span></span>
+<span><span class="co">#&gt;  7:               0.89</span></span>
+<span><span class="co">#&gt;  8:               0.95</span></span>
 <span><span class="co">#&gt;  9:               0.87</span></span>
-<span><span class="co">#&gt; 10:               1.08</span></span>
-<span><span class="co">#&gt; 11:               0.94</span></span>
-<span><span class="co">#&gt; 12:               0.91</span></span></code></pre></div>
+<span><span class="co">#&gt; 10:               1.06</span></span>
+<span><span class="co">#&gt; 11:               0.96</span></span>
+<span><span class="co">#&gt; 12:               0.88</span></span></code></pre></div>
 <p>The stacking ensemble was more accurate than Lee-Carter for nine of
-the twelve causes, most for liver disease (by 24%), diabetes (18%),
-other circulatory diseases and colorectal cancer (13%), and less
-accurate for dementia (18%), respiratory diseases (8%) and breast and
-prostate cancer (1%). The equal-weight ensemble was at least as accurate
-as Lee-Carter for eleven causes (ischaemic heart disease, respiratory
-diseases and stroke within 1%) and less accurate for dementia (5%).
+the twelve causes, most for liver disease (by 23%), diabetes (17%),
+colorectal cancer (14%), other circulatory diseases (13%) and stroke
+(12%), as accurate for ischaemic heart disease, and less accurate for
+dementia (11%) and respiratory diseases (6%). The equal-weight ensemble
+was more accurate than Lee-Carter for ten causes (stroke within 1%) and
+less accurate for dementia (5%) and ischaemic heart disease (3%).
 Recalibrated Lee-Carter was less accurate than Lee-Carter for dementia
-(24%), ischaemic heart disease (17%) and stroke (13%).</p>
+(22%), ischaemic heart disease (18%) and stroke (13%).</p>
 </div>
 <div class="section level3">
 <h3 id="is-the-difference-larger-than-chance">Is the difference larger than chance?<a class="anchor" aria-label="anchor" href="#is-the-difference-larger-than-chance"></a>
@@ -812,22 +809,22 @@ large and consistent differences:</p>
 <span><span class="va">dm</span><span class="op">[</span><span class="va">horizon</span> <span class="op">==</span> <span class="st">"all"</span>, <span class="fu">.</span><span class="op">(</span><span class="va">model</span>, <span class="va">target</span>, <span class="va">df</span>, score <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">signif</a></span><span class="op">(</span><span class="va">score</span>, <span class="fl">3</span><span class="op">)</span>, score_ref <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">signif</a></span><span class="op">(</span><span class="va">score_ref</span>, <span class="fl">3</span><span class="op">)</span>,</span>
 <span>                        p_value <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">p_value</span>, <span class="fl">2</span><span class="op">)</span><span class="op">)</span><span class="op">]</span></span>
 <span><span class="co">#&gt;                        model              target df  score score_ref p_value</span></span>
-<span><span class="co">#&gt;  1: Lee-Carter, recalibrated                 asr  1 0.0412    0.0393    0.41</span></span>
-<span><span class="co">#&gt;  2:  ensemble, equal weights                 asr  1 0.0371    0.0393    0.44</span></span>
-<span><span class="co">#&gt;  3:       ensemble, stacking                 asr  1 0.0367    0.0393    0.23</span></span>
-<span><span class="co">#&gt;  4: Lee-Carter, recalibrated             asr_gap  1 0.0348    0.0317    0.37</span></span>
-<span><span class="co">#&gt;  5:  ensemble, equal weights             asr_gap  1 0.0327    0.0317    0.48</span></span>
-<span><span class="co">#&gt;  6:       ensemble, stacking             asr_gap  1 0.0387    0.0317    0.22</span></span>
-<span><span class="co">#&gt;  7: Lee-Carter, recalibrated     life_expectancy  1 0.1490    0.1480    0.59</span></span>
-<span><span class="co">#&gt;  8:  ensemble, equal weights     life_expectancy  1 0.1510    0.1480    0.45</span></span>
-<span><span class="co">#&gt;  9:       ensemble, stacking     life_expectancy  1 0.1560    0.1480    0.74</span></span>
-<span><span class="co">#&gt; 10: Lee-Carter, recalibrated life_expectancy_gap  1 0.0934    0.0846    0.72</span></span>
-<span><span class="co">#&gt; 11:  ensemble, equal weights life_expectancy_gap  1 0.1110    0.0846    0.38</span></span>
-<span><span class="co">#&gt; 12:       ensemble, stacking life_expectancy_gap  1 0.2110    0.0846    0.18</span></span></code></pre></div>
+<span><span class="co">#&gt;  1: Lee-Carter, recalibrated                 asr  1 0.0413    0.0394    0.39</span></span>
+<span><span class="co">#&gt;  2:  ensemble, equal weights                 asr  1 0.0374    0.0394    0.30</span></span>
+<span><span class="co">#&gt;  3:       ensemble, stacking                 asr  1 0.0363    0.0394    0.11</span></span>
+<span><span class="co">#&gt;  4: Lee-Carter, recalibrated             asr_gap  1 0.0353    0.0320    0.29</span></span>
+<span><span class="co">#&gt;  5:  ensemble, equal weights             asr_gap  1 0.0331    0.0320    0.55</span></span>
+<span><span class="co">#&gt;  6:       ensemble, stacking             asr_gap  1 0.0384    0.0320    0.18</span></span>
+<span><span class="co">#&gt;  7: Lee-Carter, recalibrated     life_expectancy  1 0.1500    0.1490    0.17</span></span>
+<span><span class="co">#&gt;  8:  ensemble, equal weights     life_expectancy  1 0.1480    0.1490    0.23</span></span>
+<span><span class="co">#&gt;  9:       ensemble, stacking     life_expectancy  1 0.1600    0.1490    0.57</span></span>
+<span><span class="co">#&gt; 10: Lee-Carter, recalibrated life_expectancy_gap  1 0.0940    0.0831    0.65</span></span>
+<span><span class="co">#&gt; 11:  ensemble, equal weights life_expectancy_gap  1 0.1150    0.0831    0.34</span></span>
+<span><span class="co">#&gt; 12:       ensemble, stacking life_expectancy_gap  1 0.2230    0.0831    0.15</span></span></code></pre></div>
 <p>No difference is significant at the 5% level on average over the
-three horizons (p from 0.18 to 0.74). The 7% lower CRPS of the stacking
-ensemble for the rates of the causes has p = 0.23, its higher CRPS of
-the gap in life expectancy p = 0.18. Four origins of three years are
+three horizons (p from 0.11 to 0.65). The 8% lower CRPS of the stacking
+ensemble for the rates of the causes has p = 0.11, its higher CRPS of
+the gap in life expectancy p = 0.15. Four origins of three years are
 few: the differences between the models are within the variation between
 the origins.</p>
 </div>
@@ -866,18 +863,18 @@ the origins.</p>
 <span><span class="co">#&gt; 12:   0.28        0.00</span></span>
 <span><span class="va">fit_ens</span><span class="op">$</span><span class="va">calibration</span><span class="op">[</span><span class="va">group</span> <span class="op">!=</span> <span class="st">"all"</span>, <span class="fu">.</span><span class="op">(</span>cause <span class="op">=</span> <span class="va">group</span>, <span class="va">scale_h1</span>, <span class="va">crps_before</span>, <span class="va">crps_after</span>, <span class="va">cov95_before</span>, <span class="va">cov95_after</span><span class="op">)</span><span class="op">]</span></span>
 <span><span class="co">#&gt;                 cause  scale_h1 crps_before crps_after cov95_before cov95_after</span></span>
-<span><span class="co">#&gt;  1:   breast_prostate 0.7420155  0.06172032 0.06148200    0.9422222   0.9155556</span></span>
-<span><span class="co">#&gt;  2: colorectal_cancer 0.2359251  0.05950908 0.05813445    0.9333333   0.8866667</span></span>
-<span><span class="co">#&gt;  3:          dementia 0.6252263  0.15639359 0.15348601    0.9777778   0.9288889</span></span>
-<span><span class="co">#&gt;  4:          diabetes 0.9316157  0.14713984 0.14710959    0.9044444   0.8822222</span></span>
-<span><span class="co">#&gt;  5:               ihd 0.8651978  0.05689420 0.05673168    0.9022222   0.8888889</span></span>
-<span><span class="co">#&gt;  6:     liver_alcohol 0.7830481  0.09594753 0.09541231    0.9444444   0.8933333</span></span>
-<span><span class="co">#&gt;  7:       lung_cancer 1.2863029  0.07804079 0.07740141    0.8466667   0.9066667</span></span>
-<span><span class="co">#&gt;  8:     other_cancers 0.8794309  0.02848042 0.02843622    0.9088889   0.8800000</span></span>
-<span><span class="co">#&gt;  9: other_circulatory 0.6955683  0.10807185 0.10683857    0.9533333   0.8977778</span></span>
-<span><span class="co">#&gt; 10:       respiratory 0.7965749  0.07461080 0.07431964    0.9222222   0.8800000</span></span>
-<span><span class="co">#&gt; 11:              rest 0.6867152  0.03867120 0.03781412    0.9733333   0.9133333</span></span>
-<span><span class="co">#&gt; 12:            stroke 0.8560036  0.07119017 0.07093992    0.9644444   0.9377778</span></span></code></pre></div>
+<span><span class="co">#&gt;  1:   breast_prostate 0.8398067  0.06085165 0.06052980    0.9600000   0.9333333</span></span>
+<span><span class="co">#&gt;  2: colorectal_cancer 0.4849923  0.05906867 0.05783868    0.9355556   0.8933333</span></span>
+<span><span class="co">#&gt;  3:          dementia 0.5630659  0.15420653 0.14906039    0.9844444   0.9111111</span></span>
+<span><span class="co">#&gt;  4:          diabetes 0.9084098  0.14752864 0.14760189    0.8666667   0.8533333</span></span>
+<span><span class="co">#&gt;  5:               ihd 0.9119534  0.05593513 0.05586235    0.9044444   0.8822222</span></span>
+<span><span class="co">#&gt;  6:     liver_alcohol 0.8120310  0.09568647 0.09513878    0.9400000   0.8977778</span></span>
+<span><span class="co">#&gt;  7:       lung_cancer 1.2707264  0.07776270 0.07726088    0.8644444   0.9177778</span></span>
+<span><span class="co">#&gt;  8:     other_cancers 0.8963445  0.02826413 0.02822796    0.9155556   0.9044444</span></span>
+<span><span class="co">#&gt;  9: other_circulatory 0.7386995  0.10620261 0.10513597    0.9600000   0.9244444</span></span>
+<span><span class="co">#&gt; 10:       respiratory 0.8483272  0.07428158 0.07408973    0.9177778   0.8955556</span></span>
+<span><span class="co">#&gt; 11:              rest 0.6930626  0.03874546 0.03795035    0.9711111   0.9177778</span></span>
+<span><span class="co">#&gt; 12:            stroke 0.9137532  0.07232938 0.07231423    0.9466667   0.9288889</span></span></code></pre></div>
 <p>The weights and spread factors of the stacking ensemble fitted to all
 data, 2001-2019 (the warnings of the fit, of the same two kinds as in
 the backtest, are not shown). The weights differ between causes. The
@@ -895,13 +892,14 @@ quintiles of each sex towards a common trend and forecast the gap worst
 in “Inequality in England”. The weights at the backtest origins were
 estimated anew at each origin and are not shown.</p>
 <p>The spread factors (<code>scale_h1</code>) are below 1 for eleven
-causes, from 0.24 (colorectal cancer) to 0.93 (diabetes): in the
+causes, from 0.48 (colorectal cancer) to 0.91 (stroke): in the
 calibration window (forecasts of 2017-2019 from the origins 2016 and
 2017) the intervals of the ensemble were wider than the errors required,
 and recalibration narrows them. Only lung cancer gets wider intervals
-(1.29), which raises the 95% coverage of its calibration forecasts from
-0.85 to 0.91. The factors lower the CRPS of the calibration forecasts
-only slightly (for colorectal cancer from 0.0595 to 0.0581).</p>
+(1.27), which raises the 95% coverage of its calibration forecasts from
+0.86 to 0.92. The factors change the CRPS of the calibration forecasts
+only slightly (for colorectal cancer from 0.0591 to 0.0578; for diabetes
+it rises from 0.14753 to 0.14760).</p>
 </div>
 </div>
 <div class="section level2">
@@ -960,12 +958,13 @@ coherent paths</td>
 </table>
 <p>In these data, an ensemble for each cause forecast the rates of most
 causes more accurately than Lee-Carter one to three years ahead, and
-all-cause life expectancy about as well. With stacking weights it
-forecast the gaps between the most and the least deprived quintile worst
-of the four models. The data allow only short inner backtests: the
-stacking weights rest on one inner origin with two years ahead, and the
-spread factors on two origins. Whether the gains for the rates hold over
-longer horizons cannot be checked with 19 years of data.</p>
+all-cause life expectancy about as well with equal weights. With
+stacking weights it forecast the gaps between the most and the least
+deprived quintile worst of the four models. The data allow only short
+inner backtests: the stacking weights rest on one inner origin with two
+years ahead, and the spread factors on two origins. Whether the gains
+for the rates hold over longer horizons cannot be checked with 19 years
+of data.</p>
 </div>
 <div class="section level2">
 <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a>

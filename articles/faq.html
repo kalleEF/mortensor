@@ -250,9 +250,9 @@ random walk observed with noise separates it from the trend</td>
 <td>Totals or gaps of strata forecast by separate models</td>
 <td>
 <code>coupled(model, template = li_lee())</code>,
-<code>reconciled(model, hierarchy, dependence = "schaake")</code> (the
-dependence of past years) or a joint model such as <code><a href="../reference/cae.html">cae()</a></code>
-(<code><a href="../articles/dependence.html">vignette("dependence")</a></code>)</td>
+<code>reconciled(model, hierarchy, dependence = "empirical")</code> or
+<code>"schaake"</code> (the dependence of past years) or a joint model
+such as <code><a href="../reference/cae.html">cae()</a></code> (<code><a href="../articles/dependence.html">vignette("dependence")</a></code>)</td>
 <td>separate models give independent errors, so intervals of totals are
 too narrow and those of gaps too wide</td>
 </tr>
@@ -594,26 +594,27 @@ causes?<a class="anchor" aria-label="anchor" href="#how-do-i-get-forecasts-that-
 </h3>
 <p>Describe the structure with <code><a href="../reference/mt_hierarchy.html">mt_hierarchy()</a></code> and either
 model the bottom strata and sum them
-(<code>reconciled(..., method = "bottom_up")</code>), or model every
-node and reconcile the draws (<code>method = "wls"</code>,
-<code>"mint"</code>, …). Totals that are not in the data are added by
-<code><a href="../reference/mt_aggregate_strata.html">mt_aggregate_strata()</a></code>. To keep a trusted total, such as an
-all-cause forecast that the causes must add up to, give it as
-<code>fixed</code> and use <code>method = "proportional"</code> (its
-parts are scaled in proportion to their forecasts) or <code>"wls"</code>
-(the most uncertain parts absorb the difference).
-<code>method = "energy_score"</code> learns the reconciliation from the
-base model’s past forecasts (Panagiotelis et al. 2023); in the package’s
-backtests it was less accurate than <code>"wls"</code>, so compare it in
-a backtest before using it. Over long horizons, sums of cause forecasts
-tend to be more pessimistic than forecasts of all causes (Wilmoth 1995),
-so compare the two before choosing. Reconciliation of deaths uses
-exposures of the forecast years; supply population projections as
-<code>exposure</code> when they are available. See “Coherent forecasts:
-totals and their parts” and the applied vignettes “Inequality in
-England” and “Differences between the German Laender”. “Causes of death
-by deprivation: coherent and combined forecasts” reconciles causes by
-sex and quintile in one crossed hierarchy,
+(<code>reconciled(..., method = "bottom_up")</code>, which fits the
+model to the bottom strata only), or model every node and reconcile the
+draws (<code>method = "wls"</code>, <code>"mint"</code>, …). Totals that
+are not in the data are added by <code><a href="../reference/mt_aggregate_strata.html">mt_aggregate_strata()</a></code>. To
+keep a trusted total, such as an all-cause forecast that the causes must
+add up to, give it as <code>fixed</code> and use
+<code>method = "proportional"</code> (its parts are scaled in proportion
+to their forecasts) or <code>"wls"</code> (the most uncertain parts
+absorb the difference). <code>method = "energy_score"</code> learns the
+reconciliation from the base model’s past forecasts (Panagiotelis et
+al. 2023); in the package’s backtests it was less accurate than
+<code>"wls"</code>, so compare it in a backtest before using it. Over
+long horizons, sums of cause forecasts tend to be more pessimistic than
+forecasts of all causes (Wilmoth 1995), so compare the two before
+choosing. Reconciliation of deaths uses exposures of the forecast years;
+supply population projections as <code>exposure</code> when they are
+available. See “Coherent forecasts: totals and their parts” and the
+applied vignettes “Inequality in England” and “Differences between the
+German Laender”. “Causes of death by deprivation: coherent and combined
+forecasts” reconciles causes by sex and quintile in one crossed
+hierarchy,
 <code>mt_hierarchy(sex = "both", quintile = "England", cause = list(total = "all", additive = "rates"))</code>,
 and compares the methods and a per-cause ensemble with Lee-Carter in a
 backtest.</p>

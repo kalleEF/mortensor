@@ -130,7 +130,7 @@ ones you will report) decides. As a starting point:
 | Several strata that should not diverge (sexes, regions, deprivation groups) | `li_lee(common_by = ...)` | a common trend with bounded deviations; pools information across strata |
 | Small populations, many cells with few deaths | `li_lee(common_by = ...)`; adults: `saint(reference = ...)` against a national total; wider age groups ([`mt_regroup()`](../reference/mt_regroup.md)), [`step_smooth()`](../reference/mt_prep.md); `arima_series(order = c(0, 1, 1), drift = TRUE)` in ensembles | pooling and smoothing reduce noise; SAINT takes the trend from a large reference population; the plain random walk accumulates it, the random walk observed with noise separates it from the trend |
 | Totals and parts must add up | `reconciled(model, hierarchy)` | bottom-up for joint models, WLS for separate models |
-| Totals or gaps of strata forecast by separate models | `coupled(model, template = li_lee())`, `reconciled(model, hierarchy, dependence = "schaake")` (the dependence of past years) or a joint model such as [`cae()`](../reference/cae.md) ([`vignette("dependence")`](../articles/dependence.md)) | separate models give independent errors, so intervals of totals are too narrow and those of gaps too wide |
+| Totals or gaps of strata forecast by separate models | `coupled(model, template = li_lee())`, `reconciled(model, hierarchy, dependence = "empirical")` or `"schaake"` (the dependence of past years) or a joint model such as [`cae()`](../reference/cae.md) ([`vignette("dependence")`](../articles/dependence.md)) | separate models give independent errors, so intervals of totals are too narrow and those of gaps too wide |
 | More variation of the deaths than Poisson | `lee_carter(family = "nb")`, `stanmomo(family = "nb")` | negative binomial deaths (Delwarde, Denuit and Partrat 2007) widen the predictive intervals |
 | Causes of death | separate or Li-Lee models per cause, `reconciled(..., method = "bottom_up")` with `cause = list(total = "all", additive = "rates")`; [`coda_causes()`](../reference/coda_causes.md) (experimental) | cause rates add up to the all-cause rate |
 | Cohort effects (for example generations born around 1925-1945) | [`apc_bayes()`](../reference/apc_bayes.md), `stmomo("apc")`; at older ages `stmomo("m7")`, `stmomo("plat")` or [`apci()`](../reference/apci.md) | age-period models attribute cohort patterns to period trends |
@@ -385,9 +385,10 @@ model does not test.
 
 Describe the structure with
 [`mt_hierarchy()`](../reference/mt_hierarchy.md) and either model the
-bottom strata and sum them (`reconciled(..., method = "bottom_up")`), or
-model every node and reconcile the draws (`method = "wls"`, `"mint"`,
-…). Totals that are not in the data are added by
+bottom strata and sum them (`reconciled(..., method = "bottom_up")`,
+which fits the model to the bottom strata only), or model every node and
+reconcile the draws (`method = "wls"`, `"mint"`, …). Totals that are not
+in the data are added by
 [`mt_aggregate_strata()`](../reference/mt_aggregate_strata.md). To keep
 a trusted total, such as an all-cause forecast that the causes must add
 up to, give it as `fixed` and use `method = "proportional"` (its parts
