@@ -30,6 +30,23 @@ test_that("mt_score_table() compares models on the cells all of them scored", {
   expect_equal(tab2$n, c(nrow(bt[model == "a"]), nrow(bt[model == "b"])))
 })
 
+test_that("mt_score_table() by horizon gives the scores of mt_score() by model and horizon", {
+  x <- mt_example(deaths = "single", years = 1995:2010)
+  bt <- mt_compare(list(a = rwd(), b = lee_carter()), x, origins = c(2005, 2006), h = 4, n_draws = 20,
+                   quantities = "life_expectancy")
+  metrics <- c("crps", "cov80", "cov95", "n")
+  tab <- mt_score_table(bt, metrics = metrics, by = c("model", "horizon"), digits = 15)
+  expect_equal(nrow(tab), 2 * 4)
+  for (tg in c("rate", "life_expectancy")) {
+    ref <- mt_score(bt, by = c("model", "horizon"), target = tg)
+    data.table::setnames(ref, metrics, paste0(metrics, ".ref"))
+    cols <- paste0(metrics, if (tg == "rate") "" else "_le")
+    m <- merge(tab[, c("model", "horizon", cols), with = FALSE], ref, by = c("model", "horizon"))
+    expect_equal(nrow(m), nrow(ref))
+    for (k in seq_along(metrics)) expect_equal(m[[cols[k]]], m[[paste0(metrics[k], ".ref")]], tolerance = 1e-12)
+  }
+})
+
 test_that("mt_compare_forecasts() tabulates one quantity of several forecasts", {
   x <- mt_example(deaths = "single", years = 1990:2010)
   fc <- list(rw = mt_forecast(mt_fit(rwd(), x), h = 5, n_draws = 50, seed = 1),

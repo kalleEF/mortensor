@@ -120,13 +120,27 @@ mt_parameters <- function(fit) {
     if (!is.null(tp)) out <- rbind(out, tp[, component := "template"], fill = TRUE)
   }
   cal <- fit$calibration
-  if (!is.null(cal)) {
-    lab <- if (!is.null(cal$band)) paste0(cal$group, ", ", cal$band) else cal$group
-    out <- rbind(out, data.table(stratum = rep(paste("calibration:", lab), 3),
-                                 parameter = rep(c("scale_h1", "slope", "drift"), each = nrow(cal)), index = "",
-                                 value = c(cal$scale_h1, cal$slope, cal$drift)), fill = TRUE)
-  }
+  if (!is.null(cal)) out <- rbind(out, calibration_parameters(cal), fill = TRUE)
   out
+}
+
+# Rows of mt_parameters() for the calibration of recalibrated(): factors (one
+# row per group and band, or per horizon with index the horizon) or the
+# tuning factors of the error method
+calibration_parameters <- function(cal) {
+  if (!"group" %in% names(cal)) {
+    return(data.table(stratum = "calibration: past errors", parameter = "tuning", index = as.character(cal$horizon),
+                      value = cal$tuning))
+  }
+  lab <- if (!is.null(cal$band)) paste0(cal$group, ", ", cal$band) else cal$group
+  if ("horizon" %in% names(cal)) {
+    return(data.table(stratum = rep(paste("calibration:", lab), 2),
+                      parameter = rep(c("scale", "drift"), each = nrow(cal)),
+                      index = rep(as.character(cal$horizon), 2), value = c(cal$scale, cal$drift)))
+  }
+  data.table(stratum = rep(paste("calibration:", lab), 3),
+             parameter = rep(c("scale_h1", "slope", "drift"), each = nrow(cal)), index = "",
+             value = c(cal$scale_h1, cal$slope, cal$drift))
 }
 
 # Parameters of each component of an ensemble (column `component`) and the
@@ -458,7 +472,21 @@ print.summary.mt_fit <- function(x, ...) {
     cat(paste0("    ", utils::capture.output(print(tu, row.names = FALSE, digits = 4)), collapse = "\n"), "\n",
         sep = "")
   }
-  if (!is.null(x$calibration)) {
+  if (!is.null(x$calibration) && !"group" %in% names(x$calibration)) {
+    cal <- x$calibration
+    cat(sprintf(paste("  calibration: resampled errors of inner forecasts at horizons 1-%d (%s inner origins per",
+                      "horizon); tuning factor %s\n"), nrow(cal), paste(unique(range(cal$origins)), collapse = "-"),
+                paste(unique(sprintf("%.2f", range(cal$tuning))), collapse = "-")))
+  } else if (!is.null(x$calibration) && "horizon" %in% names(x$calibration)) {
+    cal <- x$calibration
+    for (k in unique(paste(cal$group, cal$band, sep = "\r"))) {
+      ck <- cal[paste(group, band, sep = "\r") == k]
+      grp <- if (ck$band[1] != "all ages") paste0(ck$group[1], ", ages ", ck$band[1]) else ck$group[1]
+      dr <- if (any(ck$drift != 0)) sprintf("; drift %s", paste(sprintf("%+.4f", ck$drift), collapse = " ")) else ""
+      cat(sprintf("  calibration (%s): spread factors at horizons 1-%d: %s%s\n", grp, nrow(ck),
+                  paste(sprintf("%.2f", ck$scale), collapse = " "), dr))
+    }
+  } else if (!is.null(x$calibration)) {
     cal <- x$calibration
     grp <- if (!is.null(cal$band) && any(cal$band != "all ages")) paste0(cal$group, ", ages ", cal$band) else cal$group
     ci <- if (!is.null(cal$scale_h1_lo)) sprintf(" (%.2f-%.2f)", cal$scale_h1_lo, cal$scale_h1_hi) else ""
@@ -676,10 +704,15 @@ model_assumptions <- function(spec) {
                                       paste("Before it, the draws of each age, year and stratum take the ranks of",
                                             "observed changes of distinct training years (Schaake shuffle).")
                                     }), collapse = " "),
-         mt_spec_recalibrated = paste(model_assumptions(p$base), sprintf(paste(
-           "Calibrated: the spread%s of the draws%s is rescaled to minimise the %s of %s in forecasts from %d",
+         mt_spec_recalibrated = if (identical(p$method, "errors")) paste(model_assumptions(p$base), sprintf(paste(
+           "Recalibrated by past errors: draws are the median of the base draws plus the errors (all ages and",
+           "strata of one origin) of forecasts from %d origins in the last %d training years, resampled per",
+           "horizon and scaled to %g%% coverage of these errors; they describe observed rates."),
+           p$n_origins, p$years, 100 * p$level)) else paste(model_assumptions(p$base), sprintf(paste(
+           "Calibrated: the spread%s of the draws%s is rescaled%s to minimise the %s of %s in forecasts from %d",
            "origins in the last %d training years."), if (p$bias) " and drift" else "",
            if (length(p$ages)) " (per age band)" else "",
+           if (identical(p$scale, "per_horizon")) " for each horizon" else "",
            if (identical(p$target, "interval")) sprintf("%g%% interval score", 100 * p$level) else "CRPS",
            switch(p$quantity %||% "rate", rate = "log death rates", life_expectancy = "life expectancy at birth",
                   asr = "the log ASR"), p$n_origins, p$years)),

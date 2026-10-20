@@ -158,7 +158,11 @@ allows for overdispersion. `recalibrated()` rescales the spread of any
 model's draws to its forecast errors in the last years of
 the training data (by default ten); on England & Wales men it raised the
 95% coverage of Lee-Carter from 0.63 to 0.85. Check calibration with
-`mt_backtest()` and `mt_plot_coverage()`.
+`mt_backtest()` and `mt_plot_coverage()`, and by horizon with
+`mt_score_table(by = c("model", "horizon"))`. Where coverage falls with
+the horizon, `recalibrated(scale = "per_horizon")` estimates one factor
+per horizon, and `recalibrated(method = "errors")` adds resampled errors
+of the model's past forecasts; both are opt-in.
 
 ### Is one model really more accurate than another?
 

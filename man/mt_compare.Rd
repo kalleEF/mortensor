@@ -71,7 +71,8 @@ the training data of the first forecast).}
 
 \item{targets}{Targets to show (default: all in the backtest).}
 
-\item{by}{Columns that define the rows (default \code{"model"}).}
+\item{by}{Columns that define the rows (default \code{"model"}), for example
+\code{c("model", "horizon")} for the scores of each horizon.}
 
 \item{digits}{Significant digits (\code{mt_score_table()}) or decimals
 (\code{mt_compare_forecasts()}).}
@@ -146,7 +147,10 @@ their means only, and the means would refer to different targets.
 which no cell was scored by every model (for example with different
 age groups) is always scored so. The CRPS depends on the number of
 draws (see \code{\link[=mt_backtest]{mt_backtest()}}); compare models
-backtested with the same \code{n_draws}, as \code{mt_compare()} does.
+backtested with the same \code{n_draws}, as \code{mt_compare()} does. With
+\code{by = c("model", "horizon")} the table gives the scores of each
+forecast horizon, the same values as \code{mt_score(by = c("model", "horizon"))}: coverage that falls with the horizon shows intervals that
+widen too slowly (see \code{\link[=recalibrated]{recalibrated()}}).
 \item \code{mt_compare_forecasts()} gives one quantity of several forecasts
 (\code{mt_draws}) or observed data (\code{mt_data}, with Poisson intervals) as
 "median (lower-upper)", one column per forecast (empty where a
@@ -163,6 +167,7 @@ models <- list("random walk" = rwd(), "Lee-Carter" = lee_carter())
 bt <- mt_compare(models, x, origins = c(2005, 2007), h = 5, n_draws = 50,
                  quantities = "life_expectancy")
 mt_score_table(bt)
+mt_score_table(bt, by = c("model", "horizon"))
 fc <- list("random walk" = mt_forecast(mt_fit(rwd(), x), h = 10, n_draws = 100, seed = 1),
            "Lee-Carter" = mt_forecast(mt_fit(lee_carter(), x), h = 10, n_draws = 100, seed = 1))
 mt_compare_forecasts(fc, periods = 2022)

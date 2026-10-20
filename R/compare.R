@@ -27,7 +27,11 @@
 #'   which no cell was scored by every model (for example with different
 #'   age groups) is always scored so. The CRPS depends on the number of
 #'   draws (see [mt_backtest()]); compare models
-#'   backtested with the same `n_draws`, as `mt_compare()` does.
+#'   backtested with the same `n_draws`, as `mt_compare()` does. With
+#'   `by = c("model", "horizon")` the table gives the scores of each
+#'   forecast horizon, the same values as `mt_score(by = c("model",
+#'   "horizon"))`: coverage that falls with the horizon shows intervals that
+#'   widen too slowly (see [recalibrated()]).
 #' * `mt_compare_forecasts()` gives one quantity of several forecasts
 #'   (`mt_draws`) or observed data (`mt_data`, with Poisson intervals) as
 #'   "median (lower-upper)", one column per forecast (empty where a
@@ -46,7 +50,8 @@
 #' @param metrics Score columns of [mt_score()], for example `"crps"`,
 #'   `"rmse"`, `"cov80"`, `"cov95"`.
 #' @param targets Targets to show (default: all in the backtest).
-#' @param by Columns that define the rows (default `"model"`).
+#' @param by Columns that define the rows (default `"model"`), for example
+#'   `c("model", "horizon")` for the scores of each horizon.
 #' @param digits Significant digits (`mt_score_table()`) or decimals
 #'   (`mt_compare_forecasts()`).
 #' @param hierarchy Optional [mt_hierarchy()]: scores are then given
@@ -82,6 +87,7 @@
 #' bt <- mt_compare(models, x, origins = c(2005, 2007), h = 5, n_draws = 50,
 #'                  quantities = "life_expectancy")
 #' mt_score_table(bt)
+#' mt_score_table(bt, by = c("model", "horizon"))
 #' fc <- list("random walk" = mt_forecast(mt_fit(rwd(), x), h = 10, n_draws = 100, seed = 1),
 #'            "Lee-Carter" = mt_forecast(mt_fit(lee_carter(), x), h = 10, n_draws = 100, seed = 1))
 #' mt_compare_forecasts(fc, periods = 2022)
