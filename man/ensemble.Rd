@@ -163,7 +163,8 @@ ens <- ensemble(lc = lee_carter(), rw = rwd())
 fc <- mt_forecast(mt_fit(ens, x), h = 5, n_draws = 100, seed = 1)
 \donttest{
 # stacking weights from an inner backtest on the training years
-st <- ensemble(lc = lee_carter(), rw = rwd(), weights = "crps_stack", inner_origins = 2, inner_h = 3)
+st <- ensemble(lc = lee_carter(), rw = rwd(), weights = "crps_stack",
+               inner_origins = 2, inner_h = 3)
 mt_fit(st, x)$weights
 }
 }
