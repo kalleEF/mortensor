@@ -174,12 +174,14 @@ test_that("reconciled(dependence = \"schaake\") shuffles the base draws before r
   expect_lt(coherence_gap(fc, h), 1e-8)
   expect_identical(fc$schaake$dates, 12L)
   expect_true(all(fc$schaake$draw_year + 3 <= 2014))
-  # the same as the shuffle of the base draws with mt_reconcile() after the base forecast
+  # the same as the shuffle of the base draws (of the bottom strata, to which
+  # bottom-up fits the base model) with mt_reconcile() after the base forecast
   rs <- mortensor:::with_seed(3, {
     f0 <- mt_forecast(mortensor:::unwrap_fit(fit, "mt_fit_reconciled"), h = 3, n_draws = 40)
     mt_reconcile(f0, h, method = "bottom_up", dependence = "schaake")
   })
-  expect_identical(fc$rates, rs$rates)
+  expect_identical(rs$strata$label, fc$strata$label[b])
+  expect_identical(fc$rates[, , b, ], rs$rates)
   # predictive draws: Poisson deaths of the bottom strata given the shuffled rates, coherent
   pr <- mt_forecast(fit, h = 3, n_draws = 40, seed = 3, predictive = TRUE)
   expect_true(all(is.finite(pr$rates)))
@@ -191,16 +193,17 @@ test_that("reconciled(dependence = \"schaake\") shuffles the base draws before r
   expect_match(mortensor:::model_assumptions(fit$spec), "Schaake shuffle")
 })
 
-test_that("joint models are not shuffled, and \"empirical\" is deprecated", {
+test_that("joint models are not shuffled, and \"empirical\" is not deprecated", {
   h <- h3s()
-  expect_warning(sp <- reconciled(li_lee(common_by = "sex"), h, dependence = "schaake"),
-                 class = "mt_warning_reconcile")
-  expect_identical(sp$params$dependence, "none")
-  expect_warning(se <- reconciled(lee_carter(), h, dependence = "empirical"), class = "mt_warning_deprecated")
+  for (dep in c("schaake", "empirical")) {
+    expect_warning(sp <- reconciled(li_lee(common_by = "sex"), h, dependence = dep), class = "mt_warning_reconcile")
+    expect_identical(sp$params$dependence, "none")
+  }
+  expect_no_warning(se <- reconciled(lee_carter(), h, dependence = "empirical"))
   expect_identical(se$params$dependence, "empirical")
   x <- mt_example_regions(years = 2005:2016, regions = 2)
   fc <- mt_forecast(mt_fit(lee_carter(), mt_aggregate_strata(x, h)), h = 2, n_draws = 20, seed = 1)
-  expect_warning(mt_reconcile(fc, h, dependence = "empirical", seed = 1), class = "mt_warning_deprecated")
+  expect_no_warning(mt_reconcile(fc, h, dependence = "empirical", seed = 1))
   expect_no_warning(mt_reconcile(fc, h, dependence = "schaake", seed = 1))
 })
 
@@ -209,20 +212,35 @@ test_that("predictive draws after the Schaake shuffle take the noise of the base
   h <- h3s()
   xa <- mt_aggregate_strata(x, h)
   # Poisson deaths for values from Lee-Carter draws, none for those of rwd()
-  fit <- mt_fit(reconciled(ensemble(lc = lee_carter(), rw = rwd()), h, method = "bottom_up", dependence = "schaake"),
-                xa)
+  ens <- ensemble(lc = lee_carter(), rw = rwd())
+  fit <- mt_fit(reconciled(ens, h, method = "bottom_up", dependence = "schaake"), xa)
   u <- mt_forecast(fit, h = 2, n_draws = 40, seed = 1)
   p <- mt_forecast(fit, h = 2, n_draws = 40, seed = 1, predictive = TRUE)
   expect_null(u$component)
   base <- mortensor:::with_seed(1, mt_forecast(mortensor:::unwrap_fit(fit, "mt_fit_reconciled"), h = 2, n_draws = 40))
   expect_setequal(unique(base$component), 1:2)
-  s <- mortensor:::hierarchy_structure(fit$strata, h)$bottom[3]
-  E <- fit$exposure_last[, 1, s]
+  b <- mortensor:::hierarchy_structure(fit$strata, h)$bottom
+  E <- fit$exposure_last[, 1, b[3]]
   for (a in c(2, 8)) for (t in 1:2) {
-    src <- vapply(u$rates[a, t, s, ], function(v) which.min(abs(base$rates[a, t, s, ] - v)), 1L)
+    src <- vapply(u$rates[a, t, b[3], ], function(v) which.min(abs(base$rates[a, t, 3, ] - v)), 1L)
     expect_equal(sort(src), seq_len(40))
-    deaths <- p$rates[a, t, s, ] * E[a]
-    expect_identical(abs(deaths - round(deaths)) < 1e-6, base$component[src] == 1L)
+    # bottom-up: the noise is drawn for the base draws and moves with their
+    # values, so the values from rwd() draws are the base values, and the
+    # others have Poisson deaths
+    v <- p$rates[a, t, b[3], ]
+    deaths <- v * E[a]
+    smooth <- abs(deaths - round(deaths)) > 1e-6
+    expect_equal(sort(v[smooth]), sort(base$rates[a, t, 3, base$component == 2L]))
   }
   expect_lt(coherence_gap(p, h), 1e-8)
+  # a projection method adds the noise after the shuffle and the reconciliation,
+  # from the base draw of each value: none for the values of rwd() draws
+  fw <- mt_fit(reconciled(ens, h, method = "wls", dependence = "schaake"), xa)
+  uw <- mt_forecast(fw, h = 2, n_draws = 40, seed = 1)
+  pw <- mt_forecast(fw, h = 2, n_draws = 40, seed = 1, predictive = TRUE)
+  bw <- mortensor:::with_seed(1, mt_forecast(mortensor:::unwrap_fit(fw, "mt_fit_reconciled"), h = 2, n_draws = 40))
+  s <- b[3]
+  for (a in c(2, 8)) for (t in 1:2) {
+    expect_identical(sum(pw$rates[a, t, s, ] == uw$rates[a, t, s, ]), sum(bw$component == 2L))
+  }
 })

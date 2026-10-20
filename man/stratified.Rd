@@ -35,11 +35,16 @@ moved together. \code{\link[=reconciled]{reconciled()}} keeps the draws as they 
 (\code{dependence = "none"}). Its \code{dependence = "schaake"} reorders the
 draws of every age, year and stratum so that their ranks follow the
 observed changes of distinct training years (the Schaake shuffle of
-Clark et al. 2004, see \code{\link[=mt_reconcile]{mt_reconcile()}}); this also replaces the
-dependence within joint groups.
+Clark et al. 2004, see \code{\link[=mt_reconcile]{mt_reconcile()}}), and \code{dependence = "empirical"}
+reorders the whole paths of each stratum by the observed annual changes
+of its log age-standardised rate; both also replace the dependence
+between the strata of a joint group.
 Each group is fitted and forecast as if it were the whole data, so
 backtests, \code{\link[=anchored]{anchored()}}, \code{\link[=recalibrated]{recalibrated()}} and \code{\link[=reconciled]{reconciled()}} work as for
-any model.
+any model. \code{reconciled(method = "bottom_up")} fits its base model to the
+bottom strata of the hierarchy: named levels that are aggregates of the
+hierarchy (a total or a group of levels) then have no strata and are
+skipped.
 }
 \examples{
 x <- mt_example(deaths = "single", years = 1990:2019)

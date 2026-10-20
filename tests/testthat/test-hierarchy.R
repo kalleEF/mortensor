@@ -58,15 +58,13 @@ test_that("reconciliation keeps the draws as they are by default and never reord
   rb <- mt_reconcile(fc, h3(), method = "bottom_up")
   expect_equal(rb$rates[, , b, ], fc$rates[, , b, ], tolerance = 1e-10)
   expect_identical(mt_reconcile(fc, h3())$rates, mt_reconcile(fc, h3(), dependence = "none")$rates)
-  # the deprecated package-specific reordering still works
-  re <- suppressWarnings(mt_reconcile(fc, h3(), method = "bottom_up", dependence = "empirical", seed = 1),
-                         classes = "mt_warning_deprecated")
+  # the Schaake shuffle of stratum paths reorders the bottom draws
+  re <- mt_reconcile(fc, h3(), method = "bottom_up", dependence = "empirical", seed = 1)
   expect_false(isTRUE(all.equal(re$rates[, , b, ], fc$rates[, , b, ])))
   expect_lt(coherence_gap(re, h3()), 1e-8)
   expect_identical(reconciled(lee_carter(), h3())$params$dependence, "none")
   expect_identical(reconciled(lee_carter(), h3(), dependence = "auto")$params$dependence, "none")
-  expect_identical(suppressWarnings(reconciled(lee_carter(), h3(), dependence = "empirical"),
-                                    classes = "mt_warning_deprecated")$params$dependence, "empirical")
+  expect_identical(reconciled(lee_carter(), h3(), dependence = "empirical")$params$dependence, "empirical")
   # joint models carry the dependence between strata: their paths are not reordered
   expect_warning(sp <- reconciled(li_lee(common_by = "sex"), h3(), dependence = "schaake"),
                  class = "mt_warning_reconcile")
@@ -79,14 +77,6 @@ test_that("reconciliation keeps the draws as they are by default and never reord
   expect_true(mortensor:::spec_is_joint(ensemble(li_lee(), tucker3())))
   expect_false(mortensor:::spec_is_joint(ensemble(li_lee(), lee_carter())))
   expect_false(mortensor:::spec_is_joint(stratified("sex", female = li_lee(), male = lee_carter())))
-})
-
-test_that("the empirical copula keeps each stratum's marginal distribution", {
-  x <- mt_example_regions(years = 2005:2016, regions = 2)
-  fc <- mt_forecast(mt_fit(lee_carter(), x), h = 2, n_draws = 50, seed = 1)
-  re <- with_seed_test(1, mortensor:::copula_reorder(fc$rates, fc$train_D, fc$train_E))
-  expect_equal(sort(re$arr[3, 2, 5, ]), sort(fc$rates[3, 2, 5, ]))
-  expect_length(re$years, 50)
 })
 
 test_that("reconciled models give coherent point and predictive draws and run in backtests", {
