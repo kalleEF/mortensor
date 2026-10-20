@@ -29,11 +29,56 @@ cov_plot <- function(d, facet) {
 }
 ```
 
-TEXT-INTRO
+How well does the pipeline of mortensor work? This vignette reports three
+benchmarks:
+
+1. **Known truth**: on data simulated from the Lee-Carter model, do the
+   forecast intervals contain the true future rates as often as they
+   claim?
+2. **Real data**: how accurate and how well calibrated are the standard
+   models on four data sets, in rolling-origin backtests?
+3. **Defective input**: what does mortensor do with tables that contain
+   typical errors?
+
+The results describe these data and years. They do not tell how a model
+will do on other data; a backtest on your own data does
+(`mt_backtest()`, "Backtesting and scores"). The computations take about
+a quarter of an hour and are run by `dev/benchmarks.R` in the source
+repository; this vignette shows the code and reads the stored results.
+Run on:
+
+```{r}
+res$settings[c("date", "versions")]
+```
+
+Other vignettes hold further benchmarks: "Comparison with demography,
+bamp and StMoMo" (the same models in other packages), "Choosing and
+combining models" (eleven models on England & Wales), "Ungrouping age groups: methods and diagnostics" (errors against known
+single years), "Tuning and recalibration"
+and "Dependence between groups" (totals and gaps).
+
+The scores are those of `mt_score()`: the CRPS of the log death rates
+(lower is better; Gneiting and Raftery 2007) and the coverage of the
+central 50%, 80% and 95% intervals, the share of observed values inside
+them. Well calibrated intervals cover close to their nominal level. All
+forecasts are predictive draws: rates with the variation of the deaths
+that the model assumes.
 
 ## Known truth: data simulated from the model
 
-TEXT-SIM-DESIGN
+`simulate_lc_dgp()` simulates deaths for 10 strata (two sexes, five
+quintiles) and 13 five-year age groups from 30 to 94: each stratum has the
+age pattern of a Lee-Carter model and its own period index, a random walk
+with drift, and the deaths are Poisson with the expected counts of the
+model. Two versions:
+
+* **Poisson deaths**: the model of `lee_carter()` holds exactly;
+* **extra variation**: independent normal noise with standard deviation
+  0.03 on the log rate of every cell, a source of variation that only the
+  negative binomial Lee-Carter model describes.
+
+Each model is fitted to 30 years and forecasts the next 10, in 20
+replicates with different random data.
 
 ```{r, eval = FALSE}
 generators <- list("Lee-Carter, Poisson deaths" = 0, "Lee-Carter, extra variation" = 0.03)
@@ -52,26 +97,53 @@ sim[, mt_score(.SD, by = "model"), by = generator]
 ```
 
 ```{r}
-res$sim$overall[, .(generator, model, crps = fmt(crps, 4), cov50 = fmt(cov50), cov80 = fmt(cov80),
-                    cov95 = fmt(cov95))]
+knitr::kable(res$sim$overall[, .(generator, model, CRPS = fmt(crps, 4), `50%` = fmt(cov50), `80%` = fmt(cov80),
+                                 `95%` = fmt(cov95))])
 ```
 
 ```{r, eval = has_gg, fig.height = 4}
 cov_plot(res$sim$by_horizon, ~ generator)
 ```
 
-TEXT-SIM-RESULTS
+With Poisson deaths, the intervals of `lee_carter()` cover 49.8%, 81.5%
+and 95.9% of the true future rates, close to the nominal 50%, 80% and
+95%, at every horizon (95% coverage 0.947 at one year ahead, 0.965 at
+ten). This is the check that the pipeline is correct: fitting, the
+forecast of the period index with its drift uncertainty, and the Poisson
+variation of the predictive draws together give intervals of the right
+width when the model is true. The negative binomial version estimates no
+overdispersion here and gives the same forecasts.
+
+With extra variation, Lee-Carter is too narrow at short horizons (95%
+coverage 0.83 one year ahead), where the variation of single years
+matters most; the negative binomial version describes it (0.953 overall)
+and has the lowest CRPS. The random walk with drift over-covers (95%
+coverage 0.98 to 0.99): the Poisson noise of the observed rates enters
+every year-to-year change and accumulates in its forecasts. ARIMA(0,1,1)
+with drift separates that noise from the trend but under-covers (0.83
+to 0.84). The mixture of Lee-Carter and the random walk is wider than
+Lee-Carter and over-covers too: a mixture of well calibrated components
+is too wide (Gneiting and Ranjan 2013).
 
 ## Real data: rolling-origin backtests
 
-TEXT-REAL-DESIGN
+Four data sets, with rolling origins and the horizons used in the other
+vignettes. England & Wales and France are Human Mortality Database data
+from StMoMo and demography; England by deprivation and the German
+Laender are the package data (`ons_data`; `de_deaths`, `de_population`
+with suppressed counts estimated as in "Differences between the German
+Laender"). The models are the starting points of the FAQ ("Which model
+should I use?"): Lee-Carter with Poisson or negative binomial deaths,
+the random walk with drift, their equal-weight mixture, Lee-Carter with
+intervals recalibrated to its errors in the last ten training years, and,
+where there are several groups, Li-Lee with a common trend per sex.
 
 ```{r}
-rbindlist(lapply(res$real, function(s) {
-  data.table(data = s$label, strata = s$n_strata, ages = paste(s$ages, collapse = "-"),
+knitr::kable(rbindlist(lapply(res$real, function(s) {
+  data.table(data = s$label, strata = s$n_strata, ages = paste0(s$ages[1], "-", s$ages[2], "+"),
              years = paste(s$periods, collapse = "-"), origins = paste(range(s$origins), collapse = "-"),
              horizon = s$h)
-}))
+})))
 ```
 
 ```{r, eval = FALSE}
@@ -90,7 +162,8 @@ intervals):
 
 ```{r}
 rate <- rbindlist(lapply(res$real, function(s) cbind(data = s$label, s$rate)))
-rate[, .(data, model, crps = fmt(crps, 4), cov50 = fmt(cov50), cov80 = fmt(cov80), cov95 = fmt(cov95))]
+knitr::kable(rate[, .(data, model, CRPS = fmt(crps, 4), `50%` = fmt(cov50), `80%` = fmt(cov80),
+                      `95%` = fmt(cov95))])
 ```
 
 ```{r, eval = has_gg, fig.height = 6}
@@ -102,26 +175,110 @@ Life expectancy at birth (CRPS in years; coverage of the 95% intervals):
 
 ```{r}
 le <- rbindlist(lapply(res$real, function(s) cbind(data = s$label, s$le)))
-le[, .(data, model, crps = fmt(crps), rmse = fmt(rmse), cov80 = fmt(cov80), cov95 = fmt(cov95))]
+knitr::kable(le[, .(data, model, CRPS = fmt(crps), RMSE = fmt(rmse), `80%` = fmt(cov80), `95%` = fmt(cov95))])
 ```
 
-TEXT-REAL-RESULTS
+On real data the model is never true, and intervals are narrower than
+claimed:
+
+* **Lee-Carter** covers 63% to 80% of the observed rates with its 95%
+  intervals, and the shortfall grows with the horizon on England & Wales
+  (0.73 one year ahead, 0.52 ten years ahead). Changes in the pace of
+  decline add uncertainty that a constant drift does not describe.
+* **Negative binomial deaths** widen the intervals of the rates (95%
+  coverage 0.70 against 0.63 on England & Wales, 0.88 against 0.79 on
+  France). For life expectancy on England & Wales its forecasts were
+  worse (CRPS 0.66 against 0.45 years): it estimates a different trend.
+* **Recalibration** widens the intervals of the rates (0.83 against 0.63
+  on England & Wales) without changing the median; one factor for all
+  horizons leaves the shortfall at long horizons.
+* **The random walk with drift** covers 92% to 98% and is the least
+  accurate model on the two data sets with five-year age groups.
+* **The mixture of Lee-Carter and the random walk** covers 93% to 99% of
+  the rates: where the components disagree, the mixture is wide. It has
+  the lowest CRPS on England & Wales and France, and a CRPS within 4% of
+  the best model for the groups of England and Germany.
+* **Li-Lee** is about as accurate as Lee-Carter for these groups
+  (slightly more for the Laender), with similar coverage.
+
+For life expectancy at birth the coverage is higher than for the rates:
+errors of single ages partly cancel. On England & Wales and France the
+95% intervals of most models cover all or nearly all outcomes; by
+deprivation and for the Laender they cover 77% to 92%, with recalibration
+the closest to 95% for the Laender (0.92).
 
 ## Defective input tables
 
-TEXT-DEFECT-DESIGN
+A clean data set (two regions of 200,000 and 100,000 people, two sexes,
+age groups 0-4 to 85+, 2001-2020) and one typical defect at a time. Each scenario runs the workflow of "Your own data, from CSV to report" (`mt_data()`,
+`mt_as_exposure()`, `mt_validate()`, `lee_carter()`, `mt_forecast()`,
+`life_expectancy()`) and records whether mortensor stops with an error,
+warns, reports a finding of `mt_validate()` or continues without a
+message. A third region of 5,000 people is used for small populations.
+The table shows the error and the first warning, shortened.
 
 ```{r}
-short <- function(m) sub("^\\[[a-z_]+\\] ", "", sub("([.;:]) .*$", "\\1", sub(" \\| .*$", "", m)))
-res$defects[, .(defect, outcome, message = short(ifelse(nzchar(error), error, warnings)), result)]
+first <- function(m, n = 200) {
+  m <- sub("^\\[[a-z_]+\\] ", "", sub(" \\| .*$", "", m))
+  ifelse(nchar(m) > n, paste0(substr(m, 1, n - 3), "..."), m)
+}
+knitr::kable(res$defects[, .(defect, outcome, error = first(error), warning = first(warnings), result)])
 ```
 
-TEXT-DEFECT-RESULTS
+Defects that would make a forecast wrong without notice stop the
+pipeline with an error that names the cells or strata: duplicated rows,
+gaps in the years, inconsistent coding of the strata between the tables,
+overlapping or incompatible age groups, zero or negative values and
+suppressed counts, and numbers with decimal commas (the warning suggests
+`decimal = ","`). Rows without a stratum value are left out with a
+warning, and the missing cells then stop the fit. Defects that can be
+repaired without ambiguity are repaired with a warning (rows of totals)
+or without one (factors, financial years, thousands separators). A top
+age that looks like an open interval gets a warning that suggests
+`age_open`. `mt_validate()` reports a level that equals the sum of the
+others (the "Persons" rows) and death rates above 1.
+
+Two outcomes are worth knowing. A mortality shock in the last two years
+passes without a message: whether it belongs in the trend is a decision
+of the analyst (`step_shocks()`, "Excess mortality"). In a region of
+5,000 people more than half of the cells have no deaths, and Lee-Carter
+for each region and sex gives rates above 1 in most draws; the warning
+names the strata and suggests pooling, wider age groups or smoothing.
+Li-Lee with a common trend per sex gives plausible forecasts for the same
+region.
 
 ## What the benchmarks show
 
-TEXT-SUMMARY
+* On data from its own model, Lee-Carter gives intervals with the
+  nominal coverage: the pipeline from fit to predictive draws is
+  calibrated when its assumptions hold.
+* On real data, single models give intervals that are too narrow, more
+  so at long horizons. Mixtures of different models, recalibration and
+  overdispersed deaths widen them; the mixture of Lee-Carter and the
+  random walk came closest to the nominal 95% here, at a CRPS within 4%
+  of the best model.
+* Rankings differ between data sets and between rates and life
+  expectancy. Check the candidate models on your own data with a
+  backtest, and score the quantity you will report.
+* Input tables with typical defects stop the pipeline with messages that
+  locate the problem, or are repaired with a warning.
 
 ## References
 
-TEXT-REFS
+Gneiting T, Raftery AE (2007). Strictly proper scoring rules,
+prediction, and estimation. *Journal of the American Statistical
+Association* 102(477): 359-378. doi:10.1198/016214506000001437.
+
+Gneiting T, Ranjan R (2013). Combining predictive distributions.
+*Electronic Journal of Statistics* 7: 1747-1782. doi:10.1214/13-EJS823.
+
+Lee RD, Carter LR (1992). Modeling and forecasting U.S. mortality.
+*Journal of the American Statistical Association* 87(419): 659-671.
+
+Delwarde A, Denuit M, Partrat C (2007). Negative binomial version of the
+Lee-Carter model for mortality forecasting. *Applied Stochastic Models in
+Business and Industry* 23(5): 385-401. doi:10.1002/asmb.679.
+
+Li N, Lee R (2005). Coherent mortality forecasts for a group of
+populations: an extension of the Lee-Carter method. *Demography* 42(3):
+575-594.
