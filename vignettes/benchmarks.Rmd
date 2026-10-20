@@ -1,0 +1,127 @@
+---
+title: "Benchmarks: how well the pipeline works"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Benchmarks: how well the pipeline works}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width = 7, fig.height = 4.5, message = FALSE)
+has_gg <- requireNamespace("ggplot2", quietly = TRUE)
+res <- readRDS("benchmarks-results.rds")
+library(mortensor)
+library(data.table)
+fmt <- function(x, d = 3) formatC(x, digits = d, format = "f")
+pct <- function(x) sprintf("%.0f%%", 100 * x)
+cov_plot <- function(d, facet) {
+  ggplot2::ggplot(d, ggplot2::aes(x = horizon, y = cov95, colour = model)) +
+    ggplot2::geom_hline(yintercept = 0.95, linetype = 2, colour = "grey50") +
+    ggplot2::geom_line() +
+    ggplot2::geom_point(size = 1) +
+    ggplot2::facet_wrap(facet) +
+    ggplot2::coord_cartesian(ylim = c(0, 1)) +
+    scale_colour_mortensor(type = "categorical") +
+    ggplot2::labs(x = "Horizon (years)", y = "Coverage of 95% intervals", colour = NULL,
+                  subtitle = "Dashed: nominal level") +
+    theme_mortensor()
+}
+```
+
+TEXT-INTRO
+
+## Known truth: data simulated from the model
+
+TEXT-SIM-DESIGN
+
+```{r, eval = FALSE}
+generators <- list("Lee-Carter, Poisson deaths" = 0, "Lee-Carter, extra variation" = 0.03)
+models <- list("Lee-Carter" = lee_carter(), "Lee-Carter (negative binomial)" = lee_carter(family = "nb"),
+               "random walk with drift" = rwd(),
+               "ARIMA(0,1,1) with drift" = arima_series(order = c(0, 1, 1), drift = TRUE),
+               "Lee-Carter + random walk" = ensemble(lc = lee_carter(), rw = rwd()))
+sim <- rbindlist(lapply(names(generators), function(g) {
+  rbindlist(lapply(1:20, function(r) {
+    x <- mortensor:::simulate_lc_dgp(n_t = 40, seed = 1000 + r, sd_obs = generators[[g]])
+    bt <- mt_compare(models, x, origins = 2030, h = 10, n_draws = 500, seed = r)
+    cbind(generator = g, rep = r, as.data.table(bt))
+  }))
+}))
+sim[, mt_score(.SD, by = "model"), by = generator]
+```
+
+```{r}
+res$sim$overall[, .(generator, model, crps = fmt(crps, 4), cov50 = fmt(cov50), cov80 = fmt(cov80),
+                    cov95 = fmt(cov95))]
+```
+
+```{r, eval = has_gg, fig.height = 4}
+cov_plot(res$sim$by_horizon, ~ generator)
+```
+
+TEXT-SIM-RESULTS
+
+## Real data: rolling-origin backtests
+
+TEXT-REAL-DESIGN
+
+```{r}
+rbindlist(lapply(res$real, function(s) {
+  data.table(data = s$label, strata = s$n_strata, ages = paste(s$ages, collapse = "-"),
+             years = paste(s$periods, collapse = "-"), origins = paste(range(s$origins), collapse = "-"),
+             horizon = s$h)
+}))
+```
+
+```{r, eval = FALSE}
+single <- list("Lee-Carter" = lee_carter(), "Lee-Carter (negative binomial)" = lee_carter(family = "nb"),
+               "random walk with drift" = rwd(), "Lee-Carter + random walk" = ensemble(lc = lee_carter(), rw = rwd()),
+               "Lee-Carter, recalibrated" = recalibrated(lee_carter()))
+joint <- c(single, list("Li-Lee" = li_lee(common_by = "sex")))
+ew <- as_mt_data(StMoMo::EWMaleData)
+bt_ew <- mt_compare(single, ew, origins = 1996:2001, h = 10, n_draws = 300, quantities = "life_expectancy")
+mt_score(bt_ew)
+mt_score(bt_ew, target = "life_expectancy")
+```
+
+Death rates (CRPS of log rates; coverage of the 50%, 80% and 95%
+intervals):
+
+```{r}
+rate <- rbindlist(lapply(res$real, function(s) cbind(data = s$label, s$rate)))
+rate[, .(data, model, crps = fmt(crps, 4), cov50 = fmt(cov50), cov80 = fmt(cov80), cov95 = fmt(cov95))]
+```
+
+```{r, eval = has_gg, fig.height = 6}
+rate_h <- rbindlist(lapply(res$real, function(s) cbind(data = s$label, s$rate_h)))
+cov_plot(rate_h, ~ data)
+```
+
+Life expectancy at birth (CRPS in years; coverage of the 95% intervals):
+
+```{r}
+le <- rbindlist(lapply(res$real, function(s) cbind(data = s$label, s$le)))
+le[, .(data, model, crps = fmt(crps), rmse = fmt(rmse), cov80 = fmt(cov80), cov95 = fmt(cov95))]
+```
+
+TEXT-REAL-RESULTS
+
+## Defective input tables
+
+TEXT-DEFECT-DESIGN
+
+```{r}
+short <- function(m) sub("^\\[[a-z_]+\\] ", "", sub("([.;:]) .*$", "\\1", sub(" \\| .*$", "", m)))
+res$defects[, .(defect, outcome, message = short(ifelse(nzchar(error), error, warnings)), result)]
+```
+
+TEXT-DEFECT-RESULTS
+
+## What the benchmarks show
+
+TEXT-SUMMARY
+
+## References
+
+TEXT-REFS

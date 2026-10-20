@@ -1,6 +1,6 @@
 # Interval calibration of random walks and ensembles (2026-10-13)
 
-The scripts of this study were removed in work package E5 (owner's decision: no testing suites in the repository); they are in the git history at commit 3f007d1.
+The scripts of this study were removed in work package E5 (owner's decision: no testing suites in the repository); they are in the git history at commit 3f007d1. Current results for the calibration of the standard models on simulated and real data: vignette "Benchmarks" (`dev/benchmarks.R`).
 
 Question: are the intervals of `rwd()` and of ensembles that contain it too
 wide, as the simulation benchmark suggested, and what should the defaults

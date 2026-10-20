@@ -163,6 +163,10 @@ articles:
       - model-choice
       - models
       - bayesian-apc
+  - title: Benchmarks
+    desc: How well the pipeline works on simulated and real data, and compared with other packages.
+    contents:
+      - benchmarks
       - comparison
   - title: Applications
     desc: Complete analyses from the published tables to the reported results.
