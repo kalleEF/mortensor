@@ -278,3 +278,12 @@ test_that("weights = \"stack\" is deprecated and failed inner backtests give equ
   expect_match(model_assumptions(ensemble(lee_carter(), rwd(), weights = "crps_stack")), "Yao et al. 2018")
   expect_match(model_assumptions(ensemble(lee_carter(), rwd(), weights = "bias")), "Kontis et al. 2017")
 })
+
+test_that("ensemble() warns when inner backtests score fewer origins than requested", {
+  # 11 years: the first inner origin (2003) has 4 training years, fewer than Lee-Carter needs
+  x <- mt_example(deaths = "single", years = 2000:2010)
+  ens <- ensemble(lc = lee_carter(), rw = rwd(), weights = "crps", inner_origins = 3, inner_h = 5)
+  expect_warning(mt_fit(ens, x), class = "mt_warning_ensemble_weights")
+  x2 <- mt_example(deaths = "single", years = 1990:2012)
+  expect_no_warning(mt_fit(ens, x2), class = "mt_warning_ensemble_weights")
+})

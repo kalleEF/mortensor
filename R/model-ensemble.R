@@ -238,6 +238,7 @@ mt_fit.mt_spec_ensemble <- function(spec, data, prep = NULL, cores = 1, ...) {
   inner <- NULL
   if (!is.numeric(p$weights) && p$weights != "equal" || !is.null(p$top_k)) {
     inner <- ensemble_inner_backtests(p, data, prep)
+    ensemble_inner_check(inner, p, names(p$components))
   }
   # top_k: the components with the lowest mean CRPS on the cells that all of
   # them forecast
@@ -313,6 +314,23 @@ ensemble_inner_backtests <- function(p, data, prep) {
       }
     }, error = function(e) NULL))
   })
+}
+
+# Warns when the inner backtest of a component failed or scored fewer
+# origins than requested (too few training years at the first inner origin,
+# or failed fits), so that the weights rest on fewer forecasts than set
+ensemble_inner_check <- function(inner, p, labels) {
+  n_req <- p$inner_origins
+  got <- vapply(inner, function(b) if (is.null(b)) 0L else data.table::uniqueN(as.data.table(b)$origin), 0L)
+  short <- which(got < n_req)
+  if (length(short)) {
+    mt_warn(sprintf(paste("The inner backtests for the ensemble weights scored fewer origins than",
+                          "`inner_origins` = %d for %s; the weights rest on fewer forecasts. Use more training",
+                          "years or smaller `inner_origins` and `inner_h`."), n_req,
+                    paste(sprintf("%s (%d)", labels[short], got[short]), collapse = ", ")),
+            class = "ensemble_weights")
+  }
+  invisible(got)
 }
 
 # Rows of the inner backtests on the cells (origin, stratum, age, year) that
