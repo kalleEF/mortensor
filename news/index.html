@@ -44,6 +44,11 @@
 <h2 class="pkg-version" data-toc-text="0.1.9000" id="mortensor-019000-development-of-020">mortensor 0.1.9000 (development of 0.2.0)<a class="anchor" aria-label="anchor" href="#mortensor-019000-development-of-020"></a></h2>
 <p>Clean break: the 0.1.x interface is replaced (see <code>dev/revamp-plan.md</code>).</p>
 <div class="section level3">
+<h3 id="benchmarks-0-1-9000">Benchmarks<a class="anchor" aria-label="anchor" href="#benchmarks-0-1-9000"></a></h3>
+<ul><li>New vignette “Benchmarks: how well the pipeline works”: interval calibration of the standard models on data simulated from the Lee-Carter model with Poisson deaths, rolling-origin backtests on four real data sets (England &amp; Wales men, France women, England by sex and deprivation quintile, German Laender by sex), and the behaviour of the pipeline on input tables with 26 typical defects, on small populations and on a table of 288,000 rows. The results are precomputed by <code>dev/benchmarks.R</code> and reported without thresholds. On data from its own model, the 95% intervals of <code><a href="../reference/lee_carter.html">lee_carter()</a></code> covered 95.9% of the true rates; on the real data 63% to 80%, and the mixture of Lee-Carter and the random walk 93% to 99%.</li>
+<li>The articles have a section “Benchmarks” with this vignette and the comparison with demography, bamp and StMoMo.</li>
+</ul></div>
+<div class="section level3">
 <h3 id="new-published-models-dependence-between-groups-0-1-9000">New published models; dependence between groups<a class="anchor" aria-label="anchor" href="#new-published-models-dependence-between-groups-0-1-9000"></a></h3>
 <p>Work package E5, implemented from the full papers. All new methods are opt-in; defaults are unchanged.</p>
 <ul><li>

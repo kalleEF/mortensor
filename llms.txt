@@ -452,6 +452,13 @@ Which model to use, and how to combine several.
 - [Choosing and combining models](model-choice.md):
 - [Model reference](models.md):
 - [Bayesian age-period-cohort models with bamp](bayesian-apc.md):
+
+### Benchmarks
+
+How well the pipeline works on simulated and real data, and compared
+with other packages.
+
+- [Benchmarks: how well the pipeline works](benchmarks.md):
 - [Comparison with demography, bamp and StMoMo](comparison.md):
 
 ### Applications

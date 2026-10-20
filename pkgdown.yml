@@ -4,6 +4,7 @@ pkgdown_sha: ~
 articles:
   backtesting: backtesting.html
   bayesian-apc: bayesian-apc.html
+  benchmarks: benchmarks.html
   coherence: coherence.html
   comparison: comparison.html
   decomposition: decomposition.html
@@ -23,4 +24,4 @@ articles:
   smoothing: smoothing.html
   tuning-recalibration: tuning-recalibration.html
   ungrouping: ungrouping.html
-last_built: 2026-10-19T22:42Z
+last_built: 2026-10-20T07:31Z

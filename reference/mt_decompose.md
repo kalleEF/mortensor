@@ -393,7 +393,7 @@ summary(g, by = NULL)
 #>    max_residual
 #>           <num>
 #> 1: 7.105427e-15
-#> 2: 6.661338e-15
+#> 2: 7.105427e-15
 summary(g, by = "age", change = c(2016, 2025))[1:5]
 #>      from     to       period    age          mean       q0.025          q0.5
 #>    <char> <char>       <char> <char>         <num>        <num>         <num>
@@ -422,7 +422,7 @@ mt_decompose(fc, periods = c(2015, 2025), at = 30)
 #> 2:             0.251           1.337             2.231    0.024
 #>    sum_contributions max_residual
 #>                <num>        <num>
-#> 1:             0.993      4.8e-15
+#> 1:             0.993      4.3e-15
 #> 2:             1.302      6.9e-15
 #> jump_off: the amount of the difference (in the unit of the quantity) due to observed instead of fitted rates
 #> in observed years of the draws (see mt_jump_off()); observed = "fitted" decomposes the model's change alone.

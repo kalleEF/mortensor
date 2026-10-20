@@ -65,7 +65,7 @@
 </tr><tr><td><code>R/derive-*.R</code></td>
 <td>Life tables and derived quantities</td>
 </tr><tr><td><code>dev/</code></td>
-<td>Plans, review, progress log, calibration study, package comparison script (not built into the package)</td>
+<td>Plans, review, progress log, study reports, scripts that precompute vignette results (package comparison, benchmarks) (not built into the package)</td>
 </tr></tbody></table></div>
 <div class="section level2">
 <h2 id="conventions">Conventions<a class="anchor" aria-label="anchor" href="#conventions"></a></h2>
@@ -74,7 +74,7 @@
 <li>Errors and warnings: <code>mt_abort(msg, class = "&lt;topic&gt;")</code> and <code>mt_warn(msg, class = "&lt;topic&gt;")</code> give classes <code>mt_error_&lt;topic&gt;</code> and <code>mt_warning_&lt;topic&gt;</code>; tests check classes, not messages. Messages only via <code>mt_inform()</code> (silent unless <code>options(mortensor.verbose = TRUE)</code>).</li>
 <li>data.table inside the package: column names used in non-standard evaluation go into <code><a href="https://rdrr.io/r/utils/globalVariables.html" class="external-link">utils::globalVariables()</a></code> in <code>R/mortensor-package.R</code>. Never name a local variable like a column used in the same <code>[</code> call.</li>
 <li>Plot snapshots (vdiffr) are made with ggplot2 &gt;= 4.0; regenerate them after an intended change or a ggplot2 release (<code><a href="https://testthat.r-lib.org/reference/snapshot_accept.html" class="external-link">testthat::snapshot_review()</a></code>).</li>
-<li>Precomputed vignette results: <code>vignettes/comparison-results.rds</code> comes from <code>dev/compare-packages.R</code> (about one hour); the bamp vignette from <code>dev/precompute-vignettes.R</code>.</li>
+<li>Precomputed vignette results: <code>vignettes/comparison-results.rds</code> comes from <code>dev/compare-packages.R</code> (about one hour), <code>vignettes/benchmarks-results.rds</code> from <code>dev/benchmarks.R</code>; the bamp vignette from <code>dev/precompute-vignettes.R</code>.</li>
 <li>Randomness: functions that simulate take <code>seed = NULL</code> and use <code>with_seed()</code>; parallel code uses <code>parallel</code> with L’Ecuyer streams.</li>
 <li>Code adapted from other packages carries a header with source, version, licence and authors.</li>
 <li>No <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code>/<code><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat()</a></code> for messages outside print methods; plots return ggplot objects; no files written outside <code><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir()</a></code>.</li>
@@ -92,7 +92,7 @@
 <li><p>One work package per commit or pull request; update <code>dev/progress.md</code> and <code>NEWS.md</code> in the same change.</p></li>
 <li><p>Documentation is part of every feature. After a feature works (tests, lint), review and update in the same change: roxygen docs (<code>roxygenise()</code>), README, NEWS, the vignettes that use or should use it (re-knit precomputed ones with <code>dev/precompute-vignettes.R</code>), the function map (<code>vignettes/articles/function-map.Rmd</code>), the FAQ, and <code>_pkgdown.yml</code> (reference index and articles). Then build the pkgdown site locally (<code><a href="https://pkgdown.r-lib.org/reference/build_site.html" class="external-link">pkgdown::build_site()</a></code>, offline: <code>options(pkgdown.internet = FALSE)</code>) and check that every exported function is indexed and every page renders. The site is deployed from <code>main</code> by <code>.github/workflows/pkgdown.yaml</code>.</p></li>
 <li><p>The package is public and labelled as experimental, vibe-coded software (README notice and lifecycle badge, DESCRIPTION, package help, startup message). Keep these notices.</p></li>
-<li><p>Correctness first: run the unit tests; new methods get tests that check them against the published method or a reference implementation (published numbers, the authors’ code, an established package), and exact identities where they hold. Forecast performance (coverage, CRPS, accuracy) depends on the data and is checked by the user with backtests; the repository has no performance benchmarks with thresholds.</p></li>
+<li><p>Correctness first: run the unit tests; new methods get tests that check them against the published method or a reference implementation (published numbers, the authors’ code, an established package), and exact identities where they hold. Forecast performance (coverage, CRPS, accuracy) depends on the data and is checked by the user with backtests; the repository has no performance benchmarks with thresholds. The vignette “Benchmarks” reports how well the pipeline works on simulated and real data, as results without thresholds.</p></li>
 <li><p>Data from other packages (HMD extracts in StMoMo and demography) is loaded in tests and vignettes, never copied into the repository. The owner’s German data stays outside the repository. Exceptions, with the owner’s agreement: <code>ons_data</code> (ONS, Open Government Licence) and the German regional data <code>de_deaths</code>/<code>de_population</code> (Destatis, Datenlizenz Deutschland by-2-0), built by the scripts in <code>data-raw/</code>.</p></li>
 </ul></div>
 </div>

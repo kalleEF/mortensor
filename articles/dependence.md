@@ -271,10 +271,10 @@ mt_score_table(bt, metrics = c("crps", "cov80", "cov95"), hierarchy = h, targets
 #>      <fctr> <fctr>  <num> <num> <num>   <num>    <num>    <num>
 #> 1: separate bottom 0.0378 0.548 0.746   0.301    0.520    0.768
 #> 2: separate  total 0.0392 0.264 0.407   0.349    0.160    0.300
-#> 3:      CAE bottom 0.0398 0.484 0.709   0.322    0.404    0.672
-#> 4:      CAE  total 0.0383 0.382 0.618   0.332    0.340    0.580
-#> 5:      ECC bottom 0.0378 0.556 0.756   0.301    0.508    0.772
-#> 6:      ECC  total 0.0359 0.451 0.656   0.309    0.460    0.680
+#> 3:      CAE bottom 0.0403 0.480 0.702   0.328    0.396    0.672
+#> 4:      CAE  total 0.0390 0.376 0.598   0.340    0.300    0.520
+#> 5:      ECC bottom 0.0378 0.553 0.748   0.301    0.508    0.776
+#> 6:      ECC  total 0.0359 0.460 0.656   0.309    0.460    0.660
 #> 7:   Li-Lee bottom 0.0415 0.570 0.768   0.337    0.552    0.788
 #> 8:   Li-Lee  total 0.0381 0.522 0.742   0.318    0.520    0.760
 ```
@@ -290,8 +290,8 @@ mt_score_table(bt[quintile == "Q1"], metrics = c("crps", "cov50", "cov80", "cov9
 #>       model crps_le_gap cov50_le_gap cov80_le_gap cov95_le_gap
 #>      <fctr>       <num>        <num>        <num>        <num>
 #> 1: separate       0.153         0.94         1.00         1.00
-#> 2:      CAE       0.147         0.36         0.82         1.00
-#> 3:      ECC       0.117         0.52         0.96         1.00
+#> 2:      CAE       0.140         0.46         0.82         1.00
+#> 3:      ECC       0.117         0.50         0.98         1.00
 #> 4:   Li-Lee       0.532         0.02         0.10         0.16
 ```
 

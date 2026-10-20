@@ -4,6 +4,23 @@
 
 Clean break: the 0.1.x interface is replaced (see `dev/revamp-plan.md`).
 
+### Benchmarks
+
+- New vignette “Benchmarks: how well the pipeline works”: interval
+  calibration of the standard models on data simulated from the
+  Lee-Carter model with Poisson deaths, rolling-origin backtests on four
+  real data sets (England & Wales men, France women, England by sex and
+  deprivation quintile, German Laender by sex), and the behaviour of the
+  pipeline on input tables with 26 typical defects, on small populations
+  and on a table of 288,000 rows. The results are precomputed by
+  `dev/benchmarks.R` and reported without thresholds. On data from its
+  own model, the 95% intervals of
+  [`lee_carter()`](../reference/lee_carter.md) covered 95.9% of the true
+  rates; on the real data 63% to 80%, and the mixture of Lee-Carter and
+  the random walk 93% to 99%.
+- The articles have a section “Benchmarks” with this vignette and the
+  comparison with demography, bamp and StMoMo.
+
 ### New published models; dependence between groups
 
 Work package E5, implemented from the full papers. All new methods are

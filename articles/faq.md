@@ -476,10 +476,13 @@ example results of backtests on Human Mortality Database data (England &
 Wales men from StMoMo, France from demography) or on simulated data.
 They hold for these data only; a backtest on your own data
 ([`mt_backtest()`](../reference/mt_backtest.md)) shows how a model
-performs there. The vignette “Comparison with demography, bamp and
-StMoMo” reports accuracy and interval coverage of the models on four
-data sets. The unit tests of the package check the methods against
-published results and reference implementations.
+performs there. The vignette “Benchmarks: how well the pipeline works”
+reports interval calibration on simulated data with known truth,
+backtests of the standard models on four real data sets and the
+behaviour on defective input tables. The vignette “Comparison with
+demography, bamp and StMoMo” compares the models with those packages.
+The unit tests of the package check the methods against published
+results and reference implementations.
 
 ## References
 
