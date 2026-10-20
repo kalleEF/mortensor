@@ -172,6 +172,7 @@ articles:
     desc: Complete analyses from the published tables to the reported results.
     contents:
       - inequality-england
+      - causes-deprivation
       - laender-germany
       - excess-mortality
   - title: Help

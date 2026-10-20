@@ -57,6 +57,28 @@ test_that("par_lapply() with random number streams passes the elements, not thei
   expect_identical(a, b)
 })
 
+test_that("par_lapply() passes on the warnings of forked processes, as with one core", {
+  skip_on_os("windows")
+  f <- function(i) {
+    if (i > 1) mt_warn(sprintf("task %d", i), class = "relay_test", call = NULL)
+    i * 10
+  }
+  relayed <- function(cores) {
+    msgs <- character()
+    value <- withCallingHandlers(par_lapply(1:3, f, cores = cores, streams = TRUE),
+                                 mt_warning_relay_test = function(w) {
+                                   msgs <<- c(msgs, conditionMessage(w))
+                                   invokeRestart("muffleWarning")
+                                 })
+    list(value = value, msgs = msgs)
+  }
+  one <- relayed(1)
+  expect_identical(one$value, list(10, 20, 30))
+  expect_identical(one$msgs, c("task 2", "task 3"))
+  expect_identical(relayed(2), one)
+  expect_warning(par_lapply(1:2, f, cores = 2), class = "mt_warning_relay_test")
+})
+
 test_that("the prepared ARFIMA models of coherent_fdm() give the draws of forecast's simulate()", {
   skip_if_not_installed("demography")
   skip_if_not_installed("fracdiff")

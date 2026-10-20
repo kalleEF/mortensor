@@ -205,7 +205,9 @@ it.
   against WLS.
 * Check the choice at every level of the hierarchy in a backtest, as
   above. The applied vignettes use these methods for causes of death and
-  German Laender.
+  German Laender; "Causes of death by deprivation: coherent and combined
+  forecasts" compares them on one crossed hierarchy of sexes, deprivation
+  quintiles and causes.
 
 ## References
 
