@@ -755,14 +755,39 @@ the last observed (and fitted) year and the first forecast year.
 A mixture (linear pool; Gneiting and Ranjan 2013) of the predictive
 distributions of its components: each draw comes from one component, for
 all strata at once, chosen with probabilities equal to the weights. The
-weights are equal by default. `weights = "stack"` takes the weights that
-minimise the squared error of the weighted mean of the components' median
-forecasts in an inner backtest (stacking; Breiman 1996; for mortality,
-Kessy et al. 2022); using them as mixture probabilities is a deviation,
-since they are optimal for the combination of the medians. `weights =
-"crps"` (weights inverse to the mean CRPS of an inner backtest) and
-`top_k` are package-specific. The mixture contains the uncertainty of
-each component and the disagreement between them.
+weights are equal by default. The other weights come from an inner
+rolling-origin backtest on the training years, so they use no data after
+the forecast origin:
+
+* `weights = "crps_stack"` is stacking of predictive distributions (Yao
+  et al. 2018, Section 2.1, eq. 2.2): the weights on the simplex that
+  minimise the mean CRPS of the mixture over the inner forecasts of the
+  log rates. Yao et al. allow any proper scoring rule and use the
+  logarithmic score; the CRPS (Gneiting and Raftery 2007), computed from
+  the draws, is the choice of this package. The mean CRPS of the mixture
+  is a convex quadratic function of the weights (kernel form of the CRPS,
+  Gneiting and Raftery 2007, eq. 21), minimised exactly.
+* `weights = "bias"` follows Kontis et al. (2017): each component is
+  fitted without the last 13 training years, its projection bias is the
+  observed minus the projected life expectancy averaged over these years,
+  and its weight is `exp(-|bias|)`. The life expectancy is that at the
+  first age of the data; with several strata, one weight per component
+  comes from the mean absolute bias over the strata (package-specific;
+  the paper weights each population separately, which `stratified()`
+  does).
+* `weights = "crps"` takes weights inverse to the mean CRPS of each
+  component. Shang (2012) weights point forecasts inverse to their mean
+  absolute errors, following Bates and Granger (1969); the CRPS of a
+  point forecast is its absolute error, and the extension to predictive
+  distributions is package-specific.
+* `weights = "stack"` is deprecated: it stacks the median forecasts
+  (Breiman 1996; for mortality, Kessy et al. 2022) and uses the weights,
+  which optimise the weighted mean of the medians, as mixture
+  probabilities.
+
+`top_k` keeps the components with the lowest inner CRPS
+(package-specific). The mixture contains the uncertainty of each
+component and the disagreement between them.
 
 ### Different models for groups of strata: `stratified()`
 
@@ -978,6 +1003,9 @@ Barigou K, Goffard P-O, Loisel S, Salhi Y (2023). Bayesian model averaging
 for mortality forecasting using leave-future-out validation. *International
 Journal of Forecasting* 39(2): 674-690.
 
+Bates JM, Granger CWJ (1969). The combination of forecasts. *Operational
+Research Quarterly* 20(4): 451-468.
+
 Bergeron-Boucher M-P, Canudas-Romo V, Oeppen J, Vaupel JW (2017).
 Coherent forecasts of mortality with compositional data analysis.
 *Demographic Research* 37(17): 527-566. doi:10.4054/DemRes.2017.37.17.
@@ -1143,6 +1171,11 @@ Knorr-Held L, Rainer E (2001). Prognosis of lung cancer mortality in West
 Germany: a case study in Bayesian prediction. *Biostatistics* 2(1):
 109-129.
 
+Kontis V, Bennett JE, Mathers CD, Li G, Foreman K, Ezzati M (2017).
+Future life expectancy in 35 industrialised countries: projections with a
+Bayesian model ensemble. *The Lancet* 389(10076): 1323-1335.
+doi:10.1016/S0140-6736(16)32381-9.
+
 Lazarus E, Lewis DJ, Stock JH, Watson MW (2018). HAR inference:
 recommendations for practice. *Journal of Business & Economic Statistics*
 36(4): 541-559.
@@ -1218,6 +1251,10 @@ Sevcikova H, Li N, Kantorova V, Gerland P, Raftery AE (2016). Age-specific
 mortality and fertility rates for probabilistic population projections.
 In Schoen R (ed.) *Dynamic Demographic Analysis*. Springer, 285-310.
 
+Shang HL (2012). Point and interval forecasts of age-specific life
+expectancies: a model averaging approach. *Demographic Research* 27(21):
+593-644. doi:10.4054/DemRes.2012.27.21.
+
 Shang HL, Haberman S (2020). Forecasting age distribution of death
 counts: an application to annuity pricing. *Annals of Actuarial Science*
 14(1): 150-169. doi:10.1017/S1748499519000101.
@@ -1259,6 +1296,10 @@ forecast reconciliation. *Statistics and Computing* 30: 1167-1182.
 
 Wood SN (2017). *Generalized Additive Models: An Introduction with R* (2nd
 ed.). Chapman and Hall/CRC.
+
+Yao Y, Vehtari A, Simpson D, Gelman A (2018). Using stacking to average
+Bayesian predictive distributions (with discussion). *Bayesian Analysis*
+13(3): 917-1007. doi:10.1214/17-BA1091.
 
 Zhang B, Kang Y, Panagiotelis A, Li F (2023). Optimal reconciliation with
 immutable forecasts. *European Journal of Operational Research* 308(2):

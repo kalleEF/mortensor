@@ -7,8 +7,8 @@
 ensemble(
   ...,
   weights = "equal",
-  inner_origins = 3,
-  inner_h = 5,
+  inner_origins = NULL,
+  inner_h = NULL,
   top_k = NULL,
   inner_n_draws = 100
 )
@@ -16,11 +16,14 @@ ensemble(
 \arguments{
 \item{...}{Model specifications; names are used as labels.}
 
-\item{weights}{\code{"equal"}, \code{"crps"}, \code{"stack"} or a numeric vector.}
+\item{weights}{\code{"equal"}, \code{"crps_stack"}, \code{"bias"}, \code{"crps"}, the
+deprecated \code{"stack"}, or a numeric vector.}
 
-\item{inner_origins, inner_h}{Inner backtest for \code{weights = "crps"} and
-\code{weights = "stack"}, and for \code{top_k}: the number of origins and the
-horizon of each inner forecast.}
+\item{inner_origins, inner_h}{Inner backtest for the weights other than
+\code{"equal"} and numeric ones, and for \code{top_k}: the number of origins and
+the horizon of each inner forecast. The last origin is \code{inner_h} years
+before the last training year. Defaults: 3 origins and 5 years; with
+\code{weights = "bias"}, one origin and 13 years (Kontis et al. 2017).}
 
 \item{top_k}{Keep only the \code{top_k} components with the lowest CRPS in the
 inner backtest on the training years (the others get weight 0); \code{NULL}
@@ -42,22 +45,85 @@ draws.
 \details{
 Weights:
 \itemize{
-\item \code{"equal"};
+\item \code{"equal"} (default);
 \item a numeric vector (normalised to sum to 1);
-\item \code{"crps"}: proportional to the inverse mean CRPS of each component in an
-inner rolling-origin backtest on the last years of the training window
-(\code{inner_origins}, \code{inner_h}), so the weights never use data after the
-forecast origin. This is a package heuristic (reference unknown),
-analogous to the inverse mean squared error weights of Bates and
-Granger (1969) with the mean CRPS in place of the mean squared error;
-\item \code{"stack"}: weights that minimise the squared error of the weighted mean
-of the components' median forecasts (log rates) in the same inner
-backtest, constrained to be non-negative and to sum to 1. This is
-stacking of point forecasts (Breiman 1996; for mortality, Kessy,
-Sherris, Villegas and Ziveyi 2022). Using these weights as the
-probabilities of the mixture is a deviation: they are optimal for the
-linear combination of the medians, not for the mixture distribution,
-whose median is not the weighted mean of the medians.
+\item \code{"crps_stack"}: stacking of predictive distributions (Yao, Vehtari,
+Simpson and Gelman 2018, Section 2.1, eq. 2.2): the weights on the
+simplex that optimise a proper scoring rule of the mixture, averaged
+over held-out predictions. The scoring rule is the CRPS. Yao et al.
+define stacking for any proper scoring rule (their Section 2.1 lists
+the CRPS among them) and use the logarithmic score, which needs
+predictive densities; the CRPS, which draws give directly, is a choice
+of this package. The CRPS is proper, and strictly proper for
+distributions with a finite mean (Gneiting and Raftery 2007, Section
+4.2). The held-out
+predictions are the forecasts of the inner rolling-origin backtest on
+the training years (leave-future-out validation, as in Barigou et al.
+2023) in place of the leave-one-out predictions of Yao et al.; they are
+scored on the observed log death rates, as in \code{\link[=mt_backtest]{mt_backtest()}}. With
+draws \code{X_k} of component \code{k}, the CRPS of the mixture at an
+observation \code{y} is \verb{sum_k w_k E|X_k - y| - 1/2 sum_k sum_l w_k w_l E|X_k - X_l'|} with \code{X_k} and \verb{X_l'} independent (the kernel form of
+Gneiting and Raftery 2007, eq. 21, applied to the mixture). The
+expectations are means over all draws and all pairs of draws, so this
+is the CRPS of the pooled draws with weight \code{w_k / n} for each of the
+\code{n} draws of component \code{k}, the estimator of the backtest. Its mean
+over the scored cells is a quadratic function of the weights, convex
+on the simplex (the CRPS is the integral of a squared difference of
+distribution functions, Gneiting and Raftery 2007, eq. 20). The exact
+minimum of this quadratic program is found by an active-set method.
+Weights can be 0, and the minimum need not be unique (for example with
+identical components). Yao et al. (2018, Section 2.3) note that the
+weights can be unstable when the held-out sample is small; the cells
+of an inner backtest with few origins are correlated;
+\item \code{"bias"}: the weights of Kontis et al. (2017, Methods, "Bayesian model
+averaging", steps 1 to 3). They withhold the last 13 years of data, fit
+each model to the earlier years and project the withheld years. The
+projection bias of a model is the observed minus the projected life
+expectancy, averaged over the withheld years. A model gets the weight
+\verb{exp(-|bias|)}, and the weights are normalised to sum to 1. The final
+projections pool draws of the models fitted to all data in proportion
+to the weights. Here the withheld years are those of the inner
+backtest with one origin 13 years before the last training year
+(\code{inner_origins = 1}, \code{inner_h = 13}, the defaults with \code{weights = "bias"}). The projected life expectancy is that of the mean forecast
+rates in each age group and year, here the means of the predictive
+draws of the inner backtest (the code published with the paper uses
+the life expectancy of the posterior mean rates). The observed life
+expectancy is that of the observed rates. Both are computed by
+\code{\link[=life_expectancy]{life_expectancy()}} in the observed age groups at the first age of the
+data, so at birth only when the data start at age 0 (the code published
+with the paper uses life expectancy at birth). Withheld years whose
+observed age groups do
+not cover the age range are skipped, as in \code{\link[=mt_backtest]{mt_backtest()}}.
+Package-specific (reference unknown): with several strata, one weight
+per component from the mean over the strata of \verb{|bias|} (the paper
+weights each country and sex separately; fit one ensemble per
+population with \code{\link[=stratified]{stratified()}} to do so); with \code{inner_origins > 1}, the
+mean of \verb{|bias|} over the origins. The draws of the ensemble come from
+the components with the weights as probabilities; the paper takes
+numbers of draws proportional to the weights;
+\item \code{"crps"}: proportional to the inverse mean CRPS of each component in
+the inner backtest. Shang (2012, Section 3.2.1) weights point
+forecasts of age-specific life expectancies in inverse proportion to
+their mean absolute forecast errors in a validation period, following Bates and
+Granger (1969), and normalises the weights to sum to 1. He combines
+all models, or the two best ones, this way and compares these
+combinations with equal and Bayesian model averaging weights (Tables
+18 and 19). The CRPS of a point forecast is its absolute error
+(Gneiting and Raftery 2007, Section 4.2), so the inverse mean CRPS
+extends these weights to predictive distributions. This extension, the
+log rates as the scored quantity and the use of the weights as mixture
+probabilities are package-specific. \code{top_k = 2} keeps the two
+components with the lowest inner CRPS, as Shang's combination of the
+two best models;
+\item \code{"stack"} (deprecated; use \code{"crps_stack"}): weights that minimise the
+squared error of the weighted mean of the components' median forecasts
+(log rates) in the same inner backtest, constrained to be non-negative
+and to sum to 1. This is stacking of point forecasts (Breiman 1996;
+for mortality, Kessy, Sherris, Villegas and Ziveyi 2022). Using these
+weights as the probabilities of the mixture is a deviation: they are
+optimal for the linear combination of the medians, not for the mixture
+distribution, whose median is not the weighted mean of the medians. It
+still works and warns (class \code{mt_warning_deprecated}).
 }
 
 Each draw of the ensemble comes from one component for all strata, so
@@ -68,9 +134,17 @@ this is recorded in the diagnostics. Any model specification can be a
 component, including joint models, Bayesian models, tuned, bootstrapped
 and reconciled models, and other ensembles. The components must forecast
 the same strata: with \code{\link[=reconciled]{reconciled()}} components, add the aggregates of the
-hierarchy to the data first (\code{\link[=mt_aggregate_strata]{mt_aggregate_strata()}}). Weights from the
-inner backtest (\code{"crps"}, \code{"stack"}, \code{top_k}) compare the components on
-the cells that all of them forecast.
+hierarchy to the data first (\code{\link[=mt_aggregate_strata]{mt_aggregate_strata()}}).
+
+Weights from the inner backtest (\code{"crps_stack"}, \code{"bias"}, \code{"crps"},
+\code{"stack"}, \code{top_k}) use only the training data, so they never use data
+after the forecast origin, also inside an outer backtest. They compare
+the components on the cells that all of them forecast. A component whose
+inner backtest fails gets weight 0; when every inner backtest fails, the
+weights are equal, with a warning of class \code{mt_warning_ensemble_weights}.
+With \code{top_k}, the stacking weights of \code{"crps_stack"} are computed among
+the kept components; with the other weights, the dropped components get
+weight 0.
 
 A mixture is wider than its components when they disagree, which often
 corrects the too narrow intervals of single models; a linear pool of
@@ -87,20 +161,47 @@ the random walk observed with noise, is \code{arima_series(order = c(0, 1, 1), d
 x <- mt_example(deaths = "single")
 ens <- ensemble(lc = lee_carter(), rw = rwd())
 fc <- mt_forecast(mt_fit(ens, x), h = 5, n_draws = 100, seed = 1)
+\donttest{
+# stacking weights from an inner backtest on the training years
+st <- ensemble(lc = lee_carter(), rw = rwd(), weights = "crps_stack", inner_origins = 2, inner_h = 3)
+mt_fit(st, x)$weights
+}
 }
 \references{
-Gneiting T, Ranjan R (2013). Combining predictive distributions.
-\emph{Electronic Journal of Statistics} 7: 1747-1782.
+Barigou K, Goffard P-O, Loisel S, Salhi Y (2023). Bayesian model
+averaging for mortality forecasting using leave-future-out validation.
+\emph{International Journal of Forecasting} 39(2): 674-690.
+\doi{10.1016/j.ijforecast.2022.01.011}
 
 Bates JM, Granger CWJ (1969). The combination of forecasts. \emph{Operational
 Research Quarterly} 20(4): 451-468.
 
 Breiman L (1996). Stacked regressions. \emph{Machine Learning} 24(1): 49-64.
 
+Gneiting T, Raftery AE (2007). Strictly proper scoring rules, prediction,
+and estimation. \emph{Journal of the American Statistical Association}
+102(477): 359-378. \doi{10.1198/016214506000001437}
+
+Gneiting T, Ranjan R (2013). Combining predictive distributions.
+\emph{Electronic Journal of Statistics} 7: 1747-1782.
+
+Harvey AC (1989). \emph{Forecasting, Structural Time Series Models and the
+Kalman Filter}. Cambridge University Press.
+
 Kessy SR, Sherris M, Villegas AM, Ziveyi J (2022). Mortality forecasting
 using stacked regression ensembles. \emph{Scandinavian Actuarial Journal}
 2022(7): 591-626.
 
-Harvey AC (1989). \emph{Forecasting, Structural Time Series Models and the
-Kalman Filter}. Cambridge University Press.
+Kontis V, Bennett JE, Mathers CD, Li G, Foreman K, Ezzati M (2017).
+Future life expectancy in 35 industrialised countries: projections with a
+Bayesian model ensemble. \emph{The Lancet} 389(10076): 1323-1335.
+\doi{10.1016/S0140-6736(16)32381-9}
+
+Shang HL (2012). Point and interval forecasts of age-specific life
+expectancies: a model averaging approach. \emph{Demographic Research} 27(21):
+593-644. \doi{10.4054/DemRes.2012.27.21}
+
+Yao Y, Vehtari A, Simpson D, Gelman A (2018). Using stacking to average
+Bayesian predictive distributions (with discussion). \emph{Bayesian Analysis}
+13(3): 917-1007. \doi{10.1214/17-BA1091}
 }

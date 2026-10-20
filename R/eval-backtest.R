@@ -117,25 +117,38 @@
 #' @export
 mt_backtest <- function(spec, data, origins = NULL, h = 10, prep = NULL, n_draws = 200, n_origins = 5,
                         seed = 1, cores = 1, score_estimated = FALSE, quantities = NULL, contrast = NULL) {
+  backtest_impl(spec, data, origins, h, prep, n_draws, n_origins, seed, cores, score_estimated, quantities,
+                contrast, call = sys.call())
+}
+
+# The backtest of mt_backtest(). With `keep_draws = TRUE` (inner backtests of
+# ensemble()), the rows of rates also carry the draws of the scored log rates
+# (list column `draws`) and the rows of derived quantities the quantity of the
+# mean forecast rates (column `plugin`)
+backtest_impl <- function(spec, data, origins = NULL, h = 10, prep = NULL, n_draws = 200, n_origins = 5,
+                          seed = 1, cores = 1, score_estimated = FALSE, quantities = NULL, contrast = NULL,
+                          keep_draws = FALSE, call = sys.call(-1)) {
   if (length(quantities)) {
     bad <- setdiff(quantities, c("life_expectancy", "asr"))
-    if (length(bad)) mt_abort("`quantities` can be \"life_expectancy\" and \"asr\".", class = "argument")
+    if (length(bad)) {
+      mt_abort("`quantities` can be \"life_expectancy\" and \"asr\".", class = "argument", call = call)
+    }
   }
   check_class(data, "mt_data", "data")
   contrast <- check_backtest_contrast(contrast, data, quantities)
   if (!is.null(attr(data, "smooth"))) {
     mt_abort(paste("`data` were smoothed with mt_smooth(): the forecasts would be scored against smoothed values,",
                    "and the smoother has seen the test years. Pass the raw data and smooth inside each fit:",
-                   "prep = mt_prep(step_smooth(...))."), class = "smoothed_data")
+                   "prep = mt_prep(step_smooth(...))."), class = "smoothed_data", call = call)
   }
-  check_not_ungrouped(data)
+  check_not_ungrouped(data, call = call)
   last <- max(mt_grid(data)$period$lower)
-  origins <- origins %||% backtest_origins(data, h, n_origins, spec$min_periods)
+  origins <- origins %||% backtest_origins(data, h, n_origins, spec$min_periods, call = call)
   origins <- origins[origins < last]
-  if (!length(origins)) mt_abort("No origin leaves test data.", class = "backtest")
+  if (!length(origins)) mt_abort("No origin leaves test data.", class = "backtest", call = call)
   one <- function(o) {
     res <- tryCatch(backtest_origin(spec, data, o, h, prep, n_draws, if (is.null(seed)) NULL else seed + o,
-                                    score_estimated, quantities, contrast), error = function(e) e)
+                                    score_estimated, quantities, contrast, keep_draws), error = function(e) e)
     if (inherits(res, "error")) {
       mt_warn(sprintf("Origin %s failed: %s", o, conditionMessage(res)), class = "backtest_origin")
       return(NULL)
@@ -147,7 +160,7 @@ mt_backtest <- function(spec, data, origins = NULL, h = 10, prep = NULL, n_draws
   res <- par_lapply(origins, one, cores, streams = TRUE)
   backtest_warn_skipped(res, origins)
   out <- rbindlist(res, fill = TRUE)
-  if (!nrow(out)) mt_abort("All origins failed.", class = "backtest")
+  if (!nrow(out)) mt_abort("All origins failed.", class = "backtest", call = call)
   setattr(out, "class", c("mt_backtest", class(out)))
   out
 }
@@ -169,8 +182,8 @@ backtest_warn_skipped <- function(res, origins) {
 
 # Default origins: the last `n_origins` years whose full horizon `h` is
 # observed and that leave `min_periods` training years
-backtest_origins <- function(data, h, n_origins, min_periods) {
-  cl <- sys.call(-1)
+backtest_origins <- function(data, h, n_origins, min_periods, call = sys.call(-1)) {
+  cl <- call
   yrs <- mt_grid(data)$period$lower
   last <- max(yrs)
   origins <- seq(last - h - n_origins + 1, last - h)
@@ -206,7 +219,7 @@ ungrouped_deaths <- function(data) {
 }
 
 backtest_origin <- function(spec, data, origin, h, prep, n_draws, seed, score_estimated = FALSE, quantities = NULL,
-                            contrast = NULL) {
+                            contrast = NULL, keep_draws = FALSE) {
   train <- mt_window(data, to = origin)
   fit <- mt_fit(spec, train, prep = prep)
   last_fit <- max(fit$periods)
@@ -255,13 +268,15 @@ backtest_origin <- function(spec, data, origin, h, prep, n_draws, seed, score_es
     y <- log(pmax(o$value, 0.5) / Ecell)
     sc <- score_samples(X, y, probs)
     scale <- mase_scale(fit, match(test$strata$label[s], fit$strata$label), o)
-    rows[[length(rows) + 1L]] <- cbind(
+    r <- cbind(
       data.table(model = spec$label, prep = prep_label(prep), origin = origin, horizon = o$period_lo - origin,
                  stratum = s, age_lo = o$age_lo, age_hi = o$age_hi, period = o$period_lo, observed = y,
                  scale = scale, target = "rate"),
       sc)
+    if (keep_draws) r[, draws := lapply(seq_len(nrow(X)), function(i) X[i, ])]
+    rows[[length(rows) + 1L]] <- r
     if (length(quantities)) {
-      qr <- quantity_scores(Dcell, o, Ecell, quantities, probs, ages)
+      qr <- quantity_scores(Dcell, o, Ecell, quantities, probs, ages, plugin = keep_draws)
       if (!is.null(qr)) {
         rows[[length(rows) + 1L]] <- quantity_rows(qr, spec, prep, origin, s)
         qdraws[[as.character(s)]] <- qr
@@ -274,7 +289,9 @@ backtest_origin <- function(spec, data, origin, h, prep, n_draws, seed, score_es
     }
   }
   if (!length(rows)) mt_abort("The model failed in every stratum.", class = "backtest")
-  out <- rbindlist(rows)
+  # rows of rates and of derived quantities differ in the columns kept for
+  # inner backtests (draws, plugin)
+  out <- rbindlist(rows, fill = keep_draws)
   out <- merge(data$strata, out, by = "stratum", sort = FALSE)
   if (length(skipped)) setattr(out, "skipped", skipped)
   out[]
@@ -282,10 +299,12 @@ backtest_origin <- function(spec, data, origin, h, prep, n_draws, seed, score_es
 
 # Rows of a backtest table for scored derived quantities
 quantity_rows <- function(qr, spec, prep, origin, s) {
-  cbind(data.table(model = spec$label, prep = prep_label(prep), origin = origin, horizon = qr$period - origin,
-                   stratum = s, age_lo = NA_real_, age_hi = NA_real_, period = qr$period, observed = qr$observed,
-                   scale = NA_real_, target = qr$target),
-        qr$scores)
+  out <- cbind(data.table(model = spec$label, prep = prep_label(prep), origin = origin, horizon = qr$period - origin,
+                          stratum = s, age_lo = NA_real_, age_hi = NA_real_, period = qr$period,
+                          observed = qr$observed, scale = NA_real_, target = qr$target),
+               qr$scores)
+  if (!is.null(qr$plugin)) out[, plugin := qr$plugin]
+  out
 }
 
 # `contrast` of mt_backtest(): c(var = , ref = ) with a stratum variable and
@@ -342,8 +361,9 @@ contrast_quantity_scores <- function(qdraws, strata, contrast, probs) {
 # Scores of derived quantities per test year from the draws of deaths Dcell
 # at the observed cells o, treated like the observed deaths (no floor per
 # cell). Only years whose cells cover the full age range `ages` (lowest
-# age, upper end) without gaps are scored
-quantity_scores <- function(Dcell, o, Ecell, quantities, probs, ages) {
+# age, upper end) without gaps are scored. With `plugin = TRUE`, also the
+# quantity of the mean of the draws of the rates in each cell (`plugin`)
+quantity_scores <- function(Dcell, o, Ecell, quantities, probs, ages, plugin = FALSE) {
   same <- function(a, b) a == b || abs(a - b) < 1e-9
   out <- list()
   for (pp in sort(unique(o$period_lo))) {
@@ -356,10 +376,13 @@ quantity_scores <- function(Dcell, o, Ecell, quantities, probs, ages) {
     ax <- mt_axis(lo, hi, kind = "age")
     R <- Dcell[k, , drop = FALSE] / Ecell[k]
     r_obs <- o$value[k] / Ecell[k]
+    r_mean <- rowMeans(R)
+    qp <- NA_real_
     for (q in quantities) {
       if (q == "life_expectancy") {
         qd <- as.vector(life_expectancy(array(R, c(length(k), 1, 1, ncol(R))), ax))
         qo <- as.vector(life_expectancy(array(r_obs, c(length(k), 1, 1)), ax))
+        if (plugin) qp <- as.vector(life_expectancy(array(r_mean, c(length(k), 1, 1)), ax))
       } else {
         # direct standardisation on the age groups of the ESP 2013 with the
         # exposures of the test year
@@ -372,15 +395,17 @@ quantity_scores <- function(Dcell, o, Ecell, quantities, probs, ages) {
         floor_asr <- min(0.5 / Eg[pos] * g$weight[pos]) / sum(g$weight)
         qd <- log(pmax(asr_columns(R, ax, esp, Ecell[k], per = 1), floor_asr))
         qo <- log(max(asr_columns(matrix(r_obs), ax, esp, Ecell[k], per = 1), floor_asr))
+        if (plugin) qp <- log(max(asr_columns(matrix(r_mean), ax, esp, Ecell[k], per = 1), floor_asr))
       }
       out[[length(out) + 1L]] <- list(period = pp, target = q, at = lo[1], observed = qo, draws = qd,
-                                      scores = score_samples(matrix(qd, 1), qo, probs))
+                                      scores = score_samples(matrix(qd, 1), qo, probs), plugin = qp)
     }
   }
   if (!length(out)) return(NULL)
   list(period = vapply(out, `[[`, 0, "period"), target = vapply(out, `[[`, "", "target"),
        at = vapply(out, `[[`, 0, "at"), observed = vapply(out, `[[`, 0, "observed"),
-       draws = lapply(out, `[[`, "draws"), scores = rbindlist(lapply(out, `[[`, "scores")))
+       draws = lapply(out, `[[`, "draws"), scores = rbindlist(lapply(out, `[[`, "scores")),
+       plugin = if (plugin) vapply(out, `[[`, 0, "plugin"))
 }
 
 # The test data on the age axis of the fit. Cells finer than the age groups
