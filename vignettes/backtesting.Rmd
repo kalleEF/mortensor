@@ -175,6 +175,50 @@ the trend of English mortality changed after 2011. "Tuning and
 recalibration" shows how to widen intervals to the errors of recent
 forecasts, and "Choosing and combining models" how mixtures of models do.
 
+### Life expectancy by horizon
+
+Raftery et al. (2013) check probabilistic forecasts of life expectancy by
+the coverage of their 80%, 90% and 95% intervals and by the standardised
+absolute predictive error (SAPE): the absolute error of the median,
+divided by the standard deviation of the forecast distribution and
+multiplied by `sqrt(pi / 2)`. Its mean is 1 when the forecast
+distribution is correct and normal; above 1, the intervals are too
+narrow. `measures` adds both to `mt_score()`:
+
+```{r}
+s <- mt_score(bt, by = c("model", "horizon"), target = "life_expectancy", measures = c("sape", "cov90"))
+s[, list(model, horizon, mae, sape, cov80, cov90, cov95)]
+```
+
+The mean SAPE is 1.3 to 1.6 for all three models at every horizon: the
+errors of life expectancy are larger than the spread of the forecasts
+implies, and the 90% intervals hold 67% to 84% of the observed values.
+Raftery et al. report a mean SAPE of 1.04 for their model of male life
+expectancy at birth, out of sample over ten years.
+
+### Revisions between origins
+
+A forecast also changes when a year of data is added. Stoeldraijer et
+al. (2013) name robustness as a purpose of a forecast: small changes in
+the observations should change the forecast only modestly. They give no
+measure. `measures = "revision"` gives the mean absolute change of the
+forecast median of each cell (stratum, age group, year) between
+consecutive origins, a measure of this package:
+
+```{r}
+mt_score(bt, measures = "revision")[, list(model, crps, revision)]
+mt_score(bt, target = "life_expectancy", measures = "revision")[, list(model, crps, revision)]
+```
+
+The random walk revises its forecasts of the log rates by 0.12 per added
+year, three times as much as Lee-Carter (0.037) and Li-Lee (0.034). It
+starts from the observed rates of the last year, so their noise moves the
+whole forecast; the two models start from fitted rates. For life
+expectancy the revisions are alike (0.22 to 0.25 years), because the noise
+of the single age groups averages out. Accuracy and robustness can
+conflict (Stoeldraijer et al. 2013); here Li-Lee forecasts the rates
+both most accurately and most robustly.
+
 ## Is the difference larger than chance?
 
 Mean scores over seven origins depend on the particular years. The
@@ -258,6 +302,15 @@ accuracy. *International Journal of Forecasting* 22(4): 679-688.
 Lazarus E, Lewis DJ, Stock JH, Watson MW (2018). HAR inference:
 recommendations for practice. *Journal of Business & Economic
 Statistics* 36(4): 541-559.
+
+Raftery AE, Chunn JL, Gerland P, Ševčíková H (2013). Bayesian
+probabilistic projections of life expectancy for all countries.
+*Demography* 50(3): 777-801.
+
+Stoeldraijer L, van Duin C, van Wissen L, Janssen F (2013). Impact of
+different mortality forecasting methods and explicit assumptions on
+projected future life expectancy: the case of the Netherlands.
+*Demographic Research* 29(13): 323-354.
 
 Tashman LJ (2000). Out-of-sample tests of forecasting accuracy: an
 analysis and review. *International Journal of Forecasting* 16(4):

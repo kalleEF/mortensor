@@ -46,6 +46,7 @@ reference:
       - mt_plot_decomposition
       - standard_population
       - life_table
+      - mt_open_check
       - mt_excess
   - title: 5. Models for one population
     contents:

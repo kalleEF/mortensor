@@ -89,6 +89,60 @@ that end at 85+ or 90+ (as many official tables) give biased levels of
 lifespan variation, more so in recent years with many deaths above these
 ages. Compare measures only between tables with the same open age.
 
+### Closing the open interval with a hazard law
+
+`life_table(open = )` (and the functions that build life tables, such as
+`life_expectancy()`) can replace the constant death rate of the open
+interval by a hazard law fitted by maximum likelihood to the last `k`
+single years below it (10 by default): the Gompertz and Kannisto laws
+(Thatcher, Kannisto and Vaupel 1998), the further laws that Feehan (2018)
+compares (Makeham, Weibull, Beard, log-quadratic, logistic, Perks,
+Lynch-Brown), or for each table the law with the lowest AIC (`"aic"`,
+with observed exposures). Which law extrapolates well is a question of
+the data. `mt_open_check()` follows the design of Thatcher et al.: it fits
+the laws below a cut age and scores their predicted probabilities of
+dying against the observed deaths above it. French women, deaths and
+exposures of 1997-2006 pooled, the laws fitted at 80-89 and scored at
+90-109:
+
+```{r}
+xw <- mt_regroup(mt_subset(fr, sex == "female", periods = c(1997, 2006)), period = 1997)
+chk <- mt_open_check(xw, cut = 90)
+chk[, list(law, n_par, delta_aic, nll, chisq, n_ages, rank)]
+```
+
+`nll` is minus the binomial log-likelihood of the deaths at 90-109 and
+`chisq` the sum of the chi-squared statistics over the `n_ages` test
+ages, about `n_ages` for a correct law and accurate data. The Kannisto
+law extrapolates best, followed by Beard; all laws stay far above the
+noise level, because 720,000 deaths at these ages make small deviations
+visible. The Gompertz and Makeham laws overestimate the probabilities of
+dying above 90 by far, the Kannisto law slightly. The AIC of the fits at
+80-89 (`delta_aic`) prefers the logistic and Perks laws, which
+underestimate them: a law that fits best below the cut need not
+extrapolate best. Thatcher et al. saw the same for their female data,
+where the Kannisto law, a special case of the logistic law, extrapolated
+better.
+
+For French women and men in 2006, life expectancy at 80 from single years
+to 100+ and from tables ending at 85+, with the constant rate and with a
+Kannisto law fitted at 75-84:
+
+```{r}
+x06 <- mt_subset(x, periods = c(2006, 2006))
+e80 <- function(o, open) {
+  e <- life_expectancy(mt_regroup(x06, age = 0:o), at = 80, open = open)
+  e[, list(sex, table = paste0(o, "+, ", open), e80 = mean)]
+}
+dcast(rbindlist(list(e80(100, "reciprocal"), e80(85, "reciprocal"), e80(85, "kannisto"))), sex ~ table,
+      value.var = "e80")
+```
+
+The Kannisto closure about halves the overestimate of the 85+ table (from
+0.35 to 0.19 years for women, from 0.29 to 0.17 years for men). The measures of lifespan variation use the
+closure only for the time lived in the open interval: they still place
+all its deaths at one age.
+
 ## Forecasts
 
 Forecasts of the rates imply forecasts of lifespan variation. Models with
@@ -178,6 +232,9 @@ Bergeron-Boucher M-P, Canudas-Romo V, Oeppen J, Vaupel JW (2017).
 Coherent forecasts of mortality with compositional data analysis.
 *Demographic Research* 37(17): 527-566.
 
+Feehan DM (2018). Separating the signal from the noise: evidence for
+deceleration in old-age death rates. *Demography* 55(6): 2025-2044.
+
 Goldman N, Lord G (1986). A new look at entropy and the life table.
 *Demography* 23(2): 275-282.
 
@@ -195,6 +252,9 @@ Girona.
 Shkolnikov VM, Andreev EM, Begun AZ (2003). Gini coefficient as a life
 table function: computation from discrete data, decomposition of
 differences and empirical examples. *Demographic Research* 8: 305-358.
+
+Thatcher AR, Kannisto V, Vaupel JW (1998). *The Force of Mortality at Ages
+80 to 120*. Odense University Press.
 
 van Raalte A, Riffe T, Dudel C (2024). LifeIneq: Calculate indices of
 lifespan variation. R package version 00.04.09.

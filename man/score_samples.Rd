@@ -11,11 +11,13 @@ score_samples(X, y, probs = wis_probs())
 
 \item{y}{Observed values.}
 
-\item{probs}{Quantile levels (must contain 0.5 and symmetric pairs).}
+\item{probs}{Quantile levels (must contain 0.5 and symmetric pairs,
+among them 0.025, 0.05, 0.1, 0.25 and their complements).}
 }
 \value{
 A \code{data.table} with \code{median}, \code{mean}, \code{crps}, \code{wis}, \code{ae},
-\code{cov50}, \code{cov80}, \code{cov95}, \code{pit}.
+\code{cov50}, \code{cov80}, \code{cov95}, \code{pit}, \code{sd}, \code{cov90}, \code{hw80}, \code{hw90},
+\code{hw95}.
 }
 \description{
 CRPS (the empirical-CDF estimator, Grimit et al. 2006: the CRPS of the
@@ -23,8 +25,9 @@ empirical distribution of the samples, which depends on their number),
 weighted interval score (Bracher et al. 2021, with the 23 quantiles of
 the COVID-19 forecast hubs: 11 central intervals plus the median),
 interval coverage, the PIT (randomised where samples equal the
-observation, Czado, Gneiting and Held 2009) and the absolute error of the
-median.
+observation, Czado, Gneiting and Held 2009), the absolute error of the
+median, the standard deviation of the samples and the half-widths of the
+central 80\%, 90\% and 95\% intervals.
 }
 \references{
 Bracher J, Ray EL, Gneiting T, Reich NG (2021). Evaluating epidemic
