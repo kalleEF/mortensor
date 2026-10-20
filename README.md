@@ -105,7 +105,8 @@ Vignettes:
   *Bayesian age-period-cohort models with bamp*, *Comparison with
   demography, bamp and StMoMo*.
 * **Applications**: *Inequality in England: life expectancy and causes of
-  death by deprivation* (ONS), *Differences between the German Laender*
+  death by deprivation* (ONS), *Causes of death by deprivation: coherent
+  and combined forecasts* (ONS), *Differences between the German Laender*
   (Destatis).
 * **Help**: *Frequently asked questions*, *Function map*.
 

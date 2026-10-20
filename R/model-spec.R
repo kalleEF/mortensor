@@ -287,7 +287,9 @@ describe_missing <- function(D, E, g, strata) {
 # runs with the i-th of independent L'Ecuyer-CMRG random number streams
 # started from one draw of the caller's generator, so results follow
 # set.seed() and do not depend on `cores`; the caller's generator continues
-# after that one draw.
+# after that one draw. Warnings of forked processes would not reach the
+# caller: they are collected in each process and signalled again here, in
+# the order of the tasks, as with cores = 1.
 par_lapply <- function(x, f, cores = 1, streams = FALSE) {
   if (streams) {
     seeds <- rng_streams(length(x))
@@ -297,7 +299,21 @@ par_lapply <- function(x, f, cores = 1, streams = FALSE) {
     x <- seq_along(items)
   }
   if (cores > 1 && .Platform$OS.type == "unix") {
-    parallel::mclapply(x, f, mc.cores = cores, mc.set.seed = TRUE)
+    task <- function(i) {
+      caught <- list()
+      value <- withCallingHandlers(f(i), warning = function(w) {
+        caught[[length(caught) + 1L]] <<- w
+        invokeRestart("muffleWarning")
+      })
+      structure(list(value = value, warnings = caught), class = "mt_par_result")
+    }
+    res <- parallel::mclapply(x, task, mc.cores = cores, mc.set.seed = TRUE)
+    # a failed process returns a "try-error" instead
+    lapply(res, function(r) {
+      if (!inherits(r, "mt_par_result")) return(r)
+      for (w in r$warnings) warning(w)
+      r$value
+    })
   } else {
     lapply(x, f)
   }

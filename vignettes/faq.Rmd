@@ -364,6 +364,11 @@ deaths uses exposures of the forecast years; supply
 population projections as `exposure` when they are available. See
 "Coherent forecasts: totals and their parts" and the applied vignettes
 "Inequality in England" and "Differences between the German Laender".
+"Causes of death by deprivation: coherent and combined forecasts"
+reconciles causes by sex and quintile in one crossed hierarchy,
+`mt_hierarchy(sex = "both", quintile = "England", cause = list(total = "all", additive = "rates"))`,
+and compares the methods and a per-cause ensemble with Lee-Carter in a
+backtest.
 
 ### Will the gap between regions or deprivation groups keep growing?
 
