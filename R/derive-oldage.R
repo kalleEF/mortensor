@@ -12,9 +12,9 @@ oldage_laws <- names(oldage_npar)
 
 # Gauss-Legendre nodes and weights on [0, 1] (Golub-Welsch), computed once
 gauss_legendre01 <- local({
-  cache <- NULL
+  cache <- new.env(parent = emptyenv())
   function() {
-    if (is.null(cache)) {
+    if (is.null(cache$nodes)) {
       n <- 20L
       i <- seq_len(n - 1L)
       b <- i / sqrt(4 * i^2 - 1)
@@ -22,9 +22,9 @@ gauss_legendre01 <- local({
       J[cbind(i, i + 1L)] <- b
       J[cbind(i + 1L, i)] <- b
       e <- eigen(J, symmetric = TRUE)
-      cache <<- list(t = (e$values + 1) / 2, w = e$vectors[1, ]^2)
+      cache$nodes <- list(t = (e$values + 1) / 2, w = e$vectors[1, ]^2)
     }
-    cache
+    cache$nodes
   }
 })
 
@@ -524,8 +524,8 @@ oldage_fit <- function(law, x, N, d) {
   fit
 }
 
-# Integrated hazard of a fitted law over [x, x + 1] for the ages x
-# (matrix [age, schedule])
+# Integrated hazard of a fitted law over [x, x + 1] for the ages x, as a
+# matrix with one row per age and one column per schedule
 oldage_fit_H <- function(fit, x) {
   if (fit$law %in% c("gompertz", "kannisto")) return(tail_hazard(fit$alpha, fit$b, x, fit$law)$H)
   oldage_H(fit$law, fit$theta, x - fit$centre, fit$centre)$H
