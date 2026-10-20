@@ -131,9 +131,11 @@ warning above).
 ## Does coherence cost accuracy?
 
 A backtest from the origins 2010-2014, five years ahead, with the
-reconciliation inside each fit. Two variants are added: MinT with the
+reconciliation inside each fit. Four variants are added: MinT with the
 covariance of the errors of past forecasts (`covariance = "errors"`, see
-below), and WLS after the Schaake shuffle (`dependence = "schaake"`):
+below), WLS after the Schaake shuffle of every cell (`dependence =
+"schaake"`), and bottom-up and WLS after the Schaake shuffle of whole
+stratum paths (`dependence = "empirical"`):
 
 ```{r}
 bt <- mt_compare(list(separate = lee_carter(),
@@ -141,7 +143,10 @@ bt <- mt_compare(list(separate = lee_carter(),
                       wls = reconciled(lee_carter(), h, method = "wls"),
                       mint = reconciled(lee_carter(), h, method = "mint"),
                       "mint, errors" = reconciled(lee_carter(), h, method = "mint", covariance = "errors", years = 5),
-                      "wls, Schaake" = reconciled(lee_carter(), h, method = "wls", dependence = "schaake")),
+                      "wls, Schaake" = reconciled(lee_carter(), h, method = "wls", dependence = "schaake"),
+                      "bottom-up, empirical" = reconciled(lee_carter(), h, method = "bottom_up",
+                                                          dependence = "empirical"),
+                      "wls, empirical" = reconciled(lee_carter(), h, method = "wls", dependence = "empirical")),
                  xa, origins = 2010:2014, h = 5, n_draws = 200)
 mt_score_table(bt, metrics = c("crps", "cov95"), hierarchy = h)
 ```
@@ -151,9 +156,9 @@ aggregates (quintiles for both sexes, England by sex) and the total
 (England) separately.
 
 The bottom series are forecast about as well with every method (CRPS
-0.067-0.068), and their coverage falls a little with WLS and MinT (0.77
-against 0.79). The totals lose accuracy and much coverage: the 95%
-intervals of England contain 0.37-0.42 of the observed rates after
+0.067-0.068), and their coverage falls a little with WLS and MinT
+(0.76-0.77 against 0.79). The totals lose accuracy and much coverage: the
+95% intervals of England contain 0.37-0.41 of the observed rates after
 reconciliation with the default settings (bottom-up, WLS, MinT), against
 0.67 with its own model. The model of England
 captures the common movements of the quintiles in its trend; sums of
@@ -176,6 +181,21 @@ expectancy of single strata. The template has one value per training
 year whose next five years are observed: 5 at the origin 2010, 9 at 2014.
 It assumes that the dependence of the training years holds in the
 forecast years.
+
+The shuffle of stratum paths (`dependence = "empirical"`) applies the
+Schaake shuffle with the stratum as margin. The path of a stratum in one
+draw, all its ages and years, moves as a whole: the paths of each stratum
+are ranked by the mean annual change of its log age-standardised rate
+over the forecast years and take the ranks of the observed annual changes
+of the same rate in distinct training years, the same years for all
+strata. Every stratum keeps its draws, so with bottom-up the scores of
+the bottom series are those of bottom-up without it (CRPS 0.0673,
+coverage 0.793). The 95% intervals of England then contain 0.58 of the
+observed rates, against 0.41 without it, and its CRPS falls from 0.0476
+to 0.0435, below the 0.0449 of England's own model; the aggregates cover
+0.72 instead of 0.66. With WLS, the 95% intervals of England contain 0.56
+of the observed rates (CRPS 0.0440). The template has one value per
+training year after the first: 9 at the origin 2010, 13 at 2014.
 
 The weights of WLS and MinT come from the base draws by default. The
 papers use the covariance of the errors of the base forecasts
@@ -230,9 +250,11 @@ it.
   intervals of the totals are too narrow; check their coverage in a
   backtest.
 * **dependence** for separate forecasts whose totals matter:
-  `"schaake"` takes the dependence from the observed changes of the
-  training years, `"ecc"` from a joint model (vignette "Dependence between
-  groups").
+  `"empirical"` takes how the strata move together from the observed
+  annual changes of the training years and keeps the forecast of each
+  stratum; `"schaake"` takes the dependence of every age, year and stratum
+  from the observed changes; `"ecc"` takes it from a joint model (vignette
+  "Dependence between groups").
 * **covariance = "errors"** for weights of WLS and MinT from the errors of
   past forecasts.
 * **fixed** with **proportional** for a trusted total, for example causes
