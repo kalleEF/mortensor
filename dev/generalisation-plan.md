@@ -510,16 +510,22 @@ countries' trends.
 | Phase | Content | Status |
 |---|---|---|
 | E5 | Negative binomial Lee-Carter; APCI; SAINT; common age effect model; ensemble copula coupling; multiway CoDa; CoDa review; removal of the performance validation suite | done in E5 |
-| Next | coverage by horizon and variogram score in `mt_score()`; `scale = "per_horizon"`; `weights = "crps_stack"`; Schaake shuffle; MinT from errors; further closures | open |
-| Later | `relative_model()`; `anchored(decay = "ar1", to = "filtered")`; bootstrapped local level; `scaled_error`; `method = "errors"` | open |
+| E6 | `ensemble(weights = "crps_stack")` (Yao et al. 2018) and `"bias"` (Kontis et al. 2017), `"crps"` relabelled (Shang 2012), `"stack"` deprecated; `recalibrated(scale = "per_horizon")` (Gneiting et al. 2005) and `method = "errors"` (Keilman et al. 2002; Shang and Hyndman 2017), `scale = "horizon"` deprecated; coverage by horizon in `mt_score_table()`; Schaake shuffle (Clark et al. 2004) with `dependence = "empirical"` deprecated; MinT with the covariance of past errors; the old-age laws of Feehan (2018) with `open = "aic"`; `mt_open_check()` (Thatcher et al. 1998); SAPE, 90% coverage and half-widths (Raftery et al. 2013) and revisions in `mt_score()`; vignettes "Benchmarks" and on causes of death by deprivation | done in E6 |
+| Blocked: only abstracts available | age-specific dispersion (Li, Hardy and Tan 2009); smooth dispersion for `p_splines()` (Djeundje and Currie 2011); non-diverging forecasts of `cae()` (Enchev, Kleinow and Cairns 2017); filtered jump-off (De Jong and Tickle 2006); `mt_pessimism()` (Wilmoth 1995); joint components of `coda_causes()` (Kjærgaard et al. 2019); a choice of the deviation process for deprivation groups (Villegas and Haberman 2014); relabelling `anchored(years)` (the study summarised by Janssen 2018) | open |
+| Not implemented: package-specific or without an accessible source | `scale = "scaled_error"`; `anchored(decay = "ar1")`; a pooled local level model; shrinkage and bootstrap intervals of ensemble weights; `mt_dispersion()`; the variogram score | none |
 
 Each item is one work package with correctness tests, NEWS, progress log,
 help, vignettes and pkgdown (`CLAUDE.md`). New methods are opt-in.
 
-**Decisions.** Taken on 2026-10-19 (Section 0). Open: whether to offer
-reverting (coherent) deviations for deprivation groups, which forecast the
-ONS and German gaps worst; whether to relabel `anchored(years)` and
-`ensemble(weights = "crps")`.
+**Decisions.** Taken on 2026-10-19 (Section 0) and 2026-10-20: implement
+every item whose source is available. `ensemble(weights = "crps")` is
+relabelled. Open: whether to offer a choice of the deviation process for
+deprivation groups (stationary, random walk, random walk with drift),
+which waits for the full text of Villegas and Haberman (2014); until then
+the reverting models (`li_lee()`, `coherent_fdm()`, `saint()`), separate
+trends (`lee_carter()` per stratum) and common age effects with their own
+drifts (`cae()`) are available, and the vignettes state their assumption
+on the gaps.
 
 ## 4. References
 
