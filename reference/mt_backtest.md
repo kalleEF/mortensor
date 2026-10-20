@@ -108,9 +108,12 @@ steps, `"none"` without), `origin`, `horizon`, stratum columns,
 `scale` (mean absolute year-to-year change in the training data),
 `target` (`"rate"`, or the derived quantity), the forecast `median` and
 `mean`, and the scores `crps`, `wis`, `ae` (absolute error of the
-median), `cov50`, `cov80`, `cov95` and `pit` (randomised for ties). Rows
-of derived quantities have no `age_lo`, `age_hi` and `scale`. Summarise
-with [`mt_score()`](mt_score.md).
+median), `cov50`, `cov80`, `cov95` and `pit` (randomised for ties), and
+for the opt-in summaries of [`mt_score()`](mt_score.md) (`measures`) the
+standard deviation of the draws `sd`, `cov90` and the half-widths
+`hw80`, `hw90` and `hw95` of the central intervals. Rows of derived
+quantities have no `age_lo`, `age_hi` and `scale`. Summarise with
+[`mt_score()`](mt_score.md).
 
 ## Details
 

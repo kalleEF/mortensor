@@ -26,14 +26,15 @@ reconciled(
   method = c("wls", "mint", "structural", "ols", "bottom_up", "proportional",
     "energy_score"),
   shrink = "auto",
-  dependence = c("none", "ecc", "empirical", "auto"),
+  dependence = c("none", "ecc", "schaake", "empirical", "auto"),
   fixed = NULL,
   years = 10,
   n_origins = 5,
   horizon = 5,
   control = list(),
   seed = 1,
-  template = NULL
+  template = NULL,
+  covariance = c("draws", "errors")
 )
 ```
 
@@ -58,24 +59,27 @@ reconciled(
 
 - shrink:
 
-  See [`mt_reconcile()`](mt_reconcile.md).
+  See [`mt_reconcile()`](mt_reconcile.md); with `covariance = "errors"`
+  the shrinkage intensity for the errors.
 
 - dependence:
 
   `"none"` (default: the draws are reconciled as they are), `"ecc"`,
-  `"empirical"` or `"auto"` (the same as `"none"`, kept for
-  compatibility). With `"ecc"` the draws of the base model take the
-  dependence of the draws of `template` before reconciliation (ensemble
-  copula coupling, Schefzik, Thorarinsdottir and Gneiting 2013): the
-  same as `reconciled(coupled(spec, template), ...)`, see
-  [`coupled()`](coupled.md). With `"empirical"` the paths of separately
-  fitted strata are reordered before reconciliation by a
-  package-specific method (see [`mt_reconcile()`](mt_reconcile.md)).
-  Draws of joint models such as [`li_lee()`](li_lee.md) and
-  [`tucker3()`](tucker3.md), which carry the dependence between strata,
-  are never reordered by `"empirical"` (it then gives a warning and is
-  ignored). The observation noise of predictive draws is independent
-  across cells either way.
+  `"schaake"`, `"empirical"` (deprecated) or `"auto"` (the same as
+  `"none"`, kept for compatibility). With `"ecc"` the draws of the base
+  model take the dependence of the draws of `template` before
+  reconciliation (ensemble copula coupling, Schefzik, Thorarinsdottir
+  and Gneiting 2013): the same as
+  `reconciled(coupled(spec, template), ...)`, see
+  [`coupled()`](coupled.md). With `"schaake"` they take the ranks of the
+  observed changes of distinct training years (the Schaake shuffle of
+  Clark et al. 2004, see [`mt_reconcile()`](mt_reconcile.md)); the
+  template comes from the training data of each fit, also inside
+  [`mt_backtest()`](mt_backtest.md). Draws of joint models such as
+  [`li_lee()`](li_lee.md) and [`tucker3()`](tucker3.md), which carry the
+  dependence between strata, are never reordered by `"schaake"` (it then
+  gives a warning and is ignored). The observation noise of predictive
+  draws is independent across cells either way.
 
 - fixed:
 
@@ -84,35 +88,44 @@ reconciled(
 
 - years, n_origins, horizon:
 
-  Training of `method = "energy_score"`: the length of the training
-  window (the last `years` observed years), the number of inner origins
-  in it (as in [`recalibrated()`](recalibrated.md)) and the number of
-  years each inner forecast covers (horizons 1 to `horizon`, cut at the
-  last training year).
+  Training of `method = "energy_score"` and of `covariance = "errors"`:
+  the length of the training window (the last `years` observed years),
+  the number of inner origins in it (as in
+  [`recalibrated()`](recalibrated.md)) and the number of years each
+  inner forecast covers (horizons 1 to `horizon`, cut at the last
+  training year).
 
 - control:
 
-  Settings of the training for `method = "energy_score"`: a list with
-  any of `n_draws` (draws per inner forecast, default 100),
-  `draws_per_step` (draws per training forecast in each step, 50),
-  `max_iter` (number of steps, 500), `eta` (learning rate, 0.001),
-  `beta1` (0.9), `beta2` (0.999), `tol` (1e-4) and `epsilon` (1e-8), as
-  in `ProbReco::scoreopt.control()`. The optimisation stops early when
-  no parameter moves by more than `tol` in a step, so `tol` must be
-  below `eta` (0 runs all steps). `max_iter = 0` gives OLS
-  reconciliation.
+  Settings of the training for `method = "energy_score"` (`n_draws` also
+  for `covariance = "errors"`): a list with any of `n_draws` (draws per
+  inner forecast, default 100), `draws_per_step` (draws per training
+  forecast in each step, 50), `max_iter` (number of steps, 500), `eta`
+  (learning rate, 0.001), `beta1` (0.9), `beta2` (0.999), `tol` (1e-4)
+  and `epsilon` (1e-8), as in `ProbReco::scoreopt.control()`. The
+  optimisation stops early when no parameter moves by more than `tol` in
+  a step, so `tol` must be below `eta` (0 runs all steps).
+  `max_iter = 0` gives OLS reconciliation.
 
 - seed:
 
-  Random seed of the training for `method = "energy_score"` (inner
-  forecasts, observation noise and the draws of each step), so that fits
-  are reproducible.
+  Random seed of the training for `method = "energy_score"` and
+  `covariance = "errors"` (inner forecasts, observation noise and the
+  draws of each step), so that fits are reproducible. The Schaake
+  shuffle uses the `seed` of [`mt_forecast()`](mt_forecast.md).
 
 - template:
 
   With `dependence = "ecc"`: the model specification whose draws give
   the dependence, usually a joint model such as [`cae()`](cae.md) or
   [`li_lee()`](li_lee.md).
+
+- covariance:
+
+  `"draws"` (default: the weights of `"wls"` and `"mint"` from the base
+  draws of each age and forecast year, see
+  [`mt_reconcile()`](mt_reconcile.md)) or `"errors"` (from the errors of
+  inner forecasts in the training data, see Details).
 
 ## Value
 
@@ -122,7 +135,12 @@ A model specification. With `method = "energy_score"` its fit holds
 inner `origins`, the `control` settings and a `table` per age with the
 number of training forecasts, the scale of the bottom strata, the number
 of steps, and the mean in-sample energy score with OLS (`energy_ols`)
-and with the estimated \\d\\ and \\G\\ (`energy_opt`).
+and with the estimated \\d\\ and \\G\\ (`energy_opt`). With
+`covariance = "errors"` its fit holds `$reconcile$errors`: the errors
+`[age, horizon, stratum, origin]`, the number of error vectors with
+observed values for every stratum per age and horizon (`n`) and the
+inner `origins`. Forecasts with `dependence = "schaake"` report the
+shuffle in `$schaake` (see [`mt_reconcile()`](mt_reconcile.md)).
 
 ## Details
 
@@ -227,6 +245,50 @@ optimisation takes about 3 seconds per age for 54 strata with the
 defaults. `control$max_iter = 0` gives OLS reconciliation at the cost of
 the inner forecasts.
 
+**Weights from past errors.** `covariance = "errors"` with
+`method = "wls"` or `"mint"`. MinT weights the base forecasts by the
+covariance matrix of their `h`-step forecast errors (Wickramasuriya,
+Turlach and Hyndman 2020, Section 2.1, after Wickramasuriya et al.
+2019); Hyndman et al. (2011, Section 3) note that reconciled intervals
+need this matrix. With `covariance = "errors"` it is estimated from
+errors of past forecasts. Each time the model is fitted (also at every
+origin of an outer [`mt_backtest()`](mt_backtest.md)), the base model is
+refitted at `n_origins` inner origins in the last `years` of the
+training data, as for `"energy_score"`, and forecasts the next `horizon`
+years (cut at the last training year) with `control$n_draws` draws and
+the observed exposures. The error of a stratum is its observed value
+minus the mean of its draws, on the scale of the reconciliation (deaths,
+or rates when the levels share exposures). For each age and inner
+horizon `h`, `"mint"` takes the shrinkage estimator of MinT: the sample
+covariance of the `n` error vectors `e`, \\\hat W = n^{-1} \sum e e'\\
+(errors of mean zero), shrunk towards its diagonal, \\\lambda \\
+diag(\hat W) + (1 - \lambda) \hat W\\, with \\\lambda = \sum\_{i \ne j}
+\widehat{Var}(r\_{ij}) / \sum\_{i \ne j} r\_{ij}^2\\ from the
+correlations \\r\_{ij}\\ of the errors (Schäfer and Strimmer 2005;
+Wickramasuriya et al. 2019; Wickramasuriya et al. 2020, Section 5: the
+estimator "shrinks the sample correlation matrix towards an identity
+matrix"). Panagiotelis et al. (2023, Table 1) give the same form and
+write \\\lambda\\ with the covariances. `"wls"` takes the diagonal, the
+mean squared errors. `shrink` fixes \\\lambda\\; `shrink = 1` gives the
+result of `"wls"`. The draws are then projected as with the default
+weights, as Panagiotelis et al. (2023, Section 7.3, MinTShr) do for
+probabilistic forecasts. The errors are reported in the fit (see Value).
+
+Deviations: the papers estimate the weights from the in-sample
+one-step-ahead residuals of the base models and take them as
+proportional for all horizons (Wickramasuriya et al. 2019). Here the
+`h`-step errors of inner forecasts estimate the weights of each horizon,
+one set per age (every age is a hierarchy of its own). Package-specific
+(reference unknown): forecast years beyond `horizon` take the weights of
+the longest inner horizon (a projection does not change when its weights
+are multiplied by a constant, so this is the papers' proportionality
+beyond `horizon`); an inner horizon with fewer than 2 error vectors with
+observed values for every stratum takes the weights of the next shorter
+one; ages without any take the weights from the draws, with a warning.
+Each age and horizon has at most `n_origins` errors, from overlapping
+forecasts; with many strata the shrinkage intensity is then often high,
+and `"mint"` near `"wls"` with the error variances.
+
 ## References
 
 Panagiotelis A, Gamakumara P, Athanasopoulos G, Hyndman RJ (2023).
@@ -240,6 +302,31 @@ quantification in complex simulation models using ensemble copula
 coupling. *Statistical Science* 28(4): 616-640.
 [doi:10.1214/13-STS443](https://doi.org/10.1214/13-STS443)
 
+Clark M, Gangopadhyay S, Hay L, Rajagopalan B, Wilby R (2004). The
+Schaake shuffle: a method for reconstructing space-time variability in
+forecasted precipitation and temperature fields. *Journal of
+Hydrometeorology* 5(1): 243-262.
+
+Hyndman RJ, Ahmed RA, Athanasopoulos G, Shang HL (2011). Optimal
+combination forecasts for hierarchical time series. *Computational
+Statistics & Data Analysis* 55(9): 2579-2589.
+
+Wickramasuriya SL, Athanasopoulos G, Hyndman RJ (2019). Optimal forecast
+reconciliation for hierarchical and grouped time series through trace
+minimization. *Journal of the American Statistical Association*
+114(526): 804-819.
+[doi:10.1080/01621459.2018.1448825](https://doi.org/10.1080/01621459.2018.1448825)
+
+Wickramasuriya SL, Turlach BA, Hyndman RJ (2020). Optimal non-negative
+forecast reconciliation. *Statistics and Computing* 30: 1167-1182.
+[doi:10.1007/s11222-020-09930-0](https://doi.org/10.1007/s11222-020-09930-0)
+
+Schäfer J, Strimmer K (2005). A shrinkage approach to large-scale
+covariance matrix estimation and implications for functional genomics.
+*Statistical Applications in Genetics and Molecular Biology* 4(1):
+Article 32.
+[doi:10.2202/1544-6115.1175](https://doi.org/10.2202/1544-6115.1175)
+
 ## Examples
 
 ``` r
@@ -247,6 +334,20 @@ x <- mt_example_regions(years = 2000:2019, regions = 3)
 h <- mt_hierarchy(sex = "both", region = "all", quintile = "all")
 fit <- mt_fit(reconciled(lee_carter(), h, method = "wls"), mt_aggregate_strata(x, h))
 fc <- mt_forecast(fit, h = 5, n_draws = 50, seed = 1)
+# the Schaake shuffle of the separate Lee-Carter forecasts, then MinT with
+# the covariance of the errors of forecasts from 4 inner origins
+sm <- reconciled(lee_carter(), h, method = "mint", dependence = "schaake", covariance = "errors",
+                 years = 8, n_origins = 4, horizon = 3)
+fit_sm <- mt_fit(sm, mt_aggregate_strata(x, h))
+fit_sm$reconcile$errors$n[1:3, ]
+#>        horizon
+#> age     1 2 3
+#>   40-44 4 4 3
+#>   45-49 4 4 3
+#>   50-54 4 4 3
+fc_sm <- mt_forecast(fit_sm, h = 5, n_draws = 50, seed = 1)
+fc_sm$schaake$dates
+#> [1] 15
 # \donttest{
 # score-optimal reconciliation, trained on forecasts of 2012-2019 from 4 origins
 es <- reconciled(lee_carter(), h, method = "energy_score", years = 8, n_origins = 4, horizon = 3,

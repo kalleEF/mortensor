@@ -163,8 +163,11 @@ the MASE scale <code>scale</code> (mean absolute year-to-year change in the
 training data), <code>target</code> (<code>"rate"</code>, or the derived quantity), the
 forecast <code>median</code> and <code>mean</code>, and the scores <code>crps</code>, <code>wis</code>, <code>ae</code>
 (absolute error of the median), <code>cov50</code>, <code>cov80</code>, <code>cov95</code> and <code>pit</code>
-(randomised for ties). Rows of derived quantities
-have no <code>age_lo</code>, <code>age_hi</code> and <code>scale</code>. Summarise with <code><a href="mt_score.html">mt_score()</a></code>.</p>
+(randomised for ties), and for the opt-in summaries of <code><a href="mt_score.html">mt_score()</a></code>
+(<code>measures</code>) the standard deviation of the draws <code>sd</code>, <code>cov90</code> and the
+half-widths <code>hw80</code>, <code>hw90</code> and <code>hw95</code> of the central intervals. Rows of
+derived quantities have no <code>age_lo</code>, <code>age_hi</code> and <code>scale</code>. Summarise
+with <code><a href="mt_score.html">mt_score()</a></code>.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>

@@ -4,14 +4,16 @@ empirical distribution of the samples, which depends on their number),
 weighted interval score (Bracher et al. 2021, with the 23 quantiles of
 the COVID-19 forecast hubs: 11 central intervals plus the median),
 interval coverage, the PIT (randomised where samples equal the
-observation, Czado, Gneiting and Held 2009) and the absolute error of the
-median."><meta property="og:description" content="CRPS (the empirical-CDF estimator, Grimit et al. 2006: the CRPS of the
+observation, Czado, Gneiting and Held 2009), the absolute error of the
+median, the standard deviation of the samples and the half-widths of the
+central 80%, 90% and 95% intervals."><meta property="og:description" content="CRPS (the empirical-CDF estimator, Grimit et al. 2006: the CRPS of the
 empirical distribution of the samples, which depends on their number),
 weighted interval score (Bracher et al. 2021, with the 23 quantiles of
 the COVID-19 forecast hubs: 11 central intervals plus the median),
 interval coverage, the PIT (randomised where samples equal the
-observation, Czado, Gneiting and Held 2009) and the absolute error of the
-median."></head><body>
+observation, Czado, Gneiting and Held 2009), the absolute error of the
+median, the standard deviation of the samples and the half-widths of the
+central 80%, 90% and 95% intervals."></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -59,8 +61,9 @@ empirical distribution of the samples, which depends on their number),
 weighted interval score (Bracher et al. 2021, with the 23 quantiles of
 the COVID-19 forecast hubs: 11 central intervals plus the median),
 interval coverage, the PIT (randomised where samples equal the
-observation, Czado, Gneiting and Held 2009) and the absolute error of the
-median.</p>
+observation, Czado, Gneiting and Held 2009), the absolute error of the
+median, the standard deviation of the samples and the half-widths of the
+central 80%, 90% and 95% intervals.</p>
     </div>
 
     <div class="section level2">
@@ -81,13 +84,15 @@ median.</p>
 
 
 <dt id="arg-probs">probs<a class="anchor" aria-label="anchor" href="#arg-probs"></a></dt>
-<dd><p>Quantile levels (must contain 0.5 and symmetric pairs).</p></dd>
+<dd><p>Quantile levels (must contain 0.5 and symmetric pairs,
+among them 0.025, 0.05, 0.1, 0.25 and their complements).</p></dd>
 
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>A <code>data.table</code> with <code>median</code>, <code>mean</code>, <code>crps</code>, <code>wis</code>, <code>ae</code>,
-<code>cov50</code>, <code>cov80</code>, <code>cov95</code>, <code>pit</code>.</p>
+<code>cov50</code>, <code>cov80</code>, <code>cov95</code>, <code>pit</code>, <code>sd</code>, <code>cov90</code>, <code>hw80</code>, <code>hw90</code>,
+<code>hw95</code>.</p>
     </div>
     <div class="section level2">
     <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a></h2>

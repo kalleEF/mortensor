@@ -4,6 +4,86 @@
 
 Clean break: the 0.1.x interface is replaced (see `dev/revamp-plan.md`).
 
+### Published methods from the generalisation plan
+
+Work package E6: the items of `dev/generalisation-plan.md` whose sources
+are available, implemented from the papers. All are opt-in; defaults are
+unchanged.
+
+Combining models:
+
+- `ensemble(weights = "crps_stack")`: stacking of predictive
+  distributions (Yao et al. 2018) with the CRPS as scoring rule, on the
+  inner leave-future-out forecasts; the weights solve the quadratic
+  program of the mixture CRPS exactly.
+- `ensemble(weights = "bias")`: the weights of Kontis et al. (2017),
+  exp(-\|bias\|) of life expectancy over withheld years.
+- `weights = "crps"` is described as the extension of the inverse-error
+  weights of Shang (2012) to predictive distributions; behaviour
+  unchanged. `weights = "stack"` (stacked medians used as mixture
+  weights) is deprecated in favour of `"crps_stack"`.
+
+Calibration over horizons:
+
+- `recalibrated(scale = "per_horizon")`: one spread factor for each
+  horizon, as post-processing per lead time (Gneiting et al. 2005).
+  `scale = "horizon"` (a package-specific power law) is deprecated.
+- `recalibrated(method = "errors")`: median forecasts plus resampled
+  past forecast errors of all ages and strata (Keilman, Pham and Hetland
+  2002; Shang and Hyndman 2017). The intervals are as wide as the past
+  errors allow: with few inner origins they are narrow at long horizons.
+- `mt_score_table(by = c("model", "horizon"))` documented and tested.
+
+Dependence and reconciliation:
+
+- `reconciled(dependence = "schaake")` and
+  `mt_reconcile(dependence = "schaake")`: the Schaake shuffle (Clark et
+  al. 2004), with observed changes of distinct training years as
+  template. It also replaces the dependence between ages within a
+  stratum. `dependence = "empirical"` is deprecated in favour of it.
+- `reconciled(method = "wls"/"mint", covariance = "errors")`: weights
+  from the errors of inner forecasts, with the shrinkage estimator of
+  MinT.
+
+Old ages and evaluation:
+
+- `life_table(open = )` has the further old-age laws compared by Feehan
+  (2018): Makeham, Weibull, Beard, log-quadratic, logistic, Perks and
+  Lynch-Brown, fitted by maximum likelihood, and `open = "aic"`. An
+  invalid `open` value is now an error.
+- [`mt_open_check()`](../reference/mt_open_check.md): fits old-age laws
+  below a cut age and scores their extrapolation above it, the design of
+  Thatcher, Kannisto and Vaupel (1998), whose chi-squared values it
+  reproduces within 1%.
+- `mt_score(measures = )`: SAPE, 90% coverage and interval half-widths
+  of life expectancy (Raftery et al. 2013), and the revision of
+  forecasts between consecutive origins (package-specific measure).
+  Backtest tables gain the columns `sd`, `cov90`, `hw80`, `hw90` and
+  `hw95`.
+
+Vignettes and fixes:
+
+- New vignette “Causes of death by deprivation: coherent and combined
+  forecasts” (precomputed): causes of death by sex and deprivation
+  quintile at ages 50 and over, reconciled over one crossed hierarchy to
+  England, both sexes and all causes (bottom-up, WLS, MinT, proportional
+  to a fixed all-cause forecast), and per-cause ensembles with tuned
+  windows, stacking weights and recalibration against Lee-Carter. The
+  ensembles forecast the cause-specific rates 6-7% more accurately and
+  the life expectancy gap between quintiles less accurately; no
+  difference was significant in a Diebold-Mariano test over four
+  origins.
+- Warnings raised in parallel workers (`cores > 1`) are now passed on in
+  task order; before, failed backtest origins and model warnings were
+  lost.
+- [`ensemble()`](../reference/ensemble.md) warns (class
+  `mt_warning_ensemble_weights`) when its inner backtests score fewer
+  origins than `inner_origins`, so that weights resting on fewer
+  forecasts are visible.
+
+Not implemented, because only abstracts were available or the method
+would be package-specific: see the roadmap of the plan.
+
 ### Benchmarks
 
 - New vignette “Benchmarks: how well the pipeline works”: interval

@@ -130,7 +130,7 @@ ones you will report) decides. As a starting point:
 | Several strata that should not diverge (sexes, regions, deprivation groups) | `li_lee(common_by = ...)` | a common trend with bounded deviations; pools information across strata |
 | Small populations, many cells with few deaths | `li_lee(common_by = ...)`; adults: `saint(reference = ...)` against a national total; wider age groups ([`mt_regroup()`](../reference/mt_regroup.md)), [`step_smooth()`](../reference/mt_prep.md); `arima_series(order = c(0, 1, 1), drift = TRUE)` in ensembles | pooling and smoothing reduce noise; SAINT takes the trend from a large reference population; the plain random walk accumulates it, the random walk observed with noise separates it from the trend |
 | Totals and parts must add up | `reconciled(model, hierarchy)` | bottom-up for joint models, WLS for separate models |
-| Totals or gaps of strata forecast by separate models | `coupled(model, template = li_lee())` or a joint model such as [`cae()`](../reference/cae.md) ([`vignette("dependence")`](../articles/dependence.md)) | separate models give independent errors, so intervals of totals are too narrow and those of gaps too wide |
+| Totals or gaps of strata forecast by separate models | `coupled(model, template = li_lee())`, `reconciled(model, hierarchy, dependence = "schaake")` (the dependence of past years) or a joint model such as [`cae()`](../reference/cae.md) ([`vignette("dependence")`](../articles/dependence.md)) | separate models give independent errors, so intervals of totals are too narrow and those of gaps too wide |
 | More variation of the deaths than Poisson | `lee_carter(family = "nb")`, `stanmomo(family = "nb")` | negative binomial deaths (Delwarde, Denuit and Partrat 2007) widen the predictive intervals |
 | Causes of death | separate or Li-Lee models per cause, `reconciled(..., method = "bottom_up")` with `cause = list(total = "all", additive = "rates")`; [`coda_causes()`](../reference/coda_causes.md) (experimental) | cause rates add up to the all-cause rate |
 | Cohort effects (for example generations born around 1925-1945) | [`apc_bayes()`](../reference/apc_bayes.md), `stmomo("apc")`; at older ages `stmomo("m7")`, `stmomo("plat")` or [`apci()`](../reference/apci.md) | age-period models attribute cohort patterns to period trends |
@@ -176,7 +176,11 @@ any model’s draws to its forecast errors in the last years of the
 training data (by default ten); on England & Wales men it raised the 95%
 coverage of Lee-Carter from 0.63 to 0.85. Check calibration with
 [`mt_backtest()`](../reference/mt_backtest.md) and
-[`mt_plot_coverage()`](../reference/mt_plot.md).
+[`mt_plot_coverage()`](../reference/mt_plot.md), and by horizon with
+`mt_score_table(by = c("model", "horizon"))`. Where coverage falls with
+the horizon, `recalibrated(scale = "per_horizon")` estimates one factor
+per horizon, and `recalibrated(method = "errors")` adds resampled errors
+of the model’s past forecasts; both are opt-in.
 
 ### Is one model really more accurate than another?
 
@@ -210,6 +214,28 @@ Daniell-kernel estimate: it has more degrees of freedom, and its size
 was close to 5% for horizons up to 2 and too large beyond (15% at
 `h = 5` with 7 origins). A non-significant difference means that the
 backtest cannot tell the models apart; they may still differ.
+
+### How should I weight the models of an ensemble?
+
+[`ensemble()`](../reference/ensemble.md) gives equal weights by default.
+Estimated weights come from an inner backtest on the training years.
+`weights = "crps_stack"` is stacking of predictive distributions (Yao et
+al. 2018) with the CRPS: the weights minimise the mean CRPS of the
+mixture over the inner forecasts. `weights = "bias"` gives each model
+the weight `exp(-|bias|)`, with the bias of its projected life
+expectancy over the last 13 training years (Kontis et al. 2017).
+`weights = "crps"` takes weights inverse to the mean CRPS, an extension
+to distributions of the inverse-error weights of Shang (2012). Estimated
+weights rest on a few inner origins from one period and can be unstable
+(Yao et al. 2018). Compare them with equal weights in an outer backtest:
+
+``` r
+
+ens <- function(w) ensemble(lc = lee_carter(), rw = rwd(), fdm = hyndman_ullah(), weights = w)
+bt <- mt_compare(list(equal = ens("equal"), stacking = ens("crps_stack"), bias = ens("bias")), data,
+                 origins = 1996:2001, h = 10, quantities = "life_expectancy")
+mt_score(bt)
+```
 
 ### How do I choose smoothing and model parameters by forecast accuracy?
 
@@ -375,7 +401,12 @@ cause forecasts tend to be more pessimistic than forecasts of all causes
 deaths uses exposures of the forecast years; supply population
 projections as `exposure` when they are available. See “Coherent
 forecasts: totals and their parts” and the applied vignettes “Inequality
-in England” and “Differences between the German Laender”.
+in England” and “Differences between the German Laender”. “Causes of
+death by deprivation: coherent and combined forecasts” reconciles causes
+by sex and quintile in one crossed hierarchy,
+`mt_hierarchy(sex = "both", quintile = "England", cause = list(total = "all", additive = "rates"))`,
+and compares the methods and a per-cause ensemble with Lee-Carter in a
+backtest.
 
 ### Will the gap between regions or deprivation groups keep growing?
 
@@ -520,6 +551,11 @@ Hyndman RJ, Booth H, Yasmeen F (2013). Coherent mortality forecasting:
 the product-ratio method with functional time series models.
 *Demography* 50(1): 261-283. <doi:10.1007/s13524-012-0145-5>.
 
+Kontis V, Bennett JE, Mathers CD, Li G, Foreman K, Ezzati M (2017).
+Future life expectancy in 35 industrialised countries: projections with
+a Bayesian model ensemble. *The Lancet* 389(10076): 1323-1335.
+<doi:10.1016/S0140-6736(16)32381-9>.
+
 Lazarus E, Lewis DJ, Stock JH, Watson MW (2018). HAR inference:
 recommendations for practice. *Journal of Business & Economic
 Statistics* 36(4): 541-559.
@@ -554,6 +590,14 @@ Riffe T, Tursun-zade R, Trias Llimós S (2024). Arriaga meets Kitagawa.
 Life expectancy decomposition with population subgroups. MPIDR Working
 Paper WP-2024-029. <doi:10.4054/MPIDR-WP-2024-029>.
 
+Shang HL (2012). Point and interval forecasts of age-specific life
+expectancies: a model averaging approach. *Demographic Research* 27(21):
+593-644. <doi:10.4054/DemRes.2012.27.21>.
+
 Wilmoth JR (1995). Are mortality projections always more pessimistic
 when disaggregated by cause of death? *Mathematical Population Studies*
 5(4): 293-319. <doi:10.1080/08898489509525409>.
+
+Yao Y, Vehtari A, Simpson D, Gelman A (2018). Using stacking to average
+Bayesian predictive distributions (with discussion). *Bayesian Analysis*
+13(3): 917-1007. <doi:10.1214/17-BA1091>.

@@ -806,23 +806,56 @@ default</td>
 <td>published</td>
 </tr>
 <tr class="even">
-<td><code>ensemble(weights = "crps")</code></td>
-<td>weights inverse to the mean CRPS of an inner backtest</td>
-<td>analogous to Bates and Granger (1969)</td>
-<td>package-specific</td>
+<td><code>ensemble(weights = "crps_stack")</code></td>
+<td>stacking of predictive distributions: simplex weights that minimise
+the mean CRPS of the mixture over held-out forecasts, an exact quadratic
+program in the kernel form of the CRPS</td>
+<td>Yao et al. (2018, Section 2.1, eq. 2.2); Gneiting and Raftery (2007,
+eq. 21)</td>
+<td>published, deviations: the CRPS as the scoring rule (Yao et
+al. allow any proper scoring rule and use the logarithmic score); the
+held-out forecasts are those of the inner rolling-origin backtest on the
+training years (leave-future-out, as in Barigou et al. 2023), scored on
+the log rates, in place of leave-one-out predictions</td>
 </tr>
 <tr class="odd">
-<td><code>ensemble(weights = "stack")</code></td>
+<td><code>ensemble(weights = "bias")</code></td>
+<td>weights exp(-|bias|) of the life expectancy projected for the last
+13 training years; draws pooled in proportion to the weights</td>
+<td>Kontis et al. (2017, Methods, steps 1 to 3)</td>
+<td>published, deviations: life expectancy at the first age of the data
+(the paper: at birth); the projected value from the mean of the
+predictive draws of the rates in the observed age groups (the paper’s
+code: the posterior mean rates); package-specific (reference unknown):
+one weight vector for several strata from the mean absolute bias over
+strata (the paper weights each population; use
+<code><a href="../reference/stratified.html">stratified()</a></code>), the mean over several inner origins, draws
+assigned to components at random with the weights as probabilities</td>
+</tr>
+<tr class="even">
+<td><code>ensemble(weights = "crps")</code></td>
+<td>weights inverse to the mean CRPS of an inner backtest</td>
+<td>Shang (2012, Section 3.2.1): weights inverse to the mean absolute
+errors of point forecasts, following Bates and Granger (1969)</td>
+<td>package-specific: the extension to predictive distributions (the
+CRPS of a point forecast is its absolute error), the log rates as the
+scored quantity and the use as mixture weights</td>
+</tr>
+<tr class="odd">
+<td>
+<code>ensemble(weights = "stack")</code> (deprecated)</td>
 <td>stacking of point forecasts, used as mixture weights</td>
 <td>Breiman (1996); Kessy et al. (2022)</td>
 <td>published, deviations: the weights optimise the medians and are used
-for the mixture</td>
+for the mixture; deprecated in favour of <code>"crps_stack"</code>
+</td>
 </tr>
 <tr class="even">
 <td><code>ensemble(top_k = )</code></td>
 <td>trimming to the components with the lowest inner CRPS</td>
 <td>none</td>
-<td>package-specific</td>
+<td>package-specific; with <code>"crps"</code>, <code>top_k = 2</code>
+corresponds to the two best models of Shang (2012)</td>
 </tr>
 <tr class="odd">
 <td><code><a href="../reference/stratified.html">stratified()</a></code></td>
@@ -842,6 +875,25 @@ Schäfer and Strimmer (2005)</td>
 covariances of the base draws (the papers use in-sample residuals)</td>
 </tr>
 <tr class="odd">
+<td>
+<code>reconciled(covariance = "errors")</code> with
+<code>"wls"</code> or <code>"mint"</code>
+</td>
+<td>weights from the errors of inner forecasts in the training data:
+mean squared errors (WLS), or their sample covariance (errors of mean
+zero) with the correlations shrunk towards the identity (MinT)</td>
+<td>Wickramasuriya, Athanasopoulos and Hyndman (2019); Wickramasuriya,
+Turlach and Hyndman (2020); Schäfer and Strimmer (2005); Panagiotelis et
+al. (2023)</td>
+<td>published, deviations: one set of weights per age and horizon from
+the <code>h</code>-step errors of forecasts at <code>n_origins</code>
+inner origins (the papers: in-sample one-step residuals, proportional
+for all horizons); package-specific: forecast years beyond
+<code>horizon</code> take the weights of the last inner horizon, ages
+without errors those of the draws; opt-in (default
+<code>covariance = "draws"</code>)</td>
+</tr>
+<tr class="even">
 <td>non-negativity</td>
 <td>for draws with negative bottom values, the quadratic program of the
 reconciliation with non-negative bottom values, solved by block
@@ -850,7 +902,7 @@ principal pivoting</td>
 <td>published; infeasibilities below 1e-10 of the largest base forecast
 of the draw count as zero (the paper: 1e-12)</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>fixed =</code></td>
 <td>nodes kept unchanged (immutable forecasts)</td>
 <td>Zhang et al. (2023)</td>
@@ -860,14 +912,14 @@ conditional on the fixed nodes, so that the fixed nodes are equality
 constraints of the weighted least-squares problem, also in the
 non-negative quadratic program</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>method = "proportional"</code></td>
 <td>top-down by forecast proportions</td>
 <td>Gross and Sohl (1990); Athanasopoulos, Ahmed and Hyndman (2009)</td>
 <td>published, deviations: one level, the proportions of the bottom
 forecasts below each fixed node</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>method = "energy_score"</code></td>
 <td>score-optimal reconciliation: free <code>d</code> and
 <code>G</code>, total energy score, Adam with the paper’s settings from
@@ -883,7 +935,7 @@ simulated afresh); ProbReco’s stopping rule on the steps (the paper: on
 the gradients); rescaling before the optimisation and negative bottom
 values set to zero in the forecast (package-specific)</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>
 <code><a href="../reference/coupled.html">coupled()</a></code>, <code><a href="../reference/coupled.html">mt_couple()</a></code>,
 <code>reconciled(dependence = "ecc")</code>
@@ -897,11 +949,31 @@ quantile function of each margin), opt-in; coupling the draws of the
 models before observation noise, which predictive draws add
 independently per cell, is package-specific</td>
 </tr>
+<tr class="odd">
+<td>
+<code>reconciled(dependence = "schaake")</code>,
+<code>mt_reconcile(dependence = "schaake")</code>
+</td>
+<td>Schaake shuffle: the draws of each cell (age, forecast year,
+stratum) reordered so that their ranks follow the observed changes of
+log rates from distinct training years, the same years for all cells and
+consecutive years for the horizons; tied values ranked at random</td>
+<td>Clark et al. (2004); Schefzik, Thorarinsdottir and Gneiting (2013,
+Section 3.4)</td>
+<td>published, deviations (package-specific): the template holds changes
+of log rates from the start year of each date (the paper: observed
+values); deaths of 0 count as 0.5; with more draws than dates, blocks of
+draws of the number of dates, each shuffled with all dates (the paper:
+as many dates as members); opt-in (default <code>"none"</code>)</td>
+</tr>
 <tr class="even">
 <td><code>dependence = "empirical"</code></td>
-<td>reordering of separately simulated strata</td>
+<td>reordering of whole paths of separately simulated strata by training
+years drawn with replacement</td>
 <td>related to the Schaake shuffle (Clark et al. 2004)</td>
-<td>package-specific, opt-in (default <code>"none"</code>)</td>
+<td>package-specific, deprecated: use
+<code>dependence = "schaake"</code>
+</td>
 </tr>
 <tr class="odd">
 <td><code><a href="../reference/recalibrated.html">recalibrated()</a></code></td>
@@ -913,11 +985,49 @@ minimises the CRPS of inner rolling-origin forecasts</td>
 the log scale, path by path</td>
 </tr>
 <tr class="even">
-<td><code>recalibrated(scale = "horizon", bias = TRUE, ages = , quantity = )</code></td>
+<td><code>recalibrated(scale = "horizon" (deprecated, use "per_horizon"), bias = TRUE, ages = , quantity = )</code></td>
 <td>power law of the factor over the horizon, drift correction, age
 bands, life expectancy and ASR as targets</td>
-<td>none</td>
+<td>none; analogues of another form: the bias correction in the
+predictive mean of EMOS (Gneiting et al. 2005, eq. 10) for
+<code>bias</code>, post-processing for each location separately (Van
+Schaeybroeck and Vannitsem 2015) for <code>ages</code>
+</td>
 <td>package-specific, opt-in</td>
+</tr>
+<tr class="odd">
+<td><code>recalibrated(scale = "per_horizon")</code></td>
+<td>one spread factor for each horizon, each minimising the CRPS (or
+interval score) of the inner forecasts of that horizon; with
+<code>bias = TRUE</code> one shift per horizon</td>
+<td>post-processing fitted to one lead time (Gneiting et al. 2005,
+sections 2c, 3 and 3a; Van Schaeybroeck and Vannitsem 2015)</td>
+<td>published, deviations: the draws are rescaled around their median on
+the log scale; a horizon gets a factor only with inner forecasts of at
+least two origins, and forecasts beyond the longest such horizon stop
+with an error (package-specific requirement); opt-in</td>
+</tr>
+<tr class="even">
+<td><code>recalibrated(method = "errors")</code></td>
+<td>median of the base draws plus h-step error vectors (all ages and
+strata of one inner origin) of the inner rolling-origin forecasts,
+resampled with replacement for each horizon and scaled by the tuning
+factor with which the central <code>level</code> interval covers that
+share of the inner errors</td>
+<td>extrapolation of past forecast errors (Keilman, Pham and Hetland
+2002); bootstrap intervals from h-step errors with a tuning factor
+(Shang and Hyndman 2017, section 4.4 of the preprint, pointwise
+version); joint bootstrap (Panagiotelis et al. 2023)</td>
+<td>published, deviations: the model is refitted at each inner origin
+(Shang and Hyndman: principal components from all years);
+<code>n_origins</code> origins in the last <code>years</code> years
+(they use every year); the bounds come from the bootstrap distribution
+itself (the limit of many resamples); the errors are not centred
+(Keilman et al. assume a zero expected error); package-specific
+(reference unknown): the median of the draws as point forecast, origins
+drawn independently for each horizon (no block bootstrap), errors of
+observed log rates with half a death in empty cells, at least two
+origins per horizon; no coverage guarantee; opt-in</td>
 </tr>
 <tr class="odd">
 <td><code>recalibrated(target = "interval")</code></td>
@@ -1013,6 +1123,30 @@ the training data</td>
 <td>published</td>
 </tr>
 <tr class="even">
+<td><code>mt_score(measures = "sape")</code></td>
+<td>standardised absolute predictive error
+<code>sqrt(pi / 2) abs(y - median) / sd</code> with the standard
+deviation of the draws; mean 1 for a correct normal predictive
+distribution</td>
+<td>Raftery et al. (2013)</td>
+<td>published; for life expectancy only, as in the source</td>
+</tr>
+<tr class="odd">
+<td><code>mt_score(measures = c("cov90", "halfwidth"))</code></td>
+<td>coverage of the central 90% intervals and mean half-widths of the
+80%, 90% and 95% intervals (by horizon with <code>by</code>)</td>
+<td>Raftery et al. (2013)</td>
+<td>published</td>
+</tr>
+<tr class="even">
+<td><code>mt_score(measures = "revision")</code></td>
+<td>mean absolute change of the forecast median of a cell between
+consecutive origins of a backtest</td>
+<td>none; Stoeldraijer et al. (2013) name robustness to data updates as
+a purpose of a forecast without a measure</td>
+<td>package-specific</td>
+</tr>
+<tr class="odd">
 <td><code><a href="../reference/mt_dm_test.html">mt_dm_test()</a></code></td>
 <td>Diebold-Mariano test of one loss per origin: equal-weighted cosine
 variance with <code>0.4 T^(2/3)</code> cosine terms and fixed-smoothing
@@ -1021,7 +1155,7 @@ t critical values (default)</td>
 <td>published (the EWC test of a single restriction applied to the mean
 loss difference)</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>mt_dm_test(varestimator = "daniell")</code></td>
 <td>fixed-smoothing test with the Daniell-kernel periodogram estimate,
 <code>floor(T^(1/3))</code> frequencies, t with twice as many degrees of
@@ -1032,7 +1166,7 @@ freedom</td>
 origins, 4.8% to 13.8% with 15 or 16 origins (oversized where test years
 overlap)</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>mt_dm_test(varestimator = "acf", "bartlett")</code></td>
 <td>the test of <code><a href="https://pkg.robjhyndman.com/forecast/reference/dm.test.html" class="external-link">forecast::dm.test()</a></code> with the correction of
 Harvey, Leybourne and Newbold (sum of the autocovariances, or Bartlett
@@ -1104,6 +1238,37 @@ without <code>exposure</code>, the numbers at risk are those of the life
 table (package-specific choice for schedules without counts)</td>
 </tr>
 <tr class="odd">
+<td><code>life_table(open = "makeham", "weibull", "beard", "logquad", "logistic", "perks", "lynch_brown")</code></td>
+<td>closure by the further hazard laws that Feehan compares, fitted by
+the binomial maximum likelihood of the Kannisto closure, with the
+integrated hazards of Feehan’s Appendix E</td>
+<td>Feehan (2018); Thatcher, Kannisto and Vaupel (1998)</td>
+<td>published (reproduces the Weibull, quadratic and logistic parameters
+of Thatcher et al.); Weibull with age counted from 0 as in Thatcher et
+al. (Feehan’s fits count age 80 as 1); Levenberg-Marquardt steps from
+several deterministic starts (Feehan: BFGS from one heuristic and ten
+random starts); log-quadratic hazard integrated by 20-point
+Gauss-Legendre quadrature</td>
+</tr>
+<tr class="even">
+<td><code>life_table(open = "aic")</code></td>
+<td>each schedule closed by the law with the lowest AIC; needs observed
+exposures</td>
+<td>Feehan (2018)</td>
+<td>published (Feehan compares the models by AIC); closing a life table
+with the selected law is package-specific</td>
+</tr>
+<tr class="odd">
+<td><code><a href="../reference/mt_open_check.html">mt_open_check()</a></code></td>
+<td>the laws fitted below a cut age and scored above it by the binomial
+log-likelihood and the chi-squared statistics of the predicted
+probabilities of dying; AIC of the fits</td>
+<td>Thatcher, Kannisto and Vaupel (1998, chapter 6); Feehan (2018)</td>
+<td>published (reproduces their chi-squared and log-likelihood values
+for the cohorts of 1871-1880); numbers at risk <code>E + D / 2</code>
+from person-years (the source: numbers reaching each age)</td>
+</tr>
+<tr class="even">
 <td>
 <code><a href="../reference/life_expectancy.html">life_expectancy()</a></code>, <code><a href="../reference/derived.html">prob_dying()</a></code>
 </td>
@@ -1111,28 +1276,28 @@ table (package-specific choice for schedules without counts)</td>
 <td>Preston, Heuveline and Guillot (2001)</td>
 <td>published</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code><a href="../reference/derived.html">asr()</a></code></td>
 <td>direct standardisation on the age groups of the standard
 population</td>
 <td>Eurostat (2013)</td>
 <td>published</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>asr(age_groups = "grid")</code></td>
 <td>standard weights shared evenly among the grid cells of each standard
 age group</td>
 <td>none</td>
 <td>package-specific, opt-in</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code><a href="../reference/standard_population.html">standard_population()</a></code></td>
 <td>European Standard Populations 2013 and 1976, WHO World Standard
 Population</td>
 <td>Eurostat (2013); Ahmad et al. (2001)</td>
 <td>published</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code><a href="../reference/derived.html">yll()</a></code></td>
 <td>period expected years of life lost with the remaining life
 expectancy at the average age at death; standard expected years of life
@@ -1142,27 +1307,27 @@ lost with <code>reference_ex</code>
 <td>published, deviations: life expectancy at <code>x + a_x</code>
 interpolated linearly between the bounds of the interval</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code><a href="../reference/mt_observed.html">mt_observed()</a></code></td>
 <td>Poisson bootstrap of observed indicators</td>
 <td>none</td>
 <td>package-specific construction (parametric bootstrap)</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code><a href="../reference/mt_contrast.html">mt_contrast()</a></code></td>
 <td>differences and ratios between strata, path by path, with the share
 of positive differences</td>
 <td>none</td>
 <td>package-specific summary of the draws</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code><a href="../reference/mt_inequality.html">mt_inequality()</a></code></td>
 <td>SII and RII from a weighted linear regression on the relative
 rank</td>
 <td>Mackenbach and Kunst (1997); Moreno-Betancur et al. (2015)</td>
 <td>published (identity link)</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code><a href="../reference/lifespan_variation.html">lifespan_variation()</a></code></td>
 <td>e-dagger, entropy, Gini coefficient, variance, standard deviation,
 coefficient of variation, interquartile range</td>
@@ -1174,20 +1339,20 @@ the conditioning age <code>at</code> (LifeIneq: from the first age of
 abridged tables); interquartile range by linear interpolation of the
 survival curve</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>mt_decompose(method = "arriaga")</code></td>
 <td>symmetric Arriaga decomposition; causes by their implied
 sensitivity</td>
 <td>Arriaga (1984); Riffe, Tursun-zade and Trias Llimós (2024)</td>
 <td>published</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>mt_decompose(method = "horiuchi")</code></td>
 <td>line integral of continuous change</td>
 <td>Horiuchi, Wilmoth and Pletcher (2008)</td>
 <td>published</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>mt_decompose(method = "stepwise")</code></td>
 <td>stepwise replacement from the youngest age, averaged over both
 directions</td>
@@ -1195,25 +1360,25 @@ directions</td>
 <td>published, deviations: all causes of an age are replaced
 together</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>mt_decompose(method = "kitagawa")</code></td>
 <td>rate and composition effects of the crude death rate</td>
 <td>Kitagawa (1955)</td>
 <td>published</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>mt_decompose(composition = "radix")</code></td>
 <td>subgroup life tables blended at the radix</td>
 <td>Riffe, Tursun-zade and Trias Llimós (2024); Vaupel (2002)</td>
 <td>published</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>mt_decompose(composition = "pooled")</code></td>
 <td>composition of pooled rates by the line integral</td>
 <td>Horiuchi, Wilmoth and Pletcher (2008) for the line integral</td>
 <td>package-specific parametrisation</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code><a href="../reference/mt_excess.html">mt_excess()</a></code></td>
 <td>observed minus predictive deaths of a baseline model</td>
 <td>Msemburi et al. (2023) and others compare with the expected deaths

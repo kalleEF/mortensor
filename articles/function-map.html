@@ -353,16 +353,19 @@ origins; rates, life expectancy or ASR)</td>
 <tr class="even">
 <td>Combine</td>
 <td>
-<code><a href="../reference/ensemble.html">ensemble()</a></code> (optionally <code>top_k</code>),
-<code><a href="../reference/stratified.html">stratified()</a></code>, <code><a href="../reference/reconciled.html">reconciled()</a></code> (also
-score-optimal, <code>method = "energy_score"</code>),
-<code><a href="../reference/coupled.html">coupled()</a></code>, <code><a href="../reference/bootstrapped.html">bootstrapped()</a></code>,
-<code><a href="../reference/mt_tune.html">tuned()</a></code>
+<code><a href="../reference/ensemble.html">ensemble()</a></code> (weights equal, by stacking with the CRPS,
+by the life expectancy bias of Kontis et al. or inverse to the CRPS;
+optionally <code>top_k</code>), <code><a href="../reference/stratified.html">stratified()</a></code>,
+<code><a href="../reference/reconciled.html">reconciled()</a></code> (also score-optimal,
+<code>method = "energy_score"</code>; weights from past errors,
+<code>covariance = "errors"</code>; Schaake shuffle,
+<code>dependence = "schaake"</code>), <code><a href="../reference/coupled.html">coupled()</a></code>,
+<code><a href="../reference/bootstrapped.html">bootstrapped()</a></code>, <code><a href="../reference/mt_tune.html">tuned()</a></code>
 </td>
 <td>mixtures, different models for groups of strata, coherence,
-dependence between strata from a joint model (ensemble copula coupling),
-parameter uncertainty (and of smoothing, <code>type = "data"</code>),
-tuning</td>
+dependence between strata from a joint model (ensemble copula coupling)
+or from past years (Schaake shuffle), parameter uncertainty (and of
+smoothing, <code>type = "data"</code>), tuning</td>
 <td><code>mt_spec</code></td>
 <td><code>mt_spec</code></td>
 </tr>
@@ -378,8 +381,9 @@ by path</td>
 <td>Calibrate</td>
 <td><code><a href="../reference/recalibrated.html">recalibrated()</a></code></td>
 <td>rescale the spread (optionally the drift) of any model’s draws to
-its forecast errors in the last years, overall or by age band, for
-rates, life expectancy or ASR</td>
+its forecast errors in the last years, overall, by age band or by
+horizon, for rates, life expectancy or ASR; or add resampled errors of
+its past forecasts to its median (<code>method = "errors"</code>)</td>
 <td><code>mt_spec</code></td>
 <td><code>mt_spec</code></td>
 </tr>
@@ -457,7 +461,9 @@ step</td>
 <code><a href="../reference/mt_backtest.html">mt_backtest()</a></code>, <code><a href="../reference/mt_score.html">mt_score()</a></code>
 </td>
 <td>rolling-origin scores of rates, life expectancy or ASR, and of gaps
-between strata (<code>contrast</code>)</td>
+between strata (<code>contrast</code>); optional SAPE, 90% coverage and
+interval half-widths of life expectancy (Raftery et al. 2013) and
+revisions between consecutive origins (<code>measures</code>)</td>
 <td>
 <code>mt_spec</code>, <code>mt_data</code>
 </td>
@@ -469,7 +475,8 @@ between strata (<code>contrast</code>)</td>
 <code><a href="../reference/mt_compare.html">mt_compare()</a></code>, <code><a href="../reference/mt_compare.html">mt_score_table()</a></code>
 </td>
 <td>backtests of several models on the same origins; scores of rates,
-life expectancy and gaps side by side, by level of a hierarchy</td>
+life expectancy and gaps side by side, by level of a hierarchy or by
+horizon</td>
 <td>named list of <code>mt_spec</code>, <code>mt_data</code>
 </td>
 <td>table</td>
@@ -550,12 +557,21 @@ expected values of a baseline model, by age, stratum and year</td>
 <td>
 <code><a href="../reference/life_table.html">life_table()</a></code>, <code><a href="../reference/standard_population.html">standard_population()</a></code>
 </td>
-<td>life tables from rates; standard populations esp2013, esp1976,
-who2000</td>
+<td>life tables from rates (open interval closed by one of nine hazard
+laws or by AIC, <code>open</code>); standard populations esp2013,
+esp1976, who2000</td>
 <td>rates, name</td>
 <td>table</td>
 </tr>
 <tr class="odd">
+<td>Check</td>
+<td><code><a href="../reference/mt_open_check.html">mt_open_check()</a></code></td>
+<td>old-age hazard laws fitted below a cut age and scored against the
+observed deaths above it</td>
+<td><code>mt_data</code></td>
+<td>table</td>
+</tr>
+<tr class="even">
 <td>Report</td>
 <td>
 <code><a href="../reference/mt_contrast.html">mt_contrast()</a></code>, <code><a href="../reference/mt_inequality.html">mt_inequality()</a></code>,
@@ -567,7 +583,7 @@ who2000</td>
 </td>
 <td>table, ggplot</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>Report</td>
 <td>
 <code><a href="../reference/mt_compare.html">mt_compare_forecasts()</a></code>,
@@ -579,7 +595,7 @@ reconciliation methods) side by side</td>
 </td>
 <td>table, ggplot</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>Report</td>
 <td>
 <code><a href="../reference/mt_decompose.html">mt_decompose()</a></code>,
@@ -595,7 +611,7 @@ years with gaps)</td>
 <td>
 <code>mt_decomposition</code>, table, ggplot</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>Report</td>
 <td>
 <code><a href="../reference/mt_plot.html">mt_plot_forecast()</a></code>, <code><a href="../reference/mt_plot.html">mt_plot_age()</a></code>,
@@ -607,7 +623,7 @@ years with gaps)</td>
 <td>draws, data, tables</td>
 <td>ggplot, file</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>Data</td>
 <td>
 <code>ons_data</code>, <code>ons_cause_groups</code>,
@@ -620,7 +636,7 @@ years with gaps)</td>
 <td>tables, <code>mt_data</code>
 </td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>Report</td>
 <td>
 <code><a href="../reference/mt_plot_style.html">theme_mortensor()</a></code>,
@@ -631,7 +647,7 @@ years with gaps)</td>
 <td></td>
 <td>theme, scales</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>Disaggregate</td>
 <td>
 <code><a href="../reference/mt_disaggregate.html">mt_disaggregate()</a></code>, <code><a href="../reference/mt_shape_rates.html">mt_shape_rates()</a></code>,
@@ -645,7 +661,7 @@ deprecated)</td>
 <td>
 <code>mt_draws</code>, table, ggplot</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>Exchange</td>
 <td>
 <code><a href="../reference/as_demogdata.html">as_demogdata()</a></code>, <code><a href="../reference/as_demogdata.html">as_stmomodata()</a></code>
@@ -656,7 +672,7 @@ deprecated)</td>
 <code>demogdata</code>, <code>StMoMoData</code>
 </td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>Extend</td>
 <td><code><a href="../reference/new_mt_spec.html">new_mt_spec()</a></code></td>
 <td>constructor for developers adding a model (methods for the internal

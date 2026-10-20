@@ -177,6 +177,80 @@ English mortality changed after 2011. “Tuning and recalibration” shows
 how to widen intervals to the errors of recent forecasts, and “Choosing
 and combining models” how mixtures of models do.
 
+### Life expectancy by horizon
+
+Raftery et al. (2013) check probabilistic forecasts of life expectancy
+by the coverage of their 80%, 90% and 95% intervals and by the
+standardised absolute predictive error (SAPE): the absolute error of the
+median, divided by the standard deviation of the forecast distribution
+and multiplied by `sqrt(pi / 2)`. Its mean is 1 when the forecast
+distribution is correct and normal; above 1, the intervals are too
+narrow. `measures` adds both to
+[`mt_score()`](../reference/mt_score.md):
+
+``` r
+
+s <- mt_score(bt, by = c("model", "horizon"), target = "life_expectancy", measures = c("sape", "cov90"))
+s[, list(model, horizon, mae, sape, cov80, cov90, cov95)]
+#>           model horizon       mae     sape     cov80     cov90     cov95
+#>          <fctr>   <num>     <num>    <num>     <num>     <num>     <num>
+#>  1: random walk       1 0.2253386 1.430122 0.6428571 0.7000000 0.7571429
+#>  2: random walk       2 0.3047631 1.302902 0.6000000 0.7714286 0.8857143
+#>  3: random walk       3 0.4087531 1.373876 0.5714286 0.7571429 0.8428571
+#>  4: random walk       4 0.5226022 1.440622 0.5857143 0.7142857 0.7857143
+#>  5: random walk       5 0.5906862 1.388070 0.6142857 0.7000000 0.8285714
+#>  6:  Lee-Carter       1 0.2237034 1.369782 0.6428571 0.7000000 0.7857143
+#>  7:  Lee-Carter       2 0.2988562 1.294863 0.6714286 0.8428571 0.9000000
+#>  8:  Lee-Carter       3 0.3997773 1.383686 0.6000000 0.7571429 0.8571429
+#>  9:  Lee-Carter       4 0.5270525 1.550064 0.5714286 0.7285714 0.8000000
+#> 10:  Lee-Carter       5 0.6168905 1.594811 0.6142857 0.6714286 0.7285714
+#> 11:      Li-Lee       1 0.2671036 1.395208 0.6285714 0.7000000 0.8285714
+#> 12:      Li-Lee       2 0.3352442 1.273501 0.6571429 0.7428571 0.8428571
+#> 13:      Li-Lee       3 0.4615053 1.404290 0.6285714 0.7571429 0.8000000
+#> 14:      Li-Lee       4 0.5857525 1.536526 0.6000000 0.6857143 0.7857143
+#> 15:      Li-Lee       5 0.6797984 1.568170 0.5428571 0.6857143 0.7714286
+```
+
+The mean SAPE is 1.3 to 1.6 for all three models at every horizon: the
+errors of life expectancy are larger than the spread of the forecasts
+implies, and the 90% intervals hold 67% to 84% of the observed values.
+Raftery et al. report a mean SAPE of 1.04 for their model of male life
+expectancy at birth, out of sample over ten years.
+
+### Revisions between origins
+
+A forecast also changes when a year of data is added. Stoeldraijer et
+al. (2013) name robustness as a purpose of a forecast: small changes in
+the observations should change the forecast only modestly. They give no
+measure. `measures = "revision"` gives the mean absolute change of the
+forecast median of each cell (stratum, age group, year) between
+consecutive origins, a measure of this package:
+
+``` r
+
+mt_score(bt, measures = "revision")[, list(model, crps, revision)]
+#>          model       crps   revision
+#>         <fctr>      <num>      <num>
+#> 1: random walk 0.08502155 0.11590834
+#> 2:  Lee-Carter 0.06834583 0.03739882
+#> 3:      Li-Lee 0.06709049 0.03414229
+mt_score(bt, target = "life_expectancy", measures = "revision")[, list(model, crps, revision)]
+#>          model      crps  revision
+#>         <fctr>     <num>     <num>
+#> 1: random walk 0.2934839 0.2303523
+#> 2:  Lee-Carter 0.2925671 0.2187877
+#> 3:      Li-Lee 0.3379676 0.2452118
+```
+
+The random walk revises its forecasts of the log rates by 0.12 per added
+year, three times as much as Lee-Carter (0.037) and Li-Lee (0.034). It
+starts from the observed rates of the last year, so their noise moves
+the whole forecast; the two models start from fitted rates. For life
+expectancy the revisions are alike (0.22 to 0.25 years), because the
+noise of the single age groups averages out. Accuracy and robustness can
+conflict (Stoeldraijer et al. 2013); here Li-Lee forecasts the rates
+both most accurately and most robustly.
+
 ## Is the difference larger than chance?
 
 Mean scores over seven origins depend on the particular years. The
@@ -293,6 +367,15 @@ accuracy. *International Journal of Forecasting* 22(4): 679-688.
 Lazarus E, Lewis DJ, Stock JH, Watson MW (2018). HAR inference:
 recommendations for practice. *Journal of Business & Economic
 Statistics* 36(4): 541-559.
+
+Raftery AE, Chunn JL, Gerland P, Ševčíková H (2013). Bayesian
+probabilistic projections of life expectancy for all countries.
+*Demography* 50(3): 777-801.
+
+Stoeldraijer L, van Duin C, van Wissen L, Janssen F (2013). Impact of
+different mortality forecasting methods and explicit assumptions on
+projected future life expectancy: the case of the Netherlands.
+*Demographic Research* 29(13): 323-354.
 
 Tashman LJ (2000). Out-of-sample tests of forecasting accuracy: an
 analysis and review. *International Journal of Forecasting* 16(4):

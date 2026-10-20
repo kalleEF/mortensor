@@ -798,14 +798,39 @@ first forecast year.
 A mixture (linear pool; Gneiting and Ranjan 2013) of the predictive
 distributions of its components: each draw comes from one component, for
 all strata at once, chosen with probabilities equal to the weights. The
-weights are equal by default. `weights = "stack"` takes the weights that
-minimise the squared error of the weighted mean of the components’
-median forecasts in an inner backtest (stacking; Breiman 1996; for
-mortality, Kessy et al. 2022); using them as mixture probabilities is a
-deviation, since they are optimal for the combination of the medians.
-`weights = "crps"` (weights inverse to the mean CRPS of an inner
-backtest) and `top_k` are package-specific. The mixture contains the
-uncertainty of each component and the disagreement between them.
+weights are equal by default. The other weights come from an inner
+rolling-origin backtest on the training years, so they use no data after
+the forecast origin:
+
+- `weights = "crps_stack"` is stacking of predictive distributions (Yao
+  et al. 2018, Section 2.1, eq. 2.2): the weights on the simplex that
+  minimise the mean CRPS of the mixture over the inner forecasts of the
+  log rates. Yao et al. allow any proper scoring rule and use the
+  logarithmic score; the CRPS (Gneiting and Raftery 2007), computed from
+  the draws, is the choice of this package. The mean CRPS of the mixture
+  is a convex quadratic function of the weights (kernel form of the
+  CRPS, Gneiting and Raftery 2007, eq. 21), minimised exactly.
+- `weights = "bias"` follows Kontis et al. (2017): each component is
+  fitted without the last 13 training years, its projection bias is the
+  observed minus the projected life expectancy averaged over these
+  years, and its weight is `exp(-|bias|)`. The life expectancy is that
+  at the first age of the data; with several strata, one weight per
+  component comes from the mean absolute bias over the strata
+  (package-specific; the paper weights each population separately, which
+  [`stratified()`](../reference/stratified.md) does).
+- `weights = "crps"` takes weights inverse to the mean CRPS of each
+  component. Shang (2012) weights point forecasts inverse to their mean
+  absolute errors, following Bates and Granger (1969); the CRPS of a
+  point forecast is its absolute error, and the extension to predictive
+  distributions is package-specific.
+- `weights = "stack"` is deprecated: it stacks the median forecasts
+  (Breiman 1996; for mortality, Kessy et al. 2022) and uses the weights,
+  which optimise the weighted mean of the medians, as mixture
+  probabilities.
+
+`top_k` keeps the components with the lowest inner CRPS
+(package-specific). The mixture contains the uncertainty of each
+component and the disagreement between them.
 
 ### Different models for groups of strata: `stratified()`
 
@@ -825,7 +850,16 @@ and Hyndman 2019, with the shrinkage of Schäfer and Strimmer 2005), the
 structure (structural scaling; Athanasopoulos et al. 2017) or equal
 weights (OLS; Hyndman et al. 2011). The variances and covariances of WLS
 and MinT are those of the base forecast draws in each age and forecast
-year; the papers use the in-sample residuals of the base models.
+year by default; the papers use the errors of the base forecasts. With
+`covariance = "errors"` they come from such errors: the base model is
+refitted at `n_origins` inner origins in the last `years` of the
+training data, and for each age and horizon the errors of its forecasts
+(observed minus the mean of the draws) give the mean squared errors
+(WLS) or their covariance with the correlations shrunk towards the
+identity (MinT, as in Wickramasuriya et al. 2019). The papers estimate
+one-step errors from in-sample residuals and take the weights as
+proportional over the horizons; here each horizon has its own errors,
+and the years beyond the inner horizons use the last one.
 
 Where a projection makes bottom values of a draw negative, that draw is
 reconciled by the non-negative reconciliation of Wickramasuriya, Turlach
@@ -847,9 +881,18 @@ add up over variables that divide the population and are shared by the
 levels of variables such as causes of death (`additive = "rates"`). The
 exposures of the forecast years are those of the last observed year
 unless projections are given. The draws are reconciled as they are
-(`dependence = "none"`, default); `dependence = "empirical"` reorders
-the paths of separately fitted strata first, a package-specific method
-related to the Schaake shuffle (Clark et al. 2004).
+(`dependence = "none"`, default). `dependence = "schaake"` first applies
+the Schaake shuffle (Clark et al. 2004) to the draws of separately
+fitted strata: in every age, forecast year and stratum, the draws are
+sorted and assigned in the rank order of the observed changes of the log
+rates from distinct training years, the same years for all strata and
+ages and consecutive years for the horizons. Every cell keeps its
+values, and the draws take the rank correlations of the observed
+changes. Package-specific: the template holds changes of log rates (the
+paper uses observed values, whose trend would dominate the ranks), and
+with more draws than template years the draws are shuffled in blocks of
+the number of years. The former `dependence = "empirical"`, a
+package-specific reordering of whole paths, is deprecated.
 
 Score-optimal reconciliation (`method = "energy_score"`; Panagiotelis et
 al. 2023) learns the reconciliation from the base model’s own past
@@ -885,8 +928,11 @@ couples two sets of forecast draws, and
 `reconciled(..., dependence = "ecc", template = )` couples before
 reconciliation. Package-specific: the coupling acts on the draws of the
 rates before observation noise, which predictive draws add afterwards.
-[`vignette("dependence")`](../articles/dependence.md) explains why the
-dependence matters for totals, gaps and inequality measures.
+The Schaake shuffle (`reconciled(..., dependence = "schaake")`, above)
+reorders the draws in the same way with the ranks of observed changes of
+past years in place of a model’s draws (Schefzik et al. 2013, Section
+3.4). [`vignette("dependence")`](../articles/dependence.md) explains why
+the dependence matters for totals, gaps and inequality measures.
 
 ### Calibration on recent years: `recalibrated()`
 
@@ -908,9 +954,30 @@ Package-specific options: a factor that changes with the horizon as
 (`bias = TRUE`), separate factors for age bands (`ages`) and calibration
 of the intervals of life expectancy or the ASR (`quantity`), which also
 depend on how the ages move together; `n_boot` reports bootstrap
-intervals of the factors. Beyond the longest horizon of the window the
-factors stay constant. Calibration keeps the model and its settings;
-choosing the settings themselves is tuning (below).
+intervals of the factors. The drift correction and the age bands have
+published analogues of another form: the bias correction in the
+predictive mean of EMOS (Gneiting et al. 2005) and post-processing for
+each location separately (Van Schaeybroeck and Vannitsem 2015). Beyond
+the longest horizon of the window the factors stay constant. Calibration
+keeps the model and its settings; choosing the settings themselves is
+tuning (below).
+
+Two opt-in variants work per horizon. `scale = "per_horizon"` estimates
+one factor for each horizon from the inner forecasts of that horizon
+alone, as post-processing is fitted to one lead time (Gneiting et al.
+2005; Van Schaeybroeck and Vannitsem 2015). `method = "errors"` replaces
+the draws by the median of the model’s draws plus errors of its own
+inner forecasts, resampled for each horizon: an error vector holds all
+ages and strata of one inner origin, which keeps their dependence
+(extrapolation of past errors, Keilman, Pham and Hetland 2002; bootstrap
+intervals with a tuning factor, Shang and Hyndman 2017; joint bootstrap,
+Panagiotelis et al. 2023). Both need inner forecasts of at least two
+origins at every forecast horizon and stop with an error beyond the
+longest such horizon (8 with the defaults; for 10-year forecasts, for
+example `years = 11, n_origins = 10`). Draws of the error method
+describe observed rates, are resampled independently for each year, and
+their intervals are at most as wide as the range of the past errors of
+each cell, so horizons that few origins reach get narrow intervals.
 
 ### Bootstrap and tuning: `bootstrapped()`, `tuned()`
 
@@ -969,6 +1036,7 @@ compares across windows.
 | [`reconciled()`](../reference/reconciled.md) | of the base model, projected |  |  | of the bottom strata, summed |
 | [`coupled()`](../reference/coupled.md) | of the base model, reordered | of the base model | of the base model | as the base model |
 | [`recalibrated()`](../reference/recalibrated.md) | of the base model, rescaled | rescaled (optional correction) |  | as the base model |
+| `recalibrated(method = "errors")` | resampled errors of past forecasts | in the errors | in the errors | in the errors (draws of observed rates) |
 | [`anchored()`](../reference/anchored.md) | of the base model | of the base model |  | as the base model |
 
 The deprecated `rwd(observation_noise = TRUE)`,
@@ -1032,6 +1100,9 @@ Research* 262(1): 60-74.
 Barigou K, Goffard P-O, Loisel S, Salhi Y (2023). Bayesian model
 averaging for mortality forecasting using leave-future-out validation.
 *International Journal of Forecasting* 39(2): 674-690.
+
+Bates JM, Granger CWJ (1969). The combination of forecasts. *Operational
+Research Quarterly* 20(4): 451-468.
 
 Bergeron-Boucher M-P, Canudas-Romo V, Oeppen J, Vaupel JW (2017).
 Coherent forecasts of mortality with compositional data analysis.
@@ -1188,6 +1259,10 @@ Jarner SF, Kryger EM (2011). Modelling adult mortality in small
 populations: the SAINT model. *ASTIN Bulletin* 41(2): 377-418.
 <doi:10.2143/AST.41.2.2136982>.
 
+Keilman N, Pham DQ, Hetland A (2002). Why population forecasts should be
+probabilistic: illustrated by the case of Norway. *Demographic Research*
+6(15): 409-454. <doi:10.4054/DemRes.2002.6.15>.
+
 Kessy SR, Sherris M, Villegas AM, Ziveyi J (2022). Mortality forecasting
 using stacked regression ensembles. *Scandinavian Actuarial Journal*
 2022(7): 591-626.
@@ -1199,6 +1274,11 @@ multiple populations. *Insurance: Mathematics and Economics* 63:
 Knorr-Held L, Rainer E (2001). Prognosis of lung cancer mortality in
 West Germany: a case study in Bayesian prediction. *Biostatistics* 2(1):
 109-129.
+
+Kontis V, Bennett JE, Mathers CD, Li G, Foreman K, Ezzati M (2017).
+Future life expectancy in 35 industrialised countries: projections with
+a Bayesian model ensemble. *The Lancet* 389(10076): 1323-1335.
+<doi:10.1016/S0140-6736(16)32381-9>.
 
 Lazarus E, Lewis DJ, Stock JH, Watson MW (2018). HAR inference:
 recommendations for practice. *Journal of Business & Economic
@@ -1276,6 +1356,10 @@ Age-specific mortality and fertility rates for probabilistic population
 projections. In Schoen R (ed.) *Dynamic Demographic Analysis*. Springer,
 285-310.
 
+Shang HL (2012). Point and interval forecasts of age-specific life
+expectancies: a model averaging approach. *Demographic Research* 27(21):
+593-644. <doi:10.4054/DemRes.2012.27.21>.
+
 Shang HL, Haberman S (2020). Forecasting age distribution of death
 counts: an application to annuity pricing. *Annals of Actuarial Science*
 14(1): 150-169. <doi:10.1017/S1748499519000101>.
@@ -1283,6 +1367,11 @@ counts: an application to annuity pricing. *Annals of Actuarial Science*
 Shang HL, Haberman S (2025). Forecasting age distribution of life-table
 death counts via α-transformation. *Scandinavian Actuarial Journal*
 2025(4): 387-403. <doi:10.1080/03461238.2024.2425723>.
+
+Shang HL, Hyndman RJ (2017). Grouped functional time series forecasting:
+an application to age-specific mortality rates. *Journal of
+Computational and Graphical Statistics* 26(2): 330-343.
+<doi:10.1080/10618600.2016.1237877>.
 
 Solo V (1984). The order of differencing in ARIMA models. *Journal of
 the American Statistical Association* 79(388): 916-921.
@@ -1317,6 +1406,10 @@ forecast reconciliation. *Statistics and Computing* 30: 1167-1182.
 
 Wood SN (2017). *Generalized Additive Models: An Introduction with R*
 (2nd ed.). Chapman and Hall/CRC.
+
+Yao Y, Vehtari A, Simpson D, Gelman A (2018). Using stacking to average
+Bayesian predictive distributions (with discussion). *Bayesian Analysis*
+13(3): 917-1007. <doi:10.1214/17-BA1091>.
 
 Zhang B, Kang Y, Panagiotelis A, Li F (2023). Optimal reconciliation
 with immutable forecasts. *European Journal of Operational Research*

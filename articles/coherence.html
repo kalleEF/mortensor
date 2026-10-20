@@ -205,28 +205,39 @@ end at zero (the warning above).</p>
 <h2 id="does-coherence-cost-accuracy">Does coherence cost accuracy?<a class="anchor" aria-label="anchor" href="#does-coherence-cost-accuracy"></a>
 </h2>
 <p>A backtest from the origins 2010-2014, five years ahead, with the
-reconciliation inside each fit:</p>
+reconciliation inside each fit. Two variants are added: MinT with the
+covariance of the errors of past forecasts
+(<code>covariance = "errors"</code>, see below), and WLS after the
+Schaake shuffle (<code>dependence = "schaake"</code>):</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">bt</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_compare.html">mt_compare</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>separate <span class="op">=</span> <span class="fu"><a href="../reference/lee_carter.html">lee_carter</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>                      <span class="st">"bottom-up"</span> <span class="op">=</span> <span class="fu"><a href="../reference/reconciled.html">reconciled</a></span><span class="op">(</span><span class="fu"><a href="../reference/lee_carter.html">lee_carter</a></span><span class="op">(</span><span class="op">)</span>, <span class="va">h</span>, method <span class="op">=</span> <span class="st">"bottom_up"</span><span class="op">)</span>,</span>
 <span>                      wls <span class="op">=</span> <span class="fu"><a href="../reference/reconciled.html">reconciled</a></span><span class="op">(</span><span class="fu"><a href="../reference/lee_carter.html">lee_carter</a></span><span class="op">(</span><span class="op">)</span>, <span class="va">h</span>, method <span class="op">=</span> <span class="st">"wls"</span><span class="op">)</span>,</span>
-<span>                      mint <span class="op">=</span> <span class="fu"><a href="../reference/reconciled.html">reconciled</a></span><span class="op">(</span><span class="fu"><a href="../reference/lee_carter.html">lee_carter</a></span><span class="op">(</span><span class="op">)</span>, <span class="va">h</span>, method <span class="op">=</span> <span class="st">"mint"</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>                      mint <span class="op">=</span> <span class="fu"><a href="../reference/reconciled.html">reconciled</a></span><span class="op">(</span><span class="fu"><a href="../reference/lee_carter.html">lee_carter</a></span><span class="op">(</span><span class="op">)</span>, <span class="va">h</span>, method <span class="op">=</span> <span class="st">"mint"</span><span class="op">)</span>,</span>
+<span>                      <span class="st">"mint, errors"</span> <span class="op">=</span> <span class="fu"><a href="../reference/reconciled.html">reconciled</a></span><span class="op">(</span><span class="fu"><a href="../reference/lee_carter.html">lee_carter</a></span><span class="op">(</span><span class="op">)</span>, <span class="va">h</span>, method <span class="op">=</span> <span class="st">"mint"</span>, covariance <span class="op">=</span> <span class="st">"errors"</span>, years <span class="op">=</span> <span class="fl">5</span><span class="op">)</span>,</span>
+<span>                      <span class="st">"wls, Schaake"</span> <span class="op">=</span> <span class="fu"><a href="../reference/reconciled.html">reconciled</a></span><span class="op">(</span><span class="fu"><a href="../reference/lee_carter.html">lee_carter</a></span><span class="op">(</span><span class="op">)</span>, <span class="va">h</span>, method <span class="op">=</span> <span class="st">"wls"</span>, dependence <span class="op">=</span> <span class="st">"schaake"</span><span class="op">)</span><span class="op">)</span>,</span>
 <span>                 <span class="va">xa</span>, origins <span class="op">=</span> <span class="fl">2010</span><span class="op">:</span><span class="fl">2014</span>, h <span class="op">=</span> <span class="fl">5</span>, n_draws <span class="op">=</span> <span class="fl">200</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/mt_compare.html">mt_score_table</a></span><span class="op">(</span><span class="va">bt</span>, metrics <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"crps"</span>, <span class="st">"cov95"</span><span class="op">)</span>, hierarchy <span class="op">=</span> <span class="va">h</span><span class="op">)</span></span>
-<span><span class="co">#&gt;         model     level   crps cov95</span></span>
-<span><span class="co">#&gt;        &lt;fctr&gt;    &lt;fctr&gt;  &lt;num&gt; &lt;num&gt;</span></span>
-<span><span class="co">#&gt;  1:  separate    bottom 0.0672 0.793</span></span>
-<span><span class="co">#&gt;  2:  separate aggregate 0.0549 0.764</span></span>
-<span><span class="co">#&gt;  3:  separate     total 0.0449 0.672</span></span>
-<span><span class="co">#&gt;  4: bottom-up    bottom 0.0672 0.793</span></span>
-<span><span class="co">#&gt;  5: bottom-up aggregate 0.0560 0.659</span></span>
-<span><span class="co">#&gt;  6: bottom-up     total 0.0477 0.422</span></span>
-<span><span class="co">#&gt;  7:       wls    bottom 0.0677 0.766</span></span>
-<span><span class="co">#&gt;  8:       wls aggregate 0.0570 0.602</span></span>
-<span><span class="co">#&gt;  9:       wls     total 0.0488 0.370</span></span>
-<span><span class="co">#&gt; 10:      mint    bottom 0.0677 0.763</span></span>
-<span><span class="co">#&gt; 11:      mint aggregate 0.0571 0.603</span></span>
-<span><span class="co">#&gt; 12:      mint     total 0.0489 0.376</span></span></code></pre></div>
+<span><span class="co">#&gt;            model     level   crps cov95</span></span>
+<span><span class="co">#&gt;           &lt;fctr&gt;    &lt;fctr&gt;  &lt;num&gt; &lt;num&gt;</span></span>
+<span><span class="co">#&gt;  1:     separate    bottom 0.0672 0.793</span></span>
+<span><span class="co">#&gt;  2:     separate aggregate 0.0549 0.764</span></span>
+<span><span class="co">#&gt;  3:     separate     total 0.0449 0.672</span></span>
+<span><span class="co">#&gt;  4:    bottom-up    bottom 0.0672 0.793</span></span>
+<span><span class="co">#&gt;  5:    bottom-up aggregate 0.0560 0.659</span></span>
+<span><span class="co">#&gt;  6:    bottom-up     total 0.0477 0.422</span></span>
+<span><span class="co">#&gt;  7:          wls    bottom 0.0677 0.766</span></span>
+<span><span class="co">#&gt;  8:          wls aggregate 0.0570 0.602</span></span>
+<span><span class="co">#&gt;  9:          wls     total 0.0488 0.370</span></span>
+<span><span class="co">#&gt; 10:         mint    bottom 0.0677 0.763</span></span>
+<span><span class="co">#&gt; 11:         mint aggregate 0.0571 0.603</span></span>
+<span><span class="co">#&gt; 12:         mint     total 0.0489 0.376</span></span>
+<span><span class="co">#&gt; 13: mint, errors    bottom 0.0674 0.809</span></span>
+<span><span class="co">#&gt; 14: mint, errors aggregate 0.0565 0.662</span></span>
+<span><span class="co">#&gt; 15: mint, errors     total 0.0478 0.438</span></span>
+<span><span class="co">#&gt; 16: wls, Schaake    bottom 0.0673 0.788</span></span>
+<span><span class="co">#&gt; 17: wls, Schaake aggregate 0.0555 0.673</span></span>
+<span><span class="co">#&gt; 18: wls, Schaake     total 0.0459 0.490</span></span></code></pre></div>
 <p><code>hierarchy = h</code> scores the bottom series (sex by
 quintile), the aggregates (quintiles for both sexes, England by sex) and
 the total (England) separately.</p>
@@ -234,17 +245,41 @@ the total (England) separately.</p>
 0.067-0.068), and their coverage falls a little with WLS and MinT (0.77
 against 0.79). The totals lose accuracy and much coverage: the 95%
 intervals of England contain 0.37-0.42 of the observed rates after
-reconciliation, against 0.67 with its own model. The model of England
-captures the common movements of the quintiles in its trend; sums of
-parts with independent draws do not reproduce them, so their intervals
-are too narrow. Joint models such as <code><a href="../reference/li_lee.html">li_lee()</a></code> tie the parts
-together in the model itself. <code>dependence = "empirical"</code>
-reorders the paths of separately fitted parts so that they move together
-as they did in the training years. This reordering is specific to this
-package, related to the Schaake shuffle (Clark et al. 2004); it is used
-only when chosen, and a backtest should check its effect. The vignette
-“Dependence between groups” compares joint models and ensemble copula
-coupling for totals and gaps.</p>
+reconciliation with the default settings (bottom-up, WLS, MinT), against
+0.67 with its own model. The model of England captures the common
+movements of the quintiles in its trend; sums of parts with independent
+draws do not reproduce them, so their intervals are too narrow. Joint
+models such as <code><a href="../reference/li_lee.html">li_lee()</a></code> tie the parts together in the model
+itself.</p>
+<p>The Schaake shuffle (Clark et al. 2004) gives separately fitted parts
+the dependence of the training years before the reconciliation. In every
+age, forecast year <code>h</code> and stratum, the draws are sorted and
+assigned in the rank order of the observed changes of the log rate over
+<code>h</code> years from distinct training years, the same years for
+all strata and ages. Each cell keeps its values, and the parts move
+together as their observed changes did. With WLS, the 95% intervals of
+England then contain 0.49 of the observed rates, against 0.37 without
+it, and its CRPS falls from 0.0488 to 0.0459. The shuffle also sets the
+dependence between the ages of a stratum: Lee-Carter draws move all ages
+of a stratum together, the observed changes less so, which narrows the
+intervals of the life expectancy of single strata. The template has one
+value per training year whose next five years are observed: 5 at the
+origin 2010, 9 at 2014. It assumes that the dependence of the training
+years holds in the forecast years.</p>
+<p>The weights of WLS and MinT come from the base draws by default. The
+papers use the covariance of the errors of the base forecasts
+(Wickramasuriya et al. 2019). With <code>covariance = "errors"</code>,
+the base model is refitted at <code>n_origins</code> inner origins in
+the last <code>years</code> of the training data (here five years), and
+the errors of its forecasts give the weights of each age and horizon:
+their mean squares for WLS, their covariance with the correlations
+shrunk towards the identity for MinT. Here MinT with these weights
+covers 0.81 of the bottom series and 0.44 for England, against 0.76 and
+0.38 with the weights of the draws. With four inner origins, each age
+and horizon has at most four errors, so their correlations are shrunk
+strongly towards zero.</p>
+<p>The vignette “Dependence between groups” compares joint models and
+ensemble copula coupling for totals and gaps.</p>
 </div>
 <div class="section level2">
 <h2 id="reconciliation-learnt-from-past-forecasts">Reconciliation learnt from past forecasts<a class="anchor" aria-label="anchor" href="#reconciliation-learnt-from-past-forecasts"></a>
@@ -286,6 +321,14 @@ separate models, whose draws are independent, <strong>MinT</strong>
 gives about the same result, and the intervals of the totals are too
 narrow; check their coverage in a backtest.</li>
 <li>
+<strong>dependence</strong> for separate forecasts whose totals
+matter: <code>"schaake"</code> takes the dependence from the observed
+changes of the training years, <code>"ecc"</code> from a joint model
+(vignette “Dependence between groups”).</li>
+<li>
+<strong>covariance = “errors”</strong> for weights of WLS and MinT
+from the errors of past forecasts.</li>
+<li>
 <strong>fixed</strong> with <strong>proportional</strong> for a
 trusted total, for example causes of death that must add up to an
 all-cause forecast.</li>
@@ -294,7 +337,9 @@ all-cause forecast.</li>
 after a backtest against WLS.</li>
 <li>Check the choice at every level of the hierarchy in a backtest, as
 above. The applied vignettes use these methods for causes of death and
-German Laender.</li>
+German Laender; “Causes of death by deprivation: coherent and combined
+forecasts” compares them on one crossed hierarchy of sexes, deprivation
+quintiles and causes.</li>
 </ul>
 </div>
 <div class="section level2">

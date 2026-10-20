@@ -5,8 +5,9 @@ empirical distribution of the samples, which depends on their number),
 weighted interval score (Bracher et al. 2021, with the 23 quantiles of
 the COVID-19 forecast hubs: 11 central intervals plus the median),
 interval coverage, the PIT (randomised where samples equal the
-observation, Czado, Gneiting and Held 2009) and the absolute error of
-the median.
+observation, Czado, Gneiting and Held 2009), the absolute error of the
+median, the standard deviation of the samples and the half-widths of the
+central 80%, 90% and 95% intervals.
 
 ## Usage
 
@@ -26,12 +27,13 @@ score_samples(X, y, probs = wis_probs())
 
 - probs:
 
-  Quantile levels (must contain 0.5 and symmetric pairs).
+  Quantile levels (must contain 0.5 and symmetric pairs, among them
+  0.025, 0.05, 0.1, 0.25 and their complements).
 
 ## Value
 
 A `data.table` with `median`, `mean`, `crps`, `wis`, `ae`, `cov50`,
-`cov80`, `cov95`, `pit`.
+`cov80`, `cov95`, `pit`, `sd`, `cov90`, `hw80`, `hw90`, `hw95`.
 
 ## References
 

@@ -88,7 +88,8 @@ mt_plot_compare(
 
 - by:
 
-  Columns that define the rows (default `"model"`).
+  Columns that define the rows (default `"model"`), for example
+  `c("model", "horizon")` for the scores of each horizon.
 
 - digits:
 
@@ -190,7 +191,12 @@ object.
   example with different age groups) is always scored so. The CRPS
   depends on the number of draws (see
   [`mt_backtest()`](mt_backtest.md)); compare models backtested with the
-  same `n_draws`, as `mt_compare()` does.
+  same `n_draws`, as `mt_compare()` does. With
+  `by = c("model", "horizon")` the table gives the scores of each
+  forecast horizon, the same values as
+  `mt_score(by = c("model", "horizon"))`: coverage that falls with the
+  horizon shows intervals that widen too slowly (see
+  [`recalibrated()`](recalibrated.md)).
 
 - `mt_compare_forecasts()` gives one quantity of several forecasts
   (`mt_draws`) or observed data (`mt_data`, with Poisson intervals) as
@@ -214,6 +220,19 @@ mt_score_table(bt)
 #>         <fctr>  <num> <num>   <num>    <num>
 #> 1: random walk 0.0564 0.948  0.0801        1
 #> 2:  Lee-Carter 0.0359 0.888  0.0750        1
+mt_score_table(bt, by = c("model", "horizon"))
+#>           model horizon   crps cov95 crps_le cov95_le
+#>          <fctr>   <num>  <num> <num>   <num>    <num>
+#>  1: random walk       1 0.0490 0.856  0.0591        1
+#>  2: random walk       2 0.0515 0.937  0.0493        1
+#>  3: random walk       3 0.0563 0.965  0.0823        1
+#>  4: random walk       4 0.0598 0.986  0.0869        1
+#>  5: random walk       5 0.0654 0.996  0.1230        1
+#>  6:  Lee-Carter       1 0.0346 0.880  0.0575        1
+#>  7:  Lee-Carter       2 0.0340 0.873  0.0392        1
+#>  8:  Lee-Carter       3 0.0364 0.894  0.0712        1
+#>  9:  Lee-Carter       4 0.0359 0.898  0.0754        1
+#> 10:  Lee-Carter       5 0.0388 0.894  0.1320        1
 fc <- list("random walk" = mt_forecast(mt_fit(rwd(), x), h = 10, n_draws = 100, seed = 1),
            "Lee-Carter" = mt_forecast(mt_fit(lee_carter(), x), h = 10, n_draws = 100, seed = 1))
 mt_compare_forecasts(fc, periods = 2022)

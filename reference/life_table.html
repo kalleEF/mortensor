@@ -60,7 +60,8 @@ ones of Preston, Heuveline and Guillot (2001):</p>
 <span>  <span class="va">mx</span>,</span>
 <span>  age <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  ax <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  open <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"reciprocal"</span>, <span class="st">"gompertz"</span>, <span class="st">"kannisto"</span><span class="op">)</span>,</span>
+<span>  open <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"reciprocal"</span>, <span class="st">"gompertz"</span>, <span class="st">"kannisto"</span>, <span class="st">"makeham"</span>, <span class="st">"weibull"</span>, <span class="st">"beard"</span>,</span>
+<span>    <span class="st">"logquad"</span>, <span class="st">"logistic"</span>, <span class="st">"perks"</span>, <span class="st">"lynch_brown"</span>, <span class="st">"aic"</span><span class="op">)</span>,</span>
 <span>  k <span class="op">=</span> <span class="fl">10</span>,</span>
 <span>  radix <span class="op">=</span> <span class="fl">1e+05</span>,</span>
 <span>  omega <span class="op">=</span> <span class="fl">110</span>,</span>
@@ -86,11 +87,13 @@ interval).</p></dd>
 
 
 <dt id="arg-open">open<a class="anchor" aria-label="anchor" href="#arg-open"></a></dt>
-<dd><p><code>"reciprocal"</code>, <code>"gompertz"</code> or <code>"kannisto"</code>.</p></dd>
+<dd><p><code>"reciprocal"</code>, a hazard law (<code>"gompertz"</code>, <code>"kannisto"</code>,
+<code>"makeham"</code>, <code>"weibull"</code>, <code>"beard"</code>, <code>"logquad"</code>, <code>"logistic"</code>,
+<code>"perks"</code>, <code>"lynch_brown"</code>) or <code>"aic"</code>.</p></dd>
 
 
 <dt id="arg-k">k<a class="anchor" aria-label="anchor" href="#arg-k"></a></dt>
-<dd><p>Number of ages used for the Gompertz or Kannisto fit.</p></dd>
+<dd><p>Number of ages used for the fit of a hazard law.</p></dd>
 
 
 <dt id="arg-radix">radix<a class="anchor" aria-label="anchor" href="#arg-radix"></a></dt>
@@ -98,15 +101,14 @@ interval).</p></dd>
 
 
 <dt id="arg-omega">omega<a class="anchor" aria-label="anchor" href="#arg-omega"></a></dt>
-<dd><p>Age up to which a Gompertz or Kannisto tail is applied
-(default 110, the default <code>omega</code> of <code><a href="mt_data.html">mt_data()</a></code>); ignored with
-<code>open = "reciprocal"</code>.</p></dd>
+<dd><p>Age up to which a fitted hazard is applied (default 110,
+the default <code>omega</code> of <code><a href="mt_data.html">mt_data()</a></code>); ignored with <code>open = "reciprocal"</code>.</p></dd>
 
 
 <dt id="arg-exposure">exposure<a class="anchor" aria-label="anchor" href="#arg-exposure"></a></dt>
 <dd><p>Optional person-years of the age intervals, which weight
-the maximum-likelihood fit of a Gompertz or Kannisto closure with the
-observed numbers at risk; by default the numbers of the life table.</p></dd>
+the maximum-likelihood fit of a hazard law with the observed numbers at
+risk; by default the numbers of the life table. Needed for <code>open = "aic"</code>.</p></dd>
 
 </dl></div>
     <div class="section level2">
@@ -114,7 +116,11 @@ observed numbers at risk; by default the numbers of the life table.</p></dd>
     <p>A <code>data.table</code> with <code>age_lo</code>, <code>age_hi</code>, <code>n</code>, <code>mx</code>, <code>ax</code>, <code>qx</code>,
 <code>lx</code>, <code>dx</code>, <code>Lx</code>, <code>Tx</code>, <code>ex</code>. With a Gompertz or Kannisto closure, the
 attribute <code>"tail"</code> holds the fitted <code>a</code> and <code>b</code>, the ages of the fit and
-whether it converged.</p>
+whether it converged. With another law it holds <code>alpha</code>, <code>beta</code>,
+<code>gamma</code> and <code>delta</code> (<code>NA</code> where the law has fewer parameters), the
+log-likelihood <code>loglik</code> and <code>aic</code> (with <code>exposure</code> only), the ages and
+<code>converged</code>; with <code>"aic"</code> one such row per law, with <code>delta_aic</code> and
+the <code>selected</code> law.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
@@ -153,6 +159,36 @@ logit rates. The fitted hazard is applied year by year from the start
 of the open interval to <code>omega</code> (survival <code>exp(-H)</code> and person-years
 <code>l (1 - exp(-H)) / H</code> in each year), and the survivors at <code>omega</code> are
 closed with <code>L = l / H</code> at the integrated hazard of the following year;</p></li>
+<li><p><code>"makeham"</code>, <code>"weibull"</code>, <code>"beard"</code>, <code>"logquad"</code>, <code>"logistic"</code>,
+<code>"perks"</code> and <code>"lynch_brown"</code> close the table with the other hazard
+laws that Feehan (2018, Table 1 and Appendix E) compares, for age <code>x</code>
+in years:</p><ul><li><p>Makeham: <code>gamma + alpha exp(beta x)</code>;</p></li>
+<li><p>Weibull: <code>alpha x^(beta - 1)</code> with <code>x</code> the age, as Thatcher et al.
+(1998) fit <code>a x^b</code> (Feehan's fits count age 80 as <code>z = 1</code>, Appendix
+E.9, which changes this law only);</p></li>
+<li><p>Beard (gamma-Gompertz): <code>alpha exp(beta x) / (1 + delta exp(beta x))</code>;</p></li>
+<li><p>log-quadratic: <code>exp(alpha + beta x + gamma x^2)</code> (the quadratic model
+of Coale and Kisker in Thatcher et al. 1998);</p></li>
+<li><p>logistic: <code>gamma + alpha exp(beta x) / (1 + delta exp(beta x))</code> (the
+logistic model of Thatcher et al. 1998 in another parameterisation);</p></li>
+<li><p>Perks (gamma-Makeham): <code>(gamma + alpha exp(beta x)) / (1 + delta exp(beta x))</code>;</p></li>
+<li><p>Lynch-Brown: <code>alpha + beta atan(gamma (x - delta))</code>.</p></li>
+</ul><p>The parameters are positive, except <code>beta</code> of Makeham, all parameters
+of the log-quadratic law and <code>alpha</code> and <code>delta</code> of Lynch-Brown, which
+are real (Feehan's Appendix E). They are fitted by the same binomial
+maximum likelihood as the Kannisto closure, with the integrated hazards
+of Feehan's Appendix E in closed form (for the log-quadratic law by
+Gauss-Legendre quadrature with 20 nodes per year, as its closed form
+needs the error function of an imaginary argument when <code>gamma &gt; 0</code>).
+Feehan maximises with BFGS from one heuristic and ten random starts; the
+package takes Levenberg-Marquardt steps on the Fisher information from
+several deterministic starts and keeps the highest likelihood
+(package-specific, reference unknown);</p></li>
+<li><p><code>"aic"</code> fits all nine laws and closes each schedule with the law of the
+lowest Akaike information criterion, <code>AIC = -2 loglik + 2 k</code> with <code>k</code>
+parameters, the criterion by which Feehan (2018, section 4.2) compares
+the models. It needs <code>exposure</code>: with the numbers of the life table
+(radix 1) the likelihood has no sample size;</p></li>
 <li><p>a rate of 0 in the open interval (no deaths, as in small populations)
 would give an infinite life expectancy: the last positive rate of the
 closed intervals is used for the open interval instead (column <code>mx</code>
@@ -164,10 +200,17 @@ an infinite value.</p></li>
     <p>Andreev EM, Kingkade WW (2015). Average age at death in infancy and
 infant mortality level: reconsidering the Coale-Demeny formulas at
 current levels of low mortality. <em>Demographic Research</em> 33: 363-390.</p>
+<p>Feehan DM (2018). Separating the signal from the noise: evidence for
+deceleration in old-age death rates. <em>Demography</em> 55(6): 2025-2044.
+<a href="https://doi.org/10.1007/s13524-018-0728-x" class="external-link">doi:10.1007/s13524-018-0728-x</a></p>
 <p>Preston SH, Heuveline P, Guillot M (2001). <em>Demography: Measuring and
 Modeling Population Processes</em>. Blackwell.</p>
 <p>Thatcher AR, Kannisto V, Vaupel JW (1998). <em>The Force of Mortality at Ages
 80 to 120</em>. Odense University Press.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
+    <div class="dont-index"><p><code><a href="mt_open_check.html">mt_open_check()</a></code> to compare the laws out of sample.</p></div>
     </div>
 
     <div class="section level2">
@@ -191,6 +234,14 @@ Modeling Population Processes</em>. Blackwell.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span>         law            a         b age_from age_to converged</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>      &lt;char&gt;        &lt;num&gt;     &lt;num&gt;    &lt;num&gt;  &lt;num&gt;    &lt;lgcl&gt;</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1: kannisto 1.045127e-06 0.1338894       90    100      TRUE</span>
+<span class="r-in"><span><span class="co"># the log-quadratic law of Feehan (2018)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="fu">life_table</span><span class="op">(</span><span class="va">m</span>, <span class="fu"><a href="mt_axis.html">single_ages</a></span><span class="op">(</span><span class="fl">30</span>, <span class="fl">100</span><span class="op">)</span>, open <span class="op">=</span> <span class="st">"logquad"</span><span class="op">)</span>, <span class="st">"tail"</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        law     alpha       beta        gamma delta loglik   aic age_from age_to</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     &lt;char&gt;     &lt;num&gt;      &lt;num&gt;        &lt;num&gt; &lt;num&gt;  &lt;num&gt; &lt;num&gt;    &lt;num&gt;  &lt;num&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1: logquad -9.903961 0.07871943 0.0001176787    NA     NA    NA       90    100</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    converged</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       &lt;lgcl&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1:      TRUE</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

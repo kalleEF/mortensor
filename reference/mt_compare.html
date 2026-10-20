@@ -136,7 +136,8 @@ the training data of the first forecast).</p></dd>
 
 
 <dt id="arg-by">by<a class="anchor" aria-label="anchor" href="#arg-by"></a></dt>
-<dd><p>Columns that define the rows (default <code>"model"</code>).</p></dd>
+<dd><p>Columns that define the rows (default <code>"model"</code>), for example
+<code>c("model", "horizon")</code> for the scores of each horizon.</p></dd>
 
 
 <dt id="arg-digits">digits<a class="anchor" aria-label="anchor" href="#arg-digits"></a></dt>
@@ -235,7 +236,10 @@ their means only, and the means would refer to different targets.
 which no cell was scored by every model (for example with different
 age groups) is always scored so. The CRPS depends on the number of
 draws (see <code><a href="mt_backtest.html">mt_backtest()</a></code>); compare models
-backtested with the same <code>n_draws</code>, as <code>mt_compare()</code> does.</p></li>
+backtested with the same <code>n_draws</code>, as <code>mt_compare()</code> does. With
+<code>by = c("model", "horizon")</code> the table gives the scores of each
+forecast horizon, the same values as <code>mt_score(by = c("model", "horizon"))</code>: coverage that falls with the horizon shows intervals that
+widen too slowly (see <code><a href="recalibrated.html">recalibrated()</a></code>).</p></li>
 <li><p><code>mt_compare_forecasts()</code> gives one quantity of several forecasts
 (<code>mt_draws</code>) or observed data (<code>mt_data</code>, with Poisson intervals) as
 "median (lower-upper)", one column per forecast (empty where a
@@ -257,6 +261,19 @@ around the last observed year it shows the jump-off of each forecast.</p></li>
 <span class="r-out co"><span class="r-pr">#&gt;</span>         &lt;fctr&gt;  &lt;num&gt; &lt;num&gt;   &lt;num&gt;    &lt;num&gt;</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1: random walk 0.0564 0.948  0.0801        1</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2:  Lee-Carter 0.0359 0.888  0.0750        1</span>
+<span class="r-in"><span><span class="fu">mt_score_table</span><span class="op">(</span><span class="va">bt</span>, by <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"model"</span>, <span class="st">"horizon"</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>           model horizon   crps cov95 crps_le cov95_le</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>          &lt;fctr&gt;   &lt;num&gt;  &lt;num&gt; &lt;num&gt;   &lt;num&gt;    &lt;num&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  1: random walk       1 0.0490 0.856  0.0591        1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2: random walk       2 0.0515 0.937  0.0493        1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  3: random walk       3 0.0563 0.965  0.0823        1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  4: random walk       4 0.0598 0.986  0.0869        1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  5: random walk       5 0.0654 0.996  0.1230        1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  6:  Lee-Carter       1 0.0346 0.880  0.0575        1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  7:  Lee-Carter       2 0.0340 0.873  0.0392        1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  8:  Lee-Carter       3 0.0364 0.894  0.0712        1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  9:  Lee-Carter       4 0.0359 0.898  0.0754        1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 10:  Lee-Carter       5 0.0388 0.894  0.1320        1</span>
 <span class="r-in"><span><span class="va">fc</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="st">"random walk"</span> <span class="op">=</span> <span class="fu"><a href="mt_forecast.html">mt_forecast</a></span><span class="op">(</span><span class="fu"><a href="mt_fit.html">mt_fit</a></span><span class="op">(</span><span class="fu"><a href="rwd.html">rwd</a></span><span class="op">(</span><span class="op">)</span>, <span class="va">x</span><span class="op">)</span>, h <span class="op">=</span> <span class="fl">10</span>, n_draws <span class="op">=</span> <span class="fl">100</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>           <span class="st">"Lee-Carter"</span> <span class="op">=</span> <span class="fu"><a href="mt_forecast.html">mt_forecast</a></span><span class="op">(</span><span class="fu"><a href="mt_fit.html">mt_fit</a></span><span class="op">(</span><span class="fu"><a href="lee_carter.html">lee_carter</a></span><span class="op">(</span><span class="op">)</span>, <span class="va">x</span><span class="op">)</span>, h <span class="op">=</span> <span class="fl">10</span>, n_draws <span class="op">=</span> <span class="fl">100</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu">mt_compare_forecasts</span><span class="op">(</span><span class="va">fc</span>, periods <span class="op">=</span> <span class="fl">2022</span><span class="op">)</span></span></span>

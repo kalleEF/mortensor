@@ -42,6 +42,8 @@ Complete analyses from the published tables to the reported results.
 
 - [Inequality in England: life expectancy and causes of death by
   deprivation](inequality-england.md):
+- [Causes of death by deprivation: coherent and combined
+  forecasts](causes-deprivation.md):
 - [Differences between the German Laender](laender-germany.md):
 - [Excess mortality](excess-mortality.md):
 

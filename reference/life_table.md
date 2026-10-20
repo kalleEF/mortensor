@@ -12,7 +12,8 @@ life_table(
   mx,
   age = NULL,
   ax = NULL,
-  open = c("reciprocal", "gompertz", "kannisto"),
+  open = c("reciprocal", "gompertz", "kannisto", "makeham", "weibull", "beard",
+    "logquad", "logistic", "perks", "lynch_brown", "aic"),
   k = 10,
   radix = 1e+05,
   omega = 110,
@@ -37,11 +38,13 @@ life_table(
 
 - open:
 
-  `"reciprocal"`, `"gompertz"` or `"kannisto"`.
+  `"reciprocal"`, a hazard law (`"gompertz"`, `"kannisto"`, `"makeham"`,
+  `"weibull"`, `"beard"`, `"logquad"`, `"logistic"`, `"perks"`,
+  `"lynch_brown"`) or `"aic"`.
 
 - k:
 
-  Number of ages used for the Gompertz or Kannisto fit.
+  Number of ages used for the fit of a hazard law.
 
 - radix:
 
@@ -49,22 +52,27 @@ life_table(
 
 - omega:
 
-  Age up to which a Gompertz or Kannisto tail is applied (default 110,
-  the default `omega` of [`mt_data()`](mt_data.md)); ignored with
+  Age up to which a fitted hazard is applied (default 110, the default
+  `omega` of [`mt_data()`](mt_data.md)); ignored with
   `open = "reciprocal"`.
 
 - exposure:
 
   Optional person-years of the age intervals, which weight the
-  maximum-likelihood fit of a Gompertz or Kannisto closure with the
-  observed numbers at risk; by default the numbers of the life table.
+  maximum-likelihood fit of a hazard law with the observed numbers at
+  risk; by default the numbers of the life table. Needed for
+  `open = "aic"`.
 
 ## Value
 
 A `data.table` with `age_lo`, `age_hi`, `n`, `mx`, `ax`, `qx`, `lx`,
 `dx`, `Lx`, `Tx`, `ex`. With a Gompertz or Kannisto closure, the
 attribute `"tail"` holds the fitted `a` and `b`, the ages of the fit and
-whether it converged.
+whether it converged. With another law it holds `alpha`, `beta`, `gamma`
+and `delta` (`NA` where the law has fewer parameters), the
+log-likelihood `loglik` and `aic` (with `exposure` only), the ages and
+`converged`; with `"aic"` one such row per law, with `delta_aic` and the
+`selected` law.
 
 ## Details
 
@@ -106,6 +114,49 @@ whether it converged.
   closed with `L = l / H` at the integrated hazard of the following
   year;
 
+- `"makeham"`, `"weibull"`, `"beard"`, `"logquad"`, `"logistic"`,
+  `"perks"` and `"lynch_brown"` close the table with the other hazard
+  laws that Feehan (2018, Table 1 and Appendix E) compares, for age `x`
+  in years:
+
+  - Makeham: `gamma + alpha exp(beta x)`;
+
+  - Weibull: `alpha x^(beta - 1)` with `x` the age, as Thatcher et
+    al. (1998) fit `a x^b` (Feehan's fits count age 80 as `z = 1`,
+    Appendix E.9, which changes this law only);
+
+  - Beard (gamma-Gompertz):
+    `alpha exp(beta x) / (1 + delta exp(beta x))`;
+
+  - log-quadratic: `exp(alpha + beta x + gamma x^2)` (the quadratic
+    model of Coale and Kisker in Thatcher et al. 1998);
+
+  - logistic: `gamma + alpha exp(beta x) / (1 + delta exp(beta x))` (the
+    logistic model of Thatcher et al. 1998 in another parameterisation);
+
+  - Perks (gamma-Makeham):
+    `(gamma + alpha exp(beta x)) / (1 + delta exp(beta x))`;
+
+  - Lynch-Brown: `alpha + beta atan(gamma (x - delta))`.
+
+  The parameters are positive, except `beta` of Makeham, all parameters
+  of the log-quadratic law and `alpha` and `delta` of Lynch-Brown, which
+  are real (Feehan's Appendix E). They are fitted by the same binomial
+  maximum likelihood as the Kannisto closure, with the integrated
+  hazards of Feehan's Appendix E in closed form (for the log-quadratic
+  law by Gauss-Legendre quadrature with 20 nodes per year, as its closed
+  form needs the error function of an imaginary argument when
+  `gamma > 0`). Feehan maximises with BFGS from one heuristic and ten
+  random starts; the package takes Levenberg-Marquardt steps on the
+  Fisher information from several deterministic starts and keeps the
+  highest likelihood (package-specific, reference unknown);
+
+- `"aic"` fits all nine laws and closes each schedule with the law of
+  the lowest Akaike information criterion, `AIC = -2 loglik + 2 k` with
+  `k` parameters, the criterion by which Feehan (2018, section 4.2)
+  compares the models. It needs `exposure`: with the numbers of the life
+  table (radix 1) the likelihood has no sample size;
+
 - a rate of 0 in the open interval (no deaths, as in small populations)
   would give an infinite life expectancy: the last positive rate of the
   closed intervals is used for the open interval instead (column `mx`
@@ -118,11 +169,19 @@ Andreev EM, Kingkade WW (2015). Average age at death in infancy and
 infant mortality level: reconsidering the Coale-Demeny formulas at
 current levels of low mortality. *Demographic Research* 33: 363-390.
 
+Feehan DM (2018). Separating the signal from the noise: evidence for
+deceleration in old-age death rates. *Demography* 55(6): 2025-2044.
+[doi:10.1007/s13524-018-0728-x](https://doi.org/10.1007/s13524-018-0728-x)
+
 Preston SH, Heuveline P, Guillot M (2001). *Demography: Measuring and
 Modeling Population Processes*. Blackwell.
 
 Thatcher AR, Kannisto V, Vaupel JW (1998). *The Force of Mortality at
 Ages 80 to 120*. Odense University Press.
+
+## See also
+
+[`mt_open_check()`](mt_open_check.md) to compare the laws out of sample.
 
 ## Examples
 
@@ -146,4 +205,12 @@ attr(lk, "tail")
 #>         law            a         b age_from age_to converged
 #>      <char>        <num>     <num>    <num>  <num>    <lgcl>
 #> 1: kannisto 1.045127e-06 0.1338894       90    100      TRUE
+# the log-quadratic law of Feehan (2018)
+attr(life_table(m, single_ages(30, 100), open = "logquad"), "tail")
+#>        law     alpha       beta        gamma delta loglik   aic age_from age_to
+#>     <char>     <num>      <num>        <num> <num>  <num> <num>    <num>  <num>
+#> 1: logquad -9.903961 0.07871943 0.0001176787    NA     NA    NA       90    100
+#>    converged
+#>       <lgcl>
+#> 1:      TRUE
 ```

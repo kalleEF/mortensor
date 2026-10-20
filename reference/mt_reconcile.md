@@ -19,7 +19,7 @@ mt_reconcile(
   method = c("wls", "mint", "structural", "ols", "bottom_up", "proportional"),
   shrink = "auto",
   exposure = NULL,
-  dependence = c("none", "empirical"),
+  dependence = c("none", "schaake", "empirical"),
   seed = NULL,
   fixed = NULL,
   var = NULL,
@@ -60,14 +60,18 @@ mt_reconcile(
 
 - dependence:
 
-  `"none"` (default: keep the draws as they are) or `"empirical"`
-  (package-specific reordering of the paths of separately fitted strata,
-  see Details). Draws of joint models are not reordered: `"empirical"`
-  then gives a warning and is ignored.
+  `"none"` (default: keep the draws as they are), `"schaake"` (the
+  Schaake shuffle of the draws of separately fitted strata before the
+  reconciliation, see Details) or `"empirical"` (deprecated). Draws of
+  joint models are not reordered: `"schaake"` then gives a warning and
+  is ignored. The shuffle needs the training data of the draws (as
+  [`mt_forecast()`](mt_forecast.md) returns them), with at least two
+  more training years than forecast years.
 
 - seed:
 
-  Random seed for the reordering (`dependence = "empirical"`).
+  Random seed for the Schaake shuffle (order of the draws, choice of
+  dates, ties).
 
 - fixed:
 
@@ -90,7 +94,13 @@ mt_reconcile(
 
 The reconciled `mt_draws`, with diagnostics in `$reconciliation`
 (method, largest relative gap before reconciliation, share of bottom
-values held at zero, mean shrinkage intensity).
+values held at zero, mean shrinkage intensity). After the Schaake
+shuffle, `$schaake` holds the number of dates (`dates`), their start
+years (`years`), the start year of the date of each draw (`draw_year`),
+the block of each draw (`block`), the number of blocks (`blocks`), the
+number of shuffled margins (`margins`) and the share of margins with
+tied template values (`tied`); `$component` is then dropped, since the
+values of one draw come from different base draws.
 
 ## Details
 
@@ -125,7 +135,9 @@ is changed too little. For strata fitted by separate models the base
 draws are independent across strata, so the shrunk covariance is close
 to its diagonal and `"mint"` gives nearly the result of `"wls"`; it
 differs where a joint model (for example [`li_lee()`](li_lee.md))
-simulates correlated strata.
+simulates correlated strata, or after the Schaake shuffle.
+[`reconciled()`](reconciled.md) with `covariance = "errors"` estimates
+`W` from the errors of past forecasts instead, the input of the papers.
 
 **Non-negative forecasts.** Projections can make bottom values negative
 where the base forecasts disagree strongly. For the draws where this
@@ -177,26 +189,74 @@ reconciled as they are, so sums of separately fitted parts have narrower
 intervals than they would if the parts moved together. Joint models (for
 example [`li_lee()`](li_lee.md), [`coherent_fdm()`](coherent_fdm.md) and
 [`coda()`](coda.md) with `coherent = TRUE`) carry the dependence between
-strata in the model itself; their draws are never reordered. Ensemble
-copula coupling (Schefzik, Thorarinsdottir and Gneiting 2013) gives
-separately fitted strata the dependence of a joint model's draws:
-[`mt_couple()`](coupled.md) for draws before `mt_reconcile()`, and
+strata in the model itself; their draws are never reordered (`"schaake"`
+then gives a warning and is ignored). Two methods give separately fitted
+strata a dependence before the reconciliation: the Schaake shuffle takes
+it from the observed changes of the training years
+(`dependence = "schaake"`, below), ensemble copula coupling (Schefzik,
+Thorarinsdottir and Gneiting 2013) from the draws of a joint model
+([`mt_couple()`](coupled.md) for draws before `mt_reconcile()`, and
 [`coupled()`](coupled.md) or `reconciled(dependence = "ecc")` for
-models.
+models).
 
-`dependence = "empirical"` reorders the paths of each stratum before the
-reconciliation. This is a package-specific method, related to but
-different from the Schaake shuffle of Clark et al. (2004): every draw is
-matched to a training year, the stratum whose year-to-year change of log
-rates (averaged over ages) was relatively large in that year receives a
-relatively high path, and the marginal distribution of each stratum is
-unchanged. It differs from the Schaake shuffle in three ways: it takes
-one template value per stratum and year instead of one per margin (here
-each age and forecast year of a stratum), it ranks whole paths by their
-mean level (mean log rate over ages and years) instead of ranking the
-values of each margin, and it resamples the training years with
-replacement instead of using distinct historical dates. Its effect on
-the intervals of the aggregates has to be checked in a backtest.
+**The Schaake shuffle** (`dependence = "schaake"`; Clark, Gangopadhyay,
+Hay, Rajagopalan and Wilby 2004, Section 3b). Status: published, adapted
+to mortality forecasts as listed below. In the paper, the ensemble
+members of each station and variable are reordered so that their ranks
+follow those of observations from as many dates of the historical
+record, the same dates for all stations and variables (their eqs. 5-12);
+the later lead times take the following days of the same dates, which
+keeps the persistence over lead times. Here a margin is an age, a
+forecast year and a stratum. The template value of a date, a training
+year `tau`, for the margin of forecast year `h` (counted from the last
+training year) is the observed change of the log death rate from `tau`
+to `tau + h`: one observed trajectory per date, over consecutive years.
+The dates are the `n` training years whose next `H` years are observed
+(`H` the number of forecast years, so `n` is the number of training
+years minus `H`), from the training data of the draws only. In every
+margin the draws receive the sorted values of that margin in the rank
+order of the template values of their dates. Every margin keeps exactly
+its values, and the draws take the rank correlations of the observed
+changes between strata, between ages and between forecast years. Ties
+among template values are ranked at random, as in the paper (Section
+4c); margins with a missing template value keep the order of their
+draws, as the paper's code skips vectors with missing values (appendix),
+with a warning. Schefzik et al. (2013, Section 3.4) describe the shuffle
+as the empirical copula of the historical record applied to samples of
+the margins; ensemble copula coupling takes the copula from the draws of
+a model instead.
+
+Package-specific (reference unknown): (1) the template holds changes of
+log rates from the start year of each date, where the paper takes the
+observed values themselves (from dates within seven days of the forecast
+date), so that the ranks follow the variation of past changes around the
+trend of mortality; (2) deaths of zero count as 0.5 in the template; (3)
+the paper has as many dates as ensemble members. With more draws than
+dates, the draws are taken in a random order in blocks of `n`, and each
+block is shuffled with all `n` dates; a last block with fewer draws uses
+a random subset of distinct dates, as do fewer draws than dates (the
+paper selects its dates at random). The draws of a block take the ranks
+of the template among themselves, and the same dates recur in every
+block.
+
+The shuffle assumes that the dependence of the training years holds in
+the forecast years (Clark et al. 2004, Section 5). It sets the
+dependence between the ages and years of a stratum as well, so measures
+over ages, such as the life expectancy of a single stratum, change:
+Lee-Carter draws move all ages of a stratum together, and after the
+shuffle they move together as much as the observed changes did, which
+narrows the intervals of life expectancy where these are less correlated
+between ages. The observed changes carry the Poisson variation of the
+deaths, which is independent between strata and ages; where deaths are
+few, it weakens the dependence the template gives. Templates are short:
+with 19 training years and 5 forecast years there are 14 dates, with 16
+forecast years 3.
+
+`dependence = "empirical"` is deprecated (it warns): a package-specific
+reordering of whole paths of each stratum by one-year changes of log
+rates, averaged over ages, of training years drawn with replacement. It
+keeps the dependence between the ages and years of each stratum. Use
+`"schaake"`, the published method.
 
 The one-variable interface with `var` and `total` is still accepted. It
 reconciles deaths when the exposures of the parts add up to that of the
@@ -283,4 +343,8 @@ rc$reconciliation
 #> $max_relative_change_fixed
 #> [1] NA
 #> 
+# the strata take the dependence of the observed changes of 12 training years
+rs <- mt_reconcile(fc, h, method = "wls", dependence = "schaake", seed = 1)
+rs$schaake$years
+#>  [1] 2005 2006 2007 2008 2009 2010 2011 2012 2013 2014 2015 2016
 ```

@@ -112,6 +112,8 @@ mortality (which also work on forecasts).
   populations
 - [`life_table()`](life_table.md) : Life tables from death rates on any
   age axis
+- [`mt_open_check()`](mt_open_check.md) : Check old-age mortality models
+  out of sample
 - [`mt_excess()`](mt_excess.md) [`mt_plot_excess()`](mt_excess.md) :
   Excess mortality
 

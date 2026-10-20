@@ -79,6 +79,30 @@ a model, `reconciled(..., dependence = "ecc", template = cae())` couples
 before reconciling, and [`mt_couple()`](../reference/coupled.md) couples
 two sets of forecast draws.
 
+The Schaake shuffle (Clark et al. 2004) reorders the draws in the same
+way, with the ranks of past observations in place of a model’s draws.
+With `reconciled(..., dependence = "schaake")`, the template of a cell
+in forecast year `h` holds the observed changes of its log rate over `h`
+years from several distinct training years, the same years for all
+groups and ages. Five draws of one cell and the observed changes from
+five training years:
+
+``` r
+
+past <- c(-0.031, -0.012, -0.024, -0.040, -0.018)
+sort(base)[rank(past)]
+#> [1] 0.011 0.014 0.012 0.010 0.013
+```
+
+The draw matched to the year with the largest fall receives the lowest
+value, in every group, so the groups move together as they did in the
+training years. The template has one value per training year, and it
+assumes that the dependence of the past holds in the future (Clark et
+al. 2004). The observed changes carry the random variation of the
+deaths, which is independent between groups and weakens their dependence
+where deaths are few. ECC takes the dependence from a joint model
+instead.
+
 ## Example: deprivation quintiles in England
 
 Deaths and populations by sex and deprivation quintile (`ons_data`), at
@@ -203,7 +227,7 @@ Life expectancy at 50 in 2030 for England, the sum of the quintiles:
 mt_plot_compare(fcs, at = 50, strata = c("female.England", "male.England"), periods = 2030)
 ```
 
-![](dependence_files/figure-html/unnamed-chunk-8-1.png)
+![](dependence_files/figure-html/unnamed-chunk-9-1.png)
 
 The observed gap in life expectancy at 50 between Q1 and Q5 widened:
 
@@ -336,6 +360,11 @@ totals and gaps that matter shows which method suits them.
   this in a backtest.
 
 ## References
+
+Clark M, Gangopadhyay S, Hay L, Rajagopalan B, Wilby R (2004). The
+Schaake shuffle: a method for reconstructing space-time variability in
+forecasted precipitation and temperature fields. *Journal of
+Hydrometeorology* 5(1): 243-262.
 
 Hyndman RJ, Booth H, Yasmeen F (2013). Coherent mortality forecasting:
 the product-ratio method with functional time series models.

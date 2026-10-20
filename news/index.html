@@ -44,6 +44,42 @@
 <h2 class="pkg-version" data-toc-text="0.1.9000" id="mortensor-019000-development-of-020">mortensor 0.1.9000 (development of 0.2.0)<a class="anchor" aria-label="anchor" href="#mortensor-019000-development-of-020"></a></h2>
 <p>Clean break: the 0.1.x interface is replaced (see <code>dev/revamp-plan.md</code>).</p>
 <div class="section level3">
+<h3 id="published-methods-from-the-generalisation-plan-0-1-9000">Published methods from the generalisation plan<a class="anchor" aria-label="anchor" href="#published-methods-from-the-generalisation-plan-0-1-9000"></a></h3>
+<p>Work package E6: the items of <code>dev/generalisation-plan.md</code> whose sources are available, implemented from the papers. All are opt-in; defaults are unchanged.</p>
+<p>Combining models:</p>
+<ul><li>
+<code>ensemble(weights = "crps_stack")</code>: stacking of predictive distributions (Yao et al. 2018) with the CRPS as scoring rule, on the inner leave-future-out forecasts; the weights solve the quadratic program of the mixture CRPS exactly.</li>
+<li>
+<code>ensemble(weights = "bias")</code>: the weights of Kontis et al. (2017), exp(-|bias|) of life expectancy over withheld years.</li>
+<li>
+<code>weights = "crps"</code> is described as the extension of the inverse-error weights of Shang (2012) to predictive distributions; behaviour unchanged. <code>weights = "stack"</code> (stacked medians used as mixture weights) is deprecated in favour of <code>"crps_stack"</code>.</li>
+</ul><p>Calibration over horizons:</p>
+<ul><li>
+<code>recalibrated(scale = "per_horizon")</code>: one spread factor for each horizon, as post-processing per lead time (Gneiting et al. 2005). <code>scale = "horizon"</code> (a package-specific power law) is deprecated.</li>
+<li>
+<code>recalibrated(method = "errors")</code>: median forecasts plus resampled past forecast errors of all ages and strata (Keilman, Pham and Hetland 2002; Shang and Hyndman 2017). The intervals are as wide as the past errors allow: with few inner origins they are narrow at long horizons.</li>
+<li>
+<code>mt_score_table(by = c("model", "horizon"))</code> documented and tested.</li>
+</ul><p>Dependence and reconciliation:</p>
+<ul><li>
+<code>reconciled(dependence = "schaake")</code> and <code>mt_reconcile(dependence = "schaake")</code>: the Schaake shuffle (Clark et al. 2004), with observed changes of distinct training years as template. It also replaces the dependence between ages within a stratum. <code>dependence = "empirical"</code> is deprecated in favour of it.</li>
+<li>
+<code>reconciled(method = "wls"/"mint", covariance = "errors")</code>: weights from the errors of inner forecasts, with the shrinkage estimator of MinT.</li>
+</ul><p>Old ages and evaluation:</p>
+<ul><li>
+<code>life_table(open = )</code> has the further old-age laws compared by Feehan (2018): Makeham, Weibull, Beard, log-quadratic, logistic, Perks and Lynch-Brown, fitted by maximum likelihood, and <code>open = "aic"</code>. An invalid <code>open</code> value is now an error.</li>
+<li>
+<code><a href="../reference/mt_open_check.html">mt_open_check()</a></code>: fits old-age laws below a cut age and scores their extrapolation above it, the design of Thatcher, Kannisto and Vaupel (1998), whose chi-squared values it reproduces within 1%.</li>
+<li>
+<code>mt_score(measures = )</code>: SAPE, 90% coverage and interval half-widths of life expectancy (Raftery et al. 2013), and the revision of forecasts between consecutive origins (package-specific measure). Backtest tables gain the columns <code>sd</code>, <code>cov90</code>, <code>hw80</code>, <code>hw90</code> and <code>hw95</code>.</li>
+</ul><p>Vignettes and fixes:</p>
+<ul><li>New vignette “Causes of death by deprivation: coherent and combined forecasts” (precomputed): causes of death by sex and deprivation quintile at ages 50 and over, reconciled over one crossed hierarchy to England, both sexes and all causes (bottom-up, WLS, MinT, proportional to a fixed all-cause forecast), and per-cause ensembles with tuned windows, stacking weights and recalibration against Lee-Carter. The ensembles forecast the cause-specific rates 6-7% more accurately and the life expectancy gap between quintiles less accurately; no difference was significant in a Diebold-Mariano test over four origins.</li>
+<li>Warnings raised in parallel workers (<code>cores &gt; 1</code>) are now passed on in task order; before, failed backtest origins and model warnings were lost.</li>
+<li>
+<code><a href="../reference/ensemble.html">ensemble()</a></code> warns (class <code>mt_warning_ensemble_weights</code>) when its inner backtests score fewer origins than <code>inner_origins</code>, so that weights resting on fewer forecasts are visible.</li>
+</ul><p>Not implemented, because only abstracts were available or the method would be package-specific: see the roadmap of the plan.</p>
+</div>
+<div class="section level3">
 <h3 id="benchmarks-0-1-9000">Benchmarks<a class="anchor" aria-label="anchor" href="#benchmarks-0-1-9000"></a></h3>
 <ul><li>New vignette “Benchmarks: how well the pipeline works”: interval calibration of the standard models on data simulated from the Lee-Carter model with Poisson deaths, rolling-origin backtests on four real data sets (England &amp; Wales men, France women, England by sex and deprivation quintile, German Laender by sex), and the behaviour of the pipeline on input tables with 26 typical defects, on small populations and on a table of 288,000 rows. The results are precomputed by <code>dev/benchmarks.R</code> and reported without thresholds. On data from its own model, the 95% intervals of <code><a href="../reference/lee_carter.html">lee_carter()</a></code> covered 95.9% of the true rates; on the real data 63% to 80%, and the mixture of Lee-Carter and the random walk 93% to 99%.</li>
 <li>The articles have a section “Benchmarks” with this vignette and the comparison with demography, bamp and StMoMo.</li>

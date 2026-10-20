@@ -249,8 +249,10 @@ random walk observed with noise separates it from the trend</td>
 <tr class="odd">
 <td>Totals or gaps of strata forecast by separate models</td>
 <td>
-<code>coupled(model, template = li_lee())</code> or a joint model
-such as <code><a href="../reference/cae.html">cae()</a></code> (<code><a href="../articles/dependence.html">vignette("dependence")</a></code>)</td>
+<code>coupled(model, template = li_lee())</code>,
+<code>reconciled(model, hierarchy, dependence = "schaake")</code> (the
+dependence of past years) or a joint model such as <code><a href="../reference/cae.html">cae()</a></code>
+(<code><a href="../articles/dependence.html">vignette("dependence")</a></code>)</td>
 <td>separate models give independent errors, so intervals of totals are
 too narrow and those of gaps too wide</td>
 </tr>
@@ -354,7 +356,12 @@ intervals where the models disagree, and the negative binomial family of
 its forecast errors in the last years of the training data (by default
 ten); on England &amp; Wales men it raised the 95% coverage of
 Lee-Carter from 0.63 to 0.85. Check calibration with
-<code><a href="../reference/mt_backtest.html">mt_backtest()</a></code> and <code><a href="../reference/mt_plot.html">mt_plot_coverage()</a></code>.</p>
+<code><a href="../reference/mt_backtest.html">mt_backtest()</a></code> and <code><a href="../reference/mt_plot.html">mt_plot_coverage()</a></code>, and by
+horizon with <code>mt_score_table(by = c("model", "horizon"))</code>.
+Where coverage falls with the horizon,
+<code>recalibrated(scale = "per_horizon")</code> estimates one factor
+per horizon, and <code>recalibrated(method = "errors")</code> adds
+resampled errors of the model’s past forecasts; both are opt-in.</p>
 </div>
 <div class="section level3">
 <h3 id="is-one-model-really-more-accurate-than-another">Is one model really more accurate than another?<a class="anchor" aria-label="anchor" href="#is-one-model-really-more-accurate-than-another"></a>
@@ -387,6 +394,28 @@ non-significant difference means that the backtest cannot tell the
 models apart; they may still differ.</p>
 </div>
 <div class="section level3">
+<h3 id="how-should-i-weight-the-models-of-an-ensemble">How should I weight the models of an ensemble?<a class="anchor" aria-label="anchor" href="#how-should-i-weight-the-models-of-an-ensemble"></a>
+</h3>
+<p><code><a href="../reference/ensemble.html">ensemble()</a></code> gives equal weights by default. Estimated
+weights come from an inner backtest on the training years.
+<code>weights = "crps_stack"</code> is stacking of predictive
+distributions (Yao et al. 2018) with the CRPS: the weights minimise the
+mean CRPS of the mixture over the inner forecasts.
+<code>weights = "bias"</code> gives each model the weight
+<code>exp(-|bias|)</code>, with the bias of its projected life
+expectancy over the last 13 training years (Kontis et al. 2017).
+<code>weights = "crps"</code> takes weights inverse to the mean CRPS, an
+extension to distributions of the inverse-error weights of Shang (2012).
+Estimated weights rest on a few inner origins from one period and can be
+unstable (Yao et al. 2018). Compare them with equal weights in an outer
+backtest:</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">ens</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">w</span><span class="op">)</span> <span class="fu"><a href="../reference/ensemble.html">ensemble</a></span><span class="op">(</span>lc <span class="op">=</span> <span class="fu"><a href="../reference/lee_carter.html">lee_carter</a></span><span class="op">(</span><span class="op">)</span>, rw <span class="op">=</span> <span class="fu"><a href="../reference/rwd.html">rwd</a></span><span class="op">(</span><span class="op">)</span>, fdm <span class="op">=</span> <span class="fu"><a href="../reference/hyndman_ullah.html">hyndman_ullah</a></span><span class="op">(</span><span class="op">)</span>, weights <span class="op">=</span> <span class="va">w</span><span class="op">)</span></span>
+<span><span class="va">bt</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_compare.html">mt_compare</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>equal <span class="op">=</span> <span class="fu">ens</span><span class="op">(</span><span class="st">"equal"</span><span class="op">)</span>, stacking <span class="op">=</span> <span class="fu">ens</span><span class="op">(</span><span class="st">"crps_stack"</span><span class="op">)</span>, bias <span class="op">=</span> <span class="fu">ens</span><span class="op">(</span><span class="st">"bias"</span><span class="op">)</span><span class="op">)</span>, <span class="va">data</span>,</span>
+<span>                 origins <span class="op">=</span> <span class="fl">1996</span><span class="op">:</span><span class="fl">2001</span>, h <span class="op">=</span> <span class="fl">10</span>, quantities <span class="op">=</span> <span class="st">"life_expectancy"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/mt_score.html">mt_score</a></span><span class="op">(</span><span class="va">bt</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level3">
 <h3 id="how-do-i-choose-smoothing-and-model-parameters-by-forecast-accuracy">How do I choose smoothing and model parameters by forecast
 accuracy?<a class="anchor" aria-label="anchor" href="#how-do-i-choose-smoothing-and-model-parameters-by-forecast-accuracy"></a>
 </h3>
@@ -397,7 +426,7 @@ setting that forecast them best, then refit it to all years.
 preprocessing, and <code><a href="../reference/mt_tune.html">tuned()</a></code> makes it part of a model, so
 that an outer backtest repeats the choice at each origin without seeing
 the test years:</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">grid</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/expand.grid.html" class="external-link">expand.grid</a></span><span class="op">(</span>k <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">10</span>, <span class="fl">30</span><span class="op">)</span>, order <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">6</span><span class="op">)</span></span>
 <span><span class="va">spec</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_tune.html">tuned</a></span><span class="op">(</span><span class="kw">function</span><span class="op">(</span><span class="va">order</span>, <span class="va">k</span><span class="op">)</span> <span class="fu"><a href="../reference/hyndman_ullah.html">hyndman_ullah</a></span><span class="op">(</span>order <span class="op">=</span> <span class="va">order</span>, smooth_args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>k <span class="op">=</span> <span class="va">k</span><span class="op">)</span><span class="op">)</span>, <span class="va">grid</span>,</span>
 <span>              inner_origins <span class="op">=</span> <span class="fl">1</span>, inner_h <span class="op">=</span> <span class="fl">10</span>, metric <span class="op">=</span> <span class="st">"rmse"</span><span class="op">)</span></span></code></pre></div>
@@ -549,7 +578,7 @@ strata</td>
 <p>Either end the training data in 2019 (as in the ONS vignettes), or
 mark the years as shocks so that the trend is estimated without
 them:</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">prep</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_prep.html">mt_prep</a></span><span class="op">(</span><span class="fu"><a href="../reference/mt_prep.html">step_shocks</a></span><span class="op">(</span><span class="fl">2020</span><span class="op">:</span><span class="fl">2022</span>, action <span class="op">=</span> <span class="st">"interpolate"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_fit.html">mt_fit</a></span><span class="op">(</span><span class="fu"><a href="../reference/lee_carter.html">lee_carter</a></span><span class="op">(</span><span class="op">)</span>, <span class="va">data</span>, prep <span class="op">=</span> <span class="va">prep</span><span class="op">)</span></span></code></pre></div>
 <p>Whether mortality returns to the pre-pandemic trend is an assumption
@@ -582,7 +611,12 @@ so compare the two before choosing. Reconciliation of deaths uses
 exposures of the forecast years; supply population projections as
 <code>exposure</code> when they are available. See “Coherent forecasts:
 totals and their parts” and the applied vignettes “Inequality in
-England” and “Differences between the German Laender”.</p>
+England” and “Differences between the German Laender”. “Causes of death
+by deprivation: coherent and combined forecasts” reconciles causes by
+sex and quintile in one crossed hierarchy,
+<code>mt_hierarchy(sex = "both", quintile = "England", cause = list(total = "all", additive = "rates"))</code>,
+and compares the methods and a per-cause ensemble with Lee-Carter in a
+backtest.</p>
 </div>
 <div class="section level3">
 <h3 id="will-the-gap-between-regions-or-deprivation-groups-keep-growing">Will the gap between regions or deprivation groups keep
@@ -646,7 +680,7 @@ compare measures only between tables with the same open age. See
 </h3>
 <p>Fit a baseline model to the years before the shock and compare the
 observed deaths with its predictive draws for the later years:</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">ex</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_excess.html">mt_excess</a></span><span class="op">(</span><span class="fu"><a href="../reference/lee_carter.html">lee_carter</a></span><span class="op">(</span><span class="op">)</span>, <span class="va">data</span>, baseline <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2010</span>, <span class="fl">2019</span><span class="op">)</span>, ages <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">65</span>, <span class="fl">80</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/mt_excess.html">mt_plot_excess</a></span><span class="op">(</span><span class="va">ex</span>, type <span class="op">=</span> <span class="st">"p_score"</span><span class="op">)</span></span></code></pre></div>
 <p>The intervals contain the uncertainty of the baseline trend and the
@@ -729,6 +763,9 @@ Forecasting</em> 13(2): 281-291.</p>
 <p>Hyndman RJ, Booth H, Yasmeen F (2013). Coherent mortality
 forecasting: the product-ratio method with functional time series
 models. <em>Demography</em> 50(1): 261-283. <a href="doi:10.1007/s13524-012-0145-5" class="uri">doi:10.1007/s13524-012-0145-5</a>.</p>
+<p>Kontis V, Bennett JE, Mathers CD, Li G, Foreman K, Ezzati M (2017).
+Future life expectancy in 35 industrialised countries: projections with
+a Bayesian model ensemble. <em>The Lancet</em> 389(10076): 1323-1335. <a href="doi:10.1016/S0140-6736(16)32381-9" class="uri">doi:10.1016/S0140-6736(16)32381-9</a>.</p>
 <p>Lazarus E, Lewis DJ, Stock JH, Watson MW (2018). HAR inference:
 recommendations for practice. <em>Journal of Business &amp; Economic
 Statistics</em> 36(4): 541-559.</p>
@@ -755,9 +792,15 @@ Epidemiology</em> 182(2): 138-147. <a href="doi:10.1093/aje/kwv020" class="uri">
 <p>Riffe T, Tursun-zade R, Trias Llimós S (2024). Arriaga meets
 Kitagawa. Life expectancy decomposition with population subgroups. MPIDR
 Working Paper WP-2024-029. <a href="doi:10.4054/MPIDR-WP-2024-029" class="uri">doi:10.4054/MPIDR-WP-2024-029</a>.</p>
+<p>Shang HL (2012). Point and interval forecasts of age-specific life
+expectancies: a model averaging approach. <em>Demographic Research</em>
+27(21): 593-644. <a href="doi:10.4054/DemRes.2012.27.21" class="uri">doi:10.4054/DemRes.2012.27.21</a>.</p>
 <p>Wilmoth JR (1995). Are mortality projections always more pessimistic
 when disaggregated by cause of death? <em>Mathematical Population
 Studies</em> 5(4): 293-319. <a href="doi:10.1080/08898489509525409" class="uri">doi:10.1080/08898489509525409</a>.</p>
+<p>Yao Y, Vehtari A, Simpson D, Gelman A (2018). Using stacking to
+average Bayesian predictive distributions (with discussion).
+<em>Bayesian Analysis</em> 13(3): 917-1007. <a href="doi:10.1214/17-BA1091" class="uri">doi:10.1214/17-BA1091</a>.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

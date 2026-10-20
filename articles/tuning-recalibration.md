@@ -146,6 +146,71 @@ cancel in life expectancy. Tuning and recalibration answer different
 questions and combine: the tuned and recalibrated version has the lowest
 CRPS of the rates (0.056).
 
+## Coverage by horizon
+
+[`mt_score_table()`](../reference/mt_compare.md) with
+`by = c("model", "horizon")` gives the scores of each horizon:
+
+``` r
+
+cov_h <- mt_score_table(bt, metrics = "cov95", by = c("model", "horizon"))
+dcast(cov_h, model ~ horizon, value.var = "cov95")
+#> Key: <model>
+#>                         model     1     2     3     4     5     6     7     8
+#>                        <fctr> <num> <num> <num> <num> <num> <num> <num> <num>
+#> 1:                 Lee-Carter 0.739 0.714 0.732 0.690 0.638 0.634 0.587 0.559
+#> 2:               window tuned 0.800 0.772 0.772 0.702 0.657 0.638 0.617 0.573
+#> 3:               recalibrated 0.854 0.871 0.911 0.915 0.915 0.869 0.829 0.800
+#> 4: window tuned, recalibrated 0.859 0.862 0.885 0.850 0.824 0.789 0.784 0.763
+#>        9    10
+#>    <num> <num>
+#> 1: 0.531 0.493
+#> 2: 0.545 0.559
+#> 3: 0.765 0.742
+#> 4: 0.763 0.728
+```
+
+The recalibrated model covers 0.85 of the rates at horizon 1 and 0.74 at
+horizon 10, Lee-Carter 0.74 and 0.49. Two opt-in variants of
+[`recalibrated()`](../reference/recalibrated.md) work per horizon:
+
+- `scale = "per_horizon"` estimates one factor for each horizon from the
+  inner forecasts of that horizon alone, as post-processing is fitted to
+  one lead time (Gneiting et al. 2005; Van Schaeybroeck and Vannitsem
+  2015);
+- `method = "errors"` adds resampled errors of the model’s own inner
+  forecasts to the median of its draws; each error vector holds all ages
+  and strata of one inner origin (Keilman, Pham and Hetland 2002; Shang
+  and Hyndman 2017; Panagiotelis et al. 2023). Its intervals are at most
+  as wide as the range of the past errors of each cell, which is narrow
+  at horizons that few origins reach.
+
+Both need inner forecasts of at least two origins at each forecast
+horizon. With the defaults (origins 10, 8, 6, 4 and 2 years before the
+end of the training data) these are horizons 1 to 8; ten-year forecasts
+need, for example, `years = 11, n_origins = 10`.
+
+``` r
+
+fit_ph <- mt_fit(recalibrated(lee_carter(), scale = "per_horizon"), ew)
+fit_ph$calibration[, .(horizon, origins, scale)]
+#>    horizon origins    scale
+#>      <int>   <int>    <num>
+#> 1:       1       5 4.005731
+#> 2:       2       5 2.999812
+#> 3:       3       4 2.547678
+#> 4:       4       4 2.534120
+#> 5:       5       3 2.525835
+#> 6:       6       3 2.394761
+#> 7:       7       2 2.349198
+#> 8:       8       2 2.401217
+```
+
+In the last ten training years the factor falls from 4.0 at horizon 1 to
+2.4 at horizon 8: Lee-Carter was too narrow at every horizon, and most
+at the shortest. Whether factors per horizon or past errors suit the
+data at hand is a question for a backtest.
+
 ## Options
 
 - `recalibrated(by = "sex")`: separate factors for groups of strata
@@ -158,10 +223,15 @@ CRPS of the rates (0.056).
 Further options of [`recalibrated()`](../reference/recalibrated.md) are
 specific to this package (reference unknown):
 
-- `scale = "horizon"`: a factor that changes with the horizon as a power
-  law, `scale_h1 * h^slope`;
-- `bias = TRUE`: a correction of the drift;
-- `ages = c(50, 75)`: separate factors for age bands;
+- `scale = "horizon"` (deprecated; use `scale = "per_horizon"`): a
+  factor that changes with the horizon as a power law,
+  `scale_h1 * h^slope`;
+- `bias = TRUE`: a correction of the drift (the published analogue is
+  the bias correction in the predictive mean of EMOS, Gneiting et
+  al. 2005);
+- `ages = c(50, 75)`: separate factors for age bands (the published
+  analogue is post-processing for each location separately, Van
+  Schaeybroeck and Vannitsem 2015);
 - `quantity = "life_expectancy"`: recalibrate the intervals of life
   expectancy instead of single rates.
 
@@ -174,6 +244,23 @@ specific to this package (reference unknown):
 | Did it help? | [`mt_compare()`](../reference/mt_compare.md), [`mt_score_table()`](../reference/mt_compare.md) | nothing; it checks |
 
 ## References
+
+Gneiting T, Raftery AE, Westveld AH, Goldman T (2005). Calibrated
+probabilistic forecasting using ensemble model output statistics and
+minimum CRPS estimation. *Monthly Weather Review* 133(5): 1098-1118.
+
+Keilman N, Pham DQ, Hetland A (2002). Why population forecasts should be
+probabilistic: illustrated by the case of Norway. *Demographic Research*
+6(15): 409-454.
+
+Panagiotelis A, Gamakumara P, Athanasopoulos G, Hyndman RJ (2023).
+Probabilistic forecast reconciliation: properties, evaluation and score
+optimisation. *European Journal of Operational Research* 306(2):
+693-706.
+
+Shang HL, Hyndman RJ (2017). Grouped functional time series forecasting:
+an application to age-specific mortality rates. *Journal of
+Computational and Graphical Statistics* 26(2): 330-343.
 
 Van Schaeybroeck B, Vannitsem S (2015). Ensemble post-processing using
 member-by-member approaches: theoretical aspects. *Quarterly Journal of

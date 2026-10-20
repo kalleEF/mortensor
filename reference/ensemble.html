@@ -65,8 +65,8 @@ draws.</p>
     <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">ensemble</span><span class="op">(</span></span>
 <span>  <span class="va">...</span>,</span>
 <span>  weights <span class="op">=</span> <span class="st">"equal"</span>,</span>
-<span>  inner_origins <span class="op">=</span> <span class="fl">3</span>,</span>
-<span>  inner_h <span class="op">=</span> <span class="fl">5</span>,</span>
+<span>  inner_origins <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  inner_h <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  top_k <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  inner_n_draws <span class="op">=</span> <span class="fl">100</span></span>
 <span><span class="op">)</span></span></code></pre></div>
@@ -81,13 +81,16 @@ draws.</p>
 
 
 <dt id="arg-weights">weights<a class="anchor" aria-label="anchor" href="#arg-weights"></a></dt>
-<dd><p><code>"equal"</code>, <code>"crps"</code>, <code>"stack"</code> or a numeric vector.</p></dd>
+<dd><p><code>"equal"</code>, <code>"crps_stack"</code>, <code>"bias"</code>, <code>"crps"</code>, the
+deprecated <code>"stack"</code>, or a numeric vector.</p></dd>
 
 
 <dt id="arg-inner-origins-inner-h">inner_origins, inner_h<a class="anchor" aria-label="anchor" href="#arg-inner-origins-inner-h"></a></dt>
-<dd><p>Inner backtest for <code>weights = "crps"</code> and
-<code>weights = "stack"</code>, and for <code>top_k</code>: the number of origins and the
-horizon of each inner forecast.</p></dd>
+<dd><p>Inner backtest for the weights other than
+<code>"equal"</code> and numeric ones, and for <code>top_k</code>: the number of origins and
+the horizon of each inner forecast. The last origin is <code>inner_h</code> years
+before the last training year. Defaults: 3 origins and 5 years; with
+<code>weights = "bias"</code>, one origin and 13 years (Kontis et al. 2017).</p></dd>
 
 
 <dt id="arg-top-k">top_k<a class="anchor" aria-label="anchor" href="#arg-top-k"></a></dt>
@@ -106,22 +109,85 @@ keeps all.</p></dd>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
-    <p>Weights:</p><ul><li><p><code>"equal"</code>;</p></li>
+    <p>Weights:</p><ul><li><p><code>"equal"</code> (default);</p></li>
 <li><p>a numeric vector (normalised to sum to 1);</p></li>
-<li><p><code>"crps"</code>: proportional to the inverse mean CRPS of each component in an
-inner rolling-origin backtest on the last years of the training window
-(<code>inner_origins</code>, <code>inner_h</code>), so the weights never use data after the
-forecast origin. This is a package heuristic (reference unknown),
-analogous to the inverse mean squared error weights of Bates and
-Granger (1969) with the mean CRPS in place of the mean squared error;</p></li>
-<li><p><code>"stack"</code>: weights that minimise the squared error of the weighted mean
-of the components' median forecasts (log rates) in the same inner
-backtest, constrained to be non-negative and to sum to 1. This is
-stacking of point forecasts (Breiman 1996; for mortality, Kessy,
-Sherris, Villegas and Ziveyi 2022). Using these weights as the
-probabilities of the mixture is a deviation: they are optimal for the
-linear combination of the medians, not for the mixture distribution,
-whose median is not the weighted mean of the medians.</p></li>
+<li><p><code>"crps_stack"</code>: stacking of predictive distributions (Yao, Vehtari,
+Simpson and Gelman 2018, Section 2.1, eq. 2.2): the weights on the
+simplex that optimise a proper scoring rule of the mixture, averaged
+over held-out predictions. The scoring rule is the CRPS. Yao et al.
+define stacking for any proper scoring rule (their Section 2.1 lists
+the CRPS among them) and use the logarithmic score, which needs
+predictive densities; the CRPS, which draws give directly, is a choice
+of this package. The CRPS is proper, and strictly proper for
+distributions with a finite mean (Gneiting and Raftery 2007, Section
+4.2). The held-out
+predictions are the forecasts of the inner rolling-origin backtest on
+the training years (leave-future-out validation, as in Barigou et al.
+2023) in place of the leave-one-out predictions of Yao et al.; they are
+scored on the observed log death rates, as in <code><a href="mt_backtest.html">mt_backtest()</a></code>. With
+draws <code>X_k</code> of component <code>k</code>, the CRPS of the mixture at an
+observation <code>y</code> is <code>sum_k w_k E|X_k - y| - 1/2 sum_k sum_l w_k w_l E|X_k - X_l'|</code> with <code>X_k</code> and <code>X_l'</code> independent (the kernel form of
+Gneiting and Raftery 2007, eq. 21, applied to the mixture). The
+expectations are means over all draws and all pairs of draws, so this
+is the CRPS of the pooled draws with weight <code>w_k / n</code> for each of the
+<code>n</code> draws of component <code>k</code>, the estimator of the backtest. Its mean
+over the scored cells is a quadratic function of the weights, convex
+on the simplex (the CRPS is the integral of a squared difference of
+distribution functions, Gneiting and Raftery 2007, eq. 20). The exact
+minimum of this quadratic program is found by an active-set method.
+Weights can be 0, and the minimum need not be unique (for example with
+identical components). Yao et al. (2018, Section 2.3) note that the
+weights can be unstable when the held-out sample is small; the cells
+of an inner backtest with few origins are correlated;</p></li>
+<li><p><code>"bias"</code>: the weights of Kontis et al. (2017, Methods, "Bayesian model
+averaging", steps 1 to 3). They withhold the last 13 years of data, fit
+each model to the earlier years and project the withheld years. The
+projection bias of a model is the observed minus the projected life
+expectancy, averaged over the withheld years. A model gets the weight
+<code>exp(-|bias|)</code>, and the weights are normalised to sum to 1. The final
+projections pool draws of the models fitted to all data in proportion
+to the weights. Here the withheld years are those of the inner
+backtest with one origin 13 years before the last training year
+(<code>inner_origins = 1</code>, <code>inner_h = 13</code>, the defaults with <code>weights = "bias"</code>). The projected life expectancy is that of the mean forecast
+rates in each age group and year, here the means of the predictive
+draws of the inner backtest (the code published with the paper uses
+the life expectancy of the posterior mean rates). The observed life
+expectancy is that of the observed rates. Both are computed by
+<code><a href="life_expectancy.html">life_expectancy()</a></code> in the observed age groups at the first age of the
+data, so at birth only when the data start at age 0 (the code published
+with the paper uses life expectancy at birth). Withheld years whose
+observed age groups do
+not cover the age range are skipped, as in <code><a href="mt_backtest.html">mt_backtest()</a></code>.
+Package-specific (reference unknown): with several strata, one weight
+per component from the mean over the strata of <code>|bias|</code> (the paper
+weights each country and sex separately; fit one ensemble per
+population with <code><a href="stratified.html">stratified()</a></code> to do so); with <code>inner_origins &gt; 1</code>, the
+mean of <code>|bias|</code> over the origins. The draws of the ensemble come from
+the components with the weights as probabilities; the paper takes
+numbers of draws proportional to the weights;</p></li>
+<li><p><code>"crps"</code>: proportional to the inverse mean CRPS of each component in
+the inner backtest. Shang (2012, Section 3.2.1) weights point
+forecasts of age-specific life expectancies in inverse proportion to
+their mean absolute forecast errors in a validation period, following Bates and
+Granger (1969), and normalises the weights to sum to 1. He combines
+all models, or the two best ones, this way and compares these
+combinations with equal and Bayesian model averaging weights (Tables
+18 and 19). The CRPS of a point forecast is its absolute error
+(Gneiting and Raftery 2007, Section 4.2), so the inverse mean CRPS
+extends these weights to predictive distributions. This extension, the
+log rates as the scored quantity and the use of the weights as mixture
+probabilities are package-specific. <code>top_k = 2</code> keeps the two
+components with the lowest inner CRPS, as Shang's combination of the
+two best models;</p></li>
+<li><p><code>"stack"</code> (deprecated; use <code>"crps_stack"</code>): weights that minimise the
+squared error of the weighted mean of the components' median forecasts
+(log rates) in the same inner backtest, constrained to be non-negative
+and to sum to 1. This is stacking of point forecasts (Breiman 1996;
+for mortality, Kessy, Sherris, Villegas and Ziveyi 2022). Using these
+weights as the probabilities of the mixture is a deviation: they are
+optimal for the linear combination of the medians, not for the mixture
+distribution, whose median is not the weighted mean of the medians. It
+still works and warns (class <code>mt_warning_deprecated</code>).</p></li>
 </ul><p>Each draw of the ensemble comes from one component for all strata, so
 paths keep the dependence between strata and the coherence of reconciled
 components (<code><a href="reconciled.html">reconciled()</a></code>). A component that fails in a stratum is
@@ -130,9 +196,16 @@ this is recorded in the diagnostics. Any model specification can be a
 component, including joint models, Bayesian models, tuned, bootstrapped
 and reconciled models, and other ensembles. The components must forecast
 the same strata: with <code><a href="reconciled.html">reconciled()</a></code> components, add the aggregates of the
-hierarchy to the data first (<code><a href="mt_aggregate_strata.html">mt_aggregate_strata()</a></code>). Weights from the
-inner backtest (<code>"crps"</code>, <code>"stack"</code>, <code>top_k</code>) compare the components on
-the cells that all of them forecast.</p>
+hierarchy to the data first (<code><a href="mt_aggregate_strata.html">mt_aggregate_strata()</a></code>).</p>
+<p>Weights from the inner backtest (<code>"crps_stack"</code>, <code>"bias"</code>, <code>"crps"</code>,
+<code>"stack"</code>, <code>top_k</code>) use only the training data, so they never use data
+after the forecast origin, also inside an outer backtest. They compare
+the components on the cells that all of them forecast. A component whose
+inner backtest fails gets weight 0; when every inner backtest fails, the
+weights are equal, with a warning of class <code>mt_warning_ensemble_weights</code>.
+With <code>top_k</code>, the stacking weights of <code>"crps_stack"</code> are computed among
+the kept components; with the other weights, the dropped components get
+weight 0.</p>
 <p>A mixture is wider than its components when they disagree, which often
 corrects the too narrow intervals of single models; a linear pool of
 different calibrated components is overdispersed (Gneiting and Ranjan
@@ -146,16 +219,33 @@ the random walk observed with noise, is <code>arima_series(order = c(0, 1, 1), d
     </div>
     <div class="section level2">
     <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a></h2>
-    <p>Gneiting T, Ranjan R (2013). Combining predictive distributions.
-<em>Electronic Journal of Statistics</em> 7: 1747-1782.</p>
+    <p>Barigou K, Goffard P-O, Loisel S, Salhi Y (2023). Bayesian model
+averaging for mortality forecasting using leave-future-out validation.
+<em>International Journal of Forecasting</em> 39(2): 674-690.
+<a href="https://doi.org/10.1016/j.ijforecast.2022.01.011" class="external-link">doi:10.1016/j.ijforecast.2022.01.011</a></p>
 <p>Bates JM, Granger CWJ (1969). The combination of forecasts. <em>Operational
 Research Quarterly</em> 20(4): 451-468.</p>
 <p>Breiman L (1996). Stacked regressions. <em>Machine Learning</em> 24(1): 49-64.</p>
+<p>Gneiting T, Raftery AE (2007). Strictly proper scoring rules, prediction,
+and estimation. <em>Journal of the American Statistical Association</em>
+102(477): 359-378. <a href="https://doi.org/10.1198/016214506000001437" class="external-link">doi:10.1198/016214506000001437</a></p>
+<p>Gneiting T, Ranjan R (2013). Combining predictive distributions.
+<em>Electronic Journal of Statistics</em> 7: 1747-1782.</p>
+<p>Harvey AC (1989). <em>Forecasting, Structural Time Series Models and the
+Kalman Filter</em>. Cambridge University Press.</p>
 <p>Kessy SR, Sherris M, Villegas AM, Ziveyi J (2022). Mortality forecasting
 using stacked regression ensembles. <em>Scandinavian Actuarial Journal</em>
 2022(7): 591-626.</p>
-<p>Harvey AC (1989). <em>Forecasting, Structural Time Series Models and the
-Kalman Filter</em>. Cambridge University Press.</p>
+<p>Kontis V, Bennett JE, Mathers CD, Li G, Foreman K, Ezzati M (2017).
+Future life expectancy in 35 industrialised countries: projections with a
+Bayesian model ensemble. <em>The Lancet</em> 389(10076): 1323-1335.
+<a href="https://doi.org/10.1016/S0140-6736%2816%2932381-9" class="external-link">doi:10.1016/S0140-6736(16)32381-9</a></p>
+<p>Shang HL (2012). Point and interval forecasts of age-specific life
+expectancies: a model averaging approach. <em>Demographic Research</em> 27(21):
+593-644. <a href="https://doi.org/10.4054/DemRes.2012.27.21" class="external-link">doi:10.4054/DemRes.2012.27.21</a></p>
+<p>Yao Y, Vehtari A, Simpson D, Gelman A (2018). Using stacking to average
+Bayesian predictive distributions (with discussion). <em>Bayesian Analysis</em>
+13(3): 917-1007. <a href="https://doi.org/10.1214/17-BA1091" class="external-link">doi:10.1214/17-BA1091</a></p>
     </div>
 
     <div class="section level2">
@@ -163,6 +253,14 @@ Kalman Filter</em>. Cambridge University Press.</p>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">x</span> <span class="op">&lt;-</span> <span class="fu"><a href="mt_example.html">mt_example</a></span><span class="op">(</span>deaths <span class="op">=</span> <span class="st">"single"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">ens</span> <span class="op">&lt;-</span> <span class="fu">ensemble</span><span class="op">(</span>lc <span class="op">=</span> <span class="fu"><a href="lee_carter.html">lee_carter</a></span><span class="op">(</span><span class="op">)</span>, rw <span class="op">=</span> <span class="fu"><a href="rwd.html">rwd</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">fc</span> <span class="op">&lt;-</span> <span class="fu"><a href="mt_forecast.html">mt_forecast</a></span><span class="op">(</span><span class="fu"><a href="mt_fit.html">mt_fit</a></span><span class="op">(</span><span class="va">ens</span>, <span class="va">x</span><span class="op">)</span>, h <span class="op">=</span> <span class="fl">5</span>, n_draws <span class="op">=</span> <span class="fl">100</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="co"># \donttest{</span></span></span>
+<span class="r-in"><span><span class="co"># stacking weights from an inner backtest on the training years</span></span></span>
+<span class="r-in"><span><span class="va">st</span> <span class="op">&lt;-</span> <span class="fu">ensemble</span><span class="op">(</span>lc <span class="op">=</span> <span class="fu"><a href="lee_carter.html">lee_carter</a></span><span class="op">(</span><span class="op">)</span>, rw <span class="op">=</span> <span class="fu"><a href="rwd.html">rwd</a></span><span class="op">(</span><span class="op">)</span>, weights <span class="op">=</span> <span class="st">"crps_stack"</span>,</span></span>
+<span class="r-in"><span>               inner_origins <span class="op">=</span> <span class="fl">2</span>, inner_h <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="mt_fit.html">mt_fit</a></span><span class="op">(</span><span class="va">st</span>, <span class="va">x</span><span class="op">)</span><span class="op">$</span><span class="va">weights</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>         lc         rw </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 0.95400886 0.04599114 </span>
+<span class="r-in"><span><span class="co"># }</span></span></span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

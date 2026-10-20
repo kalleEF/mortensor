@@ -5,6 +5,7 @@
 <url><loc>/articles/backtesting.html</loc></url>
 <url><loc>/articles/bayesian-apc.html</loc></url>
 <url><loc>/articles/benchmarks.html</loc></url>
+<url><loc>/articles/causes-deprivation.html</loc></url>
 <url><loc>/articles/coherence.html</loc></url>
 <url><loc>/articles/comparison.html</loc></url>
 <url><loc>/articles/decomposition.html</loc></url>
@@ -94,6 +95,7 @@
 <url><loc>/reference/mt_inequality.html</loc></url>
 <url><loc>/reference/mt_jump_off.html</loc></url>
 <url><loc>/reference/mt_observed.html</loc></url>
+<url><loc>/reference/mt_open_check.html</loc></url>
 <url><loc>/reference/mt_operator.html</loc></url>
 <url><loc>/reference/mt_order_strata.html</loc></url>
 <url><loc>/reference/mt_parameters.html</loc></url>

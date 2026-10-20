@@ -167,4 +167,4 @@ intervals.
 | What drives a gap | “Decomposing differences in life expectancy” |
 | How unequal lifespans are | “Lifespan variation” |
 | Deaths above the expected | “Excess mortality” |
-| Complete analyses | “Inequality in England”, “Differences between the German Laender” |
+| Complete analyses | “Inequality in England”, “Causes of death by deprivation”, “Differences between the German Laender” |
