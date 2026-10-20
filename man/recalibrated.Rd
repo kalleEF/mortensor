@@ -8,7 +8,7 @@ recalibrated(
   spec,
   years = 10,
   n_origins = 5,
-  scale = c("constant", "horizon"),
+  scale = c("constant", "horizon", "per_horizon"),
   bias = FALSE,
   target = c("crps", "interval"),
   level = 0.95,
@@ -17,7 +17,8 @@ recalibrated(
   seed = 1,
   ages = NULL,
   quantity = c("rate", "life_expectancy", "asr"),
-  n_boot = 0
+  n_boot = 0,
+  method = c("spread", "errors")
 )
 }
 \arguments{
@@ -26,18 +27,22 @@ recalibrated(
 \item{years}{Length of the calibration window (the last observed years).}
 
 \item{n_origins}{Number of origins in the window (evenly spaced from
-\code{years} to 2 years before the end of the training data).}
+\code{years} to 2 years before the end of the training data; at most
+\code{years - 1}). The per-horizon methods need two origins at each
+forecast horizon (see "Factors per horizon").}
 
 \item{scale}{\code{"constant"} (default: one spread factor \eqn{s_1} for all
-horizons) or \code{"horizon"} (spread factor \eqn{s_1 h^{\gamma}},
-package-specific).}
+horizons), \code{"horizon"} (spread factor \eqn{s_1 h^{\gamma}},
+package-specific) or \code{"per_horizon"} (one factor for each horizon).}
 
 \item{bias}{Estimate a correction of the drift (log rate per year;
-package-specific).}
+package-specific; with \code{scale = "per_horizon"} one for each horizon).}
 
 \item{target}{\code{"crps"} or \code{"interval"} (interval score at \code{level}).}
 
-\item{level}{Level of the central interval for \code{target = "interval"}.}
+\item{level}{Level of the central interval for \code{target = "interval"},
+and of the interval whose coverage of the inner errors is tuned with
+\code{method = "errors"}.}
 
 \item{by}{Stratum variables with separate calibration parameters.}
 
@@ -54,6 +59,12 @@ cells), \code{"life_expectancy"} (at birth) or \code{"asr"}.}
 
 \item{n_boot}{Number of bootstrap refits for intervals of the factors (0:
 none; each refit repeats the optimisation, not the inner forecasts).}
+
+\item{method}{\code{"spread"} (default: rescale the spread of the draws) or
+\code{"errors"} (point forecast plus resampled errors of the inner
+forecasts; see "Resampled past errors"). \code{method = "errors"} takes
+\code{years}, \code{n_origins}, \code{level}, \code{n_draws} and \code{seed}; the other
+arguments keep their defaults.}
 }
 \value{
 A model specification. The fitted object has a \code{calibration}
@@ -61,13 +72,23 @@ element: a \code{data.table} with one row per group and age band
 (\code{scale_h1}, \code{slope}, \code{drift}, the number of observed cells and of
 scored values, the number of inner forecasts (stratum x origin), CRPS
 and coverage of the inner forecasts before and after calibration, and
-with \code{n_boot} the intervals \code{scale_h1_lo}, \code{scale_h1_hi}, ...).
+with \code{n_boot} the intervals \code{scale_h1_lo}, \code{scale_h1_hi}, ...). With
+\code{scale = "per_horizon"} it has one row per group, age band and horizon,
+with \code{horizon}, \code{origins} (inner origins of the horizon), \code{scale} and
+\code{drift} in place of \code{scale_h1}, \code{slope} and \code{drift} (and \code{scale_lo},
+\code{scale_hi}, ... with \code{n_boot}). With \code{method = "errors"} it has one row
+per horizon: \code{horizon}, \code{origins} (error vectors), \code{cells} (ages x
+strata of each vector), \code{mean_error}, \code{tuning} (\eqn{\pi_h}) and
+\code{coverage} (share of the inner errors within the tuned interval). For
+the per-horizon methods, \code{calibration_hmax} is the longest horizon that
+forecasts can reach.
 }
 \description{
-Wraps any model specification so that the spread (and optionally the
-trend) of its forecast draws is recalibrated on the last \code{years} observed
-years of the training data. Each time the model is fitted (also at every
-origin of an outer \code{\link[=mt_backtest]{mt_backtest()}}):
+Wraps any model specification so that its forecast distribution is
+recalibrated on the last \code{years} observed years of the training data:
+the spread (and optionally the trend) of its draws is rescaled (\code{method = "spread"}, default), or the draws are replaced by the point forecast of
+the model plus resampled errors of its past forecasts (\code{method = "errors"}). Each time the model is fitted (also at every origin of an
+outer \code{\link[=mt_backtest]{mt_backtest()}}):
 }
 \details{
 \enumerate{
@@ -80,12 +101,12 @@ where \eqn{\tilde m} is the median of the draws in the cell, \eqn{h} the
 horizon, \eqn{s(h)} a spread factor, one value \eqn{s_1} for all
 horizons (\code{scale = "constant"}, default) or \eqn{s_1 h^{\gamma}}
 (\code{scale = "horizon"}), held constant beyond the longest horizon of the
-window, and \eqn{b} a correction of the drift per year (\code{bias = TRUE});
-\item \eqn{s_1}, \eqn{\gamma} and \eqn{b} minimise the mean CRPS (or the
-interval score, \code{target}) of the log death rates in the window, with
-the Poisson (or the model's negative binomial) variation of the
-observed deaths, as in \code{\link[=mt_backtest]{mt_backtest()}}. Draws of an ensemble get the observation
-noise of the component they come from.
+window, or one value \eqn{s_h} for each horizon (\code{scale = "per_horizon"}), and \eqn{b} a correction of the drift per year (\code{bias = TRUE}; with \code{scale = "per_horizon"} one \eqn{b_h} for each horizon);
+\item the parameters minimise the mean CRPS (or the interval score,
+\code{target}) of the log death rates in the window, with the Poisson (or
+the model's negative binomial) variation of the observed deaths, as in
+\code{\link[=mt_backtest]{mt_backtest()}}. Draws of an ensemble get the observation noise of the
+component they come from.
 }
 
 The final model is fitted on all training data and its forecasts are
@@ -104,15 +125,121 @@ Minimum-CRPS estimation follows ensemble model output statistics (EMOS,
 Gneiting et al. 2005), which fits a parametric predictive distribution
 instead of transforming the draws.
 
+\strong{Factors per horizon} (\code{scale = "per_horizon"}). The published
+post-processing methods fit their parameters to the forecasts of one
+lead time: Gneiting et al. (2005) fit EMOS to 48-hour forecasts (section
+3) and note that distinct forecast horizons may need distinct training
+periods (section 3a), and member-by-member post-processing is done for
+each lead time, location and variable separately (Van Schaeybroeck and
+Vannitsem 2015). The factor \eqn{s_h} minimises the mean CRPS (or the
+interval score) of the inner forecasts of horizon \eqn{h} alone, by the
+minimum-CRPS estimation of the constant factor (Gneiting et al. 2005,
+section 2c); with \code{bias = TRUE} each horizon also gets its own shift
+\eqn{b_h h}. Where the spread of the model is wrong by the same factor at
+every horizon, the factors of all horizons estimate the constant factor,
+each from fewer forecasts.
+
+The factor of horizon \eqn{h} rests on the inner origins at least \eqn{h}
+years before the last training year. A horizon gets a factor only where
+at least two origins reach it: the forecast of one origin has the errors
+of a single year, which all its ages and strata share. When every origin
+has enough training years, the longest horizon with a factor is \code{years - floor(years / n_origins)} (8 with the defaults). The fit reports it as
+\code{calibration_hmax}, and the number of origins of each horizon in column
+\code{origins}. A forecast further ahead stops with an error of class
+\code{mt_error_recalibrate}: no factor is extrapolated. For forecasts of
+\eqn{h} years, use for example \code{years = h + 1} and \code{n_origins = h} (an
+origin in every year from \eqn{h + 1} to 2 years before the last
+training year); horizon \eqn{h} then rests on two origins and horizon 1
+on \eqn{h}.
+
+\strong{Resampled past errors} (\code{method = "errors"}). The draws are the point
+forecast of the base model plus errors of its own past forecasts. The
+inner forecasts are those of step 1, so each inner fit sees the data up
+to its origin only. The error vector \eqn{e_{o,h}} of origin \eqn{o} and
+horizon \eqn{h} holds the observed log rates of year \eqn{o + h} minus the
+median of the inner draws, for every age of the grid and every stratum.
+Draw \eqn{j} of the forecast at horizon \eqn{h} is
+\deqn{\log m^*_j = \tilde m + \pi_h\, e_{o_j,h},}
+where \eqn{\tilde m} is the median of the draws of the base model in the
+cell (its point forecast) and the origin \eqn{o_j} is drawn with
+replacement from the inner origins that reach horizon \eqn{h}, for each
+draw and horizon.
+\itemize{
+\item Keilman, Pham and Hetland (2002, section 2) describe the extrapolation
+of errors of past forecasts: a deterministic forecast gives the
+expected value, and the errors of historical forecasts give the
+distribution around it, which they summarise for each forecast
+duration (section 3.1.1.2).
+\item Shang and Hyndman (2017, section 4.4 of the preprint, pointwise
+intervals) build intervals from h-step errors, observed minus forecast
+values, resampled with replacement: lower and upper bounds from the
+resampled errors of each cell are scaled by a tuning factor
+\eqn{\pi_h}, the one with which a share \code{level} of all errors of the
+horizon lies within the scaled bounds. Here the bounds are the
+quantiles at \eqn{(1 - level) / 2} and \eqn{(1 + level) / 2} of the
+bootstrap distribution itself (the empirical distribution of the
+errors of the cell, the limit of many resamples), and \eqn{\pi_h} is
+the smallest such factor. These bounds contain a
+share \code{level} of the errors of each cell, so \eqn{\pi_h \le 1}; with
+fewer than \eqn{1 / (1 - level)} origins at a horizon (20 at 95\%), they
+are the smallest and the largest error and \eqn{\pi_h = 1}.
+\item One origin per draw and horizon gives all ages and strata the errors of
+the same past forecast, which keeps their dependence: the joint
+bootstrap of Panagiotelis et al. (2023).
+\item The errors are used as they are, as by Shang and Hyndman (2017), so a
+mean error of the inner forecasts shifts the forecast distribution away
+from the point forecast. Keilman, Pham and Hetland (2002, section 2)
+assume an expected error of zero.
+}
+
+Deviations and package-specific parts (reference unknown): Shang and
+Hyndman (2017) forecast with principal components estimated from all
+years; here the model is refitted at each origin, as in the historical
+forecasts of Keilman, Pham and Hetland (2002). The origins are those of
+\code{years} and \code{n_origins} (Shang and Hyndman use every year). The point
+forecast is the median of the base draws in each cell. The origins are
+drawn independently for each horizon, so a draw combines the errors of
+different origins in different years: quantities that combine years,
+such as cohort measures or deaths summed over years, miss the dependence
+of the errors over time. Panagiotelis et al. (2023) note that
+multi-step forecasts need block-wise bootstraps to keep such serial
+dependence. The errors are those of the observed log rates, with half a
+death in empty cells as in \code{\link[=mt_backtest]{mt_backtest()}}, so the draws describe
+observed rates and predictive draws add nothing. The method needs
+observed deaths on the age groups of the grid in every cell of the
+window, and at least two origins at each forecast horizon, as \code{scale = "per_horizon"}; otherwise the fit or the forecast stops with an error.
+The method gives no coverage guarantee: its intervals cover future
+errors as far as these resemble the errors of the inner forecasts.
+Keilman, Pham and Hetland (2002) name two limits of past errors: their
+series are short, and errors may shrink over successive forecast rounds.
+The draws of a cell at horizon \eqn{h} lie within \eqn{\pi_h} times the
+range of its \eqn{M} errors. For exchangeable errors, the range of
+\eqn{M} errors contains a further one with probability
+\eqn{(M - 1) / (M + 1)}: 0.82 for 10 origins, 0.33 for two. Horizons that
+few origins reach therefore get narrow intervals; a long \code{years} with
+\code{n_origins = years - 1} gives each horizon more origins.
+
 \strong{Package-specific options} (reference unknown): the power law of the
 spread factor over the horizon (\code{scale = "horizon"}), the correction of
 the drift (\code{bias = TRUE}), separate factors for age bands (\code{ages}) and
 calibration on life expectancy or the age-standardised rate (\code{quantity}).
+The drift correction and the age bands have published analogues of
+another form. EMOS corrects the bias of the forecasts in its predictive
+mean, a linear function of the forecasts with an intercept, estimated
+together with the spread by minimum CRPS (Gneiting et al. 2005, eq. 10
+and section 2c); \code{bias = TRUE} shifts the
+log rates by a drift per year of the horizon, one drift for all horizons
+(with \code{scale = "per_horizon"} one shift per horizon, a bias correction
+per lead time). Member-by-member post-processing is done for each
+location separately (Van Schaeybroeck and Vannitsem 2015), and Gneiting
+et al. (2005, section 3a) note that distinct regions may need distinct
+training periods; \code{ages} estimates separate factors for bands of ages
+that the user chooses.
 
-\strong{Estimation.} The parameters are bounded: \eqn{s_1} between 0.1 and 20,
-\eqn{\gamma} between -1 and 1, and \eqn{b} between -0.05 and 0.05 (log
-rate per year). With one parameter (\code{scale = "constant"}, \code{bias = FALSE})
-\eqn{\log s_1} is found by \code{\link[stats:optimize]{stats::optimize()}} within its bounds;
+\strong{Estimation.} The parameters are bounded: \eqn{s_1} (and \eqn{s_h})
+between 0.1 and 20, \eqn{\gamma} between -1 and 1, and \eqn{b} between
+-0.05 and 0.05 (log rate per year). With one parameter (\code{scale = "constant"} or, for each horizon, \code{"per_horizon"}, with \code{bias = FALSE})
+the log factor is found by \code{\link[stats:optimize]{stats::optimize()}} within its bounds;
 otherwise the parameters are found by Nelder-Mead (\code{\link[stats:optim]{stats::optim()}},
 relative tolerance 1e-6, at most 300 iterations), started at
 \eqn{s_1 = 1}, \eqn{\gamma = 0}, \eqn{b = 0}, with values outside the
@@ -122,14 +249,15 @@ function of the parameters.
 
 \strong{Long horizons.} The parameters are estimated on horizons 1 to
 \eqn{h_{max}}, the distance from the first origin to the last training
-year (10 years with the defaults). Beyond \eqn{h_{max}} the spread factor
-and the drift correction are held at their values at \eqn{h_{max}}. A
-forecast more than twice as long as \eqn{h_{max}} gives a warning (class
-\code{mt_warning_recalibrate}), because nothing in the training data shows how
-the spread of the model is wrong at such horizons. With the defaults this
-concerns forecasts of more than 20 years (\code{mt_forecast()} forecasts 10 by
-default); give a longer \code{years} for long projections, or accept the
-constant factor.
+year (10 years with the defaults). With \code{scale = "constant"} or
+\code{"horizon"}, the spread factor and the drift correction are held at
+their values at \eqn{h_{max}} beyond it. A forecast more than twice as
+long as \eqn{h_{max}} gives a warning (class \code{mt_warning_recalibrate}),
+because nothing in the training data shows how the spread of the model
+is wrong at such horizons. With the defaults this concerns forecasts of
+more than 20 years (\code{mt_forecast()} forecasts 10 by default); give a
+longer \code{years} for long projections, or accept the constant factor. The
+per-horizon methods stop instead (see above).
 
 The wrapper works with any specification, including \code{\link[=ensemble]{ensemble()}},
 \code{\link[=bootstrapped]{bootstrapped()}} and joint models. For \code{\link[=reconciled]{reconciled()}} models the bottom
@@ -149,7 +277,8 @@ estimated from few overlapping forecasts (with the defaults, 5 origins and
 30 forecast years, horizons 1 to 10), so they carry their own uncertainty,
 and they cannot anticipate changes after the window. \code{n_boot} refits them
 on forecasts (stratum x origin) resampled with replacement and reports
-95\% percentile intervals. The inner models are fitted to shorter series
+95\% percentile intervals (with \code{scale = "per_horizon"}, for each horizon
+from its forecasts). The inner models are fitted to shorter series
 than the final model, which matters for models whose uncertainty depends
 on the length of the series (the drift of a random walk). Compare
 calibrated and uncalibrated models in an outer backtest.
@@ -178,6 +307,8 @@ recent past and narrows those that were too wide, for example of
 ensembles whose intervals already covered. With few training years it
 rests on few forecasts and can make intervals worse; check it in a
 backtest, as in the vignette "Tuning and recalibration".
+\code{mt_score_table(by = c("model", "horizon"))} gives the coverage of each
+horizon.
 
 \code{target = "crps"} (default) balances calibration and sharpness;
 \code{target = "interval"} minimises the interval score of the central \code{level}
@@ -189,6 +320,15 @@ x <- mt_example(deaths = "single", years = 1990:2019)
 fit <- mt_fit(recalibrated(lee_carter(), years = 8, n_origins = 3, n_draws = 50), x)
 fit$calibration
 fc <- mt_forecast(fit, h = 5, n_draws = 100, seed = 1)
+# one factor per horizon: horizons 1 to 5 rest on at least two origins
+fh <- mt_fit(recalibrated(lee_carter(), years = 6, n_origins = 5, n_draws = 50,
+                          scale = "per_horizon"), x)
+fh$calibration[, c("horizon", "origins", "scale")]
+# point forecast plus resampled errors of the inner forecasts
+fe <- mt_fit(recalibrated(lee_carter(), years = 6, n_origins = 5, n_draws = 50,
+                          method = "errors"), x)
+fe$calibration
+fce <- mt_forecast(fe, h = 5, n_draws = 100, seed = 1)
 }
 \references{
 Van Schaeybroeck B, Vannitsem S (2015). Ensemble post-processing using
@@ -204,4 +344,18 @@ minimum CRPS estimation. \emph{Monthly Weather Review} 133(5): 1098-1118.
 Gneiting T, Raftery AE (2007). Strictly proper scoring rules, prediction,
 and estimation. \emph{Journal of the American Statistical Association}
 102(477): 359-378. \doi{10.1198/016214506000001437}
+
+Keilman N, Pham DQ, Hetland A (2002). Why population forecasts should be
+probabilistic: illustrated by the case of Norway. \emph{Demographic Research}
+6(15): 409-454. \doi{10.4054/DemRes.2002.6.15}
+
+Panagiotelis A, Gamakumara P, Athanasopoulos G, Hyndman RJ (2023).
+Probabilistic forecast reconciliation: properties, evaluation and score
+optimisation. \emph{European Journal of Operational Research} 306(2):
+693-706. \doi{10.1016/j.ejor.2022.07.040}
+
+Shang HL, Hyndman RJ (2017). Grouped functional time series forecasting:
+an application to age-specific mortality rates. \emph{Journal of
+Computational and Graphical Statistics} 26(2): 330-343.
+\doi{10.1080/10618600.2016.1237877}
 }
