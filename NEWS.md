@@ -57,6 +57,25 @@ Old ages and evaluation:
   between consecutive origins (package-specific measure). Backtest tables
   gain the columns `sd`, `cov90`, `hw80`, `hw90` and `hw95`.
 
+Vignettes and fixes:
+
+* New vignette "Causes of death by deprivation: coherent and combined
+  forecasts" (precomputed): causes of death by sex and deprivation
+  quintile at ages 50 and over, reconciled over one crossed hierarchy to
+  England, both sexes and all causes (bottom-up, WLS, MinT, proportional
+  to a fixed all-cause forecast), and per-cause ensembles with tuned
+  windows, stacking weights and recalibration against Lee-Carter. The
+  ensembles forecast the cause-specific rates 6-7% more accurately and
+  the life expectancy gap between quintiles less accurately; no
+  difference was significant in a Diebold-Mariano test over four
+  origins.
+* Warnings raised in parallel workers (`cores > 1`) are now passed on in
+  task order; before, failed backtest origins and model warnings were
+  lost.
+* `ensemble()` warns (class `mt_warning_ensemble_weights`) when its inner
+  backtests score fewer origins than `inner_origins`, so that weights
+  resting on fewer forecasts are visible.
+
 Not implemented, because only abstracts were available or the method
 would be package-specific: see the roadmap of the plan.
 
