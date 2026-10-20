@@ -157,7 +157,10 @@ test_that("stacking weights lie on the simplex", {
   expect_equal(sum(w), 1)
   expect_equal(w, c(0.5, 0.5), tolerance = 1e-3)
   x <- mt_example(deaths = "single", years = 1990:2010)
-  fit <- mt_fit(ensemble(lee_carter(), rwd(), weights = "stack", inner_origins = 2, inner_h = 3), x)
+  # deprecated (use "crps_stack"), still working
+  expect_warning(ens <- ensemble(lee_carter(), rwd(), weights = "stack", inner_origins = 2, inner_h = 3),
+                 class = "mt_warning_deprecated")
+  fit <- mt_fit(ens, x)
   expect_equal(sum(fit$weights), 1)
 })
 

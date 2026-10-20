@@ -108,8 +108,11 @@
 #'   training data), `target` (`"rate"`, or the derived quantity), the
 #'   forecast `median` and `mean`, and the scores `crps`, `wis`, `ae`
 #'   (absolute error of the median), `cov50`, `cov80`, `cov95` and `pit`
-#'   (randomised for ties). Rows of derived quantities
-#'   have no `age_lo`, `age_hi` and `scale`. Summarise with [mt_score()].
+#'   (randomised for ties), and for the opt-in summaries of [mt_score()]
+#'   (`measures`) the standard deviation of the draws `sd`, `cov90` and the
+#'   half-widths `hw80`, `hw90` and `hw95` of the central intervals. Rows of
+#'   derived quantities have no `age_lo`, `age_hi` and `scale`. Summarise
+#'   with [mt_score()].
 #' @examples
 #' x <- mt_example(deaths = "single", years = 1990:2012)
 #' bt <- mt_backtest(rwd(), x, origins = c(2005, 2007), h = 5, n_draws = 100)
@@ -117,25 +120,38 @@
 #' @export
 mt_backtest <- function(spec, data, origins = NULL, h = 10, prep = NULL, n_draws = 200, n_origins = 5,
                         seed = 1, cores = 1, score_estimated = FALSE, quantities = NULL, contrast = NULL) {
+  backtest_impl(spec, data, origins, h, prep, n_draws, n_origins, seed, cores, score_estimated, quantities,
+                contrast, call = sys.call())
+}
+
+# The backtest of mt_backtest(). With `keep_draws = TRUE` (inner backtests of
+# ensemble()), the rows of rates also carry the draws of the scored log rates
+# (list column `draws`) and the rows of derived quantities the quantity of the
+# mean forecast rates (column `plugin`)
+backtest_impl <- function(spec, data, origins = NULL, h = 10, prep = NULL, n_draws = 200, n_origins = 5,
+                          seed = 1, cores = 1, score_estimated = FALSE, quantities = NULL, contrast = NULL,
+                          keep_draws = FALSE, call = sys.call(-1)) {
   if (length(quantities)) {
     bad <- setdiff(quantities, c("life_expectancy", "asr"))
-    if (length(bad)) mt_abort("`quantities` can be \"life_expectancy\" and \"asr\".", class = "argument")
+    if (length(bad)) {
+      mt_abort("`quantities` can be \"life_expectancy\" and \"asr\".", class = "argument", call = call)
+    }
   }
   check_class(data, "mt_data", "data")
   contrast <- check_backtest_contrast(contrast, data, quantities)
   if (!is.null(attr(data, "smooth"))) {
     mt_abort(paste("`data` were smoothed with mt_smooth(): the forecasts would be scored against smoothed values,",
                    "and the smoother has seen the test years. Pass the raw data and smooth inside each fit:",
-                   "prep = mt_prep(step_smooth(...))."), class = "smoothed_data")
+                   "prep = mt_prep(step_smooth(...))."), class = "smoothed_data", call = call)
   }
-  check_not_ungrouped(data)
+  check_not_ungrouped(data, call = call)
   last <- max(mt_grid(data)$period$lower)
-  origins <- origins %||% backtest_origins(data, h, n_origins, spec$min_periods)
+  origins <- origins %||% backtest_origins(data, h, n_origins, spec$min_periods, call = call)
   origins <- origins[origins < last]
-  if (!length(origins)) mt_abort("No origin leaves test data.", class = "backtest")
+  if (!length(origins)) mt_abort("No origin leaves test data.", class = "backtest", call = call)
   one <- function(o) {
     res <- tryCatch(backtest_origin(spec, data, o, h, prep, n_draws, if (is.null(seed)) NULL else seed + o,
-                                    score_estimated, quantities, contrast), error = function(e) e)
+                                    score_estimated, quantities, contrast, keep_draws), error = function(e) e)
     if (inherits(res, "error")) {
       mt_warn(sprintf("Origin %s failed: %s", o, conditionMessage(res)), class = "backtest_origin")
       return(NULL)
@@ -147,7 +163,7 @@ mt_backtest <- function(spec, data, origins = NULL, h = 10, prep = NULL, n_draws
   res <- par_lapply(origins, one, cores, streams = TRUE)
   backtest_warn_skipped(res, origins)
   out <- rbindlist(res, fill = TRUE)
-  if (!nrow(out)) mt_abort("All origins failed.", class = "backtest")
+  if (!nrow(out)) mt_abort("All origins failed.", class = "backtest", call = call)
   setattr(out, "class", c("mt_backtest", class(out)))
   out
 }
@@ -169,8 +185,8 @@ backtest_warn_skipped <- function(res, origins) {
 
 # Default origins: the last `n_origins` years whose full horizon `h` is
 # observed and that leave `min_periods` training years
-backtest_origins <- function(data, h, n_origins, min_periods) {
-  cl <- sys.call(-1)
+backtest_origins <- function(data, h, n_origins, min_periods, call = sys.call(-1)) {
+  cl <- call
   yrs <- mt_grid(data)$period$lower
   last <- max(yrs)
   origins <- seq(last - h - n_origins + 1, last - h)
@@ -206,7 +222,7 @@ ungrouped_deaths <- function(data) {
 }
 
 backtest_origin <- function(spec, data, origin, h, prep, n_draws, seed, score_estimated = FALSE, quantities = NULL,
-                            contrast = NULL) {
+                            contrast = NULL, keep_draws = FALSE) {
   train <- mt_window(data, to = origin)
   fit <- mt_fit(spec, train, prep = prep)
   last_fit <- max(fit$periods)
@@ -255,13 +271,15 @@ backtest_origin <- function(spec, data, origin, h, prep, n_draws, seed, score_es
     y <- log(pmax(o$value, 0.5) / Ecell)
     sc <- score_samples(X, y, probs)
     scale <- mase_scale(fit, match(test$strata$label[s], fit$strata$label), o)
-    rows[[length(rows) + 1L]] <- cbind(
+    r <- cbind(
       data.table(model = spec$label, prep = prep_label(prep), origin = origin, horizon = o$period_lo - origin,
                  stratum = s, age_lo = o$age_lo, age_hi = o$age_hi, period = o$period_lo, observed = y,
                  scale = scale, target = "rate"),
       sc)
+    if (keep_draws) r[, draws := lapply(seq_len(nrow(X)), function(i) X[i, ])]
+    rows[[length(rows) + 1L]] <- r
     if (length(quantities)) {
-      qr <- quantity_scores(Dcell, o, Ecell, quantities, probs, ages)
+      qr <- quantity_scores(Dcell, o, Ecell, quantities, probs, ages, plugin = keep_draws)
       if (!is.null(qr)) {
         rows[[length(rows) + 1L]] <- quantity_rows(qr, spec, prep, origin, s)
         qdraws[[as.character(s)]] <- qr
@@ -274,7 +292,9 @@ backtest_origin <- function(spec, data, origin, h, prep, n_draws, seed, score_es
     }
   }
   if (!length(rows)) mt_abort("The model failed in every stratum.", class = "backtest")
-  out <- rbindlist(rows)
+  # rows of rates and of derived quantities differ in the columns kept for
+  # inner backtests (draws, plugin)
+  out <- rbindlist(rows, fill = keep_draws)
   out <- merge(data$strata, out, by = "stratum", sort = FALSE)
   if (length(skipped)) setattr(out, "skipped", skipped)
   out[]
@@ -282,10 +302,12 @@ backtest_origin <- function(spec, data, origin, h, prep, n_draws, seed, score_es
 
 # Rows of a backtest table for scored derived quantities
 quantity_rows <- function(qr, spec, prep, origin, s) {
-  cbind(data.table(model = spec$label, prep = prep_label(prep), origin = origin, horizon = qr$period - origin,
-                   stratum = s, age_lo = NA_real_, age_hi = NA_real_, period = qr$period, observed = qr$observed,
-                   scale = NA_real_, target = qr$target),
-        qr$scores)
+  out <- cbind(data.table(model = spec$label, prep = prep_label(prep), origin = origin, horizon = qr$period - origin,
+                          stratum = s, age_lo = NA_real_, age_hi = NA_real_, period = qr$period,
+                          observed = qr$observed, scale = NA_real_, target = qr$target),
+               qr$scores)
+  if (!is.null(qr$plugin)) out[, plugin := qr$plugin]
+  out
 }
 
 # `contrast` of mt_backtest(): c(var = , ref = ) with a stratum variable and
@@ -342,8 +364,9 @@ contrast_quantity_scores <- function(qdraws, strata, contrast, probs) {
 # Scores of derived quantities per test year from the draws of deaths Dcell
 # at the observed cells o, treated like the observed deaths (no floor per
 # cell). Only years whose cells cover the full age range `ages` (lowest
-# age, upper end) without gaps are scored
-quantity_scores <- function(Dcell, o, Ecell, quantities, probs, ages) {
+# age, upper end) without gaps are scored. With `plugin = TRUE`, also the
+# quantity of the mean of the draws of the rates in each cell (`plugin`)
+quantity_scores <- function(Dcell, o, Ecell, quantities, probs, ages, plugin = FALSE) {
   same <- function(a, b) a == b || abs(a - b) < 1e-9
   out <- list()
   for (pp in sort(unique(o$period_lo))) {
@@ -356,10 +379,13 @@ quantity_scores <- function(Dcell, o, Ecell, quantities, probs, ages) {
     ax <- mt_axis(lo, hi, kind = "age")
     R <- Dcell[k, , drop = FALSE] / Ecell[k]
     r_obs <- o$value[k] / Ecell[k]
+    r_mean <- rowMeans(R)
+    qp <- NA_real_
     for (q in quantities) {
       if (q == "life_expectancy") {
         qd <- as.vector(life_expectancy(array(R, c(length(k), 1, 1, ncol(R))), ax))
         qo <- as.vector(life_expectancy(array(r_obs, c(length(k), 1, 1)), ax))
+        if (plugin) qp <- as.vector(life_expectancy(array(r_mean, c(length(k), 1, 1)), ax))
       } else {
         # direct standardisation on the age groups of the ESP 2013 with the
         # exposures of the test year
@@ -372,15 +398,17 @@ quantity_scores <- function(Dcell, o, Ecell, quantities, probs, ages) {
         floor_asr <- min(0.5 / Eg[pos] * g$weight[pos]) / sum(g$weight)
         qd <- log(pmax(asr_columns(R, ax, esp, Ecell[k], per = 1), floor_asr))
         qo <- log(max(asr_columns(matrix(r_obs), ax, esp, Ecell[k], per = 1), floor_asr))
+        if (plugin) qp <- log(max(asr_columns(matrix(r_mean), ax, esp, Ecell[k], per = 1), floor_asr))
       }
       out[[length(out) + 1L]] <- list(period = pp, target = q, at = lo[1], observed = qo, draws = qd,
-                                      scores = score_samples(matrix(qd, 1), qo, probs))
+                                      scores = score_samples(matrix(qd, 1), qo, probs), plugin = qp)
     }
   }
   if (!length(out)) return(NULL)
   list(period = vapply(out, `[[`, 0, "period"), target = vapply(out, `[[`, "", "target"),
        at = vapply(out, `[[`, 0, "at"), observed = vapply(out, `[[`, 0, "observed"),
-       draws = lapply(out, `[[`, "draws"), scores = rbindlist(lapply(out, `[[`, "scores")))
+       draws = lapply(out, `[[`, "draws"), scores = rbindlist(lapply(out, `[[`, "scores")),
+       plugin = if (plugin) vapply(out, `[[`, 0, "plugin"))
 }
 
 # The test data on the age axis of the fit. Cells finer than the age groups
@@ -441,14 +469,17 @@ wis_probs <- function() {
 #' weighted interval score (Bracher et al. 2021, with the 23 quantiles of
 #' the COVID-19 forecast hubs: 11 central intervals plus the median),
 #' interval coverage, the PIT (randomised where samples equal the
-#' observation, Czado, Gneiting and Held 2009) and the absolute error of the
-#' median.
+#' observation, Czado, Gneiting and Held 2009), the absolute error of the
+#' median, the standard deviation of the samples and the half-widths of the
+#' central 80%, 90% and 95% intervals.
 #'
 #' @param X Matrix of samples (one row per target).
 #' @param y Observed values.
-#' @param probs Quantile levels (must contain 0.5 and symmetric pairs).
+#' @param probs Quantile levels (must contain 0.5 and symmetric pairs,
+#'   among them 0.025, 0.05, 0.1, 0.25 and their complements).
 #' @return A `data.table` with `median`, `mean`, `crps`, `wis`, `ae`,
-#'   `cov50`, `cov80`, `cov95`, `pit`.
+#'   `cov50`, `cov80`, `cov95`, `pit`, `sd`, `cov90`, `hw80`, `hw90`,
+#'   `hw95`.
 #' @references
 #' Bracher J, Ray EL, Gneiting T, Reich NG (2021). Evaluating epidemic
 #' forecasts in an interval format. *PLoS Computational Biology* 17(2):
@@ -481,9 +512,13 @@ score_samples <- function(X, y, probs = wis_probs()) {
   less <- rowSums(X < y)
   eq <- rowSums(X == y)
   pit <- (less + stats::runif(length(y)) * eq) / n
+  half <- function(lo, hi) (Q[, hi] - Q[, lo]) / 2
+  sdev <- if (n > 1) sqrt(rowSums((X - rowMeans(X))^2) / (n - 1)) else rep(NA_real_, length(y))
   out <- data.table(median = med, mean = rowMeans(X), crps = crps, wis = wis, ae = abs(med - y),
                     cov50 = inside(pq(0.25), pq(0.75)), cov80 = inside(pq(0.1), pq(0.9)),
-                    cov95 = inside(pq(0.025), pq(0.975)), pit = pit)
+                    cov95 = inside(pq(0.025), pq(0.975)), pit = pit,
+                    sd = sdev, cov90 = inside(pq(0.05), pq(0.95)), hw80 = half(pq(0.1), pq(0.9)),
+                    hw90 = half(pq(0.05), pq(0.95)), hw95 = half(pq(0.025), pq(0.975)))
   out[]
 }
 
@@ -512,6 +547,33 @@ wis_from_quantiles <- function(Q, y, probs) {
 #'   quantities, see `quantities` in [mt_backtest()]), or
 #'   `"life_expectancy_gap"` or `"asr_gap"` (differences between strata, see
 #'   `contrast` in [mt_backtest()]).
+#' @param measures Optional further summaries (none by default):
+#'   * `"sape"`: the mean standardised absolute predictive error of Raftery
+#'     et al. (2013), `sqrt(pi / 2) |y - median| / sd` with the standard
+#'     deviation `sd` of the predictive draws. It is scaled so that its
+#'     expected value is 1 when the predictive distribution is correct and
+#'     normal; a mean above 1 indicates intervals that are too narrow, below
+#'     1 too wide. Raftery et al. define it for life expectancy, so it is
+#'     available for `target = "life_expectancy"` only. Rows whose draws
+#'     have no spread (`sd = 0`) are left out;
+#'   * `"cov90"`: the empirical coverage of the central 90% intervals.
+#'     Raftery et al. (2013) report the coverage of the 80%, 90% and 95%
+#'     intervals with their mean half-widths; with `by = c("model",
+#'     "horizon")` they are given by horizon;
+#'   * `"halfwidth"`: the mean half-widths `hw80`, `hw90`, `hw95` of these
+#'     intervals (Raftery et al. 2013, Table 1);
+#'   * `"revision"`: the mean absolute revision, the absolute change of the
+#'     forecast median of a cell (stratum, age group, year) between
+#'     consecutive origins of the backtest, for every cell forecast from both.
+#'     Stoeldraijer et al. (2013) name robustness as a purpose of a forecast:
+#'     small changes in the observations when the data are updated should
+#'     result in only modest changes in the forecasts. They give no measure;
+#'     the revision between consecutive origins, each of which adds a year of
+#'     data with the default origins, is a package-specific mapping onto the
+#'     rolling origins (reference unknown). A revision belongs to the later
+#'     origin and its horizon; the first origin has none. Origins further
+#'     apart than one year (for example `origins = c(2005, 2007)`) give
+#'     revisions over several years of data.
 #' @return A `data.table` with the mean CRPS, WIS and absolute error, the
 #'   root mean squared error of the median (`rmse`), MASE
 #'   (mean of absolute error over the scale, the mean absolute year-to-year
@@ -520,19 +582,39 @@ wis_from_quantiles <- function(Q, y, probs) {
 #'   of the 50%, 80% and 95% intervals, mean PIT, the number of scored
 #'   cells and the `unit` of CRPS, WIS and absolute error (log rates, or
 #'   years for life expectancy). Backtests of the same model with different
-#'   preprocessing (column `prep`) are scored separately.
+#'   preprocessing (column `prep`) are scored separately. With `measures`,
+#'   the columns `sape`, `cov90`, `hw80`, `hw90`, `hw95` and `revision`
+#'   follow.
 #' @references
 #' Hyndman RJ, Koehler AB (2006). Another look at measures of forecast
 #' accuracy. *International Journal of Forecasting* 22(4): 679-688.
+#'
+#' Raftery AE, Chunn JL, Gerland P, Sevcikova H (2013). Bayesian
+#' probabilistic projections of life expectancy for all countries.
+#' *Demography* 50(3): 777-801. \doi{10.1007/s13524-012-0193-x}
+#'
+#' Stoeldraijer L, van Duin C, van Wissen L, Janssen F (2013). Impact of
+#' different mortality forecasting methods and explicit assumptions on
+#' projected future life expectancy: the case of the Netherlands.
+#' *Demographic Research* 29(13): 323-354.
+#' \doi{10.4054/DemRes.2013.29.13}
 #' @examples
 #' x <- mt_example(deaths = "single", years = 1990:2012)
 #' bt <- mt_backtest(rwd(), x, origins = 2007, h = 5, n_draws = 100)
 #' mt_score(bt, by = c("model", "horizon"))
+#' # life expectancy: SAPE and 90% coverage by horizon (Raftery et al. 2013),
+#' # revisions between consecutive origins
+#' bl <- mt_backtest(rwd(), x, origins = 2004:2007, h = 5, n_draws = 100,
+#'                   quantities = "life_expectancy")
+#' mt_score(bl, by = c("model", "horizon"), target = "life_expectancy",
+#'          measures = c("sape", "cov90", "revision"))
 #' @export
 mt_score <- function(backtest, by = "model",
-                     target = c("rate", "life_expectancy", "asr", "life_expectancy_gap", "asr_gap")) {
+                     target = c("rate", "life_expectancy", "asr", "life_expectancy_gap", "asr_gap"),
+                     measures = NULL) {
   if (!is.data.frame(backtest)) mt_abort("`backtest` must be a backtest table.", class = "argument")
   target <- match.arg(target)
+  measures <- check_score_measures(measures, target)
   bt <- as.data.table(backtest)
   if ("target" %in% names(bt)) {
     keep <- bt[["target"]] == target
@@ -549,7 +631,70 @@ mt_score <- function(backtest, by = "model",
             by = by]
   out[, unit := switch(target, rate = "log rate", life_expectancy = "years", asr = "log rate (ASR)",
                        life_expectancy_gap = "years (difference)", asr_gap = "log rate ratio (ASR)")]
+  if (length(measures)) {
+    ex <- score_extra(bt, by, measures)
+    out <- cbind(out, ex[, setdiff(names(ex), by), with = FALSE])
+  }
   out[]
+}
+
+score_measures <- c("sape", "cov90", "halfwidth", "revision")
+
+check_score_measures <- function(measures, target) {
+  if (is.null(measures)) return(character())
+  if (!is.character(measures) || !all(measures %in% score_measures)) {
+    mt_abort(sprintf("`measures` can be %s.", paste0("\"", score_measures, "\"", collapse = ", ")),
+             class = "argument")
+  }
+  if ("sape" %in% measures && target != "life_expectancy") {
+    mt_abort(paste("SAPE is defined for life expectancy (Raftery et al. 2013): use target = \"life_expectancy\"",
+                   "(and quantities = \"life_expectancy\" in mt_backtest())."), class = "argument")
+  }
+  score_measures[score_measures %in% measures]
+}
+
+# The opt-in summaries of mt_score() for the rows of one target, grouped like
+# the main scores (the same `by` on the same table gives the same group order)
+score_extra <- function(bt, by, measures) {
+  need <- c(sape = "sd", cov90 = "cov90", halfwidth = "hw80")[intersect(measures, c("sape", "cov90", "halfwidth"))]
+  if (length(need) && !all(need %in% names(bt))) {
+    mt_abort(sprintf("The backtest lacks the column(s) %s of `measures`; run it again with mt_backtest().",
+                     paste(setdiff(need, names(bt)), collapse = ", ")), class = "argument")
+  }
+  ex <- data.table(.row = seq_len(nrow(bt)))
+  if ("sape" %in% measures) {
+    s <- bt[["sd"]]
+    ex[, sape_ := ifelse(is.finite(s) & s > 0, sqrt(pi / 2) * bt[["ae"]] / s, NA_real_)]
+  }
+  if ("revision" %in% measures) ex[, revision_ := backtest_revisions(bt)]
+  for (v in c(by, intersect(c("cov90", "hw80", "hw90", "hw95"), names(bt)))) set(ex, j = v, value = bt[[v]])
+  na_mean <- function(v) if (all(is.na(v))) NA_real_ else mean(v, na.rm = TRUE)
+  ex[, c(if ("sape" %in% measures) list(sape = na_mean(sape_)),
+         if ("cov90" %in% measures) list(cov90 = mean(cov90)),
+         if ("halfwidth" %in% measures) list(hw80 = mean(hw80), hw90 = mean(hw90), hw95 = mean(hw95)),
+         if ("revision" %in% measures) list(revision = na_mean(abs(revision_)))),
+     by = by]
+}
+
+# Revision of each row: its forecast median minus the median for the same
+# cell (model, pipeline, stratum, age group, year, target) at the previous
+# origin of the backtest of that model; NA at the first origin and for
+# cells that the previous origin did not score
+backtest_revisions <- function(bt) {
+  key <- function(cols) {
+    cols <- intersect(cols, names(bt))
+    if (!length(cols)) return(rep("", nrow(bt)))
+    do.call(paste, c(unname(as.list(bt[, cols, with = FALSE])), sep = "\r"))
+  }
+  unit <- key(c("model", "prep"))
+  cell <- key(c("model", "prep", "stratum", "age_lo", "age_hi", "period", "target"))
+  o_rank <- integer(nrow(bt))
+  for (u in unique(unit)) {
+    i <- which(unit == u)
+    o_rank[i] <- match(bt$origin[i], sort(unique(bt$origin[i])))
+  }
+  j <- match(paste(cell, o_rank - 1L, sep = "\r"), paste(cell, o_rank, sep = "\r"))
+  bt$median - bt$median[j]
 }
 
 # Grouping columns of the scores: the same model with different

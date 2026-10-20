@@ -76,8 +76,11 @@ the MASE scale \code{scale} (mean absolute year-to-year change in the
 training data), \code{target} (\code{"rate"}, or the derived quantity), the
 forecast \code{median} and \code{mean}, and the scores \code{crps}, \code{wis}, \code{ae}
 (absolute error of the median), \code{cov50}, \code{cov80}, \code{cov95} and \code{pit}
-(randomised for ties). Rows of derived quantities
-have no \code{age_lo}, \code{age_hi} and \code{scale}. Summarise with \code{\link[=mt_score]{mt_score()}}.
+(randomised for ties), and for the opt-in summaries of \code{\link[=mt_score]{mt_score()}}
+(\code{measures}) the standard deviation of the draws \code{sd}, \code{cov90} and the
+half-widths \code{hw80}, \code{hw90} and \code{hw95} of the central intervals. Rows of
+derived quantities have no \code{age_lo}, \code{age_hi} and \code{scale}. Summarise
+with \code{\link[=mt_score]{mt_score()}}.
 }
 \description{
 For each forecast origin, the data are cut at the origin, the

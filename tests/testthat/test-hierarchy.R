@@ -58,18 +58,21 @@ test_that("reconciliation keeps the draws as they are by default and never reord
   rb <- mt_reconcile(fc, h3(), method = "bottom_up")
   expect_equal(rb$rates[, , b, ], fc$rates[, , b, ], tolerance = 1e-10)
   expect_identical(mt_reconcile(fc, h3())$rates, mt_reconcile(fc, h3(), dependence = "none")$rates)
-  re <- mt_reconcile(fc, h3(), method = "bottom_up", dependence = "empirical", seed = 1)
+  # the deprecated package-specific reordering still works
+  re <- suppressWarnings(mt_reconcile(fc, h3(), method = "bottom_up", dependence = "empirical", seed = 1),
+                         classes = "mt_warning_deprecated")
   expect_false(isTRUE(all.equal(re$rates[, , b, ], fc$rates[, , b, ])))
   expect_lt(coherence_gap(re, h3()), 1e-8)
   expect_identical(reconciled(lee_carter(), h3())$params$dependence, "none")
   expect_identical(reconciled(lee_carter(), h3(), dependence = "auto")$params$dependence, "none")
-  expect_identical(reconciled(lee_carter(), h3(), dependence = "empirical")$params$dependence, "empirical")
+  expect_identical(suppressWarnings(reconciled(lee_carter(), h3(), dependence = "empirical"),
+                                    classes = "mt_warning_deprecated")$params$dependence, "empirical")
   # joint models carry the dependence between strata: their paths are not reordered
-  expect_warning(sp <- reconciled(li_lee(common_by = "sex"), h3(), dependence = "empirical"),
+  expect_warning(sp <- reconciled(li_lee(common_by = "sex"), h3(), dependence = "schaake"),
                  class = "mt_warning_reconcile")
   expect_identical(sp$params$dependence, "none")
   fj <- mt_forecast(mt_fit(li_lee(common_by = "sex"), xa), h = 2, n_draws = 30, seed = 1)
-  expect_warning(rj <- mt_reconcile(fj, h3(), method = "bottom_up", dependence = "empirical", seed = 1),
+  expect_warning(rj <- mt_reconcile(fj, h3(), method = "bottom_up", dependence = "schaake", seed = 1),
                  class = "mt_warning_reconcile")
   expect_equal(rj$rates[, , b, ], fj$rates[, , b, ], tolerance = 1e-10)
   expect_true(mortensor:::spec_is_joint(anchored(li_lee())))

@@ -32,7 +32,7 @@ test_that("reconciled() reconciles the draws of wrapped base models", {
 test_that("predictive noise of reconciled models is independent across cells", {
   x <- mt_example_regions(years = 2000:2014, regions = 2)
   xa <- mt_aggregate_strata(x, h3())
-  fit <- mt_fit(reconciled(lee_carter(), h3(), method = "bottom_up", dependence = "empirical"), xa)
+  fit <- mt_fit(reconciled(lee_carter(), h3(), method = "bottom_up", dependence = "schaake"), xa)
   p <- mt_forecast(fit, h = 2, n_draws = 300, seed = 1, predictive = TRUE)
   u <- mt_forecast(fit, h = 2, n_draws = 300, seed = 1)
   # the same seed gives the same paths, so the difference is the observation noise
@@ -130,7 +130,8 @@ test_that("reconciled ensembles keep the component of each reordered path", {
     src <- vapply(seq_len(40), function(j) which.min(colSums(abs(A - as.vector(pr$rates[, , s, j])))), 1L)
     expect_equal(pr$component[s, ], pe$component[src])
   }
-  expect_equal(dim(mt_reconcile(pe, h3(), seed = 1, dependence = "empirical")$component), c(nrow(xa$strata), 40L))
+  expect_equal(dim(suppressWarnings(mt_reconcile(pe, h3(), seed = 1, dependence = "empirical"),
+                                    classes = "mt_warning_deprecated")$component), c(nrow(xa$strata), 40L))
   # without reordering (the default), each draw keeps one component for all strata
   expect_equal(mt_reconcile(pe, h3(), seed = 1)$component, pe$component)
   fa <- suppressWarnings(mt_forecast(mt_fit(anchored(reconciled(ens, h3(), dependence = "empirical")), xa), h = 2,

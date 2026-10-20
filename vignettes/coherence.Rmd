@@ -131,13 +131,17 @@ warning above).
 ## Does coherence cost accuracy?
 
 A backtest from the origins 2010-2014, five years ahead, with the
-reconciliation inside each fit:
+reconciliation inside each fit. Two variants are added: MinT with the
+covariance of the errors of past forecasts (`covariance = "errors"`, see
+below), and WLS after the Schaake shuffle (`dependence = "schaake"`):
 
 ```{r}
 bt <- mt_compare(list(separate = lee_carter(),
                       "bottom-up" = reconciled(lee_carter(), h, method = "bottom_up"),
                       wls = reconciled(lee_carter(), h, method = "wls"),
-                      mint = reconciled(lee_carter(), h, method = "mint")),
+                      mint = reconciled(lee_carter(), h, method = "mint"),
+                      "mint, errors" = reconciled(lee_carter(), h, method = "mint", covariance = "errors", years = 5),
+                      "wls, Schaake" = reconciled(lee_carter(), h, method = "wls", dependence = "schaake")),
                  xa, origins = 2010:2014, h = 5, n_draws = 200)
 mt_score_table(bt, metrics = c("crps", "cov95"), hierarchy = h)
 ```
@@ -150,17 +154,43 @@ The bottom series are forecast about as well with every method (CRPS
 0.067-0.068), and their coverage falls a little with WLS and MinT (0.77
 against 0.79). The totals lose accuracy and much coverage: the 95%
 intervals of England contain 0.37-0.42 of the observed rates after
-reconciliation, against 0.67 with its own model. The model of England
+reconciliation with the default settings (bottom-up, WLS, MinT), against
+0.67 with its own model. The model of England
 captures the common movements of the quintiles in its trend; sums of
 parts with independent draws do not reproduce them, so their intervals
 are too narrow. Joint models such as `li_lee()` tie the parts together in
-the model itself. `dependence = "empirical"` reorders the paths of
-separately fitted parts so that they move together as they did in the
-training years. This reordering is specific to this package, related to
-the Schaake shuffle (Clark et al. 2004); it is used only when chosen, and
-a backtest should check its effect. The vignette "Dependence between
-groups" compares joint models and ensemble copula coupling for totals and
-gaps.
+the model itself.
+
+The Schaake shuffle (Clark et al. 2004) gives separately fitted parts the
+dependence of the training years before the reconciliation. In every
+age, forecast year `h` and stratum, the draws are sorted and assigned in
+the rank order of the observed changes of the log rate over `h` years
+from distinct training years, the same years for all strata and ages.
+Each cell keeps its values, and the parts move together as their observed
+changes did. With WLS, the 95% intervals of England then contain 0.49 of
+the observed rates, against 0.37 without it, and its CRPS falls from 0.0488
+to 0.0459. The shuffle also sets the dependence between the ages of a
+stratum: Lee-Carter draws move all ages of a stratum together, the
+observed changes less so, which narrows the intervals of the life
+expectancy of single strata. The template has one value per training
+year whose next five years are observed: 5 at the origin 2010, 9 at 2014.
+It assumes that the dependence of the training years holds in the
+forecast years.
+
+The weights of WLS and MinT come from the base draws by default. The
+papers use the covariance of the errors of the base forecasts
+(Wickramasuriya et al. 2019). With `covariance = "errors"`, the base
+model is refitted at `n_origins` inner origins in the last `years` of the
+training data (here five years), and the errors of its forecasts give the
+weights of each age and horizon: their mean squares for WLS, their
+covariance with the correlations shrunk towards the identity for MinT.
+Here MinT with these weights covers 0.81 of the bottom series and 0.44
+for England, against 0.76 and 0.38 with the weights of the draws. With
+four inner origins, each age and horizon has at most four errors, so
+their correlations are shrunk strongly towards zero.
+
+The vignette "Dependence between groups" compares joint models and
+ensemble copula coupling for totals and gaps.
 
 ## Reconciliation learnt from past forecasts
 
@@ -199,13 +229,21 @@ it.
   draws are independent, **MinT** gives about the same result, and the
   intervals of the totals are too narrow; check their coverage in a
   backtest.
+* **dependence** for separate forecasts whose totals matter:
+  `"schaake"` takes the dependence from the observed changes of the
+  training years, `"ecc"` from a joint model (vignette "Dependence between
+  groups").
+* **covariance = "errors"** for weights of WLS and MinT from the errors of
+  past forecasts.
 * **fixed** with **proportional** for a trusted total, for example causes
   of death that must add up to an all-cause forecast.
 * **energy_score** only with long training histories, after a backtest
   against WLS.
 * Check the choice at every level of the hierarchy in a backtest, as
   above. The applied vignettes use these methods for causes of death and
-  German Laender.
+  German Laender; "Causes of death by deprivation: coherent and combined
+  forecasts" compares them on one crossed hierarchy of sexes, deprivation
+  quintiles and causes.
 
 ## References
 

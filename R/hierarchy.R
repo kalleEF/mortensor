@@ -319,7 +319,9 @@ mt_aggregate_strata <- function(data, hierarchy, replace = FALSE) {
 #' independent across strata, so the shrunk covariance is close to its
 #' diagonal and `"mint"` gives nearly the result of `"wls"`; it differs
 #' where a joint model (for example [li_lee()]) simulates correlated
-#' strata.
+#' strata, or after the Schaake shuffle. [reconciled()] with `covariance =
+#' "errors"` estimates `W` from the errors of past forecasts instead, the
+#' input of the papers.
 #'
 #' **Non-negative forecasts.** Projections can make bottom values negative
 #' where the base forecasts disagree strongly. For the draws where this
@@ -371,24 +373,71 @@ mt_aggregate_strata <- function(data, hierarchy, replace = FALSE) {
 #' intervals than they would if the parts moved together. Joint models (for
 #' example [li_lee()], [coherent_fdm()] and [coda()] with `coherent = TRUE`)
 #' carry the dependence between strata in the model itself; their draws are
-#' never reordered. Ensemble copula coupling (Schefzik, Thorarinsdottir and
-#' Gneiting 2013) gives separately fitted strata the dependence of a joint
-#' model's draws: [mt_couple()] for draws before `mt_reconcile()`, and
-#' [coupled()] or `reconciled(dependence = "ecc")` for models.
+#' never reordered (`"schaake"` then gives a warning and is ignored).
+#' Two methods give separately fitted strata a dependence before the
+#' reconciliation: the Schaake shuffle takes it from the observed changes of
+#' the training years (`dependence = "schaake"`, below), ensemble copula
+#' coupling (Schefzik, Thorarinsdottir and Gneiting 2013) from the draws of
+#' a joint model ([mt_couple()] for draws before `mt_reconcile()`, and
+#' [coupled()] or `reconciled(dependence = "ecc")` for models).
 #'
-#' `dependence = "empirical"` reorders the paths of each stratum before the
-#' reconciliation. This is a package-specific method, related to but
-#' different from the Schaake shuffle of Clark et al. (2004): every draw is
-#' matched to a training year, the stratum whose year-to-year change of log
-#' rates (averaged over ages) was relatively large in that year receives a
-#' relatively high path, and the marginal distribution of each stratum is
-#' unchanged. It differs from the Schaake shuffle in three ways: it takes
-#' one template value per stratum and year instead of one per margin (here
-#' each age and forecast year of a stratum), it ranks whole paths by their
-#' mean level (mean log rate over ages and years) instead of ranking the
-#' values of each margin, and it resamples the training years with
-#' replacement instead of using distinct historical dates. Its effect on the
-#' intervals of the aggregates has to be checked in a backtest.
+#' **The Schaake shuffle** (`dependence = "schaake"`; Clark, Gangopadhyay,
+#' Hay, Rajagopalan and Wilby 2004, Section 3b). Status: published, adapted
+#' to mortality forecasts as listed below. In the paper, the ensemble
+#' members of each station and variable are reordered so that their ranks
+#' follow those of observations from as many dates of the historical record,
+#' the same dates for all stations and variables (their eqs. 5-12); the
+#' later lead times take the following days of the same dates, which keeps
+#' the persistence over lead times. Here a margin is an age, a forecast year
+#' and a stratum. The template value of a date, a training year `tau`, for
+#' the margin of forecast year `h` (counted from the last training year) is
+#' the observed change of the log death rate from `tau` to `tau + h`: one
+#' observed trajectory per date, over consecutive years. The dates are the
+#' `n` training years whose next `H` years are observed (`H` the number of
+#' forecast years, so `n` is the number of training years minus `H`), from
+#' the training data of the draws only. In every margin the draws receive
+#' the sorted values of that margin in the rank order of the template values
+#' of their dates. Every margin keeps exactly its values, and the draws take
+#' the rank correlations of the observed changes between strata, between
+#' ages and between forecast years. Ties among template values are ranked
+#' at random, as in the paper (Section 4c); margins with a missing template
+#' value keep the order of their draws, as the paper's code skips vectors
+#' with missing values (appendix), with a warning. Schefzik et al. (2013,
+#' Section 3.4) describe the shuffle as the empirical copula of the
+#' historical record applied to samples of the margins; ensemble copula
+#' coupling takes the copula from the draws of a model instead.
+#'
+#' Package-specific (reference unknown): (1) the template holds changes of
+#' log rates from the start year of each date, where the paper takes the
+#' observed values themselves (from dates within seven days of the
+#' forecast date), so that the ranks follow the variation of past changes
+#' around the trend of mortality; (2) deaths of zero count as 0.5
+#' in the template; (3) the paper has as many dates as ensemble members.
+#' With more draws than dates, the draws are taken in a random order in
+#' blocks of `n`, and each block is shuffled with all `n` dates; a last
+#' block with fewer draws uses a random subset of distinct dates, as do
+#' fewer draws than dates (the paper selects its dates at random). The
+#' draws of a block take the ranks of the template among themselves, and
+#' the same dates recur in every block.
+#'
+#' The shuffle assumes that the dependence of the training years holds in
+#' the forecast years (Clark et al. 2004, Section 5). It sets the
+#' dependence between the ages and years of a stratum as well, so measures
+#' over ages, such as the life expectancy of a single stratum, change:
+#' Lee-Carter draws move all ages of a stratum together, and after the
+#' shuffle they move together as much as the observed changes did, which
+#' narrows the intervals of life expectancy where these are less correlated
+#' between ages. The observed changes carry the Poisson variation of the
+#' deaths, which is independent between strata and ages; where deaths are
+#' few, it weakens the dependence the template gives. Templates are short:
+#' with 19 training years and 5 forecast years there are 14 dates, with 16
+#' forecast years 3.
+#'
+#' `dependence = "empirical"` is deprecated (it warns): a package-specific
+#' reordering of whole paths of each stratum by one-year changes of log
+#' rates, averaged over ages, of training years drawn with replacement. It
+#' keeps the dependence between the ages and years of each stratum. Use
+#' `"schaake"`, the published method.
 #'
 #' The one-variable interface with `var` and `total` is still accepted. It
 #' reconciles deaths when the exposures of the parts add up to that of the
@@ -409,11 +458,15 @@ mt_aggregate_strata <- function(data, hierarchy, replace = FALSE) {
 #' @param exposure Exposures `[age, period, stratum]` or `[age, stratum]` for
 #'   the forecast years (default: last training year). Only bottom strata are
 #'   used, and they are enough; aggregates are summed.
-#' @param dependence `"none"` (default: keep the draws as they are) or
-#'   `"empirical"` (package-specific reordering of the paths of separately
-#'   fitted strata, see Details). Draws of joint models are not reordered:
-#'   `"empirical"` then gives a warning and is ignored.
-#' @param seed Random seed for the reordering (`dependence = "empirical"`).
+#' @param dependence `"none"` (default: keep the draws as they are),
+#'   `"schaake"` (the Schaake shuffle of the draws of separately fitted
+#'   strata before the reconciliation, see Details) or `"empirical"`
+#'   (deprecated). Draws of joint models are not reordered: `"schaake"` then
+#'   gives a warning and is ignored. The shuffle needs the training data of
+#'   the draws (as [mt_forecast()] returns them), with at least two more
+#'   training years than forecast years.
+#' @param seed Random seed for the Schaake shuffle (order of the draws,
+#'   choice of dates, ties).
 #' @param fixed Strata whose forecasts are kept unchanged (labels, or
 #'   `"total"` for the grand total of the hierarchy), for example a trusted
 #'   all-cause forecast that the causes must add up to. The projection gives
@@ -427,7 +480,13 @@ mt_aggregate_strata <- function(data, hierarchy, replace = FALSE) {
 #'   level (`parts` is ignored: all other levels are parts).
 #' @return The reconciled `mt_draws`, with diagnostics in `$reconciliation`
 #'   (method, largest relative gap before reconciliation, share of bottom
-#'   values held at zero, mean shrinkage intensity).
+#'   values held at zero, mean shrinkage intensity). After the Schaake
+#'   shuffle, `$schaake` holds the number of dates (`dates`), their start
+#'   years (`years`), the start year of the date of each draw (`draw_year`),
+#'   the block of each draw (`block`), the number of blocks (`blocks`), the
+#'   number of shuffled margins (`margins`) and the share of margins with
+#'   tied template values (`tied`); `$component` is then dropped, since the
+#'   values of one draw come from different base draws.
 #' @references
 #' Hyndman RJ, Ahmed RA, Athanasopoulos G, Shang HL (2011). Optimal
 #' combination forecasts for hierarchical time series. *Computational
@@ -481,11 +540,14 @@ mt_aggregate_strata <- function(data, hierarchy, replace = FALSE) {
 #' fc <- mt_forecast(mt_fit(lee_carter(), xa), h = 3, n_draws = 50, seed = 1)
 #' rc <- mt_reconcile(fc, h, method = "wls")
 #' rc$reconciliation
+#' # the strata take the dependence of the observed changes of 12 training years
+#' rs <- mt_reconcile(fc, h, method = "wls", dependence = "schaake", seed = 1)
+#' rs$schaake$years
 #' @export
 mt_reconcile <- function(draws, hierarchy = NULL,
                          method = c("wls", "mint", "structural", "ols", "bottom_up", "proportional"),
-                         shrink = "auto", exposure = NULL, dependence = c("none", "empirical"), seed = NULL,
-                         fixed = NULL, var = NULL, total = NULL, parts = NULL) {
+                         shrink = "auto", exposure = NULL, dependence = c("none", "schaake", "empirical"),
+                         seed = NULL, fixed = NULL, var = NULL, total = NULL, parts = NULL) {
   check_class(draws, "mt_draws", "draws")
   if (identical(method, "energy_score")) {
     mt_abort(paste("`method = \"energy_score\"` learns the reconciliation from past forecasts and observations,",
@@ -493,7 +555,9 @@ mt_reconcile <- function(draws, hierarchy = NULL,
                    "which makes them inside the training data."), class = "argument")
   }
   method <- match.arg(method)
-  dependence <- joint_dependence(match.arg(dependence), draws$spec)
+  dependence <- match.arg(dependence)
+  if (dependence == "empirical") warn_empirical_deprecated()
+  dependence <- joint_dependence(dependence, draws$spec)
   if (is.character(hierarchy) && length(hierarchy) == 1 && is.null(var)) {
     var <- hierarchy
     hierarchy <- NULL
@@ -511,6 +575,16 @@ mt_reconcile <- function(draws, hierarchy = NULL,
   })
   fixed_idx <- fixed_nodes(fixed, draws$strata, h, hs, method)
   arr <- draws$rates
+  if (dependence == "schaake") {
+    y <- schaake_log_rates(draws$observed, draws$train_E, draws$train_D)
+    sr <- with_seed(seed, schaake_reorder(arr, y, draws$observed_periods %||% seq_len(dim(y)[2])))
+    warn_schaake(sr$info)
+    arr <- sr$arr
+    # the values of one draw come from different base draws
+    draws$component <- NULL
+    draws$nb_size <- NULL
+    draws$schaake <- sr$info
+  }
   if (dependence == "empirical" && !is.null(draws$train_D)) {
     Dc <- if (!is.null(draws$observed)) draws$observed * draws$train_E else draws$train_D
     cr <- with_seed(seed, copula_reorder(arr, Dc, draws$train_E))
@@ -543,9 +617,9 @@ spec_is_joint <- function(spec) {
 # reordered, since their draws carry the dependence of the model
 joint_dependence <- function(dependence, spec) {
   specs <- if (inherits(spec, "mt_spec")) list(spec) else spec
-  if (identical(dependence, "empirical") && any(vapply(specs, spec_is_joint, logical(1)))) {
-    mt_warn(paste("The draws of joint models carry the dependence between strata and are not reordered:",
-                  "`dependence = \"empirical\"` is ignored."), class = "reconcile")
+  if (dependence %in% c("empirical", "schaake") && any(vapply(specs, spec_is_joint, logical(1)))) {
+    mt_warn(sprintf(paste("The draws of joint models carry the dependence between strata and are not reordered:",
+                          "`dependence = \"%s\"` is ignored."), dependence), class = "reconcile")
     return("none")
   }
   dependence
@@ -618,8 +692,10 @@ fixed_nodes <- function(fixed, strata, h, hs, method) {
   idx
 }
 
-# Core: arr [age, period, stratum, draw] of rates
-reconcile_array <- function(arr, hs, additive, method, shrink, exposure, d, fixed = integer()) {
+# Core: arr [age, period, stratum, draw] of rates. `W_cell`: optional
+# function(age, period) giving the weights of "wls" (a vector) or "mint"
+# (list(W, lambda)) from base forecast errors, or NULL for the draws
+reconcile_array <- function(arr, hs, additive, method, shrink, exposure, d, fixed = integer(), W_cell = NULL) {
   S <- hs$S
   b <- hs$bottom
   is_agg <- !hs$is_bottom
@@ -667,15 +743,25 @@ reconcile_array <- function(arr, hs, additive, method, shrink, exposure, d, fixe
       } else {
         # diagonal weights as vectors, MinT as a matrix; fixed nodes get a
         # near-zero variance
-        W <- switch(method,
-                    ols = rep(1, d[3]),
-                    structural = rowSums(S),
-                    wls = pmax(apply(Yc, 2, stats::var), 1e-20),
-                    mint = {
-                      sh <- shrink_cov(Yc, shrink)
-                      shrink_used <- c(shrink_used, sh$lambda)
-                      sh$W
-                    })
+        We <- if (!is.null(W_cell)) W_cell(a, t)
+        W <- if (!is.null(We)) {
+          if (method == "mint") {
+            shrink_used <- c(shrink_used, We$lambda)
+            We$W
+          } else {
+            We
+          }
+        } else {
+          switch(method,
+                 ols = rep(1, d[3]),
+                 structural = rowSums(S),
+                 wls = pmax(apply(Yc, 2, stats::var), 1e-20),
+                 mint = {
+                   sh <- shrink_cov(Yc, shrink)
+                   shrink_used <- c(shrink_used, sh$lambda)
+                   sh$W
+                 })
+        }
         W <- keep_weights(W, fixed)
         Yp <- project_rows(Yc, W, Ut)
         # non-negative reconciliation (Wickramasuriya, Turlach and Hyndman
@@ -845,11 +931,139 @@ nnls_reconcile <- function(Y, W, Ut, b, X0, p_bar = 3L, max_iter = NULL) {
   list(X = X, held = held, converged = converged, iterations = it - 1L)
 }
 
-# dependence = "empirical" (package-specific, related to the Schaake shuffle
-# of Clark et al. 2004): reorder whole paths of each stratum, ranked by their
-# mean log rate, so that their ranks follow the strata's one-year changes of
-# log rates (averaged over ages) in training years sampled with replacement.
-# `perm` [stratum, draw]: the original draw of each reordered path
+# The Schaake shuffle (Clark et al. 2004, Section 3b; the empirical copula
+# reading of Schefzik et al. 2013, Section 3.4). `arr` [age, period,
+# stratum, draw]: base draws, whose period h is h years after the last
+# training year; `y` [age, training period, stratum]: observed log rates of
+# the training years (schaake_log_rates()); `periods`: the training years.
+# The template of date i (start year tau_i, the i-th of the n = T - H
+# training years whose next H years are observed) holds, for each margin
+# (age, horizon h, stratum), the change of the log rate from tau_i to
+# tau_i + h: consecutive years for the horizons, as the paper's consecutive
+# days for the lead times. For each margin, the draws receive the sorted
+# base values in the rank order of the template values of their dates (eq.
+# 9-11; ties ranked at random, Section 4c). The draws are taken in a
+# random order in blocks of n, each block shuffled with the n distinct
+# dates; with fewer than n draws in a block (also M < n), its dates are a
+# random subset of distinct dates (package-specific for M > n: the paper
+# has as many dates as members). Margins whose template has a missing value
+# keep the order of the base draws. Returns the reordered draws, the base
+# draw each value comes from (`draw`, as dim(arr)) and `info`: the n start
+# years, the start year of each draw's date, the block of each draw
+schaake_reorder <- function(arr, y, periods) {
+  d <- dim(arr)
+  M <- d[4]
+  H <- d[2]
+  n <- dim(y)[2] - H
+  if (n < 2) {
+    mt_abort(sprintf(paste("The Schaake shuffle needs at least %d training years for a forecast of %d years: the",
+                           "template takes the changes over 1 to %d years from at least two distinct years."),
+                     H + 2, H, H), class = "reconcile")
+  }
+  dn <- dimnames(arr)
+  dy <- dimnames(y)
+  if (!is.null(dn[[3]]) && !is.null(dy[[3]])) {
+    # training data matched to the draws by the labels of ages and strata
+    ia <- if (!is.null(dn[[1]]) && !is.null(dy[[1]])) match(dn[[1]], dy[[1]]) else seq_len(dim(y)[1])
+    is <- match(dn[[3]], dy[[3]])
+    if (anyNA(ia) || anyNA(is)) {
+      mt_abort("The training data of the draws lack some of their ages or strata.", class = "reconcile")
+    }
+    y <- y[ia, , is, drop = FALSE]
+  }
+  if (!identical(dim(y)[c(1, 3)], d[c(1, 3)])) {
+    mt_abort("The training data of the draws do not match their ages and strata.", class = "reconcile")
+  }
+  # template: one row per margin (age, horizon, stratum), one column per date
+  L <- prod(d[1:3])
+  tpl <- array(NA_real_, c(d[1:3], n))
+  for (h in seq_len(H)) {
+    tpl[, h, , ] <- aperm(y[, h + seq_len(n), , drop = FALSE] - y[, seq_len(n), , drop = FALSE], c(1, 3, 2))
+  }
+  Tm <- matrix(tpl, L, n)
+  Tm[!is.finite(Tm)] <- NA
+  B <- matrix(arr, L, M)
+  # margins with a missing template value keep the order of the base draws (Clark et al. 2004, appendix)
+  na_margin <- rowSums(is.na(Tm)) > 0
+  base_na <- rowSums(is.na(B)) > 0
+  ok <- !na_margin & !base_na
+  # the j-th draw of a random order is in block blk[j] and has date dates[j]
+  perm <- sample.int(M)
+  blk <- as.integer(ceiling(seq_len(M) / n))
+  dates <- integer(M)
+  for (b in unique(blk)) {
+    j <- which(blk == b)
+    dates[j] <- if (length(j) == n) seq_len(n) else sample.int(n, length(j))
+  }
+  src <- matrix(rep(seq_len(M), each = L), L)
+  tied <- 0
+  if (any(ok)) {
+    Lo <- sum(ok)
+    Bp <- B[ok, perm, drop = FALSE]
+    Tp <- Tm[ok, dates, drop = FALSE]
+    # one group per margin and block: in each group, the value of rank k
+    # among the base values goes to the draw whose template value has rank k
+    # among the template values (ties ranked at random)
+    g <- (rep(blk, each = Lo) - 1) * Lo + rep(seq_len(Lo), M)
+    ob <- order(g, Bp)
+    ot <- order(g, Tp, stats::runif(Lo * M))
+    Bn <- Bp
+    Bn[ot] <- Bp[ob]
+    Sn <- matrix(0L, Lo, M)
+    Sn[ot] <- rep(perm, each = Lo)[ob]
+    B[ok, perm] <- Bn
+    src[ok, perm] <- Sn
+    # share of margins with tied template values among the n dates
+    st <- matrix(Tm[ok, , drop = FALSE][order(rep(seq_len(Lo), n), Tm[ok, , drop = FALSE])], Lo, n, byrow = TRUE)
+    tied <- mean(rowSums(st[, -1, drop = FALSE] == st[, -n, drop = FALSE]) > 0)
+  }
+  out <- array(B, d, dimnames = dimnames(arr))
+  draw <- array(src, d)
+  date <- block <- integer(M)
+  date[perm] <- dates
+  block[perm] <- blk
+  miss <- array(na_margin & !base_na, d[1:3])
+  info <- list(method = "Schaake shuffle", dates = n, years = periods[seq_len(n)], draw_year = periods[date],
+               block = block, blocks = max(blk), margins = sum(ok), tied = tied,
+               uncoupled = dimnames(arr)[[3]][apply(miss, 3, any)])
+  list(arr = out, draw = draw, info = info)
+}
+
+# Observed log rates [age, period, stratum] of the training years for the
+# template of the Schaake shuffle: deaths over exposures, with deaths of 0
+# set to 0.5 (package-specific) so that cells without deaths have a value
+schaake_log_rates <- function(observed, E, D = NULL) {
+  Dobs <- if (!is.null(observed)) observed * E else D
+  if (is.null(Dobs) || is.null(E)) {
+    mt_abort("`dependence = \"schaake\"` needs the observed deaths and exposures of the training years.",
+             class = "reconcile")
+  }
+  y <- log(pmax(Dobs, 0.5) / E)
+  y[!is.finite(y)] <- NA
+  y
+}
+
+warn_schaake <- function(info) {
+  if (!length(info$uncoupled)) return(invisible())
+  mt_warn(sprintf(paste("The template of the Schaake shuffle has missing observed values for %d stratum/strata (%s):",
+                        "their draws keep the order of the base model where the template is missing."),
+                  length(info$uncoupled), paste(utils::head(info$uncoupled, 5), collapse = ", ")),
+          class = "reconcile", call = NULL)
+}
+
+warn_empirical_deprecated <- function() {
+  mt_warn(paste("`dependence = \"empirical\"` is deprecated: its reordering of whole paths by training years drawn",
+                "with replacement has no published source. Use `dependence = \"schaake\"`, the Schaake shuffle of",
+                "Clark et al. (2004), which takes the ranks of each age, year and stratum from distinct training",
+                "years."), class = "deprecated", call = NULL)
+}
+
+# dependence = "empirical" (package-specific, deprecated; related to the
+# Schaake shuffle of Clark et al. 2004): reorder whole paths of each
+# stratum, ranked by their mean log rate, so that their ranks follow the
+# strata's one-year changes of log rates (averaged over ages) in training
+# years sampled with replacement. `perm` [stratum, draw]: the original draw
+# of each reordered path
 copula_reorder <- function(arr, D, E) {
   d <- dim(arr)
   y <- log(pmax(D, 0.5) / E)
@@ -957,18 +1171,30 @@ bottom_exposure <- function(exposure, d, dn, hs) {
   expand_exposure(E, c(d[1:2], length(b)), if (!is.null(dn)) c(dn[1:2], list(dn[[3]][b])))
 }
 
-# Shrinkage covariance towards the diagonal (Schaefer and Strimmer 2005, target D)
-shrink_cov <- function(X, shrink = "auto") {
+# Shrinkage covariance towards the diagonal: the sample correlations shrunk
+# towards the identity with the intensity of Schaefer and Strimmer (2005),
+# lambda = sum_{i != j} Var(r_ij) / sum_{i != j} r_ij^2, as in MinT
+# (Wickramasuriya et al. 2019; 2020, Section 5). `center = TRUE` (draws):
+# the sample covariance of the centred rows with divisor n - 1. `center =
+# FALSE` (base forecast errors, assumed to have mean zero): (1 / n) sum e e',
+# the sample estimator of the error covariance in MinT, with r_ij the mean
+# of the products of the standardised errors and Var(r_ij) = sum_k (w_kij -
+# mean w_ij)^2 / (n (n - 1))
+shrink_cov <- function(X, shrink = "auto", center = TRUE) {
   n <- nrow(X)
-  V <- stats::cov(X)
+  V <- if (center) stats::cov(X) else crossprod(X) / n
   s <- sqrt(pmax(diag(V), 1e-30))
   if (is.numeric(shrink)) {
     lambda <- shrink
   } else {
-    Z <- sweep(sweep(X, 2, colMeans(X)), 2, s, "/")
-    R <- crossprod(Z) / (n - 1)
+    Z <- sweep(if (center) sweep(X, 2, colMeans(X)) else X, 2, s, "/")
+    R <- crossprod(Z) / (if (center) n - 1 else n)
     Z2 <- Z^2
-    v_r <- (crossprod(Z2) - crossprod(Z)^2 / n) * n / (n - 1)^3
+    v_r <- if (center) {
+      (crossprod(Z2) - crossprod(Z)^2 / n) * n / (n - 1)^3
+    } else {
+      (crossprod(Z2) - crossprod(Z)^2 / n) / (n * (n - 1))
+    }
     off <- row(R) != col(R)
     lambda <- sum(v_r[off]) / max(sum(R[off]^2), 1e-30)
     lambda <- min(max(lambda, 0), 1)
@@ -1088,6 +1314,50 @@ shrink_cov <- function(X, shrink = "auto") {
 #' defaults. `control$max_iter = 0` gives OLS reconciliation at the cost of
 #' the inner forecasts.
 #'
+#' **Weights from past errors.** `covariance = "errors"` with `method =
+#' "wls"` or `"mint"`. MinT weights the base forecasts by the covariance
+#' matrix of their `h`-step forecast errors (Wickramasuriya, Turlach and
+#' Hyndman 2020, Section 2.1, after Wickramasuriya et al. 2019); Hyndman et
+#' al. (2011, Section 3) note that reconciled intervals need this matrix.
+#' With `covariance = "errors"` it is estimated from errors of past
+#' forecasts. Each time the model is fitted (also at every origin of an
+#' outer [mt_backtest()]), the base model is refitted at `n_origins` inner
+#' origins in the last `years` of the training data, as for
+#' `"energy_score"`, and forecasts the next `horizon` years (cut at the last
+#' training year) with `control$n_draws` draws and the observed exposures.
+#' The error of a stratum is its observed value minus the mean of its
+#' draws, on the scale of the reconciliation (deaths, or rates when the
+#' levels share exposures). For each age and inner horizon `h`, `"mint"`
+#' takes the shrinkage estimator of MinT: the sample covariance of the `n`
+#' error vectors `e`, \eqn{\hat W = n^{-1} \sum e e'} (errors of mean zero),
+#' shrunk towards its diagonal, \eqn{\lambda \, diag(\hat W) + (1 - \lambda)
+#' \hat W}, with \eqn{\lambda = \sum_{i \ne j} \widehat{Var}(r_{ij}) /
+#' \sum_{i \ne j} r_{ij}^2} from the correlations \eqn{r_{ij}} of the errors
+#' (Schäfer and Strimmer 2005; Wickramasuriya et al. 2019; Wickramasuriya et
+#' al. 2020, Section 5: the estimator "shrinks the sample correlation matrix
+#' towards an identity matrix"). Panagiotelis et al. (2023, Table 1) give
+#' the same form and write \eqn{\lambda} with the covariances. `"wls"` takes
+#' the diagonal, the mean squared errors. `shrink` fixes \eqn{\lambda};
+#' `shrink = 1` gives the result of `"wls"`. The draws are then projected as
+#' with the default weights, as Panagiotelis et al. (2023, Section 7.3,
+#' MinTShr) do for probabilistic forecasts. The errors are reported in the
+#' fit (see Value).
+#'
+#' Deviations: the papers estimate the weights from the in-sample
+#' one-step-ahead residuals of the base models and take them as
+#' proportional for all horizons (Wickramasuriya et al. 2019). Here the
+#' `h`-step errors of inner forecasts estimate the weights of each horizon,
+#' one set per age (every age is a hierarchy of its own). Package-specific
+#' (reference unknown): forecast years beyond `horizon` take the weights of
+#' the longest inner horizon (a projection does not change when its weights
+#' are multiplied by a constant, so this is the papers' proportionality
+#' beyond `horizon`); an inner horizon with fewer than 2 error vectors with
+#' observed values for every stratum takes the weights of the next shorter
+#' one; ages without any take the weights from the draws, with a warning.
+#' Each age and horizon has at most `n_origins` errors, from overlapping
+#' forecasts; with many strata the shrinkage intensity is then often high,
+#' and `"mint"` near `"wls"` with the error variances.
+#'
 #' @param spec Base model specification (fitted to all strata).
 #' @param hierarchy An [mt_hierarchy()]. When the data hold the aggregate
 #'   strata, their exposures are compared with those the hierarchy implies,
@@ -1095,31 +1365,38 @@ shrink_cov <- function(X, shrink = "auto") {
 #'   for example causes of death declared without `additive = "rates"`.
 #' @param method A method of [mt_reconcile()], or `"energy_score"`
 #'   (score-optimal reconciliation, see Details).
-#' @param shrink See [mt_reconcile()].
+#' @param shrink See [mt_reconcile()]; with `covariance = "errors"` the
+#'   shrinkage intensity for the errors.
 #' @param dependence `"none"` (default: the draws are reconciled as they
-#'   are), `"ecc"`, `"empirical"` or `"auto"` (the same as `"none"`, kept for
-#'   compatibility). With `"ecc"` the draws of the base model take the
-#'   dependence of the draws of `template` before reconciliation (ensemble
-#'   copula coupling, Schefzik, Thorarinsdottir and Gneiting 2013): the
-#'   same as `reconciled(coupled(spec, template), ...)`, see [coupled()].
-#'   With `"empirical"` the paths of separately fitted strata are reordered
-#'   before reconciliation by a package-specific method (see
-#'   [mt_reconcile()]). Draws of joint models such as [li_lee()] and
-#'   [tucker3()], which carry the dependence between strata, are never
-#'   reordered by `"empirical"` (it then gives a warning and is ignored).
-#'   The observation noise of predictive draws is independent across cells
-#'   either way.
+#'   are), `"ecc"`, `"schaake"`, `"empirical"` (deprecated) or `"auto"` (the
+#'   same as `"none"`, kept for compatibility). With `"ecc"` the draws of the
+#'   base model take the dependence of the draws of `template` before
+#'   reconciliation (ensemble copula coupling, Schefzik, Thorarinsdottir and
+#'   Gneiting 2013): the same as `reconciled(coupled(spec, template), ...)`,
+#'   see [coupled()]. With `"schaake"` they take the ranks of the observed
+#'   changes of distinct training years (the Schaake shuffle of Clark et al.
+#'   2004, see [mt_reconcile()]); the template comes from the training data
+#'   of each fit, also inside [mt_backtest()]. Draws of joint models such as
+#'   [li_lee()] and [tucker3()], which carry the dependence between strata,
+#'   are never reordered by `"schaake"` (it then gives a warning and is
+#'   ignored). The observation noise of predictive draws is independent
+#'   across cells either way.
+#' @param covariance `"draws"` (default: the weights of `"wls"` and `"mint"`
+#'   from the base draws of each age and forecast year, see
+#'   [mt_reconcile()]) or `"errors"` (from the errors of inner forecasts in
+#'   the training data, see Details).
 #' @param template With `dependence = "ecc"`: the model specification whose
 #'   draws give the dependence, usually a joint model such as [cae()] or
 #'   [li_lee()].
 #' @param fixed Strata whose forecasts are kept (see [mt_reconcile()]); not
 #'   with `"energy_score"`.
-#' @param years,n_origins,horizon Training of `method = "energy_score"`: the
-#'   length of the training window (the last `years` observed years), the
-#'   number of inner origins in it (as in [recalibrated()]) and the number of
-#'   years each inner forecast covers (horizons 1 to `horizon`, cut at the
-#'   last training year).
-#' @param control Settings of the training for `method = "energy_score"`: a
+#' @param years,n_origins,horizon Training of `method = "energy_score"` and
+#'   of `covariance = "errors"`: the length of the training window (the last
+#'   `years` observed years), the number of inner origins in it (as in
+#'   [recalibrated()]) and the number of years each inner forecast covers
+#'   (horizons 1 to `horizon`, cut at the last training year).
+#' @param control Settings of the training for `method = "energy_score"`
+#'   (`n_draws` also for `covariance = "errors"`): a
 #'   list with any of `n_draws` (draws per inner forecast, default 100),
 #'   `draws_per_step` (draws per training forecast in each step, 50),
 #'   `max_iter` (number of steps, 500), `eta` (learning rate, 0.001),
@@ -1128,8 +1405,9 @@ shrink_cov <- function(X, shrink = "auto") {
 #'   parameter moves by more than `tol` in a step, so `tol` must be below
 #'   `eta` (0 runs all steps). `max_iter = 0` gives OLS reconciliation.
 #' @param seed Random seed of the training for `method = "energy_score"`
-#'   (inner forecasts, observation noise and the draws of each step), so
-#'   that fits are reproducible.
+#'   and `covariance = "errors"` (inner forecasts, observation noise and the
+#'   draws of each step), so that fits are reproducible. The Schaake shuffle
+#'   uses the `seed` of [mt_forecast()].
 #'
 #' @return A model specification. With `method = "energy_score"` its fit
 #'   holds `$reconcile$scoreopt`: `d` `[bottom stratum, age]`, `G` `[bottom
@@ -1137,7 +1415,12 @@ shrink_cov <- function(X, shrink = "auto") {
 #'   `origins`, the `control` settings and a `table` per age with the number
 #'   of training forecasts, the scale of the bottom strata, the number of
 #'   steps, and the mean in-sample energy score with OLS (`energy_ols`) and
-#'   with the estimated \eqn{d} and \eqn{G} (`energy_opt`).
+#'   with the estimated \eqn{d} and \eqn{G} (`energy_opt`). With
+#'   `covariance = "errors"` its fit holds `$reconcile$errors`: the errors
+#'   `[age, horizon, stratum, origin]`, the number of error vectors with
+#'   observed values for every stratum per age and horizon (`n`) and the
+#'   inner `origins`. Forecasts with `dependence = "schaake"` report the
+#'   shuffle in `$schaake` (see [mt_reconcile()]).
 #' @references
 #' Panagiotelis A, Gamakumara P, Athanasopoulos G, Hyndman RJ (2023).
 #' Probabilistic forecast reconciliation: properties, evaluation and score
@@ -1147,11 +1430,42 @@ shrink_cov <- function(X, shrink = "auto") {
 #' Schefzik R, Thorarinsdottir TL, Gneiting T (2013). Uncertainty
 #' quantification in complex simulation models using ensemble copula
 #' coupling. *Statistical Science* 28(4): 616-640. \doi{10.1214/13-STS443}
+#'
+#' Clark M, Gangopadhyay S, Hay L, Rajagopalan B, Wilby R (2004). The Schaake
+#' shuffle: a method for reconstructing space-time variability in forecasted
+#' precipitation and temperature fields. *Journal of Hydrometeorology* 5(1):
+#' 243-262.
+#'
+#' Hyndman RJ, Ahmed RA, Athanasopoulos G, Shang HL (2011). Optimal
+#' combination forecasts for hierarchical time series. *Computational
+#' Statistics & Data Analysis* 55(9): 2579-2589.
+#'
+#' Wickramasuriya SL, Athanasopoulos G, Hyndman RJ (2019). Optimal forecast
+#' reconciliation for hierarchical and grouped time series through trace
+#' minimization. *Journal of the American Statistical Association*
+#' 114(526): 804-819. \doi{10.1080/01621459.2018.1448825}
+#'
+#' Wickramasuriya SL, Turlach BA, Hyndman RJ (2020). Optimal non-negative
+#' forecast reconciliation. *Statistics and Computing* 30: 1167-1182.
+#' \doi{10.1007/s11222-020-09930-0}
+#'
+#' Schäfer J, Strimmer K (2005). A shrinkage approach to large-scale
+#' covariance matrix estimation and implications for functional genomics.
+#' *Statistical Applications in Genetics and Molecular Biology* 4(1):
+#' Article 32. \doi{10.2202/1544-6115.1175}
 #' @examples
 #' x <- mt_example_regions(years = 2000:2019, regions = 3)
 #' h <- mt_hierarchy(sex = "both", region = "all", quintile = "all")
 #' fit <- mt_fit(reconciled(lee_carter(), h, method = "wls"), mt_aggregate_strata(x, h))
 #' fc <- mt_forecast(fit, h = 5, n_draws = 50, seed = 1)
+#' # the Schaake shuffle of the separate Lee-Carter forecasts, then MinT with
+#' # the covariance of the errors of forecasts from 4 inner origins
+#' sm <- reconciled(lee_carter(), h, method = "mint", dependence = "schaake", covariance = "errors",
+#'                  years = 8, n_origins = 4, horizon = 3)
+#' fit_sm <- mt_fit(sm, mt_aggregate_strata(x, h))
+#' fit_sm$reconcile$errors$n[1:3, ]
+#' fc_sm <- mt_forecast(fit_sm, h = 5, n_draws = 50, seed = 1)
+#' fc_sm$schaake$dates
 #' \donttest{
 #' # score-optimal reconciliation, trained on forecasts of 2012-2019 from 4 origins
 #' es <- reconciled(lee_carter(), h, method = "energy_score", years = 8, n_origins = 4, horizon = 3,
@@ -1163,12 +1477,18 @@ shrink_cov <- function(X, shrink = "auto") {
 #' @export
 reconciled <- function(spec, hierarchy,
                        method = c("wls", "mint", "structural", "ols", "bottom_up", "proportional", "energy_score"),
-                       shrink = "auto", dependence = c("none", "ecc", "empirical", "auto"), fixed = NULL,
-                       years = 10, n_origins = 5, horizon = 5, control = list(), seed = 1, template = NULL) {
+                       shrink = "auto", dependence = c("none", "ecc", "schaake", "empirical", "auto"), fixed = NULL,
+                       years = 10, n_origins = 5, horizon = 5, control = list(), seed = 1, template = NULL,
+                       covariance = c("draws", "errors")) {
   check_class(spec, "mt_spec", "spec")
   method <- match.arg(method)
   dependence <- match.arg(dependence)
+  covariance <- match.arg(covariance)
   if (dependence == "auto") dependence <- "none"
+  if (dependence == "empirical") warn_empirical_deprecated()
+  if (covariance == "errors" && !method %in% c("wls", "mint")) {
+    mt_abort("`covariance = \"errors\"` sets the weights of `method = \"wls\"` or `\"mint\"`.", class = "argument")
+  }
   if (dependence == "ecc") {
     if (is.null(template)) mt_abort("`dependence = \"ecc\"` needs a `template` model.", class = "argument")
     spec <- coupled(spec, template)
@@ -1184,10 +1504,10 @@ reconciled <- function(spec, hierarchy,
     mt_abort("`method = \"proportional\"` scales the parts of fixed nodes: give `fixed`.", class = "argument")
   }
   params <- list(base = spec, hierarchy = as_hierarchy(hierarchy), method = method, shrink = shrink,
-                 dependence = dependence, fixed = fixed)
+                 dependence = dependence, fixed = fixed, covariance = covariance)
   min_periods <- spec$min_periods
-  if (method == "energy_score") {
-    if (length(fixed)) {
+  if (method == "energy_score" || covariance == "errors") {
+    if (length(fixed) && method == "energy_score") {
       mt_abort(paste("`fixed` is not available with `method = \"energy_score\"`, which learns the map of all nodes;",
                      "use \"wls\", \"mint\" or \"proportional\" to keep fixed nodes."), class = "argument")
     }
@@ -1195,12 +1515,16 @@ reconciled <- function(spec, hierarchy,
     check_number(n_origins, "n_origins", lower = 1, integerish = TRUE)
     check_number(horizon, "horizon", lower = 1, integerish = TRUE)
     if (!is.null(seed)) check_number(seed, "seed", integerish = TRUE)
+    if (covariance == "errors" && n_origins < 2) {
+      mt_abort("`covariance = \"errors\"` needs at least 2 inner origins (`n_origins`).", class = "argument")
+    }
     params <- c(params, list(years = years, n_origins = min(n_origins, years - 1), horizon = horizon,
                              control = scoreopt_control(control), seed = seed))
     min_periods <- spec$min_periods + years
   }
   new_mt_spec("reconciled", params, min_periods = min_periods,
-              label = sprintf("%s, reconciled (%s)", spec$label, method))
+              label = sprintf("%s, reconciled (%s%s)", spec$label, method,
+                              if (covariance == "errors") ", error covariance" else ""))
 }
 
 #' @export
@@ -1213,9 +1537,12 @@ mt_fit.mt_spec_reconciled <- function(spec, data, prep = NULL, cores = 1, ...) {
   # the fitted specs can be joint where the spec could not tell (tuned())
   p$dependence <- joint_dependence(p$dependence, c(list(fit$spec), fit$inner_specs))
   rc <- list(hierarchy = p$hierarchy, method = p$method, shrink = p$shrink, dependence = p$dependence,
-             structure = hs, fixed = fixed_nodes(p$fixed, fit$strata, p$hierarchy, hs, p$method))
+             structure = hs, fixed = fixed_nodes(p$fixed, fit$strata, p$hierarchy, hs, p$method),
+             covariance = p$covariance %||% "draws")
   # score-optimal reconciliation: d and G per age from inner forecasts
   if (identical(p$method, "energy_score")) rc$scoreopt <- scoreopt_train(p, data, prep, fit, hs, cores)
+  # weights of WLS and MinT from the errors of inner forecasts
+  if (identical(rc$covariance, "errors")) rc$errors <- errors_train(p, data, prep, fit, hs, cores)
   wrap_fit(fit, spec, "mt_fit_reconciled", list(reconcile = rc))
 }
 
@@ -1233,6 +1560,14 @@ mt_forecast.mt_fit_reconciled <- function(fit, h = 10, to = NULL, n_draws = 500,
     E <- expand_exposure(exposure %||% fit$exposure_last, d, dimnames(fc$rates), hs)
     arr <- fc$rates
     component <- fc$component
+    src <- NULL
+    schaake <- NULL
+    if (identical(rc$dependence, "schaake")) {
+      sr <- schaake_reorder(arr, schaake_log_rates(fit$observed, fit$train_E, fit$train_D), fit$periods)
+      arr <- sr$arr
+      src <- sr$draw
+      schaake <- sr$info
+    }
     if (identical(rc$dependence, "empirical")) {
       cr <- copula_reorder(arr, fit$raw_D %||% fit$train_D, fit$train_E)
       arr <- cr$arr
@@ -1241,19 +1576,23 @@ mt_forecast.mt_fit_reconciled <- function(fit, h = 10, to = NULL, n_draws = 500,
     rec <- if (identical(rc$method, "energy_score")) {
       scoreopt_apply(arr, hs, rc$hierarchy$additive, rc$scoreopt, E, d)
     } else {
-      reconcile_array(arr, hs, rc$hierarchy$additive, rc$method, rc$shrink, E, d, fixed = rc$fixed %||% integer())
+      W_cell <- if (!is.null(rc$errors)) function(a, t) errors_weights(rc$errors, a, t, rc$method, rc$shrink)
+      reconcile_array(arr, hs, rc$hierarchy$additive, rc$method, rc$shrink, E, d, fixed = rc$fixed %||% integer(),
+                      W_cell = W_cell)
     }
     rates <- rec$rates
     if (predictive) {
       # observation noise of the bottom strata (from the component or group
-      # of each draw), independent across cells; the aggregates are their sums
+      # of each draw, or of the base draw each value comes from after the
+      # Schaake shuffle), independent across cells; the aggregates are their sums
       fc_noise <- fc
       fc_noise$component <- component
-      rates <- add_observation_noise(rates, base_fit, fc_noise, hs$bottom, rec$exposure)
+      rates <- add_observation_noise(rates, base_fit, fc_noise, hs$bottom, rec$exposure, draw = src)
       rates <- aggregate_bottom(rates, rec$exposure, hs, rc$hierarchy$additive)
     }
-    list(fc = fc, rates = rates, info = rec$info, component = component)
+    list(fc = fc, rates = rates, info = rec$info, component = if (is.null(src)) component, schaake = schaake)
   })
+  warn_schaake(out$schaake)
   res <- out$fc
   res$rates <- out$rates
   dimnames(res$rates) <- dimnames(out$fc$rates)
@@ -1262,7 +1601,86 @@ mt_forecast.mt_fit_reconciled <- function(fit, h = 10, to = NULL, n_draws = 500,
   res$reconciliation <- out$info
   res$hierarchy <- rc$hierarchy
   res$component <- out$component
+  if (!is.null(out$schaake)) {
+    res$schaake <- out$schaake
+    res$nb_size <- NULL
+  }
   res
+}
+
+# Base forecast errors for the weights of WLS and MinT (`covariance =
+# "errors"`; Wickramasuriya et al. 2020, Section 2.1: the covariance of the
+# h-step base forecast errors). The base
+# model is refitted at the inner origins in the last `years` training years
+# (as for "energy_score"), forecasts the next `horizon` years (cut at the
+# last training year) with the observed exposures, and the error of each
+# node is its observed value minus the mean of its draws, on the scale of
+# the reconciliation (deaths, or rates when the levels share exposures).
+# Returns the errors [age, horizon, node, origin], the number of complete
+# error vectors (all nodes observed) per age and horizon, and the origins
+errors_train <- function(p, data, prep, fit, hs, cores = 1) {
+  ctl <- scoreopt_control(p$control)
+  g <- mt_grid(data)
+  last <- max(g$period$lower)
+  first_ok <- min(g$period$lower) + p$base$min_periods - 1
+  origins <- calibration_origins(last, p$years, p$n_origins)
+  origins <- origins[origins >= first_ok]
+  if (length(origins) < 2) {
+    mt_abort(sprintf(paste("`covariance = \"errors\"` needs at least 2 inner origins with %d training years each:",
+                           "give a shorter `years` or more training years."), p$base$min_periods),
+             class = "model_data")
+  }
+  p0 <- p
+  # the mean of the draws of each cell does not depend on their order
+  p0$dependence <- "none"
+  pieces <- with_seed(p$seed, par_lapply(origins, function(o) {
+    tryCatch(scoreopt_origin(p0, data, o, last, prep, ctl$n_draws, hs, fit$strata, p$hierarchy$additive,
+                             noise = FALSE), error = function(e) e)
+  }, cores, streams = TRUE))
+  bad <- vapply(pieces, inherits, logical(1), what = "error")
+  if (any(bad)) {
+    mt_warn(sprintf("Inner origin(s) %s of the error covariance failed: %s", paste(origins[bad], collapse = ", "),
+                    conditionMessage(pieces[[which(bad)[1]]])), class = "reconcile")
+  }
+  keep <- !bad & !vapply(pieces, is.null, logical(1))
+  pieces <- pieces[keep]
+  if (length(pieces) < 2) mt_abort("Fewer than 2 inner origins of the error covariance succeeded.", class = "reconcile")
+  K <- p$horizon
+  err <- array(NA_real_, c(length(fit$age), K, nrow(fit$strata), length(pieces)),
+               dimnames = list(age = fit$age$labels, horizon = seq_len(K), stratum = fit$strata$label,
+                               origin = origins[keep]))
+  for (i in seq_along(pieces)) {
+    pc <- pieces[[i]]
+    k <- dim(pc$Y)[2]
+    err[, seq_len(k), , i] <- pc$Y - rowMeans(pc$X, dims = 3)
+  }
+  err[!is.finite(err)] <- NA
+  n <- rowSums(apply(!is.na(err), c(1, 2, 4), all), dims = 2)
+  dimnames(n) <- dimnames(err)[1:2]
+  none <- rowSums(n >= 2) == 0
+  if (any(none)) {
+    mt_warn(sprintf(paste("Age(s) %s have fewer than 2 inner forecasts with observed values for every stratum: their",
+                          "weights come from the base draws."), paste(utils::head(fit$age$labels[none], 6),
+                                                                      collapse = ", ")), class = "reconcile")
+  }
+  list(errors = err, n = n, origins = origins[keep])
+}
+
+# Weights of forecast year `t` at age `a` from the inner errors: those of
+# the longest inner horizon up to `t` with at least 2 complete error vectors
+# (forecast years beyond the inner horizons use the last one). "wls": the
+# mean squared errors; "mint": shrink_cov() of the errors, not centred.
+# NULL when the age has no such horizon
+errors_weights <- function(errs, a, t, method, shrink = "auto") {
+  K <- dim(errs$errors)[2]
+  for (k in rev(seq_len(min(t, K)))) {
+    if (errs$n[a, k] < 2) next
+    X <- t(matrix(errs$errors[a, k, , ], dim(errs$errors)[3]))
+    X <- X[rowSums(is.na(X)) == 0, , drop = FALSE]
+    if (method == "wls") return(pmax(colMeans(X^2), 1e-20))
+    return(shrink_cov(X, shrink, center = FALSE))
+  }
+  NULL
 }
 
 #' Aggregate forecast draws over strata or ages
