@@ -122,16 +122,19 @@ test_that("reconciled ensembles keep the component of each reordered path", {
   xa <- mt_aggregate_strata(x, h3())
   ens <- ensemble(lc = lee_carter(), rw = rwd())
   pe <- mt_forecast(mt_fit(ens, xa), h = 2, n_draws = 40, seed = 1)
-  pr <- suppressWarnings(mt_forecast(mt_fit(reconciled(ens, h3(), method = "bottom_up", dependence = "empirical"), xa),
-                                     h = 2, n_draws = 40, seed = 1))
+  # bottom-up fits the ensemble to the bottom strata, here those of x
+  pb <- mt_forecast(mt_fit(ens, x), h = 2, n_draws = 40, seed = 1)
+  pr <- mt_forecast(mt_fit(reconciled(ens, h3(), method = "bottom_up", dependence = "empirical"), xa), h = 2,
+                    n_draws = 40, seed = 1)
   expect_equal(dim(pr$component), c(nrow(xa$strata), 40L))
-  for (s in utils::head(bottom_of(xa$strata), 3)) {
-    A <- matrix(pe$rates[, , s, ], ncol = 40)
+  b <- bottom_of(xa$strata)
+  expect_true(all(is.na(pr$component[-b, ])))
+  for (s in utils::head(b, 3)) {
+    A <- matrix(pb$rates[, , s, ], ncol = 40)
     src <- vapply(seq_len(40), function(j) which.min(colSums(abs(A - as.vector(pr$rates[, , s, j])))), 1L)
-    expect_equal(pr$component[s, ], pe$component[src])
+    expect_equal(pr$component[s, ], pb$component[src])
   }
-  expect_equal(dim(suppressWarnings(mt_reconcile(pe, h3(), seed = 1, dependence = "empirical"),
-                                    classes = "mt_warning_deprecated")$component), c(nrow(xa$strata), 40L))
+  expect_equal(dim(mt_reconcile(pe, h3(), seed = 1, dependence = "empirical")$component), c(nrow(xa$strata), 40L))
   # without reordering (the default), each draw keeps one component for all strata
   expect_equal(mt_reconcile(pe, h3(), seed = 1)$component, pe$component)
   fa <- suppressWarnings(mt_forecast(mt_fit(anchored(reconciled(ens, h3(), dependence = "empirical")), xa), h = 2,

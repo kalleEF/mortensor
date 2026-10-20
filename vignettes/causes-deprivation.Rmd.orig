@@ -288,18 +288,19 @@ causes (Wilmoth 1995), and in a decade in which improvement slowed this
 made them more accurate. The results by target:
 
 * **All-cause life expectancy at 50**: bottom-up forecast it best by far
-  (CRPS 0.178 years for the series by sex and quintile and their sums
+  (CRPS 0.177 years for the series by sex and quintile and their sums
   over sexes or quintiles, against 0.300-0.307), with the highest 95%
   coverage (0.83). For England as a whole its intervals were too narrow
   (0.48): the 120 bottom forecasts are drawn independently, so their
   errors partly cancel in the sum ("Dependence between groups").
 * **Gaps between Q5 and Q1**: WLS and MinT forecast the gaps of life
   expectancy and of the cause-specific rates best (CRPS of the life
-  expectancy gap of women 0.122 and 0.121, against 0.150 for bottom-up and
+  expectancy gap of women 0.122 and 0.121, against 0.146 for bottom-up and
   0.185 for separate forecasts), but the 95% intervals of their life
   expectancy covered only 0.34 of the observed values.
 * **Cause-specific rates**: WLS and MinT made them less accurate (CRPS of
-  the ASR of the bottom series 0.0595 against 0.0562). Proportional
+  the ASR of the bottom series 0.0595 against 0.0562 for separate
+  forecasts and 0.0563 for bottom-up). Proportional
   scaling made them least accurate (0.0641) and left all-cause life
   expectancy as inaccurate as the all-cause forecasts it keeps.
 * **Single rates of the bottom series**: the methods differ little (CRPS
@@ -356,26 +357,22 @@ ensemble and one weight vector. Each cause also gets its own tuned window
 and its own Li-Lee trends.
 
 Part 1 chose bottom-up reconciliation: every total is the sum of the 120
-bottom series, and the totals' own forecasts are not used. `reconciled()`
-still fits its base model to every stratum, so `bottom_only()` fits the
-ensemble to the ten bottom series of each cause (two nested
-`stratified()` calls) and Lee-Carter to the totals, whose forecasts are
-discarded. The stacking weights are then estimated on the series they are
-used for. `recalibrated(by = "cause")` around the reconciled model
-rescales the spread of the bottom series with one factor per cause and
-recomputes the totals as their sums, so the forecasts stay coherent.
+bottom series. `reconciled(method = "bottom_up")` fits its base model to
+these bottom series only, so each cause's ensemble is fitted to its ten
+series by sex and quintile, and its stacking weights are estimated on the
+series they are used for. `recalibrated(by = "cause")` around the
+reconciled model rescales the spread of the bottom series with one factor
+per cause and recomputes the totals as their sums, so the forecasts stay
+coherent.
 
 ```{r ensemble-spec}
 cause_groups <- setdiff(unique(mt_strata(xa)$cause), "all")
-bottom_only <- function(model) {
-  stratified("quintile", England = lee_carter(), .default = stratified("sex", both = lee_carter(), .default = model))
-}
 bu <- function(spec) reconciled(spec, h, method = "bottom_up")
 recal <- function(spec) recalibrated(spec, years = 3, n_origins = 2, by = "cause", n_draws = 50)
 full_ensemble <- function(weights) {
   ens <- do.call(ensemble, c(components, list(weights = weights, inner_origins = 1, inner_h = 2, inner_n_draws = 50)))
-  per_cause <- setNames(rep(list(bottom_only(ens)), length(cause_groups)), cause_groups)
-  recal(bu(do.call(stratified, c(list("cause", all = lee_carter()), per_cause))))
+  per_cause <- setNames(rep(list(ens), length(cause_groups)), cause_groups)
+  recal(bu(do.call(stratified, c(list("cause"), per_cause))))
 }
 ```
 
@@ -443,26 +440,27 @@ dcast(gap[, .(error = round(mean(median - observed), 2)), by = .(model, sex)], m
 One to three years ahead:
 
 * **Rates of the causes**: both ensembles forecast the age-standardised
-  rates of the causes more accurately than Lee-Carter, by 7% (stacking,
-  CRPS 0.0367) and 6% (equal weights, 0.0371) for the bottom series, and
-  by 8% and 6% for the totals over sexes or quintiles (0.0325 and 0.0332
-  against 0.0354). The 95% intervals of the bottom series covered 0.92 to
+  rates of the causes more accurately than Lee-Carter, by 8% (stacking,
+  CRPS 0.0363) and 5% (equal weights, 0.0374) for the bottom series, and
+  by 10% and 6% for the totals over sexes or quintiles (0.0321 and 0.0334
+  against 0.0355). The 95% intervals of the bottom series covered 0.91 to
   0.93 of the observed values under every model; for the totals, those of
-  Lee-Carter covered 0.76, those of the ensembles 0.84.
+  Lee-Carter covered 0.76, those of the ensembles 0.83 and 0.84.
 * **Gaps of the cause-specific rates between Q5 and Q1**: Lee-Carter
-  forecast them best (CRPS 0.0317), the equal-weight ensemble nearly as
-  well (0.0327) and the stacking ensemble worst (0.0387, 50% coverage
-  0.55).
-* **All-cause life expectancy at 50**: the four models are close (CRPS
-  0.148 to 0.157 years for the series by sex and quintile and their sums
-  over sexes or quintiles).
+  forecast them best (CRPS 0.0320), the equal-weight ensemble nearly as
+  well (0.0331) and the stacking ensemble worst (0.0384, 50% coverage
+  0.52).
+* **All-cause life expectancy at 50**: Lee-Carter, recalibrated
+  Lee-Carter and the equal-weight ensemble are close (CRPS 0.148 to 0.150
+  years for the series by sex and quintile and their sums over sexes or
+  quintiles), the stacking ensemble less accurate (0.161).
 * **Gap in life expectancy at 50 between Q5 and Q1**: Lee-Carter forecast
-  it best (CRPS 0.085 years), the equal-weight ensemble less well (0.111)
-  and the stacking ensemble worst (0.211, 50% coverage 0.17): it forecast
-  the gap too small, by 0.38 years for women and 0.26 years for men on
+  it best (CRPS 0.083 years), the equal-weight ensemble less well (0.115)
+  and the stacking ensemble worst (0.223, 50% coverage 0.19): it forecast
+  the gap too small, by 0.38 years for women and 0.27 years for men on
   average.
 * **Recalibration of Lee-Carter** made the rates of the causes slightly
-  less accurate (0.0412 against 0.0393) and changed life expectancy
+  less accurate (0.0413 against 0.0394) and changed life expectancy
   little.
 
 The warnings of this backtest are not shown. Two kinds occur at the
@@ -494,14 +492,14 @@ dcast(sc[model != "Lee-Carter", .(cause, model, relative = round(relative, 2))],
 ```
 
 The stacking ensemble was more accurate than Lee-Carter for nine of the
-twelve causes, most for liver disease (by 24%), diabetes (18%), other
-circulatory diseases and colorectal cancer (13%), and less accurate for
-dementia (18%), respiratory diseases (8%) and breast and prostate cancer
-(1%). The equal-weight ensemble was at least as accurate as Lee-Carter for
-eleven causes (ischaemic heart disease, respiratory diseases and stroke
-within 1%) and less accurate for dementia (5%). Recalibrated Lee-Carter
-was less accurate than Lee-Carter for dementia (24%), ischaemic heart
-disease (17%) and stroke (13%).
+twelve causes, most for liver disease (by 23%), diabetes (17%),
+colorectal cancer (14%), other circulatory diseases (13%) and stroke
+(12%), as accurate for ischaemic heart disease, and less accurate for
+dementia (11%) and respiratory diseases (6%). The equal-weight ensemble
+was more accurate than Lee-Carter for ten causes (stroke within 1%) and
+less accurate for dementia (5%) and ischaemic heart disease (3%).
+Recalibrated Lee-Carter was less accurate than Lee-Carter for dementia
+(22%), ischaemic heart disease (18%) and stroke (13%).
 
 ### Is the difference larger than chance?
 
@@ -523,9 +521,9 @@ dm[horizon == "all", .(model, target, df, score = signif(score, 3), score_ref = 
 ```
 
 No difference is significant at the 5% level on average over the three
-horizons (p from 0.18 to 0.74). The 7% lower CRPS of the stacking
-ensemble for the rates of the causes has p = 0.23, its higher CRPS of the
-gap in life expectancy p = 0.18. Four origins of three years are few:
+horizons (p from 0.11 to 0.65). The 8% lower CRPS of the stacking
+ensemble for the rates of the causes has p = 0.11, its higher CRPS of the
+gap in life expectancy p = 0.15. Four origins of three years are few:
 the differences between the models are within the variation between the
 origins.
 
@@ -556,14 +554,15 @@ quintiles of each sex towards a common trend and forecast the gap worst
 in "Inequality in England". The weights at the backtest origins were
 estimated anew at each origin and are not shown.
 
-The spread factors (`scale_h1`) are below 1 for eleven causes, from 0.24
-(colorectal cancer) to 0.93 (diabetes): in the calibration window
+The spread factors (`scale_h1`) are below 1 for eleven causes, from 0.48
+(colorectal cancer) to 0.91 (stroke): in the calibration window
 (forecasts of 2017-2019 from the origins 2016 and 2017) the intervals of
 the ensemble were wider than the errors required, and recalibration
-narrows them. Only lung cancer gets wider intervals (1.29), which raises
-the 95% coverage of its calibration forecasts from 0.85 to 0.91. The
-factors lower the CRPS of the calibration forecasts only slightly (for
-colorectal cancer from 0.0595 to 0.0581).
+narrows them. Only lung cancer gets wider intervals (1.27), which raises
+the 95% coverage of its calibration forecasts from 0.86 to 0.92. The
+factors change the CRPS of the calibration forecasts only slightly (for
+colorectal cancer from 0.0591 to 0.0578; for diabetes it rises from
+0.14753 to 0.14760).
 
 ## Summary
 
@@ -576,9 +575,9 @@ colorectal cancer from 0.0595 to 0.0581).
 
 In these data, an ensemble for each cause forecast the rates of most
 causes more accurately than Lee-Carter one to three years ahead, and
-all-cause life expectancy about as well. With stacking weights it
-forecast the gaps between the most and the least deprived quintile worst
-of the four models. The data allow only short inner backtests: the
+all-cause life expectancy about as well with equal weights. With
+stacking weights it forecast the gaps between the most and the least
+deprived quintile worst of the four models. The data allow only short inner backtests: the
 stacking weights rest on one inner origin with two years ahead, and the
 spread factors on two origins. Whether the gains for the rates hold over
 longer horizons cannot be checked with 19 years of data.

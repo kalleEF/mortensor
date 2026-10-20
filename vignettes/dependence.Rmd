@@ -16,7 +16,7 @@ Forecasts for groups of a population, such as sexes, regions or
 deprivation quintiles, are often combined: into totals over the groups,
 into gaps between them and into measures of inequality. The uncertainty of
 these combinations depends on how the forecasts of the groups move
-together. This vignette shows why, describes the two ways in which
+together. This vignette shows why, describes the ways in which
 mortensor gives forecasts of several groups their dependence, and compares
 them on the deprivation quintiles of England.
 
@@ -105,6 +105,33 @@ assumes that the dependence of the past holds in the future (Clark et al.
 which is independent between groups and weakens their dependence where
 deaths are few. ECC takes the dependence from a joint model instead.
 
+Both reorder every cell on its own, so they also set how the ages and
+years of one group move together. `reconciled(..., dependence =
+"empirical")` applies the Schaake shuffle with the group as margin: the
+path of a group in one draw, all its ages and years, moves as a whole. The
+paths of each group are ranked by the mean annual change of the group's
+log age-standardised rate over the forecast years, and they take the
+ranks of the observed annual changes of the same rate in distinct
+training years, the same years for all groups. Five paths of one group
+and the observed annual changes in five training years:
+
+```{r}
+path_change <- c(-0.021, -0.015, -0.018, -0.009, -0.012)
+past_change <- c(-0.031, -0.012, -0.024, -0.040, -0.018)
+order(path_change)[rank(past_change)]
+```
+
+The fourth training year had the largest fall, and the draw matched to it
+receives path 1, the path with the steepest fall. In every group, the draw
+matched to a year receives the path whose rank equals the rank of that
+year's change in the group, so groups whose changes ranked alike in the
+same years move together in the forecast. Each group keeps
+exactly its paths, so its forecast, also of measures over ages such as
+life expectancy, stays that of its model; only which path of one group
+goes with which path of another changes. The age-standardised rate gives
+each age its weight in the population, and it carries less random
+variation than the rate of a single age.
+
 ## Example: deprivation quintiles in England
 
 Deaths and populations by sex and deprivation quintile (`ons_data`), at
@@ -150,11 +177,13 @@ quintile falls more than its trend, that of the others mostly does too.
 
 ### Forecasts
 
-Four models, each with the totals for England as the sums of the quintiles
-in every draw (`method = "bottom_up"`), so that the totals show the
-dependence of the parts:
+Five models, each with the totals for England as the sums of the
+quintiles in every draw (`method = "bottom_up"`), so that the totals show
+the dependence of the parts:
 
 * **separate**: a Lee-Carter model for each group;
+* **empirical**: the Lee-Carter models of each group, their paths
+  reordered by the observed annual changes of the training years;
 * **CAE**: the common age effect model;
 * **ECC**: the Lee-Carter models of each group, coupled to the CAE model;
 * **Li-Lee**: the Li-Lee model with a common factor for each sex.
@@ -162,6 +191,7 @@ dependence of the parts:
 ```{r}
 specs <- list(
   separate = reconciled(lee_carter(), h, method = "bottom_up"),
+  empirical = reconciled(lee_carter(), h, method = "bottom_up", dependence = "empirical"),
   CAE = reconciled(cae(), h, method = "bottom_up"),
   ECC = reconciled(lee_carter(), h, method = "bottom_up", dependence = "ecc", template = cae()),
   "Li-Lee" = reconciled(li_lee(common_by = "sex"), h, method = "bottom_up"))
@@ -211,16 +241,17 @@ gap
 ```
 
 Separate models draw the quintiles independently: the correlation of
-their paths is close to zero. With CAE and ECC it is about 0.8, with Li-Lee
-0.94. ECC keeps the forecast of each quintile from the Lee-Carter models,
-so Q1 and Q5 have the same intervals as with the separate models; the
-totals and the gaps change. The 95% interval of the life expectancy of
-women in England is 1.5 years wide with separate models, 2.3 years with
-CAE, 3.0 years with ECC and 5.2 years with Li-Lee. For the gap between Q1
-and Q5 the separate models give the widest interval: 5.5 years for women,
-against 2.1 to 2.8 years with the other three. Li-Lee
-forecasts a smaller gap than the other models, because its deviations
-return towards their mean over the fitting years.
+their paths is close to zero. With the shuffle of stratum paths
+(`empirical`), CAE and ECC it is about 0.8, with Li-Lee 0.95. The shuffle
+and ECC keep the forecast of each quintile from the Lee-Carter models, so
+Q1 and Q5 have the same intervals as with the separate models; the totals
+and the gaps change. The 95% interval of the life expectancy of women in
+England is 1.53 years wide with separate models, 3.21 years with the
+shuffle of stratum paths, 2.43 years with CAE, 3.05 years with ECC and
+5.10 years with Li-Lee. For the gap between Q1 and Q5 the separate models
+give the widest interval: 5.5 years for women, against 2.0 to 2.9 years
+with the other four. Li-Lee forecasts a smaller gap than the other models,
+because its deviations return towards their mean over the fitting years.
 
 ### Backtests
 
@@ -244,28 +275,33 @@ mt_score_table(bt[quintile == "Q1"], metrics = c("crps", "cov50", "cov80", "cov9
                targets = "life_expectancy_gap")
 ```
 
-The quintiles (`bottom`) are forecast equally well by the separate models
-and by ECC (CRPS 0.0378), because ECC keeps the forecast of each cell; the
-small differences in coverage come from the Poisson variation of the
-deaths, which is drawn after the coupling. CAE (0.0396) and Li-Lee
-(0.0415) forecast the quintiles less accurately than the Lee-Carter
-models.
+The quintiles (`bottom`) are forecast equally well by the separate
+models, by the shuffle of stratum paths and by ECC (CRPS 0.0378). The
+shuffle keeps the draws of every quintile, so all its scores of the
+quintiles equal those of the separate models. ECC keeps the forecast of
+each cell; the small differences in coverage come from the Poisson
+variation of the deaths, which is drawn after the coupling. CAE (0.0405)
+and Li-Lee (0.0414) forecast the quintiles less accurately than the
+Lee-Carter models.
 
 The totals show the effect of the dependence. With separate models, the
-95% intervals for England contain 41% of the observed rates and 30% of the
+95% intervals for England contain 42% of the observed rates and 32% of the
 observed life expectancies at 50: sums of independent parts vary too
-little. With CAE they contain 63% and 62%, with ECC 65% and 68%, and with
-Li-Lee 74% and 76%. ECC has the lowest CRPS for the totals. Every model
-stays below 95%, as in the vignette "Coherent forecasts: totals and their
-parts": mortality improved more slowly after 2011 than in the training
-years.
+little. With the shuffle of stratum paths they contain 57% and 52%, with
+CAE 61% and 54%, with ECC 66% and 68%, and with Li-Lee 73% and 80%. ECC
+has the lowest CRPS for the totals (0.0358 for the rates, 0.308 for life
+expectancy), the shuffle of stratum paths the second lowest (0.0360 and
+0.310). Every model stays below 95%, as in the vignette "Coherent
+forecasts: totals and their parts": mortality improved more slowly after
+2011 than in the training years.
 
 The gap between Q1 and Q5 shows the other side. The intervals of the
-separate models are too wide: their 50% intervals contain 94% of the
-observed gaps. CAE (38%) and ECC (52%) come closer to 50%, and ECC has the
-lowest CRPS. Li-Lee forecasts the gap to return towards its mean over the
-fitting years, while the observed gap widened (see above); the 95%
-intervals of Li-Lee contain 16% of the observed gaps.
+separate models are too wide: their 50% intervals contain 92% of the
+observed gaps. The shuffle of stratum paths (72%), CAE (38%) and ECC (52%)
+come closer to 50%, and ECC has the lowest CRPS (0.115, the shuffle of
+stratum paths 0.130). Li-Lee forecasts the gap to return towards its mean
+over the fitting years, while the observed gap widened (see above); the
+95% intervals of Li-Lee contain 14% of the observed gaps.
 
 Each score of the totals and of the gap rests on 50 values per model (two
 sexes, five origins, five horizons) from overlapping forecasts. The
@@ -275,7 +311,13 @@ totals and gaps that matter shows which method suits them.
 ## Choosing a method
 
 * For totals and gaps, use draws that carry the dependence between the
-  groups: a joint model, or separate models coupled to one.
+  groups: a joint model, or separate models given a dependence by
+  reordering their draws.
+* The shuffle of stratum paths (`dependence = "empirical"`) keeps the
+  forecast of each group, also over ages and years, and takes how the
+  groups move together from their observed annual changes; the random
+  variation of the deaths in these changes weakens the dependence where
+  deaths are few.
 * ECC keeps the forecast of each cell from the base model and takes how
   groups, ages and years move together from the template; check the
   template's dependence in a backtest of totals and gaps, as above.

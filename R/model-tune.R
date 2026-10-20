@@ -383,7 +383,7 @@ fitted.mt_fit_split <- function(object, ...) {
 print.mt_fit_split <- function(x, ...) {
   NextMethod()
   ch <- x$tuning_choice
-  if (!is.null(ch)) {
+  if (!is.null(ch) && length(x$group_fits)) {
     cols <- setdiff(names(ch), c("group", "se", names(ch)[ncol(ch) - 1L]))
     lab <- vapply(seq_along(x$group_fits), function(g) {
       sprintf("%s (%s)", x$group_fits[[g]]$spec$label, setting_label(ch[g], cols))

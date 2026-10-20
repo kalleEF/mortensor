@@ -124,14 +124,14 @@ slowly.
 
 The models forecast the rates of the quintiles within about 10% of each
 other, the ensemble best. The intervals of life expectancy are too narrow
-for every model, most for the totals (95% coverage of Lee-Carter 0.77 for
+for every model, most for the totals (95% coverage of Lee-Carter 0.78 for
 the quintiles and 0.24 for England): five years ahead, the forecasts
 underestimate how far life expectancy can move. Lee-Carter forecasts
 each quintile independently (`reconciled()` keeps the draws as they
 are), so the deviations of its draws partly cancel in the totals. The
 gap separates the models clearly: Li-Lee and the coherent fdm forecast
-it worst, and their intervals covered the observed gap in only 4% and
-16% of the cases, because in 2010-2019 the female gap did not return to
+it worst, and their intervals covered the observed gap in only 6% and
+18% of the cases, because in 2010-2019 the female gap did not return to
 its past level. Lee-Carter forecast the gap best, with intervals that
 covered it in every case, the ensemble of Lee-Carter and fdm second. The
 pipeline continues with Lee-Carter, chosen for the quantity of the
@@ -155,11 +155,11 @@ mt_score_table(bt_steps[sex != "both" & quintile != "England"], metrics = c("crp
 
 Smoothing over time made the forecasts of the rates worse and those of
 life expectancy much worse (CRPS 0.420 against 0.330; 95% coverage of
-the rates 0.63 against 0.79, of life expectancy 0.26 against 0.77): the
+the rates 0.63 against 0.79, of life expectancy 0.25 against 0.78): the
 year-to-year variation of these rates is information about the
 uncertainty, and removing it made the intervals too narrow. The gaps
 were forecast slightly more accurately (CRPS 0.194 against 0.205), with
-too narrow intervals (95% coverage 0.85 against 1.00). Anchoring made
+too narrow intervals (95% coverage 0.855 against 1.000). Anchoring made
 the forecasts of the rates worse (CRPS 0.078 against 0.067) and those of
 life expectancy slightly worse (0.355 against 0.330), and left the gap
 nearly unchanged: the observed rates of a single year carry their random
@@ -278,7 +278,7 @@ For the causes the three are close: the summed forecasts are slightly
 the most accurate for the age-standardised rates but the least accurate
 for their gaps, and those scaled to Lee-Carter forecast the gaps best
 (95% coverage 0.94). The intervals of the age-standardised rates are too
-narrow for all three (95% coverage 0.79-0.87). For all causes the
+narrow for all three (95% coverage 0.80-0.87). For all causes the
 difference is large: the summed causes and the Li-Lee total both pull the
 gap back to its past level, and only the Lee-Carter total forecast it
 well (CRPS of the gap 0.15 against 0.33 and 0.50).
