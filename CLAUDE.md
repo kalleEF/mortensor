@@ -14,7 +14,7 @@ in `dev/implementation-plan.md`, and `dev/revamp-plan.md` for the design.
 | `R/hierarchy.R` | Hierarchies of strata, aggregation, reconciliation |
 | `R/eval-*.R` | Backtests and scoring |
 | `R/derive-*.R` | Life tables and derived quantities |
-| `dev/` | Plans, review, progress log, calibration study, package comparison script (not built into the package) |
+| `dev/` | Plans, review, progress log, study reports, scripts that precompute vignette results (package comparison, benchmarks) (not built into the package) |
 
 ## Conventions
 
@@ -35,8 +35,9 @@ in `dev/implementation-plan.md`, and `dev/revamp-plan.md` for the design.
 - Plot snapshots (vdiffr) are made with ggplot2 >= 4.0; regenerate them
   after an intended change or a ggplot2 release (`testthat::snapshot_review()`).
 - Precomputed vignette results: `vignettes/comparison-results.rds` comes
-  from `dev/compare-packages.R` (about one hour); the bamp vignette from
-  `dev/precompute-vignettes.R`.
+  from `dev/compare-packages.R` (about one hour),
+  `vignettes/benchmarks-results.rds` from `dev/benchmarks.R`; the bamp
+  vignette from `dev/precompute-vignettes.R`.
 - Randomness: functions that simulate take `seed = NULL` and use
   `with_seed()`; parallel code uses `parallel` with L'Ecuyer streams.
 - Code adapted from other packages carries a header with source, version,
@@ -81,7 +82,8 @@ R CMD build . && R CMD check --as-cran mortensor_*.tar.gz
   exact identities where they hold. Forecast performance (coverage, CRPS,
   accuracy) depends on the data and is checked by the user with
   backtests; the repository has no performance benchmarks with
-  thresholds.
+  thresholds. The vignette "Benchmarks" reports how well the pipeline
+  works on simulated and real data, as results without thresholds.
 - Data from other packages (HMD extracts in StMoMo and demography) is loaded
   in tests and vignettes, never copied into the repository. The owner's
   German data stays outside the repository. Exceptions, with the owner's
