@@ -8,7 +8,8 @@ life_table(
   mx,
   age = NULL,
   ax = NULL,
-  open = c("reciprocal", "gompertz", "kannisto"),
+  open = c("reciprocal", "gompertz", "kannisto", "makeham", "weibull", "beard",
+    "logquad", "logistic", "perks", "lynch_brown", "aic"),
   k = 10,
   radix = 1e+05,
   omega = 110,
@@ -23,25 +24,30 @@ interval).}
 
 \item{ax}{Optional average years lived in the interval by those who die.}
 
-\item{open}{\code{"reciprocal"}, \code{"gompertz"} or \code{"kannisto"}.}
+\item{open}{\code{"reciprocal"}, a hazard law (\code{"gompertz"}, \code{"kannisto"},
+\code{"makeham"}, \code{"weibull"}, \code{"beard"}, \code{"logquad"}, \code{"logistic"},
+\code{"perks"}, \code{"lynch_brown"}) or \code{"aic"}.}
 
-\item{k}{Number of ages used for the Gompertz or Kannisto fit.}
+\item{k}{Number of ages used for the fit of a hazard law.}
 
 \item{radix}{Starting number of survivors.}
 
-\item{omega}{Age up to which a Gompertz or Kannisto tail is applied
-(default 110, the default \code{omega} of \code{\link[=mt_data]{mt_data()}}); ignored with
-\code{open = "reciprocal"}.}
+\item{omega}{Age up to which a fitted hazard is applied (default 110,
+the default \code{omega} of \code{\link[=mt_data]{mt_data()}}); ignored with \code{open = "reciprocal"}.}
 
 \item{exposure}{Optional person-years of the age intervals, which weight
-the maximum-likelihood fit of a Gompertz or Kannisto closure with the
-observed numbers at risk; by default the numbers of the life table.}
+the maximum-likelihood fit of a hazard law with the observed numbers at
+risk; by default the numbers of the life table. Needed for \code{open = "aic"}.}
 }
 \value{
 A \code{data.table} with \code{age_lo}, \code{age_hi}, \code{n}, \code{mx}, \code{ax}, \code{qx},
 \code{lx}, \code{dx}, \code{Lx}, \code{Tx}, \code{ex}. With a Gompertz or Kannisto closure, the
 attribute \code{"tail"} holds the fitted \code{a} and \code{b}, the ages of the fit and
-whether it converged.
+whether it converged. With another law it holds \code{alpha}, \code{beta},
+\code{gamma} and \code{delta} (\code{NA} where the law has fewer parameters), the
+log-likelihood \code{loglik} and \code{aic} (with \code{exposure} only), the ages and
+\code{converged}; with \code{"aic"} one such row per law, with \code{delta_aic} and
+the \code{selected} law.
 }
 \description{
 Period life table for single or grouped ages with an open last interval.
@@ -85,6 +91,40 @@ logit rates. The fitted hazard is applied year by year from the start
 of the open interval to \code{omega} (survival \code{exp(-H)} and person-years
 \code{l (1 - exp(-H)) / H} in each year), and the survivors at \code{omega} are
 closed with \code{L = l / H} at the integrated hazard of the following year;
+\item \code{"makeham"}, \code{"weibull"}, \code{"beard"}, \code{"logquad"}, \code{"logistic"},
+\code{"perks"} and \code{"lynch_brown"} close the table with the other hazard
+laws that Feehan (2018, Table 1 and Appendix E) compares, for age \code{x}
+in years:
+\itemize{
+\item Makeham: \verb{gamma + alpha exp(beta x)};
+\item Weibull: \verb{alpha x^(beta - 1)} with \code{x} the age, as Thatcher et al.
+(1998) fit \verb{a x^b} (Feehan's fits count age 80 as \code{z = 1}, Appendix
+E.9, which changes this law only);
+\item Beard (gamma-Gompertz): \verb{alpha exp(beta x) / (1 + delta exp(beta x))};
+\item log-quadratic: \verb{exp(alpha + beta x + gamma x^2)} (the quadratic model
+of Coale and Kisker in Thatcher et al. 1998);
+\item logistic: \verb{gamma + alpha exp(beta x) / (1 + delta exp(beta x))} (the
+logistic model of Thatcher et al. 1998 in another parameterisation);
+\item Perks (gamma-Makeham): \verb{(gamma + alpha exp(beta x)) / (1 + delta exp(beta x))};
+\item Lynch-Brown: \verb{alpha + beta atan(gamma (x - delta))}.
+}
+
+The parameters are positive, except \code{beta} of Makeham, all parameters
+of the log-quadratic law and \code{alpha} and \code{delta} of Lynch-Brown, which
+are real (Feehan's Appendix E). They are fitted by the same binomial
+maximum likelihood as the Kannisto closure, with the integrated hazards
+of Feehan's Appendix E in closed form (for the log-quadratic law by
+Gauss-Legendre quadrature with 20 nodes per year, as its closed form
+needs the error function of an imaginary argument when \code{gamma > 0}).
+Feehan maximises with BFGS from one heuristic and ten random starts; the
+package takes Levenberg-Marquardt steps on the Fisher information from
+several deterministic starts and keeps the highest likelihood
+(package-specific, reference unknown);
+\item \code{"aic"} fits all nine laws and closes each schedule with the law of the
+lowest Akaike information criterion, \verb{AIC = -2 loglik + 2 k} with \code{k}
+parameters, the criterion by which Feehan (2018, section 4.2) compares
+the models. It needs \code{exposure}: with the numbers of the life table
+(radix 1) the likelihood has no sample size;
 \item a rate of 0 in the open interval (no deaths, as in small populations)
 would give an infinite life expectancy: the last positive rate of the
 closed intervals is used for the open interval instead (column \code{mx}
@@ -99,15 +139,24 @@ lt[age_lo \%in\% c(30, 65, 100)]
 # Kannisto closure fitted by maximum likelihood to ages 90-99
 lk <- life_table(m, single_ages(30, 100), open = "kannisto")
 attr(lk, "tail")
+# the log-quadratic law of Feehan (2018)
+attr(life_table(m, single_ages(30, 100), open = "logquad"), "tail")
 }
 \references{
 Andreev EM, Kingkade WW (2015). Average age at death in infancy and
 infant mortality level: reconsidering the Coale-Demeny formulas at
 current levels of low mortality. \emph{Demographic Research} 33: 363-390.
 
+Feehan DM (2018). Separating the signal from the noise: evidence for
+deceleration in old-age death rates. \emph{Demography} 55(6): 2025-2044.
+\doi{10.1007/s13524-018-0728-x}
+
 Preston SH, Heuveline P, Guillot M (2001). \emph{Demography: Measuring and
 Modeling Population Processes}. Blackwell.
 
 Thatcher AR, Kannisto V, Vaupel JW (1998). \emph{The Force of Mortality at Ages
 80 to 120}. Odense University Press.
+}
+\seealso{
+\code{\link[=mt_open_check]{mt_open_check()}} to compare the laws out of sample.
 }

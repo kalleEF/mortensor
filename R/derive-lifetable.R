@@ -39,6 +39,39 @@
 #'   of the open interval to `omega` (survival `exp(-H)` and person-years
 #'   `l (1 - exp(-H)) / H` in each year), and the survivors at `omega` are
 #'   closed with `L = l / H` at the integrated hazard of the following year;
+#' * `"makeham"`, `"weibull"`, `"beard"`, `"logquad"`, `"logistic"`,
+#'   `"perks"` and `"lynch_brown"` close the table with the other hazard
+#'   laws that Feehan (2018, Table 1 and Appendix E) compares, for age `x`
+#'   in years:
+#'   - Makeham: `gamma + alpha exp(beta x)`;
+#'   - Weibull: `alpha x^(beta - 1)` with `x` the age, as Thatcher et al.
+#'     (1998) fit `a x^b` (Feehan's fits count age 80 as `z = 1`, Appendix
+#'     E.9, which changes this law only);
+#'   - Beard (gamma-Gompertz): `alpha exp(beta x) / (1 + delta exp(beta x))`;
+#'   - log-quadratic: `exp(alpha + beta x + gamma x^2)` (the quadratic model
+#'     of Coale and Kisker in Thatcher et al. 1998);
+#'   - logistic: `gamma + alpha exp(beta x) / (1 + delta exp(beta x))` (the
+#'     logistic model of Thatcher et al. 1998 in another parameterisation);
+#'   - Perks (gamma-Makeham): `(gamma + alpha exp(beta x)) / (1 + delta
+#'     exp(beta x))`;
+#'   - Lynch-Brown: `alpha + beta atan(gamma (x - delta))`.
+#'
+#'   The parameters are positive, except `beta` of Makeham, all parameters
+#'   of the log-quadratic law and `alpha` and `delta` of Lynch-Brown, which
+#'   are real (Feehan's Appendix E). They are fitted by the same binomial
+#'   maximum likelihood as the Kannisto closure, with the integrated hazards
+#'   of Feehan's Appendix E in closed form (for the log-quadratic law by
+#'   Gauss-Legendre quadrature with 20 nodes per year, as its closed form
+#'   needs the error function of an imaginary argument when `gamma > 0`).
+#'   Feehan maximises with BFGS from one heuristic and ten random starts; the
+#'   package takes Levenberg-Marquardt steps on the Fisher information from
+#'   several deterministic starts and keeps the highest likelihood
+#'   (package-specific, reference unknown);
+#' * `"aic"` fits all nine laws and closes each schedule with the law of the
+#'   lowest Akaike information criterion, `AIC = -2 loglik + 2 k` with `k`
+#'   parameters, the criterion by which Feehan (2018, section 4.2) compares
+#'   the models. It needs `exposure`: with the numbers of the life table
+#'   (radix 1) the likelihood has no sample size;
 #' * a rate of 0 in the open interval (no deaths, as in small populations)
 #'   would give an infinite life expectancy: the last positive rate of the
 #'   closed intervals is used for the open interval instead (column `mx`
@@ -48,6 +81,10 @@
 #' Andreev EM, Kingkade WW (2015). Average age at death in infancy and
 #' infant mortality level: reconsidering the Coale-Demeny formulas at
 #' current levels of low mortality. *Demographic Research* 33: 363-390.
+#'
+#' Feehan DM (2018). Separating the signal from the noise: evidence for
+#' deceleration in old-age death rates. *Demography* 55(6): 2025-2044.
+#' \doi{10.1007/s13524-018-0728-x}
 #'
 #' Preston SH, Heuveline P, Guillot M (2001). *Demography: Measuring and
 #' Modeling Population Processes*. Blackwell.
@@ -59,19 +96,27 @@
 #' @param age An [mt_axis] (default: single ages from 0 with an open last
 #'   interval).
 #' @param ax Optional average years lived in the interval by those who die.
-#' @param open `"reciprocal"`, `"gompertz"` or `"kannisto"`.
-#' @param k Number of ages used for the Gompertz or Kannisto fit.
-#' @param omega Age up to which a Gompertz or Kannisto tail is applied
-#'   (default 110, the default `omega` of [mt_data()]); ignored with
-#'   `open = "reciprocal"`.
+#' @param open `"reciprocal"`, a hazard law (`"gompertz"`, `"kannisto"`,
+#'   `"makeham"`, `"weibull"`, `"beard"`, `"logquad"`, `"logistic"`,
+#'   `"perks"`, `"lynch_brown"`) or `"aic"`.
+#' @param k Number of ages used for the fit of a hazard law.
+#' @param omega Age up to which a fitted hazard is applied (default 110,
+#'   the default `omega` of [mt_data()]); ignored with `open =
+#'   "reciprocal"`.
 #' @param radix Starting number of survivors.
 #' @param exposure Optional person-years of the age intervals, which weight
-#'   the maximum-likelihood fit of a Gompertz or Kannisto closure with the
-#'   observed numbers at risk; by default the numbers of the life table.
+#'   the maximum-likelihood fit of a hazard law with the observed numbers at
+#'   risk; by default the numbers of the life table. Needed for `open =
+#'   "aic"`.
 #' @return A `data.table` with `age_lo`, `age_hi`, `n`, `mx`, `ax`, `qx`,
 #'   `lx`, `dx`, `Lx`, `Tx`, `ex`. With a Gompertz or Kannisto closure, the
 #'   attribute `"tail"` holds the fitted `a` and `b`, the ages of the fit and
-#'   whether it converged.
+#'   whether it converged. With another law it holds `alpha`, `beta`,
+#'   `gamma` and `delta` (`NA` where the law has fewer parameters), the
+#'   log-likelihood `loglik` and `aic` (with `exposure` only), the ages and
+#'   `converged`; with `"aic"` one such row per law, with `delta_aic` and
+#'   the `selected` law.
+#' @seealso [mt_open_check()] to compare the laws out of sample.
 #' @examples
 #' m <- 3e-4 + 2e-5 * exp(0.1 * (30:100))
 #' lt <- life_table(m, single_ages(30, 100))
@@ -79,8 +124,12 @@
 #' # Kannisto closure fitted by maximum likelihood to ages 90-99
 #' lk <- life_table(m, single_ages(30, 100), open = "kannisto")
 #' attr(lk, "tail")
+#' # the log-quadratic law of Feehan (2018)
+#' attr(life_table(m, single_ages(30, 100), open = "logquad"), "tail")
 #' @export
-life_table <- function(mx, age = NULL, ax = NULL, open = c("reciprocal", "gompertz", "kannisto"), k = 10,
+life_table <- function(mx, age = NULL, ax = NULL,
+                       open = c("reciprocal", "gompertz", "kannisto", "makeham", "weibull", "beard", "logquad",
+                                "logistic", "perks", "lynch_brown", "aic"), k = 10,
                        radix = 1e5, omega = 110, exposure = NULL) {
   open <- match.arg(open)
   age <- age %||% single_ages(0, length(mx) - 1)
@@ -95,17 +144,44 @@ life_table <- function(mx, age = NULL, ax = NULL, open = c("reciprocal", "gomper
   out <- data.table(age_lo = age$lower, age_hi = age$upper, n = age$upper - age$lower, mx = mx, ax = r$ax[, 1],
                     qx = r$qx[, 1], lx = radix * r$lx[, 1], dx = radix * r$dx[, 1], Lx = radix * r$Lx[, 1],
                     Tx = radix * r$Tx[, 1], ex = r$ex[, 1])
-  if (!is.null(r$tail)) {
-    setattr(out, "tail", data.table(law = open, a = exp(r$tail$alpha), b = r$tail$b, age_from = min(r$tail$ages),
-                                    age_to = max(r$tail$ages) + 1, converged = r$tail$converged))
-  }
+  if (!is.null(r$tail)) setattr(out, "tail", tail_table(r$tail, open, !is.null(exposure)))
   out[]
+}
+
+lt_open_choices <- c("reciprocal", "gompertz", "kannisto", "makeham", "weibull", "beard", "logquad", "logistic",
+                     "perks", "lynch_brown", "aic")
+
+# The "tail" attribute of life_table(): the fitted law (one row per law for
+# "aic"); likelihood and AIC only with observed exposures
+tail_table <- function(tl, open, observed) {
+  rng <- c(min(tl$ages), max(tl$ages) + 1)
+  if (open %in% c("gompertz", "kannisto")) {
+    return(data.table(law = open, a = exp(tl$alpha), b = tl$b, age_from = rng[1], age_to = rng[2],
+                      converged = tl$converged))
+  }
+  fits <- if (open == "aic") tl$fits else list(tl)
+  tb <- rbindlist(lapply(fits, function(f) {
+    ll <- if (observed) f$loglik[1] else NA_real_
+    data.table(law = f$law, alpha = f$par["alpha", 1], beta = f$par["beta", 1], gamma = f$par["gamma", 1],
+               delta = f$par["delta", 1], loglik = ll, aic = -2 * ll + 2 * oldage_npar[[f$law]])
+  }))
+  if (open == "aic") {
+    best <- if (all(is.na(tb$aic))) NA_real_ else min(tb$aic, na.rm = TRUE)
+    tb[, `:=`(delta_aic = aic - best, selected = !is.na(tl$choice[1]) & law == tl$choice[1])]
+  }
+  tb[, `:=`(age_from = rng[1], age_to = rng[2],
+            converged = vapply(fits, function(f) f$converged[1], TRUE))]
+  tb[]
 }
 
 # Column-wise life tables: M is a matrix [age, schedule]; `exposure`
 # (person-years, a vector per age or a matrix like M) weights the fit of a
 # Gompertz or Kannisto closure
 lt_columns <- function(M, age, ax = NULL, open = "reciprocal", k = 10, omega = 110, exposure = NULL) {
+  if (!is.character(open) || length(open) != 1 || !open %in% lt_open_choices) {
+    mt_abort(sprintf("`open` must be one of %s.", paste0("\"", lt_open_choices, "\"", collapse = ", ")),
+             class = "lifetable")
+  }
   na <- nrow(M)
   n <- age$upper - age$lower
   is_open <- is.infinite(n[na])
@@ -129,12 +205,18 @@ lt_columns <- function(M, age, ax = NULL, open = "reciprocal", k = 10, omega = 1
       if (!is.null(exposure) && !length(exposure) %in% c(na, length(M))) {
         mt_abort("`exposure` needs one value per age interval (and schedule).", class = "lifetable")
       }
-      fit <- tail_fit(M, L, Q, A, age, k, open, exposure)
-      if (any(!fit$converged & !is.na(fit$alpha))) {
-        mt_warn(sprintf("The %s fit of the open interval did not converge for %d of %d schedules.", open,
-                        sum(!fit$converged & !is.na(fit$alpha)), ncol(M)), class = "lifetable")
+      if (open == "aic" && is.null(exposure)) {
+        mt_abort(paste("`open = \"aic\"` needs the observed person-years in `exposure`: the likelihood of the",
+                       "life-table numbers has no sample size, so AIC differences would mean nothing."),
+                 class = "lifetable")
       }
-      Lx[na, ] <- L[na, ] * tail_open_ex(fit, age$lower[na], omega, open)
+      fit <- tail_fit(M, L, Q, A, age, k, open, exposure)
+      failed <- !fit$converged & fit$fitted
+      if (any(failed)) {
+        mt_warn(sprintf("The %s fit of the open interval did not converge for %d of %d schedules.",
+                        if (open == "aic") "selected" else open, sum(failed), ncol(M)), class = "lifetable")
+      }
+      Lx[na, ] <- L[na, ] * tail_open_ex(fit, age$lower[na], omega)
     }
   }
   Tx <- apply(Lx, 2, function(z) rev(cumsum(rev(z))))
@@ -206,21 +288,23 @@ tail_hazard <- function(alpha, b, x, law) {
   list(H = H, da = da, db = db)
 }
 
-# Maximum-likelihood fit of a Gompertz or Kannisto hazard to the last k
-# single-year ages below the open interval, as in Thatcher, Kannisto and
-# Vaupel (1998, chapter 6): of the N_x persons who reach age x, d_x die
-# before x + 1, binomially with q_x = 1 - exp(-H_x). N_x and d_x are the
-# survivors and deaths of the life table, or, with exposures E (person-years),
-# the deaths D = m E and N = E + (1 - a) D. Fisher scoring from least squares
-# on the log (logit) rates, with step halving, for all schedules (columns)
-# at once. Returns alpha = log(a), b, the ages and whether each fit converged
+# Maximum-likelihood fit of a hazard law to the last k single-year ages
+# below the open interval, as in Thatcher, Kannisto and Vaupel (1998, chapter
+# 6): of the N_x persons who reach age x, d_x die before x + 1, binomially
+# with q_x = 1 - exp(-H_x). N_x and d_x are the survivors and deaths of the
+# life table, or, with exposures E (person-years), the deaths D = m E and N =
+# E + (1 - a) D. Gompertz and Kannisto by tail_fit_nd(), the other laws of
+# Feehan (2018) by oldage_fit(), "aic" by oldage_fit_aic(). Returns the fit
+# (with the law, the ages, whether each fit converged and whether it was
+# fitted at all)
 tail_fit <- function(M, L, Q, A, age, k, law, exposure = NULL) {
   na <- nrow(M)
   single <- which(age$upper - age$lower == 1)
   use <- tail(single[single < na], k)
-  if (length(use) < 3) {
-    mt_abort(sprintf("The %s closure needs at least 3 single-year ages below the open interval.",
-                     if (law == "kannisto") "Kannisto" else "Gompertz"), class = "lifetable")
+  need <- if (law == "aic") max(oldage_npar) + 1L else max(3L, oldage_npar[[law]] + 1L)
+  if (length(use) < need) {
+    mt_abort(sprintf("The %s closure needs at least %d single-year ages below the open interval.",
+                     tail_law_name(law), need), class = "lifetable")
   }
   x <- age$lower[use]
   if (is.null(exposure)) {
@@ -231,20 +315,44 @@ tail_fit <- function(M, L, Q, A, age, k, law, exposure = NULL) {
     d <- M[use, , drop = FALSE] * E
     N <- E + (1 - A[use, , drop = FALSE]) * d
   }
-  nc <- ncol(M)
-  alpha <- b <- rep(NA_real_, nc)
-  converged <- rep(FALSE, nc)
-  ok <- colSums(!is.finite(N) | !is.finite(d) | N < 0 | d < 0) == 0 & colSums(N) > 0
-  if (!any(ok)) return(list(alpha = alpha, b = b, ages = x, converged = converged))
+  if (law %in% c("gompertz", "kannisto")) {
+    nc <- ncol(M)
+    alpha <- b <- rep(NA_real_, nc)
+    converged <- rep(FALSE, nc)
+    ok <- colSums(!is.finite(N) | !is.finite(d) | N < 0 | d < 0) == 0 & colSums(N) > 0
+    if (any(ok)) {
+      f <- tail_fit_nd(x, N[, ok, drop = FALSE], d[, ok, drop = FALSE], law, M[use, ok, drop = FALSE])
+      alpha[ok] <- f$alpha
+      b[ok] <- f$b
+      converged[ok] <- f$converged
+    }
+    return(list(law = law, alpha = alpha, b = b, ages = x, converged = converged, fitted = !is.na(alpha)))
+  }
+  fit <- if (law == "aic") oldage_fit_aic(x, N, d) else oldage_fit(law, x, N, d)
+  fit$fitted <- if (law == "aic") !is.na(fit$choice) else !is.na(fit$loglik)
+  fit
+}
+
+tail_law_name <- function(law) {
+  c(gompertz = "Gompertz", kannisto = "Kannisto", makeham = "Makeham", weibull = "Weibull", beard = "Beard",
+    logquad = "log-quadratic", logistic = "logistic", perks = "Perks", lynch_brown = "Lynch-Brown",
+    aic = "AIC-selected")[[law]]
+}
+
+# Fisher scoring of a Gompertz or Kannisto hazard for the deaths d among N
+# persons reaching the ages x (matrices [age, schedule], all valid), from
+# least squares on the log (logit) rates, with step halving, for all
+# schedules at once (start from the rates m, by default -log(1 - d / N)).
+# Returns alpha = log(a), b and whether each fit converged
+tail_fit_nd <- function(x, N, d, law, m = NULL) {
+  m <- m %||% -log1p(-pmin(pmax(d / N, 0), 1 - 1e-12))
   # start: least squares on the log (logit) rates at the middle of each year
-  m <- pmax(M[use, ok, drop = FALSE], 1e-12)
+  m <- pmax(m, 1e-12)
   y <- if (law == "kannisto") stats::qlogis(pmin(m, 0.99)) else log(m)
   Xs <- cbind(1, x + 0.5)
   cf <- solve(crossprod(Xs), crossprod(Xs, y))
   al <- cf[1, ]
   bb <- cf[2, ]
-  N <- N[, ok, drop = FALSE]
-  d <- d[, ok, drop = FALSE]
   loglik <- function(H, j = seq_len(ncol(d))) {
     colSums(d[, j, drop = FALSE] * log(pmax(-expm1(-H), 1e-300)) - (N[, j, drop = FALSE] - d[, j, drop = FALSE]) * H)
   }
@@ -285,10 +393,7 @@ tail_fit <- function(M, L, Q, A, age, k, law, exposure = NULL) {
     conv[act] <- !bad & ((acc & pmax(abs(f * step_a), abs(f * step_b)) < 1e-10) | !acc)
     done[act] <- conv[act] | bad
   }
-  alpha[ok] <- al
-  b[ok] <- bb
-  converged[ok] <- conv
-  list(alpha = alpha, b = b, ages = x, converged = converged)
+  list(alpha = al, b = bb, converged = conv)
 }
 
 # Life expectancy at the start of the open interval under the fitted tail:
@@ -296,9 +401,14 @@ tail_fit <- function(M, L, Q, A, age, k, law, exposure = NULL) {
 # omega, with person-years L = l (1 - p) / H (constant hazard within the
 # year), and the survivors at omega closed with L = l / H at the integrated
 # hazard of the year from omega
-tail_open_ex <- function(fit, lo, omega, law) {
+tail_open_ex <- function(fit, lo, omega) {
   ages <- seq(lo, max(lo, ceiling(omega) - 1))
-  H <- tail_hazard(fit$alpha, fit$b, c(ages, max(ages) + 1), law)$H
+  xs <- c(ages, max(ages) + 1)
+  H <- switch(fit$law,
+              gompertz = ,
+              kannisto = tail_hazard(fit$alpha, fit$b, xs, fit$law)$H,
+              aic = oldage_aic_H(fit, xs),
+              oldage_fit_H(fit, xs))
   n <- length(ages)
   Hy <- pmax(H[seq_len(n), , drop = FALSE], 1e-12)
   p <- exp(-Hy)
