@@ -130,21 +130,11 @@ scoreopt_origin <- function(p, data, origin, last, prep, n_draws, hs, strata, ad
   dn <- dimnames(arr)
   # exposures and observed deaths in the order of the forecast's periods and strata
   E <- E[, match(dn[[2]], dimnames(E)[[2]]), match(strata$label, dimnames(E)[[3]]), drop = FALSE]
-  component <- fc$component
-  src <- NULL
-  if (identical(p$dependence, "schaake")) {
-    sr <- schaake_reorder(arr, schaake_log_rates(fit$observed, fit$train_E, fit$train_D), fit$periods)
-    arr <- sr$arr
-    src <- sr$draw
-  }
-  if (identical(p$dependence, "empirical")) {
-    cr <- copula_reorder(arr, fit$raw_D %||% fit$train_D, fit$train_E)
-    arr <- cr$arr
-    component <- permute_component(component, cr$perm)
-  }
+  dep <- dependence_reorder(arr, p$dependence, train_of(fit))
+  arr <- dep$arr
   b <- hs$bottom
-  fc$component <- component
-  noisy <- if (noise) add_observation_noise(arr, fit, fc, b, E, draw = src) else arr
+  # the noise of each value follows the base draw it comes from
+  noisy <- if (noise) add_observation_noise(arr, fit, fc, b, E, draw = dep$draw) else arr
   # observed values; deaths filled from totals (mt_fill_suppressed()) are not observations
   t2 <- test
   t2$obs$deaths <- t2$obs$deaths[is.na(provenance) | provenance != "estimated"]

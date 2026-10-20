@@ -16,11 +16,16 @@
 #' (`dependence = "none"`). Its `dependence = "schaake"` reorders the
 #' draws of every age, year and stratum so that their ranks follow the
 #' observed changes of distinct training years (the Schaake shuffle of
-#' Clark et al. 2004, see [mt_reconcile()]); this also replaces the
-#' dependence within joint groups.
+#' Clark et al. 2004, see [mt_reconcile()]), and `dependence = "empirical"`
+#' reorders the whole paths of each stratum by the observed annual changes
+#' of its log age-standardised rate; both also replace the dependence
+#' between the strata of a joint group.
 #' Each group is fitted and forecast as if it were the whole data, so
 #' backtests, [anchored()], [recalibrated()] and [reconciled()] work as for
-#' any model.
+#' any model. `reconciled(method = "bottom_up")` fits its base model to the
+#' bottom strata of the hierarchy: named levels that are aggregates of the
+#' hierarchy (a total or a group of levels) then have no strata and are
+#' skipped.
 #'
 #' @param var Stratum variable that defines the groups.
 #' @param ... Named model specifications: each name is a level of `var`
@@ -61,14 +66,19 @@ mt_fit.mt_spec_stratified <- function(spec, data, prep = NULL, cores = 1, ...) {
     mt_abort(sprintf("\"%s\" is not a stratum variable.", p$var), class = "argument")
   }
   lev <- as.character(st[[p$var]])
-  unknown <- setdiff(names(p$specs), lev)
+  specs <- p$specs
+  # aggregate levels of the hierarchy of the data (a total, or a group of
+  # levels) without strata: the bottom strata to which reconciled(method =
+  # "bottom_up") fits its base model
+  hv <- data$hierarchy$vars[[p$var]]
+  specs <- specs[!names(specs) %in% setdiff(c(hv$total, names(hv$groups)), lev)]
+  unknown <- setdiff(names(specs), lev)
   if (length(unknown)) {
     mt_abort(sprintf("%s: no strata with %s = %s.", spec$label, p$var, paste(unknown, collapse = ", ")),
              class = "argument")
   }
-  groups <- lapply(names(p$specs), function(n) which(lev == n))
-  names(groups) <- names(p$specs)
-  specs <- p$specs
+  groups <- lapply(names(specs), function(n) which(lev == n))
+  names(groups) <- names(specs)
   rest <- which(!lev %in% names(p$specs))
   if (length(rest)) {
     if (is.null(p$default)) {

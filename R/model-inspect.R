@@ -95,7 +95,12 @@
 #' @export
 mt_parameters <- function(fit) {
   check_class(fit, "mt_fit", "fit")
-  out <- if (!is.null(fit$components)) {
+  # a reconciled bottom-up model fitted to the bottom strata: the parameters
+  # of its base fit (with those of wrappers inside it)
+  base <- bottom_base_fit(fit)
+  out <- if (!is.null(base)) {
+    mt_parameters(base)
+  } else if (!is.null(fit$components)) {
     ensemble_parameters(fit)
   } else if (!is.null(fit$group_fits)) {
     group_parameters(fit)
@@ -111,8 +116,9 @@ mt_parameters <- function(fit) {
     }
     base_parameters(fit, sp)
   }
+  # rows of wrappers (those inside a bottom-up base fit are in its rows)
   tpl <- fit$coupling$template
-  if (!is.null(tpl)) {
+  if (!is.null(tpl) && !identical(tpl, base$coupling$template)) {
     # coupled(): the parameters of the template, which gives the dependence
     tp <- tryCatch(mt_parameters(tpl), mt_error_argument = function(e) NULL)
     out <- copy(out)
@@ -120,7 +126,7 @@ mt_parameters <- function(fit) {
     if (!is.null(tp)) out <- rbind(out, tp[, component := "template"], fill = TRUE)
   }
   cal <- fit$calibration
-  if (!is.null(cal)) out <- rbind(out, calibration_parameters(cal), fill = TRUE)
+  if (!is.null(cal) && !identical(cal, base$calibration)) out <- rbind(out, calibration_parameters(cal), fill = TRUE)
   out
 }
 
@@ -703,6 +709,15 @@ model_assumptions <- function(spec) {
                                     if (identical(spec$params$dependence, "schaake")) {
                                       paste("Before it, the draws of each age, year and stratum take the ranks of",
                                             "observed changes of distinct training years (Schaake shuffle).")
+                                    },
+                                    if (identical(spec$params$dependence, "empirical")) {
+                                      paste("Before it, the whole paths of each stratum take the ranks of the",
+                                            "observed annual changes of its log age-standardised rate in distinct",
+                                            "training years (Schaake shuffle of stratum paths).")
+                                    },
+                                    if (identical(spec$params$method, "bottom_up")) {
+                                      paste("The base model is fitted to the bottom strata only, unless its fit of",
+                                            "them uses the aggregates.")
                                     }), collapse = " "),
          mt_spec_recalibrated = if (identical(p$method, "errors")) paste(model_assumptions(p$base), sprintf(paste(
            "Recalibrated by past errors: draws are the median of the base draws plus the errors (all ages and",

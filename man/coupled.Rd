@@ -98,7 +98,9 @@ The Schaake shuffle (Clark et al. 2004) reorders draws in the same way by
 the ranks of past observations; ECC takes the ranks from a model's
 forecast of the same years (Schefzik et al. 2013, Section 3.4).
 \code{reconciled(dependence = "schaake")} and \code{mt_reconcile(dependence = "schaake")} apply the Schaake shuffle with the observed changes of
-distinct training years.
+distinct training years; \code{dependence = "empirical"} applies it to the
+whole paths of each stratum, which keeps the dependence between the ages
+and years of each stratum.
 
 \code{mt_couple()} couples two sets of draws with the same ages, years, strata
 and number of draws. Both should describe the same quantity (both

@@ -38,12 +38,14 @@ the forecast years (default: last training year). Only bottom strata are
 used, and they are enough; aggregates are summed.}
 
 \item{dependence}{\code{"none"} (default: keep the draws as they are),
-\code{"schaake"} (the Schaake shuffle of the draws of separately fitted
-strata before the reconciliation, see Details) or \code{"empirical"}
-(deprecated). Draws of joint models are not reordered: \code{"schaake"} then
-gives a warning and is ignored. The shuffle needs the training data of
-the draws (as \code{\link[=mt_forecast]{mt_forecast()}} returns them), with at least two more
-training years than forecast years.}
+\code{"schaake"} (the Schaake shuffle of every age, year and stratum of the
+draws of separately fitted strata before the reconciliation) or
+\code{"empirical"} (the Schaake shuffle of the whole paths of each stratum);
+see Details. Draws of joint models are not reordered: both then give a
+warning and are ignored. Both need the training data of the draws (as
+\code{\link[=mt_forecast]{mt_forecast()}} returns them); \code{"schaake"} needs at least two more
+training years than forecast years, \code{"empirical"} at least three
+training years.}
 
 \item{seed}{Random seed for the Schaake shuffle (order of the draws,
 choice of dates, ties).}
@@ -70,7 +72,13 @@ years (\code{years}), the start year of the date of each draw (\code{draw_year})
 the block of each draw (\code{block}), the number of blocks (\code{blocks}), the
 number of shuffled margins (\code{margins}) and the share of margins with
 tied template values (\code{tied}); \verb{$component} is then dropped, since the
-values of one draw come from different base draws.
+values of one draw come from different base draws. After the shuffle of
+stratum paths, \verb{$empirical} holds the same items, with the years of the
+observed changes as \code{years} and the number of reordered strata as
+\code{margins}, and also the standard population (\code{standard}) and the
+template (\code{template}, the observed annual changes of the log
+age-standardised rate \verb{[stratum, year]}); \verb{$component} then gives the
+component of each stratum and draw (ensembles).
 }
 \description{
 Makes forecasts of nested or crossed strata add up, draw by draw. For each
@@ -166,13 +174,14 @@ reconciled as they are, so sums of separately fitted parts have narrower
 intervals than they would if the parts moved together. Joint models (for
 example \code{\link[=li_lee]{li_lee()}}, \code{\link[=coherent_fdm]{coherent_fdm()}} and \code{\link[=coda]{coda()}} with \code{coherent = TRUE})
 carry the dependence between strata in the model itself; their draws are
-never reordered (\code{"schaake"} then gives a warning and is ignored).
-Two methods give separately fitted strata a dependence before the
-reconciliation: the Schaake shuffle takes it from the observed changes of
-the training years (\code{dependence = "schaake"}, below), ensemble copula
-coupling (Schefzik, Thorarinsdottir and Gneiting 2013) from the draws of
-a joint model (\code{\link[=mt_couple]{mt_couple()}} for draws before \code{mt_reconcile()}, and
-\code{\link[=coupled]{coupled()}} or \code{reconciled(dependence = "ecc")} for models).
+never reordered (\code{"schaake"} and \code{"empirical"} then give a warning and are
+ignored). Three methods give separately fitted strata a dependence before
+the reconciliation, all by reordering their draws. The Schaake shuffle
+takes the dependence from the observed changes of the training years,
+either in every age, forecast year and stratum (\code{dependence = "schaake"}) or for the whole path of each stratum (\code{dependence = "empirical"}), both below. Ensemble copula coupling (Schefzik,
+Thorarinsdottir and Gneiting 2013) takes it from the draws of a joint
+model (\code{\link[=mt_couple]{mt_couple()}} for draws before \code{mt_reconcile()}, and \code{\link[=coupled]{coupled()}}
+or \code{reconciled(dependence = "ecc")} for models).
 
 \strong{The Schaake shuffle} (\code{dependence = "schaake"}; Clark, Gangopadhyay,
 Hay, Rajagopalan and Wilby 2004, Section 3b). Status: published, adapted
@@ -226,11 +235,76 @@ few, it weakens the dependence the template gives. Templates are short:
 with 19 training years and 5 forecast years there are 14 dates, with 16
 forecast years 3.
 
-\code{dependence = "empirical"} is deprecated (it warns): a package-specific
-reordering of whole paths of each stratum by one-year changes of log
-rates, averaged over ages, of training years drawn with replacement. It
-keeps the dependence between the ages and years of each stratum. Use
-\code{"schaake"}, the published method.
+\strong{The Schaake shuffle of stratum paths} (\code{dependence = "empirical"}).
+Status: the Schaake shuffle of Clark et al. (2004, Section 3b) with the
+stratum as margin; the margin and the summary that ranks the paths are
+package-specific (see below). The path of a stratum in one draw, all its
+ages and forecast years, is one ensemble member and is moved as a whole.
+The members of each stratum are ranked by a summary of their path, and
+they are reordered so that their ranks follow those of the same summary
+in the observed data of \code{n} distinct training years (the dates), the
+same dates for all strata, as in the paper. Every stratum keeps exactly
+its set of paths: its forecast distribution and the dependence between
+its ages and years stay those of the model, and with \code{method = "bottom_up"} so do all scores of the bottom strata (\code{\link[=reconciled]{reconciled()}} keeps
+this for predictive draws as well). The pairing
+of the paths of different strata changes, so that strata whose summaries
+moved together in the same training years move together in the
+forecast. In the terms of Schefzik et al. (2013, Section 3.4), the
+summaries of the strata take the empirical copula of their observed
+changes. Ben Taieb, Taylor and Hyndman (2021) reorder samples of the
+bottom series of a hierarchy in the same way, with the empirical copula
+of in-sample residuals, and sum them bottom-up; Panagiotelis,
+Gamakumara, Athanasopoulos and Hyndman (2023, Sections 1 and 7.3)
+discuss that method and note that it needs as many draws as training
+observations.
+
+The summary is the log age-standardised death rate \code{z}, with one standard
+population for all strata: the mean exposure of each age over the strata
+and training years of the draws, so that ages enter with their weight in
+the population. The template value of a stratum and training year \code{tau}
+is the observed annual change \code{z[tau] - z[tau - 1]}, so \code{n} is the number
+of training years minus one. A draw is ranked by the mean annual change of
+its summary over the forecast years, \code{(z[H] - z[0]) / H}, where \code{z[H]} is
+the summary in the last forecast year and \code{z[0]} that of the observed
+rates of the last training year. Both ranks so refer to annual changes of
+the summary; \code{z[0]} is the same for all draws of a stratum, so the ranks
+of the draws are those of \code{z[H]}. Draws and dates are matched in blocks
+as for \code{"schaake"} (item 3 above); ties among template values are ranked
+at random (Clark et al. 2004, Section 4c); deaths of zero count as 0.5.
+With fewer than three training years (one observed change) the draws keep
+their order, with a warning. A stratum with a missing template value
+keeps the order of its draws, with a warning.
+
+Package-specific (reference unknown): the stratum as margin, the summary
+and its standard population, the ranking of the draws by their mean
+annual change, and the blocks with more draws than dates.
+
+The three methods differ in what they reorder. \code{"schaake"} reorders every
+age, forecast year and stratum separately: it replaces the dependence
+between the ages and years of a stratum with that of the observed changes
+as well, which changes measures over ages and years of a single stratum
+(life expectancy, cumulative changes). \code{"empirical"} leaves each stratum
+to its model and gives only the strata a dependence, from one summary per
+stratum and year, which carries less Poisson variation than the rates of
+single ages. \code{"ecc"} takes the dependence of all cells from the draws of a
+joint model, in place of observed years. Each assumes that the
+dependence it takes holds in the forecast years. The template of
+\code{"empirical"} holds the changes of single years, and the draws are ranked
+by their changes over all forecast years: the strata of one draw take the
+ranks that their annual changes had in one training year, so they move
+together as far as their annual changes did. The observed changes carry
+the Poisson variation of the deaths, which is independent between strata
+and weakens the dependence where deaths are few.
+
+In the package's backtests of bottom-up Lee-Carter forecasts, on data
+simulated with correlated period shocks, on the deprivation quintiles of
+England (\link{ons_data}) and on the German Laender, \code{"empirical"} widened the
+intervals of the totals towards their nominal coverage and lowered their
+CRPS, with the scores of every stratum unchanged; on
+\code{\link[=mt_example_regions]{mt_example_regions()}}, whose separate forecasts already covered the
+totals, it made the intervals of the totals too wide. The vignettes
+"Coherent forecasts: totals and their parts" and "Dependence between
+groups" show such backtests.
 
 The one-variable interface with \code{var} and \code{total} is still accepted. It
 reconciles deaths when the exposures of the parts add up to that of the
@@ -248,6 +322,9 @@ rc$reconciliation
 # the strata take the dependence of the observed changes of 12 training years
 rs <- mt_reconcile(fc, h, method = "wls", dependence = "schaake", seed = 1)
 rs$schaake$years
+# whole paths of each stratum, ranked by the annual changes of 14 training years
+re <- mt_reconcile(fc, h, method = "bottom_up", dependence = "empirical", seed = 1)
+re$empirical$template[1:3, 1:5]
 }
 \references{
 Hyndman RJ, Ahmed RA, Athanasopoulos G, Shang HL (2011). Optimal
@@ -290,6 +367,16 @@ precipitation and temperature fields. \emph{Journal of Hydrometeorology} 5(1):
 Schefzik R, Thorarinsdottir TL, Gneiting T (2013). Uncertainty
 quantification in complex simulation models using ensemble copula
 coupling. \emph{Statistical Science} 28(4): 616-640. \doi{10.1214/13-STS443}
+
+Ben Taieb S, Taylor JW, Hyndman RJ (2021). Hierarchical probabilistic
+forecasting of electricity demand with smart meter data. \emph{Journal of the
+American Statistical Association} 116(533): 27-43.
+\doi{10.1080/01621459.2020.1736081}
+
+Panagiotelis A, Gamakumara P, Athanasopoulos G, Hyndman RJ (2023).
+Probabilistic forecast reconciliation: properties, evaluation and score
+optimisation. \emph{European Journal of Operational Research} 306(2):
+693-706. \doi{10.1016/j.ejor.2022.07.040}
 
 Schäfer J, Strimmer K (2005). A shrinkage approach to large-scale
 covariance matrix estimation and implications for functional genomics.

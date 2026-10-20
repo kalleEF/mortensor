@@ -499,6 +499,19 @@ fit_adds_noise <- function(fit) {
 # split into groups (stratified(), tuned(by = )) follow the fit of their
 # group.
 draw_noise <- function(fit, fc, n_draws) {
+  # a reconciled bottom-up model fitted to the bottom strata (also below
+  # other wrappers): the noise of its base fit, stratum s of all nodes being
+  # bottom stratum pos[s] of the base fit
+  base <- bottom_base_fit(fit)
+  if (!is.null(base)) {
+    b <- fit$reconcile$structure$bottom
+    fb <- fc
+    if (is.matrix(fc$component)) fb$component <- fc$component[b, , drop = FALSE]
+    if (is.matrix(fc$nb_size)) fb$nb_size <- fc$nb_size[b, , drop = FALSE]
+    parts <- draw_noise(base, fb, n_draws)
+    pos <- match(seq_len(nrow(fit$strata)), b)
+    return(list(noise = function(s) parts$noise(pos[s]), size = function(s) parts$size(pos[s])))
+  }
   comps <- fit$components
   if (!is.null(comps)) {
     parts <- lapply(comps, draw_noise, fc = NULL, n_draws = n_draws)

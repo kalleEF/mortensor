@@ -22,7 +22,8 @@ reconciled(
 )
 }
 \arguments{
-\item{spec}{Base model specification (fitted to all strata).}
+\item{spec}{Base model specification (fitted to all strata, or to the
+bottom strata with \code{method = "bottom_up"}, see Details).}
 
 \item{hierarchy}{An \code{\link[=mt_hierarchy]{mt_hierarchy()}}. When the data hold the aggregate
 strata, their exposures are compared with those the hierarchy implies,
@@ -36,19 +37,25 @@ for example causes of death declared without \code{additive = "rates"}.}
 shrinkage intensity for the errors.}
 
 \item{dependence}{\code{"none"} (default: the draws are reconciled as they
-are), \code{"ecc"}, \code{"schaake"}, \code{"empirical"} (deprecated) or \code{"auto"} (the
-same as \code{"none"}, kept for compatibility). With \code{"ecc"} the draws of the
-base model take the dependence of the draws of \code{template} before
+are), \code{"ecc"}, \code{"schaake"}, \code{"empirical"} or \code{"auto"} (the same as
+\code{"none"}, kept for compatibility). With \code{"ecc"} the draws of the base
+model take the dependence of the draws of \code{template} before
 reconciliation (ensemble copula coupling, Schefzik, Thorarinsdottir and
 Gneiting 2013): the same as \code{reconciled(coupled(spec, template), ...)},
-see \code{\link[=coupled]{coupled()}}. With \code{"schaake"} they take the ranks of the observed
-changes of distinct training years (the Schaake shuffle of Clark et al.
-2004, see \code{\link[=mt_reconcile]{mt_reconcile()}}); the template comes from the training data
-of each fit, also inside \code{\link[=mt_backtest]{mt_backtest()}}. Draws of joint models such as
-\code{\link[=li_lee]{li_lee()}} and \code{\link[=tucker3]{tucker3()}}, which carry the dependence between strata,
-are never reordered by \code{"schaake"} (it then gives a warning and is
-ignored). The observation noise of predictive draws is independent
-across cells either way.}
+see \code{\link[=coupled]{coupled()}}. With \code{"schaake"} the draws of every age, forecast year
+and stratum take the ranks of the observed changes of distinct training
+years (the Schaake shuffle of Clark et al. 2004), which also replaces the
+dependence between the ages and years of each stratum. With
+\code{"empirical"} the whole paths of each stratum take the ranks of the
+observed annual changes of its log age-standardised rate in distinct
+training years (the Schaake shuffle with the stratum as margin): every
+stratum keeps its paths, and only their pairing across strata changes.
+\code{\link[=mt_reconcile]{mt_reconcile()}} describes both. Their templates come from the training
+data of each fit, also inside \code{\link[=mt_backtest]{mt_backtest()}}. Draws of joint models
+such as \code{\link[=li_lee]{li_lee()}} and \code{\link[=tucker3]{tucker3()}}, which carry the dependence between
+strata, are never reordered by \code{"schaake"} or \code{"empirical"} (they then
+give a warning and are ignored). The observation noise of predictive
+draws is independent across cells either way.}
 
 \item{fixed}{Strata whose forecasts are kept (see \code{\link[=mt_reconcile]{mt_reconcile()}}); not
 with \code{"energy_score"}.}
@@ -71,8 +78,8 @@ parameter moves by more than \code{tol} in a step, so \code{tol} must be below
 
 \item{seed}{Random seed of the training for \code{method = "energy_score"}
 and \code{covariance = "errors"} (inner forecasts, observation noise and the
-draws of each step), so that fits are reproducible. The Schaake shuffle
-uses the \code{seed} of \code{\link[=mt_forecast]{mt_forecast()}}.}
+draws of each step), so that fits are reproducible. The Schaake
+shuffles of \code{dependence} use the \code{seed} of \code{\link[=mt_forecast]{mt_forecast()}}.}
 
 \item{template}{With \code{dependence = "ecc"}: the model specification whose
 draws give the dependence, usually a joint model such as \code{\link[=cae]{cae()}} or
@@ -93,15 +100,17 @@ with the estimated \eqn{d} and \eqn{G} (\code{energy_opt}). With
 \code{covariance = "errors"} its fit holds \verb{$reconcile$errors}: the errors
 \verb{[age, horizon, stratum, origin]}, the number of error vectors with
 observed values for every stratum per age and horizon (\code{n}) and the
-inner \code{origins}. Forecasts with \code{dependence = "schaake"} report the
-shuffle in \verb{$schaake} (see \code{\link[=mt_reconcile]{mt_reconcile()}}).
+inner \code{origins}. With \code{method = "bottom_up"}, \verb{$reconcile$bottom_only}
+tells whether the base model was fitted to the bottom strata only. Forecasts
+with \code{dependence = "schaake"} report the shuffle in \verb{$schaake}, those
+with \code{dependence = "empirical"} in \verb{$empirical} (see \code{\link[=mt_reconcile]{mt_reconcile()}}).
 }
 \description{
 Wraps a model specification so that its forecasts are reconciled over a
 hierarchy every time it is forecast, also inside \code{\link[=mt_backtest]{mt_backtest()}}. If the
 training data contain only the bottom strata, the aggregate strata are
-added with \code{\link[=mt_aggregate_strata]{mt_aggregate_strata()}} before fitting, so that the base model
-forecasts every node; exposures for the forecast (\code{exposure} of
+added with \code{\link[=mt_aggregate_strata]{mt_aggregate_strata()}} before fitting, so that the forecasts
+cover every node; exposures for the forecast (\code{exposure} of
 \code{\link[=mt_forecast]{mt_forecast()}}) can then be given for the bottom strata only, and those
 of the aggregates are their sums. Predictive draws (used by backtests)
 are coherent as well: given the reconciled rates, the Poisson variation
@@ -112,6 +121,30 @@ from; negative binomial for \code{stanmomo(family = "nb")}), and the
 aggregates are the sums of the bottom strata.
 }
 \details{
+\strong{Bottom-up.} With \code{method = "bottom_up"}, the base model is fitted to
+the bottom strata only, and the aggregates are the sums of their draws
+(of deaths, or of rates for variables with \code{additive = "rates"}). Wrappers
+inside the base model (\code{\link[=ensemble]{ensemble()}} weights, \code{\link[=tuned]{tuned()}}, \code{\link[=recalibrated]{recalibrated()}})
+then run their inner backtests on the bottom strata. The fit describes the
+aggregates by sums as well: their deaths and exposures in the training
+years, and their fitted rates (fitted deaths of the bottom strata over the
+exposures). Levels of \code{\link[=stratified]{stratified()}} models that are aggregates of the
+hierarchy, such as \code{stratified("cause", all = ...)}, have no strata in
+this fit and are skipped. Joint models that pool the bottom strata and
+give each aggregate parameters of its own (\code{\link[=li_lee]{li_lee()}}, \code{\link[=cae]{cae()}},
+\code{\link[=coherent_fdm]{coherent_fdm()}}, \code{coda(coherent = TRUE)}) estimate the same parameters of
+the bottom strata as when fitted to all strata; their draws of the bottom
+strata have the same distribution and differ by the random numbers drawn.
+The other methods fit the base model to all strata, and so does
+bottom-up for models whose fit of the bottom strata uses the aggregates:
+\code{\link[=tucker3]{tucker3()}} and \code{\link[=coda_multiway]{coda_multiway()}} decompose all strata together, \code{\link[=saint]{saint()}}
+takes its trend from reference strata, and \code{\link[=coda_causes]{coda_causes()}} needs the
+all-cause stratum. Observation noise of predictive draws is drawn before
+the reordering of \code{dependence}, for the base draws, and moves with their
+values; reordering and noise are independent, so this gives the
+distribution of noise drawn after the reordering, and with the same seed
+every bottom stratum keeps exactly the predictive draws of \code{dependence = "none"}.
+
 Whether coherence costs accuracy, and which method and base model work
 best, depends on the data: compare them in a backtest at every level of
 the hierarchy (\code{mt_score_table(..., hierarchy = )}), as in the vignette
