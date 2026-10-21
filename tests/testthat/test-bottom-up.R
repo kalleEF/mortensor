@@ -19,7 +19,11 @@ test_that("bottom-up fits the base model to the bottom strata only and keeps the
   # the draws of the former approach: the base model fitted to all strata, its bottom strata summed
   fc <- mt_forecast(fit, h = 3, n_draws = 40, seed = 3)
   all_fc <- mt_forecast(mt_fit(lee_carter(), xa), h = 3, n_draws = 40, seed = 3)
-  expect_identical(fc$rates, mt_reconcile(all_fc, h, method = "bottom_up")$rates)
+  rb <- mt_reconcile(all_fc, h, method = "bottom_up")$rates
+  expect_identical(fc$rates[, , b, ], rb[, , b, ])
+  # the aggregates are sums by matrix products of other shapes, whose
+  # rounding depends on the BLAS: equal up to rounding
+  expect_equal(fc$rates, rb, tolerance = 1e-14)
   # rates times exposures divided by exposures: equal up to rounding
   expect_equal(fc$rates[, , b, ], all_fc$rates[, , b, ], tolerance = 1e-14)
   # the same from data with the bottom strata only
