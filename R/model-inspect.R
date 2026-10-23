@@ -64,12 +64,14 @@
 #' * [cae()]: the common age effects `beta1`, `beta2`, ... of each group
 #'   (rows labelled `common <g> (<strata>)`), and per stratum the centring
 #'   `a`, the period effects `kappa1`, `kappa2`, ..., their drift
-#'   (`drift_kappa1`, ...), the standard deviation of their innovations
-#'   (`sd_kappa1`, ...) and the correlation of their innovations with those
-#'   of the same order of every stratum (`cor_kappa1`, ..., indexed by the
-#'   other stratum); rows of stratum `"model"` give the mean squared error
-#'   of the centred log rates (`mse`) and the approximate BIC of Kleinow
-#'   (2015, eq. 5; `bic`).
+#'   (`drift_kappa1`, ...; with `index = "coherent"` the common drift of the
+#'   group for order 1 and 0 for the others, whose autoregressive
+#'   coefficients are `phi_kappa2`, ...), the standard deviation of their
+#'   innovations (`sd_kappa1`, ...) and the correlation of their innovations
+#'   with those of the same order of every stratum (`cor_kappa1`, ...,
+#'   indexed by the other stratum); rows of stratum `"model"` give the mean
+#'   squared error of the centred log rates (`mse`) and the approximate BIC
+#'   of Kleinow (2015, eq. 5; `bic`).
 #'
 #' Fits of wrapped packages (StMoMo, demography) keep the original fitted
 #' object in `fit$fits[[i]]`, where the methods of those packages apply.
@@ -258,6 +260,7 @@ base_parameters <- function(fit, sp) {
               same <- (seq_len(ns) - 1L) * p + j
               rbind(row(lab[s], paste0("kappa", j), yrs, f$kappa[j, , s]),
                     row(lab[s], paste0("drift_kappa", j), "", f$drift[i]),
+                    if (identical(f$index, "coherent") && j > 1) row(lab[s], paste0("phi_kappa", j), "", f$phi[i]),
                     row(lab[s], paste0("sd_kappa", j), "", sdv[i]),
                     row(lab[s], paste0("cor_kappa", j), lab, cr[i, same]))
             })))
@@ -593,11 +596,21 @@ model_assumptions <- function(spec) {
            "beta_j(x) kappa_j(t,i); the age effects beta (orthonormal columns) are common to the populations",
            if (!is.null(p$common_by)) "of each group of `common_by`",
            "and estimated by least-squares common principal components of the centred log rates (equal weight",
-           "per population); kappa = t(beta) times the centred rates. Forecast (package-specific; the paper",
-           "does not forecast): the period effects of all populations follow one multivariate random walk with",
-           "drift with correlated normal innovations; draws include the innovations and the drift uncertainty;",
-           "a and beta are fixed. Each population keeps its own drift, so forecasts can diverge. Predictive",
-           "draws add Poisson variation of the deaths given the rates."),
+           "per population); kappa = t(beta) times the centred rates.",
+           if (identical(p$index, "coherent")) {
+             paste("Forecast (Enchev, Kleinow and Cairns 2017, Table 10, Model 3): kappa_1 of all populations a",
+                   "multivariate random walk with a common drift", if (!is.null(p$common_by)) "per group",
+                   "(the mean change, equal weights), kappa_2, ... AR(1) processes reverting to 0 (diagonal",
+                   "VAR(1), least squares through the origin, |phi| <= 0.99), so the expected rates of the",
+                   "populations do not diverge; one covariance of all innovations; draws include the innovations",
+                   "and the uncertainty of the common drift; a, beta and phi are fixed.")
+           } else {
+             paste("Forecast (package-specific; the paper does not forecast): the period effects of all",
+                   "populations follow one multivariate random walk with drift with correlated normal innovations;",
+                   "draws include the innovations and the drift uncertainty; a and beta are fixed. Each population",
+                   "keeps its own drift, so forecasts can diverge.")
+           },
+           "Predictive draws add Poisson variation of the deaths given the rates."),
          mt_spec_coupled = paste(model_assumptions(p$base), sprintf(paste(
            "Coupled (ensemble copula coupling, ECC-R; Schefzik et al. 2013): the draws of each age, year and",
            "stratum keep the values of this model, reordered so that their ranks follow the draws of %s; the",
