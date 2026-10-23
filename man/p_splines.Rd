@@ -29,8 +29,10 @@ value for both).}
 \item{ndx}{Numbers of intervals between knots over age and years; \code{NULL}
 gives about one knot per five years (see Details).}
 
-\item{overdispersion}{Account for overdispersion in the choice of the
-smoothing parameters and in the draws.}
+\item{overdispersion}{\code{FALSE} (default): Poisson deaths. \code{TRUE}: one
+dispersion for all cells in the choice of the smoothing parameters and
+in the draws (MortalitySmooth). \code{"age"}: a dispersion for each age that
+varies smoothly over age (Djeundje and Currie 2011; see Details).}
 
 \item{lambda_range}{Search range of the smoothing parameters (the default
 of MortalitySmooth). A selected value at an end of the range gives a
@@ -96,6 +98,44 @@ the smoothing parameters and the penalty, as in
 the forecast without \code{psi2} in the penalty and multiplies the standard
 errors by \code{sqrt(psi2)}.
 
+\strong{Dispersion by age.} \code{overdispersion = "age"} replaces the Poisson
+assumption by the first two moments of the deaths, \verb{E[D] = E m} and
+\verb{var(D) = phi[x] E[D]}, with a dispersion \code{phi[x]} for each age that
+varies smoothly over age (Djeundje and Currie 2011, eq. 2.1; Model 3,
+eq. 5.26). Rates and dispersions are estimated by the bias corrected
+scheme of the paper (section 4):
+\enumerate{
+\item Start with \code{phi = 1} at every age.
+\item Fit the rates by penalised quasi-likelihood: the scoring algorithm
+with the weights of the cells divided by their dispersion (eq. 3.13).
+The smoothing parameters minimise the criterion of the scaled
+deviance: the deviance of each cell divided by its dispersion, plus
+\code{log(n)} (BIC, eq. 3.16) or 2 (AIC) times the effective dimension.
+\item For each age, compute the bias-corrected mean Pearson statistic
+\code{d[x]}: the sum of \code{(D - mu)^2 / mu} over its years, divided by its
+number of cells \code{n[x]} minus its contribution to the effective
+dimension, the sum of its diagonal elements of the hat matrix (eq.
+4.20 and 4.21).
+\item Smooth the statistics over age by penalised quasi-likelihood with
+\code{E[d] = phi}, \verb{var(d) = tau phi^2 / n[x]} and the link \verb{-1 / phi = Ba beta} (eq. 4.22): the B-splines over age of the rates and a
+difference penalty of order \code{pord[1]} (eq. 5.28). The smoothing
+parameter minimises the scaled BIC of this fit.
+\item Repeat steps 2 to 4 until no dispersion changes by more than 1e-5
+relative to its value (section 5.2.2), at most 50 times.
+}
+
+The forecast fit keeps the dispersions of the ages in the weights, and
+the draws come from the covariance \verb{(B'WB + P)^-1} with \code{W} the fitted
+deaths divided by their dispersion. In the paper's example (CMI assured
+lives, ages 40-90, section 5.2.3) the dispersion down-weights the fit to
+the data and the selected surface is smoother: the effective dimension
+is 46 under the Poisson assumption, 36 with one dispersion and 33 with
+the dispersion by age, and the confidence intervals of the forecast are
+narrower. With a single age, \code{"age"} gives one dispersion, the
+bias-corrected mean Pearson statistic (eq. 4.20). The fit selects the
+smoothing parameters in every round, so it takes several times as long
+as the Poisson fit.
+
 \strong{Data.} Ages are placed at the midpoints of their cells, an open
 interval at its lower bound plus half the width of the interval below it
 (as in \code{\link[=mt_smooth]{mt_smooth()}}). Cells with missing deaths or exposures, and cells
@@ -111,12 +151,31 @@ wider than one year, \code{n} is the number of single years that the cell
 ages span. The smoothing parameters are searched on a grid with steps of
 1 on the log10 scale, followed by a continuous search near the best grid
 point (MortalitySmooth: two grid searches with steps of 2 and 0.5).
+With \code{overdispersion = "age"}: \code{tau} is the mean Pearson statistic of the
+smooth of step 4, \code{sum(n[x] (d[x] - phi[x])^2 / phi[x]^2)} divided by the
+number of ages minus its effective dimension, alternated with the choice
+of its smoothing parameter as \code{psi2} with \code{overdispersion = TRUE} (at
+most 5 times; the paper estimates \code{tau} without stating how); that
+smoothing parameter is searched over \code{lambda_range} as those of the
+rates; ages without data get weight 0 in step 4, so the smooth gives
+their dispersion; predictive draws add Poisson variation of the deaths,
+as with \code{overdispersion = TRUE}, because the quasi-likelihood defines
+the mean and variance of the deaths but no distribution, and the paper
+gives no predictive distribution. The paper's full extended
+quasi-likelihood scheme (mean deviances by age, eq. 2.6) is not offered:
+it underestimates the dispersion (section 4, Figure 4), and the paper
+reports its results with the bias corrected scheme.
 }
 \examples{
 x <- mt_example(deaths = "single", years = 1995:2012)
 fit <- mt_fit(p_splines(), x)
 fc <- mt_forecast(fit, h = 10, n_draws = 100, seed = 1)
 mt_parameters(fit)
+# dispersion that varies smoothly over age (Djeundje and Currie 2011),
+# smoothing parameters of the rates given
+fit_age <- mt_fit(p_splines(lambda = c(1, 1000), overdispersion = "age"), x)
+p <- mt_parameters(fit_age)
+p[parameter == "dispersion" & stratum == "female"]
 }
 \references{
 Currie ID, Durban M, Eilers PHC (2004). Smoothing and forecasting
@@ -129,6 +188,10 @@ counts with P-splines. R package version 2.3.4 (CRAN archive).
 Camarda CG (2019). Smooth constrained mortality forecasting.
 \emph{Demographic Research} 41(38): 1091-1130.
 \doi{10.4054/DemRes.2019.41.38}
+
+Djeundje VAB, Currie ID (2011). Smoothing dispersed counts with
+applications to mortality data. \emph{Annals of Actuarial Science} 5(1):
+33-52. \doi{10.1017/S1748499510000047}
 }
 \seealso{
 \code{\link[=cp_splines]{cp_splines()}} for forecasts constrained to past age patterns and
