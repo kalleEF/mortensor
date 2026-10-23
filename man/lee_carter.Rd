@@ -6,7 +6,7 @@
 \usage{
 lee_carter(
   method = c("poisson", "svd"),
-  jump_off = c("fitted", "observed", "constrained"),
+  jump_off = c("fitted", "observed", "filtered", "constrained"),
   bootstrap = FALSE,
   n_boot = 100,
   adjust = c("dt", "dxt", "e0", "none"),
@@ -15,7 +15,8 @@ lee_carter(
   rotate = FALSE,
   rotation = c(e0_start = 80, e0_end = 102, power = 0.5),
   family = c("poisson", "nb"),
-  dispersion = c("global", "age")
+  dispersion = c("global", "age"),
+  jump_off_years = 1
 )
 }
 \arguments{
@@ -23,10 +24,14 @@ lee_carter(
 \code{family}) or \code{"svd"}.}
 
 \item{jump_off}{\code{"fitted"} (forecasts start from the fitted rates of the
-last year), \code{"observed"} (from the observed rates of the last year;
-Lee and Miller 2001) or \code{"constrained"} (the maximum likelihood fit is
+last year), \code{"observed"} (from the observed rates of the last year; Lee
+and Miller 2001; with \code{jump_off_years > 1} from their mean over the last
+years, Stoeldraijer et al. 2018), \code{"filtered"} (from the rates at the
+Kalman filter estimate of the index in the last year; De Jong and
+Tickle 2006) or \code{"constrained"} (the maximum likelihood fit is
 constrained to the observed rates of the last year, the forecast origin
-correction of Li, Hardy and Tan 2009; \code{method = "poisson"} only).}
+correction of Li, Hardy and Tan 2009; \code{method = "poisson"} only). See
+"Jump-off" above.}
 
 \item{bootstrap}{Semi-parametric bootstrap of the parameters.}
 
@@ -57,6 +62,10 @@ binomial; Delwarde, Denuit and Partrat 2007).}
 \item{dispersion}{Dispersion of the negative binomial deaths (\code{family = "nb"}): \code{"global"} (one for all ages; Delwarde, Denuit and Partrat
 2007) or \code{"age"} (one per age group of the data; Li, Hardy and Tan
 2009).}
+
+\item{jump_off_years}{For \code{jump_off = "observed"}: the number of last
+observed years whose mean log rates give the jump-off rates (default 1,
+the last year; 2 to 5 in Stoeldraijer et al. 2018).}
 }
 \value{
 A model specification.
@@ -121,6 +130,83 @@ Lee-Carter model (Brouhns, Denuit and Vermunt 2002); no other observation
 noise is added. If intervals are too narrow on real data, that is a
 property of the model: see \code{\link[=recalibrated]{recalibrated()}}, \code{\link[=ensemble]{ensemble()}}, or
 overdispersed models such as \code{family = "nb"} below or \code{stanmomo("lc", family = "nb")} (\code{\link[=stanmomo]{stanmomo()}}).
+
+\strong{Jump-off.} The jump-off rates are the rates of the last year \code{T} of
+the fitting period, from which the forecast starts. Stoeldraijer et al.
+(2018) compare six options for the Lee-Carter model; their names are in
+quotes:
+\itemize{
+\item \code{jump_off = "fitted"}: "model values", \verb{a[x] + b[x] k[T]} (Lee and
+Carter 1992);
+\item \code{jump_off = "observed"}: "last observed values", the observed log rates
+of year \code{T} (Lee and Miller 2001): \code{a[x]} is replaced by them and \code{k} is
+0 in year \code{T};
+\item \verb{jump_off = "observed", jump_off_years = n} (\code{n} = 2 to 5 in the
+paper): "average n years observed". \code{a[x]} is the mean of the observed
+log rates of the last \code{n} years and \code{k} is 0 at the midpoint of these
+years; the random walk with drift carries the mean from the midpoint to
+year \code{T}, so the jump-off rates are that mean plus \verb{b[x] d (n - 1) / 2},
+with \code{d} the drift of \code{k}. The paper does not say how the index at the
+midpoint relates to the fitted index of year \code{T}; this reading (the
+forecast does not depend on \code{k[T]}) reproduces its results for French
+men (below), where the mean of the fitted index over the \code{n} years does
+not.
+}
+
+Stoeldraijer et al. call a forecast accurate if its out-of-sample errors
+in historical data are small (mean absolute error of life expectancy at
+65 one and five years ahead), and robust if it changes little when one
+more year of data is added (standard deviation of the changes of the
+forecast life expectancy at 65 in 2020 between successive fitting
+periods). In eight Western European countries the last observed values
+were the most accurate for most countries and an average of observed
+years the most robust; more years averaged gave more robust and less
+accurate forecasts. For French men (Human Mortality Database in
+\code{StanMoMo::FRMaleData}, a later release than the paper's; ages 0-94 and
+95+; fitting periods from 1960 to 2005, ..., 2014; \code{method = "svd"}), the
+mean absolute errors and the standard deviations of the last observed
+values and of the averages are within 0.03 years of Table 8a of the
+paper. Those of the model values differ by up to 0.08 years: the mean
+error of the fitted log rates at ages 65 and over in 2005-2014 is -0.002
+with these data and 0.005 in the paper (Table 9a), and a shift of the log
+rates at these ages by 0.007 moves life expectancy at 65 by 0.05 years.
+\code{\link[=anchored]{anchored()}} moves the jump-off of any model.
+
+\strong{Filtered jump-off} (\code{jump_off = "filtered"}; De Jong and Tickle 2006).
+The paper writes the Lee-Carter model in state-space form (eq. 6): \verb{y[t] = a + b alpha[t] + eps[t]} for the vector of log rates of year \code{t}, and
+\verb{alpha[t + 1] = delta + alpha[t] + lambda eta[t]}, with independent normal
+\code{eps[t]} (variance \code{sigma^2} at every age) and \code{eta[t]} (variance
+\code{sigma^2}), \verb{b'b = 1} and the signal-to-noise ratio \code{lambda}. The forecast
+starts from \verb{a + b E(alpha[T] | y[1], ..., y[T])}, the Kalman filter
+estimate of the index in the jump-off year (eq. 15). The paper estimates
+\code{b} and \code{lambda} by maximum likelihood with the Kalman filter, then \code{a},
+\code{delta} and \code{sigma} given them (Section 5), for a model with B-spline age
+effects (eq. 2; eq. 6 is its case without splines, the model fitted
+here). Here \code{a} and \code{b} are those of the Lee-Carter fit (\code{method}), in
+the scale \code{sum(b) = 1} of \code{k}; given them, \code{sigma}, \code{lambda}, \code{delta}
+and the level of the index in the first year are estimated by maximum
+likelihood of the paper's model for the observed log rates. The filtered
+index is computed in closed form (generalised least squares for the
+level and the drift and the best linear prediction of the index), which
+equals the Kalman filter with a diffuse initial state. Without state
+noise (\code{lambda = 0}, which is the estimate in some short or noisy series)
+it is the value in year \code{T} of the linear trend fitted to the per-year
+indices \verb{z[t] = b'(y[t] - a) / b'b}; with little
+observation noise (large \code{lambda}) it approaches \code{z[T]}, the projection
+of the observed log rates of year \code{T} on the age pattern, which is \code{k[T]}
+for \verb{method = "svd", adjust = "none"}. Only the start changes: the
+forecast keeps the drift and the innovations of \code{k} (the paper's forecast
+uses the maximum likelihood drift and adds the variance of the filtered
+index). Package-specific (reference unknown): cells without deaths enter
+with 0.5 deaths, as for \code{jump_off = "observed"}; age groups without deaths
+in the fitting period are left out; with \code{bootstrap = TRUE} each
+bootstrap fit filters the observed rates with its own \code{a} and \code{b}.
+\code{\link[=mt_parameters]{mt_parameters()}} reports the filtered index (\code{k_filtered}), its standard
+error (\code{se_k_filtered}, which includes the uncertainty of the level and
+the drift) and the estimates \code{filter_sigma}, \code{filter_lambda} and
+\code{filter_drift} (per year, in the units of \code{k}). The paper's data
+(Australian women, 1921-2000) are not in an R package; tests check the
+limiting cases, a Kalman filter and recovery on simulated data.
 
 \strong{Negative binomial version} (\code{family = "nb"}; Delwarde, Denuit and
 Partrat 2007). Following the paper:
@@ -257,9 +343,10 @@ expectancy; here every draw is rotated with its own path of life
 expectancy;
 \item rates change from the jump-off year \code{T}, \verb{log m[x, t] = log m[x, T] + B[x, t] (k*[t] - k[T])}. Eq. (4) writes \verb{a[x] + B[x, t] K[t]} with \code{a}
 the last observed log rates (as \code{jump_off = "observed"}) or their mean
-over the years; with \code{jump_off = "fitted"} the fitted rates of year \code{T}
-are the starting point (package-specific), which keeps the jump-off
-rates when \code{B} departs from \code{b};
+over the years; with \code{jump_off = "fitted"} (or \code{"filtered"}) the fitted
+(or filtered) rates of year \code{T} are the starting point
+(package-specific), which keeps the jump-off rates when \code{B} departs
+from \code{b};
 \item the paper extends the open age group to age 130 with a logistic model
 before fitting (footnote 3); here the age groups of the data are used,
 and life expectancy closes the open interval with \code{L = l / m}
@@ -287,6 +374,11 @@ mt_parameters(fit_nb)[parameter == "nb_dispersion"]
 fit_lht <- mt_fit(lee_carter(family = "nb", dispersion = "age", jump_off = "constrained",
                              bootstrap = TRUE, n_boot = 20), mt_subset(x, sex == "female"))
 mt_parameters(fit_lht)[parameter == "nb_dispersion"]
+# jump-off: mean of the last three observed years (Stoeldraijer et al.
+# 2018) and the Kalman filter estimate (De Jong and Tickle 2006)
+fit_av <- mt_fit(lee_carter(jump_off = "observed", jump_off_years = 3), x)
+fit_kf <- mt_fit(lee_carter(jump_off = "filtered"), x)
+mt_parameters(fit_kf)[grepl("filter", parameter)]
 }
 \references{
 Lee RD, Carter LR (1992). Modeling and forecasting U.S. mortality.
@@ -304,6 +396,15 @@ conditions of variable mortality decline. \emph{Population Studies} 56(3):
 Lee R, Miller T (2001). Evaluating the performance of the Lee-Carter
 method for forecasting mortality. \emph{Demography} 38(4): 537-549.
 \doi{10.1353/dem.2001.0036}
+
+Stoeldraijer L, van Duin C, van Wissen L, Janssen F (2018). Comparing
+strategies for matching mortality forecasts to the most recently observed
+data: exploring the trade-off between accuracy and robustness. \emph{Genus}
+74: 16. \doi{10.1186/s41118-018-0041-y}
+
+De Jong P, Tickle L (2006). Extending Lee-Carter mortality forecasting.
+\emph{Mathematical Population Studies} 13(1): 1-18.
+\doi{10.1080/08898480500452109}
 
 Delwarde A, Denuit M, Partrat C (2007). Negative binomial version of the
 Lee-Carter model for mortality forecasting. \emph{Applied Stochastic Models in

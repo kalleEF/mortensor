@@ -161,13 +161,19 @@ test_that("rotation leaves paths below e0_start unchanged, per stratum", {
 
 test_that("from e0_end on, the age pattern of decline is the ultimate pattern", {
   x <- rot_data()
-  for (jump_off in c("fitted", "observed")) {
-    fit <- mt_fit(lee_carter(rotate = TRUE, rotation = c(e0_start = 50, e0_end = 60), jump_off = jump_off), x)
+  for (jo in list(c("fitted", 1), c("observed", 1), c("observed", 3), c("filtered", 1))) {
+    jump_off <- jo[1]
+    n <- as.numeric(jo[2])
+    fit <- mt_fit(lee_carter(rotate = TRUE, rotation = c(e0_start = 50, e0_end = 60), jump_off = jump_off,
+                             jump_off_years = n), x)
     fc <- mt_forecast(fit, h = 5, n_draws = 5, seed = 1)
     for (s in 1:2) {
       f <- fit$fits[[s]]
       bu <- f$b_ultimate
-      J <- if (jump_off == "observed") f$last_log_rate else log(f$fitted[, ncol(f$fitted)])
+      # jump-off rates: observed (mean of n years at their midpoint, moved by
+      # the drift), filtered or fitted
+      J <- switch(jump_off, observed = f$last_log_rate + f$b * f$drift * (n - 1) / 2,
+                  filtered = f$a + f$b * f$filter$level, log(f$fitted[, ncol(f$fitted)]))
       for (j in 1:5) {
         # log rates move from the jump-off along bu only
         d <- unname(log(fc$rates[, , s, j]) - J)
@@ -192,6 +198,8 @@ test_that("rotation works with the observed jump-off, the bootstrap, SVD and a c
     f1
   }
   check_e0(lee_carter(rotate = TRUE, jump_off = "observed"))
+  check_e0(lee_carter(rotate = TRUE, jump_off = "observed", jump_off_years = 3))
+  check_e0(lee_carter(rotate = TRUE, jump_off = "filtered"))
   check_e0(lee_carter(rotate = TRUE, method = "svd", adjust = "e0"))
   check_e0(lee_carter(rotate = TRUE, choose_period = TRUE, min_years = 15))
   fb <- check_e0(lee_carter(rotate = TRUE, bootstrap = TRUE, n_boot = 3), n = 6)

@@ -60,6 +60,83 @@
 #' overdispersed models such as `family = "nb"` below or `stanmomo("lc",
 #' family = "nb")` ([stanmomo()]).
 #'
+#' **Jump-off.** The jump-off rates are the rates of the last year `T` of
+#' the fitting period, from which the forecast starts. Stoeldraijer et al.
+#' (2018) compare six options for the Lee-Carter model; their names are in
+#' quotes:
+#'
+#' * `jump_off = "fitted"`: "model values", `a[x] + b[x] k[T]` (Lee and
+#'   Carter 1992);
+#' * `jump_off = "observed"`: "last observed values", the observed log rates
+#'   of year `T` (Lee and Miller 2001): `a[x]` is replaced by them and `k` is
+#'   0 in year `T`;
+#' * `jump_off = "observed", jump_off_years = n` (`n` = 2 to 5 in the
+#'   paper): "average n years observed". `a[x]` is the mean of the observed
+#'   log rates of the last `n` years and `k` is 0 at the midpoint of these
+#'   years; the random walk with drift carries the mean from the midpoint to
+#'   year `T`, so the jump-off rates are that mean plus `b[x] d (n - 1) / 2`,
+#'   with `d` the drift of `k`. The paper does not say how the index at the
+#'   midpoint relates to the fitted index of year `T`; this reading (the
+#'   forecast does not depend on `k[T]`) reproduces its results for French
+#'   men (below), where the mean of the fitted index over the `n` years does
+#'   not.
+#'
+#' Stoeldraijer et al. call a forecast accurate if its out-of-sample errors
+#' in historical data are small (mean absolute error of life expectancy at
+#' 65 one and five years ahead), and robust if it changes little when one
+#' more year of data is added (standard deviation of the changes of the
+#' forecast life expectancy at 65 in 2020 between successive fitting
+#' periods). In eight Western European countries the last observed values
+#' were the most accurate for most countries and an average of observed
+#' years the most robust; more years averaged gave more robust and less
+#' accurate forecasts. For French men (Human Mortality Database in
+#' `StanMoMo::FRMaleData`, a later release than the paper's; ages 0-94 and
+#' 95+; fitting periods from 1960 to 2005, ..., 2014; `method = "svd"`), the
+#' mean absolute errors and the standard deviations of the last observed
+#' values and of the averages are within 0.03 years of Table 8a of the
+#' paper. Those of the model values differ by up to 0.08 years: the mean
+#' error of the fitted log rates at ages 65 and over in 2005-2014 is -0.002
+#' with these data and 0.005 in the paper (Table 9a), and a shift of the log
+#' rates at these ages by 0.007 moves life expectancy at 65 by 0.05 years.
+#' [anchored()] moves the jump-off of any model.
+#'
+#' **Filtered jump-off** (`jump_off = "filtered"`; De Jong and Tickle 2006).
+#' The paper writes the Lee-Carter model in state-space form (eq. 6): `y[t]
+#' = a + b alpha[t] + eps[t]` for the vector of log rates of year `t`, and
+#' `alpha[t + 1] = delta + alpha[t] + lambda eta[t]`, with independent normal
+#' `eps[t]` (variance `sigma^2` at every age) and `eta[t]` (variance
+#' `sigma^2`), `b'b = 1` and the signal-to-noise ratio `lambda`. The forecast
+#' starts from `a + b E(alpha[T] | y[1], ..., y[T])`, the Kalman filter
+#' estimate of the index in the jump-off year (eq. 15). The paper estimates
+#' `b` and `lambda` by maximum likelihood with the Kalman filter, then `a`,
+#' `delta` and `sigma` given them (Section 5), for a model with B-spline age
+#' effects (eq. 2; eq. 6 is its case without splines, the model fitted
+#' here). Here `a` and `b` are those of the Lee-Carter fit (`method`), in
+#' the scale `sum(b) = 1` of `k`; given them, `sigma`, `lambda`, `delta`
+#' and the level of the index in the first year are estimated by maximum
+#' likelihood of the paper's model for the observed log rates. The filtered
+#' index is computed in closed form (generalised least squares for the
+#' level and the drift and the best linear prediction of the index), which
+#' equals the Kalman filter with a diffuse initial state. Without state
+#' noise (`lambda = 0`, which is the estimate in some short or noisy series)
+#' it is the value in year `T` of the linear trend fitted to the per-year
+#' indices `z[t] = b'(y[t] - a) / b'b`; with little
+#' observation noise (large `lambda`) it approaches `z[T]`, the projection
+#' of the observed log rates of year `T` on the age pattern, which is `k[T]`
+#' for `method = "svd", adjust = "none"`. Only the start changes: the
+#' forecast keeps the drift and the innovations of `k` (the paper's forecast
+#' uses the maximum likelihood drift and adds the variance of the filtered
+#' index). Package-specific (reference unknown): cells without deaths enter
+#' with 0.5 deaths, as for `jump_off = "observed"`; age groups without deaths
+#' in the fitting period are left out; with `bootstrap = TRUE` each
+#' bootstrap fit filters the observed rates with its own `a` and `b`.
+#' [mt_parameters()] reports the filtered index (`k_filtered`), its standard
+#' error (`se_k_filtered`, which includes the uncertainty of the level and
+#' the drift) and the estimates `filter_sigma`, `filter_lambda` and
+#' `filter_drift` (per year, in the units of `k`). The paper's data
+#' (Australian women, 1921-2000) are not in an R package; tests check the
+#' limiting cases, a Kalman filter and recovery on simulated data.
+#'
 #' **Negative binomial version** (`family = "nb"`; Delwarde, Denuit and
 #' Partrat 2007). Following the paper:
 #'
@@ -203,9 +280,10 @@
 #' * rates change from the jump-off year `T`, `log m[x, t] = log m[x, T] +
 #'   B[x, t] (k*[t] - k[T])`. Eq. (4) writes `a[x] + B[x, t] K[t]` with `a`
 #'   the last observed log rates (as `jump_off = "observed"`) or their mean
-#'   over the years; with `jump_off = "fitted"` the fitted rates of year `T`
-#'   are the starting point (package-specific), which keeps the jump-off
-#'   rates when `B` departs from `b`;
+#'   over the years; with `jump_off = "fitted"` (or `"filtered"`) the fitted
+#'   (or filtered) rates of year `T` are the starting point
+#'   (package-specific), which keeps the jump-off rates when `B` departs
+#'   from `b`;
 #' * the paper extends the open age group to age 130 with a logistic model
 #'   before fitting (footnote 3); here the age groups of the data are used,
 #'   and life expectancy closes the open interval with `L = l / m`
@@ -220,10 +298,17 @@
 #' @param min_years `choose_period` considers fitting periods of more than
 #'   `min_years` years (`minperiod` of `demography::lca()`).
 #' @param jump_off `"fitted"` (forecasts start from the fitted rates of the
-#'   last year), `"observed"` (from the observed rates of the last year;
-#'   Lee and Miller 2001) or `"constrained"` (the maximum likelihood fit is
+#'   last year), `"observed"` (from the observed rates of the last year; Lee
+#'   and Miller 2001; with `jump_off_years > 1` from their mean over the last
+#'   years, Stoeldraijer et al. 2018), `"filtered"` (from the rates at the
+#'   Kalman filter estimate of the index in the last year; De Jong and
+#'   Tickle 2006) or `"constrained"` (the maximum likelihood fit is
 #'   constrained to the observed rates of the last year, the forecast origin
-#'   correction of Li, Hardy and Tan 2009; `method = "poisson"` only).
+#'   correction of Li, Hardy and Tan 2009; `method = "poisson"` only). See
+#'   "Jump-off" above.
+#' @param jump_off_years For `jump_off = "observed"`: the number of last
+#'   observed years whose mean log rates give the jump-off rates (default 1,
+#'   the last year; 2 to 5 in Stoeldraijer et al. 2018).
 #' @param bootstrap Semi-parametric bootstrap of the parameters.
 #' @param n_boot Number of bootstrap fits.
 #' @param rotate Rotate the age pattern of decline `b` towards an ultimate
@@ -257,6 +342,15 @@
 #' Lee R, Miller T (2001). Evaluating the performance of the Lee-Carter
 #' method for forecasting mortality. *Demography* 38(4): 537-549.
 #' \doi{10.1353/dem.2001.0036}
+#'
+#' Stoeldraijer L, van Duin C, van Wissen L, Janssen F (2018). Comparing
+#' strategies for matching mortality forecasts to the most recently observed
+#' data: exploring the trade-off between accuracy and robustness. *Genus*
+#' 74: 16. \doi{10.1186/s41118-018-0041-y}
+#'
+#' De Jong P, Tickle L (2006). Extending Lee-Carter mortality forecasting.
+#' *Mathematical Population Studies* 13(1): 1-18.
+#' \doi{10.1080/08898480500452109}
 #'
 #' Delwarde A, Denuit M, Partrat C (2007). Negative binomial version of the
 #' Lee-Carter model for mortality forecasting. *Applied Stochastic Models in
@@ -308,11 +402,16 @@
 #' fit_lht <- mt_fit(lee_carter(family = "nb", dispersion = "age", jump_off = "constrained",
 #'                              bootstrap = TRUE, n_boot = 20), mt_subset(x, sex == "female"))
 #' mt_parameters(fit_lht)[parameter == "nb_dispersion"]
+#' # jump-off: mean of the last three observed years (Stoeldraijer et al.
+#' # 2018) and the Kalman filter estimate (De Jong and Tickle 2006)
+#' fit_av <- mt_fit(lee_carter(jump_off = "observed", jump_off_years = 3), x)
+#' fit_kf <- mt_fit(lee_carter(jump_off = "filtered"), x)
+#' mt_parameters(fit_kf)[grepl("filter", parameter)]
 #' @export
-lee_carter <- function(method = c("poisson", "svd"), jump_off = c("fitted", "observed", "constrained"),
+lee_carter <- function(method = c("poisson", "svd"), jump_off = c("fitted", "observed", "filtered", "constrained"),
                        bootstrap = FALSE, n_boot = 100, adjust = c("dt", "dxt", "e0", "none"), choose_period = FALSE,
                        min_years = 20, rotate = FALSE, rotation = c(e0_start = 80, e0_end = 102, power = 0.5),
-                       family = c("poisson", "nb"), dispersion = c("global", "age")) {
+                       family = c("poisson", "nb"), dispersion = c("global", "age"), jump_off_years = 1) {
   method <- match.arg(method)
   jump_off <- match.arg(jump_off)
   adjust <- match.arg(adjust)
@@ -320,6 +419,11 @@ lee_carter <- function(method = c("poisson", "svd"), jump_off = c("fitted", "obs
   dispersion <- match.arg(dispersion)
   check_flag(choose_period, "choose_period")
   check_number(min_years, "min_years", lower = 5, integerish = TRUE)
+  check_number(jump_off_years, "jump_off_years", lower = 1, integerish = TRUE)
+  if (jump_off_years > 1 && jump_off != "observed") {
+    mt_abort("`jump_off_years` averages observed log rates; use it with `jump_off = \"observed\"`.",
+             class = "argument")
+  }
   check_flag(rotate, "rotate")
   rotation <- rotation_settings(rotation)
   if (family == "nb" && method != "poisson") {
@@ -340,16 +444,22 @@ lee_carter <- function(method = c("poisson", "svd"), jump_off = c("fitted", "obs
   }
   new_mt_spec("lee_carter", list(method = method, jump_off = jump_off, bootstrap = bootstrap, n_boot = n_boot,
                                  adjust = adjust, choose_period = choose_period, min_years = min_years,
-                                 rotate = rotate, rotation = rotation, family = family, dispersion = dispersion),
-              min_periods = if (choose_period) min_years else 5,
+                                 rotate = rotate, rotation = rotation, family = family, dispersion = dispersion,
+                                 jump_off_years = jump_off_years),
+              min_periods = max(if (choose_period) min_years else 5, jump_off_years),
               label = paste0("Lee-Carter", if (method == "svd") sprintf(" (SVD, %s)", adjust) else "",
                              if (family == "nb") " (negative binomial" else "",
                              if (family == "nb" && dispersion == "age") ", dispersion by age" else "",
                              if (family == "nb") ")" else "",
                              if (rotate) rotation_label(rotation) else "",
                              if (choose_period) ", chosen period" else "",
-                             if (jump_off == "observed") ", observed jump-off" else "",
-                             if (jump_off == "constrained") ", constrained jump-off" else "",
+                             switch(jump_off, fitted = "", filtered = ", filtered jump-off",
+                                    constrained = ", constrained jump-off",
+                                    observed = if (jump_off_years > 1) {
+                                      sprintf(", observed jump-off (mean of %d years)", jump_off_years)
+                                    } else {
+                                      ", observed jump-off"
+                                    }),
                              if (bootstrap) ", bootstrap" else ""))
 }
 
@@ -467,9 +577,33 @@ fit_model.mt_spec_lee_carter <- function(spec, D, E, ages, periods, ...) {
                   "a ridge penalty; the SVD estimates (method = \"svd\", adjust = \"dt\") are used instead (a",
                   "safeguard of this package)."), class = "model_fit")
   }
-  est$last_log_rate <- log_rates(D[, ncol(D)], E[, ncol(E)])
+  # observed jump-off: the log rates of the last year, or their mean over the
+  # last `jump_off_years` years (Stoeldraijer et al. 2018)
+  n_jo <- p$jump_off_years %||% 1
+  if (n_jo > ncol(D)) {
+    mt_abort(sprintf("`jump_off_years = %d` exceeds the %d years of the fitting period.", n_jo, ncol(D)),
+             class = "model_data")
+  }
+  last <- seq(ncol(D) - n_jo + 1, ncol(D))
+  est$last_log_rate <- if (n_jo == 1) {
+    log_rates(D[, ncol(D)], E[, ncol(E)])
+  } else {
+    rowMeans(log_rates(D[, last, drop = FALSE], E[, last, drop = FALSE]))
+  }
+  est$jump_off_years <- n_jo
   est$fitted <- exp(est$a + outer(est$b, est$k))
   est$jump_off <- p$jump_off
+  # filtered jump-off (De Jong and Tickle 2006): the observed log rates of the
+  # age groups with deaths, filtered with the age effects of each fit
+  filtered <- identical(p$jump_off, "filtered")
+  if (filtered) {
+    y_obs <- log_rates(D[!zero, , drop = FALSE], E[!zero, , drop = FALSE])
+    add_filter <- function(s) {
+      s$filter <- lc_filter(y_obs, s$a[!zero], s$b[!zero])
+      s
+    }
+    est <- add_filter(est)
+  }
   if (isTRUE(p$bootstrap)) {
     # resamples of the (chosen) fitting period: Poisson deaths, or negative
     # binomial deaths with the estimated dispersion (family = "nb"); with a
@@ -482,6 +616,7 @@ fit_model.mt_spec_lee_carter <- function(spec, D, E, ages, periods, ...) {
       tryCatch(fit_lc(Db, E, disp = keep), error = function(e) NULL)
     })
     est$boot <- Filter(Negate(is.null), est$boot)
+    if (filtered) est$boot <- lapply(est$boot, add_filter)
   }
   if (isTRUE(p$rotate)) {
     est$rotation <- c(list(age = ages), as.list(p$rotation))
@@ -517,9 +652,11 @@ simulate_model.mt_spec_lee_carter <- function(spec, fit, h, n_draws, ...) {
     s <- sets[[i]]
     kp <- rw_paths(s$k[length(s$k)], s$drift, matrix(s$dk - s$drift, nrow = 1), h, length(js), "gaussian",
                    sigma = s$sigma_k, exp_out = FALSE)
+    # paths of k start from k[T]; the jump-off rates of the set are
+    # base + b k[T]
+    base <- if (fit$jump_off == "fitted") s$a else lc_jump_log_rate(fit, s) - s$b * s$k[length(s$k)]
     for (m in seq_along(js)) {
       kk <- kp[1, , m]
-      base <- if (fit$jump_off == "observed") fit$last_log_rate - s$b * s$k[length(s$k)] else s$a
       out[, , js[m]] <- exp(base + outer(s$b, kk))
     }
     if (!is.null(fit$rotation)) out[, , js] <- lc_rotate(out[, , js, drop = FALSE], matrix(kp[1, , ], h), s, fit)
@@ -597,10 +734,10 @@ lc_ultimate_b <- function(b, age, fixed = NULL) {
 
 # Rotated rates for the unrotated draws R [age, h, draw] of parameter set s,
 # with index paths K [h, draw]. Rates change from the jump-off year: log m =
-# J + B (k* - k[T]), J the jump-off log rates (fitted or observed)
+# J + B (k* - k[T]), J the jump-off log rates (lc_jump_log_rate())
 lc_rotate <- function(R, K, s, fit) {
   kj <- s$k[length(s$k)]
-  J <- if (fit$jump_off == "observed") fit$last_log_rate else s$a + s$b * kj
+  J <- lc_jump_log_rate(fit, s)
   d <- dim(R)
   array(rotate_rates(matrix(R, d[1]), J, s$b, s$b_ultimate, as.vector(K) - kj, fit$rotation), d)
 }
@@ -660,6 +797,21 @@ lc_solve_e0 <- function(J, B, e0, start, age, tol = 1e-10, maxit = 30) {
                        error = function(e) NA_real_)
   }
   out
+}
+
+# Jump-off log rates (year T) of parameter set s: the fitted rates (also for
+# the fit constrained to the last year); the observed log rates of the last
+# year, or the mean of the last n years moved from their midpoint to T by the
+# drift (Stoeldraijer et al. 2018); or the rates at the filtered index (De
+# Jong and Tickle 2006)
+lc_jump_log_rate <- function(fit, s) {
+  switch(fit$jump_off,
+         observed = {
+           n <- fit$jump_off_years %||% 1
+           if (n > 1) fit$last_log_rate + s$b * s$drift * (n - 1) / 2 else fit$last_log_rate
+         },
+         filtered = s$a + s$b * s$filter$level,
+         s$a + s$b * s$k[length(s$k)])
 }
 
 # Identification sum(b) = 1 and sum(k) = 0 (rates unchanged); `centre =

@@ -7,7 +7,10 @@
 #'   (period index), and the drift and innovation standard deviation of `k`;
 #'   with `rotate = TRUE` also the ultimate pattern `b_ultimate`; with
 #'   `family = "nb"` also the dispersion `nb_dispersion` (variance `mu + phi
-#'   mu^2`; one per age group with a dispersion by age);
+#'   mu^2`; one per age group with a dispersion by age); with `jump_off =
+#'   "filtered"` also the filtered index of the last year `k_filtered`, its
+#'   standard error `se_k_filtered` and the state-space estimates
+#'   `filter_sigma`, `filter_lambda`, `filter_drift`;
 #' * [li_lee()], [product_ratio()]: the common factor of each group (`B`,
 #'   `K`, its drift and standard deviation), and per stratum the deviations
 #'   `a`, `b`, `k` and their AR(1) coefficient `phi` and standard deviation;
@@ -198,7 +201,12 @@ base_parameters <- function(fit, sp) {
             if (!is.null(f$dispersion)) {
               row(lab[s], "nb_dispersion", if (is.null(f$age_nb_size)) "" else ages, f$dispersion)
             },
-            if (!is.null(f$b_ultimate)) row(lab[s], "b_ultimate", ages, f$b_ultimate))
+            if (!is.null(f$b_ultimate)) row(lab[s], "b_ultimate", ages, f$b_ultimate),
+            if (!is.null(f$filter)) {
+              row(lab[s], c("k_filtered", "se_k_filtered", "filter_sigma", "filter_lambda", "filter_drift"),
+                  c(yrs[length(yrs)], yrs[length(yrs)], "", "", ""),
+                  c(f$filter$level, f$filter$se, f$filter$sigma, f$filter$lambda, f$filter$drift))
+            })
     })))
   }
   if (inherits(sp, c("mt_spec_coda", "mt_spec_coda_causes"))) return(coda_parameters(fit, sp))
@@ -561,12 +569,18 @@ model_assumptions <- function(spec) {
            } else {
              "Poisson variation of the deaths given the rates."
            },
-           if (identical(p$jump_off, "constrained")) {
-             paste("Jump-off: observed rates of the last year, as constraints of the fit (a(x) = log m(x,T), k(T) =",
-                   "0; Li, Hardy and Tan 2009).")
-           } else {
-             paste("Jump-off:", p$jump_off, "rates.")
-           },
+           "Jump-off:", switch(p$jump_off,
+             constrained = paste("observed rates of the last year, as constraints of the fit (a(x) = log m(x,T),",
+                                 "k(T) = 0; Li, Hardy and Tan 2009)."),
+             filtered = paste("rates at the Kalman filter estimate of k in the last year (De Jong and Tickle",
+                              "2006)."),
+             observed = if ((p$jump_off_years %||% 1) > 1) {
+               sprintf(paste("mean observed log rates of the last %d years, moved from their midpoint to the",
+                             "last year by the drift (Stoeldraijer et al. 2018)."), p$jump_off_years)
+             } else {
+               "observed rates."
+             },
+             paste(p$jump_off, "rates.")),
            if (isTRUE(p$rotate)) {
              sprintf(paste("b(x) rotates towards an ultimate pattern (flat below 65) as life expectancy at birth",
                            "of each path rises from %g to %g (Li, Lee and Gerland 2013); k(t) is solved again so",
