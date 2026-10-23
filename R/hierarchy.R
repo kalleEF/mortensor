@@ -1240,10 +1240,14 @@ permute_component <- function(component, perm) {
 }
 
 # Values per stratum and draw [stratum, draw] (components, sizes of the
-# negative binomial distribution of the deaths) after the paths of each
-# stratum were permuted
+# negative binomial distribution of the deaths; sizes [age, stratum, draw]
+# with a dispersion by age) after the paths of each stratum were permuted
 permute_rows <- function(x, perm) {
   if (is.null(x) || is.null(perm)) return(x)
+  if (length(dim(x)) == 3L) {
+    for (a in seq_len(dim(x)[1])) x[a, , ] <- permute_rows(matrix(x[a, , ], dim(x)[2]), perm)
+    return(x)
+  }
   matrix(x[cbind(rep(seq_len(nrow(perm)), ncol(perm)), as.vector(perm))], nrow(perm))
 }
 
@@ -1946,8 +1950,14 @@ take_draws <- function(A, draw) {
 }
 
 # Rows [bottom stratum, draw] of a matrix for all nodes of a hierarchy
-# (aggregates NA); vectors (one value per draw) and NULL are kept
+# (aggregates NA; [age, stratum, draw] for sizes with a dispersion by age);
+# vectors (one value per draw) and NULL are kept
 node_rows <- function(x, hs) {
+  if (length(dim(x)) == 3L) {
+    out <- array(NA_real_, c(dim(x)[1], nrow(hs$S), dim(x)[3]))
+    out[, hs$bottom, ] <- x
+    return(out)
+  }
   if (!is.matrix(x)) return(x)
   out <- matrix(NA, nrow(hs$S), ncol(x))
   storage.mode(out) <- storage.mode(x)
