@@ -490,9 +490,10 @@ fit_adds_noise <- function(fit) {
 
 # Observation noise of each draw: whether deaths are drawn given the rates
 # (`noise(s)`: one flag per draw for stratum s) and the size of their
-# negative binomial distribution (`size(s)`: one per draw; Inf for Poisson).
-# The sizes are those of the posterior draws of `fc` (stanmomo(family =
-# "nb")), paired by position, or else drawn from the posterior of the fit.
+# negative binomial distribution (`size(s)`: one per draw, or [age, draw]
+# with a dispersion by age; Inf for Poisson). The sizes are those of the
+# posterior draws of `fc` (stanmomo(family = "nb")), paired by position, or
+# else drawn from the posterior of the fit.
 # Draws of an ensemble follow the component they come from (`fc$component`:
 # one per draw, or [stratum, draw] after reordering; without it, draws are
 # allocated to the components in proportion to the weights); strata of a fit
@@ -507,7 +508,7 @@ draw_noise <- function(fit, fc, n_draws) {
     b <- fit$reconcile$structure$bottom
     fb <- fc
     if (is.matrix(fc$component)) fb$component <- fc$component[b, , drop = FALSE]
-    if (is.matrix(fc$nb_size)) fb$nb_size <- fc$nb_size[b, , drop = FALSE]
+    if (!is.null(dim(fc$nb_size))) fb$nb_size <- nb_size_rows(fc$nb_size, b)
     parts <- draw_noise(base, fb, n_draws)
     pos <- match(seq_len(nrow(fit$strata)), b)
     return(list(noise = function(s) parts$noise(pos[s]), size = function(s) parts$size(pos[s])))
@@ -528,8 +529,19 @@ draw_noise <- function(fit, fc, n_draws) {
       out
     }, size = function(s) {
       ks <- of(s)
-      out <- rep(Inf, n_draws)
-      for (j in unique(ks)) out[ks == j] <- parts[[j]]$size(s)[ks == j]
+      sz <- lapply(parts, function(p) p$size(s))
+      by_age <- vapply(sz, is.matrix, logical(1))
+      if (!any(by_age)) {
+        out <- rep(Inf, n_draws)
+        for (j in unique(ks)) out[ks == j] <- sz[[j]][ks == j]
+        return(out)
+      }
+      # some component with a dispersion by age: sizes [age, draw]
+      na <- nrow(sz[[which(by_age)[1]]])
+      out <- matrix(Inf, na, n_draws)
+      for (j in unique(ks)) {
+        out[, ks == j] <- if (by_age[j]) sz[[j]][, ks == j] else rep(sz[[j]][ks == j], each = na)
+      }
       out
     }))
   }
@@ -544,17 +556,26 @@ draw_noise <- function(fit, fc, n_draws) {
                 size = function(s) parts[[grp[s]]]$size(pos[s])))
   }
   flag <- fit_adds_noise(fit)
-  size <- if (!is.null(fc$nb_size) && ncol(fc$nb_size) == n_draws) fc$nb_size else sample_nb_size(fit, n_draws)
+  nd <- dim(fc$nb_size)
+  size <- if (!is.null(nd) && nd[length(nd)] == n_draws) fc$nb_size else sample_nb_size(fit, n_draws)
   list(noise = function(s) rep(flag, n_draws), size = function(s) {
-    if (flag && !is.null(size)) size[s, ] else rep(Inf, n_draws)
+    if (flag && !is.null(size)) nb_size_stratum(size, s) else rep(Inf, n_draws)
   })
 }
 
 # Sizes of the negative binomial distribution of the deaths [stratum, draw]
 # drawn from the posterior of fits with that likelihood (stanmomo(family =
-# "nb")); NULL for other models
+# "nb")), or [age, stratum, draw] for a dispersion by age
+# (lee_carter(dispersion = "age"), the same in all draws); NULL for other
+# models
 sample_nb_size <- function(fit, n_draws) {
   if (isTRUE(fit$spec$joint) || !is.list(fit$fits)) return(NULL)
+  by_age <- lapply(fit$fits, function(f) if (is.list(f) && !inherits(f, "mt_fit")) f$age_nb_size)
+  if (!all(vapply(by_age, is.null, logical(1)))) {
+    out <- array(Inf, c(length(fit$age), length(by_age), n_draws))
+    for (s in seq_along(by_age)) if (!is.null(by_age[[s]])) out[, s, ] <- by_age[[s]]
+    return(out)
+  }
   post <- lapply(fit$fits, function(f) if (is.list(f) && !inherits(f, "mt_fit")) f$nb_size)
   if (all(vapply(post, is.null, logical(1)))) return(NULL)
   do.call(rbind, lapply(post, function(p) {
@@ -1146,7 +1167,9 @@ add_observation_noise <- function(arr, base_fit, fc, targets, E, draw = NULL) {
     j <- if (is.null(draw)) rep(seq_len(d[4]), each = d[1] * d[2]) else as.vector(draw[, , s, ])
     Es <- as.vector(E[, , s])
     mu <- R * Es
-    D <- r_deaths(mu, nz$size(s)[j]) / pmax(Es, 1e-12)
+    sz <- nz$size(s)
+    sz <- if (is.matrix(sz)) sz[cbind(rep_len(seq_len(d[1]), length(j)), j)] else sz[j]
+    D <- r_deaths(mu, sz) / pmax(Es, 1e-12)
     k <- nz$noise(s)[j]
     R[k] <- D[k]
     arr[, , s, ] <- R

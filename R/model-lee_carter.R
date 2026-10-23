@@ -99,6 +99,72 @@
 #' standard deviations of `k` (Sections 3.5 and 3.6) within 1%; the paper's
 #' column labelled `sigma^2` holds the standard deviation (divisor `T - 1`).
 #'
+#' **Dispersion by age** (`family = "nb"` with `dispersion = "age"`; Li,
+#' Hardy and Tan 2009). Following the paper:
+#'
+#' * each cell consists of clusters whose deaths are Poisson given a gamma
+#'   distributed frailty with mean 1 and a variance that depends on age. The
+#'   deaths of the cell are then negative binomial with mean `mu = E
+#'   exp(a[x] + b[x] k[t])` and variance `mu + alpha[x] mu^2` (Section 3, eq.
+#'   5-12), with one dispersion `alpha[x]` per age group of the data;
+#'   `alpha[x]` near 0 gives the Poisson model;
+#' * `a`, `b`, `k` and `alpha` are estimated by maximum likelihood (eq. 13):
+#'   the Newton updates of `a`, `b` and `k` of Appendix 1, alternated with
+#'   the estimate of each `alpha[x]` given the fitted deaths of its age
+#'   group;
+#' * `jump_off = "constrained"` applies the forecast origin correction
+#'   (Section 3 and Appendix 2): `a[x]` is the observed log rate of the last
+#'   year `T` (the paper writes `a[x] = m[x, T]`; `a` is on the log scale of
+#'   eq. 1), `k[T] = 0`, and `b` and `k` are estimated by maximum
+#'   likelihood under these constraints. The fitted rates of the last year
+#'   are the observed ones, and the log-likelihood is lower than without the
+#'   constraints (footnote 3). With `family = "poisson"` it gives the
+#'   original model with the correction, which the paper fits for comparison
+#'   (Section 4.2);
+#' * interval forecasts come from the parametric bootstrap of Section 3:
+#'   `bootstrap = TRUE` simulates negative binomial deaths from the fitted
+#'   model, re-estimates `a`, `b` and `k` (with `jump_off = "constrained"`,
+#'   `a` comes from the simulated deaths of the last year, as the correction
+#'   is part of the estimation in Section 3), and simulates
+#'   `k` from the time series model of each refit. The dispersions are those
+#'   of the fit: step 2(a) re-estimates `a`, `b` and `k`. The paper's method
+#'   is `lee_carter(family = "nb", dispersion = "age", jump_off =
+#'   "constrained", bootstrap = TRUE)`;
+#' * predictive draws (`mt_forecast(predictive = TRUE)`) are negative
+#'   binomial deaths with the dispersion of their age group (size `1 /
+#'   alpha[x]`), the observation model of eq. (10). The paper's intervals
+#'   describe the central death rates, which are the draws without
+#'   `predictive`.
+#'
+#' A numeric `dispersion` gives the lower bounds of groups of ages that share
+#' one dispersion. Each age group of the data belongs to the dispersion group
+#' in which it starts (package-specific; the paper has one dispersion per
+#' single year of age). One group (`dispersion` at or below the first age)
+#' gives the estimates of `dispersion = "global"` (Delwarde, Denuit and
+#' Partrat 2007).
+#'
+#' Package-specific (reference unknown): as for one dispersion, the updates
+#' start from the Poisson estimates (Appendix 1 recommends them), and each
+#' `alpha[x]` is maximised by Newton steps on `log(alpha[x])` with step
+#' halving (the paper: Newton steps on `alpha[x]`). Its estimate is 0 where
+#' the derivative of the log-likelihood at 0 is not positive. The paper fits
+#' an ARIMA model to `k` without naming the model it chose; here `k` follows
+#' a random walk with drift, and the draws of each bootstrap fit include the
+#' uncertainty of its drift, as all draws of `lee_carter()`. With `jump_off =
+#' "constrained"`, an age group without deaths in the last year starts from
+#' the rate of 0.5 deaths. Age groups without deaths in all years keep their
+#' constant rate and take the dispersion of their dispersion group (0 if no
+#' other age group of the group has deaths). As with one dispersion, a fit
+#' that does not converge fails; `jump_off = "constrained"` has no
+#' fallbacks either. Each `alpha[x]` is estimated from cells that also
+#' estimate `a[x]`, `b[x]` and `k`. Like other maximum likelihood estimates
+#' of a variance it is biased downwards: by about `2 / T` with `T` years,
+#' and more at the ages that carry most of the information on `k` (many
+#' deaths and a small dispersion). The paper uses data of the Human
+#' Mortality Database for the United States and Canada, ages 0-99,
+#' 1950-2004 (Section 4.1). The packages demography and StMoMo do not hold
+#' these series, so its estimates are not reproduced.
+#'
 #' `rotate = TRUE` rotates the age pattern of decline as life expectancy
 #' rises (Li, Lee and Gerland 2013; status: published, with the deviations
 #' listed below). In long-lived populations the decline of mortality slows
@@ -161,8 +227,10 @@
 #' @param min_years `choose_period` considers fitting periods of more than
 #'   `min_years` years (`minperiod` of `demography::lca()`).
 #' @param jump_off `"fitted"` (forecasts start from the fitted rates of the
-#'   last year) or `"observed"` (from the observed rates of the last year;
-#'   Lee and Miller 2001).
+#'   last year), `"observed"` (from the observed rates of the last year;
+#'   Lee and Miller 2001) or `"constrained"` (the maximum likelihood fit is
+#'   constrained to the observed rates of the last year, the forecast origin
+#'   correction of Li, Hardy and Tan 2009; `method = "poisson"` only).
 #' @param bootstrap Semi-parametric bootstrap of the parameters.
 #' @param n_boot Number of bootstrap fits.
 #' @param rotate Rotate the age pattern of decline `b` towards an ultimate
@@ -170,6 +238,10 @@
 #' @param family Distribution of the deaths for `method = "poisson"`:
 #'   `"poisson"` (Brouhns, Denuit and Vermunt 2002) or `"nb"` (negative
 #'   binomial; Delwarde, Denuit and Partrat 2007).
+#' @param dispersion Dispersion of the negative binomial deaths (`family =
+#'   "nb"`): `"global"` (one for all ages; Delwarde, Denuit and Partrat
+#'   2007), `"age"` (one per age group of the data; Li, Hardy and Tan 2009)
+#'   or the lower bounds of groups of ages with one dispersion each.
 #' @param rotation Settings of the rotation, a named vector: life expectancy
 #'   at birth at which the rotation starts (`e0_start`, default 80) and is
 #'   complete (`e0_end`, default 102), and the exponent of the weights
@@ -196,6 +268,10 @@
 #' Delwarde A, Denuit M, Partrat C (2007). Negative binomial version of the
 #' Lee-Carter model for mortality forecasting. *Applied Stochastic Models in
 #' Business and Industry* 23(5): 385-401. \doi{10.1002/asmb.679}
+#'
+#' Li JS-H, Hardy MR, Tan KS (2009). Uncertainty in mortality forecasting:
+#' an extension to the classical Lee-Carter approach. *ASTIN Bulletin* 39(1):
+#' 137-164. \doi{10.2143/AST.39.1.2038060}
 #'
 #' Brouhns N, Denuit M, Van Keilegom I (2005). Bootstrapping the Poisson
 #' log-bilinear model for mortality forecasting. *Scandinavian Actuarial
@@ -234,15 +310,21 @@
 #' # negative binomial deaths (Delwarde, Denuit and Partrat 2007)
 #' fit_nb <- mt_fit(lee_carter(family = "nb"), x)
 #' mt_parameters(fit_nb)[parameter == "nb_dispersion"]
+#' # dispersion by age with the forecast origin correction and the parametric
+#' # bootstrap (Li, Hardy and Tan 2009)
+#' fit_lht <- mt_fit(lee_carter(family = "nb", dispersion = "age", jump_off = "constrained",
+#'                              bootstrap = TRUE, n_boot = 20), mt_subset(x, sex == "female"))
+#' mt_parameters(fit_lht)[parameter == "nb_dispersion"]
 #' @export
-lee_carter <- function(method = c("poisson", "svd"), jump_off = c("fitted", "observed"), bootstrap = FALSE,
-                       n_boot = 100, adjust = c("dt", "dxt", "e0", "none"), choose_period = FALSE,
+lee_carter <- function(method = c("poisson", "svd"), jump_off = c("fitted", "observed", "constrained"),
+                       bootstrap = FALSE, n_boot = 100, adjust = c("dt", "dxt", "e0", "none"), choose_period = FALSE,
                        min_years = 20, rotate = FALSE, rotation = c(e0_start = 80, e0_end = 102, power = 0.5),
-                       family = c("poisson", "nb")) {
+                       family = c("poisson", "nb"), dispersion = c("global", "age")) {
   method <- match.arg(method)
   jump_off <- match.arg(jump_off)
   adjust <- match.arg(adjust)
   family <- match.arg(family)
+  dispersion <- dispersion_setting(dispersion)
   check_flag(choose_period, "choose_period")
   check_number(min_years, "min_years", lower = 5, integerish = TRUE)
   check_flag(rotate, "rotate")
@@ -255,16 +337,58 @@ lee_carter <- function(method = c("poisson", "svd"), jump_off = c("fitted", "obs
     mt_abort(paste("`choose_period` compares Poisson deviances (Booth, Maindonald and Smith 2002) and is not",
                    "available with `family = \"nb\"`."), class = "argument")
   }
+  if (!identical(dispersion, "global") && family != "nb") {
+    mt_abort("`dispersion` sets the dispersion of the negative binomial deaths; use it with `family = \"nb\"`.",
+             class = "argument")
+  }
+  if (jump_off == "constrained" && (method != "poisson" || choose_period)) {
+    mt_abort(paste("`jump_off = \"constrained\"` constrains the maximum likelihood fit (Li, Hardy and Tan 2009);",
+                   "use it with `method = \"poisson\"` and without `choose_period`."), class = "argument")
+  }
+  disp_label <- if (identical(dispersion, "age")) ", dispersion by age" else ", dispersion by age group"
   new_mt_spec("lee_carter", list(method = method, jump_off = jump_off, bootstrap = bootstrap, n_boot = n_boot,
                                  adjust = adjust, choose_period = choose_period, min_years = min_years,
-                                 rotate = rotate, rotation = rotation, family = family),
+                                 rotate = rotate, rotation = rotation, family = family, dispersion = dispersion),
               min_periods = if (choose_period) min_years else 5,
               label = paste0("Lee-Carter", if (method == "svd") sprintf(" (SVD, %s)", adjust) else "",
-                             if (family == "nb") " (negative binomial)" else "",
+                             if (family == "nb") " (negative binomial" else "",
+                             if (family == "nb" && !identical(dispersion, "global")) disp_label else "",
+                             if (family == "nb") ")" else "",
                              if (rotate) rotation_label(rotation) else "",
                              if (choose_period) ", chosen period" else "",
                              if (jump_off == "observed") ", observed jump-off" else "",
+                             if (jump_off == "constrained") ", constrained jump-off" else "",
                              if (bootstrap) ", bootstrap" else ""))
+}
+
+# `dispersion` of lee_carter(): "global", "age" or increasing lower bounds of
+# groups of ages
+dispersion_setting <- function(dispersion) {
+  if (is.character(dispersion)) {
+    if (identical(dispersion, c("global", "age"))) return("global")
+    check_choice(dispersion, c("global", "age"), "dispersion")
+    return(dispersion)
+  }
+  if (!is.numeric(dispersion) || !length(dispersion) || anyNA(dispersion) || any(!is.finite(dispersion)) ||
+      is.unsorted(dispersion, strictly = TRUE)) {
+    mt_abort("`dispersion` must be \"global\", \"age\" or increasing lower bounds of groups of ages.",
+             class = "argument", call = NULL)
+  }
+  as.numeric(dispersion)
+}
+
+# Dispersion group (1, 2, ...) of each age group of the data: one per age
+# group with "age"; with lower bounds, the group in which the age group
+# starts; NULL for one dispersion ("global")
+lc_disp_groups <- function(dispersion, ages) {
+  if (is.null(dispersion) || identical(dispersion, "global")) return(NULL)
+  if (identical(dispersion, "age")) return(seq_along(ages$lower))
+  g <- findInterval(ages$lower, dispersion)
+  if (any(g == 0)) {
+    mt_abort(sprintf("The ages start at %s, below the first lower bound of `dispersion` (%s).",
+                     format(ages$lower[1]), format(dispersion[1])), class = "model_data", call = NULL)
+  }
+  match(g, unique(g))
 }
 
 # Settings of the rotation: defaults completed by the elements given
@@ -297,16 +421,29 @@ fit_model.mt_spec_lee_carter <- function(spec, D, E, ages, periods, ...) {
   zero <- rowSums(D) == 0
   if (sum(!zero) < 2) mt_abort("Fewer than two age groups with deaths.", class = "model_fit")
   fallback <- character()
+  # dispersion group of each age group (NULL: one dispersion) and the
+  # forecast origin correction (Li, Hardy and Tan 2009)
+  groups <- lc_disp_groups(p$dispersion, ages)
+  constrained <- identical(p$jump_off, "constrained")
   # Poisson estimates; where the Poisson likelihood has no finite maximum
   # (very sparse counts) the package's safeguards: a ridge penalty on b, then
   # SVD estimates (`fallback` records which). `fixed`: constant rates of the
   # age groups left out of D (NA for the rows of D), for life tables over all
-  # ages
-  est_one <- function(D, E, fixed = NULL) {
+  # ages. `disp`: dispersions kept fixed (one per row of D), `grp`: the
+  # dispersion groups of the rows of D
+  est_one <- function(D, E, fixed = NULL, disp = NULL, grp = NULL) {
     if (p$method == "svd") return(lc_svd(D, E, adjust = p$adjust %||% "dt", ages = ages, fixed = fixed))
     # negative binomial maximum likelihood, without the safeguards of the
     # Poisson fit
-    if (identical(p$family, "nb")) return(lc_nb(D, E))
+    if (identical(p$family, "nb")) return(lc_nb(D, E, disp = disp, groups = grp, origin = constrained))
+    if (constrained) {
+      # the Poisson model with the forecast origin correction: the limit of
+      # the negative binomial model with dispersion 0
+      out <- lc_nb(D, E, disp = 0, origin = TRUE)
+      out$method <- "poisson"
+      out$dispersion <- out$nb_size <- NULL
+      return(out)
+    }
     tryCatch(lc_poisson(D, E), mt_error_model_fit = function(e) {
       tryCatch({
         out <- lc_poisson(D, E, ridge = 1)
@@ -318,19 +455,31 @@ fit_model.mt_spec_lee_carter <- function(spec, D, E, ages, periods, ...) {
       })
     })
   }
-  fit_lc <- function(D, E) {
-    if (!any(zero)) return(est_one(D, E))
+  # `disp`: dispersions of all age groups kept fixed (bootstrap refits)
+  fit_lc <- function(D, E, disp = NULL) {
+    if (!any(zero)) return(est_one(D, E, disp = disp, grp = groups))
     # age groups without any death: constant rate of 0.5 deaths over the
     # training years, no trend (the Poisson estimate would be minus infinity)
     fixed <- rep(NA_real_, nrow(D))
     fixed[zero] <- 0.5 / rowSums(E[zero, , drop = FALSE])
-    e <- est_one(D[!zero, , drop = FALSE], E[!zero, , drop = FALSE], fixed)
+    grp <- if (!is.null(groups)) match(groups[!zero], unique(groups[!zero]))
+    e <- est_one(D[!zero, , drop = FALSE], E[!zero, , drop = FALSE], fixed, disp = disp[!zero], grp = grp)
     a <- b <- numeric(nrow(D))
     a[!zero] <- e$a
     b[!zero] <- e$b
     a[zero] <- log(fixed[zero])
     e$a <- a
     e$b <- b
+    if (!is.null(e$age_nb_size)) {
+      # dispersion of their dispersion group, 0 (Poisson) if no age group of
+      # it has deaths
+      d <- numeric(nrow(D))
+      d[!zero] <- e$dispersion
+      d[zero] <- e$dispersion[match(groups[zero], groups[!zero])]
+      d[is.na(d)] <- 0
+      e$dispersion <- d
+      e$age_nb_size <- 1 / d
+    }
     e
   }
   first <- 1L
@@ -362,11 +511,14 @@ fit_model.mt_spec_lee_carter <- function(spec, D, E, ages, periods, ...) {
   est$jump_off <- p$jump_off
   if (isTRUE(p$bootstrap)) {
     # resamples of the (chosen) fitting period: Poisson deaths, or negative
-    # binomial deaths with the estimated dispersion (family = "nb")
+    # binomial deaths with the estimated dispersion (family = "nb"); with a
+    # dispersion by age the refits keep it (Li, Hardy and Tan 2009, Section 3,
+    # step 2a, re-estimates a, b and k)
     fitted <- E * est$fitted
+    keep <- if (!is.null(est$age_nb_size)) est$dispersion
     est$boot <- lapply(seq_len(p$n_boot), function(i) {
-      Db <- matrix(r_deaths(as.vector(fitted), est$nb_size), nrow(fitted))
-      tryCatch(fit_lc(Db, E), error = function(e) NULL)
+      Db <- matrix(r_deaths(as.vector(fitted), est$age_nb_size %||% est$nb_size), nrow(fitted))
+      tryCatch(fit_lc(Db, E, disp = keep), error = function(e) NULL)
     })
     est$boot <- Filter(Negate(is.null), est$boot)
   }
@@ -412,8 +564,14 @@ simulate_model.mt_spec_lee_carter <- function(spec, fit, h, n_draws, ...) {
     if (!is.null(fit$rotation)) out[, , js] <- lc_rotate(out[, , js, drop = FALSE], matrix(kp[1, , ], h), s, fit)
   }
   # negative binomial family: the size 1 / dispersion of the parameter set of
-  # each draw, for predictive draws of the deaths (see predictive_rates())
-  if (!is.null(fit$nb_size)) attr(out, "nb_size") <- vapply(sets, function(s) s$nb_size, 0)[which_set]
+  # each draw, for predictive draws of the deaths (see predictive_rates());
+  # with a dispersion by age one size per age group [age, draw], the same in
+  # all draws (bootstrap refits keep the dispersions)
+  if (!is.null(fit$age_nb_size)) {
+    attr(out, "nb_size") <- matrix(fit$age_nb_size, length(fit$a), n_draws)
+  } else if (!is.null(fit$nb_size)) {
+    attr(out, "nb_size") <- vapply(sets, function(s) s$nb_size, 0)[which_set]
+  }
   out
 }
 
@@ -543,9 +701,11 @@ lc_solve_e0 <- function(J, B, e0, start, age, tol = 1e-10, maxit = 30) {
   out
 }
 
-lc_finish <- function(a, b, k) {
+# Identification sum(b) = 1 and sum(k) = 0 (rates unchanged); `centre =
+# FALSE` keeps a and the level of k (forecast origin correction: k[T] = 0)
+lc_finish <- function(a, b, k, centre = TRUE) {
   s <- sum(b)
-  kbar <- mean(k)
+  kbar <- if (centre) mean(k) else 0
   a <- a + b * kbar
   k <- (k - kbar) * s
   b <- b / s
@@ -669,13 +829,42 @@ lc_poisson <- function(D, E, init = NULL, maxit = 500, tol = 1e-8, ridge = 0) {
 # (the paper: a = 0, b = 1, k = 0, "random values can also be used"). After
 # each round, sum(b) = 1 and sum(k) = 0 (rates unchanged). `disp`: a fixed
 # dispersion instead of its estimate (phi = 0 gives the Poisson model).
-lc_nb <- function(D, E, disp = NULL, maxit = 5000, tol = 1e-12) {
+#
+# Dispersion by age (Li, Hardy and Tan 2009, Section 3): `groups` gives the
+# dispersion group (1, 2, ...) of each row; the deaths of the rows of group
+# g have variance mu + alpha[g] mu^2. The updates of a, b and k are those of
+# Appendix 1 (the same terms per cell as above, with the dispersion of the
+# row), alternated with the estimate of each alpha[g] given the fitted deaths
+# of its rows (eq. 13). `disp` is then one fixed dispersion per row (or one
+# for all). The result has the dispersion of each row (`dispersion`) and its
+# inverse, the size of each row (`age_nb_size`).
+#
+# `origin = TRUE`: forecast origin correction (Appendix 2): a fixed at the
+# observed log rates of the last year (0.5 deaths where there are none) and
+# k[T] = 0, b and k estimated under these constraints (sum(b) = 1).
+lc_nb <- function(D, E, disp = NULL, groups = NULL, origin = FALSE, maxit = 5000, tol = 1e-12) {
   init <- tryCatch(lc_poisson(D, E), mt_error_model_fit = function(e) lc_svd(D, E))
   a <- init$a
   b <- init$b
   k <- init$k
+  nt <- ncol(D)
+  if (origin) {
+    a <- log_rates(D[, nt], E[, nt])
+    k <- k - k[nt]
+  }
   fit_mu <- function() E * exp(a + outer(b, k))
-  phi <- disp %||% nb_dispersion(D, fit_mu())
+  # dispersion: one (Delwarde et al. 2007) or one per group of rows (Li et
+  # al. 2009), and its value per row (a vector recycled along the rows)
+  one <- is.null(groups)
+  est_disp <- function(mu, start = NULL) {
+    if (one) return(nb_dispersion(D, mu, start))
+    vapply(seq_len(max(groups)), function(g) {
+      nb_dispersion(D[groups == g, , drop = FALSE], mu[groups == g, , drop = FALSE], start[g])
+    }, 0)
+  }
+  phi_g <- if (is.null(disp)) est_disp(fit_mu())
+  phi <- disp %||% if (one) phi_g else phi_g[groups]
+  if (!one) phi <- rep_len(phi, nrow(D))
   # score and observed information of the log-likelihood in the linear
   # predictor of each cell (the terms of eq. 6-8)
   score <- function(mu) {
@@ -684,19 +873,31 @@ lc_nb <- function(D, E, disp = NULL, maxit = 5000, tol = 1e-12) {
   ll_old <- -Inf
   converged <- FALSE
   for (it in seq_len(maxit)) {
+    if (!origin) {
+      g <- score(fit_mu())
+      a <- a + rowSums(g$s) / rowSums(g$w)
+    }
     g <- score(fit_mu())
-    a <- a + rowSums(g$s) / rowSums(g$w)
-    g <- score(fit_mu())
-    kk <- matrix(k, nrow(D), ncol(D), byrow = TRUE)
+    kk <- matrix(k, nrow(D), nt, byrow = TRUE)
     b <- b + rowSums(g$s * kk) / rowSums(g$w * kk^2)
     g <- score(fit_mu())
-    k <- k + colSums(g$s * b) / colSums(g$w * b^2)
+    step <- colSums(g$s * b) / colSums(g$w * b^2)
     s <- sum(b)
-    a <- a + b * mean(k)
-    k <- (k - mean(k)) * s
+    if (origin) {
+      # k[T] stays 0 (Appendix 2); the scale of b and k is free
+      step[nt] <- 0
+      k <- (k + step) * s
+    } else {
+      k <- k + step
+      a <- a + b * mean(k)
+      k <- (k - mean(k)) * s
+    }
     b <- b / s
     mu <- fit_mu()
-    if (is.null(disp)) phi <- nb_dispersion(D, mu, phi)
+    if (is.null(disp)) {
+      phi_g <- est_disp(mu, phi_g)
+      phi <- if (one) phi_g else phi_g[groups]
+    }
     ll <- nb_loglik(D, mu, phi)
     if (!is.finite(ll)) mt_abort("The negative binomial Lee-Carter fit diverged.", class = "model_fit")
     if (abs(ll - ll_old) <= tol * abs(ll)) {
@@ -708,27 +909,43 @@ lc_nb <- function(D, E, disp = NULL, maxit = 5000, tol = 1e-12) {
   if (!converged) {
     mt_abort("The negative binomial Lee-Carter fit did not converge.", class = "model_fit")
   }
-  out <- lc_finish(a, b, k)
+  out <- lc_finish(a, b, k, centre = !origin)
   out$method <- "nb"
   out$dispersion <- phi
-  out$nb_size <- 1 / phi
+  if (one) out$nb_size <- 1 / phi else out$age_nb_size <- 1 / phi
   out$loglik <- ll
   out$iterations <- it
   out
 }
 
-# Negative binomial log-likelihood (Delwarde, Denuit and Partrat 2007, eq. 5)
-# of deaths D with means mu and dispersion phi (variance mu + phi mu^2), in
-# a form that is accurate for small phi and accepts non-integer deaths;
-# phi = 0 gives the Poisson log-likelihood. lgamma(D + z) - lgamma(z) -
-# lgamma(D + 1) = -lbeta(z, D) - log(D) for D > 0, with z = 1 / phi.
+# Negative binomial log-likelihood (Delwarde, Denuit and Partrat 2007, eq. 5;
+# Li, Hardy and Tan 2009, eq. 13) of deaths D with means mu and dispersion
+# phi (variance mu + phi mu^2), in a form that is accurate for small phi and
+# accepts non-integer deaths; phi = 0 gives the Poisson log-likelihood.
+# lgamma(D + z) - lgamma(z) - lgamma(D + 1) = -lbeta(z, D) - log(D) for D >
+# 0, with z = 1 / phi. `phi`: one dispersion, or one per cell (a vector of
+# one per row of the matrix D is recycled along its rows).
 nb_loglik <- function(D, mu, phi) {
+  if (length(phi) > 1L) {
+    phi <- rep_len(phi, length(D))
+    pois <- phi <= 0
+    out <- 0
+    if (any(pois)) out <- nb_loglik(D[pois], mu[pois], 0)
+    if (any(!pois)) out <- out + nb_loglik_cells(D[!pois], mu[!pois], phi[!pois])
+    return(out)
+  }
   if (phi <= 0) return(sum(ifelse(D > 0, D * log(mu), 0) - mu - lgamma(D + 1)))
+  nb_loglik_cells(D, mu, phi)
+}
+
+# nb_loglik() for phi > 0 (one value, or one per cell)
+nb_loglik_cells <- function(D, mu, phi) {
+  phi <- rep_len(phi, length(D))
   z <- 1 / phi
   out <- -z * log1p(phi * mu)
   pos <- D > 0
-  out[pos] <- out[pos] - lbeta(z, D[pos]) - log(D[pos]) +
-    D[pos] * (log(phi * mu[pos]) - log1p(phi * mu[pos]))
+  out[pos] <- out[pos] - lbeta(z[pos], D[pos]) - log(D[pos]) +
+    D[pos] * (log(phi[pos] * mu[pos]) - log1p(phi[pos] * mu[pos]))
   sum(out)
 }
 

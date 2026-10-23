@@ -7,7 +7,7 @@
 #'   (period index), and the drift and innovation standard deviation of `k`;
 #'   with `rotate = TRUE` also the ultimate pattern `b_ultimate`; with
 #'   `family = "nb"` also the dispersion `nb_dispersion` (variance `mu + phi
-#'   mu^2`);
+#'   mu^2`; one per age group with a dispersion by age);
 #' * [li_lee()], [product_ratio()]: the common factor of each group (`B`,
 #'   `K`, its drift and standard deviation), and per stratum the deviations
 #'   `a`, `b`, `k` and their AR(1) coefficient `phi` and standard deviation;
@@ -188,7 +188,9 @@ base_parameters <- function(fit, sp) {
       if (is.null(f)) return(NULL)
       rbind(row(lab[s], "a", ages, f$a), row(lab[s], "b", ages, f$b), row(lab[s], "k", yrs, f$k),
             row(lab[s], "drift_k", "", f$drift), row(lab[s], "sd_k", "", f$sigma_k),
-            if (!is.null(f$dispersion)) row(lab[s], "nb_dispersion", "", f$dispersion),
+            if (!is.null(f$dispersion)) {
+              row(lab[s], "nb_dispersion", if (is.null(f$age_nb_size)) "" else ages, f$dispersion)
+            },
             if (!is.null(f$b_ultimate)) row(lab[s], "b_ultimate", ages, f$b_ultimate))
     })))
   }
@@ -517,7 +519,11 @@ model_assumptions <- function(spec) {
   switch(class(spec)[1],
          mt_spec_lee_carter = paste(
            "log m(x,t) = a(x) + b(x) k(t), estimated by",
-           if (identical(p$family, "nb")) {
+           if (identical(p$family, "nb") && !identical(p$dispersion %||% "global", "global")) {
+             paste("negative binomial maximum likelihood (Li, Hardy and Tan 2009): deaths with mean mu and",
+                   "variance mu + alpha(x) mu^2, one dispersion alpha(x) per",
+                   if (identical(p$dispersion, "age")) "age group." else "group of ages.")
+           } else if (identical(p$family, "nb")) {
              paste("negative binomial maximum likelihood (Delwarde, Denuit and Partrat 2007): deaths with mean mu",
                    "and variance mu + phi mu^2, one dispersion phi for all ages and years.")
            } else if (p$method == "poisson") {
@@ -533,14 +539,27 @@ model_assumptions <- function(spec) {
                none = "with k(t) from the SVD (not refitted)"), ".")
            },
            "k(t) follows a random walk with drift; draws include",
-           "its innovations and the uncertainty of the drift. a(x) and b(x) are fixed",
-           "(parameter uncertainty with bootstrapped()). Predictive draws add",
+           "its innovations and the uncertainty of the drift.",
+           if (isTRUE(p$bootstrap)) {
+             keep <- identical(p$family, "nb") && !identical(p$dispersion %||% "global", "global")
+             sprintf(paste("a(x), b(x) and k(t) are re-estimated on %d resamples of the fitted deaths (parametric",
+                           "bootstrap), each with its own drift.%s"), p$n_boot,
+                     if (keep) " The refits keep the dispersions of the fit." else "")
+           } else {
+             "a(x) and b(x) are fixed (parameter uncertainty with bootstrapped())."
+           },
+           "Predictive draws add",
            if (identical(p$family, "nb")) {
              "negative binomial variation of the deaths given the rates, with the estimated dispersion."
            } else {
              "Poisson variation of the deaths given the rates."
            },
-           "Jump-off:", p$jump_off, "rates.",
+           if (identical(p$jump_off, "constrained")) {
+             paste("Jump-off: observed rates of the last year, as constraints of the fit (a(x) = log m(x,T), k(T) =",
+                   "0; Li, Hardy and Tan 2009).")
+           } else {
+             paste("Jump-off:", p$jump_off, "rates.")
+           },
            if (isTRUE(p$rotate)) {
              sprintf(paste("b(x) rotates towards an ultimate pattern (flat below 65) as life expectancy at birth",
                            "of each path rises from %g to %g (Li, Lee and Gerland 2013); k(t) is solved again so",

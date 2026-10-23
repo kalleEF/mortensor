@@ -6,7 +6,7 @@
 \usage{
 lee_carter(
   method = c("poisson", "svd"),
-  jump_off = c("fitted", "observed"),
+  jump_off = c("fitted", "observed", "constrained"),
   bootstrap = FALSE,
   n_boot = 100,
   adjust = c("dt", "dxt", "e0", "none"),
@@ -14,7 +14,8 @@ lee_carter(
   min_years = 20,
   rotate = FALSE,
   rotation = c(e0_start = 80, e0_end = 102, power = 0.5),
-  family = c("poisson", "nb")
+  family = c("poisson", "nb"),
+  dispersion = c("global", "age")
 )
 }
 \arguments{
@@ -22,8 +23,10 @@ lee_carter(
 \code{family}) or \code{"svd"}.}
 
 \item{jump_off}{\code{"fitted"} (forecasts start from the fitted rates of the
-last year) or \code{"observed"} (from the observed rates of the last year;
-Lee and Miller 2001).}
+last year), \code{"observed"} (from the observed rates of the last year;
+Lee and Miller 2001) or \code{"constrained"} (the maximum likelihood fit is
+constrained to the observed rates of the last year, the forecast origin
+correction of Li, Hardy and Tan 2009; \code{method = "poisson"} only).}
 
 \item{bootstrap}{Semi-parametric bootstrap of the parameters.}
 
@@ -50,6 +53,10 @@ complete (\code{e0_end}, default 102), and the exponent of the weights
 \item{family}{Distribution of the deaths for \code{method = "poisson"}:
 \code{"poisson"} (Brouhns, Denuit and Vermunt 2002) or \code{"nb"} (negative
 binomial; Delwarde, Denuit and Partrat 2007).}
+
+\item{dispersion}{Dispersion of the negative binomial deaths (\code{family = "nb"}): \code{"global"} (one for all ages; Delwarde, Denuit and Partrat
+2007), \code{"age"} (one per age group of the data; Li, Hardy and Tan 2009)
+or the lower bounds of groups of ages with one dispersion each.}
 }
 \value{
 A model specification.
@@ -153,6 +160,69 @@ paper's dispersions (Section 3.3), AIC (Section 3.4) and drifts and
 standard deviations of \code{k} (Sections 3.5 and 3.6) within 1\%; the paper's
 column labelled \code{sigma^2} holds the standard deviation (divisor \code{T - 1}).
 
+\strong{Dispersion by age} (\code{family = "nb"} with \code{dispersion = "age"}; Li,
+Hardy and Tan 2009). Following the paper:
+\itemize{
+\item each cell consists of clusters whose deaths are Poisson given a gamma
+distributed frailty with mean 1 and a variance that depends on age. The
+deaths of the cell are then negative binomial with mean \verb{mu = E exp(a[x] + b[x] k[t])} and variance \verb{mu + alpha[x] mu^2} (Section 3, eq.
+5-12), with one dispersion \code{alpha[x]} per age group of the data;
+\code{alpha[x]} near 0 gives the Poisson model;
+\item \code{a}, \code{b}, \code{k} and \code{alpha} are estimated by maximum likelihood (eq. 13):
+the Newton updates of \code{a}, \code{b} and \code{k} of Appendix 1, alternated with
+the estimate of each \code{alpha[x]} given the fitted deaths of its age
+group;
+\item \code{jump_off = "constrained"} applies the forecast origin correction
+(Section 3 and Appendix 2): \code{a[x]} is the observed log rate of the last
+year \code{T} (the paper writes \code{a[x] = m[x, T]}; \code{a} is on the log scale of
+eq. 1), \code{k[T] = 0}, and \code{b} and \code{k} are estimated by maximum
+likelihood under these constraints. The fitted rates of the last year
+are the observed ones, and the log-likelihood is lower than without the
+constraints (footnote 3). With \code{family = "poisson"} it gives the
+original model with the correction, which the paper fits for comparison
+(Section 4.2);
+\item interval forecasts come from the parametric bootstrap of Section 3:
+\code{bootstrap = TRUE} simulates negative binomial deaths from the fitted
+model, re-estimates \code{a}, \code{b} and \code{k} (with \code{jump_off = "constrained"},
+\code{a} comes from the simulated deaths of the last year, as the correction
+is part of the estimation in Section 3), and simulates
+\code{k} from the time series model of each refit. The dispersions are those
+of the fit: step 2(a) re-estimates \code{a}, \code{b} and \code{k}. The paper's method
+is \code{lee_carter(family = "nb", dispersion = "age", jump_off = "constrained", bootstrap = TRUE)};
+\item predictive draws (\code{mt_forecast(predictive = TRUE)}) are negative
+binomial deaths with the dispersion of their age group (size \code{1 / alpha[x]}), the observation model of eq. (10). The paper's intervals
+describe the central death rates, which are the draws without
+\code{predictive}.
+}
+
+A numeric \code{dispersion} gives the lower bounds of groups of ages that share
+one dispersion. Each age group of the data belongs to the dispersion group
+in which it starts (package-specific; the paper has one dispersion per
+single year of age). One group (\code{dispersion} at or below the first age)
+gives the estimates of \code{dispersion = "global"} (Delwarde, Denuit and
+Partrat 2007).
+
+Package-specific (reference unknown): as for one dispersion, the updates
+start from the Poisson estimates (Appendix 1 recommends them), and each
+\code{alpha[x]} is maximised by Newton steps on \code{log(alpha[x])} with step
+halving (the paper: Newton steps on \code{alpha[x]}). Its estimate is 0 where
+the derivative of the log-likelihood at 0 is not positive. The paper fits
+an ARIMA model to \code{k} without naming the model it chose; here \code{k} follows
+a random walk with drift, and the draws of each bootstrap fit include the
+uncertainty of its drift, as all draws of \code{lee_carter()}. With \code{jump_off = "constrained"}, an age group without deaths in the last year starts from
+the rate of 0.5 deaths. Age groups without deaths in all years keep their
+constant rate and take the dispersion of their dispersion group (0 if no
+other age group of the group has deaths). As with one dispersion, a fit
+that does not converge fails; \code{jump_off = "constrained"} has no
+fallbacks either. Each \code{alpha[x]} is estimated from cells that also
+estimate \code{a[x]}, \code{b[x]} and \code{k}. Like other maximum likelihood estimates
+of a variance it is biased downwards: by about \code{2 / T} with \code{T} years,
+and more at the ages that carry most of the information on \code{k} (many
+deaths and a small dispersion). The paper uses data of the Human
+Mortality Database for the United States and Canada, ages 0-99,
+1950-2004 (Section 4.1). The packages demography and StMoMo do not hold
+these series, so its estimates are not reproduced.
+
 \code{rotate = TRUE} rotates the age pattern of decline as life expectancy
 rises (Li, Lee and Gerland 2013; status: published, with the deviations
 listed below). In long-lived populations the decline of mortality slows
@@ -219,6 +289,11 @@ if (requireNamespace("demography", quietly = TRUE)) {
 # negative binomial deaths (Delwarde, Denuit and Partrat 2007)
 fit_nb <- mt_fit(lee_carter(family = "nb"), x)
 mt_parameters(fit_nb)[parameter == "nb_dispersion"]
+# dispersion by age with the forecast origin correction and the parametric
+# bootstrap (Li, Hardy and Tan 2009)
+fit_lht <- mt_fit(lee_carter(family = "nb", dispersion = "age", jump_off = "constrained",
+                             bootstrap = TRUE, n_boot = 20), mt_subset(x, sex == "female"))
+mt_parameters(fit_lht)[parameter == "nb_dispersion"]
 }
 \references{
 Lee RD, Carter LR (1992). Modeling and forecasting U.S. mortality.
@@ -240,6 +315,10 @@ method for forecasting mortality. \emph{Demography} 38(4): 537-549.
 Delwarde A, Denuit M, Partrat C (2007). Negative binomial version of the
 Lee-Carter model for mortality forecasting. \emph{Applied Stochastic Models in
 Business and Industry} 23(5): 385-401. \doi{10.1002/asmb.679}
+
+Li JS-H, Hardy MR, Tan KS (2009). Uncertainty in mortality forecasting:
+an extension to the classical Lee-Carter approach. \emph{ASTIN Bulletin} 39(1):
+137-164. \doi{10.2143/AST.39.1.2038060}
 
 Brouhns N, Denuit M, Van Keilegom I (2005). Bootstrapping the Poisson
 log-bilinear model for mortality forecasting. \emph{Scandinavian Actuarial

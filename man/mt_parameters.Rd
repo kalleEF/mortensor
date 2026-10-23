@@ -23,7 +23,7 @@ model type that has interpretable parameters:
 \item \code{\link[=lee_carter]{lee_carter()}}: \code{a} (age pattern), \code{b} (age pattern of change), \code{k}
 (period index), and the drift and innovation standard deviation of \code{k};
 with \code{rotate = TRUE} also the ultimate pattern \code{b_ultimate}; with
-\code{family = "nb"} also the dispersion \code{nb_dispersion} (variance \verb{mu + phi mu^2});
+\code{family = "nb"} also the dispersion \code{nb_dispersion} (variance \verb{mu + phi mu^2}; one per age group with a dispersion by age);
 \item \code{\link[=li_lee]{li_lee()}}, \code{\link[=product_ratio]{product_ratio()}}: the common factor of each group (\code{B},
 \code{K}, its drift and standard deviation), and per stratum the deviations
 \code{a}, \code{b}, \code{k} and their AR(1) coefficient \code{phi} and standard deviation;

@@ -419,7 +419,9 @@ mt_forecast.mt_fit <- function(fit, h = 10, to = NULL, n_draws = 500, seed = NUL
                                stratum = fit$strata$label, draw = NULL))
   # size of the negative binomial distribution of the deaths per stratum and
   # draw, for models with that likelihood (the posterior draw of the
-  # dispersion that belongs to each draw of the rates); NULL: Poisson
+  # dispersion that belongs to each draw of the rates), or per age, stratum
+  # and draw for a dispersion by age (lee_carter(dispersion = "age")); NULL:
+  # Poisson
   size <- NULL
   with_seed(seed, {
     if (spec$joint) {
@@ -433,9 +435,11 @@ mt_forecast.mt_fit <- function(fit, h = 10, to = NULL, n_draws = 500, seed = NUL
         if (is.null(fit$fits[[s]])) next
         sim <- simulate_model(spec, fit$fits[[s]], h, n_draws)
         arr[, , s, ] <- sim
-        if (!is.null(attr(sim, "nb_size"))) {
-          if (is.null(size)) size <- matrix(Inf, ns, n_draws)
-          size[s, ] <- attr(sim, "nb_size")
+        sz <- attr(sim, "nb_size")
+        if (!is.null(sz)) {
+          # [age, draw] with a dispersion by age
+          if (is.null(size)) size <- if (is.matrix(sz)) array(Inf, c(na, ns, n_draws)) else matrix(Inf, ns, n_draws)
+          if (is.matrix(sz)) size[, s, ] <- sz else size[s, ] <- sz
         }
       }
     }
@@ -470,20 +474,42 @@ check_draws_plausible <- function(arr, age, strata, label) {
 # Observed-rate draws: deaths given the rates of each draw and the exposures,
 # divided by the exposures (models of expected rates, or fitted to smoothed
 # rates). The deaths are Poisson (Brouhns, Denuit and Vermunt 2002), or
-# negative binomial with `size` [stratum, draw] for models with that
-# likelihood; no other observation noise is added. Cells may have zero
-# deaths (rate 0); scores that take logarithms floor the deaths after
-# summing them to the observed cells, not per grid cell
+# negative binomial with `size` [stratum, draw] or [age, stratum, draw] for
+# models with that likelihood; no other observation noise is added. Cells
+# may have zero deaths (rate 0); scores that take logarithms floor the
+# deaths after summing them to the observed cells, not per grid cell
 predictive_rates <- function(arr, fit, exposure, spec, size = NULL) {
   if (!isTRUE(spec$smooth) && !isTRUE(fit$smoothed_input)) return(arr)
   d <- dim(arr)
   E <- expand_exposure(exposure %||% fit$exposure_last, d, dimnames(arr))
   mu <- arr * as.vector(E)
   ok <- !is.na(mu)
-  sz <- if (!is.null(size)) rep(as.vector(size), each = d[1] * d[2])[ok]
+  sz <- if (!is.null(size)) nb_cell_size(size, d)[ok]
   deaths <- array(NA_real_, d)
   deaths[ok] <- r_deaths(mu[ok], sz)
   deaths / pmax(as.vector(E), 1e-12)
+}
+
+# Size of the negative binomial distribution of each cell [age, period,
+# stratum, draw] of an array with dimensions `d`, from the sizes of the
+# draws: [stratum, draw], or [age, stratum, draw] with a dispersion by age
+nb_cell_size <- function(size, d) {
+  if (length(dim(size)) < 3L) return(rep(as.vector(size), each = d[1] * d[2]))
+  n <- prod(d)
+  size[cbind(rep_len(seq_len(d[1]), n), rep_len(rep(seq_len(d[3]), each = d[1] * d[2]), n),
+             rep(seq_len(d[4]), each = d[1] * d[2] * d[3]))]
+}
+
+# Sizes of stratum s [draw], or [age, draw] with a dispersion by age
+nb_size_stratum <- function(size, s) {
+  if (length(dim(size)) < 3L) return(size[s, ])
+  matrix(size[, s, ], dim(size)[1])
+}
+
+# Sizes of the strata `rows` (same layout as `size`)
+nb_size_rows <- function(size, rows) {
+  if (length(dim(size)) < 3L) return(size[rows, , drop = FALSE])
+  size[, rows, , drop = FALSE]
 }
 
 # Deaths given their expected values `mu`: Poisson, or negative binomial
