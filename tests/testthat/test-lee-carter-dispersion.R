@@ -186,17 +186,6 @@ test_that("one dispersion group gives the fit of family = \"nb\" (Delwarde, Denu
   expect_equal(f1$k, f0$k, tolerance = 1e-12)
   expect_equal(f1$dispersion, rep(f0$dispersion, 12), tolerance = 1e-12)
   expect_equal(f1$loglik, f0$loglik, tolerance = 1e-12)
-  # through lee_carter(): a lower bound at or below the first age
-  long <- data.frame(age = rep(60:71, 30), year = rep(1981:2010, each = 12), deaths = as.vector(x$D),
-                     exposure = as.vector(x$E))
-  d <- mt_data(deaths = long, exposure = long)
-  p1 <- mt_parameters(mt_fit(lee_carter(family = "nb", dispersion = 0), d))
-  p0 <- mt_parameters(mt_fit(lee_carter(family = "nb"), d))
-  for (nm in c("a", "b", "k", "drift_k", "sd_k")) {
-    expect_equal(p1[parameter == nm]$value, p0[parameter == nm]$value, tolerance = 1e-10)
-  }
-  expect_equal(p1[parameter == "nb_dispersion"]$value, rep(p0[parameter == "nb_dispersion"]$value, 12),
-               tolerance = 1e-10)
 })
 
 test_that("as the dispersions vanish the fit is the Poisson Lee-Carter fit", {
@@ -227,22 +216,9 @@ test_that("as the dispersions vanish the fit is the Poisson Lee-Carter fit", {
   expect_equal(fc$k, pc$k, tolerance = 1e-7)
 })
 
-test_that("dispersion groups follow the lower bounds of `dispersion`", {
-  ages <- age_groups(c(0, 1, seq(5, 90, 5)))
-  expect_null(mortensor:::lc_disp_groups("global", ages))
-  expect_identical(mortensor:::lc_disp_groups("age", ages), seq_len(20))
-  # each age group belongs to the group in which it starts; groups without
-  # age groups are dropped
-  g <- mortensor:::lc_disp_groups(c(0, 1, 15, 63, 200), ages)
-  expect_identical(g, as.integer(c(1, 2, 2, 2, rep(3, 10), rep(4, 6))))
-  expect_identical(mortensor:::lc_disp_groups(c(-5, 50), ages), as.integer(rep(1:2, c(11, 9))))
-  expect_error(mortensor:::lc_disp_groups(c(10, 50), ages), class = "mt_error_model_data")
+test_that("the settings of the dispersion and the jump-off are checked", {
   expect_identical(lee_carter(family = "nb", dispersion = "age")$params$dispersion, "age")
   expect_identical(lee_carter(family = "nb")$params$dispersion, "global")
-  expect_identical(lee_carter(family = "nb", dispersion = c(0, 65))$params$dispersion, c(0, 65))
-  expect_error(lee_carter(family = "nb", dispersion = c(65, 0)), class = "mt_error_argument")
-  expect_error(lee_carter(family = "nb", dispersion = "ages"), class = "mt_error_argument")
-  expect_error(lee_carter(family = "nb", dispersion = NA_real_), class = "mt_error_argument")
   expect_error(lee_carter(dispersion = "age"), class = "mt_error_argument")
   expect_error(lee_carter(method = "svd", jump_off = "constrained"), class = "mt_error_argument")
   expect_error(lee_carter(jump_off = "constrained", choose_period = TRUE), class = "mt_error_argument")
@@ -253,7 +229,6 @@ test_that("lee_carter(dispersion = \"age\") fits through mt_fit() with one dispe
   spec <- lee_carter(family = "nb", dispersion = "age", jump_off = "constrained")
   expect_match(spec$label, "dispersion by age")
   expect_match(spec$label, "constrained jump-off")
-  expect_match(lee_carter(family = "nb", dispersion = c(0, 65))$label, "dispersion by age group")
   fit <- mt_fit(spec, x)
   expect_true(all(fit$diagnostics$status == "ok"))
   p <- mt_parameters(fit)
@@ -284,11 +259,10 @@ test_that("predictive draws are negative binomial with the dispersion of each ag
   long <- data.frame(age = rep(60:69, 25), year = rep(1991:2015, each = 10), deaths = as.vector(x$D),
                      exposure = as.vector(x$E))
   d <- mt_data(deaths = long, exposure = long)
-  fit <- mt_fit(lee_carter(family = "nb", dispersion = c(60, 65)), d)
+  fit <- mt_fit(lee_carter(family = "nb", dispersion = "age"), d)
   alpha <- fit$fits[[1]]$dispersion
-  expect_identical(alpha[1:5], rep(alpha[1], 5))
-  expect_identical(alpha[6:10], rep(alpha[6], 5))
-  expect_gt(alpha[6], 5 * alpha[1])
+  expect_length(alpha, 10)
+  expect_gt(mean(alpha[6:10]), 5 * mean(alpha[1:5]))
   n <- 4000
   fc <- mt_forecast(fit, h = 1, n_draws = n, seed = 1, predictive = TRUE)
   expect_equal(dim(fc$nb_size), c(10, 1, n))
@@ -302,7 +276,7 @@ test_that("predictive draws are negative binomial with the dispersion of each ag
   expect_lt(max(abs(apply(z, 1, stats::var) - 1)), 0.08)
   expect_lt(max(abs(rowMeans(z))), 0.08)
   # the same through a wrapper that adds the observation noise itself
-  fa <- mt_fit(anchored(lee_carter(family = "nb", dispersion = c(60, 65))), d)
+  fa <- mt_fit(anchored(lee_carter(family = "nb", dispersion = "age")), d)
   pa <- mt_forecast(fa, h = 1, n_draws = n, seed = 2, predictive = TRUE)
   ra <- mt_forecast(fa, h = 1, n_draws = n, seed = 2)$rates
   mu <- ra[, 1, 1, ] * E

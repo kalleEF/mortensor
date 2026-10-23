@@ -136,13 +136,6 @@
 #'   describe the central death rates, which are the draws without
 #'   `predictive`.
 #'
-#' A numeric `dispersion` gives the lower bounds of groups of ages that share
-#' one dispersion. Each age group of the data belongs to the dispersion group
-#' in which it starts (package-specific; the paper has one dispersion per
-#' single year of age). One group (`dispersion` at or below the first age)
-#' gives the estimates of `dispersion = "global"` (Delwarde, Denuit and
-#' Partrat 2007).
-#'
 #' Package-specific (reference unknown): as for one dispersion, the updates
 #' start from the Poisson estimates (Appendix 1 recommends them), and each
 #' `alpha[x]` is maximised by Newton steps on `log(alpha[x])` with step
@@ -153,8 +146,8 @@
 #' uncertainty of its drift, as all draws of `lee_carter()`. With `jump_off =
 #' "constrained"`, an age group without deaths in the last year starts from
 #' the rate of 0.5 deaths. Age groups without deaths in all years keep their
-#' constant rate and take the dispersion of their dispersion group (0 if no
-#' other age group of the group has deaths). As with one dispersion, a fit
+#' constant rate and have Poisson deaths (dispersion 0). As with one
+#' dispersion, a fit
 #' that does not converge fails; `jump_off = "constrained"` has no
 #' fallbacks either. Each `alpha[x]` is estimated from cells that also
 #' estimate `a[x]`, `b[x]` and `k`. Like other maximum likelihood estimates
@@ -240,8 +233,8 @@
 #'   binomial; Delwarde, Denuit and Partrat 2007).
 #' @param dispersion Dispersion of the negative binomial deaths (`family =
 #'   "nb"`): `"global"` (one for all ages; Delwarde, Denuit and Partrat
-#'   2007), `"age"` (one per age group of the data; Li, Hardy and Tan 2009)
-#'   or the lower bounds of groups of ages with one dispersion each.
+#'   2007) or `"age"` (one per age group of the data; Li, Hardy and Tan
+#'   2009).
 #' @param rotation Settings of the rotation, a named vector: life expectancy
 #'   at birth at which the rotation starts (`e0_start`, default 80) and is
 #'   complete (`e0_end`, default 102), and the exponent of the weights
@@ -324,7 +317,7 @@ lee_carter <- function(method = c("poisson", "svd"), jump_off = c("fitted", "obs
   jump_off <- match.arg(jump_off)
   adjust <- match.arg(adjust)
   family <- match.arg(family)
-  dispersion <- dispersion_setting(dispersion)
+  dispersion <- match.arg(dispersion)
   check_flag(choose_period, "choose_period")
   check_number(min_years, "min_years", lower = 5, integerish = TRUE)
   check_flag(rotate, "rotate")
@@ -345,14 +338,13 @@ lee_carter <- function(method = c("poisson", "svd"), jump_off = c("fitted", "obs
     mt_abort(paste("`jump_off = \"constrained\"` constrains the maximum likelihood fit (Li, Hardy and Tan 2009);",
                    "use it with `method = \"poisson\"` and without `choose_period`."), class = "argument")
   }
-  disp_label <- if (identical(dispersion, "age")) ", dispersion by age" else ", dispersion by age group"
   new_mt_spec("lee_carter", list(method = method, jump_off = jump_off, bootstrap = bootstrap, n_boot = n_boot,
                                  adjust = adjust, choose_period = choose_period, min_years = min_years,
                                  rotate = rotate, rotation = rotation, family = family, dispersion = dispersion),
               min_periods = if (choose_period) min_years else 5,
               label = paste0("Lee-Carter", if (method == "svd") sprintf(" (SVD, %s)", adjust) else "",
                              if (family == "nb") " (negative binomial" else "",
-                             if (family == "nb" && !identical(dispersion, "global")) disp_label else "",
+                             if (family == "nb" && dispersion == "age") ", dispersion by age" else "",
                              if (family == "nb") ")" else "",
                              if (rotate) rotation_label(rotation) else "",
                              if (choose_period) ", chosen period" else "",
@@ -361,35 +353,6 @@ lee_carter <- function(method = c("poisson", "svd"), jump_off = c("fitted", "obs
                              if (bootstrap) ", bootstrap" else ""))
 }
 
-# `dispersion` of lee_carter(): "global", "age" or increasing lower bounds of
-# groups of ages
-dispersion_setting <- function(dispersion) {
-  if (is.character(dispersion)) {
-    if (identical(dispersion, c("global", "age"))) return("global")
-    check_choice(dispersion, c("global", "age"), "dispersion")
-    return(dispersion)
-  }
-  if (!is.numeric(dispersion) || !length(dispersion) || anyNA(dispersion) || any(!is.finite(dispersion)) ||
-      is.unsorted(dispersion, strictly = TRUE)) {
-    mt_abort("`dispersion` must be \"global\", \"age\" or increasing lower bounds of groups of ages.",
-             class = "argument", call = NULL)
-  }
-  as.numeric(dispersion)
-}
-
-# Dispersion group (1, 2, ...) of each age group of the data: one per age
-# group with "age"; with lower bounds, the group in which the age group
-# starts; NULL for one dispersion ("global")
-lc_disp_groups <- function(dispersion, ages) {
-  if (is.null(dispersion) || identical(dispersion, "global")) return(NULL)
-  if (identical(dispersion, "age")) return(seq_along(ages$lower))
-  g <- findInterval(ages$lower, dispersion)
-  if (any(g == 0)) {
-    mt_abort(sprintf("The ages start at %s, below the first lower bound of `dispersion` (%s).",
-                     format(ages$lower[1]), format(dispersion[1])), class = "model_data", call = NULL)
-  }
-  match(g, unique(g))
-}
 
 # Settings of the rotation: defaults completed by the elements given
 rotation_settings <- function(rotation) {
@@ -421,9 +384,10 @@ fit_model.mt_spec_lee_carter <- function(spec, D, E, ages, periods, ...) {
   zero <- rowSums(D) == 0
   if (sum(!zero) < 2) mt_abort("Fewer than two age groups with deaths.", class = "model_fit")
   fallback <- character()
-  # dispersion group of each age group (NULL: one dispersion) and the
-  # forecast origin correction (Li, Hardy and Tan 2009)
-  groups <- lc_disp_groups(p$dispersion, ages)
+  # dispersion group of each age group, one per age group with a dispersion
+  # by age (NULL: one dispersion), and the forecast origin correction (Li,
+  # Hardy and Tan 2009)
+  groups <- if (identical(p$dispersion, "age")) seq_along(ages$lower)
   constrained <- identical(p$jump_off, "constrained")
   # Poisson estimates; where the Poisson likelihood has no finite maximum
   # (very sparse counts) the package's safeguards: a ridge penalty on b, then
@@ -471,12 +435,9 @@ fit_model.mt_spec_lee_carter <- function(spec, D, E, ages, periods, ...) {
     e$a <- a
     e$b <- b
     if (!is.null(e$age_nb_size)) {
-      # dispersion of their dispersion group, 0 (Poisson) if no age group of
-      # it has deaths
+      # dispersion 0 (Poisson) for the age groups without deaths
       d <- numeric(nrow(D))
       d[!zero] <- e$dispersion
-      d[zero] <- e$dispersion[match(groups[zero], groups[!zero])]
-      d[is.na(d)] <- 0
       e$dispersion <- d
       e$age_nb_size <- 1 / d
     }

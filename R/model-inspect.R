@@ -521,8 +521,7 @@ model_assumptions <- function(spec) {
            "log m(x,t) = a(x) + b(x) k(t), estimated by",
            if (identical(p$family, "nb") && !identical(p$dispersion %||% "global", "global")) {
              paste("negative binomial maximum likelihood (Li, Hardy and Tan 2009): deaths with mean mu and",
-                   "variance mu + alpha(x) mu^2, one dispersion alpha(x) per",
-                   if (identical(p$dispersion, "age")) "age group." else "group of ages.")
+                   "variance mu + alpha(x) mu^2, one dispersion alpha(x) per age group.")
            } else if (identical(p$family, "nb")) {
              paste("negative binomial maximum likelihood (Delwarde, Denuit and Partrat 2007): deaths with mean mu",
                    "and variance mu + phi mu^2, one dispersion phi for all ages and years.")

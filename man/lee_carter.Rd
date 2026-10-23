@@ -55,8 +55,8 @@ complete (\code{e0_end}, default 102), and the exponent of the weights
 binomial; Delwarde, Denuit and Partrat 2007).}
 
 \item{dispersion}{Dispersion of the negative binomial deaths (\code{family = "nb"}): \code{"global"} (one for all ages; Delwarde, Denuit and Partrat
-2007), \code{"age"} (one per age group of the data; Li, Hardy and Tan 2009)
-or the lower bounds of groups of ages with one dispersion each.}
+2007) or \code{"age"} (one per age group of the data; Li, Hardy and Tan
+2009).}
 }
 \value{
 A model specification.
@@ -195,13 +195,6 @@ describe the central death rates, which are the draws without
 \code{predictive}.
 }
 
-A numeric \code{dispersion} gives the lower bounds of groups of ages that share
-one dispersion. Each age group of the data belongs to the dispersion group
-in which it starts (package-specific; the paper has one dispersion per
-single year of age). One group (\code{dispersion} at or below the first age)
-gives the estimates of \code{dispersion = "global"} (Delwarde, Denuit and
-Partrat 2007).
-
 Package-specific (reference unknown): as for one dispersion, the updates
 start from the Poisson estimates (Appendix 1 recommends them), and each
 \code{alpha[x]} is maximised by Newton steps on \code{log(alpha[x])} with step
@@ -211,8 +204,8 @@ an ARIMA model to \code{k} without naming the model it chose; here \code{k} foll
 a random walk with drift, and the draws of each bootstrap fit include the
 uncertainty of its drift, as all draws of \code{lee_carter()}. With \code{jump_off = "constrained"}, an age group without deaths in the last year starts from
 the rate of 0.5 deaths. Age groups without deaths in all years keep their
-constant rate and take the dispersion of their dispersion group (0 if no
-other age group of the group has deaths). As with one dispersion, a fit
+constant rate and have Poisson deaths (dispersion 0). As with one
+dispersion, a fit
 that does not converge fails; \code{jump_off = "constrained"} has no
 fallbacks either. Each \code{alpha[x]} is estimated from cells that also
 estimate \code{a[x]}, \code{b[x]} and \code{k}. Like other maximum likelihood estimates
