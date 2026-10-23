@@ -127,7 +127,8 @@ test_that("tied template values are ranked at random", {
   expect_equal(e1$info$tied, 1)
   expect_false(identical(e1$arr, e2$arr))
   for (er in list(e1, e2)) {
-    up <- (er$info$template[1, as.character(er$info$draw_year)] == 1) + 0
+    # template values are differences of log(exp(y)), whose rounding depends on the maths library: 1 up to rounding
+    up <- (abs(er$info$template[1, as.character(er$info$draw_year)] - 1) < 1e-12) + 0
     for (s in 1:2) {
       v <- er$arr[1, 1, s, ]
       expect_true(all(outer(v, v, ">=")[outer(up, up, ">")]))
@@ -192,7 +193,7 @@ test_that("bottom-up with \"empirical\" keeps every stratum's draws and scores o
     expect_lt(coherence_gap(f1, h), 1e-8)
   }
   expect_identical(f1$empirical$dates, 14L)
-  # backtests: identical scores of every bottom stratum, other scores of the totals
+  # backtests: the scores of every bottom stratum are those of "none", other scores of the totals
   bt0 <- mt_backtest(reconciled(lee_carter(), h, method = "bottom_up"), xa, origins = 2010, h = 3, n_draws = 40)
   bt1 <- mt_backtest(reconciled(lee_carter(), h, method = "bottom_up", dependence = "empirical"), xa, origins = 2010,
                      h = 3, n_draws = 40)
@@ -200,8 +201,9 @@ test_that("bottom-up with \"empirical\" keeps every stratum's draws and scores o
   key <- c("label", "age_lo", "period")
   s0 <- bt0[label %in% lb][order(label, age_lo, period)]
   s1 <- bt1[label %in% lb][order(label, age_lo, period)]
-  expect_identical(s1[, c(key, "crps", "cov50", "cov95"), with = FALSE], s0[, c(key, "crps", "cov50", "cov95"),
-                                                                             with = FALSE])
+  expect_identical(s1[, c(key, "cov50", "cov95"), with = FALSE], s0[, c(key, "cov50", "cov95"), with = FALSE])
+  # the CRPS sums the draws of a cell in their order, which the shuffle changes: equal up to rounding
+  expect_equal(s1$crps, s0$crps, tolerance = 1e-12)
   expect_false(isTRUE(all.equal(bt1[label == "both.all.all"]$crps, bt0[label == "both.all.all"]$crps)))
   expect_match(mortensor:::model_assumptions(emp$spec), "stratum")
 })
