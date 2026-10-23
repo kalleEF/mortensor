@@ -21,6 +21,11 @@
 #'   `order_K`, `arima_K`, `sd_K`) and per stratum `a`, `b`, `k` and the
 #'   ARIMA model of `k`. [coda_causes()]: per group, as [coda()], with parts
 #'   by age and cause (`b1`, `k1`, `b2`, `k2`, ... with several components);
+#'   with `individual = TRUE` also the individual components of each cause
+#'   (`b_<cause>`, `k_<cause>`, `order_k_<cause>`, ...) and the explained
+#'   variation of each cause (`explained_joint`, `explained_individual`),
+#'   and with weights the weights of the parts (`w_part`) and years
+#'   (`w_time`);
 #' * [coda_multiway()]: the common age patterns `b`, time indexes `k` (with
 #'   `order_k`, `arima_k`, `sd_k`), population markers `gamma` and core `g`
 #'   (index `p,q,r`), numbered with several components, and the share of

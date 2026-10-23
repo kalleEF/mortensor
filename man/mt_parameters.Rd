@@ -37,6 +37,11 @@ model gives per group of \code{common_by} the common \code{a}, \code{B}, \code{K
 \code{order_K}, \code{arima_K}, \code{sd_K}) and per stratum \code{a}, \code{b}, \code{k} and the
 ARIMA model of \code{k}. \code{\link[=coda_causes]{coda_causes()}}: per group, as \code{\link[=coda]{coda()}}, with parts
 by age and cause (\code{b1}, \code{k1}, \code{b2}, \code{k2}, ... with several components);
+with \code{individual = TRUE} also the individual components of each cause
+(\verb{b_<cause>}, \verb{k_<cause>}, \verb{order_k_<cause>}, ...) and the explained
+variation of each cause (\code{explained_joint}, \code{explained_individual}),
+and with weights the weights of the parts (\code{w_part}) and years
+(\code{w_time});
 \item \code{\link[=coda_multiway]{coda_multiway()}}: the common age patterns \code{b}, time indexes \code{k} (with
 \code{order_k}, \code{arima_k}, \code{sd_k}), population markers \code{gamma} and core \code{g}
 (index \verb{p,q,r}), numbered with several components, and the share of
