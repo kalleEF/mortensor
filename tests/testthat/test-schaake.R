@@ -241,6 +241,8 @@ test_that("predictive draws after the Schaake shuffle take the noise of the base
   bw <- mortensor:::with_seed(1, mt_forecast(mortensor:::unwrap_fit(fw, "mt_fit_reconciled"), h = 2, n_draws = 40))
   s <- b[3]
   for (a in c(2, 8)) for (t in 1:2) {
-    expect_identical(sum(pw$rates[a, t, s, ] == uw$rates[a, t, s, ]), sum(bw$component == 2L))
+    # predictive rates are multiplied by exposures and divided by them again: equal up to rounding without noise
+    same <- abs(pw$rates[a, t, s, ] / uw$rates[a, t, s, ] - 1) < 1e-12
+    expect_identical(sum(same), sum(bw$component == 2L))
   }
 })
