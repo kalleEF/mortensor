@@ -1,9 +1,11 @@
 # Compositional data (CoDa) models of life-table deaths: coda() and
 # coda_causes(). Written from Bergeron-Boucher, Canudas-Romo, Oeppen and
-# Vaupel (2017) and Oeppen (2008); the numerical core is in
-# model-coda-core.R. Earlier versions adapted MortalityForecast 0.8.1 (GPL-3,
-# Pascariu and Bergeron-Boucher); its random walk with drift for the index
-# and AR(1) deviations remain available through `order` and `order_dev`.
+# Vaupel (2017) and Oeppen (2008), the weights and individual components of
+# coda_causes() from Kjaergaard, Ergemen, Kallestrup-Lamb, Oeppen and
+# Lindahl-Jacobsen (2019); the numerical core is in model-coda-core.R.
+# Earlier versions adapted MortalityForecast 0.8.1 (GPL-3, Pascariu and
+# Bergeron-Boucher); its random walk with drift for the index and AR(1)
+# deviations remain available through `order` and `order_dev`.
 
 #' Compositional data (CoDa) model of life-table deaths
 #'
@@ -357,8 +359,11 @@ coda_simulate_coherent <- function(fit, h, n_draws) {
 #' `coda_causes()` forecasts death rates by cause with the multiple-decrement
 #' form of the compositional Lee-Carter model, which Oeppen (2008) proposed
 #' and tested on Japanese causes of death. Causes add up to all causes in
-#' every draw. The model is experimental. Status: published, with the
-#' deviations listed below; section numbers refer to Oeppen (2008).
+#' every draw. The options `weights`, `rho` and `individual` add the
+#' extensions of Kjærgaard, Ergemen, Kallestrup-Lamb, Oeppen and
+#' Lindahl-Jacobsen (2019). The model is experimental. Status: published,
+#' with the deviations listed below; section numbers refer to Oeppen (2008),
+#' and to Kjærgaard et al. (2019) for the extensions.
 #'
 #' **Model (Sections 3, 6 and 8.3).** In each group (the strata that differ
 #' only in `var`, for example one group per sex):
@@ -416,11 +421,77 @@ coda_simulate_coherent <- function(fit, h, n_draws) {
 #' shares of the draw, so that the causes also add up to all causes in
 #' predictive draws; no other observation noise is added (package-specific).
 #'
-#' The extensions of Kjærgaard, Ergemen, Kallestrup-Lamb, Oeppen and
-#' Lindahl-Jacobsen (2019) are not implemented, nor is the alpha-transformation
-#' that Dong, Shang, Hui and Bruhn (2025) use in place of the clr for
-#' compositions of causes with zero counts. Compare the model with
-#' [reconciled()] separate models in a backtest before using it.
+#' **Weights and individual components (Kjærgaard et al. 2019, Section
+#' 2.4).** Kjærgaard et al. call the model above CT-CoDA and extend it to
+#' the two-step model 2S-CoDA with two elements, weights of the parts and
+#' years and cause-specific components. They are options here:
+#'
+#' * `weights = "deaths"` weights each part (age by cause) by its temporal
+#'   mean of the life-table deaths, `w[x, i] = dbar[x, i] / sum(dbar)` (eq.
+#'   10), so that a large cause counts more than a small one and splitting a
+#'   cause does not double its weight;
+#' * `rho` weights the years `t = 1, ..., T` by `rho (1 - rho)^(T - t)` (eq.
+#'   11, after Hyndman, Booth and Yasmeen 2013): the last year gets the weight
+#'   `rho`, earlier years less. The paper uses `rho = 0.1`, chosen by
+#'   cross-validation (Section 2.8). Eq. (11) states `t = 1, ..., T - 1`; the
+#'   text gives the last year the weight `rho`, which the package follows;
+#' * with weights, the components are the first ones of a generalized
+#'   singular value decomposition (van Loan 1976) with these weights of the
+#'   parts and years: they minimise the sum over parts and years of
+#'   `w[x, i] w[t]` times the squared residual of eq. (9). The centre `a` is
+#'   the unweighted geometric mean, as in CT-CoDA (Section 2.4: 2S-CoDA
+#'   "follows the same first steps"). Loadings have unit length; the index
+#'   of each year is the weighted least-squares fit of that year;
+#' * `individual = TRUE` adds the cause-specific components of eq. (12): the
+#'   residuals of each cause after the joint components (`rank` of them; the
+#'   paper uses one) get the first component of their own decomposition,
+#'   `b_i[x] k_i[t]`. This follows the joint and individual components of Lock
+#'   et al. (2013) in two steps without iteration, as in the paper. The paper
+#'   names an SVD for this step and does not say whether the weights apply;
+#'   here the same weights apply, so that both steps minimise the same
+#'   weighted sum of squares (package-specific, reference unknown).
+#'
+#' `coda_causes(weights = "deaths", rho = 0.1, individual = TRUE)` is
+#' 2S-CoDA; with `jump_off = "fitted"`, forecasts start from the model, as in
+#' eq. (7) of the paper. `rank = 3` is the paper's CT-CoDA (Section 2.8).
+#' Every index, joint or individual, has its own ARIMA model of `order` and
+#' `drift`, independent of the others. The paper selects the order of
+#' integration of each index by the augmented Dickey-Fuller test and the ARMA
+#' orders by AIC, with a drift for the rank-one indexes (Section 2.8); the
+#' settings of the test are not given, and the package uses `order`. Further
+#' choices of the package (reference unknown): in the clr deaths, the
+#' individual loadings are centred over all parts, which leaves the closed
+#' composition unchanged; the log rate of an open age interval is regressed
+#' on the joint indexes only, weighted by the weights of the years; a
+#' residual cause gets an individual component, the survivors of a closed
+#' age range none. The paper gives point forecasts only. Draws refit the
+#' same decomposition with the same weights to bootstrap samples. With
+#' weights of the parts, each cell takes a residual of its own part: pooled
+#' resampling (Appendix B of Bergeron-Boucher et al. 2017) would move the
+#' large residuals of small, down-weighted parts into the parts that
+#' determine the weighted fit, and on [mt_example_causes()] it about doubled
+#' the innovation standard deviation of the refitted index. With weights of
+#' the years, the year of each residual is drawn with probability
+#' proportional to its weight. [mt_parameters()]
+#' gives the individual loadings and indexes as `b_<cause>` and `k_<cause>`
+#' with their ARIMA models and the weighted share of the residual variation of
+#' the cause that they explain (`explained_<cause>`), the weights `w_part` and
+#' `w_time`, and the share of the variation of each cause explained by the
+#' joint and the individual components (`explained_joint`,
+#' `explained_individual`; squared Frobenius norms of the centred clr deaths
+#' of the cause, Section 3.3.1 and Fig. 4).
+#'
+#' The paper replaces zero counts by half a death; zeros here are replaced
+#' multiplicatively, as above. The paper's third model, VECM-CoDA (Section
+#' 2.5: one SVD per cause and a cointegrated vector error correction model
+#' of the cause indexes, with the Johansen test), is not implemented. The
+#' paper's data (France, Institut National d'Etudes Démographiques,
+#' 1955-2008; the Netherlands, Statistics Netherlands, 1958-2014; 5-year age
+#' groups from 25) are not available to the package, so its numbers (Table
+#' 1) are not reproduced. The alpha-transformation that Dong, Shang, Hui and Bruhn
+#' (2025) use in place of the clr for compositions of causes with zero
+#' counts is not implemented. Compare the model with [reconciled()] separate
+#' models in a backtest before using it.
 #'
 #' @param var Stratum variable with the causes.
 #' @param total_level Level of `var` for all causes.
@@ -433,6 +504,14 @@ coda_simulate_coherent <- function(fit, h, n_draws) {
 #' @param rank Number of components (1 by default; Oeppen 2008 used 2 for
 #'   Japan).
 #' @param order,drift ARIMA order and drift of each index, as in [coda()].
+#' @param weights Weights of the parts (ages by cause) in the decomposition:
+#'   `"equal"` (Oeppen 2008) or `"deaths"`, their mean life-table deaths
+#'   (Kjærgaard et al. 2019, eq. 10).
+#' @param rho `NULL` (equal weights of the years) or the weight of the last
+#'   year, a number between 0 and 1: years weighted by `rho (1 - rho)^(T -
+#'   t)` (Kjærgaard et al. 2019, eq. 11; they use 0.1).
+#' @param individual Add one individual component per cause to the joint
+#'   components (Kjærgaard et al. 2019, eq. 12).
 #' @return A model specification.
 #' @references
 #' Oeppen J (2008). Coherent forecasting of multiple-decrement life tables:
@@ -448,6 +527,17 @@ coda_simulate_coherent <- function(fit, h, n_draws) {
 #' the case of cancer deaths. *Journal of the Royal Statistical Society
 #' Series C* 68(5): 1351-1370. \doi{10.1111/rssc.12357}
 #'
+#' van Loan CF (1976). Generalizing the singular value decomposition. *SIAM
+#' Journal on Numerical Analysis* 13(1): 76-83. \doi{10.1137/0713009}
+#'
+#' Hyndman RJ, Booth H, Yasmeen F (2013). Coherent mortality forecasting: the
+#' product-ratio method with functional time series models. *Demography*
+#' 50(1): 261-283. \doi{10.1007/s13524-012-0145-5}
+#'
+#' Lock EF, Hoadley KA, Marron JS, Nobel AB (2013). Joint and individual
+#' variation explained (JIVE) for integrated analysis of multiple data types.
+#' *Annals of Applied Statistics* 7(1): 523-542. \doi{10.1214/12-AOAS597}
+#'
 #' Dong Z, Shang HL, Hui F, Bruhn A (2025). A compositional approach to
 #' modeling cause-specific mortality with zero counts. *Annals of Actuarial
 #' Science* 19(3): 416-441. \doi{10.1017/S1748499524000320}
@@ -456,10 +546,16 @@ coda_simulate_coherent <- function(fit, h, n_draws) {
 #' x <- mt_example_causes(years = 2005:2019)
 #' fit <- mt_fit(coda_causes(), x)
 #' fc <- mt_forecast(fit, h = 5, n_draws = 50, seed = 1)
+#' # 2S-CoDA of Kjaergaard et al. (2019): weights and individual components
+#' fit2 <- mt_fit(coda_causes(weights = "deaths", rho = 0.1, individual = TRUE), x)
+#' p <- mt_parameters(fit2)
+#' p[parameter %in% c("explained_joint", "explained_individual")]
 #' @export
 coda_causes <- function(var = "cause", total_level = "all", jump_off = c("observed", "fitted"), residual = "auto",
-                        rank = 1, order = c(0, 1, 1), drift = TRUE) {
+                        rank = 1, order = c(0, 1, 1), drift = TRUE, weights = c("equal", "deaths"), rho = NULL,
+                        individual = FALSE) {
   jump_off <- match.arg(jump_off)
+  weights <- match.arg(weights)
   if (!is.character(var) || length(var) != 1L) mt_abort("`var` must be one stratum variable.", class = "argument")
   if (length(total_level) != 1L) mt_abort("`total_level` must be one level.", class = "argument")
   if (!identical(residual, "auto") && !(is.logical(residual) && length(residual) == 1L && !is.na(residual))) {
@@ -467,11 +563,19 @@ coda_causes <- function(var = "cause", total_level = "all", jump_off = c("observ
   }
   check_number(rank, "rank", lower = 1, upper = 5, integerish = TRUE)
   check_flag(drift, "drift")
+  check_flag(individual, "individual")
+  if (!is.null(rho) && !(is.numeric(rho) && length(rho) == 1L && !is.na(rho) && rho > 0 && rho < 1)) {
+    mt_abort("`rho` must be NULL or a single number strictly between 0 and 1.", class = "argument")
+  }
   order <- check_arima_order(order, "order")
   ts_label <- c(if (rank > 1) sprintf("rank %d", as.integer(rank)),
-                if (!identical(order, c(0, 1, 1)) || !drift) arima_label(order, drift))
+                if (!identical(order, c(0, 1, 1)) || !drift) arima_label(order, drift),
+                if (weights == "deaths") "parts weighted by deaths",
+                if (!is.null(rho)) sprintf("years weighted (rho = %s)", format(rho)),
+                if (individual) "joint and individual components")
   new_mt_spec("coda_causes", list(var = var, total_level = total_level, jump_off = jump_off, residual = residual,
-                                  rank = as.integer(rank), order = order, drift = drift),
+                                  rank = as.integer(rank), order = order, drift = drift, weights = weights,
+                                  rho = rho, individual = individual),
               joint = TRUE, min_periods = 6,
               label = paste0("CoDa causes (multiple decrement)",
                              if (length(ts_label)) paste0(", ", paste(ts_label, collapse = ", ")),
@@ -533,8 +637,16 @@ fit_model.mt_spec_coda_causes <- function(spec, D, E, ages, periods, strata = NU
     Dg <- matrix(aperm(m * as.vector(Et), c(1, 3, 2)), na * nc, nt)
     Dg <- coda_replace_zeros(Dg, sprintf("the causes of group %s", groups[g]))
     m <- aperm(array(Dg, c(na, nc, nt)), c(1, 3, 2)) / as.vector(Et)
-    out <- coda_core(md_forward(m, ages), rank, p$order %||% c(0, 1, 1), p$drift %||% TRUE)
-    if (open) out$open <- coda_open_fit(log(rowSums(m, dims = 2)[na, ]), out$k)
+    Z <- md_forward(m, ages)
+    w <- md_weights(Z, p$weights %||% "equal", p$rho)
+    rows <- if (isTRUE(p$individual)) unname(split(seq_len(na * nc), rep(seq_len(nc), each = na)))
+    out <- coda_core(Z, rank, p$order %||% c(0, 1, 1), p$drift %||% TRUE, w_part = w$part, w_time = w$time,
+                     rows = rows)
+    if (!is.null(rows)) {
+      out$cause_labels <- c(causes, if (use_residual) "residual")
+      out$explained_causes <- md_explained(Z - out$alpha, out, rows)
+    }
+    if (open) out$open <- coda_open_core(log(rowSums(m, dims = 2)[na, ]), out)
     out$jump_off <- p$jump_off
     R <- md_rates(out$alpha + out$b %*% t(out$k), layout, nc, coda_open_fitted(out$open, out$k))
     for (j in seq_len(K)) fitted[, , part_id[g, j]] <<- R[, , j]
@@ -651,6 +763,40 @@ md_rates <- function(Z, layout, nc, open_log = NULL) {
   out
 }
 
+# Weights of the two-step model (Kjaergaard et al. 2019, Section 2.4): of the
+# parts, the temporal mean of the life-table deaths of each part over the
+# sum of these means (eq. 10, `weights = "deaths"`); of the years t = 1..T,
+# rho (1 - rho)^(T - t) (eq. 11). NULL for equal weights.
+md_weights <- function(Z, weights = "equal", rho = NULL) {
+  part <- NULL
+  if (identical(weights, "deaths")) {
+    P <- exp(Z)
+    dbar <- rowMeans(sweep(P, 2, colSums(P), "/"))
+    part <- dbar / sum(dbar)
+  }
+  time <- if (!is.null(rho)) rho * (1 - rho)^(ncol(Z) - seq_len(ncol(Z)))
+  list(part = part, time = time)
+}
+
+# Variation of each cause explained by the joint and the individual
+# components of a two-step fit (Kjaergaard et al. 2019, Section 3.3.1, Fig.
+# 4): squared Frobenius norms of the rows of the cause of the centred clr
+# matrix H, of its residuals after the joint components and after both; a
+# matrix [cause, joint / individual / residual] whose rows sum to 1
+md_explained <- function(H, core, rows) {
+  nj <- core$n_joint
+  J <- core$b[, seq_len(nj), drop = FALSE] %*% t(core$k[, seq_len(nj), drop = FALSE])
+  out <- t(vapply(seq_along(rows), function(i) {
+    ri <- rows[[i]]
+    E <- H[ri, , drop = FALSE] - J[ri, , drop = FALSE]
+    E2 <- E - outer(core$b_individual[ri, i], core$k[, nj + i])
+    tot <- sum(H[ri, ]^2)
+    c(1 - sum(E^2) / tot, (sum(E^2) - sum(E2^2)) / tot, sum(E2^2) / tot)
+  }, numeric(3)))
+  dimnames(out) <- list(core$cause_labels, c("joint", "individual", "residual"))
+  out
+}
+
 # All-cause rates as the sum of the cause rates [age, column, cause]
 md_total <- function(R) {
   tot <- R[, , 1]
@@ -671,23 +817,38 @@ coda_parameters <- function(fit, sp = fit$spec) {
     data.table(stratum = stratum, parameter = parameter, index = as.character(index), value = as.numeric(value))
   }
   centre <- function(alpha) exp(alpha) / sum(exp(alpha))
+  index_rows <- function(who, x, j, b_name, idx, suffix, parts, b) {
+    tsj <- x$ts[[j]]
+    cf <- tsj$coef
+    list(row(who, paste0(b_name, suffix), parts, b),
+         row(who, paste0(idx, suffix), yrs, x$k[, j]),
+         row(who, paste0("order_", idx, suffix), c("p", "d", "q"), tsj$order),
+         if (length(cf)) row(who, paste0("arima_", idx, suffix), names(cf), cf),
+         row(who, paste0("sd_", idx, suffix), "", tsj$sigma),
+         row(who, paste0("explained", suffix), "", x$explained[j]))
+  }
   one <- function(who, x, parts, idx = "k") {
     b_name <- if (idx == "K") "B" else "b"
-    r <- ncol(x$k)
+    r <- x$n_joint %||% ncol(x$k)
     suffix <- if (r > 1) seq_len(r) else ""
     out <- list(row(who, "a", parts, centre(x$alpha)))
-    for (j in seq_len(r)) {
-      tsj <- x$ts[[j]]
-      cf <- tsj$coef
-      out <- c(out, list(row(who, paste0(b_name, suffix[j]), parts, x$b[, j]),
-                         row(who, paste0(idx, suffix[j]), yrs, x$k[, j]),
-                         row(who, paste0("order_", idx, suffix[j]), c("p", "d", "q"), tsj$order),
-                         if (length(cf)) row(who, paste0("arima_", idx, suffix[j]), names(cf), cf),
-                         row(who, paste0("sd_", idx, suffix[j]), "", tsj$sigma),
-                         row(who, paste0("explained", suffix[j]), "", x$explained[j])))
+    for (j in seq_len(r)) out <- c(out, index_rows(who, x, j, b_name, idx, suffix[j], parts, x$b[, j]))
+    # individual components of the two-step model: loadings on the parts of
+    # each cause (before centring), indexes and their ARIMA models
+    for (i in seq_along(x$cause_labels)) {
+      ri <- x$decomp$rows[[i]]
+      out <- c(out, index_rows(who, x, r + i, b_name, idx, paste0("_", x$cause_labels[i]), parts[ri],
+                               x$b_individual[ri, i]))
     }
+    if (!is.null(x$explained_causes)) {
+      out <- c(out, list(row(who, "explained_joint", x$cause_labels, x$explained_causes[, "joint"]),
+                         row(who, "explained_individual", x$cause_labels, x$explained_causes[, "individual"])))
+    }
+    if (!is.null(x$decomp$w_part)) out <- c(out, list(row(who, "w_part", parts, x$decomp$w_part)))
+    if (!is.null(x$decomp$w_time)) out <- c(out, list(row(who, "w_time", yrs, x$decomp$w_time)))
     if (!is.null(x$open)) {
-      out <- c(out, list(row(who, "a_open", "", x$open$a), row(who, paste0(b_name, "_open"), suffix, x$open$b),
+      out <- c(out, list(row(who, "a_open", "", x$open$a),
+                         row(who, paste0(b_name, "_open"), suffix, x$open$b[seq_len(r)]),
                          row(who, "sd_open", "", x$open$sd)))
     }
     if (!is.null(x$kannisto)) {
@@ -720,12 +881,29 @@ coda_assumptions <- function(spec) {
                  "forecast in the first forecast year.")
   ts <- arima_label(p$order %||% c(0, 1, 1), p$drift %||% TRUE)
   if (inherits(spec, "mt_spec_coda_causes")) {
-    return(paste("Multiple-decrement CoDa model (Oeppen 2008; experimental): per group, clr of the life-table",
-                 sprintf("deaths by age and cause = a + sum of %d component(s) b k(t) of the SVD; k(t) %s.",
-                         p$rank %||% 1L, ts),
+    two_step <- !identical(p$weights %||% "equal", "equal") || !is.null(p$rho) || isTRUE(p$individual)
+    if (!two_step) {
+      return(paste("Multiple-decrement CoDa model (Oeppen 2008; experimental): per group, clr of the life-table",
+                   sprintf("deaths by age and cause = a + sum of %d component(s) b k(t) of the SVD; k(t) %s.",
+                           p$rank %||% 1L, ts),
+                   "Causes add up to all causes in every draw; predictive draws split Poisson all-cause deaths",
+                   "multinomially.", draws, "Jump-off:", p$jump_off, "deaths. The log rate of an open age interval",
+                   "is regressed on the indexes."))
+    }
+    wt <- c(if (identical(p$weights, "deaths")) "parts (age by cause) weighted by their mean life-table deaths",
+            if (!is.null(p$rho)) sprintf("years weighted by rho (1 - rho)^(T - t), rho = %s", format(p$rho)))
+    return(paste("Multiple-decrement CoDa model with the extensions of Kjaergaard et al. (2019; experimental):",
+                 "per group, clr of the life-table deaths by age and cause = a +",
+                 sprintf("%d joint component(s) b k(t)", p$rank %||% 1L),
+                 if (isTRUE(p$individual)) "+ per cause one individual component b_i k_i(t)" else "",
+                 paste0(if (length(wt)) paste0("by generalized SVD (", paste(wt, collapse = "; "), ")") else "by SVD",
+                        sprintf("; each index %s.", ts)),
                  "Causes add up to all causes in every draw; predictive draws split Poisson all-cause deaths",
-                 "multinomially.", draws, "Jump-off:", p$jump_off, "deaths. The log rate of an open age interval",
-                 "is regressed on the indexes."))
+                 "multinomially. Draws: residuals resampled (with weights, by part and with year probabilities",
+                 "proportional to the weights), the decomposition and the ARIMA models estimated again, index",
+                 "paths with resampled innovations; centred on the point forecast in the first forecast year.",
+                 "Jump-off:", p$jump_off, "deaths. The log rate of an open age interval is regressed on the joint",
+                 "indexes."))
   }
   old <- switch(p$open %||% "auto",
                 regression = "The log rate of an open age interval is regressed on the indexes.",
