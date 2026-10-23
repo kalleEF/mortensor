@@ -18,7 +18,8 @@ anchored(
 \item{to}{\code{"observed"} or \code{"smoothed"}.}
 
 \item{years}{Number of last training years whose deaths define the
-offset (default 1, the last training year).}
+offset (default 1, the last training year; see above for the averages
+of Stoeldraijer et al. 2018).}
 
 \item{decay}{Years over which the offset fades out (default \code{Inf}:
 constant).}
@@ -68,13 +69,49 @@ models the bottom strata are anchored and the aggregates recomputed, so
 the draws stay coherent. \code{\link[=mt_jump_off]{mt_jump_off()}} reports the step between the
 last observed or fitted year and the first forecast year.
 
+\strong{Jump-off options of Stoeldraijer et al. (2018).} The jump-off rates
+are the rates of the last year of the fitting period, the jump-off year.
+Stoeldraijer et al. compare six options for the Lee-Carter model (their
+names in quotes):
+\itemize{
+\item "model values", the fitted rates of the jump-off year (Lee and Carter
+1992): the model itself, without \code{anchored()} (or \code{decay = 0});
+\item "last observed values" (Lee and Miller 2001): \code{anchored()} with its
+defaults, for any model; for Lee-Carter also \code{lee_carter(jump_off = "observed")};
+\item "average n years observed" (\code{n} = 2 to 5): \code{lee_carter(jump_off = "observed", jump_off_years = n)}, as the paper defines it: the mean of
+the observed log rates of the last \code{n} years, with the index 0 at the
+midpoint of these years. \code{anchored(years = n)} is a package-specific
+variant for any model (reference unknown): its offset is the log ratio
+of the observed to the fitted deaths of these years, so the forecast
+also keeps the change of the fitted rates from these years to the last
+year.
+}
+
+They call a forecast accurate if its out-of-sample errors in historical
+data are small (mean absolute error of the forecast life expectancy at
+65 one and five years ahead), and robust if it changes little when one
+more year of data is added (standard deviation of the changes of the
+forecast life expectancy at 65 in 2020 between successive fitting
+periods). In eight Western European countries the last observed values
+were the most accurate for most countries and an average of observed
+years the most robust; the more years averaged, the more robust and the
+less accurate the forecast. The model values were the most accurate where
+the model fitted the last years well. They recommend moving from the most
+accurate jump-off in the first forecast year to the most robust one by
+the fifth (Appendix 6, without a formula for the weights). Where the
+last observed values are the most accurate and the model values the most
+robust, \code{anchored(decay = 4)} does this: the weight of the observed
+offset falls linearly from 1 in the first forecast year to 0 in the fifth
+(the linear weights are package-specific). The filtered jump-off of De Jong
+and Tickle (2006) is \code{lee_carter(jump_off = "filtered")}.
+
 \strong{Package-specific options} (reference unknown). Starting from the
 observed rates of one year carries their random variation into every
 forecast year, which matters where deaths are few. The other settings
-are package-specific: averaging the offset over the last \code{years} years,
-fading it out over \code{decay} years (forecasts more than \code{decay} years ahead
-are then those of the model itself, and during the fade the offsets add
-a small apparent trend) and shrinking it (\code{shrink = TRUE}). The shrinkage
+are package-specific: averaging the offset over the last \code{years} years
+(see above), fading it out over \code{decay} years (forecasts more than
+\code{decay} years ahead are then those of the model itself, and during the
+fade the offsets add a small apparent trend) and shrinking it (\code{shrink = TRUE}). The shrinkage
 is empirical Bayes within each stratum: the offset \eqn{r_x} of age
 \eqn{x} has the approximate Poisson sampling variance \eqn{v_x = 1/D_x},
 where \eqn{D_x} is the number of deaths in the last \code{years} (at least
@@ -99,8 +136,20 @@ mt_jump_off(fc)
 fit3 <- mt_fit(anchored(lee_carter(), years = 3, decay = 10, shrink = TRUE), x)
 }
 \references{
+Stoeldraijer L, van Duin C, van Wissen L, Janssen F (2018). Comparing
+strategies for matching mortality forecasts to the most recently observed
+data: exploring the trade-off between accuracy and robustness. \emph{Genus}
+74: 16. \doi{10.1186/s41118-018-0041-y}
+
+Lee RD, Carter LR (1992). Modeling and forecasting U.S. mortality.
+\emph{Journal of the American Statistical Association} 87(419): 659-671.
+
 Lee R, Miller T (2001). Evaluating the performance of the Lee-Carter
 method for forecasting mortality. \emph{Demography} 38(4): 537-549.
+
+De Jong P, Tickle L (2006). Extending Lee-Carter mortality forecasting.
+\emph{Mathematical Population Studies} 13(1): 1-18.
+\doi{10.1080/08898480500452109}
 
 DerSimonian R, Laird N (1986). Meta-analysis in clinical trials.
 \emph{Controlled Clinical Trials} 7(3): 177-188.
