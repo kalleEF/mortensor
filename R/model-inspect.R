@@ -35,9 +35,14 @@
 #' * [p_splines()], [cp_splines()]: the smoothing parameters over age
 #'   (`lambda_age`) and years (`lambda_year`), the effective dimension
 #'   (`ed`), the criterion (`bic` or `aic`) and the dispersion (deviance
-#'   divided by the number of cells minus the effective dimension); for
-#'   [cp_splines()] also the bounds of the rates of ageing and of change per
-#'   age (`ageing_lower`, `ageing_upper`, `change_lower`, `change_upper`).
+#'   divided by the number of cells minus the effective dimension); with
+#'   `p_splines(overdispersion = "age")` the smooth dispersion by age
+#'   (`dispersion`), the bias-corrected mean Pearson statistics by age that
+#'   it smooths (`dispersion_raw`), its smoothing parameter
+#'   (`lambda_dispersion`) and the dispersion `tau` of these statistics
+#'   (`dispersion_tau`); for [cp_splines()] also the bounds of the rates of
+#'   ageing and of change per age (`ageing_lower`, `ageing_upper`,
+#'   `change_lower`, `change_upper`).
 #' * [saint()]: per trend (`"trend <group>"`) the indexes `alpha`, `beta`,
 #'   `kappa`, `zeta` by year, the frailty variance `sigma2`, the
 #'   pseudo-log-likelihood `loglik`, the `drift` and covariance `cov` of
@@ -201,7 +206,12 @@ base_parameters <- function(fit, sp) {
       b <- f$bounds
       rbind(row(lab[s], "lambda_age", "", f$lambda[1]), row(lab[s], "lambda_year", "", f$lambda[2]),
             row(lab[s], "ed", "", f$ed), row(lab[s], f$criterion, "", f$ic),
-            row(lab[s], "dispersion", "", f$dispersion),
+            row(lab[s], "dispersion", if (is.null(f$phi)) "" else ages, f$dispersion),
+            if (!is.null(f$phi)) {
+              rbind(row(lab[s], "dispersion_raw", ages, f$dispersion_raw),
+                    row(lab[s], "lambda_dispersion", "", f$lambda_dispersion),
+                    row(lab[s], "dispersion_tau", "", f$dispersion_tau))
+            },
             if (!is.null(b)) {
               rbindlist(lapply(c("ageing_lower", "ageing_upper", "change_lower", "change_upper"),
                                function(nm) row(lab[s], nm, ages, b[[nm]])))
@@ -549,12 +559,28 @@ model_assumptions <- function(spec) {
            }),
          mt_spec_p_splines = paste(
            "Two-dimensional P-splines (Currie, Durban and Eilers 2004; MortalitySmooth): log m(x,t) is a B-spline",
-           "surface over age and year with difference penalties on its coefficients, fitted by penalised Poisson",
-           sprintf("likelihood with smoothing parameters chosen by %s.", toupper(p$criterion)),
+           "surface over age and year with difference penalties on its coefficients, fitted by penalised",
+           sprintf("%s with smoothing parameters chosen by %s.",
+                   if (identical(p$overdispersion, "age")) "quasi-likelihood" else "Poisson likelihood",
+                   toupper(p$criterion)),
            "The forecast extends the basis over the forecast years with weight 0, so the penalty (order",
-           sprintf("%d over years) extrapolates the trend of each age.", p$pord[2]),
+           sprintf("%d over years) extrapolates the trend of each age.%s", p$pord[2],
+                   if (identical(p$overdispersion, "age")) {
+                     paste(" The variance of the deaths is a dispersion times their mean, the dispersion varying",
+                           "smoothly over age (Djeundje and Currie 2011): it divides the weights of the fit and",
+                           "the deviance in the criterion, and is estimated by smoothing bias-corrected Pearson",
+                           "statistics over age.")
+                   } else {
+                     ""
+                   }),
            "Draws come from the normal approximation of the coefficients (covariance of the penalised",
-           if (isTRUE(p$overdispersion)) "likelihood, scaled by the overdispersion);" else "likelihood);",
+           if (isTRUE(p$overdispersion)) {
+             "likelihood, scaled by the overdispersion);"
+           } else if (identical(p$overdispersion, "age")) {
+             "quasi-likelihood with the dispersions by age);"
+           } else {
+             "likelihood);"
+           },
            "their variance grows with the horizon. Predictive draws add Poisson variation of the deaths."),
          mt_spec_cp_splines = paste(
            "CP-splines (Camarda 2019): two-dimensional P-splines, with coefficients of their own for age 0 where",

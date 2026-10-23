@@ -28,6 +28,10 @@
 # cp_splines() is written from the paper (Camarda 2019, sections 2 and 3);
 # the author's R code (supplementary material of the paper, no licence
 # stated) was used only to check details and results.
+#
+# The dispersion by age of p_splines(overdispersion = "age") is written
+# from Djeundje and Currie (2011, sections 2 to 4 and 5.2); no code of the
+# authors was used.
 
 # Bases and array arithmetic ---------------------------------------------------
 
@@ -148,17 +152,21 @@ chol_solve <- function(A, b) {
 # included). `extra(alpha)` gives asymmetric penalties (cp_splines()):
 # entries of the system matrix (lists `idx`, `val`) and `p`, added to the
 # right-hand side; recomputed at every step, without step halving (as in
-# Camarda 2019). Convergence: largest change of a coefficient below `tol`
-# (relative to its size where it exceeds 1). Returns the coefficients, the
-# fitted log rates, the weighted inner product B'WB and the Cholesky factor
-# of B'WB + P (+ extra).
-ps2_irls <- function(Y, O, wt, ma, my, P, alpha, maxit = 50, tol = 1e-6, extra = NULL) {
+# Camarda 2019). `phi` [age, year]: dispersions of the cells of the
+# quasi-likelihood (Djeundje and Currie 2011, eq. 2.1 and 3.13), which
+# divide the weights and the deviance. Convergence: largest change of a
+# coefficient below `tol` (relative to its size where it exceeds 1).
+# Returns the coefficients, the fitted log rates, the weighted inner
+# product B'WB and the Cholesky factor of B'WB + P (+ extra).
+ps2_irls <- function(Y, O, wt, ma, my, P, alpha, maxit = 50, tol = 1e-6, extra = NULL, phi = NULL) {
   map <- glam_map(ma$pr, my$pr)
   obs <- wt > 0
+  pw <- if (is.null(phi)) wt else wt / phi
   pdev <- function(eta, a) {
     mu <- exp(O + eta)[obs]
     if (any(!is.finite(mu))) return(Inf)
-    poisson_dev(Y[obs], mu) + sum(a * (P %*% a))
+    dv <- if (is.null(phi)) poisson_dev(Y[obs], mu) else sum(poisson_dev_cells(Y[obs], mu) / phi[obs])
+    dv + sum(a * (P %*% a))
   }
   # B'WB + P (+ asymmetric penalties at the coefficients `a`), filled in place
   system <- function(e, a) {
@@ -176,7 +184,7 @@ ps2_irls <- function(Y, O, wt, ma, my, P, alpha, maxit = 50, tol = 1e-6, extra =
   converged <- FALSE
   for (it in seq_len(maxit)) {
     mu <- exp(O + eta)
-    W <- wt * mu
+    W <- pw * mu
     z <- eta + (Y - mu) / mu
     z[!obs] <- 0
     rhs <- as.vector(crossprod(ma$B, W * z) %*% my$B)
@@ -207,7 +215,7 @@ ps2_irls <- function(Y, O, wt, ma, my, P, alpha, maxit = 50, tol = 1e-6, extra =
     }
   }
   mu <- exp(O + eta)
-  e <- glam_bwb(ma$pr, my$pr, wt * mu, map)
+  e <- glam_bwb(ma$pr, my$pr, pw * mu, map)
   BWB <- matrix(0, map$p, map$p)
   BWB[e$idx] <- e$val
   R <- tryCatch(chol(system(e, alpha)$A), error = function(e) NULL)
@@ -218,6 +226,26 @@ ps2_irls <- function(Y, O, wt, ma, my, P, alpha, maxit = 50, tol = 1e-6, extra =
 ps2_ed <- function(f, P) {
   Ainv <- if (!is.null(f$R)) chol2inv(f$R) else MASS_ginv(f$BWB + P)
   sum(Ainv * f$BWB)
+}
+
+# Poisson deviance of each cell (with 0 log 0 = 0)
+poisson_dev_cells <- function(y, mu) 2 * (ifelse(y > 0, y * log(y / mu), 0) - (y - mu))
+
+# Diagonal of the hat matrix [age, year] of a fit from ps2_irls() with cell
+# weights W (Djeundje and Currie 2011, eq. 3.17 and 4.21): W b' (B'WB +
+# P)^-1 b for the rows b = By[t, ] (x) Ba[x, ] of the Kronecker basis, as
+# Ba2 M t(By2) with the row tensors Ba2, By2 of the marginal bases and M the
+# inverse rearranged over pairs of age and pairs of year coefficients
+ps2_leverage <- function(f, P, Ba, By, W) {
+  Ainv <- if (!is.null(f$R)) chol2inv(f$R) else MASS_ginv(f$BWB + P)
+  ca <- ncol(Ba)
+  cy <- ncol(By)
+  rt <- function(B) {
+    k <- seq_len(ncol(B))
+    B[, rep(k, each = length(k)), drop = FALSE] * B[, rep(k, length(k)), drop = FALSE]
+  }
+  M <- matrix(aperm(array(Ainv, c(ca, cy, ca, cy)), c(3, 1, 4, 2)), ca * ca, cy * cy)
+  W * (rt(Ba) %*% M %*% t(rt(By)))
 }
 
 # Marginal bases with row tensors for ages (with the specialised coefficient
@@ -278,11 +306,13 @@ ps_data <- function(D, E) {
 }
 
 # Two-dimensional P-spline fit with smoothing parameters given or selected
-# by an information criterion. With `overdispersion`, the dispersion psi2 =
-# deviance / (cells - ed) enters the penalty (B'WB + psi2 P) and the
+# by an information criterion. With `overdispersion = TRUE`, the dispersion
+# psi2 = deviance / (cells - ed) enters the penalty (B'WB + psi2 P) and the
 # criterion (deviance / psi2), and selection and estimation of psi2 are
 # iterated (at most 5 times; Mort2Dsmooth(overdispersion = TRUE)). Without,
-# psi2 is reported after the fit.
+# psi2 is reported after the fit. With `overdispersion = "age"`, a
+# dispersion per age that varies smoothly over age divides the weights and
+# the deviance (ps2_dispersion_age(); Djeundje and Currie 2011).
 ps2_model <- function(D, E, xa, xy, ndx, deg, pord, margin, infant, lambda, criterion, lambda_range,
                       overdispersion) {
   dat <- ps_data(D, E)
@@ -297,20 +327,30 @@ ps2_model <- function(D, E, xa, xy, ndx, deg, pord, margin, infant, lambda, crit
   start <- ps_start(dat$Y, dat$E, dat$wt, ma$B, my$B, xa, xy)
   state <- new.env(parent = emptyenv())
   state$alpha <- start
-  fit_at <- function(lam, psi2) {
+  obs <- dat$wt > 0
+  # fit with smoothing parameters `lam` and the dispersion psi2 or the
+  # dispersions `phi` by age; the criterion of the deviance scaled by the
+  # dispersion (Djeundje and Currie 2011, eq. 3.16)
+  fit_at <- function(lam, psi2, phi = NULL) {
     P <- psi2 * (lam[1] * pen$Pa + lam[2] * pen$Py)
-    f <- ps2_irls(dat$Y, dat$O, dat$wt, ma, my, P, state$alpha)
+    Phi <- if (!is.null(phi)) matrix(phi, nrow(dat$Y), ncol(dat$Y))
+    f <- ps2_irls(dat$Y, dat$O, dat$wt, ma, my, P, state$alpha, phi = Phi)
     if (f$converged) state$alpha <- f$alpha
     f$ed <- ps2_ed(f, P)
-    f$dev <- poisson_dev(dat$Y[dat$wt > 0], f$mu[dat$wt > 0])
-    f$ic <- f$dev / psi2 + k_ic * f$ed
+    f$dev <- poisson_dev(dat$Y[obs], f$mu[obs])
+    sdev <- if (is.null(phi)) f$dev / psi2 else sum(poisson_dev_cells(dat$Y[obs], f$mu[obs]) / Phi[obs])
+    f$ic <- sdev + k_ic * f$ed
     f$lambda <- lam
     f$psi2 <- psi2
+    f$phi <- phi
     f
   }
   dispersion <- function(f) f$dev / max(n_obs - f$ed, 1)
   at_bound <- FALSE
-  if (!is.null(lambda)) {
+  if (identical(overdispersion, "age")) {
+    f <- ps2_dispersion_age(fit_at, dat, ma, my, pen, pord, infant, lambda, lambda_range, ca > 1)
+    at_bound <- f$at_bound
+  } else if (!is.null(lambda)) {
     f <- fit_at(lambda, 1)
     if (overdispersion) {
       for (i in 1:5) {
@@ -342,9 +382,144 @@ ps2_model <- function(D, E, xa, xy, ndx, deg, pord, margin, infant, lambda, crit
     }
   }
   if (!f$converged) mt_warn("The P-spline fit did not converge.", class = "model_fit", call = NULL)
-  f$psi2_estimate <- dispersion(f)
+  f$psi2_estimate <- if (is.null(f$phi)) dispersion(f) else f$phi
+  f$at_bound <- NULL
   c(f, list(data = dat, ma = ma, my = my, pen = pen, xa = xa, xy = xy, at_bound = at_bound, n_obs = n_obs,
             overdispersion = overdispersion))
+}
+
+# Dispersion that varies smoothly over age (Djeundje and Currie 2011, Model
+# 3 of section 5.2, bias corrected scheme of section 4). From phi = 1, two
+# steps alternate: the fit of the rates with the dispersions in the weights
+# (eq. 3.13), its smoothing parameters selected by the criterion of the
+# scaled deviance (eq. 3.16) unless given; and the dispersions, the
+# bias-corrected mean Pearson statistics of the ages (eq. 4.20, with the
+# contributions of the ages to the effective dimension, eq. 4.21) smoothed
+# over age (ps_disp_smooth()). The iteration stops when no dispersion
+# changes by more than 1e-5 relative to its value (section 5.2.2), after at
+# most 50 rounds. `fit_at(lambda, psi2, phi)`: the fit of ps2_model().
+ps2_dispersion_age <- function(fit_at, dat, ma, my, pen, pord, infant, lambda, lambda_range, two) {
+  obs <- dat$wt > 0
+  n_x <- rowSums(obs)
+  Dp <- ps_penalties(ncol(ma$B), 1, pord, infant)$Pa
+  st <- new.env(parent = emptyenv())
+  phi_step <- function(f) {
+    P <- f$lambda[1] * pen$Pa + f$lambda[2] * pen$Py
+    v <- rowSums(ps2_leverage(f, P, ma$B, my$B, dat$wt * f$mu / f$phi))
+    pearson <- rowSums(ifelse(obs, (dat$Y - f$mu)^2 / f$mu, 0))
+    ok <- n_x > 0 & n_x - v > 0
+    st$raw <- ifelse(ok, pearson / (n_x - v), NA_real_)
+    st$disp <- ps_disp_smooth(ifelse(ok, st$raw, 1), ifelse(ok, n_x, 0), ma$B, Dp, lambda_range, st$disp$beta,
+                              st$disp$tau %||% 1)
+    st$disp$phi
+  }
+  phi <- rep(1, nrow(dat$Y))
+  converged <- FALSE
+  for (round in seq_len(50)) {
+    if (is.null(lambda)) {
+      sel <- ps_select_lambda(function(ll) fit_at(10^ll, 1, phi)$ic, log10(lambda_range), two)
+      f <- fit_at(10^sel$ll, 1, phi)
+    } else {
+      f <- fit_at(lambda, 1, phi)
+    }
+    phi_new <- phi_step(f)
+    converged <- max(abs(phi_new - phi) / phi_new) < 1e-5
+    phi <- phi_new
+    if (converged) break
+  }
+  if (!converged) mt_warn("The dispersion of the P-spline fit did not converge.", class = "model_fit", call = NULL)
+  f <- fit_at(f$lambda, 1, phi)
+  # as in ps2_model(): a smoothing parameter at an end of the range
+  f$at_bound <- is.null(lambda) && any(sel$bound != 0) &&
+    fit_at(f$lambda * 100^sel$bound, 1, phi)$ic < f$ic - 1
+  c(f, list(dispersion_raw = st$raw, lambda_dispersion = st$disp$lambda, dispersion_tau = st$disp$tau,
+            dispersion_rounds = round))
+}
+
+# Penalised quasi-likelihood fit of the dispersions over age (Djeundje and
+# Currie 2011, eq. 3.14 and 4.22): responses `d` (bias-corrected mean
+# Pearson statistics) with E[d] = phi, var(d) = tau phi^2 / n, link -1 /
+# phi = B beta, and the penalty Pd (smoothing parameter included). `n`: the
+# numbers of cells of the ages (0 for ages without data, whose dispersion
+# the smooth fills in). Scoring with step halving on the penalised deviance;
+# the dispersions stay positive at every age.
+ps_disp_irls <- function(d, n, tau, B, Pd, beta, maxit = 100, tol = 1e-8) {
+  ok <- n > 0
+  w <- n / tau
+  gamma_dev <- function(phi) 2 * (-log(d[ok] / phi[ok]) + (d[ok] - phi[ok]) / phi[ok])
+  obj <- function(b) {
+    eta <- as.vector(B %*% b)
+    if (any(eta >= 0)) return(Inf)
+    sum(w[ok] * gamma_dev(-1 / eta)) + sum(b * (Pd %*% b))
+  }
+  cur <- obj(beta)
+  converged <- FALSE
+  for (it in seq_len(maxit)) {
+    eta <- as.vector(B %*% beta)
+    phi <- -1 / eta
+    Wd <- w * phi^2
+    z <- eta + ifelse(ok, (d - phi) / phi^2, 0)
+    new <- chol_solve(crossprod(B, Wd * B) + Pd, as.vector(crossprod(B, Wd * z)))$x
+    if (anyNA(new)) mt_abort("The smoothing of the dispersion failed (singular system).", class = "model_fit")
+    step <- new - beta
+    val <- obj(new)
+    halvings <- 0L
+    while (!(val <= cur + 1e-10 * abs(cur)) && halvings < 30L) {
+      step <- step / 2
+      new <- beta + step
+      val <- obj(new)
+      halvings <- halvings + 1L
+    }
+    beta <- new
+    cur <- val
+    if (max(abs(step) / pmax(abs(beta), 1e-3)) < tol) {
+      converged <- TRUE
+      break
+    }
+  }
+  phi <- -1 / as.vector(B %*% beta)
+  BWB <- crossprod(B, (w * phi^2) * B)
+  A <- BWB + Pd
+  Ainv <- tryCatch(chol2inv(chol(A)), error = function(e) MASS_ginv(A))
+  list(beta = beta, phi = phi, ed = sum(Ainv * BWB), sdev = sum(w[ok] * gamma_dev(phi)), converged = converged)
+}
+
+# Smooth dispersions over age from the statistics `d` of the ages with `n`
+# cells (Djeundje and Currie 2011, section 4 and eq. 5.28): the basis `B`
+# over age of the rates and the difference penalty `Dp`; the smoothing
+# parameter minimises the scaled BIC of this fit (deviance divided by tau
+# plus log(ages) times its effective dimension) over `lambda_range`; tau is
+# the mean Pearson statistic of this fit, sum n (d - phi)^2 / phi^2 divided
+# by the number of ages minus the effective dimension (package-specific:
+# the paper estimates tau without stating how), and selection and tau
+# alternate as the constant dispersion in ps2_model() (at most 5 times,
+# relative change 1e-3), from the starting values `beta` and `tau` (those
+# of the previous round of ps2_dispersion_age()). Without a penalty (one
+# age), phi = d.
+ps_disp_smooth <- function(d, n, B, Dp, lambda_range, beta = NULL, tau = 1) {
+  ok <- n > 0
+  K <- sum(ok)
+  st <- new.env(parent = emptyenv())
+  st$beta <- beta %||% rep(-1 / stats::weighted.mean(d[ok], n[ok]), ncol(B))
+  fit_at <- function(l2, tau) {
+    f <- ps_disp_irls(d, n, tau, B, l2 * Dp, st$beta)
+    if (f$converged) st$beta <- f$beta
+    f$ic <- f$sdev + log(K) * f$ed
+    f$lambda <- l2
+    f$tau <- tau
+    f
+  }
+  if (!any(Dp != 0)) return(fit_at(0, 1))
+  for (round in 1:5) {
+    l2 <- 10^ps_select_lambda(function(ll) fit_at(10^ll[2], tau)$ic, log10(lambda_range), FALSE)$ll[2]
+    f <- fit_at(l2, tau)
+    if (K - f$ed < 1) break
+    tau_new <- sum(n[ok] * (d[ok] - f$phi[ok])^2 / f$phi[ok]^2) / (K - f$ed)
+    done <- abs(tau_new - tau) / tau_new < 1e-3
+    tau <- tau_new
+    if (done) break
+  }
+  fit_at(l2, tau)
 }
 
 # Smoothing parameters on the log10 scale minimising `ic`: a greedy search on
@@ -424,8 +599,8 @@ ps_continue <- function(alpha, ca, cy_new, pord, left = 0L) {
 # Forecast fit of a P-spline model: the basis over years extended to `h`
 # more years (ps_extend(), as predict.Mort2Dsmooth()), the forecast years
 # with weights 0, the coefficients refitted with the smoothing parameters
-# (and dispersion) of the fit. Returns the extended fit with its year basis
-# `my` and penalty `P`.
+# (and dispersion, or dispersions by age) of the fit. Returns the extended
+# fit with its year basis `my` and penalty `P`.
 ps2_extend_fit <- function(fit, h, pord, extra_fun = NULL, tol = 1e-6, maxit = 50, Y = NULL, start = NULL) {
   dat <- fit$data
   ny <- ncol(dat$Y)
@@ -442,7 +617,8 @@ ps2_extend_fit <- function(fit, h, pord, extra_fun = NULL, tol = 1e-6, maxit = 5
   wx <- pad(dat$wt, 0)
   alpha <- start %||% ps_continue(fit$alpha, ca, cy, pord[2], my$offset)
   extra <- if (!is.null(extra_fun)) extra_fun(my, ny) else NULL
-  f <- ps2_irls(Yx, Ox, wx, fit$ma, my, P, alpha, maxit = maxit, tol = tol, extra = extra)
+  phi <- if (!is.null(fit$phi)) matrix(fit$phi, nrow(Yx), ncol(Yx))
+  f <- ps2_irls(Yx, Ox, wx, fit$ma, my, P, alpha, maxit = maxit, tol = tol, extra = extra, phi = phi)
   f$my <- my
   f$P <- P
   f$forecast_cols <- ny + seq_len(h)
@@ -488,7 +664,8 @@ ps_fit_stratum <- function(p, D, E, ages, periods, margin, overdispersion) {
   list(alpha = f$alpha, lambda = f$lambda, psi2 = f$psi2, dispersion = f$psi2_estimate, ed = f$ed, dev = f$dev,
        ic = f$ic, criterion = p$criterion, data = f$data, ma = f$ma, my = f$my, xa = xa, xy = periods,
        pord = p$pord, ndx = ndx, n_obs = f$n_obs, mu = f$mu, fitted = exp(f$eta), at_bound = f$at_bound,
-       converged = f$converged)
+       converged = f$converged, phi = f$phi, dispersion_raw = f$dispersion_raw,
+       lambda_dispersion = f$lambda_dispersion, dispersion_tau = f$dispersion_tau)
 }
 
 # Draws of the forecast log rates [age, h, draw] from the normal
@@ -567,6 +744,44 @@ ps_draws <- function(fx, Ba, psi2, n_draws) {
 #' the forecast without `psi2` in the penalty and multiplies the standard
 #' errors by `sqrt(psi2)`.
 #'
+#' **Dispersion by age.** `overdispersion = "age"` replaces the Poisson
+#' assumption by the first two moments of the deaths, `E[D] = E m` and
+#' `var(D) = phi[x] E[D]`, with a dispersion `phi[x]` for each age that
+#' varies smoothly over age (Djeundje and Currie 2011, eq. 2.1; Model 3,
+#' eq. 5.26). Rates and dispersions are estimated by the bias corrected
+#' scheme of the paper (section 4):
+#'
+#' 1. Start with `phi = 1` at every age.
+#' 2. Fit the rates by penalised quasi-likelihood: the scoring algorithm
+#'    with the weights of the cells divided by their dispersion (eq. 3.13).
+#'    The smoothing parameters minimise the criterion of the scaled
+#'    deviance: the deviance of each cell divided by its dispersion, plus
+#'    `log(n)` (BIC, eq. 3.16) or 2 (AIC) times the effective dimension.
+#' 3. For each age, compute the bias-corrected mean Pearson statistic
+#'    `d[x]`: the sum of `(D - mu)^2 / mu` over its years, divided by its
+#'    number of cells `n[x]` minus its contribution to the effective
+#'    dimension, the sum of its diagonal elements of the hat matrix (eq.
+#'    4.20 and 4.21).
+#' 4. Smooth the statistics over age by penalised quasi-likelihood with
+#'    `E[d] = phi`, `var(d) = tau phi^2 / n[x]` and the link `-1 / phi =
+#'    Ba beta` (eq. 4.22): the B-splines over age of the rates and a
+#'    difference penalty of order `pord[1]` (eq. 5.28). The smoothing
+#'    parameter minimises the scaled BIC of this fit.
+#' 5. Repeat steps 2 to 4 until no dispersion changes by more than 1e-5
+#'    relative to its value (section 5.2.2), at most 50 times.
+#'
+#' The forecast fit keeps the dispersions of the ages in the weights, and
+#' the draws come from the covariance `(B'WB + P)^-1` with `W` the fitted
+#' deaths divided by their dispersion. In the paper's example (CMI assured
+#' lives, ages 40-90, section 5.2.3) the dispersion down-weights the fit to
+#' the data and the selected surface is smoother: the effective dimension
+#' is 46 under the Poisson assumption, 36 with one dispersion and 33 with
+#' the dispersion by age, and the confidence intervals of the forecast are
+#' narrower. With a single age, `"age"` gives one dispersion, the
+#' bias-corrected mean Pearson statistic (eq. 4.20). The fit selects the
+#' smoothing parameters in every round, so it takes several times as long
+#' as the Poisson fit.
+#'
 #' **Data.** Ages are placed at the midpoints of their cells, an open
 #' interval at its lower bound plus half the width of the interval below it
 #' (as in [mt_smooth()]). Cells with missing deaths or exposures, and cells
@@ -583,6 +798,20 @@ ps_draws <- function(fx, Ba, psi2, n_draws) {
 #' ages span. The smoothing parameters are searched on a grid with steps of
 #' 1 on the log10 scale, followed by a continuous search near the best grid
 #' point (MortalitySmooth: two grid searches with steps of 2 and 0.5).
+#' With `overdispersion = "age"`: `tau` is the mean Pearson statistic of the
+#' smooth of step 4, `sum(n[x] (d[x] - phi[x])^2 / phi[x]^2)` divided by the
+#' number of ages minus its effective dimension, alternated with the choice
+#' of its smoothing parameter as `psi2` with `overdispersion = TRUE` (at
+#' most 5 times; the paper estimates `tau` without stating how); that
+#' smoothing parameter is searched over `lambda_range` as those of the
+#' rates; ages without data get weight 0 in step 4, so the smooth gives
+#' their dispersion; predictive draws add Poisson variation of the deaths,
+#' as with `overdispersion = TRUE`, because the quasi-likelihood defines
+#' the mean and variance of the deaths but no distribution, and the paper
+#' gives no predictive distribution. The paper's full extended
+#' quasi-likelihood scheme (mean deviances by age, eq. 2.6) is not offered:
+#' it underestimates the dispersion (section 4, Figure 4), and the paper
+#' reports its results with the bias corrected scheme.
 #'
 #' @param lambda Smoothing parameters over age and years, `c(age, year)`;
 #'   `NULL` (default) selects them by `criterion`.
@@ -592,8 +821,10 @@ ps_draws <- function(fx, Ba, psi2, n_draws) {
 #' @param deg Degree of the B-splines, over age and years.
 #' @param ndx Numbers of intervals between knots over age and years; `NULL`
 #'   gives about one knot per five years (see Details).
-#' @param overdispersion Account for overdispersion in the choice of the
-#'   smoothing parameters and in the draws.
+#' @param overdispersion `FALSE` (default): Poisson deaths. `TRUE`: one
+#'   dispersion for all cells in the choice of the smoothing parameters and
+#'   in the draws (MortalitySmooth). `"age"`: a dispersion for each age that
+#'   varies smoothly over age (Djeundje and Currie 2011; see Details).
 #' @param lambda_range Search range of the smoothing parameters (the default
 #'   of MortalitySmooth). A selected value at an end of the range gives a
 #'   warning (class `mt_warning_lambda_bound`) when the criterion improves
@@ -612,6 +843,10 @@ ps_draws <- function(fx, Ba, psi2, n_draws) {
 #' Camarda CG (2019). Smooth constrained mortality forecasting.
 #' *Demographic Research* 41(38): 1091-1130.
 #' \doi{10.4054/DemRes.2019.41.38}
+#'
+#' Djeundje VAB, Currie ID (2011). Smoothing dispersed counts with
+#' applications to mortality data. *Annals of Actuarial Science* 5(1):
+#' 33-52. \doi{10.1017/S1748499510000047}
 #' @seealso [cp_splines()] for forecasts constrained to past age patterns and
 #'   time trends; [mt_smooth()] for smoothing without forecasting.
 #' @examples
@@ -619,18 +854,26 @@ ps_draws <- function(fx, Ba, psi2, n_draws) {
 #' fit <- mt_fit(p_splines(), x)
 #' fc <- mt_forecast(fit, h = 10, n_draws = 100, seed = 1)
 #' mt_parameters(fit)
+#' # dispersion that varies smoothly over age (Djeundje and Currie 2011),
+#' # smoothing parameters of the rates given
+#' fit_age <- mt_fit(p_splines(lambda = c(1, 1000), overdispersion = "age"), x)
+#' p <- mt_parameters(fit_age)
+#' p[parameter == "dispersion" & stratum == "female"]
 #' @export
 p_splines <- function(lambda = NULL, criterion = c("bic", "aic"), pord = 2, deg = 3, ndx = NULL,
                       overdispersion = FALSE, lambda_range = c(1e-4, 1e6), infant = FALSE) {
   criterion <- match.arg(criterion)
-  check_flag(overdispersion, "overdispersion")
+  if (!identical(overdispersion, "age") && !(is.logical(overdispersion) && length(overdispersion) == 1L &&
+                                              !is.na(overdispersion))) {
+    mt_abort("`overdispersion` must be TRUE, FALSE or \"age\".", class = "argument")
+  }
   check_flag(infant, "infant")
   p <- ps_settings(lambda, criterion, pord, deg, ndx, lambda_range)
   p$overdispersion <- overdispersion
   p$infant <- infant
+  od <- if (identical(overdispersion, "age")) ", dispersion by age" else if (overdispersion) ", overdispersed"
   spec <- new_mt_spec("p_splines", p, min_periods = 5,
-                      label = paste0("P-splines", if (overdispersion) ", overdispersed" else "",
-                                     if (infant) ", infant coefficient" else ""))
+                      label = paste0("P-splines", od, if (infant) ", infant coefficient" else ""))
   spec$missing_ok <- TRUE
   spec
 }

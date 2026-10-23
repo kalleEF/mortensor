@@ -51,9 +51,14 @@ of the identified quantities;
 \item \code{\link[=p_splines]{p_splines()}}, \code{\link[=cp_splines]{cp_splines()}}: the smoothing parameters over age
 (\code{lambda_age}) and years (\code{lambda_year}), the effective dimension
 (\code{ed}), the criterion (\code{bic} or \code{aic}) and the dispersion (deviance
-divided by the number of cells minus the effective dimension); for
-\code{\link[=cp_splines]{cp_splines()}} also the bounds of the rates of ageing and of change per
-age (\code{ageing_lower}, \code{ageing_upper}, \code{change_lower}, \code{change_upper}).
+divided by the number of cells minus the effective dimension); with
+\code{p_splines(overdispersion = "age")} the smooth dispersion by age
+(\code{dispersion}), the bias-corrected mean Pearson statistics by age that
+it smooths (\code{dispersion_raw}), its smoothing parameter
+(\code{lambda_dispersion}) and the dispersion \code{tau} of these statistics
+(\code{dispersion_tau}); for \code{\link[=cp_splines]{cp_splines()}} also the bounds of the rates of
+ageing and of change per age (\code{ageing_lower}, \code{ageing_upper},
+\code{change_lower}, \code{change_upper}).
 \item \code{\link[=saint]{saint()}}: per trend (\code{"trend <group>"}) the indexes \code{alpha}, \code{beta},
 \code{kappa}, \code{zeta} by year, the frailty variance \code{sigma2}, the
 pseudo-log-likelihood \code{loglik}, the \code{drift} and covariance \code{cov} of
