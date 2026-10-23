@@ -136,12 +136,11 @@ the unweighted geometric mean, as in CT-CoDA (Section 2.4: 2S-CoDA
 of each year is the weighted least-squares fit of that year;
 \item \code{individual = TRUE} adds the cause-specific components of eq. (12): the
 residuals of each cause after the joint components (\code{rank} of them; the
-paper uses one) get the first component of their own decomposition,
-\verb{b_i[x] k_i[t]}. This follows the joint and individual components of Lock
-et al. (2013) in two steps without iteration, as in the paper. The paper
-names an SVD for this step and does not say whether the weights apply;
-here the same weights apply, so that both steps minimise the same
-weighted sum of squares (package-specific, reference unknown).
+paper uses one) get the first component of their own unweighted SVD,
+\verb{b_i[x] k_i[t]}, as the paper names it for this step (Section 2.4); the
+weights of eq. (10) and (11) apply to the joint components of eq. (9).
+This follows the joint and individual components of Lock et al. (2013)
+in two steps without iteration, as in the paper.
 }
 
 \code{coda_causes(weights = "deaths", rho = 0.1, individual = TRUE)} is
@@ -158,17 +157,18 @@ composition unchanged; the log rate of an open age interval is regressed
 on the joint indexes only, weighted by the weights of the years; a
 residual cause gets an individual component, the survivors of a closed
 age range none. The paper gives point forecasts only. Draws refit the
-same decomposition with the same weights to bootstrap samples. With
-weights of the parts, each cell takes a residual of its own part: pooled
-resampling (Appendix B of Bergeron-Boucher et al. 2017) would move the
-large residuals of small, down-weighted parts into the parts that
-determine the weighted fit, and on \code{\link[=mt_example_causes]{mt_example_causes()}} it about doubled
-the innovation standard deviation of the refitted index. With weights of
-the years, the year of each residual is drawn with probability
-proportional to its weight. \code{\link[=mt_parameters]{mt_parameters()}}
-gives the individual loadings and indexes as \verb{b_<cause>} and \verb{k_<cause>}
-with their ARIMA models and the weighted share of the residual variation of
-the cause that they explain (\verb{explained_<cause>}), the weights \code{w_part} and
+same decomposition (with the same weights of the joint components) to
+bootstrap samples. With weights of the parts, each cell takes a residual
+of its own part: pooled resampling (Appendix B of Bergeron-Boucher et al.
+2017) would move the large residuals of small, down-weighted parts into
+the parts that determine the weighted fit, and on \code{\link[=mt_example_causes]{mt_example_causes()}}
+it about doubled the innovation standard deviation of the refitted index.
+With weights of the years, the year of each residual is drawn with
+probability proportional to its weight. \code{\link[=mt_parameters]{mt_parameters()}} gives the
+individual loadings and indexes as \verb{b_<cause>} and \verb{k_<cause>}
+with their ARIMA models and the share of the residual variation of the
+cause after the joint components that they explain (\verb{explained_<cause>}),
+the weights \code{w_part} and
 \code{w_time}, and the share of the variation of each cause explained by the
 joint and the individual components (\code{explained_joint},
 \code{explained_individual}; squared Frobenius norms of the centred clr deaths

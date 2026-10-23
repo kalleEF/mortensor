@@ -273,13 +273,14 @@ coda_core <- function(Z, rank = 1, order = c(0, 1, 1), drift = TRUE, common = NU
 # Two-step decomposition of a centred clr matrix H [part, year] (Kjaergaard
 # et al. 2019, Section 2.4, eq. 9-12): the first `dec$rank` components of
 # the generalized SVD with weights `dec$w_part` of the parts and
-# `dec$w_time` of the years give the joint components `b` and `k`; with
-# `dec$rows` (rows of each cause), the residuals of each cause get one
-# component of the generalized SVD with the same weights (individual
-# loadings `b_individual` [part, cause], zero outside the rows of the cause,
-# and indexes). In `b`, the individual loadings are centred over all parts,
-# which leaves the closed composition unchanged and keeps the fit on the clr
-# scale. `ref`: a fit whose loadings fix the signs (bootstrap refits).
+# `dec$w_time` of the years give the joint components `b` and `k` (eq. 9-11);
+# with `dec$rows` (rows of each cause), the residuals of each cause get the
+# first component of their (unweighted) SVD, as the paper names it for eq.
+# (12) (individual loadings `b_individual` [part, cause], zero outside the
+# rows of the cause, and indexes). In `b`, the individual loadings are
+# centred over all parts, which leaves the closed composition unchanged and
+# keeps the fit on the clr scale. `ref`: a fit whose loadings fix the signs
+# (bootstrap refits).
 coda_decompose <- function(H, dec, ref = NULL) {
   r <- dec$rank
   jt <- coda_gsvd(H, r, dec$w_part, dec$w_time, ref = if (!is.null(ref)) ref$b[, seq_len(r), drop = FALSE])
@@ -291,8 +292,7 @@ coda_decompose <- function(H, dec, ref = NULL) {
   ex <- numeric(nc)
   for (i in seq_len(nc)) {
     ri <- dec$rows[[i]]
-    s <- coda_gsvd(E[ri, , drop = FALSE], 1, dec$w_part[ri], dec$w_time,
-                   ref = if (!is.null(ref)) ref$b_individual[ri, i, drop = FALSE])
+    s <- coda_svd(E[ri, , drop = FALSE], 1, ref = if (!is.null(ref)) ref$b_individual[ri, i, drop = FALSE])
     B[ri, i] <- s$b
     K[, i] <- s$k
     ex[i] <- s$explained
@@ -396,8 +396,8 @@ coda_index_mean <- function(core, h) {
 # open interval (or its part not explained by the common component),
 # regressed on the indexes of each refit [h, draw]. The order of the draws is
 # random. A fit with a two-step decomposition (`core$decomp`) is refitted
-# with the same decomposition and weights (coda_resample() draws its
-# residuals).
+# with the same decomposition and weights of the joint components
+# (coda_resample() draws its residuals).
 coda_boot <- function(core, h, n_draws, open_y = NULL) {
   r <- core$rank
   np <- nrow(core$b)

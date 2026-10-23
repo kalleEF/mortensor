@@ -219,8 +219,17 @@ test_that("two-step forecasts of the causes add up to all causes and their life-
   lt <- mortensor:::lt_columns(tot, ages)
   dxc <- vapply(j, function(c) lt$dx * matrix(fc$rates[, , c, ], length(ages)) / tot, tot)
   expect_equal(apply(dxc, 2, sum), rep(1, ncol(tot)), tolerance = 1e-10)
-  # parameters: weights, individual components, explained variation
+  # individual step (eq. 12): unweighted SVD of the residuals of each cause after the joint component
   g <- fit$fits$groups[[1]]
+  E <- g$b %*% t(g$k) + g$resid - outer(g$b[, 1], g$k[, 1])
+  for (i in 1:3) {
+    ri <- g$decomp$rows[[i]]
+    sv <- mortensor:::coda_svd(E[ri, ], 1)
+    expect_equal(outer(g$b_individual[ri, i], g$k[, 1 + i]), outer(sv$b[, 1], sv$k[, 1]), tolerance = 1e-10)
+    sw <- mortensor:::coda_gsvd(E[ri, ], 1, g$decomp$w_part[ri], g$decomp$w_time)
+    expect_false(isTRUE(all.equal(outer(g$b_individual[ri, i], g$k[, 1 + i]), outer(sw$b[, 1], sw$k[, 1]))))
+  }
+  # parameters: weights, individual components, explained variation
   p <- mt_parameters(fit)
   expect_true(all(c("w_part", "w_time", "b_cvd", "k_cancer", "arima_k_other", "explained_joint",
                     "explained_individual") %in% p$parameter))

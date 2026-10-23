@@ -444,12 +444,11 @@ coda_simulate_coherent <- function(fit, h, n_draws) {
 #'   of each year is the weighted least-squares fit of that year;
 #' * `individual = TRUE` adds the cause-specific components of eq. (12): the
 #'   residuals of each cause after the joint components (`rank` of them; the
-#'   paper uses one) get the first component of their own decomposition,
-#'   `b_i[x] k_i[t]`. This follows the joint and individual components of Lock
-#'   et al. (2013) in two steps without iteration, as in the paper. The paper
-#'   names an SVD for this step and does not say whether the weights apply;
-#'   here the same weights apply, so that both steps minimise the same
-#'   weighted sum of squares (package-specific, reference unknown).
+#'   paper uses one) get the first component of their own unweighted SVD,
+#'   `b_i[x] k_i[t]`, as the paper names it for this step (Section 2.4); the
+#'   weights of eq. (10) and (11) apply to the joint components of eq. (9).
+#'   This follows the joint and individual components of Lock et al. (2013)
+#'   in two steps without iteration, as in the paper.
 #'
 #' `coda_causes(weights = "deaths", rho = 0.1, individual = TRUE)` is
 #' 2S-CoDA; with `jump_off = "fitted"`, forecasts start from the model, as in
@@ -465,17 +464,18 @@ coda_simulate_coherent <- function(fit, h, n_draws) {
 #' on the joint indexes only, weighted by the weights of the years; a
 #' residual cause gets an individual component, the survivors of a closed
 #' age range none. The paper gives point forecasts only. Draws refit the
-#' same decomposition with the same weights to bootstrap samples. With
-#' weights of the parts, each cell takes a residual of its own part: pooled
-#' resampling (Appendix B of Bergeron-Boucher et al. 2017) would move the
-#' large residuals of small, down-weighted parts into the parts that
-#' determine the weighted fit, and on [mt_example_causes()] it about doubled
-#' the innovation standard deviation of the refitted index. With weights of
-#' the years, the year of each residual is drawn with probability
-#' proportional to its weight. [mt_parameters()]
-#' gives the individual loadings and indexes as `b_<cause>` and `k_<cause>`
-#' with their ARIMA models and the weighted share of the residual variation of
-#' the cause that they explain (`explained_<cause>`), the weights `w_part` and
+#' same decomposition (with the same weights of the joint components) to
+#' bootstrap samples. With weights of the parts, each cell takes a residual
+#' of its own part: pooled resampling (Appendix B of Bergeron-Boucher et al.
+#' 2017) would move the large residuals of small, down-weighted parts into
+#' the parts that determine the weighted fit, and on [mt_example_causes()]
+#' it about doubled the innovation standard deviation of the refitted index.
+#' With weights of the years, the year of each residual is drawn with
+#' probability proportional to its weight. [mt_parameters()] gives the
+#' individual loadings and indexes as `b_<cause>` and `k_<cause>`
+#' with their ARIMA models and the share of the residual variation of the
+#' cause after the joint components that they explain (`explained_<cause>`),
+#' the weights `w_part` and
 #' `w_time`, and the share of the variation of each cause explained by the
 #' joint and the individual components (`explained_joint`,
 #' `explained_individual`; squared Frobenius norms of the centred clr deaths
@@ -895,9 +895,10 @@ coda_assumptions <- function(spec) {
     return(paste("Multiple-decrement CoDa model with the extensions of Kjaergaard et al. (2019; experimental):",
                  "per group, clr of the life-table deaths by age and cause = a +",
                  sprintf("%d joint component(s) b k(t)", p$rank %||% 1L),
-                 if (isTRUE(p$individual)) "+ per cause one individual component b_i k_i(t)" else "",
-                 paste0(if (length(wt)) paste0("by generalized SVD (", paste(wt, collapse = "; "), ")") else "by SVD",
-                        sprintf("; each index %s.", ts)),
+                 if (length(wt)) paste0("by generalized SVD (", paste(wt, collapse = "; "), ")") else "by SVD",
+                 if (isTRUE(p$individual)) "+ per cause one individual component b_i k_i(t) by SVD of its residuals"
+                 else "",
+                 sprintf("; each index %s.", ts),
                  "Causes add up to all causes in every draw; predictive draws split Poisson all-cause deaths",
                  "multinomially. Draws: residuals resampled (with weights, by part and with year probabilities",
                  "proportional to the weights), the decomposition and the ARIMA models estimated again, index",
