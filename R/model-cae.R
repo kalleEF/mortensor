@@ -2,8 +2,11 @@
 #'
 #' Joint model of the strata as populations that share their age effects and
 #' keep their own period effects: the common age effect (CAE) model of
-#' Kleinow (2015). Status: published, with the package-specific forecast and
-#' choices listed below; section and equation numbers refer to that paper.
+#' Kleinow (2015). Status: published. The model and its estimation follow
+#' Kleinow (2015), and section and equation numbers refer to that paper
+#' unless another is named; `index = "coherent"` forecasts with the model of
+#' Enchev, Kleinow and Cairns (2017); the default forecast and the other
+#' choices listed below are package-specific.
 #'
 #' **Model (Sections 2 and 3.1, eq. 1-3).** The log death rates `y[x, t, i]
 #' = log(D[x, t, i] / E[x, t, i])` of each population `i` are centred over
@@ -33,25 +36,83 @@
 #' use wider age groups ([mt_regroup()]) or fewer ages ([mt_subset()]);
 #' Kleinow fitted ages 18-52 and 53-87 separately.
 #'
-#' **Forecasts (package-specific).** Kleinow (2015) does not forecast. Here
-#' the period effects of all populations and orders follow one multivariate
-#' random walk with drift, `kappa[t] = kappa[t - 1] + mu + e[t]`, with normal
-#' innovations whose covariance matrix is estimated from the year-to-year
-#' changes (divided by the number of changes minus one), so the innovations
-#' are correlated between populations and between orders. This is the
-#' random walk with drift of Lee and Carter (1992) for every index, and the
-#' multivariate random walk with drift that StMoMo uses for several period
-#' indexes (Villegas, Kaishev and Millossovich 2018), here over all
-#' populations together. Draws include the innovations and, as in
-#' [lee_carter()], the uncertainty of the drift (normal, with the innovation
-#' covariance divided by the number of changes; StMoMo keeps the drift
-#' fixed). `a` and `beta` are fixed. Forecasts start from the fitted rates of
-#' the last year ([anchored()] starts them from the observed rates). Each
-#' population has its own drift, so the forecasts of different populations
-#' can diverge; [li_lee()] and [coherent_fdm()] keep them together.
-#' Predictive draws (`mt_forecast(predictive = TRUE)`) add Poisson variation
-#' of the deaths given the rates and the exposures (the paper makes no
-#' assumption about the distribution of the errors).
+#' **Forecasts.** Kleinow (2015) does not forecast. `index` chooses the
+#' time-series model of the period effects. Both models start from the
+#' fitted rates of the last year, as in Enchev, Kleinow and Cairns (2017,
+#' Section 6.3) ([anchored()] starts them from the observed rates), and keep
+#' `a` and `beta` fixed. Predictive draws (`mt_forecast(predictive = TRUE)`)
+#' add Poisson variation of the deaths given the rates and the exposures
+#' (Kleinow makes no assumption about the distribution of the errors).
+#'
+#' * `index = "rwd"` (default, package-specific): the period effects of all
+#'   populations and orders follow one multivariate random walk with drift,
+#'   `kappa[t] = kappa[t - 1] + mu + e[t]`, with normal innovations whose
+#'   covariance matrix is estimated from the year-to-year changes (divided by
+#'   the number of changes minus one), so the innovations are correlated
+#'   between populations and between orders. This is the random walk with
+#'   drift of Lee and Carter (1992) for every index, and the multivariate
+#'   random walk with drift that StMoMo uses for several period indexes
+#'   (Villegas, Kaishev and Millossovich 2018), here over all populations
+#'   together. Draws include the innovations and, as in [lee_carter()], the
+#'   uncertainty of the drift (normal, with the innovation covariance divided
+#'   by the number of changes; StMoMo keeps the drift fixed). Each population
+#'   has its own drift, so the forecasts of different populations can
+#'   diverge. Enchev, Kleinow and Cairns (2017, Section 6.2, Table 10) use
+#'   this process for the population-specific period effects of two
+#'   variants of the Li-Lee model and note that it lets the populations
+#'   diverge.
+#' * `index = "coherent"`: the forecasting model for the CAE model of
+#'   Enchev, Kleinow and Cairns (2017, Section 6.2, Table 10, Model 3). The
+#'   period effects of order 1 follow a multivariate random walk with one
+#'   drift `d` common to all populations, `kappa1[t] = kappa1[t - 1] + d +
+#'   e1[t]`, so that the populations do not diverge quickly. The period
+#'   effects of order 2 follow a vector autoregression of order 1 with a
+#'   diagonal matrix `Phi`, which reverts to 0, `kappa2[t] = Phi kappa2[t -
+#'   1] + e2[t]`. The expected log rates of two populations then keep the
+#'   difference of their first period effects in the last year, and the
+#'   difference of their second period effects decays to 0, the mean over
+#'   the fitting years. The variance of the difference of the first period
+#'   effects still grows with the horizon unless their innovations are
+#'   perfectly correlated. With one population and `order = 1`, the draws
+#'   equal those of `index = "rwd"`.
+#'
+#' **Choices for `index = "coherent"` (package-specific; the paper is
+#' silent on them).**
+#'
+#' * `d` is the mean year-to-year change of the first period effects over
+#'   the years and the populations, each population with the same weight (as
+#'   in the estimation of `beta`). With `common_by`, each group has its own
+#'   drift, from the strata of the group (the bottom strata of a hierarchy);
+#'   the aggregates of a hierarchy take the drift of their group.
+#' * Each diagonal element of `Phi` is the least-squares estimate through the
+#'   origin for its population, bounded to `|phi| <= 0.99` as in
+#'   [li_lee()], because the paper's process is stationary; a warning of
+#'   class `mt_warning_cae` names the strata where the bound binds. Orders 3
+#'   and higher follow the same process as order 2 (the paper has `order =
+#'   2`).
+#' * One covariance matrix of the innovations of all populations and orders
+#'   is estimated from the residuals (divided by the number of changes minus
+#'   one), as for `"rwd"`. The paper gives each process a volatility matrix,
+#'   does not say whether the innovations of the two processes are
+#'   correlated, and reports correlations below 0.3 between them for its
+#'   data (Section 6.1).
+#' * Draws include the innovations and the uncertainty of `d` (normal, with
+#'   the variance of the mean change), and keep `Phi` fixed.
+#'
+#' **Estimation in Enchev, Kleinow and Cairns (2017).** The paper fits the
+#' CAE model with `order = 2` by Poisson maximum likelihood (Section 4.3),
+#' with age effects that sum to 1, period effects that sum to 0 over the
+#' years for each population, and second period effects that sum to 0 over
+#' the populations in each year (Table 4), a constraint that lowers the
+#' likelihood (Section 4.2). `cae()` keeps the least-squares estimates of
+#' Kleinow (2015) for both values of `index`: the period effects are
+#' identified by the common principal components, and `index = "coherent"`
+#' applies the paper's forecasting model to them. Rescaling a column of
+#' `beta` leaves the forecasts unchanged. Rotating the age effects changes
+#' them, so forecasts from the paper's estimates can differ. The paper's
+#' data (men aged 60-89 in six countries, 1961-2010) are not in the Human
+#' Mortality Database extracts of demography and StMoMo, and the paper
+#' reports its forecasts as figures.
 #'
 #' **Other package-specific choices.**
 #'
@@ -73,8 +134,8 @@
 #' * `common_by` (for example `"sex"`) gives each group of strata its own
 #'   common age effects, estimated from the strata of the group. The paper
 #'   names this extension and leaves it for further research (Section
-#'   3.1). The period effects of all strata still form one random walk, with
-#'   innovations correlated across groups.
+#'   3.1). The innovations of the period effects of all strata have one
+#'   covariance matrix, with correlations across groups.
 #' * If the data carry a hierarchy (see [mt_aggregate_strata()]), `beta` is
 #'   estimated from the bottom strata only, and the aggregates get their
 #'   period effects by projection on it, as the other strata (as in
@@ -92,11 +153,18 @@
 #' @param order Number of common age effects (`p` in the paper).
 #' @param common_by Stratum variable(s) defining groups of strata with their
 #'   own common age effects (package-specific, see Details).
+#' @param index Time-series model of the period effects: `"rwd"` (one
+#'   multivariate random walk with a drift for every population and order,
+#'   package-specific) or `"coherent"` (a common drift for the first period
+#'   effects and mean-reverting autoregressions for the others; Enchev,
+#'   Kleinow and Cairns 2017). See Details.
 #' @return A model specification. The fit (`fit$fits`) holds the common age
 #'   effects `beta` (one matrix per group), the centring `a` `[age,
 #'   stratum]`, the period effects `kappa` `[order, year, stratum]`, the
-#'   drift `drift` and innovation covariance `sigma` of the stacked period
-#'   effects (order within stratum), `mse` and `bic`.
+#'   drift `drift`, the autoregressive coefficient `phi` (1 for a random
+#'   walk) and the innovation covariance `sigma` of the stacked period
+#'   effects (order within stratum), the common drift of each group
+#'   `common_drift` (`index = "coherent"`), `mse` and `bic`.
 #' @references
 #' Kleinow T (2015). A common age effect model for the mortality of multiple
 #' populations. *Insurance: Mathematics and Economics* 63: 147-152.
@@ -121,6 +189,10 @@
 #' Lee RD, Carter LR (1992). Modeling and forecasting U.S. mortality.
 #' *Journal of the American Statistical Association* 87(419): 659-671.
 #'
+#' Enchev V, Kleinow T, Cairns AJG (2017). Multi-population mortality
+#' models: fitting, forecasting and comparisons. *Scandinavian Actuarial
+#' Journal* 2017(4): 319-342. \doi{10.1080/03461238.2015.1133450}
+#'
 #' Villegas AM, Kaishev VK, Millossovich P (2018). StMoMo: an R package for
 #' stochastic mortality modeling. *Journal of Statistical Software* 84(3):
 #' 1-38. \doi{10.18637/jss.v084.i03}
@@ -133,16 +205,24 @@
 #' p <- mt_parameters(fit)
 #' p[parameter %in% c("mse", "bic")]
 #' fc <- mt_forecast(fit, h = 10, n_draws = 100, seed = 1)
+#' # common drift and mean-reverting second period effects
+#' x2 <- mt_subset(mt_example_regions(years = 1990:2019, regions = 2), ages = c(60, Inf))
+#' fit2 <- mt_fit(cae(order = 2, index = "coherent"), x2)
+#' fit2$fits$common_drift
+#' fc2 <- mt_forecast(fit2, h = 10, n_draws = 100, seed = 1)
 #' @export
-cae <- function(order = 1, common_by = NULL) {
+cae <- function(order = 1, common_by = NULL, index = c("rwd", "coherent")) {
   check_number(order, "order", lower = 1, integerish = TRUE)
   if (!is.null(common_by) && (!is.character(common_by) || !length(common_by))) {
     mt_abort("`common_by` must name stratum variables.", class = "argument")
   }
-  new_mt_spec("cae", list(order = as.integer(order), common_by = common_by), joint = TRUE, min_periods = 5,
+  if (identical(index, c("rwd", "coherent"))) index <- "rwd"
+  check_choice(index, c("rwd", "coherent"), "index")
+  new_mt_spec("cae", list(order = as.integer(order), common_by = common_by, index = index), joint = TRUE,
+              min_periods = 5,
               label = paste0("CAE (order ", order, if (!is.null(common_by)) {
                 paste0(", common by ", paste(common_by, collapse = ", "))
-              }, ")"))
+              }, if (index == "coherent") ", coherent index", ")"))
 }
 
 #' @export
@@ -201,17 +281,68 @@ fit_model.mt_spec_cae <- function(spec, D, E, ages, periods, strata = NULL, hier
   mse <- sum(res^2) / n_obs
   k <- sum(vapply(members, function(u) p * (length(u) * nt + na), 0))
   bic <- n_obs * log(mse) + k * log(n_obs)
-  # multivariate random walk with drift of the stacked period effects (the
-  # orders of stratum 1, then of stratum 2, ...): K [order and stratum, year]
-  K <- matrix(aperm(kappa, c(1, 3, 2)), p * ns)
+  ts <- cae_index_fit(kappa, group, members, spec$params$index %||% "rwd")
+  if (any(ts$bounded)) {
+    lab <- if (!is.null(strata$label)) strata$label else as.character(seq_len(ns))
+    who <- unique(lab[(which(ts$bounded) - 1L) %/% p + 1L])
+    mt_warn(sprintf(paste("CAE: the AR(1) coefficient of a period effect of order 2 or higher is bounded at",
+                          "|phi| = 0.99 in %d stratum/strata (%s); these period effects revert very slowly."),
+                    length(who), paste(utils::head(who, 5), collapse = ", ")), class = "cae")
+  }
+  c(list(beta = beta, a = a, kappa = kappa, group = group, members = members), ts,
+    list(fitted = fitted, mse = mse, bic = bic,
+         lambda = lapply(cpca, function(cp) cp$lambda[seq_len(p), , drop = FALSE]),
+         sweeps = vapply(cpca, `[[`, 0, "sweeps")))
+}
+
+# Time-series models of the stacked period effects K [order and stratum,
+# year] (row (s - 1) p + j holds order j of stratum s), with the
+# innovation covariance of all rows from the residuals divided by the
+# number of changes minus one:
+# * "rwd": multivariate random walk with drift, the drift of each row its
+#   mean year-to-year change;
+# * "coherent" (Enchev, Kleinow and Cairns 2017, Table 10, Model 3): the
+#   rows of order 1 a multivariate random walk with one drift per group of
+#   strata with common age effects, the mean change of order 1 over the
+#   group's member strata (`members`; weights `drift_weights` [group, row]);
+#   the rows of order 2 and higher AR(1) processes without constant (a
+#   diagonal VAR(1) reverting to 0), the coefficient the least-squares
+#   estimate through the origin bounded to |phi| <= 0.99 (`bounded`)
+cae_index_fit <- function(kappa, group, members, index) {
+  p <- dim(kappa)[1]
+  nt <- dim(kappa)[2]
+  ns <- dim(kappa)[3]
+  nd <- p * ns
+  K <- matrix(aperm(kappa, c(1, 3, 2)), nd)
   dK <- K[, -1, drop = FALSE] - K[, -nt, drop = FALSE]
-  drift <- rowMeans(dK)
-  R <- dK - drift
+  phi <- rep(1, nd)
+  bounded <- rep(FALSE, nd)
+  out <- list(index = index)
+  if (index == "rwd") {
+    drift <- rowMeans(dK)
+    R <- dK - drift
+  } else {
+    first <- rep(seq_len(p), ns) == 1L
+    W <- matrix(0, length(members), nd)
+    for (g in seq_along(members)) W[g, (members[[g]] - 1L) * p + 1L] <- 1 / length(members[[g]])
+    common <- drop(W %*% rowMeans(dK))
+    drift_group <- ifelse(first, group[rep(seq_len(ns), each = p)], 0L)
+    drift <- ifelse(first, common[pmax(drift_group, 1L)], 0)
+    R <- dK - drift
+    for (r in which(!first)) {
+      ss <- sum(K[r, -nt]^2)
+      raw <- if (ss > 0) sum(K[r, -1] * K[r, -nt]) / ss else 0
+      phi[r] <- max(min(raw, 0.99), -0.99)
+      bounded[r] <- abs(raw) > 0.99
+      R[r, ] <- K[r, -1] - phi[r] * K[r, -nt]
+    }
+    out <- c(out, list(common_drift = common, drift_group = drift_group, drift_weights = W))
+  }
   sigma <- tcrossprod(R) / max(nt - 2, 1)
-  list(beta = beta, a = a, kappa = kappa, group = group, members = members, drift = drift, sigma = sigma,
-       root = mvn_root(sigma), last = K[, nt], n_changes = nt - 1, fitted = fitted, mse = mse, bic = bic,
-       lambda = lapply(cpca, function(cp) cp$lambda[seq_len(p), , drop = FALSE]),
-       sweeps = vapply(cpca, `[[`, 0, "sweeps"))
+  out <- c(out, list(drift = drift, phi = phi, bounded = bounded, sigma = sigma, root = mvn_root(sigma),
+                     last = K[, nt], n_changes = nt - 1))
+  if (index == "coherent") out$drift_root <- mvn_root(W %*% sigma %*% t(W))
+  out
 }
 
 #' @export
@@ -222,11 +353,27 @@ simulate_model.mt_spec_cae <- function(spec, fit, h, n_draws, ...) {
   nd <- length(fit$last)
   # cumulative sums over the horizon as a product with a triangular matrix
   U <- 1 * upper.tri(diag(h), diag = TRUE)
+  coherent <- identical(fit$index, "coherent")
   out <- array(NA_real_, c(na, h, ns, n_draws))
   for (j in seq_len(n_draws)) {
-    drift <- fit$drift + as.vector(fit$root %*% stats::rnorm(nd)) / sqrt(fit$n_changes)
-    eps <- fit$root %*% matrix(stats::rnorm(nd * h), nd, h)
-    path <- fit$last + (eps + drift) %*% U
+    if (coherent) {
+      # one drift per group (with its estimation uncertainty) for the rows of
+      # order 1, AR(1) recursions for the others
+      ng <- length(fit$common_drift)
+      common <- fit$common_drift + as.vector(fit$drift_root %*% stats::rnorm(ng)) / sqrt(fit$n_changes)
+      drift <- ifelse(fit$drift_group > 0, common[pmax(fit$drift_group, 1L)], 0)
+      eps <- fit$root %*% matrix(stats::rnorm(nd * h), nd, h)
+      path <- matrix(NA_real_, nd, h)
+      prev <- fit$last
+      for (k in seq_len(h)) {
+        prev <- fit$phi * prev + drift + eps[, k]
+        path[, k] <- prev
+      }
+    } else {
+      drift <- fit$drift + as.vector(fit$root %*% stats::rnorm(nd)) / sqrt(fit$n_changes)
+      eps <- fit$root %*% matrix(stats::rnorm(nd * h), nd, h)
+      path <- fit$last + (eps + drift) %*% U
+    }
     for (s in seq_len(ns)) {
       rows <- (s - 1L) * p + seq_len(p)
       out[, , s, j] <- exp(fit$a[, s] + fit$beta[[fit$group[s]]] %*% path[rows, , drop = FALSE])

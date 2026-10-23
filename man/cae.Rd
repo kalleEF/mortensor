@@ -4,25 +4,36 @@
 \alias{cae}
 \title{Common age effect model for several populations}
 \usage{
-cae(order = 1, common_by = NULL)
+cae(order = 1, common_by = NULL, index = c("rwd", "coherent"))
 }
 \arguments{
 \item{order}{Number of common age effects (\code{p} in the paper).}
 
 \item{common_by}{Stratum variable(s) defining groups of strata with their
 own common age effects (package-specific, see Details).}
+
+\item{index}{Time-series model of the period effects: \code{"rwd"} (one
+multivariate random walk with a drift for every population and order,
+package-specific) or \code{"coherent"} (a common drift for the first period
+effects and mean-reverting autoregressions for the others; Enchev,
+Kleinow and Cairns 2017). See Details.}
 }
 \value{
 A model specification. The fit (\code{fit$fits}) holds the common age
 effects \code{beta} (one matrix per group), the centring \code{a} \verb{[age, stratum]}, the period effects \code{kappa} \verb{[order, year, stratum]}, the
-drift \code{drift} and innovation covariance \code{sigma} of the stacked period
-effects (order within stratum), \code{mse} and \code{bic}.
+drift \code{drift}, the autoregressive coefficient \code{phi} (1 for a random
+walk) and the innovation covariance \code{sigma} of the stacked period
+effects (order within stratum), the common drift of each group
+\code{common_drift} (\code{index = "coherent"}), \code{mse} and \code{bic}.
 }
 \description{
 Joint model of the strata as populations that share their age effects and
 keep their own period effects: the common age effect (CAE) model of
-Kleinow (2015). Status: published, with the package-specific forecast and
-choices listed below; section and equation numbers refer to that paper.
+Kleinow (2015). Status: published. The model and its estimation follow
+Kleinow (2015), and section and equation numbers refer to that paper
+unless another is named; \code{index = "coherent"} forecasts with the model of
+Enchev, Kleinow and Cairns (2017); the default forecast and the other
+choices listed below are package-specific.
 }
 \details{
 \strong{Model (Sections 2 and 3.1, eq. 1-3).} The log death rates \code{y[x, t, i] = log(D[x, t, i] / E[x, t, i])} of each population \code{i} are centred over
@@ -52,25 +63,82 @@ years than age groups (Section 2), and so does \code{cae()}: with fewer years,
 use wider age groups (\code{\link[=mt_regroup]{mt_regroup()}}) or fewer ages (\code{\link[=mt_subset]{mt_subset()}});
 Kleinow fitted ages 18-52 and 53-87 separately.
 
-\strong{Forecasts (package-specific).} Kleinow (2015) does not forecast. Here
-the period effects of all populations and orders follow one multivariate
-random walk with drift, \code{kappa[t] = kappa[t - 1] + mu + e[t]}, with normal
-innovations whose covariance matrix is estimated from the year-to-year
-changes (divided by the number of changes minus one), so the innovations
-are correlated between populations and between orders. This is the
-random walk with drift of Lee and Carter (1992) for every index, and the
-multivariate random walk with drift that StMoMo uses for several period
-indexes (Villegas, Kaishev and Millossovich 2018), here over all
-populations together. Draws include the innovations and, as in
-\code{\link[=lee_carter]{lee_carter()}}, the uncertainty of the drift (normal, with the innovation
-covariance divided by the number of changes; StMoMo keeps the drift
-fixed). \code{a} and \code{beta} are fixed. Forecasts start from the fitted rates of
-the last year (\code{\link[=anchored]{anchored()}} starts them from the observed rates). Each
-population has its own drift, so the forecasts of different populations
-can diverge; \code{\link[=li_lee]{li_lee()}} and \code{\link[=coherent_fdm]{coherent_fdm()}} keep them together.
-Predictive draws (\code{mt_forecast(predictive = TRUE)}) add Poisson variation
-of the deaths given the rates and the exposures (the paper makes no
-assumption about the distribution of the errors).
+\strong{Forecasts.} Kleinow (2015) does not forecast. \code{index} chooses the
+time-series model of the period effects. Both models start from the
+fitted rates of the last year, as in Enchev, Kleinow and Cairns (2017,
+Section 6.3) (\code{\link[=anchored]{anchored()}} starts them from the observed rates), and keep
+\code{a} and \code{beta} fixed. Predictive draws (\code{mt_forecast(predictive = TRUE)})
+add Poisson variation of the deaths given the rates and the exposures
+(Kleinow makes no assumption about the distribution of the errors).
+\itemize{
+\item \code{index = "rwd"} (default, package-specific): the period effects of all
+populations and orders follow one multivariate random walk with drift,
+\code{kappa[t] = kappa[t - 1] + mu + e[t]}, with normal innovations whose
+covariance matrix is estimated from the year-to-year changes (divided by
+the number of changes minus one), so the innovations are correlated
+between populations and between orders. This is the random walk with
+drift of Lee and Carter (1992) for every index, and the multivariate
+random walk with drift that StMoMo uses for several period indexes
+(Villegas, Kaishev and Millossovich 2018), here over all populations
+together. Draws include the innovations and, as in \code{\link[=lee_carter]{lee_carter()}}, the
+uncertainty of the drift (normal, with the innovation covariance divided
+by the number of changes; StMoMo keeps the drift fixed). Each population
+has its own drift, so the forecasts of different populations can
+diverge. Enchev, Kleinow and Cairns (2017, Section 6.2, Table 10) use
+this process for the population-specific period effects of two
+variants of the Li-Lee model and note that it lets the populations
+diverge.
+\item \code{index = "coherent"}: the forecasting model for the CAE model of
+Enchev, Kleinow and Cairns (2017, Section 6.2, Table 10, Model 3). The
+period effects of order 1 follow a multivariate random walk with one
+drift \code{d} common to all populations, \code{kappa1[t] = kappa1[t - 1] + d + e1[t]}, so that the populations do not diverge quickly. The period
+effects of order 2 follow a vector autoregression of order 1 with a
+diagonal matrix \code{Phi}, which reverts to 0, \verb{kappa2[t] = Phi kappa2[t - 1] + e2[t]}. The expected log rates of two populations then keep the
+difference of their first period effects in the last year, and the
+difference of their second period effects decays to 0, the mean over
+the fitting years. The variance of the difference of the first period
+effects still grows with the horizon unless their innovations are
+perfectly correlated. With one population and \code{order = 1}, the draws
+equal those of \code{index = "rwd"}.
+}
+
+\strong{Choices for \code{index = "coherent"} (package-specific; the paper is
+silent on them).}
+\itemize{
+\item \code{d} is the mean year-to-year change of the first period effects over
+the years and the populations, each population with the same weight (as
+in the estimation of \code{beta}). With \code{common_by}, each group has its own
+drift, from the strata of the group (the bottom strata of a hierarchy);
+the aggregates of a hierarchy take the drift of their group.
+\item Each diagonal element of \code{Phi} is the least-squares estimate through the
+origin for its population, bounded to \verb{|phi| <= 0.99} as in
+\code{\link[=li_lee]{li_lee()}}, because the paper's process is stationary; a warning of
+class \code{mt_warning_cae} names the strata where the bound binds. Orders 3
+and higher follow the same process as order 2 (the paper has \code{order = 2}).
+\item One covariance matrix of the innovations of all populations and orders
+is estimated from the residuals (divided by the number of changes minus
+one), as for \code{"rwd"}. The paper gives each process a volatility matrix,
+does not say whether the innovations of the two processes are
+correlated, and reports correlations below 0.3 between them for its
+data (Section 6.1).
+\item Draws include the innovations and the uncertainty of \code{d} (normal, with
+the variance of the mean change), and keep \code{Phi} fixed.
+}
+
+\strong{Estimation in Enchev, Kleinow and Cairns (2017).} The paper fits the
+CAE model with \code{order = 2} by Poisson maximum likelihood (Section 4.3),
+with age effects that sum to 1, period effects that sum to 0 over the
+years for each population, and second period effects that sum to 0 over
+the populations in each year (Table 4), a constraint that lowers the
+likelihood (Section 4.2). \code{cae()} keeps the least-squares estimates of
+Kleinow (2015) for both values of \code{index}: the period effects are
+identified by the common principal components, and \code{index = "coherent"}
+applies the paper's forecasting model to them. Rescaling a column of
+\code{beta} leaves the forecasts unchanged. Rotating the age effects changes
+them, so forecasts from the paper's estimates can differ. The paper's
+data (men aged 60-89 in six countries, 1961-2010) are not in the Human
+Mortality Database extracts of demography and StMoMo, and the paper
+reports its forecasts as figures.
 
 \strong{Other package-specific choices.}
 \itemize{
@@ -92,8 +160,8 @@ populations, with no general solution (Section 3.2).
 \item \code{common_by} (for example \code{"sex"}) gives each group of strata its own
 common age effects, estimated from the strata of the group. The paper
 names this extension and leaves it for further research (Section
-3.1). The period effects of all strata still form one random walk, with
-innovations correlated across groups.
+3.1). The innovations of the period effects of all strata have one
+covariance matrix, with correlations across groups.
 \item If the data carry a hierarchy (see \code{\link[=mt_aggregate_strata]{mt_aggregate_strata()}}), \code{beta} is
 estimated from the bottom strata only, and the aggregates get their
 period effects by projection on it, as the other strata (as in
@@ -114,6 +182,11 @@ fit <- mt_fit(cae(order = 2), x)
 p <- mt_parameters(fit)
 p[parameter \%in\% c("mse", "bic")]
 fc <- mt_forecast(fit, h = 10, n_draws = 100, seed = 1)
+# common drift and mean-reverting second period effects
+x2 <- mt_subset(mt_example_regions(years = 1990:2019, regions = 2), ages = c(60, Inf))
+fit2 <- mt_fit(cae(order = 2, index = "coherent"), x2)
+fit2$fits$common_drift
+fc2 <- mt_forecast(fit2, h = 10, n_draws = 100, seed = 1)
 }
 \references{
 Kleinow T (2015). A common age effect model for the mortality of multiple
@@ -138,6 +211,10 @@ diagonalization. \emph{SIAM Journal on Matrix Analysis and Applications}
 
 Lee RD, Carter LR (1992). Modeling and forecasting U.S. mortality.
 \emph{Journal of the American Statistical Association} 87(419): 659-671.
+
+Enchev V, Kleinow T, Cairns AJG (2017). Multi-population mortality
+models: fitting, forecasting and comparisons. \emph{Scandinavian Actuarial
+Journal} 2017(4): 319-342. \doi{10.1080/03461238.2015.1133450}
 
 Villegas AM, Kaishev VK, Millossovich P (2018). StMoMo: an R package for
 stochastic mortality modeling. \emph{Journal of Statistical Software} 84(3):

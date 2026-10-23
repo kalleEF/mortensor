@@ -80,12 +80,14 @@ the recent trend;
 \item \code{\link[=cae]{cae()}}: the common age effects \code{beta1}, \code{beta2}, ... of each group
 (rows labelled \verb{common <g> (<strata>)}), and per stratum the centring
 \code{a}, the period effects \code{kappa1}, \code{kappa2}, ..., their drift
-(\code{drift_kappa1}, ...), the standard deviation of their innovations
-(\code{sd_kappa1}, ...) and the correlation of their innovations with those
-of the same order of every stratum (\code{cor_kappa1}, ..., indexed by the
-other stratum); rows of stratum \code{"model"} give the mean squared error
-of the centred log rates (\code{mse}) and the approximate BIC of Kleinow
-(2015, eq. 5; \code{bic}).
+(\code{drift_kappa1}, ...; with \code{index = "coherent"} the common drift of the
+group for order 1 and 0 for the others, whose autoregressive
+coefficients are \code{phi_kappa2}, ...), the standard deviation of their
+innovations (\code{sd_kappa1}, ...) and the correlation of their innovations
+with those of the same order of every stratum (\code{cor_kappa1}, ...,
+indexed by the other stratum); rows of stratum \code{"model"} give the mean
+squared error of the centred log rates (\code{mse}) and the approximate BIC
+of Kleinow (2015, eq. 5; \code{bic}).
 }
 
 Fits of wrapped packages (StMoMo, demography) keep the original fitted
