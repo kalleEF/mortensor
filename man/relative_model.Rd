@@ -114,6 +114,9 @@ Package-specific (reference unknown): with cohort effects these
 iterations converge slowly, as known for this model (Section 2.5), and
 their fixed point is found with Anderson acceleration (Anderson 1965;
 Walker and Ni 2011), which extrapolates from the last ten iterations.
+The iterations of the Lee-Carter reference are not accelerated: they
+converge within a few hundred iterations, and extrapolations can lead
+them to a fixed point of lower likelihood.
 The iterations stop when one iteration changes no fitted log rate by
 more than \code{1e-9} (at most 5,000 iterations; a warning of class
 \code{mt_warning_relative_model} otherwise). The fit reproduces

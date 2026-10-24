@@ -126,6 +126,9 @@ mt_fit.mt_spec <- function(spec, data, prep = NULL, cores = 1, ...) {
   if (spec$joint) {
     r <- run(function() fit_model(spec, md$D, md$E, md$age, md$periods, strata = st, hierarchy = d$hierarchy))
     fits <- r$fit
+    # a fit that used fewer components than its label names (the ranks of
+    # coda_multiway()) carries the label of the model fitted
+    if (is.list(fits) && is.character(fits[["effective_label"]])) spec$label <- fits[["effective_label"]]
     classes <- r$classes
     diagnostics <- data.table(stratum = st$label, status = r$status, message = r$message, seconds = r$seconds)
   } else {
@@ -347,8 +350,10 @@ with_stream <- function(seed, expr) {
 
 #' @export
 print.mt_fit <- function(x, ...) {
-  cat(sprintf("<mt_fit> %s; %d strata; ages %s; periods %s-%s\n", x$spec$label, nrow(x$strata),
-              paste(x$age$labels[c(1, length(x$age))], collapse = " to "), min(x$periods), max(x$periods)))
+  chosen <- chosen_period_text(x)
+  cat(sprintf("<mt_fit> %s; %d strata; ages %s; periods %s-%s%s\n", x$spec$label, nrow(x$strata),
+              paste(x$age$labels[c(1, length(x$age))], collapse = " to "), min(x$periods), max(x$periods),
+              if (!is.null(chosen)) sprintf(" (fitted %s)", chosen) else ""))
   if (!is.null(x$prep)) cat(sprintf("  preprocessing: %d step(s)\n", length(x$prep$steps)))
   bad <- x$diagnostics[status != "ok"]
   if (nrow(bad)) cat(sprintf("  failed: %s\n", paste(bad$stratum, collapse = ", ")))

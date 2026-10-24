@@ -2153,6 +2153,12 @@ mt_coherence <- function(draws, hierarchy, exposure = NULL) {
   by_deaths <- identical(h$additive, "deaths")
   V <- if (by_deaths) draws$rates * as.vector(E) else draws$rates
   agg <- which(!hs$is_bottom)
+  if (!length(agg)) {
+    mt_abort(paste("The draws hold no aggregate strata of the hierarchy, only its bottom strata, so there is no",
+                   "sum to check. Forecast the aggregates as well: fit the data aggregated with",
+                   "mt_aggregate_strata(), or fit reconciled(), whose draws include the aggregates."),
+             class = "hierarchy")
+  }
   b <- hs$bottom
   rows <- lapply(agg, function(i) {
     w <- hs$S[i, ]

@@ -71,10 +71,13 @@
 #' Bergeron-Boucher, Simonacci, Oeppen and Gallo (2018), or [coda()]
 #' (`coherent = TRUE`) for a common component with deviations per stratum.
 #'
-#' Ranks are reduced to the array dimensions where needed, so the model also
-#' runs with one stratum or one age group. The model is experimental: compare
-#' it with established models such as [li_lee()] in a backtest before using
-#' it.
+#' Ranks are reduced to the array dimensions where needed (at most the
+#' number of age groups minus 1, of years minus 1 and of strata, and at
+#' least 1), so the model also runs with one stratum or one age group; a
+#' warning (class `mt_warning_argument`) names the requested and the ranks
+#' used, which [mt_parameters()] reports (`rank`). The model is
+#' experimental: compare it with established models such as [li_lee()] in a
+#' backtest before using it.
 #'
 #' @param ranks Tucker ranks for age, period and stratum (default `c(2, 2,
 #'   2)`, Russolillo et al. 2011, Section 3.2), or `"bic"` / `"aic"` to
@@ -162,6 +165,11 @@ fit_model.mt_spec_tucker3 <- function(spec, D, E, ages, periods, ...) {
   rk <- if (is.character(p$ranks)) tucker_select_ranks(Xc, p$ranks)$ranks else p$ranks
   ranks <- pmin(rk, dims - c(1, 1, 0), dims)
   ranks <- pmax(ranks, 1)
+  if (!is.character(p$ranks) && any(ranks != p$ranks)) {
+    mt_warn(sprintf(paste("The ranks c(%s) exceed what the data allow (the number of age groups minus 1,",
+                          "of years minus 1 and of strata, at least 1 each); ranks c(%s) are used."),
+                    paste(p$ranks, collapse = ", "), paste(ranks, collapse = ", ")), class = "argument")
+  }
   dec <- hooi(Xc, ranks, p$maxit, p$tol)
   Xhat <- tucker_add_centre(tucker_reconstruct(dec$G, dec$U), alpha)
   resid <- X - Xhat
@@ -350,4 +358,30 @@ tucker_select_ranks <- function(X, criterion = "bic", max_ranks = c(6, 6, 4)) {
   })
   i <- which.min(ic)
   list(ranks = as.numeric(grid[i, ]), table = cbind(grid, ic = ic))
+}
+
+# Parameters of a Tucker3 fit, for mt_parameters(): the ranks used, the
+# factors of age (`A1`, ...), period (`B1`, ...) and stratum (`C1`, ...),
+# the drifts of the period factors (random walks), the core `g` (index
+# `p,q,r`) and the share of the sum of squares explained; per stratum the
+# centre `a`
+tucker3_parameters <- function(fit) {
+  f <- fit$fits
+  lab <- fit$strata$label
+  U <- f$dec$U
+  G <- f$dec$G
+  index <- list(fit$age$labels, as.character(fit$periods), lab)
+  factors <- rbindlist(lapply(1:3, function(n) {
+    rbindlist(lapply(seq_len(ncol(U[[n]])), function(j) {
+      param_rows("common", paste0(c("A", "B", "C")[n], j), index[[n]], U[[n]][, j])
+    }))
+  }))
+  common <- rbind(param_rows("common", "rank", c("age", "period", "stratum"), f$ranks), factors,
+                  if (f$ts == "rwd") param_rows("common", paste0("drift_B", seq_along(f$B_mu)), "", f$B_mu),
+                  param_rows("common", "g", apply(arrayInd(seq_along(G), dim(G)), 1, paste, collapse = ","), G),
+                  param_rows("common", "explained", "", f$fit_pct / 100))
+  own <- if (!is.null(f$alpha)) {
+    rbindlist(lapply(seq_along(lab), function(s) param_rows(lab[s], "a", fit$age$labels, f$alpha[, s])))
+  }
+  rbind(common, own)
 }

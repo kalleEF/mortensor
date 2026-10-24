@@ -106,7 +106,12 @@
 #' coda_multiway())` does.
 #'
 #' @param ranks Numbers of components `c(age, time, population)`, by default
-#'   `c(1, 1, 1)`. They are reduced where the data allow fewer components.
+#'   `c(1, 1, 1)`. They are reduced where the data allow fewer components
+#'   (at most the number of parts of the composition minus 1, of years minus
+#'   1 and of populations, and no rank above the product of the other two),
+#'   with a warning (class `mt_warning_argument`) that names the requested
+#'   and the ranks used; the label of the fit and [mt_parameters()]
+#'   (`rank`) give the ranks used.
 #' @param order ARIMA order `c(p, d, q)` of each time index; `c(0, 1, 0)` by
 #'   default (random walk, Bergeron-Boucher et al. 2018, Section 5).
 #' @param drift Include a drift when `d = 1`; ignored otherwise (`d = 0`
@@ -168,14 +173,19 @@ coda_multiway <- function(ranks = c(1, 1, 1), order = c(0, 1, 0), drift = TRUE, 
              call = NULL)
   }
   ranks <- as.numeric(ranks)
-  ts_label <- if (!identical(order, c(0, 1, 0)) || !drift) arima_label(order, drift)
-  new_mt_spec("coda_multiway", list(ranks = ranks, order = order, drift = drift, jump_off = jump_off, open = open),
-              joint = TRUE, min_periods = 6,
-              label = paste0("Multiway CoDa",
-                             if (!identical(ranks, c(1, 1, 1))) sprintf(" (ranks %s)", paste(ranks, collapse = "/")),
-                             if (length(ts_label)) paste0(", ", ts_label),
-                             if (open == "regression") ", open regression" else "",
-                             if (jump_off == "observed") ", observed jump-off" else ""))
+  p <- list(ranks = ranks, order = order, drift = drift, jump_off = jump_off, open = open)
+  new_mt_spec("coda_multiway", p, joint = TRUE, min_periods = 6, label = coda_multiway_label(p, ranks))
+}
+
+# Label of coda_multiway() with the ranks `ranks` (those requested, or those
+# of the fit where the data allow fewer)
+coda_multiway_label <- function(p, ranks) {
+  ts_label <- if (!identical(p$order, c(0, 1, 0)) || !p$drift) arima_label(p$order, p$drift)
+  paste0("Multiway CoDa",
+         if (!identical(as.numeric(ranks), c(1, 1, 1))) sprintf(" (ranks %s)", paste(ranks, collapse = "/")),
+         if (length(ts_label)) paste0(", ", ts_label),
+         if (p$open == "regression") ", open regression" else "",
+         if (p$jump_off == "observed") ", observed jump-off" else "")
 }
 
 #' @export
@@ -193,7 +203,15 @@ fit_model.mt_spec_coda_multiway <- function(spec, D, E, ages, periods, strata = 
   })
   np <- length(layout$parts)
   Z <- array(unlist(lapply(sched, function(sc) coda_clr(sc$m, layout))), c(np, nt, ns))
-  tk <- coda_tucker(Z, p$ranks %||% c(1, 1, 1))
+  requested <- p$ranks %||% c(1, 1, 1)
+  tk <- coda_tucker(Z, requested)
+  capped <- any(tk$ranks != requested)
+  if (capped) {
+    mt_warn(sprintf(paste("The ranks c(%s) exceed what the data allow (the number of parts of the",
+                          "composition minus 1, of years minus 1 and of populations, and no rank above the product",
+                          "of the other two); ranks c(%s) are used."), paste(requested, collapse = ", "),
+                    paste(tk$ranks, collapse = ", ")), class = "argument")
+  }
   k <- tk$U[[2]]
   order <- p$order %||% c(0, 1, 0)
   drift <- p$drift %||% TRUE
@@ -201,6 +219,11 @@ fit_model.mt_spec_coda_multiway <- function(spec, D, E, ages, periods, strata = 
   fit <- c(tk, list(k = k, rank = ncol(k), ts = ts, order = order, drift = drift, adjust = TRUE, layout = layout,
                     parts = layout$parts,
                     jump_off = p$jump_off %||% "fitted", Z_last = matrix(Z[, nt, ], np), labels = labels))
+  # the label of the fit names the ranks used (mt_fit())
+  if (capped) {
+    fit$effective_label <- coda_multiway_label(list(order = order, drift = drift, open = p$open %||% "auto",
+                                                    jump_off = fit$jump_off), tk$ranks)
+  }
   # loadings of each population on the time indexes [part, index]
   fit$load <- lapply(seq_len(ns), function(s) coda_tucker_loadings(tk, s))
   fit$kannisto <- lapply(sched, `[[`, "kannisto")
@@ -337,13 +360,12 @@ coda_multiway_parameters <- function(fit) {
   f <- fit$fits
   lab <- fit$strata$label
   yrs <- as.character(fit$periods)
-  row <- function(stratum, parameter, index, value) {
-    data.table(stratum = stratum, parameter = parameter, index = as.character(index), value = as.numeric(value))
-  }
+  row <- param_rows
   suffix <- function(n) if (n > 1) seq_len(n) else rep("", n)
   r <- f$ranks
   G <- f$G
   common <- c(
+    list(row("common", "rank", c("age", "time", "population"), r)),
     lapply(seq_len(r[1]), function(p) row("common", paste0("b", suffix(r[1])[p]), f$parts, f$U[[1]][, p])),
     unlist(lapply(seq_len(r[2]), function(q) {
       tsq <- f$ts[[q]]

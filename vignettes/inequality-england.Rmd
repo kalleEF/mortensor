@@ -148,11 +148,11 @@ merge(start, end, by = c("model", "sex"), sort = FALSE)[, lapply(.SD, function(v
 #>  5:        coherent fdm female          6.46        6.49          5.79
 #>  6:        coherent fdm   male          7.66        7.63          7.32
 #>  7:     relative (mrwd) female          6.46        6.19          6.26
-#>  8:     relative (mrwd)   male          7.66        7.21          7.16
+#>  8:     relative (mrwd)   male          7.66        7.55          7.55
 #>  9:      relative (rwd) female          6.46        6.19          6.27
-#> 10:      relative (rwd)   male          7.66        7.21          7.16
+#> 10:      relative (rwd)   male          7.66        7.55          7.55
 #> 11: relative (constant) female          6.46        6.19          6.16
-#> 12: relative (constant)   male          7.66        7.21          7.16
+#> 12: relative (constant)   male          7.66        7.55          7.50
 #>      forecast_2035
 #>  1: 7.6 (4.2-11.4)
 #>  2: 7.8 (5.4-10.3)
@@ -161,11 +161,11 @@ merge(start, end, by = c("model", "sex"), sort = FALSE)[, lapply(.SD, function(v
 #>  5:  4.8 (4.1-5.5)
 #>  6:  6.4 (5.7-7.0)
 #>  7:  7.3 (6.5-8.2)
-#>  8:  6.3 (5.7-6.9)
+#>  8:  7.6 (7.1-8.2)
 #>  9:  7.4 (5.2-9.4)
-#> 10:  6.3 (5.4-7.2)
+#> 10:  7.6 (6.8-8.4)
 #> 11:  5.6 (5.2-5.9)
-#> 12:  6.3 (6.0-6.6)
+#> 12:  6.7 (6.4-6.9)
 ```
 
 The drifts of the indexes of improvement differences in the relative
@@ -177,9 +177,9 @@ dr <- mt_parameters(fits[["relative (mrwd)"]])[parameter == "drift" & grepl("^(f
                                                .(stratum, drift = round(value, 3))]
 dr[, c("sex", "quintile") := tstrsplit(stratum, ".", fixed = TRUE)]
 dcast(dr, sex ~ quintile, value.var = "drift")
-#>       sex     Q1    Q2     Q3     Q4     Q5
-#> 1: female  0.046 0.016 -0.004 -0.010 -0.029
-#> 2:   male -0.006 0.007  0.007 -0.006 -0.003
+#>       sex    Q1    Q2     Q3     Q4     Q5
+#> 1: female 0.046 0.016 -0.004 -0.010 -0.029
+#> 2:   male 0.003 0.001 -0.001 -0.001 -0.002
 ```
 
 The assumption decides the answer: Lee-Carter continues the widening of the
@@ -196,16 +196,18 @@ Lee-Carter (4.2-11.4): the quintiles share England's trend, so the
 uncertainty of that trend moves all of them together. Independent random
 walks (`"rwd"`)
 give about the same median (7.4 years) and a wider interval (5.2-9.4).
-For men the relative model narrows the gap, from 7.21 years fitted for
-2019 to 6.3 years in 2035: the indexes of men hardly drifted in 2001-2019
-(drifts between -0.006 and 0.007, against 0.046 for women in Q1 and
--0.029 in Q5), so its forecast for men is that of constant improvement
-differences (also 6.3 years). With the ratios of the rates to England's
-fixed at each age, the gap in years narrows as mortality falls (for women
-to 5.6 years with `"constant"`): deaths move to older ages, where the
-ratios between the quintiles are smaller (see the last section of this
-part). All three versions start below the observed gap of 2019 (fitted
-6.19 against 6.46 years for women, 7.21 against 7.66 for men): one age
+For men the relative model keeps the gap near its fitted level of 2019
+(7.55 years), at 7.6 years in 2035 (95% interval 7.1-8.2). The indexes of
+men hardly drifted in 2001-2019 (drifts between -0.002 and 0.003, against
+0.046 for women in Q1 and -0.029 in Q5); with constant improvement
+differences the gap of men narrows to 6.7 years, and the small drifts,
+upwards in Q1 and downwards in Q5, offset that narrowing. With the ratios
+of the rates to England's fixed at each age, the gap in years narrows as
+mortality falls (for women to 5.6 years with `"constant"`): deaths move to
+older ages, where the ratios between the quintiles are smaller (see the
+last section of this part). All three versions start below the observed
+gap of 2019 (fitted 6.19 against 6.46 years for women, 7.55 against 7.66
+for men): one age
 pattern of improvement differences, shared by all quintiles at all ages
 from 0 to 90+, does not reproduce the gap of the last year.
 
@@ -238,15 +240,15 @@ mt_score_table(bt, metrics = c("crps", "cov95"), targets = c("rate", "life_expec
 #> 10:        coherent fdm    bottom 0.0707 0.755   0.407    0.532
 #> 11:        coherent fdm aggregate 0.0608 0.651   0.400    0.480
 #> 12:        coherent fdm     total 0.0544 0.504   0.380    0.440
-#> 13:     relative (mrwd)    bottom 0.0665 0.777   0.387    0.588
-#> 14:     relative (mrwd) aggregate 0.0555 0.706   0.390    0.491
-#> 15:     relative (mrwd)     total 0.0477 0.582   0.385    0.440
-#> 16:      relative (rwd)    bottom 0.0666 0.776   0.388    0.608
-#> 17:      relative (rwd) aggregate 0.0557 0.693   0.393    0.469
-#> 18:      relative (rwd)     total 0.0484 0.536   0.389    0.400
-#> 19: relative (constant)    bottom 0.0668 0.734   0.397    0.576
-#> 20: relative (constant) aggregate 0.0560 0.657   0.400    0.497
-#> 21: relative (constant)     total 0.0483 0.512   0.393    0.480
+#> 13:     relative (mrwd)    bottom 0.0655 0.787   0.355    0.620
+#> 14:     relative (mrwd) aggregate 0.0553 0.701   0.363    0.531
+#> 15:     relative (mrwd)     total 0.0480 0.570   0.366    0.480
+#> 16:      relative (rwd)    bottom 0.0655 0.785   0.354    0.640
+#> 17:      relative (rwd) aggregate 0.0555 0.691   0.363    0.520
+#> 18:      relative (rwd)     total 0.0487 0.540   0.370    0.440
+#> 19: relative (constant)    bottom 0.0656 0.745   0.377    0.604
+#> 20: relative (constant) aggregate 0.0554 0.651   0.384    0.531
+#> 21: relative (constant)     total 0.0482 0.526   0.383    0.480
 #> 22:    Lee-Carter + fdm    bottom 0.0664 0.858   0.330    0.860
 #> 23:    Lee-Carter + fdm aggregate 0.0542 0.749   0.332    0.611
 #> 24:    Lee-Carter + fdm     total 0.0442 0.556   0.353    0.360
@@ -261,9 +263,9 @@ mt_score_table(bt[quintile == "Q5" & sex != "both"], metrics = c("crps", "cov95"
 #> 2:                 fdm       0.371         0.92
 #> 3:              Li-Lee       0.778         0.06
 #> 4:        coherent fdm       0.684         0.18
-#> 5:     relative (mrwd)       0.544         0.14
-#> 6:      relative (rwd)       0.532         0.20
-#> 7: relative (constant)       0.650         0.08
+#> 5:     relative (mrwd)       0.367         0.26
+#> 6:      relative (rwd)       0.354         0.36
+#> 7: relative (constant)       0.543         0.14
 #> 8:    Lee-Carter + fdm       0.283         1.00
 ```
 
@@ -280,7 +282,8 @@ root (its AR(1) coefficient is bounded at 0.99), so it reverts very
 slowly.
 
 The models forecast the rates of the quintiles within about 10% of each
-other, the ensemble and the relative model best (CRPS 0.0664-0.0668).
+other, the relative model best (CRPS 0.0655-0.0656), then the ensemble
+(0.0664).
 The intervals of life expectancy are too narrow for every model, most
 for the totals (95% coverage of Lee-Carter 0.78 for the quintiles and
 0.24 for England): five years ahead, the forecasts
@@ -290,11 +293,12 @@ are), so the deviations of its draws partly cancel in the totals. The
 gap separates the models clearly: Li-Lee and the coherent fdm forecast
 it worst, and their intervals covered the observed gap in only 6% and
 18% of the cases, because in 2010-2019 the female gap did not return to
-its past level. The relative model forecast it better than these two and
-worse than the models fitted to each quintile separately (CRPS 0.532 to
-0.650, against 0.218 to 0.371), with intervals that covered the observed
-gap in 14% (`"mrwd"`), 20% (`"rwd"`) and 8% (`"constant"`) of the
-cases: its forecasts start from the fitted gap of the last year, which
+its past level. The relative model forecast it better than these two:
+with drifting indexes about as well as fdm (CRPS 0.354 and 0.367 against
+0.371), with constant indexes worse (0.543), and all three worse than
+Lee-Carter and the ensemble (0.218 and 0.283). Its intervals covered the
+observed gap in 26% (`"mrwd"`), 36% (`"rwd"`) and 14% (`"constant"`) of
+the cases: its forecasts start from the fitted gap of the last year, which
 can lie well below the observed one (as in 2019 above), and its
 intervals of the gap are narrow. Lee-Carter forecast the gap best, with
 intervals that covered it in every case, the ensemble of Lee-Carter and

@@ -957,9 +957,7 @@ saint_parameters <- function(fit) {
   f <- fit$fits
   lab <- fit$strata$label
   yrs <- as.character(fit$periods)
-  row <- function(stratum, parameter, index, value) {
-    data.table(stratum = stratum, parameter = parameter, index = as.character(index), value = as.numeric(value))
-  }
+  row <- param_rows
   pairs <- function(nm) {
     k <- which(upper.tri(diag(length(nm)), diag = TRUE), arr.ind = TRUE)
     list(i = k[, 1], j = k[, 2], index = paste(nm[k[, 1]], nm[k[, 2]], sep = ","))

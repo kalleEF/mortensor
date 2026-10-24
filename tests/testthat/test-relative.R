@@ -221,6 +221,39 @@ test_that("without subpopulations and with cohort effects, the reference fit is 
   expect_equal(m$ref$eta, plain$ref$eta, tolerance = 1e-8)
 })
 
+test_that("the Lee-Carter reference reaches the maximum on England's deprivation quintiles", {
+  # ages 50 and over, 2001-2006, England built with mt_aggregate_strata(), the
+  # model inside reconciled() with a hierarchy that also sums the sexes:
+  # accelerated iterations did not converge for women within 5,000
+  # iterations and stopped at a lower likelihood
+  x <- mt_data(deaths = ons_data, population = ons_data, by = c("sex", "imd_decile"), age = "age_group",
+               value = c(deaths = "all_causes", population = "population"))
+  x <- mt_as_exposure(x, type = "midyear")
+  x <- mt_group_levels(x, "imd_decile", function(d) paste0("Q", ceiling(as.numeric(d) / 2)), name = "quintile")
+  h <- mt_hierarchy(sex = "both", quintile = list(total = "England"))
+  xa <- mt_aggregate_strata(mt_subset(x, ages = c(50, Inf), periods = c(2001, 2006)), h)
+  sp <- reconciled(relative_model(reference = list(quintile = "England"), by = "sex"), h, method = "bottom_up")
+  expect_no_warning(fit <- mt_fit(sp, xa))
+  m <- fit$fits$models
+  expect_identical(fit$fits$groups, c("female", "male", "both"))
+  expect_true(all(vapply(m, `[[`, logical(1), "converged")))
+  expect_true(all(vapply(m, `[[`, 0, "iterations") < 200))
+  md <- mortensor:::model_inputs(xa, sp)
+  st <- mt_strata(xa)
+  ref <- which(st$sex == "female" & st$quintile == "England")
+  sub <- which(st$sex == "female" & st$quintile != "England")
+  args <- list(md$D[, , ref], md$E[, , ref], md$D[, , sub, drop = FALSE], md$E[, , sub, drop = FALSE], diag(9),
+               1:6, FALSE)
+  acc <- do.call(mortensor:::relative_fit_group, c(args, list(accelerate = TRUE, maxit = 1000)))
+  ll <- function(r) r$loglik_ref + r$loglik_sub
+  expect_gt(ll(m[[1]]) - ll(acc), 1)
+  # the fit of the reconciled model is that of the group, and a tighter
+  # tolerance gives the same estimates
+  plain <- do.call(mortensor:::relative_fit_group, c(args, list(tol = 1e-12, maxit = 1e4)))
+  expect_true(plain$converged)
+  expect_equal(plain$ref$eta, m[[1]]$ref$eta, tolerance = 1e-8, ignore_attr = TRUE)
+})
+
 test_that("estimates maximise the total log-likelihood (eq. 25): the subpopulations inform the reference", {
   w <- rel_world(noise = TRUE)
   m <- mt_fit(relative_model(reference = w$ref), w$sub)$fits$models[[1]]

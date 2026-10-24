@@ -4,9 +4,10 @@
 #' whose forecasts do not diverge in the long run (Li and Lee 2005):
 #' `log m[x,t,i] = a[x,i] + B[x] K[t] + b[x,i] k[t,i]`. The common factor
 #' `B K` is a Lee-Carter model of the pooled rates (sum of deaths over sum of
-#' exposures, SVD with `K` refitted to the total deaths of each year); the
-#' stratum factors `b k` are the first `ratio_order` components of an SVD of
-#' the residuals of each stratum.
+#' exposures, SVD with `K` refitted to the total deaths of each year; a year
+#' where the search finds no such `K` keeps the SVD index, as with `adjust =
+#' "dt"` in [lee_carter()]); the stratum factors `b k` are the first
+#' `ratio_order` components of an SVD of the residuals of each stratum.
 #'
 #' With `common_by` (for example `"sex"`), `li_lee()` fits one common factor
 #' per level of that stratum variable (women and men each with their own
@@ -41,7 +42,11 @@
 #' `product_ratio()`, a Lee-Carter version of the product-ratio method, is
 #' deprecated; use [coherent_fdm()].
 #'
-#' @param ratio_order Number of stratum-specific factors.
+#' @param ratio_order Number of stratum-specific factors. It is capped by
+#'   the number of age groups and the number of years minus 2, with a
+#'   warning (class `mt_warning_argument`) that names the requested and the
+#'   fitted number; [mt_parameters()] reports the fitted number
+#'   (`ratio_order`).
 #' @param jump_off `"fitted"` (forecasts start from the fitted rates of the
 #'   last year) or `"observed"` (forecasts are multiplied by the ratio of
 #'   observed to fitted rates in the last year, per age and stratum; Lee and
@@ -93,7 +98,8 @@ li_lee <- function(ratio_order = 1, common_by = NULL, jump_off = c("fitted", "ob
 #' of the deaths given the rates and the exposures.
 #'
 #' @inheritParams li_lee
-#' @param ratio_order Number of stratum-specific (ratio) factors.
+#' @param ratio_order Number of stratum-specific (ratio) factors, capped as
+#'   in [li_lee()].
 #' @return A model specification.
 #' @references
 #' Hyndman RJ, Booth H, Yasmeen F (2013). Coherent mortality forecasting: the
@@ -146,7 +152,13 @@ fit_model.mt_spec_multipop <- function(spec, D, E, ages, periods, strata = NULL,
     }
   })
   base_of <- function(cm) if (p$type == "li_lee") outer(cm$b, cm$k) else cm$a + outer(cm$b, cm$k)
-  r <- min(p$ratio_order, ncol(D) - 2)
+  # stratum factors: at most one per age group and the number of years minus 2
+  r <- min(p$ratio_order, nrow(D), ncol(D) - 2)
+  if (r != p$ratio_order) {
+    mt_warn(sprintf(paste("`ratio_order = %s` exceeds what the data allow (the number of age groups, %d, and the",
+                          "number of years minus 2, %d); %d stratum factor(s) are fitted."), format(p$ratio_order),
+                    nrow(D), ncol(D) - 2, r), class = "argument")
+  }
   strata_fits <- lapply(seq_len(ns), function(s) {
     res <- y[, , s] - base_of(commons[[group[s]]])
     a <- rowMeans(res)
@@ -174,7 +186,8 @@ fit_model.mt_spec_multipop <- function(spec, D, E, ages, periods, strata = NULL,
   nt <- dim(D)[2]
   jump <- if (identical(p$jump_off, "observed")) y[, nt, , drop = TRUE] - log(fitted[, nt, , drop = TRUE]) else NULL
   if (!is.null(jump)) jump <- matrix(jump, dim(D)[1], ns)
-  list(commons = commons, group = group, base_type = p$type, strata = strata_fits, fitted = fitted, jump = jump)
+  list(commons = commons, group = group, base_type = p$type, strata = strata_fits, fitted = fitted, jump = jump,
+       ratio_order = r)
 }
 
 # Lee-Carter by SVD of a matrix of log rates (no second-stage refit of k)
