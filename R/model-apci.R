@@ -386,9 +386,7 @@ arima_paths <- function(fit, h, n_draws) {
 apci_parameters <- function(fit) {
   lab <- fit$strata$label
   ages <- fit$age$labels
-  row <- function(stratum, parameter, index, value) {
-    data.table(stratum = stratum, parameter = parameter, index = as.character(index), value = as.numeric(value))
-  }
+  row <- param_rows
   arima_rows <- function(s, f, name) {
     cf <- stats::coef(f)
     rbind(row(s, paste0("order_", name), c("p", "d", "q"), f$order),

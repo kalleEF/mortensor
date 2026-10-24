@@ -813,9 +813,7 @@ coda_parameters <- function(fit, sp = fit$spec) {
   lab <- fit$strata$label
   yrs <- as.character(fit$periods)
   f <- fit$fits
-  row <- function(stratum, parameter, index, value) {
-    data.table(stratum = stratum, parameter = parameter, index = as.character(index), value = as.numeric(value))
-  }
+  row <- param_rows
   centre <- function(alpha) exp(alpha) / sum(exp(alpha))
   index_rows <- function(who, x, j, b_name, idx, suffix, parts, b) {
     tsj <- x$ts[[j]]

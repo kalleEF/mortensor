@@ -292,7 +292,16 @@
 #' @param method `"poisson"` (maximum likelihood with the distribution of
 #'   `family`) or `"svd"`.
 #' @param adjust Re-estimation of `k[t]` for `method = "svd"`: `"dt"`,
-#'   `"dxt"`, `"e0"` or `"none"`.
+#'   `"dxt"`, `"e0"` or `"none"`. With `"dt"`, `k[t]` is the root of the
+#'   total-deaths equation found by a search around the SVD index
+#'   (package-specific: a bracket of `k[t] +/- (10 + 10 |k[t]|)`, extended
+#'   while the fitted total deaths do not cross the observed ones). A year
+#'   where the search finds no root keeps the index of the SVD: a year
+#'   without deaths has none, and with an age pattern `b` of both signs the
+#'   fitted total deaths are not monotone in `k[t]` and the search fails in
+#'   most years. A warning (class `mt_warning_model_fit`, in the
+#'   diagnostics of the fit) names these years, which the fit of the
+#'   stratum also holds (`no_root_years`).
 #' @param choose_period Choose the fitting period (Booth, Maindonald and
 #'   Smith 2002).
 #' @param min_years `choose_period` considers fitting periods of more than
@@ -555,7 +564,7 @@ fit_model.mt_spec_lee_carter <- function(spec, D, E, ages, periods, ...) {
   }
   first <- 1L
   if (isTRUE(p$choose_period)) {
-    first <- bms_start(D, E, est_one, p$min_years)
+    first <- as.integer(bms_start(D, E, est_one, p$min_years))
     D <- D[, first:ncol(D), drop = FALSE]
     E <- E[, first:ncol(E), drop = FALSE]
     zero <- rowSums(D) == 0
@@ -563,6 +572,11 @@ fit_model.mt_spec_lee_carter <- function(spec, D, E, ages, periods, ...) {
   # fallbacks of the final fit only (not of the candidate periods)
   fallback <- character()
   est <- fit_lc(D, E)
+  # years of the SVD fit (also the fallback) that keep the SVD index
+  if (length(est[["no_root"]])) {
+    est$no_root_years <- periods[first - 1L + est[["no_root"]]]
+    lc_warn_no_root(est$no_root_years, "Lee-Carter (SVD, adjust = \"dt\")")
+  }
   if (any(zero)) {
     mt_warn(sprintf(paste("No deaths in age group(s) %s in the training years: constant rate (0.5 deaths in all",
                           "years), no trend."), paste(ages$labels[zero], collapse = ", ")), class = "sparse")
@@ -633,11 +647,10 @@ fit_model.mt_spec_lee_carter <- function(spec, D, E, ages, periods, ...) {
       }))
     }
   }
-  if (first > 1L) {
-    # fitted rates only for the chosen period
-    est$fitted <- cbind(matrix(NA_real_, nrow(D), first - 1L), est$fitted)
-    est$first_year <- periods[first]
-  }
+  # the first year of the chosen fitting period (mt_parameters(), summary());
+  # fitted rates only for that period
+  if (isTRUE(p$choose_period)) est$first_year <- periods[first]
+  if (first > 1L) est$fitted <- cbind(matrix(NA_real_, nrow(D), first - 1L), est$fitted)
   est
 }
 
@@ -849,6 +862,9 @@ lc_svd <- function(D, E, adjust = "dt", ages = NULL, fixed = NULL) {
     array(out, c(nrow(out), ncol(out), 1))
   }
   if (adjust == "e0") e_obs <- life_expectancy(all_ages(pmax(D, 0.5) / E), ages)[, 1]
+  # years in which the search of the second stage "dt" finds no index that
+  # gives the observed total deaths
+  no_root <- integer()
   for (t in seq_len(ncol(D))) {
     if (adjust == "none") break
     if (adjust == "dxt") {
@@ -862,22 +878,42 @@ lc_svd <- function(D, E, adjust = "dt", ages = NULL, fixed = NULL) {
       if (is.finite(kt)) k[t] <- kt
       next
     }
+    # a year without deaths has no finite root (the search would stop where
+    # the fitted deaths underflow)
+    if (adjust == "dt" && sum(D[, t]) <= 0) {
+      no_root <- c(no_root, t)
+      next
+    }
     f <- if (adjust == "dt") {
       function(kt) sum(E[, t] * exp(a + b * kt)) - sum(D[, t])
     } else {
       function(kt) life_expectancy(all_ages(matrix(exp(a + b * kt))), ages)[1, 1] - e_obs[t]
     }
     rng <- k[t] + c(-1, 1) * (10 + 10 * abs(k[t]))
-    # without a root in reach, total deaths keep the SVD index (with `b` of
-    # both signs the nearest root of total deaths can lie far off and makes
-    # the index erratic); life expectancy searches for the nearest root
-    k[t] <- tryCatch(stats::uniroot(f, rng, extendInt = "yes", tol = 1e-10)$root, error = function(e) {
-      if (adjust == "e0") nearest_root(f, k[t], 0.1 * (1 + abs(k[t]))) else k[t]
-    })
+    # where the search finds no root, total deaths keep the SVD index (with
+    # `b` of both signs the nearest root of total deaths can lie far off and
+    # makes the index erratic; `no_root` records these years); life
+    # expectancy searches for the nearest root
+    root <- tryCatch(stats::uniroot(f, rng, extendInt = "yes", tol = 1e-10)$root, error = function(e) NULL)
+    if (is.null(root) && adjust == "e0") root <- nearest_root(f, k[t], 0.1 * (1 + abs(k[t])))
+    if (is.null(root)) no_root <- c(no_root, t) else k[t] <- root
   }
   out <- lc_finish(a, b, k)
   out$method <- "svd"
+  out$no_root <- no_root
   out
+}
+
+# Warning for the years in which the second stage of the SVD fit (adjust =
+# "dt") found no index that gives the observed total deaths (`years`); `who`
+# names the model and the index
+lc_warn_no_root <- function(years, who) {
+  if (!length(years)) return(invisible())
+  mt_warn(sprintf(paste("%s: in %d year(s) (%s) the search found no index that gives fitted total deaths equal to the",
+                        "observed ones (a year without deaths, or an age pattern b of both signs, with which the",
+                        "fitted total deaths are not monotone in the index); these years keep the index of the SVD."),
+                  who, length(years), paste(c(utils::head(years, 5), if (length(years) > 5) "..."), collapse = ", ")),
+          class = "model_fit", call = NULL)
 }
 
 # Root of f nearest to x0, for f that is not monotone (life expectancy as a
@@ -1099,7 +1135,8 @@ nb_dispersion <- function(D, mu, start = NULL, tol = 1e-10, maxit = 200) {
 
 # First year of the fitting period with the smallest ratio of the mean
 # deviance of a linear-k fit to the mean deviance of the Lee-Carter fit
-# (Booth, Maindonald and Smith 2002)
+# (Booth, Maindonald and Smith 2002); the ratios of the candidate first years
+# in attribute "ratio"
 bms_start <- function(D, E, est_one, min_years) {
   nt <- ncol(D)
   na <- nrow(D)
@@ -1118,5 +1155,5 @@ bms_start <- function(D, E, est_one, min_years) {
     dev_lin <- poisson_dev(Ds, Es * exp(est$a + outer(est$b, klin)))
     (dev_lin / (na * (n - 2))) / (dev_base / ((na - 1) * (n - 2)))
   }, 0)
-  starts[which.min(ratio)]
+  structure(starts[which.min(ratio)], ratio = ratio)
 }

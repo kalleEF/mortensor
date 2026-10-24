@@ -158,16 +158,18 @@ Lee-Carter (4.2-11.4): the quintiles share England's trend, so the
 uncertainty of that trend moves all of them together. Independent random
 walks (`"rwd"`)
 give about the same median (7.4 years) and a wider interval (5.2-9.4).
-For men the relative model narrows the gap, from 7.21 years fitted for
-2019 to 6.3 years in 2035: the indexes of men hardly drifted in 2001-2019
-(drifts between -0.006 and 0.007, against 0.046 for women in Q1 and
--0.029 in Q5), so its forecast for men is that of constant improvement
-differences (also 6.3 years). With the ratios of the rates to England's
-fixed at each age, the gap in years narrows as mortality falls (for women
-to 5.6 years with `"constant"`): deaths move to older ages, where the
-ratios between the quintiles are smaller (see the last section of this
-part). All three versions start below the observed gap of 2019 (fitted
-6.19 against 6.46 years for women, 7.21 against 7.66 for men): one age
+For men the relative model keeps the gap near its fitted level of 2019
+(7.55 years), at 7.6 years in 2035 (95% interval 7.1-8.2). The indexes of
+men hardly drifted in 2001-2019 (drifts between -0.002 and 0.003, against
+0.046 for women in Q1 and -0.029 in Q5); with constant improvement
+differences the gap of men narrows to 6.7 years, and the small drifts,
+upwards in Q1 and downwards in Q5, offset that narrowing. With the ratios
+of the rates to England's fixed at each age, the gap in years narrows as
+mortality falls (for women to 5.6 years with `"constant"`): deaths move to
+older ages, where the ratios between the quintiles are smaller (see the
+last section of this part). All three versions start below the observed
+gap of 2019 (fitted 6.19 against 6.46 years for women, 7.55 against 7.66
+for men): one age
 pattern of improvement differences, shared by all quintiles at all ages
 from 0 to 90+, does not reproduce the gap of the last year.
 
@@ -197,7 +199,8 @@ root (its AR(1) coefficient is bounded at 0.99), so it reverts very
 slowly.
 
 The models forecast the rates of the quintiles within about 10% of each
-other, the ensemble and the relative model best (CRPS 0.0664-0.0668).
+other, the relative model best (CRPS 0.0655-0.0656), then the ensemble
+(0.0664).
 The intervals of life expectancy are too narrow for every model, most
 for the totals (95% coverage of Lee-Carter 0.78 for the quintiles and
 0.24 for England): five years ahead, the forecasts
@@ -207,11 +210,12 @@ are), so the deviations of its draws partly cancel in the totals. The
 gap separates the models clearly: Li-Lee and the coherent fdm forecast
 it worst, and their intervals covered the observed gap in only 6% and
 18% of the cases, because in 2010-2019 the female gap did not return to
-its past level. The relative model forecast it better than these two and
-worse than the models fitted to each quintile separately (CRPS 0.532 to
-0.650, against 0.218 to 0.371), with intervals that covered the observed
-gap in 14% (`"mrwd"`), 20% (`"rwd"`) and 8% (`"constant"`) of the
-cases: its forecasts start from the fitted gap of the last year, which
+its past level. The relative model forecast it better than these two:
+with drifting indexes about as well as fdm (CRPS 0.354 and 0.367 against
+0.371), with constant indexes worse (0.543), and all three worse than
+Lee-Carter and the ensemble (0.218 and 0.283). Its intervals covered the
+observed gap in 26% (`"mrwd"`), 36% (`"rwd"`) and 14% (`"constant"`) of
+the cases: its forecasts start from the fitted gap of the last year, which
 can lie well below the observed one (as in 2019 above), and its
 intervals of the gap are narrow. Lee-Carter forecast the gap best, with
 intervals that covered it in every case, the ensemble of Lee-Carter and

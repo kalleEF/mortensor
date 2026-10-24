@@ -38,7 +38,16 @@ correction of Li, Hardy and Tan 2009; \code{method = "poisson"} only). See
 \item{n_boot}{Number of bootstrap fits.}
 
 \item{adjust}{Re-estimation of \code{k[t]} for \code{method = "svd"}: \code{"dt"},
-\code{"dxt"}, \code{"e0"} or \code{"none"}.}
+\code{"dxt"}, \code{"e0"} or \code{"none"}. With \code{"dt"}, \code{k[t]} is the root of the
+total-deaths equation found by a search around the SVD index
+(package-specific: a bracket of \verb{k[t] +/- (10 + 10 |k[t]|)}, extended
+while the fitted total deaths do not cross the observed ones). A year
+where the search finds no root keeps the index of the SVD: a year
+without deaths has none, and with an age pattern \code{b} of both signs the
+fitted total deaths are not monotone in \code{k[t]} and the search fails in
+most years. A warning (class \code{mt_warning_model_fit}, in the
+diagnostics of the fit) names these years, which the fit of the
+stratum also holds (\code{no_root_years}).}
 
 \item{choose_period}{Choose the fitting period (Booth, Maindonald and
 Smith 2002).}

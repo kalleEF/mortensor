@@ -7,7 +7,11 @@
 li_lee(ratio_order = 1, common_by = NULL, jump_off = c("fitted", "observed"))
 }
 \arguments{
-\item{ratio_order}{Number of stratum-specific factors.}
+\item{ratio_order}{Number of stratum-specific factors. It is capped by
+the number of age groups and the number of years minus 2, with a
+warning (class \code{mt_warning_argument}) that names the requested and the
+fitted number; \code{\link[=mt_parameters]{mt_parameters()}} reports the fitted number
+(\code{ratio_order}).}
 
 \item{common_by}{Stratum variable(s) defining groups with their own common
 factor.}
@@ -27,9 +31,9 @@ Joint model for several strata (for example women and men, or regions)
 whose forecasts do not diverge in the long run (Li and Lee 2005):
 \verb{log m[x,t,i] = a[x,i] + B[x] K[t] + b[x,i] k[t,i]}. The common factor
 \verb{B K} is a Lee-Carter model of the pooled rates (sum of deaths over sum of
-exposures, SVD with \code{K} refitted to the total deaths of each year); the
-stratum factors \verb{b k} are the first \code{ratio_order} components of an SVD of
-the residuals of each stratum.
+exposures, SVD with \code{K} refitted to the total deaths of each year; a year
+where the search finds no such \code{K} keeps the SVD index, as with \code{adjust = "dt"} in \code{\link[=lee_carter]{lee_carter()}}); the stratum factors \verb{b k} are the first
+\code{ratio_order} components of an SVD of the residuals of each stratum.
 }
 \details{
 With \code{common_by} (for example \code{"sex"}), \code{li_lee()} fits one common factor

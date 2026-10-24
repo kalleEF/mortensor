@@ -22,13 +22,17 @@ model type that has interpretable parameters:
 \itemize{
 \item \code{\link[=lee_carter]{lee_carter()}}: \code{a} (age pattern), \code{b} (age pattern of change), \code{k}
 (period index), and the drift and innovation standard deviation of \code{k};
+with \code{choose_period = TRUE}, \code{k} of the years of the chosen fitting
+period and its first year (\code{first_year});
 with \code{rotate = TRUE} also the ultimate pattern \code{b_ultimate}; with
 \code{family = "nb"} also the dispersion \code{nb_dispersion} (variance \verb{mu + phi mu^2}; one per age group with a dispersion by age); with \code{jump_off = "filtered"} also the filtered index of the last year \code{k_filtered}, its
 standard error \code{se_k_filtered} and the state-space estimates
 \code{filter_sigma}, \code{filter_lambda}, \code{filter_drift};
 \item \code{\link[=li_lee]{li_lee()}}, \code{\link[=product_ratio]{product_ratio()}}: the common factor of each group (\code{B},
-\code{K}, its drift and standard deviation), and per stratum the deviations
-\code{a}, \code{b}, \code{k} and their AR(1) coefficient \code{phi} and standard deviation;
+\code{K}, its drift and standard deviation), per stratum the deviations
+\code{a}, \code{b}, \code{k} and their AR(1) coefficient \code{phi} and standard deviation,
+and the number of stratum factors fitted (\code{ratio_order}, stratum
+\code{"model"});
 \item \code{\link[=coda]{coda()}}: the centre \code{a} (geometric mean distribution of life-table
 deaths), the loadings \code{b}, the index \code{k} with the order (\code{order_k}),
 coefficients (\code{arima_k}) and innovation standard deviation (\code{sd_k}) of
@@ -44,11 +48,18 @@ with \code{individual = TRUE} also the individual components of each cause
 variation of each cause (\code{explained_joint}, \code{explained_individual}),
 and with weights the weights of the parts (\code{w_part}) and years
 (\code{w_time});
-\item \code{\link[=coda_multiway]{coda_multiway()}}: the common age patterns \code{b}, time indexes \code{k} (with
+\item \code{\link[=coda_multiway]{coda_multiway()}}: the ranks used (\code{rank}, indexed \code{age}, \code{time},
+\code{population}), the common age patterns \code{b}, time indexes \code{k} (with
 \code{order_k}, \code{arima_k}, \code{sd_k}), population markers \code{gamma} and core \code{g}
 (index \verb{p,q,r}), numbered with several components, and the share of
 variation explained; per stratum the centre \code{a}, the parameters of the
 open age interval or of the Kannisto model of each year;
+\item \code{\link[=tucker3]{tucker3()}}: the ranks used (\code{rank}, indexed \code{age}, \code{period},
+\code{stratum}), the factors of age (\code{A1}, \code{A2}, ...), period (\code{B1}, ...)
+and stratum (\code{C1}, ...), the drifts of the period factors (\code{drift_B1},
+..., with \code{ts = "rwd"}), the core \code{g} (index \verb{p,q,r}) and the share of
+the sum of squares explained (\code{explained}), all of stratum \code{"common"};
+per stratum the centre \code{a} (with \code{centre = TRUE});
 \item \code{\link[=rwd]{rwd()}}: drift and innovation standard deviation per age (and, with
 \code{observation_noise = TRUE}, the variances of level and noise);
 \item \code{\link[=apc_bayes]{apc_bayes()}}: posterior medians and 90\% intervals of the age, period

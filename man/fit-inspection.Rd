@@ -32,8 +32,10 @@ Pearson residuals of the death counts, assuming Poisson deaths given the
 fitted rates, as a long table; values far beyond 2 in absolute value
 point to structure that the model misses (for example cohort effects) or
 to overdispersion. \code{summary()} describes the model, its sources of
-uncertainty and the fit; \code{\link[=mt_plot_residuals]{mt_plot_residuals()}} shows the residuals as an
-age-period heat map.
+uncertainty and the fit, and the fitting period where
+\code{lee_carter(choose_period = TRUE)} chose a shorter one (as \code{print()}
+does); \code{\link[=mt_plot_residuals]{mt_plot_residuals()}} shows the residuals as an age-period heat
+map.
 }
 \examples{
 x <- mt_example(deaths = "single")
