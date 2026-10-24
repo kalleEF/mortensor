@@ -18,7 +18,8 @@ lee_carter(
   rotation = c(e0_start = 80, e0_end = 102, power = 0.5),
   family = c("poisson", "nb"),
   dispersion = c("global", "age"),
-  jump_off_years = 1
+  jump_off_years = 1,
+  seed = NULL
 )
 ```
 
@@ -104,6 +105,16 @@ lee_carter(
   mean log rates give the jump-off rates (default 1, the last year; 2 to
   5 in Stoeldraijer et al. 2018).
 
+- seed:
+
+  Random seed of the bootstrap resamples (`bootstrap = TRUE`). The
+  resamples of each stratum come from its own random number stream, and
+  these streams start from `seed`, so two fits with the same seed have
+  the same bootstrap parameters with any number of cores. `NULL`
+  (default): the streams start from the current generator
+  ([`set.seed()`](https://rdrr.io/r/base/Random.html)). The forecast
+  draws have their own `seed` in [`mt_forecast()`](mt_forecast.md).
+
 ## Value
 
 A model specification.
@@ -147,7 +158,8 @@ fitted deaths of Renshaw and Haberman 2008), which adds the uncertainty
 of `a` and `b`. The bootstrap of Brouhns, Denuit and Van Keilegom (2005)
 resamples the observed deaths instead:
 `bootstrapped(lee_carter(), type = "data")`
-([`bootstrapped()`](bootstrapped.md)).
+([`bootstrapped()`](bootstrapped.md)). A `seed` makes the resamples
+reproducible.
 
 Age groups without deaths in the fitting period get a constant rate (0.5
 deaths over the period) and no trend; with `adjust = "e0"` they enter

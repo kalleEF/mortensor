@@ -188,12 +188,12 @@ symbols, shared populations)</td>
 <tr class="odd">
 <td>Read</td>
 <td>
-<code><a href="../reference/parse_age_labels.html">parse_age_labels()</a></code>, <code><a href="../reference/mt_axis.html">age_groups()</a></code>,
-<code><a href="../reference/mt_axis.html">single_ages()</a></code>, <code><a href="../reference/mt_axis.html">single_years()</a></code>,
-<code><a href="../reference/mt_axis.html">period_groups()</a></code>
+<code><a href="../reference/mt_axis.html">mt_axis()</a></code>, <code><a href="../reference/parse_age_labels.html">parse_age_labels()</a></code>,
+<code><a href="../reference/mt_axis.html">age_groups()</a></code>, <code><a href="../reference/mt_axis.html">single_ages()</a></code>,
+<code><a href="../reference/mt_axis.html">single_years()</a></code>, <code><a href="../reference/mt_axis.html">period_groups()</a></code>
 </td>
-<td>age and period axes from labels or bounds</td>
-<td>labels</td>
+<td>age and period axes from interval bounds or labels</td>
+<td>bounds, labels</td>
 <td><code>mt_axis</code></td>
 </tr>
 <tr class="even">
@@ -382,6 +382,16 @@ by path</td>
 <td><code>mt_draws</code></td>
 </tr>
 <tr class="even">
+<td>Combine</td>
+<td><code><a href="../reference/coupled.html">mt_couple()</a></code></td>
+<td>give the draws of separate forecasts the dependence between ages,
+years and strata of the draws of a joint model (ensemble copula
+coupling, as <code><a href="../reference/coupled.html">coupled()</a></code>)</td>
+<td>two <code>mt_draws</code>
+</td>
+<td><code>mt_draws</code></td>
+</tr>
+<tr class="odd">
 <td>Calibrate</td>
 <td><code><a href="../reference/recalibrated.html">recalibrated()</a></code></td>
 <td>rescale the spread (optionally the drift) of any model’s draws to
@@ -391,7 +401,7 @@ its past forecasts to its median (<code>method = "errors"</code>)</td>
 <td><code>mt_spec</code></td>
 <td><code>mt_spec</code></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>Jump-off</td>
 <td>
 <code><a href="../reference/anchored.html">anchored()</a></code>, <code><a href="../reference/mt_jump_off.html">mt_jump_off()</a></code>;
@@ -407,7 +417,7 @@ last year; report the first-year step</td>
 <td>
 <code>mt_spec</code>, table</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>Coherence</td>
 <td>
 <code><a href="../reference/mt_hierarchy.html">mt_hierarchy()</a></code>, <code><a href="../reference/mt_aggregate_strata.html">mt_aggregate_strata()</a></code>,
@@ -421,7 +431,7 @@ last year; report the first-year step</td>
 <code>mt_data</code>, <code>mt_draws</code>
 </td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>Coherence</td>
 <td>
 <code><a href="../reference/mt_coherence.html">mt_coherence()</a></code>, <code><a href="../reference/mt_coherence.html">mt_plot_coherence()</a></code>
@@ -431,7 +441,7 @@ last year; report the first-year step</td>
 <code>mt_draws</code>, hierarchy</td>
 <td>table, ggplot</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>Fit</td>
 <td><code><a href="../reference/mt_fit.html">mt_fit()</a></code></td>
 <td>estimate</td>
@@ -440,7 +450,7 @@ last year; report the first-year step</td>
 </td>
 <td><code>mt_fit</code></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>Inspect</td>
 <td>
 <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code>, <code><a href="../reference/mt_parameters.html">mt_parameters()</a></code>,
@@ -451,7 +461,7 @@ last year; report the first-year step</td>
 <td><code>mt_fit</code></td>
 <td>text, table, plot</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>Forecast</td>
 <td>
 <code><a href="../reference/mt_forecast.html">mt_forecast()</a></code>, <code><a href="../reference/mt_draws.html">mt_summarise()</a></code>
@@ -461,7 +471,7 @@ last year; report the first-year step</td>
 <td>
 <code>mt_draws</code>, table</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>Evaluate</td>
 <td>
 <code><a href="../reference/mt_backtest.html">mt_backtest()</a></code>, <code><a href="../reference/mt_score.html">mt_score()</a></code>
@@ -475,7 +485,7 @@ revisions between consecutive origins (<code>measures</code>)</td>
 </td>
 <td>table</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>Evaluate</td>
 <td>
 <code><a href="../reference/mt_compare.html">mt_compare()</a></code>, <code><a href="../reference/mt_compare.html">mt_score_table()</a></code>
@@ -487,7 +497,7 @@ horizon</td>
 </td>
 <td>table</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>Evaluate</td>
 <td><code><a href="../reference/mt_dm_test.html">mt_dm_test()</a></code></td>
 <td>Diebold-Mariano tests: is one model more accurate than another, per
@@ -496,7 +506,7 @@ horizon, beyond chance?</td>
 </td>
 <td>table</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>Evaluate</td>
 <td>
 <code><a href="../reference/mt_plot_more.html">mt_plot_scores()</a></code>, <code><a href="../reference/mt_plot.html">mt_plot_coverage()</a></code>,
@@ -508,14 +518,14 @@ design of a backtest, tuning scores</td>
 <td>backtest, tuning</td>
 <td>ggplot</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>Describe</td>
 <td><code><a href="../reference/mt_observed.html">mt_observed()</a></code></td>
 <td>observed rates as draws</td>
 <td><code>mt_data</code></td>
 <td><code>mt_draws</code></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>Report</td>
 <td>
 <code><a href="../reference/life_expectancy.html">life_expectancy()</a></code>, <code><a href="../reference/derived.html">asr()</a></code>,
@@ -527,7 +537,7 @@ design of a backtest, tuning scores</td>
 </td>
 <td>table</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>Report</td>
 <td><code><a href="../reference/lifespan_variation.html">lifespan_variation()</a></code></td>
 <td>e-dagger, entropy, Gini, standard deviation, coefficient of
@@ -536,7 +546,7 @@ variation and interquartile range of the age at death</td>
 <code>mt_draws</code>, <code>mt_data</code> or rates</td>
 <td>table, array</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>Report</td>
 <td><code><a href="../reference/mt_pessimism.html">mt_pessimism()</a></code></td>
 <td>how much lower life expectancy is when causes are forecast
@@ -548,7 +558,7 @@ age and cause, or approximated from two observed periods</td>
 </td>
 <td>table</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>Report</td>
 <td>
 <code><a href="../reference/mt_excess.html">mt_excess()</a></code>, <code><a href="../reference/mt_excess.html">mt_plot_excess()</a></code>
@@ -561,7 +571,7 @@ expected values of a baseline model, by age, stratum and year</td>
 </td>
 <td>table, ggplot</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>Report</td>
 <td>
 <code><a href="../reference/derived.html">yll()</a></code>, <code><a href="../reference/mt_deaths.html">mt_deaths()</a></code>
@@ -570,7 +580,7 @@ expected values of a baseline model, by age, stratum and year</td>
 <td><code>mt_draws</code></td>
 <td>table, array</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>Report</td>
 <td>
 <code><a href="../reference/life_table.html">life_table()</a></code>, <code><a href="../reference/standard_population.html">standard_population()</a></code>
@@ -581,7 +591,7 @@ esp1976, who2000</td>
 <td>rates, name</td>
 <td>table</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>Check</td>
 <td><code><a href="../reference/mt_open_check.html">mt_open_check()</a></code></td>
 <td>old-age hazard laws fitted below a cut age and scored against the
@@ -589,7 +599,7 @@ observed deaths above it</td>
 <td><code>mt_data</code></td>
 <td>table</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>Report</td>
 <td>
 <code><a href="../reference/mt_contrast.html">mt_contrast()</a></code>, <code><a href="../reference/mt_inequality.html">mt_inequality()</a></code>,
@@ -601,7 +611,7 @@ observed deaths above it</td>
 </td>
 <td>table, ggplot</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>Report</td>
 <td>
 <code><a href="../reference/mt_compare.html">mt_compare_forecasts()</a></code>,
@@ -613,7 +623,7 @@ reconciliation methods) side by side</td>
 </td>
 <td>table, ggplot</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>Report</td>
 <td>
 <code><a href="../reference/mt_decompose.html">mt_decompose()</a></code>,
@@ -629,7 +639,7 @@ years with gaps)</td>
 <td>
 <code>mt_decomposition</code>, table, ggplot</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>Report</td>
 <td>
 <code><a href="../reference/mt_plot.html">mt_plot_forecast()</a></code>, <code><a href="../reference/mt_plot.html">mt_plot_age()</a></code>,
@@ -641,7 +651,7 @@ years with gaps)</td>
 <td>draws, data, tables</td>
 <td>ggplot, file</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>Data</td>
 <td>
 <code>ons_data</code>, <code>ons_cause_groups</code>,
@@ -654,7 +664,7 @@ years with gaps)</td>
 <td>tables, <code>mt_data</code>
 </td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>Report</td>
 <td>
 <code><a href="../reference/mt_plot_style.html">theme_mortensor()</a></code>,
@@ -665,7 +675,7 @@ years with gaps)</td>
 <td></td>
 <td>theme, scales</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>Disaggregate</td>
 <td>
 <code><a href="../reference/mt_disaggregate.html">mt_disaggregate()</a></code>, <code><a href="../reference/mt_shape_rates.html">mt_shape_rates()</a></code>,
@@ -679,7 +689,7 @@ deprecated)</td>
 <td>
 <code>mt_draws</code>, table, ggplot</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>Exchange</td>
 <td>
 <code><a href="../reference/as_demogdata.html">as_demogdata()</a></code>, <code><a href="../reference/as_demogdata.html">as_stmomodata()</a></code>
@@ -690,7 +700,7 @@ deprecated)</td>
 <code>demogdata</code>, <code>StMoMoData</code>
 </td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>Extend</td>
 <td><code><a href="../reference/new_mt_spec.html">new_mt_spec()</a></code></td>
 <td>constructor for developers adding a model (methods for the internal

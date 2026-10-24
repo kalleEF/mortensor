@@ -120,7 +120,8 @@ years; <code><a href="ungroup-diagnostics.html">mt_plot_ungroup()</a></code> and
 
 <dt id="arg-lambda">lambda<a class="anchor" aria-label="anchor" href="#arg-lambda"></a></dt>
 <dd><p>Fixed smoothing parameter(s); <code>NULL</code> selects them by
-<code>criterion</code>.</p></dd>
+<code>criterion</code>, for the deaths. The ungrouping of grouped exposures and the
+split of the exposure of an open interval of the grid (<code>open_split = "pclm"</code>) always select their own (see Details).</p></dd>
 
 
 <dt id="arg-criterion">criterion<a class="anchor" aria-label="anchor" href="#arg-criterion"></a></dt>
@@ -176,7 +177,9 @@ the boundary of the search range.</p>
 <ul><li><p><strong>Exposures</strong> observed coarser than the grid are ungrouped first, as
 counts by the PCLM (<code>exposure_method = "pclm"</code>) or by the monotone cubic
 interpolation of Hyman (1983) applied to the cumulative counts
-(<code>"monotone"</code>), which reproduces the group totals exactly.</p></li>
+(<code>"monotone"</code>), which reproduces the group totals exactly. The PCLM of
+the exposures chooses its own smoothing parameter by <code>criterion</code>; a
+<code>lambda</code> given for the deaths is not used for the exposures.</p></li>
 <li><p><strong>Deaths</strong> are ungrouped as <strong>rates</strong> when exposures are available on
 the grid: the exposures enter the composite link as offset (Rizzi, Gampe
 and Eilers 2015), so cohort-size waves stay in the exposures and the
@@ -211,7 +214,9 @@ its exposure is split over these years (<code>open_split</code>):</p><ul><li><p>
 with a group of 0 counts of 15 years beyond <code>omega</code>, as Rizzi, Gampe
 and Eilers (2015) ungroup grouped exposures (their maximum age 115 and
 a group 115-130 with 0 counts); the estimates enter the composite link
-of the rates;</p></li>
+of the rates. This PCLM smooths exposures, not deaths, so it chooses its
+own smoothing parameter by <code>criterion</code> (BIC by default) also when
+<code>lambda</code> is given;</p></li>
 <li><p><code>"stationary"</code>: with stationary-population weights <code>l(x) = exp(-cumsum(m(x)))</code> implied by the fitted rates; starting from rates
 that rise by 10% per year of age, the weights and the fit are iterated
 until no weight changes by more than 1e-6 (at most 50 iterations; the

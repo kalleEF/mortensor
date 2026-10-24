@@ -284,8 +284,8 @@ for one population and for the coherent model.
   weight on the clr scale, so the noise of ages with few deaths enters
   `k(t)`: intervals can be wider than those of Lee-Carter. In an example
   backtest on England & Wales men (ages 30-100, origins 1996-2001, 10
-  years ahead) the 95% intervals covered 0.97 of the observed rates at
-  horizons 1-4 and 0.71 at horizon 10: the moving-average coefficient of
+  years ahead) the 95% intervals covered 0.98 of the observed rates at
+  horizons 1-4 and 0.67 at horizon 10: the moving-average coefficient of
   the index was at -1, so the index paths added little uncertainty
   beyond that of the drift.
 - **Deviations**: life tables with `a_x = n / 2` at age 0 (the authors’

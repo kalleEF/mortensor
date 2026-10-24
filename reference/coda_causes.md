@@ -129,11 +129,12 @@ Oeppen (2008, Section 3) replaces zero counts by lightly smoothing the
 deaths of each year with a penalised histogram smoother whose smoothing
 parameter is not given; here zero counts are replaced multiplicatively
 in the composition of each year (Bergeron-Boucher et al. 2017, Appendix
-C; see [`coda()`](coda.md)). How the death rate of the open age interval
-follows from the forecast deaths is not stated; here the all-cause log
-rate of an open interval is regressed on the indexes and split by cause
-through the composition (package-specific, as `open = "regression"` of
-[`coda()`](coda.md)).
+C, with the package-specific cap `0.5 / z` of `delta` for `z` zeros in a
+year; see [`coda()`](coda.md)). How the death rate of the open age
+interval follows from the forecast deaths is not stated; here the
+all-cause log rate of an open interval is regressed on the indexes and
+split by cause through the composition (package-specific, as
+`open = "regression"` of [`coda()`](coda.md)).
 
 Draws are expected rates. Predictive draws
 (`mt_forecast(predictive = TRUE)`) draw Poisson all-cause deaths given

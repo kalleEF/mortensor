@@ -94,6 +94,14 @@ bt <- mt_backtest(li_lee(common_by = "sex"), x, origins = 2008:2014, h = 5)
 mt_score(bt)
 ```
 
+The examples of the help pages simulate data with
+`mt_example(deaths = "single")`, because the default
+[`mt_example()`](reference/mt_example.md) has deaths in 5-year groups
+and exposures in single years, which a model fits only after ungrouping
+([`mt_ungroup()`](reference/mt_ungroup.md),
+[`step_ungroup()`](reference/mt_prep.md)) or regrouping
+([`mt_regroup()`](reference/mt_regroup.md)).
+
 Vignettes:
 
 - **Start**: *Getting started*, *Your own data, from CSV to report*.

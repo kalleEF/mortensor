@@ -59,6 +59,17 @@
 <code><a href="../reference/mt_coherence.html">mt_coherence()</a></code> stops with class <code>mt_error_hierarchy</code> and names the cause when the draws hold no aggregate strata of the hierarchy.</li>
 </ul></div>
 <div class="section level3">
+<h3 id="small-corrections-and-labels-r2-0-2-0-9000">Small corrections and labels (R2)<a class="anchor" aria-label="anchor" href="#small-corrections-and-labels-r2-0-2-0-9000"></a></h3>
+<p>Work package R2 of <code>dev/review-0.2-plan.md</code>.</p>
+<ul><li>The bootstrap of the CoDa time indexes (<code><a href="../reference/coda.html">coda()</a></code>, <code>coda(coherent = TRUE)</code>, <code><a href="../reference/coda_multiway.html">coda_multiway()</a></code>, <code><a href="../reference/coda_causes.html">coda_causes()</a></code>) resamples the innovations without the first <code>d</code> residuals of <code><a href="https://rdrr.io/r/stats/arima.html" class="external-link">stats::arima()</a></code>. These come from its diffuse initialisation and are near zero, so the draws are slightly wider. The vignettes “Choosing and combining models” and “Causes of death by deprivation” are re-knitted; “Lifespan variation” and “Model reference” give the new numbers. The Bayesian APC rows of “Choosing and combining models” also moved, because the chains of bamp are not seeded.</li>
+<li>
+<code><a href="../reference/mt_ungroup.html">mt_ungroup()</a></code> and <code>mt_smooth(method = "pspline")</code> choose the smoothing parameter of the PCLM of the exposures on their own: for grouped exposures and for the split of the exposure of an open interval of the grid (<code>open_split = "pclm"</code>). A <code>lambda</code> given for the deaths no longer enters these fits; it had changed the ungrouped exposures by up to 60%. Results with the default <code>lambda = NULL</code> are unchanged.</li>
+<li>
+<code>lee_carter(seed = )</code> makes the bootstrap of the parameters (<code>bootstrap = TRUE</code>) reproducible with any number of cores: the random number streams of the strata start from it. <code><a href="../reference/new_mt_spec.html">new_mt_spec()</a></code> gains <code>seed</code> for models whose fit uses random numbers.</li>
+<li>Help: the normal approximation of the Poisson distribution for cells with 50 or more expected deaths in the calibration sample of <code><a href="../reference/recalibrated.html">recalibrated()</a></code>, and the cap <code>0.5 / z</code> of the zero replacement of <code><a href="../reference/coda.html">coda()</a></code> and <code><a href="../reference/coda_causes.html">coda_causes()</a></code>, are labelled package-specific. The README and <code><a href="../reference/mt_example.html">mt_example()</a></code> say why the examples pass <code>deaths = "single"</code>. The function map shows <code><a href="../reference/mt_axis.html">mt_axis()</a></code> and <code><a href="../reference/coupled.html">mt_couple()</a></code>.</li>
+<li>The unused internal functions <code>axis_from_bounds()</code>, <code>Matrix_diag()</code> and <code>relative_kernel()</code> are removed.</li>
+</ul></div>
+<div class="section level3">
 <h3 id="faster-two-dimensional-ungrouping-and-smoothing-r3-0-2-0-9000">Faster two-dimensional ungrouping and smoothing (R3)<a class="anchor" aria-label="anchor" href="#faster-two-dimensional-ungrouping-and-smoothing-r3-0-2-0-9000"></a></h3>
 <p>Work package R3 of <code>dev/review-0.2-plan.md</code>.</p>
 <ul><li>

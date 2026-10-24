@@ -17,7 +17,8 @@ new_mt_spec(
   joint = FALSE,
   min_periods = 5,
   label = model,
-  smooth = TRUE
+  smooth = TRUE,
+  seed = NULL
 )
 ```
 
@@ -50,6 +51,12 @@ new_mt_spec(
   deaths given these rates and the exposures) or observed rates
   (`FALSE`, for example a random walk on observed log rates: predictive
   draws add nothing).
+
+- seed:
+
+  Random seed of the fit, for models whose fit uses random numbers: the
+  random number streams of the strata in [`mt_fit()`](mt_fit.md) start
+  from this seed. `NULL`: they start from the current generator.
 
 ## Value
 

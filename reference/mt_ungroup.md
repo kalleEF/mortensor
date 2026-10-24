@@ -70,7 +70,10 @@ mt_ungroup(
 
 - lambda:
 
-  Fixed smoothing parameter(s); `NULL` selects them by `criterion`.
+  Fixed smoothing parameter(s); `NULL` selects them by `criterion`, for
+  the deaths. The ungrouping of grouped exposures and the split of the
+  exposure of an open interval of the grid (`open_split = "pclm"`)
+  always select their own (see Details).
 
 - criterion:
 
@@ -122,7 +125,9 @@ boundary of the search range.
 - **Exposures** observed coarser than the grid are ungrouped first, as
   counts by the PCLM (`exposure_method = "pclm"`) or by the monotone
   cubic interpolation of Hyman (1983) applied to the cumulative counts
-  (`"monotone"`), which reproduces the group totals exactly.
+  (`"monotone"`), which reproduces the group totals exactly. The PCLM of
+  the exposures chooses its own smoothing parameter by `criterion`; a
+  `lambda` given for the deaths is not used for the exposures.
 
 - **Deaths** are ungrouped as **rates** when exposures are available on
   the grid: the exposures enter the composite link as offset (Rizzi,
@@ -163,7 +168,9 @@ well, and its exposure is split over these years (`open_split`):
   with a group of 0 counts of 15 years beyond `omega`, as Rizzi, Gampe
   and Eilers (2015) ungroup grouped exposures (their maximum age 115 and
   a group 115-130 with 0 counts); the estimates enter the composite link
-  of the rates;
+  of the rates. This PCLM smooths exposures, not deaths, so it chooses
+  its own smoothing parameter by `criterion` (BIC by default) also when
+  `lambda` is given;
 
 - `"stationary"`: with stationary-population weights
   `l(x) = exp(-cumsum(m(x)))` implied by the fitted rates; starting from

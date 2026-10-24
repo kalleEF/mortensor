@@ -609,25 +609,25 @@ fc_coda <- lapply(fit_coda, mt_forecast, to = 2035, n_draws = 500, seed = 1)
 fc_cause <- c(fc[c("separate", "bottom-up")], fc_coda)
 mt_compare_forecasts(fc_cause, periods = 2035, at = 50, strata = c("female.Q1.all", "female.Q5.all", "both.England.all"))
 #>               label period         separate        bottom-up             CoDA
-#> 1: both.England.all   2035 35.9 (34.2-37.5) 33.6 (32.7-34.4) 37.3 (36.8-37.8)
-#> 2:    female.Q1.all   2035 33.0 (30.2-35.8) 30.9 (28.7-33.0) 34.7 (33.3-36.3)
-#> 3:    female.Q5.all   2035 39.9 (37.5-42.2) 37.3 (34.6-40.5) 41.1 (39.2-42.8)
+#> 1: both.England.all   2035 35.9 (34.2-37.5) 33.6 (32.7-34.4) 37.3 (36.8-37.9)
+#> 2:    female.Q1.all   2035 33.0 (30.2-35.8) 30.9 (28.7-33.0) 34.7 (33.4-36.2)
+#> 3:    female.Q5.all   2035 39.9 (37.5-42.2) 37.3 (34.6-40.5) 41.1 (39.5-43.1)
 #>             2S-CoDA
 #> 1: 37.2 (36.8-37.7)
-#> 2: 34.5 (33.3-36.1)
-#> 3: 40.8 (39.6-42.1)
+#> 2: 34.5 (33.1-36.0)
+#> 3: 40.8 (39.7-42.1)
 mt_compare_forecasts(fc_cause, quantity = "asr", periods = 2035,
                      strata = paste0("both.England.", c("lung_cancer", "ihd", "dementia", "respiratory")), digits = 0)
 #>                       label period       separate      bottom-up          CoDA
-#> 1:    both.England.dementia   2035 727 (266-2148) 899 (624-1385) 583 (547-617)
-#> 2:         both.England.ihd   2035   104 (81-133)   105 (96-115)    72 (57-87)
-#> 3: both.England.lung_cancer   2035  113 (107-121)  124 (114-140)    75 (67-83)
-#> 4: both.England.respiratory   2035  141 (140-148)  143 (122-170)    88 (80-97)
+#> 1:    both.England.dementia   2035 727 (266-2148) 899 (624-1385) 583 (543-617)
+#> 2:         both.England.ihd   2035   104 (81-133)   105 (96-115)    72 (57-89)
+#> 3: both.England.lung_cancer   2035  113 (107-121)  124 (114-140)    75 (65-83)
+#> 4: both.England.respiratory   2035  141 (140-148)  143 (122-170)    88 (79-97)
 #>          2S-CoDA
-#> 1: 583 (542-619)
-#> 2:    72 (60-86)
-#> 3:    74 (65-86)
-#> 4:    86 (78-94)
+#> 1: 580 (542-618)
+#> 2:    73 (59-86)
+#> 3:    75 (64-86)
+#> 4:    87 (78-94)
 ```
 
 The observed rates of these causes in 2001 and 2019:
@@ -651,20 +651,20 @@ mt_compare_forecasts(list(observed = mt_subset(xa, sex == "both" & quintile == "
 The compositional models forecast a higher life expectancy at 50 than
 both Lee-Carter forecasts: 37.3 and 37.2 years for England in 2035,
 against 35.9 years from the all-cause forecast and 33.6 from bottom-up,
-with narrower intervals (36.8-37.8 for CoDA). Their sum of the causes is
+with narrower intervals (36.8-37.9 for CoDA). Their sum of the causes is
 more optimistic than the all-cause Lee-Carter forecast, the opposite of
 the separate forecasts by cause. They forecast lower rates of all four
-causes: ischaemic heart disease 72 per 100,000 against 104 and 105, lung
-cancer 75 and 74 against 113 and 124, and dementia 583 against 727 and
-899, with a much narrower interval for dementia (547-617 for CoDA,
-against 266-2148 and 624-1385). Respiratory diseases fell from 149 to
-137 per 100,000 between 2001 and 2019; Lee-Carter keeps them near that
-level (141 and 143), and the compositional models bring them down by
-about a third (88 and 86). In these models the rate of a cause follows
-from the forecast life-table deaths of all ages and causes (Oeppen 2008,
-eq. 7), so the trends of the causes are tied together. The individual
-components of 2S-CoDA change the forecasts shown little: life expectancy
-by at most 0.3 years, the rates by at most 2 per 100,000.
+causes: ischaemic heart disease 72 and 73 per 100,000 against 104 and
+105, lung cancer 75 against 113 and 124, and dementia 583 and 580
+against 727 and 899, with a much narrower interval for dementia (543-617
+for CoDA, against 266-2148 and 624-1385). Respiratory diseases fell from
+149 to 137 per 100,000 between 2001 and 2019; Lee-Carter keeps them near
+that level (141 and 143), and the compositional models bring them down
+by about a third (88 and 87). In these models the rate of a cause
+follows from the forecast life-table deaths of all ages and causes
+(Oeppen 2008, eq. 7), so the trends of the causes are tied together. The
+individual components of 2S-CoDA change the forecasts shown little: life
+expectancy by at most 0.3 years, the rates by at most 3 per 100,000.
 
 ### Which way forecast best
 
@@ -718,12 +718,12 @@ mt_score_table(bt1, metrics = c("crps", "cov95"), targets = "rate", hierarchy = 
 #> 13: proportional    bottom 0.1170 0.876
 #> 14: proportional aggregate 0.0873 0.731
 #> 15: proportional     total 0.0401 0.293
-#> 16:         CoDA    bottom 0.1350 0.837
-#> 17:         CoDA aggregate 0.0989 0.708
-#> 18:         CoDA     total 0.0582 0.258
-#> 19:      2S-CoDA    bottom 0.1350 0.784
-#> 20:      2S-CoDA aggregate 0.1010 0.615
-#> 21:      2S-CoDA     total 0.0630 0.160
+#> 16:         CoDA    bottom 0.1360 0.836
+#> 17:         CoDA aggregate 0.0994 0.706
+#> 18:         CoDA     total 0.0587 0.240
+#> 19:      2S-CoDA    bottom 0.1350 0.790
+#> 20:      2S-CoDA aggregate 0.1010 0.620
+#> 21:      2S-CoDA     total 0.0629 0.138
 #>            model     level   crps cov95
 ```
 
@@ -744,10 +744,10 @@ mt_score_table(bt1[cause != "all"], metrics = c("crps", "cov95"), targets = "asr
 #>  8:         MinT aggregate   0.0584     0.550
 #>  9: proportional    bottom   0.0641     0.904
 #> 10: proportional aggregate   0.0606     0.734
-#> 11:         CoDA    bottom   0.0709     0.740
-#> 12:         CoDA aggregate   0.0715     0.558
-#> 13:      2S-CoDA    bottom   0.0743     0.677
-#> 14:      2S-CoDA aggregate   0.0757     0.468
+#> 11:         CoDA    bottom   0.0712     0.730
+#> 12:         CoDA aggregate   0.0722     0.544
+#> 13:      2S-CoDA    bottom   0.0741     0.687
+#> 14:      2S-CoDA aggregate   0.0755     0.472
 mt_score_table(bt1[cause != "all" & quintile == "Q5"], metrics = c("crps", "cov95"), targets = "asr_gap")
 #>           model crps_asr_gap cov95_asr_gap
 #> 1:     separate       0.0398         0.984
@@ -755,8 +755,8 @@ mt_score_table(bt1[cause != "all" & quintile == "Q5"], metrics = c("crps", "cov9
 #> 3:          WLS       0.0362         0.957
 #> 4:         MinT       0.0362         0.960
 #> 5: proportional       0.0405         0.992
-#> 6:         CoDA       0.0358         0.981
-#> 7:      2S-CoDA       0.0330         0.968
+#> 6:         CoDA       0.0360         0.977
+#> 7:      2S-CoDA       0.0332         0.972
 ```
 
 Life expectancy at 50 from all causes, and its gap between Q5 and Q1:
@@ -775,10 +775,10 @@ mt_score_table(bt1[cause == "all"], metrics = c("crps", "cov95"), targets = "lif
 #>  8:         MinT     total   0.346    0.120
 #>  9: proportional aggregate   0.307    0.675
 #> 10: proportional     total   0.361    0.240
-#> 11:         CoDA aggregate   0.465    0.421
-#> 12:         CoDA     total   0.540    0.160
-#> 13:      2S-CoDA aggregate   0.517    0.221
-#> 14:      2S-CoDA     total   0.577    0.040
+#> 11:         CoDA aggregate   0.468    0.421
+#> 12:         CoDA     total   0.543    0.080
+#> 13:      2S-CoDA aggregate   0.515    0.214
+#> 14:      2S-CoDA     total   0.575    0.040
 mt_score_table(bt1[cause == "all" & quintile == "Q5"], metrics = c("crps", "cov95"),
                targets = "life_expectancy_gap", by = c("model", "sex"))
 #>            model    sex crps_le_gap cov95_le_gap
@@ -797,12 +797,12 @@ mt_score_table(bt1[cause == "all" & quintile == "Q5"], metrics = c("crps", "cov9
 #> 13: proportional female       0.185         1.00
 #> 14: proportional   male       0.127         1.00
 #> 15: proportional   both       0.128         1.00
-#> 16:         CoDA female       0.174         1.00
-#> 17:         CoDA   male       0.180         1.00
-#> 18:         CoDA   both       0.157         1.00
+#> 16:         CoDA female       0.170         1.00
+#> 17:         CoDA   male       0.178         1.00
+#> 18:         CoDA   both       0.151         1.00
 #> 19:      2S-CoDA female       0.158         0.96
-#> 20:      2S-CoDA   male       0.136         1.00
-#> 21:      2S-CoDA   both       0.152         0.88
+#> 20:      2S-CoDA   male       0.143         1.00
+#> 21:      2S-CoDA   both       0.152         0.84
 #>            model    sex crps_le_gap cov95_le_gap
 ```
 
@@ -837,7 +837,7 @@ dcast(bias, model ~ horizon, value.var = "error")
 #> 3:          WLS 0.11 0.24 0.35 0.46 0.55
 #> 4:         MinT 0.11 0.24 0.34 0.45 0.56
 #> 5: proportional 0.10 0.26 0.40 0.54 0.68
-#> 6:         CoDA 0.17 0.38 0.57 0.77 0.96
+#> 6:         CoDA 0.17 0.38 0.58 0.77 0.96
 #> 7:      2S-CoDA 0.17 0.38 0.59 0.80 1.00
 ```
 
@@ -855,7 +855,7 @@ accurate. The results by target:
 - **All-cause life expectancy at 50**: bottom-up forecast it best by far
   (CRPS 0.177 years for the series by sex and quintile and their sums
   over sexes or quintiles, against 0.300-0.307 for the other forecasts
-  from Lee-Carter and 0.465 and 0.517 for CoDA and 2S-CoDA), with the
+  from Lee-Carter and 0.468 and 0.515 for CoDA and 2S-CoDA), with the
   highest 95% coverage (0.83). For England as a whole its intervals were
   too narrow (0.48): the 120 bottom forecasts are drawn independently,
   so their errors partly cancel in the sum (“Dependence between
@@ -865,25 +865,26 @@ accurate. The results by target:
   0.121, against 0.146 for bottom-up, 0.158 for 2S-CoDA and 0.185 for
   separate forecasts), but the 95% intervals of their life expectancy
   covered only 0.34 of the observed values. The gaps of the
-  cause-specific rates were forecast best by 2S-CoDA (CRPS 0.0330), then
-  by CoDA (0.0358) and by WLS and MinT (0.0362).
+  cause-specific rates were forecast best by 2S-CoDA (CRPS 0.0332), then
+  by CoDA (0.0360) and by WLS and MinT (0.0362).
 - **Cause-specific rates**: WLS and MinT made them less accurate (CRPS
   of the ASR of the bottom series 0.0595 against 0.0562 for separate
   forecasts and 0.0563 for bottom-up). Proportional scaling made them
   less accurate still (0.0641) and left all-cause life expectancy as
   inaccurate as the all-cause forecasts it keeps. The compositional
-  models forecast them least accurately (0.0709 for CoDA, 0.0743 for
-  2S-CoDA), with 95% coverage of 0.74 and 0.68.
+  models forecast them least accurately (0.0712 for CoDA, 0.0741 for
+  2S-CoDA), with 95% coverage of 0.73 and 0.69.
 - **Single rates of the bottom series**: the forecasts from Lee-Carter
   differ little (CRPS 0.113-0.117); CoDA and 2S-CoDA are less accurate
-  (0.135).
+  (0.136 and 0.135).
 - **CoDA and 2S-CoDA**: the 95% intervals of their life expectancy at 50
-  covered only 0.42 and 0.22 of the observed values (series by sex and
+  covered only 0.42 and 0.21 of the observed values (series by sex and
   quintile and their sums): the forecasts were too high and the
   intervals narrow. 2S-CoDA forecast the gaps between Q5 and Q1 more
-  accurately than CoDA, the rates of the bottom series as accurately,
-  and the other targets less accurately. Which variant forecasts better
-  depends on the data and the horizon.
+  accurately than CoDA (the gap of life expectancy of both sexes
+  together about as accurately), the rates of the bottom series about as
+  accurately, and the other targets less accurately. Which variant
+  forecasts better depends on the data and the horizon.
 
 Part 2 uses bottom-up reconciliation: it forecast all-cause life
 expectancy best, and the cause-specific rates as well as separate

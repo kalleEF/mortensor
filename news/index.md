@@ -40,6 +40,47 @@ Work package R1 of `dev/review-0.2-plan.md`.
   `mt_error_hierarchy` and names the cause when the draws hold no
   aggregate strata of the hierarchy.
 
+### Small corrections and labels (R2)
+
+Work package R2 of `dev/review-0.2-plan.md`.
+
+- The bootstrap of the CoDa time indexes
+  ([`coda()`](../reference/coda.md), `coda(coherent = TRUE)`,
+  [`coda_multiway()`](../reference/coda_multiway.md),
+  [`coda_causes()`](../reference/coda_causes.md)) resamples the
+  innovations without the first `d` residuals of
+  [`stats::arima()`](https://rdrr.io/r/stats/arima.html). These come
+  from its diffuse initialisation and are near zero, so the draws are
+  slightly wider. The vignettes “Choosing and combining models” and
+  “Causes of death by deprivation” are re-knitted; “Lifespan variation”
+  and “Model reference” give the new numbers. The Bayesian APC rows of
+  “Choosing and combining models” also moved, because the chains of bamp
+  are not seeded.
+- [`mt_ungroup()`](../reference/mt_ungroup.md) and
+  `mt_smooth(method = "pspline")` choose the smoothing parameter of the
+  PCLM of the exposures on their own: for grouped exposures and for the
+  split of the exposure of an open interval of the grid
+  (`open_split = "pclm"`). A `lambda` given for the deaths no longer
+  enters these fits; it had changed the ungrouped exposures by up to
+  60%. Results with the default `lambda = NULL` are unchanged.
+- `lee_carter(seed = )` makes the bootstrap of the parameters
+  (`bootstrap = TRUE`) reproducible with any number of cores: the random
+  number streams of the strata start from it.
+  [`new_mt_spec()`](../reference/new_mt_spec.md) gains `seed` for models
+  whose fit uses random numbers.
+- Help: the normal approximation of the Poisson distribution for cells
+  with 50 or more expected deaths in the calibration sample of
+  [`recalibrated()`](../reference/recalibrated.md), and the cap
+  `0.5 / z` of the zero replacement of [`coda()`](../reference/coda.md)
+  and [`coda_causes()`](../reference/coda_causes.md), are labelled
+  package-specific. The README and
+  [`mt_example()`](../reference/mt_example.md) say why the examples pass
+  `deaths = "single"`. The function map shows
+  [`mt_axis()`](../reference/mt_axis.md) and
+  [`mt_couple()`](../reference/coupled.md).
+- The unused internal functions `axis_from_bounds()`, `Matrix_diag()`
+  and `relative_kernel()` are removed.
+
 ### Faster two-dimensional ungrouping and smoothing (R3)
 
 Work package R3 of `dev/review-0.2-plan.md`.

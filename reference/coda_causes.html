@@ -174,7 +174,8 @@ the index paths, centred on the point forecast) are those of <code><a href="coda
 3) replaces zero counts by lightly smoothing the deaths of each year with
 a penalised histogram smoother whose smoothing parameter is not given;
 here zero counts are replaced multiplicatively in the composition of each
-year (Bergeron-Boucher et al. 2017, Appendix C; see <code><a href="coda.html">coda()</a></code>). How the
+year (Bergeron-Boucher et al. 2017, Appendix C, with the package-specific
+cap <code>0.5 / z</code> of <code>delta</code> for <code>z</code> zeros in a year; see <code><a href="coda.html">coda()</a></code>). How the
 death rate of the open age interval follows from the forecast deaths is
 not stated; here the all-cause log rate of an open interval is regressed
 on the indexes and split by cause through the composition

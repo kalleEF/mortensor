@@ -62,7 +62,8 @@ sum(k) = 0, fitted per stratum:"></head><body>
 <span>  rotation <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>e0_start <span class="op">=</span> <span class="fl">80</span>, e0_end <span class="op">=</span> <span class="fl">102</span>, power <span class="op">=</span> <span class="fl">0.5</span><span class="op">)</span>,</span>
 <span>  family <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"poisson"</span>, <span class="st">"nb"</span><span class="op">)</span>,</span>
 <span>  dispersion <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"global"</span>, <span class="st">"age"</span><span class="op">)</span>,</span>
-<span>  jump_off_years <span class="op">=</span> <span class="fl">1</span></span>
+<span>  jump_off_years <span class="op">=</span> <span class="fl">1</span>,</span>
+<span>  seed <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -149,6 +150,16 @@ binomial; Delwarde, Denuit and Partrat 2007).</p></dd>
 observed years whose mean log rates give the jump-off rates (default 1,
 the last year; 2 to 5 in Stoeldraijer et al. 2018).</p></dd>
 
+
+<dt id="arg-seed">seed<a class="anchor" aria-label="anchor" href="#arg-seed"></a></dt>
+<dd><p>Random seed of the bootstrap resamples (<code>bootstrap = TRUE</code>).
+The resamples of each stratum come from its own random number stream,
+and these streams start from <code>seed</code>, so two fits with the same seed have
+the same bootstrap parameters with any number of cores. <code>NULL</code>
+(default): the streams start from the current generator
+(<code><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed()</a></code>). The forecast draws have their own <code>seed</code> in
+<code><a href="mt_forecast.html">mt_forecast()</a></code>.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
@@ -185,7 +196,7 @@ deaths of the fitting period (semi-parametric bootstrap with fitted deaths
 of Renshaw and Haberman 2008), which adds the uncertainty of <code>a</code> and <code>b</code>.
 The bootstrap of Brouhns, Denuit and Van Keilegom (2005) resamples the
 observed deaths instead: <code>bootstrapped(lee_carter(), type = "data")</code>
-(<code><a href="bootstrapped.html">bootstrapped()</a></code>).</p>
+(<code><a href="bootstrapped.html">bootstrapped()</a></code>). A <code>seed</code> makes the resamples reproducible.</p>
 <p>Age groups without deaths in the fitting period get a constant rate (0.5
 deaths over the period) and no trend; with <code>adjust = "e0"</code> they enter the
 life tables at that rate.</p>
