@@ -155,6 +155,7 @@ articles:
       - smoothing
       - jump-off
       - backtesting
+      - overdispersion
       - tuning-recalibration
       - coherence
       - dependence
@@ -165,7 +166,6 @@ articles:
     contents:
       - model-choice
       - models
-      - overdispersion
       - bayesian-apc
   - title: Benchmarks
     desc: How well the pipeline works on simulated and real data, and compared with other packages.
