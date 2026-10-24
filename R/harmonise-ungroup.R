@@ -19,7 +19,9 @@
 #' * `dims = 1` fits each stratum and period separately; `dims = 2` fits a
 #'   smooth age-period surface of rates per stratum with two smoothing
 #'   parameters, the PCLM of rates over age and period with exposures of
-#'   Rizzi et al. (2019).
+#'   Rizzi et al. (2019). Its products with the tensor basis over age and
+#'   period are computed in array form, as in generalised linear array
+#'   models (Currie, Durban and Eilers 2006).
 #'
 #' **Group totals.** The PCLM reproduces the total over all groups of a fit
 #' (the penalty leaves the level of the latent curve free), but not each
@@ -153,7 +155,9 @@
 #'   otherwise single years of age from the lowest age to the start of the
 #'   open interval.
 #' @param dims 1 or 2 (for `method = "pclm"`; `"gam"` is always 2D, the
-#'   other methods 1D).
+#'   other methods 1D). The 2D PCLM takes about 10 seconds per stratum on
+#'   the package example (`mt_example()`: 13 age groups, 71 grid ages, 30
+#'   years).
 #' @param method Method for deaths: `"pclm"` (default), or `"monotone"`, the
 #'   monotone cubic interpolation of Hyman (1983) of the cumulative deaths
 #'   (counts only, 1D, ignores exposures; group totals reproduced exactly).
@@ -192,6 +196,11 @@
 #'   an expanded open interval), and a flag when a smoothing parameter is at
 #'   the boundary of the search range.
 #' @references
+#' Currie ID, Durban M, Eilers PHC (2006). Generalized linear array models
+#' with applications to multidimensional smoothing. *Journal of the Royal
+#' Statistical Society Series B* 68(2): 259-280.
+#' \doi{10.1111/j.1467-9868.2006.00543.x}
+#'
 #' Eilers PHC (2007). Ill-posed problems with counts, the composite link model
 #' and penalized likelihood. *Statistical Modelling* 7(3): 239-254.
 #'
@@ -420,7 +429,8 @@ ungroup_rates <- function(D, E, g, omega, ctl, dims) {
       bp <- pclm_basis(xp, g$period$lower[min(ps)], g$period$upper[max(ps)], ctl$kr, ctl$deg, ctl$pord)
       inf <- infant(Ds)
       fb <- if (any(inf)) list(fa = fa1, bas = bas1) else list(fa = fa, bas = bas)
-      B2 <- kronecker(bp$B, fb$bas$B)
+      # tensor basis over fine ages and periods, computed in array form (pclm_tensor())
+      B2 <- pclm_tensor(fb$bas$B, bp$B)
       pen <- list(kronecker(diag(ncol(bp$B)), fb$bas$P), kronecker(bp$P, diag(ncol(fb$bas$B))))
       r <- ungroup_rate_block(Ds[!inf], lapply(ps, function(p) Earr[, p, s]), fb$fa, B2, pen, ctl, omega, n_open,
                               ps)
@@ -469,7 +479,7 @@ ungroup_rate_block <- function(o, e_list, fa, B, pen, ctl, omega, n_open, ps = N
   fit_w <- function(w, lambda, beta) {
     off <- as.vector(e_grid[fa$grid, , drop = FALSE] * w)
     cov <- Matrix::colSums(C) > 0 & off > 0
-    fit <- pclm_fit(o$value, C[, cov, drop = FALSE], off[cov], B[cov, , drop = FALSE], pen, lambda,
+    fit <- pclm_fit(o$value, C[, cov, drop = FALSE], off[cov], basis_rows(B, cov), pen, lambda,
                     ctl$criterion, ctl$lambda_range, beta = beta)
     list(fit = fit, off = off, cov = cov)
   }
@@ -488,7 +498,7 @@ ungroup_rate_block <- function(o, e_list, fa, B, pen, ctl, omega, n_open, ps = N
     for (round in seq_len(if (select) 3L else 1L)) {
       lam <- r$fit$lambda
       repeat {
-        rate_m <- matrix(exp(as.numeric(B %*% r$fit$beta)), nf, length(ps))
+        rate_m <- matrix(exp(basis_eta(B, r$fit$beta)), nf, length(ps))
         w_new <- w
         for (j in seq_along(ps)) w_new[open_idx, j] <- open_weights(rate_m[open_idx, j])
         if (max(abs(w_new - w)) < 1e-6) break

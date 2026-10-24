@@ -23,7 +23,8 @@ mt_smooth(
 \item{data}{An \link{mt_data} object.}
 
 \item{dims}{1 (over one direction, see \code{along}) or 2 (age-period
-surface; \code{"pspline"} or \code{"gam"}).}
+surface; \code{"pspline"} or \code{"gam"}). The 2D P-spline surface takes about
+10 seconds per stratum on the package example (\code{mt_example(deaths = "single")}: 71 ages, 30 years), the 2D GAM about 2 seconds.}
 
 \item{lambda}{Fixed smoothing parameter(s) of the P-splines or the
 Whittaker smoother; \code{NULL} selects them.}
@@ -130,8 +131,9 @@ data such as cause-specific rates of small regions. Whether smoothing
 improves a forecast is a question for a backtest; the vignette
 "Smoothing death rates" shows one. Use \code{\link[=mt_smooth_check]{mt_smooth_check()}} to see how
 much was removed and \code{\link[=mt_plot_smooth]{mt_plot_smooth()}} to look at it. The 2D P-spline
-surface is slow for many ages and years (minutes per stratum); the 2D
-GAM takes about a second.
+surface computes its products with the tensor basis in array form
+(Currie, Durban and Eilers 2006); its run time and that of the 2D GAM
+are given under \code{dims}.
 }
 \examples{
 x <- mt_example(years = 2001:2003, deaths = "single")
@@ -144,6 +146,11 @@ mt_smooth_check(xt, st)
 \references{
 Currie ID, Durban M, Eilers PHC (2004). Smoothing and forecasting
 mortality rates. \emph{Statistical Modelling} 4(4): 279-298.
+
+Currie ID, Durban M, Eilers PHC (2006). Generalized linear array models
+with applications to multidimensional smoothing. \emph{Journal of the Royal
+Statistical Society Series B} 68(2): 259-280.
+\doi{10.1111/j.1467-9868.2006.00543.x}
 
 Eilers PHC (2003). A perfect smoother. \emph{Analytical Chemistry} 75(14):
 3631-3636.

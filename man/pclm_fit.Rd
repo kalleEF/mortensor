@@ -23,7 +23,9 @@ pclm_fit(
 
 \item{o}{Offset per fine cell.}
 
-\item{B}{Basis matrix (fine cells x coefficients).}
+\item{B}{Basis matrix (fine cells x coefficients), or a tensor basis
+over fine ages and periods from \code{pclm_tensor()}, whose products are
+computed in array form (Currie, Durban and Eilers 2006).}
 
 \item{pen}{List of penalty matrices (one per smoothing parameter).}
 
@@ -46,5 +48,11 @@ counts by \code{mu = C (o * gamma)}, where \code{o} is an offset (exposures for
 rates, interval widths for counts). The coefficients are estimated by
 penalized Poisson IRLS; the smoothing parameter is chosen by BIC or AIC on a
 log scale unless fixed.
+}
+\references{
+Currie ID, Durban M, Eilers PHC (2006). Generalized linear array models
+with applications to multidimensional smoothing. \emph{Journal of the Royal
+Statistical Society Series B} 68(2): 259-280.
+\doi{10.1111/j.1467-9868.2006.00543.x}
 }
 \keyword{internal}
