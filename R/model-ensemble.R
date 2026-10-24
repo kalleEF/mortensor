@@ -80,16 +80,7 @@
 #'   log rates as the scored quantity and the use of the weights as mixture
 #'   probabilities are package-specific. `top_k = 2` keeps the two
 #'   components with the lowest inner CRPS, as Shang's combination of the
-#'   two best models;
-#' * `"stack"` (deprecated; use `"crps_stack"`): weights that minimise the
-#'   squared error of the weighted mean of the components' median forecasts
-#'   (log rates) in the same inner backtest, constrained to be non-negative
-#'   and to sum to 1. This is stacking of point forecasts (Breiman 1996;
-#'   for mortality, Kessy, Sherris, Villegas and Ziveyi 2022). Using these
-#'   weights as the probabilities of the mixture is a deviation: they are
-#'   optimal for the linear combination of the medians, not for the mixture
-#'   distribution, whose median is not the weighted mean of the medians. It
-#'   still works and warns (class `mt_warning_deprecated`).
+#'   two best models.
 #'
 #' Each draw of the ensemble comes from one component for all strata, so
 #' paths keep the dependence between strata and the coherence of reconciled
@@ -102,7 +93,7 @@
 #' hierarchy to the data first ([mt_aggregate_strata()]).
 #'
 #' Weights from the inner backtest (`"crps_stack"`, `"bias"`, `"crps"`,
-#' `"stack"`, `top_k`) use only the training data, so they never use data
+#' `top_k`) use only the training data, so they never use data
 #' after the forecast origin, also inside an outer backtest. They compare
 #' the components on the cells that all of them forecast. A component whose
 #' inner backtest fails gets weight 0; when every inner backtest fails, the
@@ -124,8 +115,8 @@
 #' drift = TRUE)` (its reduced form, Harvey 1989).
 #'
 #' @param ... Model specifications; names are used as labels.
-#' @param weights `"equal"`, `"crps_stack"`, `"bias"`, `"crps"`, the
-#'   deprecated `"stack"`, or a numeric vector.
+#' @param weights `"equal"`, `"crps_stack"`, `"bias"`, `"crps"`, or a
+#'   numeric vector.
 #' @param inner_origins,inner_h Inner backtest for the weights other than
 #'   `"equal"` and numeric ones, and for `top_k`: the number of origins and
 #'   the horizon of each inner forecast. The last origin is `inner_h` years
@@ -145,8 +136,6 @@
 #' Bates JM, Granger CWJ (1969). The combination of forecasts. *Operational
 #' Research Quarterly* 20(4): 451-468.
 #'
-#' Breiman L (1996). Stacked regressions. *Machine Learning* 24(1): 49-64.
-#'
 #' Gneiting T, Raftery AE (2007). Strictly proper scoring rules, prediction,
 #' and estimation. *Journal of the American Statistical Association*
 #' 102(477): 359-378. \doi{10.1198/016214506000001437}
@@ -156,10 +145,6 @@
 #'
 #' Harvey AC (1989). *Forecasting, Structural Time Series Models and the
 #' Kalman Filter*. Cambridge University Press.
-#'
-#' Kessy SR, Sherris M, Villegas AM, Ziveyi J (2022). Mortality forecasting
-#' using stacked regression ensembles. *Scandinavian Actuarial Journal*
-#' 2022(7): 591-626.
 #'
 #' Kontis V, Bennett JE, Mathers CD, Li G, Foreman K, Ezzati M (2017).
 #' Future life expectancy in 35 industrialised countries: projections with a
@@ -196,12 +181,7 @@ ensemble <- function(..., weights = "equal", inner_origins = NULL, inner_h = NUL
   if (is.numeric(weights)) {
     if (length(weights) != length(comps) || any(weights < 0)) mt_abort("Invalid weights.", class = "argument")
   } else {
-    check_choice(weights, c("equal", "crps_stack", "bias", "crps", "stack"), "weights")
-    if (weights == "stack") {
-      mt_warn(paste("ensemble(weights = \"stack\") is deprecated: its weights optimise the weighted mean of the",
-                    "median forecasts and are used as mixture probabilities. Use weights = \"crps_stack\" (stacking",
-                    "of the predictive distributions)."), class = "deprecated", call = NULL)
-    }
+    check_choice(weights, c("equal", "crps_stack", "bias", "crps"), "weights")
   }
   # Kontis et al. (2017) withhold the last 13 years
   bias <- identical(weights, "bias")
@@ -336,9 +316,9 @@ ensemble_inner_check <- function(inner, p, labels) {
 
 # Rows of the inner backtests on the cells (origin, stratum, age, year) that
 # every successful one forecast, matched by these keys, for the target `tgt`
-# ("rate", or a derived quantity matched without ages): columns crps<i>,
-# median<i> and, when kept, draws<i> and plugin<i> for component i, and the
-# observed value (NULL if there are none)
+# ("rate", or a derived quantity matched without ages): columns crps<i> and,
+# when kept, draws<i> and plugin<i> for component i, and the observed value
+# (NULL if there are none)
 ensemble_inner_common <- function(bts, tgt = "rate") {
   keys <- c("origin", "stratum", if (tgt == "rate") c("age_lo", "age_hi"), "period", "target")
   ok <- which(!vapply(bts, is.null, logical(1)))
@@ -346,7 +326,7 @@ ensemble_inner_common <- function(bts, tgt = "rate") {
   tabs <- lapply(ok, function(i) {
     b <- as.data.table(bts[[i]])
     b <- b[target == tgt]
-    cols <- c("crps", "median", intersect(c("draws", "plugin"), names(b)))
+    cols <- c("crps", intersect(c("draws", "plugin"), names(b)))
     b <- b[, c(keys, "observed", cols), with = FALSE]
     setnames(b, cols, paste0(cols, i))
     if (i != ok[1]) b[, observed := NULL]
@@ -382,12 +362,8 @@ ensemble_inner_weights <- function(p, bts, keep = NULL) {
     w[ok] <- simplex_qp(-tm$B, tm$a)
     return(w)
   }
-  if (p$weights == "bias") {
-    w[ok] <- vapply(idx, function(i) exp(-mean_abs_bias(common, paste0("plugin", i))), 0)
-    return(w)
-  }
-  M <- as.matrix(common[, paste0("median", idx), with = FALSE])
-  w[ok] <- simplex_least_squares(M, common$observed)
+  # bias weights of Kontis et al. (2017)
+  w[ok] <- vapply(idx, function(i) exp(-mean_abs_bias(common, paste0("plugin", i))), 0)
   w
 }
 
@@ -503,16 +479,6 @@ simplex_face_step <- function(Q, g, free, tol) {
   list(d = d, newton = TRUE)
 }
 
-# Least squares with weights on the simplex (softmax parametrisation): the
-# stacking weights of the median forecasts (deprecated weights = "stack")
-simplex_least_squares <- function(M, y) {
-  k <- ncol(M)
-  if (k == 1) return(1)
-  sm <- function(z) exp(z - max(z)) / sum(exp(z - max(z)))
-  f <- function(z) mean((M %*% sm(z) - y)^2)
-  sm(stats::optim(rep(0, k), f, method = "BFGS")$par)
-}
-
 # The weights of an ensemble in one sentence (model_assumptions())
 ensemble_weights_text <- function(p) {
   w <- p$weights
@@ -528,8 +494,7 @@ ensemble_weights_text <- function(p) {
            bias = paste("Weights: exp(-|bias|) of the life expectancy at the first age projected for the",
                         "withheld years of", paste0(inner, " (Kontis et al. 2017).")),
            crps = paste("Weights: inverse mean CRPS in", inner, "(inverse past errors, Shang 2012; for",
-                        "predictive distributions package-specific)."),
-           stack = paste("Weights: stacking of the median forecasts in", inner, "(deprecated)."))
+                        "predictive distributions package-specific)."))
   }
   if (!is.null(p$top_k)) txt <- paste(txt, sprintf("Only the %d components with the lowest inner CRPS are kept.",
                                                    p$top_k))

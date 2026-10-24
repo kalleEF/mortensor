@@ -119,5 +119,76 @@ test_that("the revision measure is the change of the median between consecutive 
   expect_equal(s2[model == "m", revision], mean(abs(r1)))
   # the default summary is unchanged
   expect_named(mt_score(bt, target = "life_expectancy"),
-               c("model", "crps", "wis", "mae", "rmse", "mase", "cov50", "cov80", "cov95", "pit_mean", "n", "unit"))
+               c("model", "crps", "wis", "mae", "rmse", "mase", "cov50", "cov80", "cov95", "pit_mean", "n",
+                 "n_floored", "unit"))
+})
+
+test_that("the robustness measure is the SD of the changes of the forecast of a target year", {
+  # Stoeldraijer et al. (2018): the standard deviation of the increase or
+  # decrease of the forecast of one target year over successive forecasts
+  x <- mt_example(deaths = "single", years = 1995:2014)
+  bt <- mt_backtest(rwd(), x, origins = 2005:2009, h = 5, n_draws = 50, quantities = "life_expectancy")
+  le <- bt[target == "life_expectancy"]
+  sd_changes <- function(sx, yr) stats::sd(diff(le[sex == sx & period == yr][order(origin), median]))
+  # (a) one stratum and one target year forecast from all five origins
+  bf <- bt[sex == "female"]
+  expect_identical(le[sex == "female" & period == 2010, sort(origin)], 2005:2009)
+  s <- mt_score(bf, by = c("model", "period"), target = "life_expectancy", measures = "robustness")
+  expect_equal(s[period == 2010, robustness], sd_changes("female", 2010), tolerance = 1e-12)
+  # (d) fewer than two changes: 2006 and 2014 are forecast from one origin,
+  # 2007 and 2013 from two
+  expect_true(all(is.na(s[period %in% c(2006, 2007, 2013, 2014), robustness])))
+  expect_false(anyNA(s[period %in% 2008:2012, robustness]))
+  # (b) the mean over two cells: both strata in 2010
+  s2 <- mt_score(bt, by = c("model", "period"), target = "life_expectancy", measures = "robustness")
+  expect_equal(s2[period == 2010, robustness], mean(c(sd_changes("female", 2010), sd_changes("male", 2010))),
+               tolerance = 1e-12)
+  # each cell counted once: the mean over the target years with two or more changes
+  s3 <- mt_score(bf, target = "life_expectancy", measures = "robustness")
+  expect_equal(s3$robustness, mean(vapply(2008:2012, function(yr) sd_changes("female", yr), 0)), tolerance = 1e-12)
+  # rates: one cell (age group and target year) of one stratum
+  r <- bt[target == "rate" & sex == "female" & age_lo == 60 & period == 2010][order(origin), median]
+  sr <- mt_score(bf, by = c("model", "period", "age_lo"), measures = c("revision", "robustness"))
+  expect_equal(sr[period == 2010 & age_lo == 60, robustness], stats::sd(diff(r)), tolerance = 1e-12)
+  # (c) the changes of a cell span origins and horizons
+  expect_error(mt_score(bt, by = c("model", "horizon"), target = "life_expectancy", measures = "robustness"),
+               class = "mt_error_argument")
+  expect_error(mt_score(bt, by = c("model", "origin"), measures = "robustness"), class = "mt_error_argument")
+  # the revision measure is unchanged by it
+  expect_equal(sr$revision, mt_score(bf, by = c("model", "period", "age_lo"), measures = "revision")$revision)
+})
+
+test_that("mt_score() counts the cells whose observed deaths are floored at half a death", {
+  x <- mt_example(deaths = "single", years = 2000:2012)
+  bt0 <- mt_backtest(rwd(), x, origins = 2008:2009, h = 3, n_draws = 20, quantities = "life_expectancy")
+  # the simulated data have deaths in every cell
+  expect_identical(mt_score(bt0)$n_floored, 0L)
+  # no deaths at age 30 in the test years
+  z <- x
+  z$obs$deaths <- data.table::copy(z$obs$deaths)
+  z$obs$deaths[age_lo == 30 & period_lo > 2008, value := 0]
+  bt <- mt_backtest(rwd(), z, origins = 2008:2009, h = 3, n_draws = 20, quantities = "life_expectancy")
+  rates <- bt[target == "rate"]
+  # by hand: 2 strata x 3 test years for each of the 2 origins
+  expect_identical(mt_score(bt)$n_floored, 2L * 3L * 2L)
+  expect_identical(sum(rates$floored), 12L)
+  expect_identical(unique(rates[floored == TRUE]$age_lo), 30)
+  # their observed log rate is that of half a death
+  fl <- rates[floored == TRUE]
+  E <- mt_obs(z, "exposure")[age_lo == 30]
+  e30 <- E$value[match(paste(fl$stratum, fl$period), paste(E$stratum, E$period_lo))]
+  expect_equal(fl$observed, log(0.5 / e30))
+  # rows of derived quantities: NA, and no count
+  expect_true(all(is.na(bt[target == "life_expectancy"]$floored)))
+  expect_true(is.na(mt_score(bt, target = "life_expectancy")$n_floored))
+  # by horizon: 2 origins x 2 strata
+  expect_identical(mt_score(bt, by = c("model", "horizon"))$n_floored, rep(4L, 3))
+  # several models: rbind(), mt_compare() and mt_score_table() keep the count
+  bc <- mt_compare(list(rw = rwd(), lc = lee_carter()), z, origins = 2008:2009, h = 3, n_draws = 20,
+                   quantities = "life_expectancy")
+  expect_identical(mt_score(rbind(bt, bt))$n_floored, 24L)
+  expect_identical(mt_score(bc)$n_floored, c(12L, 12L))
+  expect_equal(mt_score_table(bc, metrics = "n_floored", targets = "rate")$n_floored, c(12, 12))
+  # backtest tables without the column
+  expect_true(is.na(mt_score(data.table::copy(bt)[, floored := NULL])$n_floored))
 })

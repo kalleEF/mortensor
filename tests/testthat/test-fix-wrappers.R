@@ -168,16 +168,18 @@ test_that("ensembles do not take the wrapper fields of their first component", {
 test_that("stacking and CRPS weights compare the components on common cells", {
   cells <- function(origin, crps, err) {
     data.table::data.table(origin = origin, stratum = 1L, age_lo = 1:5, age_hi = 2:6, period = origin + 1,
-                           target = "rate", observed = (1:5) / 10, crps = crps, median = (1:5) / 10 + err)
+                           target = "rate", observed = (1:5) / 10, crps = crps,
+                           draws = lapply(1:5, function(i) i / 10 + err + c(-0.01, 0, 0.01)))
   }
   # component a also forecast an origin at which b failed, with large errors there
   a <- rbind(cells(2010, 10, 5), cells(2011, 0.1, 0))
   b <- cells(2011, 0.2, 0.1)
   w <- mortensor:::ensemble_inner_weights(list(weights = "crps"), list(a, b, NULL))
   expect_equal(w, c(10, 5, 0))
-  ws <- mortensor:::ensemble_inner_weights(list(weights = "stack"), list(a, b, NULL))
-  expect_gt(ws[1], 0.95)
-  expect_equal(ws[3], 0)
+  # on the common cells (origin 2011) the draws of a are centred on the
+  # observations and those of b lie above all of them: all weight on a
+  ws <- mortensor:::ensemble_inner_weights(list(weights = "crps_stack"), list(a, b, NULL))
+  expect_equal(ws, c(1, 0, 0))
   # the draws of the inner backtests are an argument
   expect_identical(ensemble(lee_carter(), rwd())$params$inner_n_draws, 100)
   expect_error(ensemble(lee_carter(), rwd(), inner_n_draws = 2), class = "mt_error_argument")

@@ -288,8 +288,8 @@ uncertainty about the future.
 
 Weights can be equal, set by hand, or estimated from an inner backtest on
 the training data only (`weights = "crps"`: inversely proportional to the
-CRPS of each component; `"stack"`: the combination that minimised the
-error of the median forecasts), and `top_k` keeps the best components.
+CRPS of each component; `"crps_stack"`: the stacking weights that
+minimise the CRPS of the mixture), and `top_k` keeps the best components.
 CRPS weights and `top_k` are package-specific (see the article "Methods
 and sources"):
 

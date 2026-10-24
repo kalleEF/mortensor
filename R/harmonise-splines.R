@@ -1,9 +1,6 @@
-# Spline-based disaggregation of grouped rates (ported from mortensor 0.1,
-# disaggregation.R), with group means preserved exposure-weighted. These are
-# heuristics of this package without a published source and are deprecated:
-# the methods hyman_kannisto, natural_gompertz and gam of mt_ungroup(), the
-# spline methods of mt_disaggregate() and the GAM of mt_shape_rates(); they
-# keep working with a warning.
+# Disaggregation of forecast draws to finer ages (proportional allocation by
+# a standard schedule), its age shapes and checks, and the representative
+# ages of age cells used by the smoothers.
 
 # Representative ages of age cells [lo, hi): the midpoint of a closed cell;
 # for an open cell (hi = Inf) its lower bound plus half the width of the
@@ -27,220 +24,32 @@ cell_ages <- function(lo, hi) {
   mid
 }
 
-# Kannisto fit on log rates: m(x) = a e^{bx} / (1 + a e^{bx})
-fit_kannisto <- function(mx, ages) {
-  log_mx <- log(pmax(mx, 1e-12))
-  start_b <- max(0.05, diff(range(log_mx)) / max(diff(range(ages)), 1))
-  start_a <- exp(mean(log_mx) - start_b * mean(ages))
-  fit <- tryCatch(stats::optim(c(log(start_a), start_b), function(par) {
-    a <- exp(par[1])
-    b <- par[2]
-    mu <- a * exp(b * ages) / (1 + a * exp(b * ages))
-    sum((log(mu) - log_mx)^2)
-  }, method = "L-BFGS-B", lower = c(-30, 0.01), upper = c(5, 0.5)), error = function(e) NULL)
-  if (is.null(fit)) {
-    cf <- stats::coef(stats::lm(log_mx ~ ages))
-    return(function(x) exp(cf[1] + cf[2] * x))
-  }
-  a <- exp(fit$par[1])
-  b <- fit$par[2]
-  function(x) a * exp(b * x) / (1 + a * exp(b * x))
-}
-
-# Group of each fine cell by containment (groups sorted by age); NA for cells
-# in no group, such as cells in the gap of a missing group or above a closed
-# top group
-cell_groups <- function(x_lo, x_hi, g_lo, g_hi, omega) {
-  grp <- findInterval(x_lo + 1e-9, g_lo)
-  grp[grp == 0] <- NA
-  grp[!is.na(grp) & pmin(x_hi, omega) > pmin(g_hi, omega)[grp] + 1e-9] <- NA
-  grp
-}
-
-# One schedule: grouped rates -> rates on fine cells.
-#   m_g: group rates; g_lo, g_hi: group bounds (Inf open); x_lo, x_hi: fine cells;
-#   e: fine exposures (weights of the group-mean constraint); omega: maximum age
-spline_disaggregate <- function(m_g, g_lo, g_hi, x_lo, x_hi, e, omega, method = "hyman_kannisto",
-                                exact = TRUE) {
-  ng <- length(m_g)
-  open <- is.infinite(g_hi[ng])
-  mids <- cell_ages(g_lo, g_hi)
-  closed <- if (open) seq_len(ng - 1) else seq_len(ng)
-  log_m <- log(pmax(m_g, 1e-12))
-  xm <- cell_ages(x_lo, x_hi)
-  if (method == "hyman_kannisto") {
-    old <- closed[g_lo[closed] >= 60]
-    if (length(old) < 3) old <- utils::tail(closed, min(4, length(closed)))
-    kann <- fit_kannisto(m_g[old], mids[old])
-    if (open) {
-      virt <- seq(g_lo[ng] + 2.5, omega, by = 5)
-      vm <- kann(virt)
-      pts <- c(mids[closed], virt)
-      lp <- c(log_m[closed], log(vm))
-    } else {
-      pts <- mids
-      lp <- log_m
-    }
-    if (all(diff(lp) >= -0.05)) {
-      for (i in seq_along(lp)[-1]) if (lp[i] <= lp[i - 1]) lp[i] <- lp[i - 1] + 1e-6
-      f <- stats::splinefun(pts, lp, method = "hyman")
-    } else {
-      f <- stats::splinefun(pts, lp, method = "natural")
-    }
-  } else {
-    pts <- mids[closed]
-    lp <- log_m[closed]
-    nc <- length(closed)
-    if (nc >= 2) {
-      slope <- (lp[nc] - lp[nc - 1]) / (pts[nc] - pts[nc - 1])
-      step <- pts[nc] - pts[nc - 1]
-      pts <- c(pts, pts[nc] + step, pts[nc] + 2 * step)
-      lp <- c(lp, lp[nc] + slope * step, lp[nc] + 2 * slope * step)
-    }
-    f <- stats::splinefun(pts, lp, method = "natural")
-  }
-  m <- exp(f(xm))
-  grp <- cell_groups(x_lo, x_hi, g_lo, g_hi, omega)
-  w <- pmax(e, 1e-12)
-  for (it in 1:15) {
-    fac <- vapply(seq_len(ng), function(k) {
-      i <- which(grp == k)
-      if (!length(i) || m_g[k] <= 0) return(1)
-      m_g[k] / (sum(w[i] * m[i]) / sum(w[i]))
-    }, 0)
-    if (max(abs(fac - 1)) < 1e-8) break
-    cf <- stats::splinefun(mids, log(fac), method = "natural")
-    m <- m * exp(cf(xm))
-  }
-  if (exact) {
-    for (k in seq_len(ng)) {
-      i <- which(grp == k)
-      if (length(i) && m_g[k] > 0) m[i] <- m[i] * m_g[k] / (sum(w[i] * m[i]) / sum(w[i]))
-    }
-  }
-  pmax(m, 1e-12)
-}
-
-# Deaths as rates by spline methods (1D per stratum and period) or 2D GAM
-ungroup_rates_spline <- function(D, E, g, omega, method, tail = "kannisto", tail_width = 2) {
-  idx <- obs_grid_index(D, g, "deaths")
-  D <- cbind(D, idx)[!is.na(a1)]
-  if (any(D$p1 != D$p2)) mt_abort("Spline ungrouping needs deaths for single periods.", class = "ungroup")
-  Earr <- obs_to_matrix(E, g)
-  out <- list()
-  for (s in unique(D$stratum)) {
-    Ds <- D[stratum == s]
-    if (method == "gam") {
-      res <- gam_disaggregate(Ds, matrix(Earr[, , s], dim(Earr)[1]), g, omega, tail, tail_width)
-      out[[length(out) + 1L]] <- res
-      next
-    }
-    for (p in sort(unique(Ds$p1))) {
-      o <- Ds[p1 == p][order(age_lo)]
-      e <- Earr[, p, s]
-      Eg <- vapply(seq_len(nrow(o)), function(i) sum(e[o$a1[i]:o$a2[i]]), 0)
-      m <- spline_disaggregate(o$value / pmax(Eg, 1e-12), o$age_lo, o$age_hi, g$age$lower, g$age$upper, e, omega,
-                               method)
-      a <- seq_along(g$age$lower)
-      cov <- unlist(Map(seq, o$a1, o$a2))
-      out[[length(out) + 1L]] <- data.table(stratum = s, a = a[cov], p = p, value = m[cov] * e[cov],
-                                            provenance = method)
-    }
-  }
-  grid_table(rbindlist(out), g)
-}
-
-# 2D GAM of grouped log rates (te(age, year)), Kannisto blend above the start
-# of the last age group (open or wide), exposure-weighted correction of group means per year
-gam_disaggregate <- function(Ds, Es, g, omega, tail = "kannisto", tail_width = 2) {
-  need_pkg("mgcv", "for method = \"gam\"")
-  periods <- sort(unique(Ds$p1))
-  Eg <- vapply(seq_len(nrow(Ds)), function(i) sum(Es[Ds$a1[i]:Ds$a2[i], Ds$p1[i]]), 0)
-  df <- data.frame(age = cell_ages(Ds$age_lo, Ds$age_hi),
-                   year = g$period$lower[Ds$p1], y = log(pmax(Ds$value, 0.5) / pmax(Eg, 1e-12)),
-                   w = pmax(Ds$value, 0.5))
-  ny <- length(unique(df$year))
-  ka <- min(10, length(unique(df$age)) - 1)
-  # P-spline bases need at least 4 functions; with few years an age smooth
-  # plus year effects
-  form <- if (ny >= 5) {
-    stats::as.formula(sprintf("y ~ te(age, year, bs = \"ps\", k = c(%d, %d))", ka, min(10, ny - 1)))
-  } else if (ny > 1) {
-    stats::as.formula(sprintf("y ~ s(age, bs = \"ps\", k = %d) + factor(year)", ka))
-  } else {
-    stats::as.formula(sprintf("y ~ s(age, bs = \"ps\", k = %d)", ka))
-  }
-  wts <- df$w / mean(df$w)
-  fit <- mgcv::gam(form, data = df, weights = wts, method = "REML")
-  xm <- cell_ages(g$age$lower, g$age$upper)
-  # centre of the blend: the representative age of the last group
-  open_mid <- max(df$age)
-  out <- list()
-  for (p in periods) {
-    o <- Ds[p1 == p][order(age_lo)]
-    m <- exp(stats::predict(fit, newdata = data.frame(age = xm, year = g$period$lower[p])))
-    anchor <- which(xm >= 70 & xm <= open_mid)
-    if (length(anchor) >= 3) {
-      tl <- if (tail == "kannisto") {
-        fit_kannisto(m[anchor], xm[anchor])
-      } else {
-        cf <- stats::coef(stats::lm(log(m[anchor]) ~ xm[anchor]))
-        function(x) exp(cf[1] + cf[2] * x)
-      }
-      wb <- 1 / (1 + exp(-(xm - open_mid) / tail_width))
-      m <- exp((1 - wb) * log(m) + wb * log(pmax(tl(xm), 1e-12)))
-    }
-    e <- Es[, p]
-    Eg_p <- vapply(seq_len(nrow(o)), function(i) sum(e[o$a1[i]:o$a2[i]]), 0)
-    m_g <- o$value / pmax(Eg_p, 1e-12)
-    grp <- cell_groups(g$age$lower, g$age$upper, o$age_lo, o$age_hi, omega)
-    for (k in seq_len(nrow(o))) {
-      i <- which(grp == k)
-      if (length(i) && m_g[k] > 0) m[i] <- m[i] * m_g[k] / (sum(e[i] * m[i]) / sum(e[i]))
-    }
-    cov <- unlist(Map(seq, o$a1, o$a2))
-    out[[length(out) + 1L]] <- data.table(stratum = o$stratum[1], a = cov, p = p, value = m[cov] * e[cov],
-                                          provenance = "gam")
-  }
-  rbindlist(out)
-}
-
 #' Disaggregate forecast draws to a finer age grid
 #'
 #' Maps draws of age groups to finer ages (for example single years), path
 #' by path, when a model was forecast at the resolution of the observed
 #' deaths.
 #'
-#' * `"shape"` (default): proportional allocation by a standard schedule.
-#'   The rate of each finer age is the group rate of the draw times a fixed
-#'   age-specific factor taken from rates at the finer resolution
-#'   (`shape_rates`), the factors being scaled to an exposure-weighted mean
-#'   of 1 within each group, so that the exposure-weighted mean of the finer
-#'   rates equals the group rate of every draw. [mt_shape_rates()] estimates
-#'   the shape from the last observed years of data at the finer resolution;
-#'   with grouped training data, estimate those first with [mt_ungroup()]
-#'   (for example `mt_shape_rates(mt_ungroup(x), periods)`). A group whose
-#'   shape rates are all 0 gets a flat shape.
-#' * `"hyman_kannisto"` or `"natural_gompertz"` (deprecated): a spline
-#'   through the group rates of each draw (monotone Hyman spline with a
-#'   Kannisto tail, or a natural spline with a log-linear tail), corrected so
-#'   that the exposure-weighted mean of the fine rates equals each group
-#'   rate. These are heuristics of this package without a published source;
-#'   they still work, with a warning of class `mt_warning_deprecated`.
-#'
-#' The default changed from `"hyman_kannisto"` to `"shape"`, which needs
-#' `shape_rates`. Missing group rates (for example of a stratum whose fit
-#' failed) give missing rates at the finer ages of that group.
+#' The method (`"shape"`) is proportional allocation by a standard
+#' schedule. The rate of each finer age is the group rate of the draw times
+#' a fixed age-specific factor taken from rates at the finer resolution
+#' (`shape_rates`), the factors being scaled to an exposure-weighted mean of
+#' 1 within each group, so that the exposure-weighted mean of the finer
+#' rates equals the group rate of every draw. [mt_shape_rates()] estimates
+#' the shape from the last observed years of data at the finer resolution;
+#' with grouped training data, estimate those first with [mt_ungroup()]
+#' (for example `mt_shape_rates(mt_ungroup(x), periods)`). A group whose
+#' shape rates are all 0 gets a flat shape. Missing group rates (for
+#' example of a stratum whose fit failed) give missing rates at the finer
+#' ages of that group.
 #'
 #' @param draws An [mt_draws] object on age groups.
 #' @param age The finer [mt_axis]; its cells must nest in the groups.
 #' @param exposure Exposures on the finer ages, `[age, stratum]` or
 #'   `[age, period, stratum]`, used as weights.
-#' @param method `"shape"` (default) or the deprecated `"hyman_kannisto"`
-#'   and `"natural_gompertz"`.
-#' @param shape_rates For `"shape"`: rates on the finer ages, `[age, stratum]`
-#'   or `[age, period, stratum]` for the forecast periods (see
-#'   [mt_shape_rates()]).
+#' @param method `"shape"` (proportional allocation by a standard schedule).
+#' @param shape_rates Rates on the finer ages, `[age, stratum]` or `[age,
+#'   period, stratum]` for the forecast periods (see [mt_shape_rates()]).
 #' @param omega Maximum age.
 #' @return An `mt_draws` object on `age`.
 #' @examples
@@ -252,16 +61,10 @@ gam_disaggregate <- function(Ds, Es, g, omega, tail = "kannisto", tail_width = 2
 #' fs <- mt_disaggregate(fc, mt_grid(x)$age, exposure = e, shape_rates = sh)
 #' dim(fs$rates)
 #' @export
-mt_disaggregate <- function(draws, age, exposure, method = c("shape", "hyman_kannisto", "natural_gompertz"),
-                            shape_rates = NULL, omega = 110) {
+mt_disaggregate <- function(draws, age, exposure, method = "shape", shape_rates = NULL, omega = 110) {
   check_class(draws, "mt_draws", "draws")
   check_class(age, "mt_axis", "age")
-  method <- match.arg(method)
-  if (method != "shape") {
-    warn_deprecated_ungroup(sprintf("mt_disaggregate(method = \"%s\")", method),
-                            paste("method = \"shape\" with rates at the finer ages (mt_shape_rates(), from data at",
-                                  "the finer resolution or ungrouped with mt_ungroup())"))
-  }
+  match.arg(method)
   ga <- draws$age
   d <- dim(draws$rates)
   if (length(dim(exposure)) == 2) exposure <- array(exposure, c(length(age), 1, d[3]))
@@ -274,43 +77,25 @@ mt_disaggregate <- function(draws, age, exposure, method = c("shape", "hyman_kan
     mt_abort("The finer ages do not nest in the age groups of the draws.", class = "argument")
   }
   out <- array(NA_real_, c(length(age), d[2], d[3], d[4]))
-  if (method == "shape") {
-    if (is.null(shape_rates)) {
-      mt_abort(paste("`shape_rates` is needed for method = \"shape\" (the default): rates at the finer ages, for",
-                     "example mt_shape_rates() of data at the finer resolution, or of grouped data ungrouped with",
-                     "mt_ungroup()."), class = "argument")
-    }
-    if (length(dim(shape_rates)) == 2) shape_rates <- array(shape_rates, c(nrow(shape_rates), 1, ncol(shape_rates)))
-    if (dim(shape_rates)[1] != length(age) || dim(shape_rates)[3] != d[3] ||
-        !dim(shape_rates)[2] %in% c(1, d[2])) {
-      mt_abort("`shape_rates` must be [age, stratum] or [age, period, stratum] on the finer ages and forecast years.",
-               class = "argument")
-    }
-    for (s in seq_len(d[3])) {
-      for (t in seq_len(d[2])) {
-        e <- exposure[, t, s]
-        r <- shape_rates[, min(t, dim(shape_rates)[2]), s]
-        norm <- tapply(e * r, grp, sum) / tapply(e, grp, sum)
-        nk <- as.vector(norm[as.character(grp)])
-        # groups whose shape rates (or exposures) are all 0 get a flat shape
-        f <- ifelse(is.finite(nk) & nk > 0, r / nk, 1)
-        out[, t, s, ] <- draws$rates[grp, t, s, ] * f
-      }
-    }
-  } else {
-    for (s in seq_len(d[3])) {
-      for (t in seq_len(d[2])) {
-        for (j in seq_len(d[4])) {
-          # missing group rates (for example a stratum whose fit failed) stay
-          # missing; the spline goes through the other groups
-          rg <- draws$rates[, t, s, j]
-          ok <- is.finite(rg)
-          if (sum(ok) < 2) next
-          fr <- spline_disaggregate(rg[ok], ga$lower[ok], ga$upper[ok], age$lower, age$upper, exposure[, t, s],
-                                    omega, method)
-          out[, t, s, j] <- ifelse(ok[grp], fr, NA_real_)
-        }
-      }
+  if (is.null(shape_rates)) {
+    mt_abort(paste("`shape_rates` is needed: rates at the finer ages, for example mt_shape_rates() of data at the",
+                   "finer resolution, or of grouped data ungrouped with mt_ungroup()."), class = "argument")
+  }
+  if (length(dim(shape_rates)) == 2) shape_rates <- array(shape_rates, c(nrow(shape_rates), 1, ncol(shape_rates)))
+  if (dim(shape_rates)[1] != length(age) || dim(shape_rates)[3] != d[3] ||
+      !dim(shape_rates)[2] %in% c(1, d[2])) {
+    mt_abort("`shape_rates` must be [age, stratum] or [age, period, stratum] on the finer ages and forecast years.",
+             class = "argument")
+  }
+  for (s in seq_len(d[3])) {
+    for (t in seq_len(d[2])) {
+      e <- exposure[, t, s]
+      r <- shape_rates[, min(t, dim(shape_rates)[2]), s]
+      norm <- tapply(e * r, grp, sum) / tapply(e, grp, sum)
+      nk <- as.vector(norm[as.character(grp)])
+      # groups whose shape rates (or exposures) are all 0 get a flat shape
+      f <- ifelse(is.finite(nk) & nk > 0, r / nk, 1)
+      out[, t, s, ] <- draws$rates[grp, t, s, ] * f
     }
   }
   res <- draws
@@ -328,26 +113,16 @@ mt_disaggregate <- function(draws, age, exposure, method = c("shape", "hyman_kan
 
 #' Age shapes within groups for disaggregating forecasts
 #'
-#' Rates on a fine age grid that give [mt_disaggregate()] (`method =
-#' "shape"`) the age pattern within each age group of a forecast:
-#'
-#' * `"last"` (default): the rates of the last `years` years (deaths and
-#'   exposures summed), the same for every forecast year: a standard
-#'   schedule for proportional allocation within groups;
-#' * `"gam"` (deprecated): a quasi-Poisson age-period GAM (`te(age, year)`,
-#'   exposures as offset, package \pkg{mgcv}) fitted to the last `years`
-#'   years per stratum and extrapolated to `periods`, so the age pattern
-#'   within groups changes over the forecast years. Extrapolating a
-#'   P-spline surface in time is a heuristic of this package without a
-#'   published source; it still works, with a warning of class
-#'   `mt_warning_deprecated`. The representative age of an open interval is
-#'   its lower bound plus half the width of the interval below it (package
-#'   convention, as in [mt_smooth()]).
+#' Rates on a fine age grid that give [mt_disaggregate()] the age pattern
+#' within each age group of a forecast. The method (`"last"`) takes the
+#' rates of the last `years` years (deaths and exposures summed), the same
+#' for every forecast year: a standard schedule for proportional allocation
+#' within groups.
 #'
 #' @param data An [mt_data] object at the fine age resolution (for example
 #'   ungrouped training data).
 #' @param periods Forecast years.
-#' @param method `"last"` or the deprecated `"gam"`.
+#' @param method `"last"` (the rates of the last `years` years).
 #' @param years Number of last observed years used.
 #' @return An array `[age, period, stratum]` of rates.
 #' @examples
@@ -358,9 +133,9 @@ mt_disaggregate <- function(draws, age, exposure, method = c("shape", "hyman_kan
 #' fs <- mt_disaggregate(fc, mt_grid(x)$age, exposure = mt_array(x, "exposure")[, 20, ],
 #'                       method = "shape", shape_rates = sh)
 #' @export
-mt_shape_rates <- function(data, periods, method = c("last", "gam"), years = 5) {
+mt_shape_rates <- function(data, periods, method = "last", years = 5) {
   check_class(data, "mt_data", "data")
-  method <- match.arg(method)
+  match.arg(method)
   check_number(years, "years", lower = 1, integerish = TRUE)
   g <- mt_grid(data)
   D <- mt_array(data, "deaths")
@@ -369,25 +144,8 @@ mt_shape_rates <- function(data, periods, method = c("last", "gam"), years = 5) 
   use <- seq(max(1, np - years + 1), np)
   out <- array(NA_real_, c(dim(D)[1], length(periods), dim(D)[3]),
                dimnames = list(g$age$labels, as.character(periods), data$strata$label))
-  if (method == "last") {
-    r <- apply(D[, use, , drop = FALSE], c(1, 3), sum) / apply(E[, use, , drop = FALSE], c(1, 3), sum)
-    out[] <- r[, rep(seq_len(dim(D)[3]), each = length(periods))]
-    return(out)
-  }
-  warn_deprecated_ungroup("mt_shape_rates(method = \"gam\")",
-                          "method = \"last\" (a fixed age shape from the last observed years)")
-  need_pkg("mgcv", "for method = \"gam\"")
-  if (length(use) < 5) mt_abort("The GAM shape needs at least 5 years.", class = "argument")
-  age <- cell_ages(g$age$lower, g$age$upper)
-  for (s in seq_len(dim(D)[3])) {
-    df <- data.frame(age = rep(age, length(use)), year = rep(g$period$lower[use], each = length(age)),
-                     d = as.vector(D[, use, s]), e = as.vector(E[, use, s]))
-    df <- df[!is.na(df$d) & df$e > 0, ]
-    fit <- mgcv::gam(d ~ te(age, year, bs = "ps", k = c(min(10, length(age) - 1), min(5, length(use) - 1))) +
-                       offset(log(e)), family = stats::quasipoisson(), data = df, method = "REML")
-    nd <- data.frame(age = rep(age, length(periods)), year = rep(periods, each = length(age)), e = 1)
-    out[, , s] <- exp(stats::predict(fit, newdata = nd, type = "link"))
-  }
+  r <- apply(D[, use, , drop = FALSE], c(1, 3), sum) / apply(E[, use, , drop = FALSE], c(1, 3), sum)
+  out[] <- r[, rep(seq_len(dim(D)[3]), each = length(periods))]
   out
 }
 

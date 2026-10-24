@@ -27,8 +27,7 @@
 #'
 #' Forecasts of the strata are products of the two. This is the method of
 #' `demography::coherentfdm()` and `forecast()` for its result; [li_lee()]
-#' is a related model with a common Lee-Carter factor. The Lee-Carter
-#' version [product_ratio()] is deprecated in its favour.
+#' is a related model with a common Lee-Carter factor.
 #'
 #' Draws simulate the product and each ratio (uncertainty of the scores and
 #' resampled model errors, as `simulate()` for functional forecasts in

@@ -64,7 +64,8 @@ signs are arbitrary.
 \item \code{mt_plot_shares()}: shares of each cause in the deaths over the
 selected ages, observed and forecast (median and 95\% interval), from a
 forecast with a cause variable among the strata (for example from
-\code{\link[=cause_shares]{cause_shares()}}).
+\code{\link[=reconciled]{reconciled()}} with causes in its hierarchy, or from \code{\link[=coda_causes]{coda_causes()}}
+with \code{var} and \code{total_level} given).
 \item \code{mt_plot_scores()}: mean score of each model by horizon or age from a
 backtest, or one bar per model (\code{by = "model"}); \code{target} selects
 rates or a derived quantity scored by the backtest.

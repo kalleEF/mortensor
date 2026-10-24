@@ -60,8 +60,7 @@ revert towards their recent level.
 
 Forecasts of the strata are products of the two. This is the method of
 \code{demography::coherentfdm()} and \code{forecast()} for its result; \code{\link[=li_lee]{li_lee()}}
-is a related model with a common Lee-Carter factor. The Lee-Carter
-version \code{\link[=product_ratio]{product_ratio()}} is deprecated in its favour.
+is a related model with a common Lee-Carter factor.
 
 Draws simulate the product and each ratio (uncertainty of the scores and
 resampled model errors, as \code{simulate()} for functional forecasts in

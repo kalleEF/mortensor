@@ -117,17 +117,20 @@ test_that("package inventions with a published counterpart are deprecated and st
     })
     n
   }
-  expect_equal(count(product_ratio()), 1)
-  expect_equal(count(cause_shares()), 1)
   expect_equal(count(rwd(observation_noise = TRUE)), 1)
   expect_equal(count(tucker3(transform = "coda")), 1)
   expect_no_warning(rwd())
   expect_no_warning(tucker3())
   expect_no_warning(li_lee())
-  expect_warning(sp <- product_ratio(), class = "mt_warning_deprecated")
-  fc <- suppressWarnings(mt_forecast(mt_fit(sp, mt_example(deaths = "single", years = 2000:2015)), h = 2,
-                                     n_draws = 10, seed = 1))
+  x <- mt_example(deaths = "single", years = 2000:2015)
+  fc <- suppressWarnings(mt_forecast(mt_fit(rwd(observation_noise = TRUE), x), h = 2, n_draws = 10, seed = 1))
   expect_s3_class(fc, "mt_draws")
+})
+
+test_that("the deprecated functions removed in 0.3.0 are no longer exported", {
+  ours <- getNamespaceExports("mortensor")
+  expect_false("product_ratio" %in% ours)
+  expect_false("cause_shares" %in% ours)
 })
 
 test_that("arima_series() fits a given order: the local level model with drift", {
@@ -206,8 +209,10 @@ test_that("tucker3() centres log rates as the three-way Lee-Carter model", {
   # one stratum, ranks 1: the Lee-Carter model (first SVD component of the centred log rates)
   x1 <- mt_subset(x, sex == "female")
   f1 <- mt_fit(tucker3(ranks = c(1, 1, 1)), x1)
-  lc <- mortensor:::lc_from_log(y[, , 1])
-  expect_equal(log(f1$fits$fitted[, , 1]), lc$a + outer(lc$b, lc$k), ignore_attr = TRUE, tolerance = 1e-8)
+  a1 <- rowMeans(y[, , 1])
+  sv <- svd(y[, , 1] - a1, nu = 1, nv = 1)
+  expect_equal(log(f1$fits$fitted[, , 1]), a1 + sv$d[1] * outer(sv$u[, 1], sv$v[, 1]), ignore_attr = TRUE,
+               tolerance = 1e-8)
   # without centring, no means are removed
   f0 <- mt_fit(tucker3(centre = FALSE), x)
   expect_null(f0$fits$alpha)

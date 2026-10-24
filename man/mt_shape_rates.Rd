@@ -4,7 +4,7 @@
 \alias{mt_shape_rates}
 \title{Age shapes within groups for disaggregating forecasts}
 \usage{
-mt_shape_rates(data, periods, method = c("last", "gam"), years = 5)
+mt_shape_rates(data, periods, method = "last", years = 5)
 }
 \arguments{
 \item{data}{An \link{mt_data} object at the fine age resolution (for example
@@ -12,7 +12,7 @@ ungrouped training data).}
 
 \item{periods}{Forecast years.}
 
-\item{method}{\code{"last"} or the deprecated \code{"gam"}.}
+\item{method}{\code{"last"} (the rates of the last \code{years} years).}
 
 \item{years}{Number of last observed years used.}
 }
@@ -20,23 +20,11 @@ ungrouped training data).}
 An array \verb{[age, period, stratum]} of rates.
 }
 \description{
-Rates on a fine age grid that give \code{\link[=mt_disaggregate]{mt_disaggregate()}} (\code{method = "shape"}) the age pattern within each age group of a forecast:
-}
-\details{
-\itemize{
-\item \code{"last"} (default): the rates of the last \code{years} years (deaths and
-exposures summed), the same for every forecast year: a standard
-schedule for proportional allocation within groups;
-\item \code{"gam"} (deprecated): a quasi-Poisson age-period GAM (\code{te(age, year)},
-exposures as offset, package \pkg{mgcv}) fitted to the last \code{years}
-years per stratum and extrapolated to \code{periods}, so the age pattern
-within groups changes over the forecast years. Extrapolating a
-P-spline surface in time is a heuristic of this package without a
-published source; it still works, with a warning of class
-\code{mt_warning_deprecated}. The representative age of an open interval is
-its lower bound plus half the width of the interval below it (package
-convention, as in \code{\link[=mt_smooth]{mt_smooth()}}).
-}
+Rates on a fine age grid that give \code{\link[=mt_disaggregate]{mt_disaggregate()}} the age pattern
+within each age group of a forecast. The method (\code{"last"}) takes the
+rates of the last \code{years} years (deaths and exposures summed), the same
+for every forecast year: a standard schedule for proportional allocation
+within groups.
 }
 \examples{
 x <- mt_example(years = 2000:2019, deaths = "single")

@@ -1768,13 +1768,13 @@ mt_fit.mt_spec_reconciled <- function(spec, data, prep = NULL, cores = 1, ...) {
 # (li_lee(), cae(), coherent_fdm(), coda(coherent = TRUE)). The fits of
 # tucker3() and coda_multiway() decompose all strata together, saint()
 # takes its trend from reference strata (often aggregates), and
-# coda_causes() and cause_shares() need the all-cause stratum: they are
-# fitted to all strata. Wrappers, ensembles and stratified models decide by
-# the models inside them; the candidates of tuned() are created from its
-# grid (FALSE when that fails)
+# coda_causes() needs the all-cause stratum: they are fitted to all strata.
+# Wrappers, ensembles and stratified models decide by the models inside
+# them; the candidates of tuned() are created from its grid (FALSE when that
+# fails)
 fits_bottom_alone <- function(spec) {
   if (!inherits(spec, "mt_spec")) return(TRUE)
-  if (spec$model %in% c("tucker3", "coda_multiway", "saint", "coda_causes", "cause_shares")) return(FALSE)
+  if (spec$model %in% c("tucker3", "coda_multiway", "saint", "coda_causes")) return(FALSE)
   # relative_model(): reference strata of the data (often aggregates), or a
   # reference population of its own
   if (spec$model == "relative") return(inherits(spec$params$reference, "mt_data"))
