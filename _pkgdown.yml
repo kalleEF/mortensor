@@ -33,7 +33,7 @@ reference:
       - mt_prep
       - mt_set_grid
   - title: 4. Describe the past
-    desc: Observed indicators with Poisson intervals, gaps between strata, inequality indices, lifespan variation, decompositions and excess mortality (which also work on forecasts).
+    desc: Observed indicators with Poisson intervals, gaps between strata, inequality indices, lifespan variation, decompositions, excess mortality and the pessimism of forecasts by cause (which also work on forecasts).
     contents:
       - mt_observed
       - life_expectancy
@@ -48,6 +48,7 @@ reference:
       - life_table
       - mt_open_check
       - mt_excess
+      - mt_pessimism
   - title: 5. Models for one population
     contents:
       - lee_carter
@@ -163,6 +164,7 @@ articles:
     contents:
       - model-choice
       - models
+      - overdispersion
       - bayesian-apc
   - title: Benchmarks
     desc: How well the pipeline works on simulated and real data, and compared with other packages.
