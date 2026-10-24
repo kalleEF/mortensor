@@ -1,4 +1,4 @@
-# mortensor 0.1.9000 (development of 0.2.0)
+# mortensor 0.2.0
 
 Clean break: the 0.1.x interface is replaced (see `dev/revamp-plan.md`).
 
