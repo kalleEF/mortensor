@@ -1775,6 +1775,9 @@ mt_fit.mt_spec_reconciled <- function(spec, data, prep = NULL, cores = 1, ...) {
 fits_bottom_alone <- function(spec) {
   if (!inherits(spec, "mt_spec")) return(TRUE)
   if (spec$model %in% c("tucker3", "coda_multiway", "saint", "coda_causes", "cause_shares")) return(FALSE)
+  # relative_model(): reference strata of the data (often aggregates), or a
+  # reference population of its own
+  if (spec$model == "relative") return(inherits(spec$params$reference, "mt_data"))
   p <- spec$params
   inner <- switch(spec$model,
                   ensemble = p$components,

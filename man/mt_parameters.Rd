@@ -74,6 +74,16 @@ error-correction model: \code{a11}, \code{a21}, \code{a32}, \code{a42}, \code{C_
 \code{lambda}, \code{Omega}) and the standard deviations \code{sd_kappa}, \code{sd_zeta};
 per stratum with a spread the spread parameters \code{y1} ... \code{y5} by year
 and their VAR(1) (\code{ar} or \code{A}, and \code{Omega});
+\item \code{\link[=relative_model]{relative_model()}}: per group (\code{"reference <group>"}) the reference
+parameters \code{alpha}, \code{beta} (by age), \code{kappa} (by year), \code{gamma} (by
+year of birth), the \code{drift} and \code{sd} of \code{kappa}, the ARIMA(1,1,0) model
+of \code{gamma} (\code{ar_gamma}, \code{drift_gamma}, \code{sd_gamma}), and the
+log-likelihood, effective number of parameters, number of cells and BIC
+of the reference part (\code{loglik}, \code{npar}, \code{nobs}, \code{bic}); per group
+(\code{"subpopulations <group>"}) the common \code{beta} and the same statistics
+of the subpopulation part; per subpopulation \code{alpha}, \code{kappa}, the
+\code{drift} and \code{sd} of \code{kappa} and the correlation \code{cor} of its
+innovations with those of each subpopulation of the group;
 \item \code{\link[=bohk_rau]{bohk_rau()}}: posterior medians and 90\% intervals of the curve
 parameters \code{b1} and \code{b2} by age and of the variance and hyperparameters,
 the least-squares values \code{theta1}, \code{theta2} (exponential core model) and
