@@ -73,7 +73,7 @@ observed data.
 | Read | `mt_add()`, `mt_add_deaths()`, `mt_add_exposure()`, `mt_add_population()` | add or replace one table | `mt_data`, data frame | `mt_data` |
 | Read | `mt_read_genesis()`, `mt_read_gbe()` | read German official exports | files | `mt_data`, table |
 | Read | `mt_from_hmd()`, `mt_read_hmd()`, `as_mt_data()` | read or convert HMD, StMoMo, demography data | objects, files | `mt_data` |
-| Read | `parse_age_labels()`, `age_groups()`, `single_ages()`, `single_years()`, `period_groups()` | age and period axes from labels or bounds | labels | `mt_axis` |
+| Read | `mt_axis()`, `parse_age_labels()`, `age_groups()`, `single_ages()`, `single_years()`, `period_groups()` | age and period axes from interval bounds or labels | bounds, labels | `mt_axis` |
 | Read | `axis_widths()`, `axis_midpoints()`, `is_open()` | interval widths, midpoints and the open interval of an axis | `mt_axis` | vector |
 | Prepare | `mt_as_exposure()` | exposures from populations (`type` required) | `mt_data` | `mt_data` |
 | Prepare | `mt_subset()` | restrict ages, years, strata | `mt_data` | `mt_data` |
@@ -90,6 +90,7 @@ observed data.
 | Model | `apc_select()`, `mcmc_control()`, `mt_tune()` | choose random-walk orders, MCMC settings; model and preprocessing settings by forecast accuracy on the last years (hold-out or rolling origins; rates, life expectancy or ASR) | data, grid | table, `mt_spec` |
 | Combine | `ensemble()` (weights equal, by stacking with the CRPS, by the life expectancy bias of Kontis et al. or inverse to the CRPS; optionally `top_k`), `stratified()`, `reconciled()` (also score-optimal, `method = "energy_score"`; weights from past errors, `covariance = "errors"`; Schaake shuffle, `dependence = "schaake"`, or of whole stratum paths, `dependence = "empirical"`), `coupled()`, `bootstrapped()`, `tuned()` | mixtures, different models for groups of strata, coherence, dependence between strata from a joint model (ensemble copula coupling) or from past years (Schaake shuffle), parameter uncertainty (and of smoothing, `type = "data"`), tuning | `mt_spec` | `mt_spec` |
 | Combine | `mt_order_strata()` | keep an ordering between strata (for example women below men) path by path | `mt_draws` | `mt_draws` |
+| Combine | `mt_couple()` | give the draws of separate forecasts the dependence between ages, years and strata of the draws of a joint model (ensemble copula coupling, as `coupled()`) | two `mt_draws` | `mt_draws` |
 | Calibrate | `recalibrated()` | rescale the spread (optionally the drift) of any model's draws to its forecast errors in the last years, overall, by age band or by horizon, for rates, life expectancy or ASR; or add resampled errors of its past forecasts to its median (`method = "errors"`) | `mt_spec` | `mt_spec` |
 | Jump-off | `anchored()`, `mt_jump_off()`; `lee_carter(jump_off = )` | start forecasts at the observed rates of the last year (optionally of several years, shrunk and fading out), at their mean over the last years, at the Kalman filter estimate or from a fit constrained to the last year; report the first-year step | `mt_spec`, `mt_draws` | `mt_spec`, table |
 | Coherence | `mt_hierarchy()`, `mt_aggregate_strata()`, `mt_reconcile()` (with `fixed` nodes; `"proportional"` scales the parts of fixed nodes), `mt_aggregate_draws()` | define and apply totals of strata | hierarchy | `mt_data`, `mt_draws` |

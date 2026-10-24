@@ -10,7 +10,8 @@ new_mt_spec(
   joint = FALSE,
   min_periods = 5,
   label = model,
-  smooth = TRUE
+  smooth = TRUE,
+  seed = NULL
 )
 }
 \arguments{
@@ -29,6 +30,10 @@ new_mt_spec(
 of the deaths given these rates and the exposures) or observed rates
 (\code{FALSE}, for example a random walk on observed log rates: predictive
 draws add nothing).}
+
+\item{seed}{Random seed of the fit, for models whose fit uses random
+numbers: the random number streams of the strata in \code{\link[=mt_fit]{mt_fit()}} start
+from this seed. \code{NULL}: they start from the current generator.}
 }
 \value{
 An object of class \code{c("mt_spec_<model>", "mt_spec")}.

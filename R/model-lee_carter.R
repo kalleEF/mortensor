@@ -35,7 +35,7 @@
 #' of Renshaw and Haberman 2008), which adds the uncertainty of `a` and `b`.
 #' The bootstrap of Brouhns, Denuit and Van Keilegom (2005) resamples the
 #' observed deaths instead: `bootstrapped(lee_carter(), type = "data")`
-#' ([bootstrapped()]).
+#' ([bootstrapped()]). A `seed` makes the resamples reproducible.
 #'
 #' Age groups without deaths in the fitting period get a constant rate (0.5
 #' deaths over the period) and no trend; with `adjust = "e0"` they enter the
@@ -320,6 +320,13 @@
 #'   the last year; 2 to 5 in Stoeldraijer et al. 2018).
 #' @param bootstrap Semi-parametric bootstrap of the parameters.
 #' @param n_boot Number of bootstrap fits.
+#' @param seed Random seed of the bootstrap resamples (`bootstrap = TRUE`).
+#'   The resamples of each stratum come from its own random number stream,
+#'   and these streams start from `seed`, so two fits with the same seed have
+#'   the same bootstrap parameters with any number of cores. `NULL`
+#'   (default): the streams start from the current generator
+#'   ([set.seed()]). The forecast draws have their own `seed` in
+#'   [mt_forecast()].
 #' @param rotate Rotate the age pattern of decline `b` towards an ultimate
 #'   pattern as life expectancy at birth rises (Li, Lee and Gerland 2013).
 #' @param family Distribution of the deaths for `method = "poisson"`:
@@ -420,13 +427,15 @@
 lee_carter <- function(method = c("poisson", "svd"), jump_off = c("fitted", "observed", "filtered", "constrained"),
                        bootstrap = FALSE, n_boot = 100, adjust = c("dt", "dxt", "e0", "none"), choose_period = FALSE,
                        min_years = 20, rotate = FALSE, rotation = c(e0_start = 80, e0_end = 102, power = 0.5),
-                       family = c("poisson", "nb"), dispersion = c("global", "age"), jump_off_years = 1) {
+                       family = c("poisson", "nb"), dispersion = c("global", "age"), jump_off_years = 1,
+                       seed = NULL) {
   method <- match.arg(method)
   jump_off <- match.arg(jump_off)
   adjust <- match.arg(adjust)
   family <- match.arg(family)
   dispersion <- match.arg(dispersion)
   check_flag(choose_period, "choose_period")
+  if (!is.null(seed)) check_number(seed, "seed", integerish = TRUE)
   check_number(min_years, "min_years", lower = 5, integerish = TRUE)
   check_number(jump_off_years, "jump_off_years", lower = 1, integerish = TRUE)
   if (jump_off_years > 1 && jump_off != "observed") {
@@ -454,8 +463,9 @@ lee_carter <- function(method = c("poisson", "svd"), jump_off = c("fitted", "obs
   new_mt_spec("lee_carter", list(method = method, jump_off = jump_off, bootstrap = bootstrap, n_boot = n_boot,
                                  adjust = adjust, choose_period = choose_period, min_years = min_years,
                                  rotate = rotate, rotation = rotation, family = family, dispersion = dispersion,
-                                 jump_off_years = jump_off_years),
+                                 jump_off_years = jump_off_years, seed = seed),
               min_periods = max(if (choose_period) min_years else 5, jump_off_years),
+              seed = if (bootstrap) seed,
               label = paste0("Lee-Carter", if (method == "svd") sprintf(" (SVD, %s)", adjust) else "",
                              if (family == "nb") " (negative binomial" else "",
                              if (family == "nb" && dispersion == "age") ", dispersion by age" else "",

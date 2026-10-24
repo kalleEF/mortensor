@@ -181,8 +181,8 @@ mt_plot_compare(fc, quantity = "lifespan_variation", data = x)
   spread of the ages at death little. For men it starts when their
   forecast life expectancy passes 80, after 2015.
 * **CoDa** forecasts a higher life expectancy (94.6 years for women and
-  89.2 for men in 2050) and a faster fall of e-dagger (to 6.15 years for
-  women and 7.6 for men). It extrapolates the past concentration of
+  89.4 for men in 2050) and a faster fall of e-dagger (to 6.14 years for
+  women and 7.5 for men). It extrapolates the past concentration of
   deaths at old ages directly. For men its intervals are wider than those
   of Lee-Carter. For women they narrow towards the end of the forecast
   and are narrower than those of Lee-Carter in 2050.
@@ -217,8 +217,8 @@ merge(obs, mt_compare_forecasts(fc_past, quantity = "lifespan_variation", period
 
 For women, all three forecasts of 2006 were below the observed 9.6 years
 (Lee-Carter 9.2, CoDa 9.0); the intervals of Lee-Carter contain it, that
-of CoDa (8.55-9.45) does not. For men, all were above the observed 11.5
-years (Lee-Carter 11.99, CoDa 12.05), and none of the intervals contains
+of CoDa (8.49-9.44) does not. For men, all were above the observed 11.5
+years (Lee-Carter 11.99, CoDa 12.06), and none of the intervals contains
 it. The rotation changed the forecast for women by 0.02 years and not at
 all for men, whose life expectancy stayed below 80.
 

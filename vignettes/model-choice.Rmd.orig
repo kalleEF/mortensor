@@ -95,7 +95,7 @@ All models forecast a further rise, at different paces and with
 different uncertainty. By 2031 the medians range from 26.7 to 30.6 years:
 
 * **P-splines**, **Bohk-Rau**, **CoDa** and **fdm** give the highest
-  forecasts (30.6, 29.9, 29.7 and 29.2 years). The P-spline surface
+  forecasts (30.6, 29.9, 29.6 and 29.2 years). The P-spline surface
   continues the trend of each age over the last years and has the widest
   interval (28.3-32.1). The interval of Bohk-Rau is narrow, and its median
   lies close to its upper bound (29.1-30.1): the forecast improvements
@@ -143,9 +143,9 @@ mt_plot_scores(bt, by = "model", target = "life_expectancy")
   expectancy.
 * The **Bayesian RH** follows APC for the rates (0.0455); its 95%
   intervals covered 0.90 of the observed rates.
-* **CoDa** forecast the rates (0.050) and life expectancy (0.321 years)
+* **CoDa** forecast the rates (0.0505) and life expectancy (0.329 years)
   less accurately than the cohort models; its intervals covered 0.88 of
-  the rates and 0.77 of the values of life expectancy.
+  the rates and 0.83 of the values of life expectancy.
 * The period models and the random walk lie close together; the random
   walk forecast the single rates slightly better than Lee-Carter and CBD.
   The intervals of Lee-Carter and CBD are too narrow for the rates (95%
@@ -199,10 +199,10 @@ accurate forecast. With 16 origins the test has 2 degrees of freedom
 (`df`) and finds only large and consistent differences. Bohk-Rau had the
 lowest mean CRPS five years ahead and on average over the five horizons.
 On average, the difference is significant at the 5% level against the
-random walk, Lee-Carter, APC, Plat, CoDa and CP-splines (p from 0.005 to
+random walk, Lee-Carter, APC, Plat, CoDa and CP-splines (p from 0.007 to
 0.018), but not against M6 (p = 0.058) and P-splines (p = 0.051). Five
-years ahead it is significant against the same six models (p from 0.006
-to 0.016), and again not against M6 (p = 0.082) and P-splines
+years ahead it is significant against the same six models (p from 0.004
+to 0.011), and again not against M6 (p = 0.082) and P-splines
 (p = 0.051). One year ahead, M6 and Plat had a lower mean CRPS
 than Bohk-Rau (p = 0.24 and 0.51), and the difference is significant
 only against Lee-Carter, P-splines and CP-splines (p from 0.008 to
@@ -251,7 +251,7 @@ mt_score_table(rbind(bt, bt_ens), metrics = c("crps", "cov95"))
 ```
 
 * The **equal-weight ensemble** is more accurate than the average of its
-  components (CRPS of the rates 0.043 against 0.051), and its intervals
+  components (CRPS of the rates 0.042 against 0.051), and its intervals
   cover. This always holds: the CRPS is a convex function of the forecast
   distribution, so the CRPS of a mixture is never larger than the weighted
   mean of the CRPS of its components. It includes the weak Bayesian APC,

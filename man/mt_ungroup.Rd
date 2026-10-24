@@ -50,7 +50,8 @@ years; \code{\link[=mt_plot_ungroup]{mt_plot_ungroup()}} and \code{\link[=mt_ung
 \item{exposure_method}{\code{"pclm"} or \code{"monotone"} (Hyman 1983).}
 
 \item{lambda}{Fixed smoothing parameter(s); \code{NULL} selects them by
-\code{criterion}.}
+\code{criterion}, for the deaths. The ungrouping of grouped exposures and the
+split of the exposure of an open interval of the grid (\code{open_split = "pclm"}) always select their own (see Details).}
 
 \item{criterion}{\code{"bic"} or \code{"aic"}.}
 
@@ -96,7 +97,9 @@ rescaling.
 \item \strong{Exposures} observed coarser than the grid are ungrouped first, as
 counts by the PCLM (\code{exposure_method = "pclm"}) or by the monotone cubic
 interpolation of Hyman (1983) applied to the cumulative counts
-(\code{"monotone"}), which reproduces the group totals exactly.
+(\code{"monotone"}), which reproduces the group totals exactly. The PCLM of
+the exposures chooses its own smoothing parameter by \code{criterion}; a
+\code{lambda} given for the deaths is not used for the exposures.
 \item \strong{Deaths} are ungrouped as \strong{rates} when exposures are available on
 the grid: the exposures enter the composite link as offset (Rizzi, Gampe
 and Eilers 2015), so cohort-size waves stay in the exposures and the
@@ -136,7 +139,9 @@ its exposure is split over these years (\code{open_split}):
 with a group of 0 counts of 15 years beyond \code{omega}, as Rizzi, Gampe
 and Eilers (2015) ungroup grouped exposures (their maximum age 115 and
 a group 115-130 with 0 counts); the estimates enter the composite link
-of the rates;
+of the rates. This PCLM smooths exposures, not deaths, so it chooses its
+own smoothing parameter by \code{criterion} (BIC by default) also when
+\code{lambda} is given;
 \item \code{"stationary"}: with stationary-population weights \code{l(x) = exp(-cumsum(m(x)))} implied by the fitted rates; starting from rates
 that rise by 10\% per year of age, the weights and the fit are iterated
 until no weight changes by more than 1e-6 (at most 50 iterations; the

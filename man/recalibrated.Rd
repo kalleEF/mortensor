@@ -246,7 +246,11 @@ relative tolerance 1e-6, at most 300 iterations), started at
 \eqn{s_1 = 1}, \eqn{\gamma = 0}, \eqn{b = 0}, with values outside the
 bounds rejected. The observation noise of the scored forecasts is
 simulated once (common random numbers), so the score is a deterministic
-function of the parameters.
+function of the parameters. In this calibration sample, cells with 50 or
+more expected deaths get Poisson deaths from the normal approximation
+(mean and variance equal to the expected deaths, truncated at zero); the
+other cells get quantiles of the Poisson or negative binomial
+distribution (package-specific, reference unknown).
 
 \strong{Long horizons.} The parameters are estimated on horizons 1 to
 \eqn{h_{max}}, the distance from the first origin to the last training

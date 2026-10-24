@@ -149,10 +149,11 @@ are replaced multiplicatively in each year: each zero gets the share
 \code{delta} of the deaths of the year, the other shares are multiplied by
 \verb{1 - z delta} (\code{z} zeros), and \code{delta} is half the smallest positive count
 over all ages and years divided by the deaths of the year. A warning is
-given when more than 10\% of the cells are zero. Package safeguards: the
-imputed share of a year is at most 1/2, and a year whose deaths at ages
-from 80 allow no Kannisto fit takes the fit to all years together (with a
-warning).
+given when more than 10\% of the cells are zero. \code{delta} is capped at
+\code{0.5 / z}, so the zeros of a year get at most half of its deaths
+(package-specific safeguard, reference unknown). A year whose deaths at
+ages from 80 allow no Kannisto fit takes the fit to all years together
+(with a warning; package-specific).
 
 \strong{Deviations from the paper.} Besides the package-specific treatment of
 other age groups: the life tables use \code{a_x = n / 2} at every age (the
