@@ -571,19 +571,37 @@ wis_from_quantiles <- function(Q, y, probs) {
 #'     intervals (Raftery et al. 2013, Table 1);
 #'   * `"revision"`: the mean absolute revision, the absolute change of the
 #'     forecast median of a cell (stratum, age group, year) between
-#'     consecutive origins of the backtest, for every cell forecast from both.
-#'     Stoeldraijer et al. (2013) name robustness as a purpose of a forecast:
-#'     small changes in the observations when the data are updated should
-#'     result in only modest changes in the forecasts. Stoeldraijer et al.
-#'     (2018) measure it by the standard deviation of the changes of the
-#'     forecast for one target year between successive fitting periods. The
-#'     mean absolute revision over all cells forecast from consecutive
-#'     origins, each of which adds a year of data with the default origins,
-#'     is a package-specific summary of these changes (reference unknown).
-#'     A revision belongs to the later
-#'     origin and its horizon; the first origin has none. Origins further
-#'     apart than one year (for example `origins = c(2005, 2007)`) give
-#'     revisions over several years of data.
+#'     consecutive origins of the backtest, for every cell forecast from
+#'     both. It is a summary of this package (reference unknown).
+#'     Stoeldraijer et al. (2013) name robustness as a purpose of a
+#'     forecast: small changes in the observations when the data are
+#'     updated should result in only modest changes in the forecasts. A
+#'     revision belongs to the later origin and its horizon; the first
+#'     origin has none. Origins further apart than one year (for example
+#'     `origins = c(2005, 2007)`) give revisions over several years of
+#'     data. The published measure of robustness is `"robustness"`;
+#'   * `"robustness"`: the robustness of Stoeldraijer et al. (2018), "the
+#'     standard deviation (SD) of the increase/decrease" of the forecast of
+#'     one target year over successive forecasts, each with one more year
+#'     of data; a lower standard deviation means a more robust forecast.
+#'     They forecast life expectancy at age 65 in 2020 from the fitting
+#'     periods 1960-2005, ..., 1960-2014. Here, for each cell (stratum, age
+#'     group, target year and target), it is the sample standard deviation
+#'     ([stats::sd()]) of the revisions of the forecast median between
+#'     consecutive origins (as for `"revision"`), for cells with at least
+#'     two revisions (`NA` otherwise); the column `robustness` is the mean
+#'     of these standard deviations over the cells of a group, each cell
+#'     counted once. With one stratum, `target = "life_expectancy"` and one
+#'     target year (`by = c("model", "period")`) this is the published
+#'     measure; the mean over several cells is package-specific (reference
+#'     unknown). The revisions of a cell span several origins and horizons,
+#'     so `by` cannot contain `"horizon"` or `"origin"`: group by the target
+#'     year (`"period"`). The target years of a backtest are observed
+#'     years, so the origins and `h` must reach them from every origin: for
+#'     example `origins = 2005:2014` and `h = 10` forecast 2015 from all ten
+#'     origins, one year apart like the fitting periods of the paper. The
+#'     life expectancy of a backtest is that at the first age of the grid,
+#'     so at age 65 for data from age 65.
 #' @return A `data.table` with the mean CRPS, WIS and absolute error, the
 #'   root mean squared error of the median (`rmse`), MASE
 #'   (mean of absolute error over the scale, the mean absolute year-to-year
@@ -591,15 +609,15 @@ wis_from_quantiles <- function(Q, y, probs) {
 #'   Hyndman and Koehler 2006; rates only), empirical coverage
 #'   of the 50%, 80% and 95% intervals, mean PIT, the number of scored
 #'   cells (`n`), the number of them whose observed deaths were floored at
-#'   half a death (`n_floored`, see [mt_backtest()]; for `target = "rate"`,
-#'   `NA` for other targets and for backtest tables without the column
-#'   `floored`) and the `unit` of CRPS, WIS and absolute error (log rates,
-#'   or years for life expectancy). The scores of floored cells can
+#'   half a death (`n_floored`, see [mt_backtest()]; `NA` for targets other
+#'   than `"rate"` and for backtest tables without the column `floored`)
+#'   and the `unit` of CRPS, WIS and absolute error (log rates, or years for
+#'   life expectancy). The scores of floored cells can
 #'   dominate the means of sparse data; the derived quantities and coarser
 #'   age groups avoid the floor. Backtests of the same model with different
 #'   preprocessing (column `prep`) are scored separately. With `measures`,
-#'   the columns `sape`, `cov90`, `hw80`, `hw90`, `hw95` and `revision`
-#'   follow.
+#'   the columns `sape`, `cov90`, `hw80`, `hw90`, `hw95`, `revision` and
+#'   `robustness` follow.
 #' @references
 #' Hyndman RJ, Koehler AB (2006). Another look at measures of forecast
 #' accuracy. *International Journal of Forecasting* 22(4): 679-688.
@@ -628,13 +646,17 @@ wis_from_quantiles <- function(Q, y, probs) {
 #'                   quantities = "life_expectancy")
 #' mt_score(bl, by = c("model", "horizon"), target = "life_expectancy",
 #'          measures = c("sape", "cov90", "revision"))
+#' # robustness (Stoeldraijer et al. 2018) of each target year: 2008 and
+#' # 2009 are forecast from all four origins
+#' mt_score(bl, by = c("model", "period"), target = "life_expectancy",
+#'          measures = "robustness")
 #' @export
 mt_score <- function(backtest, by = "model",
                      target = c("rate", "life_expectancy", "asr", "life_expectancy_gap", "asr_gap"),
                      measures = NULL) {
   if (!is.data.frame(backtest)) mt_abort("`backtest` must be a backtest table.", class = "argument")
   target <- match.arg(target)
-  measures <- check_score_measures(measures, target)
+  measures <- check_score_measures(measures, target, by)
   bt <- as.data.table(backtest)
   if ("target" %in% names(bt)) {
     keep <- bt[["target"]] == target
@@ -661,9 +683,9 @@ mt_score <- function(backtest, by = "model",
   out[]
 }
 
-score_measures <- c("sape", "cov90", "halfwidth", "revision")
+score_measures <- c("sape", "cov90", "halfwidth", "revision", "robustness")
 
-check_score_measures <- function(measures, target) {
+check_score_measures <- function(measures, target, by = NULL) {
   if (is.null(measures)) return(character())
   if (!is.character(measures) || !all(measures %in% score_measures)) {
     mt_abort(sprintf("`measures` can be %s.", paste0("\"", score_measures, "\"", collapse = ", ")),
@@ -672,6 +694,11 @@ check_score_measures <- function(measures, target) {
   if ("sape" %in% measures && target != "life_expectancy") {
     mt_abort(paste("SAPE is defined for life expectancy (Raftery et al. 2013): use target = \"life_expectancy\"",
                    "(and quantities = \"life_expectancy\" in mt_backtest())."), class = "argument")
+  }
+  if ("robustness" %in% measures && any(c("horizon", "origin") %in% by)) {
+    mt_abort(paste("The robustness of Stoeldraijer et al. (2018) summarises the changes of the forecast of a cell",
+                   "over several origins and horizons: group by the target year (\"period\"), not by \"horizon\"",
+                   "or \"origin\"."), class = "argument")
   }
   score_measures[score_measures %in% measures]
 }
@@ -689,13 +716,16 @@ score_extra <- function(bt, by, measures) {
     s <- bt[["sd"]]
     ex[, sape_ := ifelse(is.finite(s) & s > 0, sqrt(pi / 2) * bt[["ae"]] / s, NA_real_)]
   }
-  if ("revision" %in% measures) ex[, revision_ := backtest_revisions(bt)]
+  if (any(c("revision", "robustness") %in% measures)) revs <- backtest_revisions(bt)
+  if ("revision" %in% measures) ex[, revision_ := revs]
+  if ("robustness" %in% measures) ex[, robustness_ := backtest_robustness(bt, revs)]
   for (v in c(by, intersect(c("cov90", "hw80", "hw90", "hw95"), names(bt)))) set(ex, j = v, value = bt[[v]])
   na_mean <- function(v) if (all(is.na(v))) NA_real_ else mean(v, na.rm = TRUE)
   ex[, c(if ("sape" %in% measures) list(sape = na_mean(sape_)),
          if ("cov90" %in% measures) list(cov90 = mean(cov90)),
          if ("halfwidth" %in% measures) list(hw80 = mean(hw80), hw90 = mean(hw90), hw95 = mean(hw95)),
-         if ("revision" %in% measures) list(revision = na_mean(abs(revision_)))),
+         if ("revision" %in% measures) list(revision = na_mean(abs(revision_))),
+         if ("robustness" %in% measures) list(robustness = na_mean(robustness_))),
      by = by]
 }
 
@@ -704,13 +734,8 @@ score_extra <- function(bt, by, measures) {
 # origin of the backtest of that model; NA at the first origin and for
 # cells that the previous origin did not score
 backtest_revisions <- function(bt) {
-  key <- function(cols) {
-    cols <- intersect(cols, names(bt))
-    if (!length(cols)) return(rep("", nrow(bt)))
-    do.call(paste, c(unname(as.list(bt[, cols, with = FALSE])), sep = "\r"))
-  }
-  unit <- key(c("model", "prep"))
-  cell <- key(c("model", "prep", "stratum", "age_lo", "age_hi", "period", "target"))
+  unit <- backtest_key(bt, c("model", "prep"))
+  cell <- backtest_cell(bt)
   o_rank <- integer(nrow(bt))
   for (u in unique(unit)) {
     i <- which(unit == u)
@@ -719,6 +744,32 @@ backtest_revisions <- function(bt) {
   j <- match(paste(cell, o_rank - 1L, sep = "\r"), paste(cell, o_rank, sep = "\r"))
   bt$median - bt$median[j]
 }
+
+# The robustness of Stoeldraijer et al. (2018) of each cell: the standard
+# deviation of the revisions `revs` of its forecast median between
+# consecutive origins (backtest_revisions()), for cells with at least two
+# revisions. The value sits on the first row of each cell and is NA on the
+# others, so that a mean over the rows of a group counts each cell once
+backtest_robustness <- function(bt, revs = backtest_revisions(bt)) {
+  cell <- backtest_cell(bt)
+  ok <- !is.na(revs)
+  sds <- vapply(split(revs[ok], cell[ok]), function(v) if (length(v) >= 2) stats::sd(v) else NA_real_, 0)
+  out <- rep(NA_real_, nrow(bt))
+  first <- which(!duplicated(cell))
+  out[first] <- unname(sds[cell[first]])
+  out
+}
+
+# Keys of the rows of a backtest from the columns `cols` (those present)
+backtest_key <- function(bt, cols) {
+  cols <- intersect(cols, names(bt))
+  if (!length(cols)) return(rep("", nrow(bt)))
+  do.call(paste, c(unname(as.list(bt[, cols, with = FALSE])), sep = "\r"))
+}
+
+# The forecast cell of each row: model, pipeline, stratum, age group, year
+# and target
+backtest_cell <- function(bt) backtest_key(bt, c("model", "prep", "stratum", "age_lo", "age_hi", "period", "target"))
 
 # Grouping columns of the scores: the same model with different
 # preprocessing is scored separately

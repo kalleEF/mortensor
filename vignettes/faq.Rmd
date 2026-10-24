@@ -280,7 +280,8 @@ al. 2018), the Kalman filter estimate of the index in the last year
 to the observed rates of the last year (`jump_off = "constrained"`; Li,
 Hardy and Tan 2009). Stoeldraijer et al. (2018) found the last observed
 year most accurate and an average over several years most robust to data
-updates. The other settings of `anchored()` are package-specific: the
+updates; `mt_score(measures = "robustness")` gives their measure of
+robustness for a backtest. The other settings of `anchored()` are package-specific: the
 offset of the last `years` years, shrunk where deaths are few
 (`shrink = TRUE`) and fading out over `decay` years. "Where a forecast starts: the
 jump-off" compares the starting points in a backtest. Decompositions of a

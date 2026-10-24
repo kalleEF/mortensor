@@ -123,6 +123,41 @@ test_that("the revision measure is the change of the median between consecutive 
                  "n_floored", "unit"))
 })
 
+test_that("the robustness measure is the SD of the changes of the forecast of a target year", {
+  # Stoeldraijer et al. (2018): the standard deviation of the increase or
+  # decrease of the forecast of one target year over successive forecasts
+  x <- mt_example(deaths = "single", years = 1995:2014)
+  bt <- mt_backtest(rwd(), x, origins = 2005:2009, h = 5, n_draws = 50, quantities = "life_expectancy")
+  le <- bt[target == "life_expectancy"]
+  sd_changes <- function(sx, yr) stats::sd(diff(le[sex == sx & period == yr][order(origin), median]))
+  # (a) one stratum and one target year forecast from all five origins
+  bf <- bt[sex == "female"]
+  expect_identical(le[sex == "female" & period == 2010, sort(origin)], 2005:2009)
+  s <- mt_score(bf, by = c("model", "period"), target = "life_expectancy", measures = "robustness")
+  expect_equal(s[period == 2010, robustness], sd_changes("female", 2010), tolerance = 1e-12)
+  # (d) fewer than two changes: 2006 and 2014 are forecast from one origin,
+  # 2007 and 2013 from two
+  expect_true(all(is.na(s[period %in% c(2006, 2007, 2013, 2014), robustness])))
+  expect_false(anyNA(s[period %in% 2008:2012, robustness]))
+  # (b) the mean over two cells: both strata in 2010
+  s2 <- mt_score(bt, by = c("model", "period"), target = "life_expectancy", measures = "robustness")
+  expect_equal(s2[period == 2010, robustness], mean(c(sd_changes("female", 2010), sd_changes("male", 2010))),
+               tolerance = 1e-12)
+  # each cell counted once: the mean over the target years with two or more changes
+  s3 <- mt_score(bf, target = "life_expectancy", measures = "robustness")
+  expect_equal(s3$robustness, mean(vapply(2008:2012, function(yr) sd_changes("female", yr), 0)), tolerance = 1e-12)
+  # rates: one cell (age group and target year) of one stratum
+  r <- bt[target == "rate" & sex == "female" & age_lo == 60 & period == 2010][order(origin), median]
+  sr <- mt_score(bf, by = c("model", "period", "age_lo"), measures = c("revision", "robustness"))
+  expect_equal(sr[period == 2010 & age_lo == 60, robustness], stats::sd(diff(r)), tolerance = 1e-12)
+  # (c) the changes of a cell span origins and horizons
+  expect_error(mt_score(bt, by = c("model", "horizon"), target = "life_expectancy", measures = "robustness"),
+               class = "mt_error_argument")
+  expect_error(mt_score(bt, by = c("model", "origin"), measures = "robustness"), class = "mt_error_argument")
+  # the revision measure is unchanged by it
+  expect_equal(sr$revision, mt_score(bf, by = c("model", "period", "age_lo"), measures = "revision")$revision)
+})
+
 test_that("mt_score() counts the cells whose observed deaths are floored at half a death", {
   x <- mt_example(deaths = "single", years = 2000:2012)
   bt0 <- mt_backtest(rwd(), x, origins = 2008:2009, h = 3, n_draws = 20, quantities = "life_expectancy")
