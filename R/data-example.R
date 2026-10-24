@@ -5,7 +5,11 @@
 #' period index, and a population with cohort-size waves. Deaths are Poisson
 #' draws. By default deaths are reported in 5-year age groups with an open
 #' 90+ interval and exposures in single years of age with an open 100+
-#' interval, as in many official statistics.
+#' interval, as in many official statistics. A model fits these data after
+#' the deaths are ungrouped ([mt_ungroup()] or `step_ungroup()`) or all
+#' tables are aggregated to common age groups ([mt_regroup()]); the
+#' examples of the other help pages pass `deaths = "single"` (deaths in
+#' single years of age) so that every model fits them directly.
 #'
 #' The true rates on the default grid are attached as attribute `"truth"`
 #' (array `[age, period, stratum]`), which makes the dataset suitable for

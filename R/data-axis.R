@@ -292,14 +292,3 @@ parse_period_labels <- function(x) {
   }
   data.table(label = s, period_lo = lo, period_hi = hi)
 }
-
-#' Build an axis from interval bounds found in data
-#' @keywords internal
-axis_from_bounds <- function(lo, hi, kind) {
-  b <- unique(data.table(lo = lo, hi = hi))
-  setorder(b, lo)
-  if (anyDuplicated(b$lo)) {
-    mt_abort(sprintf("Overlapping %s intervals with the same lower bound.", kind), class = "axis")
-  }
-  mt_axis(b$lo, b$hi, kind = kind)
-}

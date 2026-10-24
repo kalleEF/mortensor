@@ -102,7 +102,8 @@ the index paths, centred on the point forecast) are those of \code{\link[=coda]{
 3) replaces zero counts by lightly smoothing the deaths of each year with
 a penalised histogram smoother whose smoothing parameter is not given;
 here zero counts are replaced multiplicatively in the composition of each
-year (Bergeron-Boucher et al. 2017, Appendix C; see \code{\link[=coda]{coda()}}). How the
+year (Bergeron-Boucher et al. 2017, Appendix C, with the package-specific
+cap \code{0.5 / z} of \code{delta} for \code{z} zeros in a year; see \code{\link[=coda]{coda()}}). How the
 death rate of the open age interval follows from the forecast deaths is
 not stated; here the all-cause log rate of an open interval is regressed
 on the indexes and split by cause through the composition

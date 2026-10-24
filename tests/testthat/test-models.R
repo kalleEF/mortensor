@@ -175,6 +175,44 @@ test_that("Lee-Carter constraints hold and parameters can be extracted", {
   expect_mt_model(lee_carter(bootstrap = TRUE, n_boot = 3), n_draws = 6)
 })
 
+test_that("the seed of lee_carter() reproduces the bootstrap parameters and forecasts", {
+  x <- mt_example(deaths = "single", years = 2001:2015)
+  boot <- function(seed, cores = 1) mt_fit(lee_carter(bootstrap = TRUE, n_boot = 4, seed = seed), x, cores = cores)
+  pars <- function(fit) lapply(fit$fits, function(f) lapply(f$boot, `[`, c("a", "b", "k")))
+  f1 <- boot(1)
+  f2 <- boot(1)
+  expect_identical(pars(f2), pars(f1))
+  expect_identical(mt_forecast(f2, h = 5, n_draws = 20, seed = 2)$rates,
+                   mt_forecast(f1, h = 5, n_draws = 20, seed = 2)$rates)
+  # independent of the generator before the fit, which the fit leaves as it was
+  set.seed(5)
+  before <- stats::runif(1)
+  set.seed(5)
+  f3 <- boot(1)
+  expect_identical(stats::runif(1), before)
+  expect_identical(pars(f3), pars(f1))
+  # another seed gives other resamples
+  f4 <- boot(2)
+  expect_false(isTRUE(all.equal(pars(f4), pars(f1))))
+  expect_false(isTRUE(all.equal(mt_forecast(f4, h = 5, n_draws = 20, seed = 2)$rates,
+                                mt_forecast(f1, h = 5, n_draws = 20, seed = 2)$rates)))
+  # each stratum has its own stream: two strata with the same data get
+  # different resamples
+  y <- x
+  for (v in c("deaths", "exposure")) {
+    tab <- y$obs[[v]][order(y$obs[[v]]$stratum, y$obs[[v]]$period_lo, y$obs[[v]]$age_lo)]
+    tab$value[tab$stratum == 2] <- tab$value[tab$stratum == 1]
+    y$obs[[v]] <- tab
+  }
+  fy <- mt_fit(lee_carter(bootstrap = TRUE, n_boot = 4, seed = 1), y)
+  expect_equal(fy$fits[[2]]$a, fy$fits[[1]]$a)
+  expect_false(isTRUE(all.equal(pars(fy)[[2]], pars(fy)[[1]])))
+  # the same bootstrap with any number of cores
+  skip_on_os("windows")
+  expect_identical(pars(boot(1, cores = 2)), pars(f1))
+  expect_error(lee_carter(bootstrap = TRUE, seed = "a"), class = "mt_error_argument")
+})
+
 test_that("HOOI recovers an exact low-rank array and CoDa round trips", {
   set.seed(1)
   U <- list(qr.Q(qr(matrix(rnorm(20), 10, 2))), qr.Q(qr(matrix(rnorm(16), 8, 2))), qr.Q(qr(matrix(rnorm(6), 3, 2))))

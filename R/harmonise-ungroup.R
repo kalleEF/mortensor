@@ -48,7 +48,9 @@
 #'   with a group of 0 counts of 15 years beyond `omega`, as Rizzi, Gampe
 #'   and Eilers (2015) ungroup grouped exposures (their maximum age 115 and
 #'   a group 115-130 with 0 counts); the estimates enter the composite link
-#'   of the rates;
+#'   of the rates. This PCLM smooths exposures, not deaths, so it chooses its
+#'   own smoothing parameter by `criterion` (BIC by default) also when
+#'   `lambda` is given;
 #' * `"stationary"`: with stationary-population weights `l(x) =
 #'   exp(-cumsum(m(x)))` implied by the fitted rates; starting from rates
 #'   that rise by 10% per year of age, the weights and the fit are iterated
@@ -171,7 +173,8 @@
 #'   years; [mt_plot_ungroup()] and [mt_ungroup_check()] check a result.
 #' @param exposure_method `"pclm"` or `"monotone"` (Hyman 1983).
 #' @param lambda Fixed smoothing parameter(s); `NULL` selects them by
-#'   `criterion`.
+#'   `criterion`. The split of the exposure of an open interval of the grid
+#'   (`open_split = "pclm"`) always selects its own (see Details).
 #' @param criterion `"bic"` or `"aic"`.
 #' @param kr Knot spacing in years (age and period).
 #' @param deg,pord Degree of the B-splines and order of the difference
@@ -549,7 +552,9 @@ ungroup_rate_block <- function(o, e_list, fa, B, pen, ctl, omega, n_open, ps = N
 # the exposures of all grid cells of one period (exposures as counts, offset
 # the widths of the fine cells, the open cell expanded to omega), as Rizzi,
 # Gampe and Eilers (2015) ungroup grouped exposures before they enter the
-# composite link of the rates
+# composite link of the rates. The smoothing parameter is chosen by
+# `criterion` for these exposures: a `lambda` given for the deaths is not
+# used here.
 open_weights_pclm <- function(e, fa, ctl) {
   open_idx <- which(fa$grid == max(fa$grid) & fa$open)
   cells <- sort(unique(fa$grid))
@@ -562,7 +567,7 @@ open_weights_pclm <- function(e, fa, ctl) {
   C <- 1 * outer(c(cells, max(cells) + 1L), grid, "==")
   width <- upper - lower
   bas <- pclm_basis((lower + upper) / 2, min(lower), max(upper), ctl$kr, ctl$deg, ctl$pord)
-  fit <- pclm_fit(c(e[cells], 0), C, width, bas$B, list(bas$P), ctl$lambda, ctl$criterion, ctl$lambda_range)
+  fit <- pclm_fit(c(e[cells], 0), C, width, bas$B, list(bas$P), NULL, ctl$criterion, ctl$lambda_range)
   est <- (width * fit$gamma)[open_idx]
   est / sum(est)
 }

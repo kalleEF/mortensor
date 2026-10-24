@@ -160,6 +160,23 @@ test_that("ARIMA models of the index match stats::arima() and forecast::Arima()"
   expect_equal(f$const, mean(diff(1:4 + c(0, 0.1, -0.1, 0))))
 })
 
+test_that("the bootstrap pool of an index leaves out the first d residuals and has mean zero", {
+  set.seed(3)
+  k <- cumsum(c(0, -1 + stats::arima.sim(list(ma = 0.4), 30)))
+  for (ord in list(c(0, 1, 1), c(1, 1, 0), c(1, 0, 0), c(0, 2, 1), c(0, 1, 0))) {
+    f <- mortensor:::index_arima_fit(k, ord, TRUE)
+    n_res <- length(k) - ord[2]
+    expect_length(f$innov, n_res)
+    expect_length(f$pool, n_res)
+    expect_equal(mean(f$pool), 0, tolerance = 1e-12)
+    expect_equal(f$pool, f$innov - mean(f$innov))
+  }
+  # the residuals of stats::arima() without the first d ones
+  a <- stats::arima(k, order = c(0, 1, 1), xreg = cbind(drift = seq_along(k)), method = "ML")
+  f <- mortensor:::index_arima_fit(k, c(0, 1, 1), TRUE)
+  expect_equal(f$innov, as.numeric(stats::residuals(a))[-1])
+})
+
 test_that("zero deaths are replaced multiplicatively, keeping the total of each year", {
   D <- matrix(c(0, 4, 6, 10, 2, 0, 8, 10), 4)
   expect_warning(r <- mortensor:::coda_replace_zeros(D, "test"), class = "mt_warning_sparse")
