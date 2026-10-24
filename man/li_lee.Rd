@@ -66,9 +66,6 @@ of the deaths given the rates and the exposures, and no other observation
 noise. If intervals are too narrow on real data, that is a property of
 the model (see \code{\link[=recalibrated]{recalibrated()}}, \code{\link[=ensemble]{ensemble()}}, or
 overdispersed models such as \code{stanmomo(family = "nb")}).
-
-\code{product_ratio()}, a Lee-Carter version of the product-ratio method, is
-deprecated; use \code{\link[=coherent_fdm]{coherent_fdm()}}.
 }
 \examples{
 x <- mt_example(deaths = "single")

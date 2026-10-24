@@ -28,7 +28,7 @@ with \code{rotate = TRUE} also the ultimate pattern \code{b_ultimate}; with
 \code{family = "nb"} also the dispersion \code{nb_dispersion} (variance \verb{mu + phi mu^2}; one per age group with a dispersion by age); with \code{jump_off = "filtered"} also the filtered index of the last year \code{k_filtered}, its
 standard error \code{se_k_filtered} and the state-space estimates
 \code{filter_sigma}, \code{filter_lambda}, \code{filter_drift};
-\item \code{\link[=li_lee]{li_lee()}}, \code{\link[=product_ratio]{product_ratio()}}: the common factor of each group (\code{B},
+\item \code{\link[=li_lee]{li_lee()}}: the common factor of each group (\code{B},
 \code{K}, its drift and standard deviation), per stratum the deviations
 \code{a}, \code{b}, \code{k} and their AR(1) coefficient \code{phi} and standard deviation,
 and the number of stratum factors fitted (\code{ratio_order}, stratum

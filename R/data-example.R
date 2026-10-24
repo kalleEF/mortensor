@@ -222,3 +222,37 @@ simulate_lc_dgp <- function(n_t = 40, seed = 1, pop = 2e5, sd_k = 0.02, drift = 
     mt_set_grid(x, age = age_groups(ages, open = FALSE, last_upper = 95))
   })
 }
+
+#' Simulated deaths by cause
+#'
+#' Extends [mt_example()] with deaths by cause (`"cvd"`, `"cancer"`,
+#' `"other"`) and the all-cause total (`"all"`), single years of age. Cause
+#' shares change smoothly with age and time; deaths are split multinomially,
+#' so causes add up to all causes exactly.
+#'
+#' @inheritParams mt_example
+#' @return An [mt_data] object with strata `sex` x `cause`.
+#' @examples
+#' mt_example_causes(years = 2010:2019)
+#' @export
+mt_example_causes <- function(years = 1990:2019, size = 1e5, seed = 1) {
+  x <- mt_example(years = years, deaths = "single", size = size, seed = seed)
+  D <- mt_obs(x, "deaths")
+  E <- mt_obs(x, "exposure")
+  with_seed(seed + 1, {
+    t0 <- (D$period_lo - min(years)) / 10
+    a <- (pmin(D$age_lo, 100) - 30) / 10
+    eta_cvd <- -1.5 + 0.35 * a - 0.25 * t0
+    eta_can <- 0.3 - 0.15 * a + 0.05 * t0
+    p <- cbind(exp(eta_cvd), exp(eta_can), 1)
+    p <- p / rowSums(p)
+    split <- t(vapply(seq_len(nrow(D)), function(i) as.numeric(stats::rmultinom(1, D$value[i], p[i, ])), numeric(3)))
+  })
+  causes <- c("cvd", "cancer", "other")
+  base <- D[, list(sex, period_lo, age_lo, age_hi)]
+  long <- rbind(cbind(base, cause = "all", deaths = D$value),
+                rbindlist(lapply(1:3, function(k) cbind(base, cause = causes[k], deaths = split[, k]))))
+  ex <- E[, list(sex, period_lo, age_lo, age_hi, exposure = value)]
+  ex <- rbindlist(lapply(c("all", causes), function(cc) cbind(ex, cause = cc)))
+  mt_data(deaths = long, exposure = ex, by = c("sex", "cause"), age = c("age_lo", "age_hi"), period = "period_lo")
+}

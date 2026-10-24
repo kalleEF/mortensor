@@ -267,9 +267,8 @@ test_that("top_k works with every weight option", {
   expect_equal(unname(mt_fit(ens, x)$weights), w, tolerance = 1e-12)
 })
 
-test_that("weights = \"stack\" is deprecated and failed inner backtests give equal weights", {
-  expect_warning(ens <- ensemble(lee_carter(), rwd(), weights = "stack"), class = "mt_warning_deprecated")
-  expect_identical(ens$params$weights, "stack")
+test_that("weights = \"stack\" is removed and failed inner backtests give equal weights", {
+  expect_error(ensemble(lee_carter(), rwd(), weights = "stack"), class = "mt_error_argument")
   expect_warning(w <- mortensor:::ensemble_inner_weights(list(weights = "crps_stack", inner_origins = 3, inner_h = 5),
                                                          list(NULL, NULL)),
                  class = "mt_warning_ensemble_weights")

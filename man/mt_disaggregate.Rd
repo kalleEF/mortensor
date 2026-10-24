@@ -8,7 +8,7 @@ mt_disaggregate(
   draws,
   age,
   exposure,
-  method = c("shape", "hyman_kannisto", "natural_gompertz"),
+  method = "shape",
   shape_rates = NULL,
   omega = 110
 )
@@ -21,12 +21,9 @@ mt_disaggregate(
 \item{exposure}{Exposures on the finer ages, \verb{[age, stratum]} or
 \verb{[age, period, stratum]}, used as weights.}
 
-\item{method}{\code{"shape"} (default) or the deprecated \code{"hyman_kannisto"}
-and \code{"natural_gompertz"}.}
+\item{method}{\code{"shape"} (proportional allocation by a standard schedule).}
 
-\item{shape_rates}{For \code{"shape"}: rates on the finer ages, \verb{[age, stratum]}
-or \verb{[age, period, stratum]} for the forecast periods (see
-\code{\link[=mt_shape_rates]{mt_shape_rates()}}).}
+\item{shape_rates}{Rates on the finer ages, \verb{[age, stratum]} or \verb{[age, period, stratum]} for the forecast periods (see \code{\link[=mt_shape_rates]{mt_shape_rates()}}).}
 
 \item{omega}{Maximum age.}
 }
@@ -39,28 +36,18 @@ by path, when a model was forecast at the resolution of the observed
 deaths.
 }
 \details{
-\itemize{
-\item \code{"shape"} (default): proportional allocation by a standard schedule.
-The rate of each finer age is the group rate of the draw times a fixed
-age-specific factor taken from rates at the finer resolution
-(\code{shape_rates}), the factors being scaled to an exposure-weighted mean
-of 1 within each group, so that the exposure-weighted mean of the finer
+The method (\code{"shape"}) is proportional allocation by a standard
+schedule. The rate of each finer age is the group rate of the draw times
+a fixed age-specific factor taken from rates at the finer resolution
+(\code{shape_rates}), the factors being scaled to an exposure-weighted mean of
+1 within each group, so that the exposure-weighted mean of the finer
 rates equals the group rate of every draw. \code{\link[=mt_shape_rates]{mt_shape_rates()}} estimates
 the shape from the last observed years of data at the finer resolution;
 with grouped training data, estimate those first with \code{\link[=mt_ungroup]{mt_ungroup()}}
 (for example \code{mt_shape_rates(mt_ungroup(x), periods)}). A group whose
-shape rates are all 0 gets a flat shape.
-\item \code{"hyman_kannisto"} or \code{"natural_gompertz"} (deprecated): a spline
-through the group rates of each draw (monotone Hyman spline with a
-Kannisto tail, or a natural spline with a log-linear tail), corrected so
-that the exposure-weighted mean of the fine rates equals each group
-rate. These are heuristics of this package without a published source;
-they still work, with a warning of class \code{mt_warning_deprecated}.
-}
-
-The default changed from \code{"hyman_kannisto"} to \code{"shape"}, which needs
-\code{shape_rates}. Missing group rates (for example of a stratum whose fit
-failed) give missing rates at the finer ages of that group.
+shape rates are all 0 gets a flat shape. Missing group rates (for
+example of a stratum whose fit failed) give missing rates at the finer
+ages of that group.
 }
 \examples{
 x <- mt_example(years = 2000:2019, deaths = "single")

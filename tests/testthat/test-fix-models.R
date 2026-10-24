@@ -54,33 +54,6 @@ test_that("StMoMo forecasts one year ahead", {
   expect_true(all(is.finite(fc$rates) & fc$rates > 0))
 })
 
-test_that("cause shares keep causes adding up in predictive draws and follow the total model", {
-  x <- mt_example_causes(years = 2005:2019)
-  st <- mt_strata(x)
-  fit <- mt_fit(suppressWarnings(cause_shares(total = lee_carter(), ranks = c(2, 2, 2, 2))), x)
-  E <- fit$exposure_last
-  p <- mt_forecast(fit, h = 2, n_draws = 10, seed = 1, predictive = TRUE)
-  for (sx in c("female", "male")) {
-    i <- st$stratum[st$sex == sx & st$cause == "all"]
-    j <- st$stratum[st$sex == sx & st$cause != "all"]
-    d_tot <- p$rates[, , i, ] * as.vector(E[, 1, i])
-    d_parts <- apply(p$rates[, , j, , drop = FALSE] * as.vector(E[, 1, j]), c(1, 2, 4), sum)
-    expect_equal(d_parts, d_tot, tolerance = 1e-8)
-    expect_equal(d_tot, round(d_tot), tolerance = 1e-8)
-  }
-  # a total model of observed rates: predictive draws are the draws
-  fit2 <- mt_fit(suppressWarnings(cause_shares(total = rwd(), ranks = c(2, 2, 2, 2))), x)
-  expect_false(fit2$spec$smooth)
-  a <- mt_forecast(fit2, h = 2, n_draws = 10, seed = 1)
-  b <- mt_forecast(fit2, h = 2, n_draws = 10, seed = 1, predictive = TRUE)
-  expect_equal(b$rates, a$rates)
-  expect_error(mt_forecast(fit2, h = 0), class = "mt_error_argument")
-  expect_error(mt_forecast(fit2, h = 2, n_draws = 0), class = "mt_error_argument")
-  bad <- fit2
-  bad$fits$total$fits[[1]]$last[] <- log(5)
-  expect_warning(mt_forecast(bad, h = 1, n_draws = 5, seed = 1), class = "mt_warning_implausible")
-})
-
 test_that("joint models run with a single age group", {
   x <- mt_regroup(mt_example(deaths = "single", years = 2000:2019), age = 30)
   for (spec in list(tucker3(ranks = c(1, 2, 2)), li_lee())) {

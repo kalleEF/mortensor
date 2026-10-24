@@ -82,11 +82,9 @@ total (`max_rel_diff`). `preserve_totals = TRUE` rescales the estimates
 to every group total, a post-hoc rescaling of this package that creates
 jumps at the group boundaries. `method = "monotone"` interpolates the
 cumulative counts and reproduces every group total, without using the
-exposures.
-The spline methods `"hyman_kannisto"`, `"natural_gompertz"` and `"gam"`
-are deprecated: they have no published source. Check your own result
-with `mt_plot_ungroup()` and `mt_ungroup_check()`; see "Ungrouping age
-groups: methods and diagnostics".
+exposures. Check your own result with `mt_plot_ungroup()` and
+`mt_ungroup_check()`; see "Ungrouping age groups: methods and
+diagnostics".
 
 ### Can I split the open interval 90+ into single years?
 

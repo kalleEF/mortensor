@@ -8,7 +8,7 @@ recalibrated(
   spec,
   years = 10,
   n_origins = 5,
-  scale = c("constant", "horizon", "per_horizon"),
+  scale = c("constant", "per_horizon"),
   bias = FALSE,
   target = c("crps", "interval"),
   level = 0.95,
@@ -32,9 +32,7 @@ recalibrated(
 forecast horizon (see "Factors per horizon").}
 
 \item{scale}{\code{"constant"} (default: one spread factor \eqn{s_1} for all
-horizons), \code{"per_horizon"} (one factor for each horizon) or the
-deprecated \code{"horizon"} (spread factor \eqn{s_1 h^{\gamma}},
-package-specific; use \code{"per_horizon"}).}
+horizons) or \code{"per_horizon"} (one factor for each horizon).}
 
 \item{bias}{Estimate a correction of the drift (log rate per year;
 package-specific; with \code{scale = "per_horizon"} one for each horizon).}
@@ -70,13 +68,13 @@ arguments keep their defaults.}
 \value{
 A model specification. The fitted object has a \code{calibration}
 element: a \code{data.table} with one row per group and age band
-(\code{scale_h1}, \code{slope}, \code{drift}, the number of observed cells and of
+(\code{scale_h1}, \code{drift}, the number of observed cells and of
 scored values, the number of inner forecasts (stratum x origin), CRPS
 and coverage of the inner forecasts before and after calibration, and
 with \code{n_boot} the intervals \code{scale_h1_lo}, \code{scale_h1_hi}, ...). With
 \code{scale = "per_horizon"} it has one row per group, age band and horizon,
 with \code{horizon}, \code{origins} (inner origins of the horizon), \code{scale} and
-\code{drift} in place of \code{scale_h1}, \code{slope} and \code{drift} (and \code{scale_lo},
+\code{drift} in place of \code{scale_h1} and \code{drift} (and \code{scale_lo},
 \code{scale_hi}, ... with \code{n_boot}). With \code{method = "errors"} it has one row
 per horizon: \code{horizon}, \code{origins} (error vectors), \code{cells} (ages x
 strata of each vector), \code{mean_error}, \code{tuning} (\eqn{\pi_h}) and
@@ -100,9 +98,10 @@ remaining years of the window;
 \deqn{\log m^* = \tilde m + b\,h + s(h)\,(\log m - \tilde m),}
 where \eqn{\tilde m} is the median of the draws in the cell, \eqn{h} the
 horizon, \eqn{s(h)} a spread factor, one value \eqn{s_1} for all
-horizons (\code{scale = "constant"}, default) or \eqn{s_1 h^{\gamma}}
-(\code{scale = "horizon"}, deprecated), held constant beyond the longest horizon of the
-window, or one value \eqn{s_h} for each horizon (\code{scale = "per_horizon"}), and \eqn{b} a correction of the drift per year (\code{bias = TRUE}; with \code{scale = "per_horizon"} one \eqn{b_h} for each horizon);
+horizons (\code{scale = "constant"}, default) or one value \eqn{s_h} for
+each horizon (\code{scale = "per_horizon"}), and \eqn{b} a correction of
+the drift per year (\code{bias = TRUE}; with \code{scale = "per_horizon"} one
+\eqn{b_h} for each horizon);
 \item the parameters minimise the mean CRPS (or the interval score,
 \code{target}) of the log death rates in the window, with the Poisson (or
 the model's negative binomial) variation of the observed deaths, as in
@@ -220,9 +219,8 @@ range of its \eqn{M} errors. For exchangeable errors, the range of
 few origins reach therefore get narrow intervals; a long \code{years} with
 \code{n_origins = years - 1} gives each horizon more origins.
 
-\strong{Package-specific options} (reference unknown): the power law of the
-spread factor over the horizon (\code{scale = "horizon"}), the correction of
-the drift (\code{bias = TRUE}), separate factors for age bands (\code{ages}) and
+\strong{Package-specific options} (reference unknown): the correction of the
+drift (\code{bias = TRUE}), separate factors for age bands (\code{ages}) and
 calibration on life expectancy or the age-standardised rate (\code{quantity}).
 The drift correction and the age bands have published analogues of
 another form. EMOS corrects the bias of the forecasts in its predictive
@@ -238,24 +236,23 @@ training periods; \code{ages} estimates separate factors for bands of ages
 that the user chooses.
 
 \strong{Estimation.} The parameters are bounded: \eqn{s_1} (and \eqn{s_h})
-between 0.1 and 20, \eqn{\gamma} between -1 and 1, and \eqn{b} between
--0.05 and 0.05 (log rate per year). With one parameter (\code{scale = "constant"} or, for each horizon, \code{"per_horizon"}, with \code{bias = FALSE})
-the log factor is found by \code{\link[stats:optimize]{stats::optimize()}} within its bounds;
-otherwise the parameters are found by Nelder-Mead (\code{\link[stats:optim]{stats::optim()}},
-relative tolerance 1e-6, at most 300 iterations), started at
-\eqn{s_1 = 1}, \eqn{\gamma = 0}, \eqn{b = 0}, with values outside the
-bounds rejected. The observation noise of the scored forecasts is
-simulated once (common random numbers), so the score is a deterministic
-function of the parameters.
+between 0.1 and 20, and \eqn{b} between -0.05 and 0.05 (log rate per
+year). With one parameter (\code{scale = "constant"} or, for each horizon,
+\code{"per_horizon"}, with \code{bias = FALSE}) the log factor is found by
+\code{\link[stats:optimize]{stats::optimize()}} within its bounds; otherwise the parameters are
+found by Nelder-Mead (\code{\link[stats:optim]{stats::optim()}}, relative tolerance 1e-6, at most
+300 iterations), started at \eqn{s_1 = 1} and \eqn{b = 0}, with values
+outside the bounds rejected. The observation noise of the scored
+forecasts is simulated once (common random numbers), so the score is a
+deterministic function of the parameters.
 
 \strong{Long horizons.} The parameters are estimated on horizons 1 to
 \eqn{h_{max}}, the distance from the first origin to the last training
-year (10 years with the defaults). With \code{scale = "constant"} or
-\code{"horizon"}, the spread factor and the drift correction are held at
-their values at \eqn{h_{max}} beyond it. A forecast more than twice as
-long as \eqn{h_{max}} gives a warning (class \code{mt_warning_recalibrate}),
-because nothing in the training data shows how the spread of the model
-is wrong at such horizons. With the defaults this concerns forecasts of
+year (10 years with the defaults). With \code{scale = "constant"}, the spread
+factor and the drift correction of \eqn{h_{max}} are used beyond it. A
+forecast more than twice as long as \eqn{h_{max}} gives a warning (class
+\code{mt_warning_recalibrate}), because nothing in the training data shows
+how the spread of the model is wrong at such horizons. With the defaults this concerns forecasts of
 more than 20 years (\code{mt_forecast()} forecasts 10 by default); give a
 longer \code{years} for long projections, or accept the constant factor. The
 per-horizon methods stop instead (see above).

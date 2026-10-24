@@ -188,27 +188,11 @@ test_that("an open deaths interval at 90+ is extrapolated as documented (French 
   }
 })
 
-test_that("rate-based spline ungrouping preserves group rates and approximates the truth", {
-  x <- mt_example(years = 2015:2019)
-  truth <- attr(x, "truth")
-  D0 <- mt_obs(x)
+test_that("the spline methods removed in 0.3.0 stop with an argument error", {
+  x <- mt_example(years = 2018:2019)
   for (m in c("hyman_kannisto", "natural_gompertz", "gam")) {
-    if (m == "gam") skip_if_not_installed("mgcv")
-    # heuristics without a published source: deprecated
-    expect_warning(u <- mt_ungroup(x, method = m), class = "mt_warning_deprecated")
-    expect_equal(sum(mt_obs(u)$value), sum(D0$value), tolerance = 1e-8)
-    D <- mt_array(u, "deaths")
-    E <- mt_array(u, "exposure")
-    ages <- mt_grid(u)$age$lower
-    m90 <- apply(D[ages >= 90, , , drop = FALSE], 2:3, sum) / apply(E[ages >= 90, , , drop = FALSE], 2:3, sum)
-    expect_equal(as.vector(m90), D0[age_lo == 90][order(stratum, period_lo)]$value /
-                   as.vector(apply(E[ages >= 90, , , drop = FALSE], 2:3, sum)), tolerance = 1e-8)
-    le <- abs(log((D / E) / truth))
-    expect_lt(stats::median(le), 0.05)
+    expect_error(mt_ungroup(x, method = m), class = "simpleError")
   }
-  y <- x
-  y$obs$exposure <- NULL
-  expect_error(suppressWarnings(mt_ungroup(y, method = "hyman_kannisto")), class = "mt_error_ungroup")
 })
 
 test_that("forecast draws disaggregate to single ages with the group rates preserved", {
@@ -225,14 +209,13 @@ test_that("forecast draws disaggregate to single ages with the group rates prese
     }
     out
   }
-  for (m in c("hyman_kannisto", "natural_gompertz")) {
-    expect_warning(fs <- mt_disaggregate(fc, mt_grid(x)$age, exposure = e, method = m),
-                   class = "mt_warning_deprecated")
-    expect_identical(dim(fs$rates), c(71L, 2L, 2L, 5L))
-    expect_equal(as.vector(group_rates(fs$rates)), as.vector(fc$rates), tolerance = 1e-6)
-  }
-  # proportional allocation by a standard schedule is the default
+  # proportional allocation by a standard schedule
   sh <- mt_disaggregate(fc, mt_grid(x)$age, exposure = e, shape_rates = mt_array(x, "deaths")[, 20, ] / e)
+  expect_identical(dim(sh$rates), c(71L, 2L, 2L, 5L))
   expect_equal(as.vector(group_rates(sh$rates)), as.vector(fc$rates), tolerance = 1e-6)
   expect_error(mt_disaggregate(fc, mt_grid(x)$age, exposure = e), class = "mt_error_argument")
+  # the spline methods were removed in 0.3.0
+  for (m in c("hyman_kannisto", "natural_gompertz")) {
+    expect_error(mt_disaggregate(fc, mt_grid(x)$age, exposure = e, method = m), class = "simpleError")
+  }
 })

@@ -8,7 +8,7 @@ mt_ungroup(
   data,
   age = NULL,
   dims = 1,
-  method = c("pclm", "monotone", "hyman_kannisto", "natural_gompertz", "gam"),
+  method = c("pclm", "monotone"),
   exposure_method = c("pclm", "monotone"),
   lambda = NULL,
   criterion = c("bic", "aic"),
@@ -17,9 +17,7 @@ mt_ungroup(
   pord = 2,
   lambda_range = c(0.01, 1e+08),
   preserve_totals = FALSE,
-  open_split = c("pclm", "stationary"),
-  tail = c("kannisto", "gompertz"),
-  tail_width = 2
+  open_split = c("pclm", "stationary")
 )
 }
 \arguments{
@@ -30,20 +28,14 @@ set (with \code{\link[=mt_set_grid]{mt_set_grid()}} or \code{step_grid()}) and i
 otherwise single years of age from the lowest age to the start of the
 open interval.}
 
-\item{dims}{1 or 2 (for \code{method = "pclm"}; \code{"gam"} is always 2D, the
-other methods 1D).}
+\item{dims}{1 or 2 (for \code{method = "pclm"}; \code{"monotone"} is 1D).}
 
 \item{method}{Method for deaths: \code{"pclm"} (default), or \code{"monotone"}, the
 monotone cubic interpolation of Hyman (1983) of the cumulative deaths
 (counts only, 1D, ignores exposures; group totals reproduced exactly).
-Deprecated, without a published source: \code{"hyman_kannisto"} (monotone
-spline of log group rates with a Kannisto tail), \code{"natural_gompertz"}
-(natural spline with a log-linear tail) and \code{"gam"} (2D tensor-product
-GAM of log group rates over age and year with a Kannisto tail, package
-mgcv); they need exposures on the grid and rescale to the
-exposure-weighted group rates. The vignette "Ungrouping age groups:
-methods and diagnostics" compares methods on data with known single
-years; \code{\link[=mt_plot_ungroup]{mt_plot_ungroup()}} and \code{\link[=mt_ungroup_check]{mt_ungroup_check()}} check a result.}
+The vignette "Ungrouping age groups: methods and diagnostics" compares
+methods on data with known single years; \code{\link[=mt_plot_ungroup]{mt_plot_ungroup()}} and
+\code{\link[=mt_ungroup_check]{mt_ungroup_check()}} check a result.}
 
 \item{exposure_method}{\code{"pclm"} or \code{"monotone"} (Hyman 1983).}
 
@@ -66,12 +58,6 @@ after the fit (default \code{FALSE}, the published PCLM); see Details.}
 when deaths are ungrouped as rates: \code{"pclm"} (default, the PCLM of the
 exposures, Rizzi, Gampe and Eilers 2015) or \code{"stationary"}
 (package-specific stationary-population weights); see Details.}
-
-\item{tail, tail_width}{For the deprecated \code{method = "gam"}: the parametric
-curve that takes over from the GAM above the start of the last age group
-(\code{"kannisto"}, logistic, or \code{"gompertz"}, log-linear), fitted to the GAM
-rates from age 70, and the width (years) of the logistic blend between
-the two.}
 }
 \value{
 An \code{mt_data} object with deaths (and exposures) on the grid.
@@ -222,11 +208,6 @@ dimension, 0.1 to 1000 in two): \code{lambda_range = c(1e-2, 1e8)}. In two
 dimensions ungroup uses fixed smoothing parameters (1, 1) and a knot every
 7 cells by default; here both parameters are chosen by BIC with a knot
 every \code{kr} years and periods.
-
-The methods \code{"hyman_kannisto"}, \code{"natural_gompertz"} and \code{"gam"} are
-deprecated: they are heuristics of this package without a published
-source. They still work, with a warning of class
-\code{mt_warning_deprecated}.
 
 In backtests use \code{step_ungroup()} so that ungrouping, in particular in 2D,
 sees only the training window.
