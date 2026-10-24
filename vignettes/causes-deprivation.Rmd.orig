@@ -441,21 +441,22 @@ mt_compare_forecasts(list(observed = mt_subset(xa, sex == "both" & quintile == "
 The compositional models forecast a higher life expectancy at 50 than
 both Lee-Carter forecasts: 37.3 and 37.2 years for England in 2035,
 against 35.9 years from the all-cause forecast and 33.6 from bottom-up,
-with narrower intervals (36.8-37.8 for CoDA). Their sum of the causes is
+with narrower intervals (36.8-37.9 for CoDA). Their sum of the causes is
 more optimistic than the all-cause Lee-Carter forecast, the opposite of
 the separate forecasts by cause. They forecast lower rates of all four
-causes: ischaemic heart disease 72 per 100,000 against 104 and 105, lung
-cancer 75 and 74 against 113 and 124, and dementia 583 against 727 and
-899, with a much narrower interval for dementia (547-617 for CoDA,
+causes: ischaemic heart disease 72 and 73 per 100,000 against 104 and
+105, lung cancer 75 against 113 and 124, and dementia 583 and 580
+against 727 and 899, with a much narrower interval for dementia
+(543-617 for CoDA,
 against 266-2148 and 624-1385). Respiratory
 diseases fell from 149 to 137 per 100,000 between 2001 and 2019;
 Lee-Carter keeps them near that level (141 and 143), and the
-compositional models bring them down by about a third (88 and 86). In
+compositional models bring them down by about a third (88 and 87). In
 these models the rate of a cause follows from the forecast life-table
 deaths of all ages and causes (Oeppen 2008, eq. 7), so the trends of
 the causes are tied together. The individual components of 2S-CoDA
 change the forecasts shown little: life expectancy by at most 0.3 years,
-the rates by at most 2 per 100,000.
+the rates by at most 3 per 100,000.
 
 ### Which way forecast best
 
@@ -537,7 +538,7 @@ accurate. The results by target:
 * **All-cause life expectancy at 50**: bottom-up forecast it best by far
   (CRPS 0.177 years for the series by sex and quintile and their sums
   over sexes or quintiles, against 0.300-0.307 for the other forecasts
-  from Lee-Carter and 0.465 and 0.517 for CoDA and 2S-CoDA), with the
+  from Lee-Carter and 0.468 and 0.515 for CoDA and 2S-CoDA), with the
   highest 95% coverage (0.83). For England as a whole its intervals were
   too narrow (0.48): the 120 bottom forecasts are drawn independently, so
   their errors partly cancel in the sum ("Dependence between groups").
@@ -546,24 +547,25 @@ accurate. The results by target:
   0.121, against 0.146 for bottom-up, 0.158 for 2S-CoDA and 0.185 for
   separate forecasts), but the 95% intervals of their life expectancy
   covered only 0.34 of the observed values. The gaps of the
-  cause-specific rates were forecast best by 2S-CoDA (CRPS 0.0330), then
-  by CoDA (0.0358) and by WLS and MinT (0.0362).
+  cause-specific rates were forecast best by 2S-CoDA (CRPS 0.0332), then
+  by CoDA (0.0360) and by WLS and MinT (0.0362).
 * **Cause-specific rates**: WLS and MinT made them less accurate (CRPS of
   the ASR of the bottom series 0.0595 against 0.0562 for separate
   forecasts and 0.0563 for bottom-up). Proportional
   scaling made them less accurate still (0.0641) and left all-cause life
   expectancy as inaccurate as the all-cause forecasts it keeps. The
-  compositional models forecast them least accurately (0.0709 for CoDA,
-  0.0743 for 2S-CoDA), with 95% coverage of 0.74 and 0.68.
+  compositional models forecast them least accurately (0.0712 for CoDA,
+  0.0741 for 2S-CoDA), with 95% coverage of 0.73 and 0.69.
 * **Single rates of the bottom series**: the forecasts from Lee-Carter
   differ little (CRPS 0.113-0.117); CoDA and 2S-CoDA are less accurate
-  (0.135).
+  (0.136 and 0.135).
 * **CoDA and 2S-CoDA**: the 95% intervals of their life expectancy at 50
-  covered only 0.42 and 0.22 of the observed values (series by sex and
+  covered only 0.42 and 0.21 of the observed values (series by sex and
   quintile and their sums): the forecasts were too high and the
   intervals narrow. 2S-CoDA forecast the gaps between Q5 and Q1
-  more accurately than CoDA, the rates of the bottom series as accurately,
-  and the other targets less accurately. Which variant forecasts better
+  more accurately than CoDA (the gap of life expectancy of both sexes
+  together about as accurately), the rates of the bottom series about as
+  accurately, and the other targets less accurately. Which variant forecasts better
   depends on the data and the horizon.
 
 Part 2 uses bottom-up reconciliation: it forecast all-cause life
