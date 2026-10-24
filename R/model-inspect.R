@@ -46,6 +46,16 @@
 #'   `lambda`, `Omega`) and the standard deviations `sd_kappa`, `sd_zeta`;
 #'   per stratum with a spread the spread parameters `y1` ... `y5` by year
 #'   and their VAR(1) (`ar` or `A`, and `Omega`);
+#' * [relative_model()]: per group (`"reference <group>"`) the reference
+#'   parameters `alpha`, `beta` (by age), `kappa` (by year), `gamma` (by
+#'   year of birth), the `drift` and `sd` of `kappa`, the ARIMA(1,1,0) model
+#'   of `gamma` (`ar_gamma`, `drift_gamma`, `sd_gamma`), and the
+#'   log-likelihood, effective number of parameters, number of cells and BIC
+#'   of the reference part (`loglik`, `npar`, `nobs`, `bic`); per group
+#'   (`"subpopulations <group>"`) the common `beta` and the same statistics
+#'   of the subpopulation part; per subpopulation `alpha`, `kappa`, the
+#'   `drift` and `sd` of `kappa` and the correlation `cor` of its
+#'   innovations with those of each subpopulation of the group;
 #' * [bohk_rau()]: posterior medians and 90% intervals of the curve
 #'   parameters `b1` and `b2` by age and of the variance and hyperparameters,
 #'   the least-squares values `theta1`, `theta2` (exponential core model) and
@@ -265,6 +275,7 @@ base_parameters <- function(fit, sp) {
     return(rbind(common, own, row("model", c("mse", "bic"), "", c(f$mse, f$bic))))
   }
   if (inherits(sp, "mt_spec_saint")) return(saint_parameters(fit))
+  if (inherits(sp, "mt_spec_relative")) return(relative_parameters(fit))
   if (inherits(sp, "mt_spec_bohk_rau")) return(bohk_rau_parameters(fit))
   if (inherits(sp, "mt_spec_apci")) return(apci_parameters(fit))
   if (inherits(sp, "mt_spec_nordpred")) return(nordpred_parameters(fit))
@@ -622,6 +633,7 @@ model_assumptions <- function(spec) {
            "so the spread reverts towards zero. Draws include the innovations of the trend indexes and of the",
            "spread; parameters are fixed. Frailty selection makes rates of improvement change over time.",
            "Predictive draws add Poisson variation of the deaths given the rates. Jump-off: fitted rates."),
+         mt_spec_relative = relative_assumptions(spec),
          mt_spec_coherent_fdm = paste(
            "Product-ratio method with functional data models (Hyndman, Booth and Yasmeen 2013; demography):",
            "rates smoothed over age; the geometric mean of the strata (per group of `common_by`) and the ratio",
