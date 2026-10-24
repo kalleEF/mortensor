@@ -30,6 +30,23 @@ Work package R1 of `dev/review-0.2-plan.md`.
 * `mt_coherence()` stops with class `mt_error_hierarchy` and names the
   cause when the draws hold no aggregate strata of the hierarchy.
 
+## Faster two-dimensional ungrouping and smoothing (R3)
+
+Work package R3 of `dev/review-0.2-plan.md`.
+
+* `mt_ungroup(dims = 2)` and `mt_smooth(dims = 2)` (P-splines) compute
+  the products with the tensor basis over age and period in array form, as
+  in generalised linear array models (Currie, Durban and Eilers 2006), and
+  solve the banded system within its band. The model, the penalties, the
+  criterion and the search of the smoothing parameters are unchanged. With
+  fixed smoothing parameters the results equal those of 0.2.0 within a
+  relative difference of 1e-8. Chosen smoothing parameters near the upper
+  end of `lambda_range`, where the criterion is nearly flat, can differ by
+  rounding error; the code of 0.2.0 differs from itself by as much when
+  the rows of the data are reordered. On `mt_example()` a two-dimensional
+  fit takes about 10 seconds per stratum, against about 1.5 minutes
+  (ungrouping) and 6 minutes (smoothing) before.
+
 # mortensor 0.2.0
 
 Clean break: the 0.1.x interface is replaced (see `dev/revamp-plan.md`).
