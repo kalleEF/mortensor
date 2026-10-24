@@ -23,12 +23,16 @@
 #'   of the deaths given these rates and the exposures) or observed rates
 #'   (`FALSE`, for example a random walk on observed log rates: predictive
 #'   draws add nothing).
+#' @param seed Random seed of the fit, for models whose fit uses random
+#'   numbers: the random number streams of the strata in [mt_fit()] start
+#'   from this seed. `NULL`: they start from the current generator.
 #' @return An object of class `c("mt_spec_<model>", "mt_spec")`.
 #' @keywords internal
 #' @export
-new_mt_spec <- function(model, params = list(), joint = FALSE, min_periods = 5, label = model, smooth = TRUE) {
+new_mt_spec <- function(model, params = list(), joint = FALSE, min_periods = 5, label = model, smooth = TRUE,
+                        seed = NULL) {
   structure(list(model = model, params = params, joint = joint, min_periods = min_periods, label = label,
-                 smooth = smooth),
+                 smooth = smooth, seed = seed),
             class = c(paste0("mt_spec_", model), "mt_spec"))
 }
 
@@ -67,9 +71,10 @@ simulate_model.default <- function(spec, fit, h, n_draws, ...) {
 #' @param prep An [mt_prep] pipeline or `NULL`.
 #' @param cores Number of cores for per-stratum fits (forked processes; 1 on
 #'   Windows). Each stratum is fitted with its own random number stream,
-#'   started from the current generator, so fits that use random numbers
-#'   (such as `lee_carter(bootstrap = TRUE)`) are reproduced by `set.seed()`
-#'   with any number of cores.
+#'   started from the seed of the specification (`seed` of [lee_carter()])
+#'   or else from the current generator, so fits that use random numbers
+#'   (such as `lee_carter(bootstrap = TRUE)`) are reproduced by that seed or
+#'   by `set.seed()` with any number of cores.
 #' @param ... Passed to methods.
 #' @return An object of class `mt_fit`.
 #' @details Smooth inside the fit (`prep = mt_prep(step_smooth(...))`), not
@@ -124,7 +129,9 @@ mt_fit.mt_spec <- function(spec, data, prep = NULL, cores = 1, ...) {
          classes = unique(w$cls))
   }
   if (spec$joint) {
-    r <- run(function() fit_model(spec, md$D, md$E, md$age, md$periods, strata = st, hierarchy = d$hierarchy))
+    r <- with_seed(spec$seed, run(function() {
+      fit_model(spec, md$D, md$E, md$age, md$periods, strata = st, hierarchy = d$hierarchy)
+    }))
     fits <- r$fit
     classes <- r$classes
     diagnostics <- data.table(stratum = st$label, status = r$status, message = r$message, seconds = r$seconds)
@@ -132,8 +139,9 @@ mt_fit.mt_spec <- function(spec, data, prep = NULL, cores = 1, ...) {
     # matrices [age, period] also with a single age group
     slice <- function(A, s) array(A[, , s], dim(A)[1:2], dimnames(A)[1:2])
     one <- function(s) run(function() fit_model(spec, slice(md$D, s), slice(md$E, s), md$age, md$periods))
-    # one random number stream per stratum, so that results do not depend on `cores`
-    res <- par_lapply(seq_len(nrow(st)), one, cores, streams = TRUE)
+    # one random number stream per stratum, so that results do not depend on
+    # `cores`; the streams start from the seed of the specification, if any
+    res <- with_seed(spec$seed, par_lapply(seq_len(nrow(st)), one, cores, streams = TRUE))
     fits <- lapply(res, `[[`, "fit")
     classes <- unique(unlist(lapply(res, `[[`, "classes")))
     diagnostics <- data.table(stratum = st$label, status = vapply(res, `[[`, "", "status"),

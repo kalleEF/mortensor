@@ -133,7 +133,9 @@ test_that("the exposure of the open interval is split with stationary weights or
   expect_equal(dopen, sum(e[length(e)] * w * rate), tolerance = 1e-4)
   # "pclm": the weights are the PCLM estimates of the exposures in the open
   # interval (exposures of all grid cells as counts, then 15 years with 0
-  # counts beyond omega, Rizzi et al. 2015)
+  # counts beyond omega, Rizzi et al. 2015), with a smoothing parameter
+  # chosen by BIC for the exposures; the fixed `lambda` of the deaths in
+  # `ctl` does not enter
   up <- mt_ungroup(x, open_split = "pclm")
   expect_true(all(is.na(attr(up, "ungroup")$open_iterations)))
   ctl$open_split <- "pclm"
@@ -142,9 +144,14 @@ test_that("the exposure of the open interval is split with stationary weights or
   hi <- c(fa$upper, 111:125)
   Ce <- 1 * outer(seq_len(length(e) + 1), c(fa$grid, rep(length(e) + 1, 15)), "==")
   be <- mortensor:::pclm_basis((lo + hi) / 2, min(lo), max(hi))
-  fe <- mortensor:::pclm_fit(c(e, 0), Ce, hi - lo, be$B, list(be$P), lambda = ctl$lambda)
+  fe <- mortensor:::pclm_fit(c(e, 0), Ce, hi - lo, be$B, list(be$P), lambda = NULL, criterion = "bic")
   we <- fe$gamma[open] / sum(fe$gamma[open])
   expect_equal(mortensor:::open_weights_pclm(e, fa, ctl), we)
+  for (lam in list(NULL, 1e6, c(100, 10))) {
+    expect_identical(mortensor:::open_weights_pclm(e, fa, modifyList(ctl, list(lambda = lam))),
+                     mortensor:::open_weights_pclm(e, fa, ctl))
+  }
+  expect_false(isTRUE(all.equal(fe$lambda, ctl$lambda)))
   rate <- exp(as.numeric(bas$B %*% r$fit$beta))[open]
   expect_equal(r$deaths[r$a == length(g$age)], sum(e[length(e)] * we * rate), tolerance = 1e-8)
   # the exposures of the open interval decline with age

@@ -112,10 +112,11 @@
 #' `delta` of the deaths of the year, the other shares are multiplied by
 #' `1 - z delta` (`z` zeros), and `delta` is half the smallest positive count
 #' over all ages and years divided by the deaths of the year. A warning is
-#' given when more than 10% of the cells are zero. Package safeguards: the
-#' imputed share of a year is at most 1/2, and a year whose deaths at ages
-#' from 80 allow no Kannisto fit takes the fit to all years together (with a
-#' warning).
+#' given when more than 10% of the cells are zero. `delta` is capped at
+#' `0.5 / z`, so the zeros of a year get at most half of its deaths
+#' (package-specific safeguard, reference unknown). A year whose deaths at
+#' ages from 80 allow no Kannisto fit takes the fit to all years together
+#' (with a warning; package-specific).
 #'
 #' **Deviations from the paper.** Besides the package-specific treatment of
 #' other age groups: the life tables use `a_x = n / 2` at every age (the
@@ -409,7 +410,8 @@ coda_simulate_coherent <- function(fit, h, n_draws) {
 #' 3) replaces zero counts by lightly smoothing the deaths of each year with
 #' a penalised histogram smoother whose smoothing parameter is not given;
 #' here zero counts are replaced multiplicatively in the composition of each
-#' year (Bergeron-Boucher et al. 2017, Appendix C; see [coda()]). How the
+#' year (Bergeron-Boucher et al. 2017, Appendix C, with the package-specific
+#' cap `0.5 / z` of `delta` for `z` zeros in a year; see [coda()]). How the
 #' death rate of the open age interval follows from the forecast deaths is
 #' not stated; here the all-cause log rate of an open interval is regressed
 #' on the indexes and split by cause through the composition

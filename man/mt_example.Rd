@@ -30,7 +30,11 @@ model with Gompertz-Makeham age pattern, a random walk with drift for the
 period index, and a population with cohort-size waves. Deaths are Poisson
 draws. By default deaths are reported in 5-year age groups with an open
 90+ interval and exposures in single years of age with an open 100+
-interval, as in many official statistics.
+interval, as in many official statistics. A model fits these data after
+the deaths are ungrouped (\code{\link[=mt_ungroup]{mt_ungroup()}} or \code{step_ungroup()}) or all
+tables are aggregated to common age groups (\code{\link[=mt_regroup]{mt_regroup()}}); the
+examples of the other help pages pass \code{deaths = "single"} (deaths in
+single years of age) so that every model fits them directly.
 }
 \details{
 The true rates on the default grid are attached as attribute \code{"truth"}

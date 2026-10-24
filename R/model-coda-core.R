@@ -504,11 +504,15 @@ index_arima_fit <- function(k, order, drift = TRUE) {
   p <- order[1]
   q <- order[3]
   res <- as.numeric(stats::residuals(fit))
+  # the first d residuals come from the diffuse initialisation of the
+  # differenced model and are near zero; innovations and bootstrap pool
+  # leave them out
+  innov <- res[(d + 1):n]
   list(order = order, drift = use_drift,
        phi = if (p) unname(cf[paste0("ar", seq_len(p))]) else numeric(),
        theta = if (q) unname(cf[paste0("ma", seq_len(q))]) else numeric(),
        const = if (use_drift) unname(cf[["drift"]]) else if (d == 0) unname(cf[["intercept"]]) else 0,
-       k = k, innov = res[(d + 1):n], pool = res - mean(res), sigma = sqrt(sum(res^2) / max(n - d - length(cf), 1)),
+       k = k, innov = innov, pool = innov - mean(innov), sigma = sqrt(sum(res^2) / max(n - d - length(cf), 1)),
        coef = cf, fallback = FALSE)
 }
 

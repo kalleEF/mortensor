@@ -136,8 +136,6 @@ pclm_irls <- function(y, C, o, B, pen, lambda, beta, maxit = 100L, tol = 1e-6, s
        se_eta = se_eta, converged = converged, iterations = it)
 }
 
-Matrix_diag <- function(x) Matrix::Diagonal(x = x)
-
 poisson_dev <- function(y, mu) {
   r <- ifelse(y > 0, y * log(y / mu), 0)
   2 * sum(r - (y - mu))

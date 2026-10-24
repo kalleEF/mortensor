@@ -16,7 +16,8 @@ lee_carter(
   rotation = c(e0_start = 80, e0_end = 102, power = 0.5),
   family = c("poisson", "nb"),
   dispersion = c("global", "age"),
-  jump_off_years = 1
+  jump_off_years = 1,
+  seed = NULL
 )
 }
 \arguments{
@@ -66,6 +67,14 @@ binomial; Delwarde, Denuit and Partrat 2007).}
 \item{jump_off_years}{For \code{jump_off = "observed"}: the number of last
 observed years whose mean log rates give the jump-off rates (default 1,
 the last year; 2 to 5 in Stoeldraijer et al. 2018).}
+
+\item{seed}{Random seed of the bootstrap resamples (\code{bootstrap = TRUE}).
+The resamples of each stratum come from its own random number stream,
+and these streams start from \code{seed}, so two fits with the same seed have
+the same bootstrap parameters with any number of cores. \code{NULL}
+(default): the streams start from the current generator
+(\code{\link[=set.seed]{set.seed()}}). The forecast draws have their own \code{seed} in
+\code{\link[=mt_forecast]{mt_forecast()}}.}
 }
 \value{
 A model specification.
@@ -108,7 +117,7 @@ deaths of the fitting period (semi-parametric bootstrap with fitted deaths
 of Renshaw and Haberman 2008), which adds the uncertainty of \code{a} and \code{b}.
 The bootstrap of Brouhns, Denuit and Van Keilegom (2005) resamples the
 observed deaths instead: \code{bootstrapped(lee_carter(), type = "data")}
-(\code{\link[=bootstrapped]{bootstrapped()}}).
+(\code{\link[=bootstrapped]{bootstrapped()}}). A \code{seed} makes the resamples reproducible.
 
 Age groups without deaths in the fitting period get a constant rate (0.5
 deaths over the period) and no trend; with \code{adjust = "e0"} they enter the

@@ -599,23 +599,11 @@ relative_eta_sub <- function(er, th, pr) {
   out
 }
 
-# Linear predictors of all cells (convergence criterion) and the kernel of
-# the total log-likelihood (eq. 25 without terms free of parameters)
+# Linear predictors of all cells (convergence criterion)
 relative_lp <- function(v, pr) {
   th <- relative_unpack(v, pr)
   er <- relative_eta_ref(th, pr)
   c(er, if (pr$ns > 0) relative_eta_sub(er, th, pr))
-}
-
-relative_kernel <- function(v, pr) {
-  th <- relative_unpack(v, pr)
-  er <- relative_eta_ref(th, pr)
-  l <- sum(pr$Dr * er - pr$Er * exp(er))
-  if (pr$ns > 0) {
-    es <- relative_eta_sub(er, th, pr)
-    l <- l + sum(pr$D * es - pr$E * exp(es))
-  }
-  l
 }
 
 # Starting values: the Poisson Lee-Carter fit of the reference (Brouhns et
