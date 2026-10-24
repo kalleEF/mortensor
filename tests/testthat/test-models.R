@@ -345,10 +345,12 @@ test_that("ensemble draws come from one component for all strata", {
 
 test_that("every kind of model can be an ensemble component", {
   x <- mt_example(deaths = "single", years = 2000:2019)
-  comps <- list(tucker3(ranks = c(2, 2, 2)), li_lee(common_by = "sex"), suppressWarnings(product_ratio()), ets_series(),
+  comps <- list(tucker3(ranks = c(2, 2, 2)), li_lee(common_by = "sex"), ets_series(),
                 bootstrapped(rwd(), n_boot = 2), ensemble(lee_carter(), rwd()),
                 tuned(function(w) rwd(drift_window = w), data.frame(w = c(5, 10)), inner_origins = 2, inner_h = 2))
-  if (requireNamespace("demography", quietly = TRUE)) comps <- c(comps, list(hyndman_ullah(order = 2)))
+  if (requireNamespace("demography", quietly = TRUE) && requireNamespace("forecast", quietly = TRUE)) {
+    comps <- c(comps, list(hyndman_ullah(order = 2), coherent_fdm(order1 = 2, order2 = 1)))
+  }
   if (requireNamespace("StMoMo", quietly = TRUE)) comps <- c(comps, list(stmomo("cbd")))
   for (cp in comps) {
     fc <- mt_forecast(mt_fit(ensemble(lc = lee_carter(), other = cp), x), h = 2, n_draws = 20, seed = 1,

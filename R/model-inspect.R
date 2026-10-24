@@ -13,7 +13,7 @@
 #'   "filtered"` also the filtered index of the last year `k_filtered`, its
 #'   standard error `se_k_filtered` and the state-space estimates
 #'   `filter_sigma`, `filter_lambda`, `filter_drift`;
-#' * [li_lee()], [product_ratio()]: the common factor of each group (`B`,
+#' * [li_lee()]: the common factor of each group (`B`,
 #'   `K`, its drift and standard deviation), per stratum the deviations
 #'   `a`, `b`, `k` and their AR(1) coefficient `phi` and standard deviation,
 #'   and the number of stratum factors fitted (`ratio_order`, stratum
@@ -180,9 +180,9 @@ calibration_parameters <- function(cal) {
                       parameter = rep(c("scale", "drift"), each = nrow(cal)),
                       index = rep(as.character(cal$horizon), 2), value = c(cal$scale, cal$drift)))
   }
-  data.table(stratum = rep(paste("calibration:", lab), 3),
-             parameter = rep(c("scale_h1", "slope", "drift"), each = nrow(cal)), index = "",
-             value = c(cal$scale_h1, cal$slope, cal$drift))
+  data.table(stratum = rep(paste("calibration:", lab), 2),
+             parameter = rep(c("scale_h1", "drift"), each = nrow(cal)), index = "",
+             value = c(cal$scale_h1, cal$drift))
 }
 
 # Parameters of each component of an ensemble (column `component`) and the
@@ -314,8 +314,7 @@ base_parameters <- function(fit, sp) {
     common <- rbindlist(lapply(seq_along(f$commons), function(g) {
       cm <- f$commons[[g]]
       gl <- sprintf("common %d (%s)", g, groups[g])
-      rbind(if (!is.null(cm$a) && f$base_type != "li_lee") row(gl, "A", ages, cm$a),
-            row(gl, "B", ages, cm$b), row(gl, "K", yrs, cm$k),
+      rbind(row(gl, "B", ages, cm$b), row(gl, "K", yrs, cm$k),
             row(gl, "drift_K", "", cm$drift), row(gl, "sd_K", "", cm$sigma_k))
     }))
     own <- rbindlist(lapply(seq_along(f$strata), function(s) {
@@ -595,11 +594,10 @@ print.summary.mt_fit <- function(x, ...) {
     cal <- x$calibration
     grp <- if (!is.null(cal$band) && any(cal$band != "all ages")) paste0(cal$group, ", ages ", cal$band) else cal$group
     ci <- if (!is.null(cal$scale_h1_lo)) sprintf(" (%.2f-%.2f)", cal$scale_h1_lo, cal$scale_h1_hi) else ""
-    # slope and drift are exactly 0 when they were not estimated
-    hz <- ifelse(cal$slope != 0, sprintf(" at horizon 1, x h^%.2f", cal$slope), " at all horizons")
+    # the drift is exactly 0 when it was not estimated
     dr <- ifelse(cal$drift != 0, sprintf("; drift %+.4f", cal$drift), "")
-    cat(sprintf(paste("  calibration (%s): spread factor %.2f%s%s%s; inner CRPS",
-                      "%.4f -> %.4f, 95%% coverage %.2f -> %.2f\n"), grp, cal$scale_h1, ci, hz, dr,
+    cat(sprintf(paste("  calibration (%s): spread factor %.2f%s at all horizons%s; inner CRPS",
+                      "%.4f -> %.4f, 95%% coverage %.2f -> %.2f\n"), grp, cal$scale_h1, ci, dr,
                 cal$crps_before, cal$crps_after, cal$cov95_before, cal$cov95_after), sep = "")
   }
   bad <- x$diagnostics[status != "ok" | nzchar(message)]
@@ -717,9 +715,7 @@ model_assumptions <- function(spec) {
                   "rates accumulates, so intervals are wide where deaths are few.")
          },
          mt_spec_multipop = paste(
-           if (p$type == "li_lee") "Li-Lee (Li and Lee 2005): log m(x,t,i) = a(x,i) + B(x) K(t) + b(x,i) k(t,i)." else
-             paste("Product-ratio, Lee-Carter version (deprecated; no published source, see coherent_fdm()):",
-                   "log m(x,t,i) = common Lee-Carter + a(x,i) + b(x,i) k(t,i)."),
+           "Li-Lee (Li and Lee 2005): log m(x,t,i) = a(x,i) + B(x) K(t) + b(x,i) k(t,i).",
            "The common factor (per group of `common_by`)",
            "follows a random walk with drift; each stratum's k(t,i) an AR(1) without intercept",
            "(|phi| <= 0.99, a bound of this package), independent across strata, so deviations from the common",

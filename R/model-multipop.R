@@ -39,9 +39,6 @@
 #' the model (see [recalibrated()], [ensemble()], or
 #' overdispersed models such as `stanmomo(family = "nb")`).
 #'
-#' `product_ratio()`, a Lee-Carter version of the product-ratio method, is
-#' deprecated; use [coherent_fdm()].
-#'
 #' @param ratio_order Number of stratum-specific factors. It is capped by
 #'   the number of age groups and the number of years minus 2, with a
 #'   warning (class `mt_warning_argument`) that names the requested and the
@@ -73,58 +70,11 @@
 #' @export
 li_lee <- function(ratio_order = 1, common_by = NULL, jump_off = c("fitted", "observed")) {
   jump_off <- match.arg(jump_off)
-  new_mt_spec("multipop", list(type = "li_lee", ratio_order = ratio_order, common_by = common_by,
-                               jump_off = jump_off), joint = TRUE,
+  new_mt_spec("multipop", list(ratio_order = ratio_order, common_by = common_by, jump_off = jump_off), joint = TRUE,
               min_periods = 8,
               label = paste0(if (is.null(common_by)) "Li-Lee" else sprintf("Li-Lee (common by %s)",
                                                                            paste(common_by, collapse = ", ")),
                              if (jump_off == "observed") ", observed jump-off" else ""))
-}
-
-#' Lee-Carter version of the product-ratio method (deprecated)
-#'
-#' **Deprecated.** `product_ratio()` replaces the functional data models of
-#' the product-ratio method of Hyndman, Booth and Yasmeen (2013) by
-#' Lee-Carter-type factors; this combination is a method of this package
-#' without a published source. Use [coherent_fdm()], the published
-#' product-ratio method. `product_ratio()` still works and warns (class
-#' `mt_warning_deprecated`).
-#'
-#' The geometric mean of the stratum rates (product) is modelled with a
-#' Lee-Carter-type factor (SVD of its log rates, period index a random walk
-#' with drift), and the ratio of each stratum to the product with factors
-#' whose indexes follow AR(1) processes without constant, bounded to
-#' `|phi| <= 0.99` (see [li_lee()]). Predictive draws add Poisson variation
-#' of the deaths given the rates and the exposures.
-#'
-#' @inheritParams li_lee
-#' @param ratio_order Number of stratum-specific (ratio) factors, capped as
-#'   in [li_lee()].
-#' @return A model specification.
-#' @references
-#' Hyndman RJ, Booth H, Yasmeen F (2013). Coherent mortality forecasting: the
-#' product-ratio method with functional time series models. *Demography*
-#' 50(1): 261-283.
-#'
-#' Lee R, Miller T (2001). Evaluating the performance of the Lee-Carter
-#' method for forecasting mortality. *Demography* 38(4): 537-549.
-#' @seealso [coherent_fdm()], [li_lee()].
-#' @examples
-#' sp <- suppressWarnings(product_ratio())
-#' # the published method:
-#' if (requireNamespace("demography", quietly = TRUE)) {
-#'   x <- mt_example(deaths = "single", years = 1990:2019)
-#'   fit <- mt_fit(coherent_fdm(order1 = 2, order2 = 1), x)
-#' }
-#' @export
-product_ratio <- function(ratio_order = 1, jump_off = c("fitted", "observed")) {
-  mt_warn(paste("product_ratio() is deprecated: this Lee-Carter version of the product-ratio method has no",
-                "published source. Use coherent_fdm(), the product-ratio method of Hyndman, Booth and Yasmeen",
-                "(2013)."), class = "deprecated")
-  jump_off <- match.arg(jump_off)
-  new_mt_spec("multipop", list(type = "product_ratio", ratio_order = ratio_order, jump_off = jump_off), joint = TRUE,
-              min_periods = 8,
-              label = paste0("Product-ratio", if (jump_off == "observed") ", observed jump-off" else ""))
 }
 
 #' @export
@@ -145,13 +95,9 @@ fit_model.mt_spec_multipop <- function(spec, D, E, ages, periods, strata = NULL,
   commons <- lapply(seq_len(max(group)), function(g) {
     use <- group == g & pool
     if (!any(use)) use <- group == g
-    if (p$type == "li_lee") {
-      lc_svd(apply(D[, , use, drop = FALSE], 1:2, sum), apply(E[, , use, drop = FALSE], 1:2, sum))
-    } else {
-      lc_from_log(apply(y[, , use, drop = FALSE], 1:2, mean))
-    }
+    lc_svd(apply(D[, , use, drop = FALSE], 1:2, sum), apply(E[, , use, drop = FALSE], 1:2, sum))
   })
-  base_of <- function(cm) if (p$type == "li_lee") outer(cm$b, cm$k) else cm$a + outer(cm$b, cm$k)
+  base_of <- function(cm) outer(cm$b, cm$k)
   # stratum factors: at most one per age group and the number of years minus 2
   r <- min(p$ratio_order, nrow(D), ncol(D) - 2)
   if (r != p$ratio_order) {
@@ -168,15 +114,13 @@ fit_model.mt_spec_multipop <- function(spec, D, E, ages, periods, strata = NULL,
     ar <- lapply(seq_len(r), function(j) ar1_fit(k[, j]))
     list(a = a, b = b, k = k, ar = ar)
   })
-  if (p$type == "li_lee") {
-    bound <- vapply(strata_fits, function(st) any(vapply(st$ar, `[[`, logical(1), "bounded")), logical(1))
-    if (any(bound)) {
-      who <- if (!is.null(strata$label)) strata$label[bound] else which(bound)
-      mt_warn(sprintf(paste("Li-Lee: the AR(1) coefficient of the stratum index is bounded at |phi| = 0.99 in %d",
-                            "stratum/strata (%s): their deviations from the common trend are close to a unit root",
-                            "and revert very slowly; coherence may not suit them."), sum(bound),
-                      paste(utils::head(who, 5), collapse = ", ")), class = "li_lee")
-    }
+  bound <- vapply(strata_fits, function(st) any(vapply(st$ar, `[[`, logical(1), "bounded")), logical(1))
+  if (any(bound)) {
+    who <- if (!is.null(strata$label)) strata$label[bound] else which(bound)
+    mt_warn(sprintf(paste("Li-Lee: the AR(1) coefficient of the stratum index is bounded at |phi| = 0.99 in %d",
+                          "stratum/strata (%s): their deviations from the common trend are close to a unit root",
+                          "and revert very slowly; coherence may not suit them."), sum(bound),
+                    paste(utils::head(who, 5), collapse = ", ")), class = "li_lee")
   }
   fitted <- array(NA_real_, dim(D))
   for (s in seq_len(ns)) {
@@ -186,21 +130,7 @@ fit_model.mt_spec_multipop <- function(spec, D, E, ages, periods, strata = NULL,
   nt <- dim(D)[2]
   jump <- if (identical(p$jump_off, "observed")) y[, nt, , drop = TRUE] - log(fitted[, nt, , drop = TRUE]) else NULL
   if (!is.null(jump)) jump <- matrix(jump, dim(D)[1], ns)
-  list(commons = commons, group = group, base_type = p$type, strata = strata_fits, fitted = fitted, jump = jump,
-       ratio_order = r)
-}
-
-# Lee-Carter by SVD of a matrix of log rates (no second-stage refit of k)
-lc_from_log <- function(y) {
-  a <- rowMeans(y)
-  s <- svd(y - a, nu = 1, nv = 1)
-  b <- s$u[, 1]
-  k <- s$d[1] * s$v[, 1]
-  if (sum(b) < 0) {
-    b <- -b
-    k <- -k
-  }
-  lc_finish(a, b, k)
+  list(commons = commons, group = group, strata = strata_fits, fitted = fitted, jump = jump, ratio_order = r)
 }
 
 # AR(1) without constant, least squares through the origin; the coefficient
@@ -227,7 +157,6 @@ simulate_model.mt_spec_multipop <- function(spec, fit, h, n_draws, ...) {
       g <- fit$group[s]
       cm <- fit$commons[[g]]
       base <- outer(cm$b, kps[[g]][1, , j])
-      if (fit$base_type == "product_ratio") base <- base + cm$a
       st <- fit$strata[[s]]
       kk <- vapply(st$ar, function(a) {
         v <- numeric(h)

@@ -143,11 +143,6 @@
 #' 7 cells by default; here both parameters are chosen by BIC with a knot
 #' every `kr` years and periods.
 #'
-#' The methods `"hyman_kannisto"`, `"natural_gompertz"` and `"gam"` are
-#' deprecated: they are heuristics of this package without a published
-#' source. They still work, with a warning of class
-#' `mt_warning_deprecated`.
-#'
 #' In backtests use `step_ungroup()` so that ungrouping, in particular in 2D,
 #' sees only the training window.
 #'
@@ -158,21 +153,15 @@
 #'   set (with [mt_set_grid()] or `step_grid()`) and is finer than the data,
 #'   otherwise single years of age from the lowest age to the start of the
 #'   open interval.
-#' @param dims 1 or 2 (for `method = "pclm"`; `"gam"` is always 2D, the
-#'   other methods 1D). The 2D PCLM takes about 10 seconds per stratum on
-#'   the package example (`mt_example()`: 13 age groups, 71 grid ages, 30
-#'   years).
+#' @param dims 1 or 2 (for `method = "pclm"`; `"monotone"` is 1D). The 2D
+#'   PCLM takes about 10 seconds per stratum on the package example
+#'   (`mt_example()`: 13 age groups, 71 grid ages, 30 years).
 #' @param method Method for deaths: `"pclm"` (default), or `"monotone"`, the
 #'   monotone cubic interpolation of Hyman (1983) of the cumulative deaths
 #'   (counts only, 1D, ignores exposures; group totals reproduced exactly).
-#'   Deprecated, without a published source: `"hyman_kannisto"` (monotone
-#'   spline of log group rates with a Kannisto tail), `"natural_gompertz"`
-#'   (natural spline with a log-linear tail) and `"gam"` (2D tensor-product
-#'   GAM of log group rates over age and year with a Kannisto tail, package
-#'   mgcv); they need exposures on the grid and rescale to the
-#'   exposure-weighted group rates. The vignette "Ungrouping age groups:
-#'   methods and diagnostics" compares methods on data with known single
-#'   years; [mt_plot_ungroup()] and [mt_ungroup_check()] check a result.
+#'   The vignette "Ungrouping age groups: methods and diagnostics" compares
+#'   methods on data with known single years; [mt_plot_ungroup()] and
+#'   [mt_ungroup_check()] check a result.
 #' @param exposure_method `"pclm"` or `"monotone"` (Hyman 1983).
 #' @param lambda Fixed smoothing parameter(s); `NULL` selects them by
 #'   `criterion`, for the deaths. The ungrouping of grouped exposures and the
@@ -189,11 +178,6 @@
 #'   when deaths are ungrouped as rates: `"pclm"` (default, the PCLM of the
 #'   exposures, Rizzi, Gampe and Eilers 2015) or `"stationary"`
 #'   (package-specific stationary-population weights); see Details.
-#' @param tail,tail_width For the deprecated `method = "gam"`: the parametric
-#'   curve that takes over from the GAM above the start of the last age group
-#'   (`"kannisto"`, logistic, or `"gompertz"`, log-linear), fitted to the GAM
-#'   rates from age 70, and the width (years) of the logistic blend between
-#'   the two.
 #' @return An `mt_data` object with deaths (and exposures) on the grid.
 #'   Diagnostics per fit are attached as attribute `"ungroup"`: smoothing
 #'   parameters, effective dimension, the largest relative difference between
@@ -230,28 +214,22 @@
 #' ut <- mt_ungroup(x, preserve_totals = TRUE)
 #' @export
 mt_ungroup <- function(data, age = NULL, dims = 1,
-                       method = c("pclm", "monotone", "hyman_kannisto", "natural_gompertz", "gam"),
+                       method = c("pclm", "monotone"),
                        exposure_method = c("pclm", "monotone"),
                        lambda = NULL,
                        criterion = c("bic", "aic"), kr = 2, deg = 3, pord = 2,
-                       lambda_range = c(1e-2, 1e8), preserve_totals = FALSE, open_split = c("pclm", "stationary"),
-                       tail = c("kannisto", "gompertz"), tail_width = 2) {
+                       lambda_range = c(1e-2, 1e8), preserve_totals = FALSE, open_split = c("pclm", "stationary")) {
   check_class(data, "mt_data", "data")
   method <- match.arg(method)
   open_split <- match.arg(open_split)
-  tail <- match.arg(tail)
-  check_number(tail_width, "tail_width", lower = 0.1)
   exposure_method <- match.arg(exposure_method)
   criterion <- match.arg(criterion)
   check_number(dims, "dims", lower = 1, upper = 2, integerish = TRUE)
   if (!is.logical(preserve_totals) || length(preserve_totals) != 1L || is.na(preserve_totals)) {
     mt_abort("`preserve_totals` must be TRUE or FALSE.", class = "argument")
   }
-  if (method %in% c("hyman_kannisto", "natural_gompertz", "gam")) {
-    warn_deprecated_ungroup(sprintf("mt_ungroup(method = \"%s\")", method))
-  }
-  if (dims == 2 && method %in% c("monotone", "hyman_kannisto", "natural_gompertz")) {
-    mt_warn(sprintf("dims = 2 is ignored by method = \"%s\", which works per stratum and period.", method),
+  if (dims == 2 && method == "monotone") {
+    mt_warn("dims = 2 is ignored by method = \"monotone\", which works per stratum and period.",
             class = "ungroup_dims")
   }
   g <- mt_grid(data)
@@ -276,13 +254,6 @@ mt_ungroup <- function(data, age = NULL, dims = 1,
     E <- data$obs$exposure
     if (method == "monotone") {
       res <- ungroup_counts_1d(data$obs$deaths, g, data$omega, ctl, "monotone", "deaths")
-    } else if (method %in% c("hyman_kannisto", "natural_gompertz", "gam")) {
-      if (is.null(E) || needs_ungroup(E, g)) {
-        mt_abort(sprintf("method = \"%s\" needs exposures on the grid.", method), class = "ungroup")
-      }
-      res <- list(obs = ungroup_rates_spline(data$obs$deaths, E, g, data$omega, method, tail, tail_width),
-                  diag = data.table(measure = "deaths", stratum = NA_integer_, period = "all", method = method,
-                                    at_bound = FALSE))
     } else if (!is.null(E) && !needs_ungroup(E, g)) {
       res <- ungroup_rates(data$obs$deaths, E, g, data$omega, ctl, dims)
     } else {
@@ -311,14 +282,6 @@ mt_ungroup <- function(data, age = NULL, dims = 1,
   data$grid <- g
   attr(data, "ungroup") <- dg
   data
-}
-
-# Warning for the deprecated ungrouping and disaggregation heuristics
-warn_deprecated_ungroup <- function(what, alternative = NULL) {
-  alternative <- alternative %||% paste("the penalized composite link model (method = \"pclm\") or the monotone cubic",
-                                        "interpolation of cumulative counts of Hyman (1983) (method = \"monotone\")")
-  mt_warn(sprintf("%s is deprecated: it is a heuristic of this package without a published source. Use %s.",
-                  what, alternative), class = "deprecated", call = NULL)
 }
 
 needs_ungroup <- function(obs, g) {

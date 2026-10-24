@@ -15,11 +15,10 @@
 #'    \deqn{\log m^* = \tilde m + b\,h + s(h)\,(\log m - \tilde m),}
 #'    where \eqn{\tilde m} is the median of the draws in the cell, \eqn{h} the
 #'    horizon, \eqn{s(h)} a spread factor, one value \eqn{s_1} for all
-#'    horizons (`scale = "constant"`, default) or \eqn{s_1 h^{\gamma}}
-#'    (`scale = "horizon"`, deprecated), held constant beyond the longest horizon of the
-#'    window, or one value \eqn{s_h} for each horizon (`scale =
-#'    "per_horizon"`), and \eqn{b} a correction of the drift per year (`bias =
-#'    TRUE`; with `scale = "per_horizon"` one \eqn{b_h} for each horizon);
+#'    horizons (`scale = "constant"`, default) or one value \eqn{s_h} for
+#'    each horizon (`scale = "per_horizon"`), and \eqn{b} a correction of
+#'    the drift per year (`bias = TRUE`; with `scale = "per_horizon"` one
+#'    \eqn{b_h} for each horizon);
 #' 3. the parameters minimise the mean CRPS (or the interval score,
 #'    `target`) of the log death rates in the window, with the Poisson (or
 #'    the model's negative binomial) variation of the observed deaths, as in
@@ -138,9 +137,8 @@
 #' few origins reach therefore get narrow intervals; a long `years` with
 #' `n_origins = years - 1` gives each horizon more origins.
 #'
-#' **Package-specific options** (reference unknown): the power law of the
-#' spread factor over the horizon (`scale = "horizon"`), the correction of
-#' the drift (`bias = TRUE`), separate factors for age bands (`ages`) and
+#' **Package-specific options** (reference unknown): the correction of the
+#' drift (`bias = TRUE`), separate factors for age bands (`ages`) and
 #' calibration on life expectancy or the age-standardised rate (`quantity`).
 #' The drift correction and the age bands have published analogues of
 #' another form. EMOS corrects the bias of the forecasts in its predictive
@@ -156,29 +154,27 @@
 #' that the user chooses.
 #'
 #' **Estimation.** The parameters are bounded: \eqn{s_1} (and \eqn{s_h})
-#' between 0.1 and 20, \eqn{\gamma} between -1 and 1, and \eqn{b} between
-#' -0.05 and 0.05 (log rate per year). With one parameter (`scale =
-#' "constant"` or, for each horizon, `"per_horizon"`, with `bias = FALSE`)
-#' the log factor is found by [stats::optimize()] within its bounds;
-#' otherwise the parameters are found by Nelder-Mead ([stats::optim()],
-#' relative tolerance 1e-6, at most 300 iterations), started at
-#' \eqn{s_1 = 1}, \eqn{\gamma = 0}, \eqn{b = 0}, with values outside the
-#' bounds rejected. The observation noise of the scored forecasts is
-#' simulated once (common random numbers), so the score is a deterministic
-#' function of the parameters. In this calibration sample, cells with 50 or
-#' more expected deaths get Poisson deaths from the normal approximation
-#' (mean and variance equal to the expected deaths, truncated at zero); the
-#' other cells get quantiles of the Poisson or negative binomial
-#' distribution (package-specific, reference unknown).
+#' between 0.1 and 20, and \eqn{b} between -0.05 and 0.05 (log rate per
+#' year). With one parameter (`scale = "constant"` or, for each horizon,
+#' `"per_horizon"`, with `bias = FALSE`) the log factor is found by
+#' [stats::optimize()] within its bounds; otherwise the parameters are
+#' found by Nelder-Mead ([stats::optim()], relative tolerance 1e-6, at most
+#' 300 iterations), started at \eqn{s_1 = 1} and \eqn{b = 0}, with values
+#' outside the bounds rejected. The observation noise of the scored
+#' forecasts is simulated once (common random numbers), so the score is a
+#' deterministic function of the parameters. In this calibration sample,
+#' cells with 50 or more expected deaths get Poisson deaths from the normal
+#' approximation (mean and variance equal to the expected deaths, truncated
+#' at zero); the other cells get quantiles of the Poisson or negative
+#' binomial distribution (package-specific, reference unknown).
 #'
 #' **Long horizons.** The parameters are estimated on horizons 1 to
 #' \eqn{h_{max}}, the distance from the first origin to the last training
-#' year (10 years with the defaults). With `scale = "constant"` or
-#' `"horizon"`, the spread factor and the drift correction are held at
-#' their values at \eqn{h_{max}} beyond it. A forecast more than twice as
-#' long as \eqn{h_{max}} gives a warning (class `mt_warning_recalibrate`),
-#' because nothing in the training data shows how the spread of the model
-#' is wrong at such horizons. With the defaults this concerns forecasts of
+#' year (10 years with the defaults). With `scale = "constant"`, the spread
+#' factor and the drift correction of \eqn{h_{max}} are used beyond it. A
+#' forecast more than twice as long as \eqn{h_{max}} gives a warning (class
+#' `mt_warning_recalibrate`), because nothing in the training data shows
+#' how the spread of the model is wrong at such horizons. With the defaults this concerns forecasts of
 #' more than 20 years (`mt_forecast()` forecasts 10 by default); give a
 #' longer `years` for long projections, or accept the constant factor. The
 #' per-horizon methods stop instead (see above).
@@ -246,9 +242,7 @@
 #'   `years - 1`). The per-horizon methods need two origins at each
 #'   forecast horizon (see "Factors per horizon").
 #' @param scale `"constant"` (default: one spread factor \eqn{s_1} for all
-#'   horizons), `"per_horizon"` (one factor for each horizon) or the
-#'   deprecated `"horizon"` (spread factor \eqn{s_1 h^{\gamma}},
-#'   package-specific; use `"per_horizon"`).
+#'   horizons) or `"per_horizon"` (one factor for each horizon).
 #' @param bias Estimate a correction of the drift (log rate per year;
 #'   package-specific; with `scale = "per_horizon"` one for each horizon).
 #' @param target `"crps"` or `"interval"` (interval score at `level`).
@@ -272,13 +266,13 @@
 #'   arguments keep their defaults.
 #' @return A model specification. The fitted object has a `calibration`
 #'   element: a `data.table` with one row per group and age band
-#'   (`scale_h1`, `slope`, `drift`, the number of observed cells and of
+#'   (`scale_h1`, `drift`, the number of observed cells and of
 #'   scored values, the number of inner forecasts (stratum x origin), CRPS
 #'   and coverage of the inner forecasts before and after calibration, and
 #'   with `n_boot` the intervals `scale_h1_lo`, `scale_h1_hi`, ...). With
 #'   `scale = "per_horizon"` it has one row per group, age band and horizon,
 #'   with `horizon`, `origins` (inner origins of the horizon), `scale` and
-#'   `drift` in place of `scale_h1`, `slope` and `drift` (and `scale_lo`,
+#'   `drift` in place of `scale_h1` and `drift` (and `scale_lo`,
 #'   `scale_hi`, ... with `n_boot`). With `method = "errors"` it has one row
 #'   per horizon: `horizon`, `origins` (error vectors), `cells` (ages x
 #'   strata of each vector), `mean_error`, `tuning` (\eqn{\pi_h}) and
@@ -328,17 +322,12 @@
 #' fe$calibration
 #' fce <- mt_forecast(fe, h = 5, n_draws = 100, seed = 1)
 #' @export
-recalibrated <- function(spec, years = 10, n_origins = 5, scale = c("constant", "horizon", "per_horizon"),
+recalibrated <- function(spec, years = 10, n_origins = 5, scale = c("constant", "per_horizon"),
                          bias = FALSE, target = c("crps", "interval"), level = 0.95, by = NULL, n_draws = 100,
                          seed = 1, ages = NULL, quantity = c("rate", "life_expectancy", "asr"), n_boot = 0,
                          method = c("spread", "errors")) {
   check_class(spec, "mt_spec", "spec")
   scale <- match.arg(scale)
-  if (identical(scale, "horizon")) {
-    mt_warn(paste("`scale = \"horizon\"` (a power law of the factor over the horizon, package-specific) is",
-                  "deprecated; use `scale = \"per_horizon\"`, one factor for each horizon (Gneiting et al. 2005)."),
-            class = "deprecated")
-  }
   target <- match.arg(target)
   quantity <- match.arg(quantity)
   method <- match.arg(method)
@@ -736,7 +725,6 @@ calibration_fit_per_horizon <- function(pieces, p, n_draws, where = "") {
     }
     r <- calibration_fit(stack_pieces(ph, n_draws), "constant", p$bias, p$target %||% "crps", p$level %||% 0.95)
     tab <- r$table
-    set(tab, j = "slope", value = NULL)
     setnames(tab, "scale_h1", "scale")
     tab <- cbind(data.table(horizon = hv, origins = n_o), tab, data.table(forecasts = length(ph)))
     if ((p$n_boot %||% 0) > 0) {
@@ -803,9 +791,8 @@ calibration_shift <- function(theta, h, scale, bias, h_max = Inf) {
     return(list(s = exp(th[h, 1]), b = if (bias) th[h, 2] * h else 0))
   }
   hc <- pmin(h, h_max)
-  s <- exp(theta[1] + if (scale == "horizon") theta[2] * log(hc) else 0)
   b <- if (bias) theta[length(theta)] * hc else 0
-  list(s = s, b = b)
+  list(s = exp(theta[1]), b = b)
 }
 
 # Log rates of the observed cells under parameters theta, with observation noise
@@ -840,9 +827,9 @@ interval_score <- function(X, y, level) {
 }
 
 calibration_fit <- function(P, scale, bias, target = "crps", level = 0.95, summary = TRUE) {
-  k <- 1 + (scale == "horizon") + bias
-  lower <- c(log(0.1), if (scale == "horizon") -1, if (bias) -0.05)
-  upper <- c(log(20), if (scale == "horizon") 1, if (bias) 0.05)
+  k <- 1 + bias
+  lower <- c(log(0.1), if (bias) -0.05)
+  upper <- c(log(20), if (bias) 0.05)
   f <- function(theta) {
     if (any(theta < lower | theta > upper)) return(1e10)
     sc <- calibration_scored(calibration_sample(theta, P, scale, bias), P)
@@ -863,9 +850,8 @@ calibration_fit <- function(P, scale, bias, target = "crps", level = 0.95, summa
   b0 <- summ(rep(0, k))
   b1 <- summ(theta)
   list(theta = theta, table = data.table(
-    scale_h1 = exp(theta[1]), slope = if (scale == "horizon") theta[2] else 0,
-    drift = if (bias) theta[k] else 0, cells = length(P$y), scored = b0[["n"]], crps_before = b0[["crps"]],
-    crps_after = b1[["crps"]], cov80_before = b0[["cov80"]], cov80_after = b1[["cov80"]],
+    scale_h1 = exp(theta[1]), drift = if (bias) theta[k] else 0, cells = length(P$y), scored = b0[["n"]],
+    crps_before = b0[["crps"]], crps_after = b1[["crps"]], cov80_before = b0[["cov80"]], cov80_after = b1[["cov80"]],
     cov95_before = b0[["cov95"]], cov95_after = b1[["cov95"]]))
 }
 
@@ -876,12 +862,11 @@ calibration_boot <- function(pieces, p, n_draws) {
     gp <- pieces[sample.int(length(pieces), replace = TRUE)]
     calibration_fit(stack_pieces(gp, n_draws), p$scale, p$bias, p$target %||% "crps", p$level %||% 0.95,
                     summary = FALSE)$theta
-  }, numeric(1 + (p$scale == "horizon") + p$bias)))
+  }, numeric(1 + p$bias)))
   if (nrow(th) == 1L && length(th) > 1L) th <- t(th)
   q <- function(v) stats::quantile(v, c(0.025, 0.975), names = FALSE)
   k <- ncol(th)
   out <- data.table(scale_h1_lo = exp(q(th[, 1]))[1], scale_h1_hi = exp(q(th[, 1]))[2])
-  if (p$scale == "horizon") out[, `:=`(slope_lo = q(th[, 2])[1], slope_hi = q(th[, 2])[2])]
   if (p$bias) out[, `:=`(drift_lo = q(th[, k])[1], drift_hi = q(th[, k])[2])]
   out
 }

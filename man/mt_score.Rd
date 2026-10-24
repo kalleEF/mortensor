@@ -40,19 +40,37 @@ intervals with their mean half-widths; with \code{by = c("model", "horizon")} th
 intervals (Raftery et al. 2013, Table 1);
 \item \code{"revision"}: the mean absolute revision, the absolute change of the
 forecast median of a cell (stratum, age group, year) between
-consecutive origins of the backtest, for every cell forecast from both.
-Stoeldraijer et al. (2013) name robustness as a purpose of a forecast:
-small changes in the observations when the data are updated should
-result in only modest changes in the forecasts. Stoeldraijer et al.
-(2018) measure it by the standard deviation of the changes of the
-forecast for one target year between successive fitting periods. The
-mean absolute revision over all cells forecast from consecutive
-origins, each of which adds a year of data with the default origins,
-is a package-specific summary of these changes (reference unknown).
-A revision belongs to the later
-origin and its horizon; the first origin has none. Origins further
-apart than one year (for example \code{origins = c(2005, 2007)}) give
-revisions over several years of data.
+consecutive origins of the backtest, for every cell forecast from
+both. It is a summary of this package (reference unknown).
+Stoeldraijer et al. (2013) name robustness as a purpose of a
+forecast: small changes in the observations when the data are
+updated should result in only modest changes in the forecasts. A
+revision belongs to the later origin and its horizon; the first
+origin has none. Origins further apart than one year (for example
+\code{origins = c(2005, 2007)}) give revisions over several years of
+data. The published measure of robustness is \code{"robustness"};
+\item \code{"robustness"}: the robustness of Stoeldraijer et al. (2018), "the
+standard deviation (SD) of the increase/decrease" of the forecast of
+one target year over successive forecasts, each with one more year
+of data; a lower standard deviation means a more robust forecast.
+They forecast life expectancy at age 65 in 2020 from the fitting
+periods 1960-2005, ..., 1960-2014. Here, for each cell (stratum, age
+group, target year and target), it is the sample standard deviation
+(\code{\link[stats:sd]{stats::sd()}}) of the revisions of the forecast median between
+consecutive origins (as for \code{"revision"}), for cells with at least
+two revisions (\code{NA} otherwise); the column \code{robustness} is the mean
+of these standard deviations over the cells of a group, each cell
+counted once. With one stratum, \code{target = "life_expectancy"} and one
+target year (\code{by = c("model", "period")}) this is the published
+measure; the mean over several cells is package-specific (reference
+unknown). The revisions of a cell span several origins and horizons,
+so \code{by} cannot contain \code{"horizon"} or \code{"origin"}: group by the target
+year (\code{"period"}). The target years of a backtest are observed
+years, so the origins and \code{h} must reach them from every origin: for
+example \code{origins = 2005:2014} and \code{h = 10} forecast 2015 from all ten
+origins, one year apart like the fitting periods of the paper. The
+life expectancy of a backtest is that at the first age of the grid,
+so at age 65 for data from age 65.
 }}
 }
 \value{
@@ -62,11 +80,16 @@ root mean squared error of the median (\code{rmse}), MASE
 change of the training data, as the mean absolute scaled error of
 Hyndman and Koehler 2006; rates only), empirical coverage
 of the 50\%, 80\% and 95\% intervals, mean PIT, the number of scored
-cells and the \code{unit} of CRPS, WIS and absolute error (log rates, or
-years for life expectancy). Backtests of the same model with different
+cells (\code{n}), the number of them whose observed deaths were floored at
+half a death (\code{n_floored}, see \code{\link[=mt_backtest]{mt_backtest()}}; \code{NA} for targets other
+than \code{"rate"} and for backtest tables without the column \code{floored})
+and the \code{unit} of CRPS, WIS and absolute error (log rates, or years for
+life expectancy). The scores of floored cells can
+dominate the means of sparse data; the derived quantities and coarser
+age groups avoid the floor. Backtests of the same model with different
 preprocessing (column \code{prep}) are scored separately. With \code{measures},
-the columns \code{sape}, \code{cov90}, \code{hw80}, \code{hw90}, \code{hw95} and \code{revision}
-follow.
+the columns \code{sape}, \code{cov90}, \code{hw80}, \code{hw90}, \code{hw95}, \code{revision} and
+\code{robustness} follow.
 }
 \description{
 Summarise backtest scores
@@ -81,6 +104,10 @@ bl <- mt_backtest(rwd(), x, origins = 2004:2007, h = 5, n_draws = 100,
                   quantities = "life_expectancy")
 mt_score(bl, by = c("model", "horizon"), target = "life_expectancy",
          measures = c("sape", "cov90", "revision"))
+# robustness (Stoeldraijer et al. 2018) of each target year: 2008 and
+# 2009 are forecast from all four origins
+mt_score(bl, by = c("model", "period"), target = "life_expectancy",
+         measures = "robustness")
 }
 \references{
 Hyndman RJ, Koehler AB (2006). Another look at measures of forecast

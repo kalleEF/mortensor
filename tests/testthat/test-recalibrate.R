@@ -13,16 +13,15 @@ test_that("the calibration estimator recovers a known spread factor", {
   expect_gt(r$table$cov95_after, 0.9)
   ri <- mortensor:::calibration_fit(P, "constant", FALSE, target = "interval", level = 0.9)
   expect_equal(ri$table$scale_h1, 2, tolerance = 0.2)
-  rh <- mortensor:::calibration_fit(P, "horizon", TRUE)
-  expect_equal(abs(rh$table$slope) < 0.3, TRUE)
-  expect_lt(abs(rh$table$drift), 0.02)
+  rb <- mortensor:::calibration_fit(P, "constant", TRUE)
+  expect_equal(rb$table$scale_h1, 2, tolerance = 0.15)
+  expect_lt(abs(rb$table$drift), 0.02)
 })
 
 test_that("the transformation keeps the median and the ranks of the draws", {
-  sh <- mortensor:::calibration_shift(c(log(2), 0), 1:3, "horizon", FALSE)
-  expect_equal(sh$s, rep(2, 3))
-  shc <- mortensor:::calibration_shift(c(0, 0.5), c(1, 4, 16), "horizon", FALSE, h_max = 4)
-  expect_equal(shc$s, c(1, 2, 2))
+  sh <- mortensor:::calibration_shift(log(2), 1:3, "constant", FALSE)
+  expect_equal(sh$s, 2)
+  expect_equal(sh$b, 0)
   sh0 <- mortensor:::calibration_shift(0, 1:3, "constant", FALSE)
   expect_equal(sh0$s, 1)
   expect_equal(sh0$b, 0)
@@ -37,9 +36,8 @@ test_that("recalibrated() wraps any model and forecasts on the grid", {
   expect_identical(sp$params$scale, "constant")
   r <- expect_mt_model(sp, data = x, n_draws = 20)
   cal <- r$fit$calibration
-  expect_true(all(c("group", "scale_h1", "slope", "drift", "crps_before", "crps_after", "cov95_after") %in%
-                    names(cal)))
-  expect_equal(cal$slope, 0)
+  expect_true(all(c("group", "scale_h1", "drift", "crps_before", "crps_after", "cov95_after") %in% names(cal)))
+  expect_equal(cal$drift, 0)
   expect_lte(cal$crps_after, cal$crps_before + 1e-12)
   expect_equal(r$fit$calibration_origins, c(2010, 2012, 2014))
   expect_identical(r$fc$model, "Lee-Carter, recalibrated")
@@ -56,6 +54,8 @@ test_that("recalibrated() wraps any model and forecasts on the grid", {
   expect_identical(recalibrated(rwd(), target = "interval", level = 0.9)$label,
                    "Random walk with drift, recalibrated (90% interval)")
   expect_error(recalibrated(lee_carter(), years = 1), class = "mt_error_argument")
+  # the power law of the factor over the horizon was removed in 0.3.0
+  expect_error(recalibrated(lee_carter(), scale = "horizon"), class = "simpleError")
   expect_error(mt_fit(recalibrated(lee_carter(), years = 6, by = "region", n_draws = 30), x),
                class = "mt_error_argument")
   expect_warning(mt_fit(recalibrated(lee_carter(), years = 20, n_draws = 20), x), class = "mt_warning_calibration")
@@ -107,11 +107,10 @@ test_that("recalibrated() estimates factors by age band and on life expectancy",
 
 test_that("recalibrated() reports intervals of the factors and damps the drift", {
   x <- mt_example(deaths = "single", years = 1985:2015)
-  expect_warning(spec <- recalibrated(lee_carter(), years = 6, n_origins = 3, n_draws = 30, n_boot = 5,
-                                      scale = "horizon"), class = "mt_warning_deprecated")
+  spec <- recalibrated(lee_carter(), years = 6, n_origins = 3, n_draws = 30, n_boot = 5, bias = TRUE)
   fit <- mt_fit(spec, x)
   cal <- fit$calibration
-  expect_true(all(c("scale_h1_lo", "scale_h1_hi", "slope_lo", "slope_hi") %in% names(cal)))
+  expect_true(all(c("scale_h1_lo", "scale_h1_hi", "drift_lo", "drift_hi") %in% names(cal)))
   expect_lte(cal$scale_h1_lo, cal$scale_h1_hi)
   expect_output(print(summary(fit)), "spread factor .* \\(")
   sh <- mortensor:::calibration_shift(c(0, 0.02), 1:20, "constant", TRUE, h_max = 8)
@@ -128,9 +127,10 @@ test_that("recalibrated() warns when the forecast is much longer than the calibr
   expect_no_warning(mt_forecast(fit, h = 8, n_draws = 20, seed = 1), class = "mt_warning_recalibrate")
   expect_warning(mt_forecast(fit, h = 9, n_draws = 20, seed = 1), class = "mt_warning_recalibrate")
   expect_warning(mt_forecast(fit, to = 2026, n_draws = 20, seed = 1), class = "mt_warning_recalibrate")
-  # beyond the calibrated horizons the factor of horizon 4 is kept
-  sh <- mortensor:::calibration_shift(c(log(1.5), 0.2), 1:9, "horizon", FALSE, h_max = 4)
-  expect_equal(sh$s[5:9], rep(1.5 * 4^0.2, 5))
+  # beyond the calibrated horizons the factor and the drift correction of horizon 4 are kept
+  sh <- mortensor:::calibration_shift(c(log(1.5), 0.02), 1:9, "constant", TRUE, h_max = 4)
+  expect_equal(sh$s, 1.5)
+  expect_equal(sh$b[4:9], rep(0.08, 6))
 })
 
 # Inner forecasts of `origins` with cells at horizons 1 to length(factors):

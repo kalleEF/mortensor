@@ -302,7 +302,8 @@ mt_plot_coverage <- function(backtest) {
 #' * `mt_plot_shares()`: shares of each cause in the deaths over the
 #'   selected ages, observed and forecast (median and 95% interval), from a
 #'   forecast with a cause variable among the strata (for example from
-#'   [cause_shares()]).
+#'   [reconciled()] with causes in its hierarchy, or from [coda_causes()]
+#'   with `var` and `total_level` given).
 #' * `mt_plot_scores()`: mean score of each model by horizon or age from a
 #'   backtest, or one bar per model (`by = "model"`); `target` selects
 #'   rates or a derived quantity scored by the backtest.
@@ -367,10 +368,6 @@ mt_plot_shares <- function(draws, var = NULL, total_level = NULL, ages = NULL, g
   need_ggplot()
   check_class(draws, "mt_draws", "draws")
   st <- draws$strata
-  if ((is.null(var) || is.null(total_level)) && inherits(draws$spec, "mt_spec_cause_shares")) {
-    var <- var %||% draws$spec$params$var
-    total_level <- total_level %||% draws$spec$params$total_level
-  }
   if (is.null(var) || is.null(total_level)) {
     h <- draws$hierarchy
     shared <- if (!is.null(h)) names(h$vars)[vapply(h$vars, function(v) identical(v$additive, "rates"), logical(1))]

@@ -26,8 +26,8 @@ backtests refit them on every training window.
 the experimental \code{\link[=tucker3]{tucker3()}}, \code{\link[=coda_multiway]{coda_multiway()}} and \code{\link[=coda_causes]{coda_causes()}}, and
 \code{\link[=ensemble]{ensemble()}}, fitted with \code{\link[=mt_fit]{mt_fit()}} (optionally tuned with \code{\link[=tuned]{tuned()}})
 and forecast with \code{\link[=mt_forecast]{mt_forecast()}} as simulated paths (\link{mt_draws}).
-\code{\link[=product_ratio]{product_ratio()}} and \code{\link[=cause_shares]{cause_shares()}} are deprecated. The article
-"Methods and sources" lists the published source of every method.
+The article "Methods and sources" lists the published source of every
+method.
 \item \strong{Hierarchies}: \code{\link[=mt_hierarchy]{mt_hierarchy()}} describes crossed or nested strata
 (for example sex x region x deprivation quintile with their totals),
 \code{\link[=mt_aggregate_strata]{mt_aggregate_strata()}} adds the aggregates, \code{\link[=mt_reconcile]{mt_reconcile()}} and

@@ -13,44 +13,6 @@ group_gap <- function(x, u) {
   max(abs(est / D0$value - 1))
 }
 
-test_that("spline ungrouping works with grouped exposures", {
-  x <- mt_example(years = 2010:2011)
-  E <- mt_obs(x, "exposure")
-  lo <- ifelse(E$age_lo >= 100, 100, 30 + 5 * floor((E$age_lo - 30) / 5))
-  Eg <- data.table::data.table(stratum = E$stratum, age_lo = lo, age_hi = ifelse(lo >= 100, Inf, lo + 5),
-                               period_lo = E$period_lo, period_hi = E$period_hi, value = E$value)
-  Eg <- Eg[, list(value = sum(value), provenance = "observed"),
-           by = c("stratum", "age_lo", "age_hi", "period_lo", "period_hi")]
-  xg <- x
-  xg$obs$exposure <- Eg
-  xg$grid <- NULL
-  for (m in c("hyman_kannisto", "natural_gompertz", "gam")) {
-    if (m == "gam") skip_if_not_installed("mgcv")
-    u <- suppressWarnings(mt_ungroup(xg, method = m), classes = "mt_warning_deprecated")
-    dg <- attr(u, "ungroup")
-    expect_false(anyNA(dg$at_bound))
-    expect_equal(sum(mt_obs(u, "exposure")$value), sum(Eg$value), tolerance = 1e-6)
-    expect_lt(group_gap(xg, u), 1e-6)
-  }
-})
-
-test_that("spline ungrouping keeps group totals next to a missing group and above a closed top group", {
-  x <- mt_example(years = 2010:2011)
-  xm <- x
-  xm$obs$deaths <- mt_obs(x, "deaths")[!(age_lo == 40 & period_lo == 2011 & stratum == 1)]
-  xc <- x
-  xc$obs$deaths <- mt_obs(x, "deaths")[is.finite(age_hi)]
-  for (m in c("hyman_kannisto", "natural_gompertz", "gam")) {
-    if (m == "gam") skip_if_not_installed("mgcv")
-    u <- suppressWarnings(mt_ungroup(xm, method = m), classes = "mt_warning_deprecated")
-    expect_lt(group_gap(xm, u), 1e-6)
-    expect_equal(nrow(mt_obs(u)[stratum == 1 & period_lo == 2011 & age_lo >= 40 & age_lo < 45]), 0L)
-    uc <- suppressWarnings(mt_ungroup(xc, method = m), classes = "mt_warning_deprecated")
-    expect_lt(group_gap(xc, uc), 1e-6)
-    expect_equal(max(mt_obs(uc)$age_hi), 90)
-  }
-})
-
 test_that("a missing deaths cell does not break smoothing of the other cells", {
   x <- mt_example(years = 2006:2011, deaths = "single")
   xm <- x
@@ -151,17 +113,9 @@ test_that("disaggregated draws handle zero shape rates, missing draws and keep e
   fm <- mt_disaggregate(fc2, age, exposure = e, shape_rates = sh)
   expect_true(all(is.na(fm$rates[, , 1, ])))
   expect_false(anyNA(fm$rates[, , 2:3, 2:5]))
-  # deprecated spline: the spline goes through the other groups
-  fn <- suppressWarnings(mt_disaggregate(fc2, age, exposure = e, method = "hyman_kannisto"),
-                         classes = "mt_warning_deprecated")
-  expect_true(all(is.na(fn$rates[, , 1, ])))
   grp <- findInterval(age$lower, lo)
-  expect_true(all(is.na(fn$rates[grp == 3, 1, 2, 1])))
-  expect_false(anyNA(fn$rates[grp != 3, 1, 2, 1]))
-  expect_false(anyNA(fn$rates[, , 2:3, 2:5]))
-  ok <- grp != 3
-  wm <- rowsum(fn$rates[ok, 1, 2, 1] * e[ok, 2], grp[ok]) / rowsum(e[ok, 2], grp[ok])
-  expect_equal(as.vector(wm), as.vector(fc2$rates[-3, 1, 2, 1]), tolerance = 1e-6)
+  expect_true(all(is.na(fm$rates[grp == 3, 1, 2, 1])))
+  expect_false(anyNA(fm$rates[grp != 3, 1, 2, 1]))
   # exposures stored with names: no warning about matching by position
   fs2 <- mt_disaggregate(fc, age, exposure = e, shape_rates = sh)
   expect_identical(dimnames(fs2$exposure_last)$age, age$labels)
@@ -187,10 +141,10 @@ test_that("interpolated shocks at the edges of the data are removed with a warni
   expect_setequal(unique(bt$origin), c(2005, 2006))
 })
 
-test_that("dims = 2 warns for the one-dimensional ungrouping methods", {
+test_that("dims = 2 warns for the one-dimensional ungrouping method", {
   x <- mt_example(years = 2010:2011)
-  expect_warning(suppressWarnings(mt_ungroup(x, method = "hyman_kannisto", dims = 2),
-                                  classes = "mt_warning_deprecated"),
+  expect_warning(suppressWarnings(mt_ungroup(x, method = "monotone", dims = 2),
+                                  classes = "mt_warning_ungroup_open_counts"),
                  class = "mt_warning_ungroup_dims")
 })
 

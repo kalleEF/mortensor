@@ -18,8 +18,8 @@
 #'   the experimental [tucker3()], [coda_multiway()] and [coda_causes()], and
 #'   [ensemble()], fitted with [mt_fit()] (optionally tuned with [tuned()])
 #'   and forecast with [mt_forecast()] as simulated paths ([mt_draws]).
-#'   [product_ratio()] and [cause_shares()] are deprecated. The article
-#'   "Methods and sources" lists the published source of every method.
+#'   The article "Methods and sources" lists the published source of every
+#'   method.
 #' * **Hierarchies**: [mt_hierarchy()] describes crossed or nested strata
 #'   (for example sex x region x deprivation quintile with their totals),
 #'   [mt_aggregate_strata()] adds the aggregates, [mt_reconcile()] and
@@ -70,5 +70,6 @@ utils::globalVariables(c(
   "band", "ref", "noise", "density",
   "comparison", "xvar", "fvar", "max_residual", "q0.025", "q0.975", "forecast", "fitted", "prep", "V1",
   "unit", "loss", "selected", "se", "method", "col", "setting", "score", "part", "from", "to", "draws", "plugin",
-  "sape_", "revision_", "cov90", "hw80", "hw90", "hw95", "aic", "delta_aic", "nll", "law"
+  "sape_", "revision_", "cov90", "hw80", "hw90", "hw95", "aic", "delta_aic", "nll", "law", "floored",
+  "robustness_"
 ))
