@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">mortensor</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -77,11 +77,13 @@ directions: the quintiles to England, women and men to both sexes, and
 the causes to all causes. They also have to suit causes whose trends
 differ: a model that forecasts one cause well can forecast another
 badly. This vignette forecasts twelve groups of causes by sex, age and
-deprivation quintile. Part 1 makes the forecasts coherent in all three
-directions and compares the ways to do so. Part 2 combines six models
-for each cause, one of them with a tuned fitting window, recalibrates
-the combination, and checks in a backtest whether it forecasts better
-than Lee-Carter.</p>
+deprivation quintile. Part 1 measures how much more pessimistic the sum
+of the cause forecasts is than a forecast of all causes, makes the
+forecasts coherent in all three directions and compares the ways to do
+so, among them two compositional models of the causes. Part 2 combines
+six models for each cause, one of them with a tuned fitting window,
+recalibrates the combination, and checks in a backtest whether it
+forecasts better than Lee-Carter.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/kalleEF/mortensor" class="external-link">mortensor</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://r-datatable.com" class="external-link">data.table</a></span><span class="op">)</span></span></code></pre></div>
@@ -211,10 +213,187 @@ forecasts: by 7% in the median for the ten series of sex by quintile
 (<code>cause</code>), and by 7% to 9% for the totals over sexes or
 quintiles. Over long horizons, sums of cause-specific forecasts tend to
 be more pessimistic than forecasts of all causes, because the sum is
-dominated by the causes that fall slowest or rise (Wilmoth 1995). Over
-sexes and quintiles the medians agree within 1%, but single paths do
-not: the 234 models draw their futures independently, so a path of
-England has no matching paths of its quintiles.</p>
+dominated by the causes that fall slowest or rise (Wilmoth 1995); the
+next section measures this pessimism. Over sexes and quintiles the
+medians agree within 1%, but single paths do not: the 234 models draw
+their futures independently, so a path of England has no matching paths
+of its quintiles.</p>
+</div>
+<div class="section level3">
+<h3 id="how-pessimistic-are-the-forecasts-by-cause">How pessimistic are the forecasts by cause?<a class="anchor" aria-label="anchor" href="#how-pessimistic-are-the-forecasts-by-cause"></a>
+</h3>
+<p>Wilmoth (1995) compares a forecast of all-cause mortality with the
+sum of separate forecasts of the causes. <code><a href="../reference/mt_pessimism.html">mt_pessimism()</a></code>
+computes his measures path by path: life expectancy from both forecasts
+and their difference, all causes minus the summed causes (positive where
+the forecast by cause is more pessimistic); the m-ratio, the sum of the
+cause rates over the all-cause rate at each age (his equation 6); and
+the contribution of each cause to the m-ratio minus 1 (equation 13). For
+the separate Lee-Carter forecasts, life expectancy at 50 in 2035 from
+the all-cause forecast (<code>total</code>) and from the summed causes
+(<code>causes</code>), their difference with its 95% interval over the
+paths, and the share of paths in which the summed causes give the lower
+life expectancy (<code>positive</code>):</p>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">pess</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_pessimism.html">mt_pessimism</a></span><span class="op">(</span><span class="va">fc_base</span>, at <span class="op">=</span> <span class="fl">50</span>, paths <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span><span class="va">e50</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/data.table/man/dcast.data.table.html" class="external-link">dcast</a></span><span class="op">(</span><span class="va">pess</span><span class="op">[</span><span class="va">period</span> <span class="op">==</span> <span class="fl">2035</span> <span class="op">&amp;</span> <span class="va">sex</span> <span class="op">!=</span> <span class="st">"both"</span><span class="op">]</span>, <span class="va">sex</span> <span class="op">+</span> <span class="va">quintile</span> <span class="op">+</span> <span class="va">draw</span> <span class="op">~</span> <span class="va">measure</span>, value.var <span class="op">=</span> <span class="st">"value"</span><span class="op">)</span></span>
+<span><span class="va">e50</span><span class="op">[</span>, <span class="fu">.</span><span class="op">(</span>total <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">total</span><span class="op">)</span>, <span class="fl">1</span><span class="op">)</span>, causes <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">causes</span><span class="op">)</span>, <span class="fl">1</span><span class="op">)</span>,</span>
+<span>        difference <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">sprintf</a></span><span class="op">(</span><span class="st">"%.1f (%.1f to %.1f)"</span>, <span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">difference</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/stats/quantile.html" class="external-link">quantile</a></span><span class="op">(</span><span class="va">difference</span>, <span class="fl">0.025</span><span class="op">)</span>,</span>
+<span>                             <span class="fu"><a href="https://rdrr.io/r/stats/quantile.html" class="external-link">quantile</a></span><span class="op">(</span><span class="va">difference</span>, <span class="fl">0.975</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>        positive <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">difference</span> <span class="op">&gt;</span> <span class="fl">0</span><span class="op">)</span>, <span class="fl">2</span><span class="op">)</span><span class="op">)</span>, by <span class="op">=</span> <span class="fu">.</span><span class="op">(</span><span class="va">sex</span>, <span class="va">quintile</span><span class="op">)</span><span class="op">]</span></span>
+<span><span class="co">#&gt;        sex quintile total causes        difference positive</span></span>
+<span><span class="co">#&gt;  1: female  England  37.1   34.9 2.2 (-0.7 to 5.1)     0.93</span></span>
+<span><span class="co">#&gt;  2: female       Q1  33.0   30.8 2.1 (-1.5 to 5.7)     0.88</span></span>
+<span><span class="co">#&gt;  3: female       Q2  35.8   33.6 2.2 (-1.2 to 5.2)     0.92</span></span>
+<span><span class="co">#&gt;  4: female       Q3  37.3   35.0 2.3 (-1.1 to 5.3)     0.91</span></span>
+<span><span class="co">#&gt;  5: female       Q4  38.3   36.0 2.2 (-0.5 to 5.2)     0.94</span></span>
+<span><span class="co">#&gt;  6: female       Q5  39.8   37.4 2.4 (-1.4 to 6.0)     0.89</span></span>
+<span><span class="co">#&gt;  7:   male  England  34.8   33.0 1.8 (-0.5 to 4.5)     0.93</span></span>
+<span><span class="co">#&gt;  8:   male       Q1  30.8   29.1 1.6 (-0.7 to 4.0)     0.92</span></span>
+<span><span class="co">#&gt;  9:   male       Q2  33.4   31.7 1.7 (-0.8 to 4.2)     0.91</span></span>
+<span><span class="co">#&gt; 10:   male       Q3  35.3   33.6 1.7 (-0.9 to 4.5)     0.91</span></span>
+<span><span class="co">#&gt; 11:   male       Q4  36.2   34.2 1.9 (-0.5 to 4.7)     0.94</span></span>
+<span><span class="co">#&gt; 12:   male       Q5  37.3   35.6 1.8 (-0.9 to 4.8)     0.90</span></span></code></pre></div>
+<p>The difference for both sexes in England (the all-cause forecast of
+England against the sum of the cause forecasts of England) by forecast
+year:</p>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">pess</span><span class="op">[</span><span class="va">sex</span> <span class="op">==</span> <span class="st">"both"</span> <span class="op">&amp;</span> <span class="va">quintile</span> <span class="op">==</span> <span class="st">"England"</span> <span class="op">&amp;</span> <span class="va">measure</span> <span class="op">==</span> <span class="st">"difference"</span> <span class="op">&amp;</span> <span class="va">period</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">2020</span>, <span class="fl">2035</span>, <span class="fl">5</span><span class="op">)</span>,</span>
+<span>     <span class="fu">.</span><span class="op">(</span>difference <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">value</span><span class="op">)</span>, <span class="fl">2</span><span class="op">)</span>, q0.025 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/quantile.html" class="external-link">quantile</a></span><span class="op">(</span><span class="va">value</span>, <span class="fl">0.025</span><span class="op">)</span>, <span class="fl">2</span><span class="op">)</span>,</span>
+<span>       q0.975 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/quantile.html" class="external-link">quantile</a></span><span class="op">(</span><span class="va">value</span>, <span class="fl">0.975</span><span class="op">)</span>, <span class="fl">2</span><span class="op">)</span><span class="op">)</span>, by <span class="op">=</span> <span class="va">period</span><span class="op">]</span></span>
+<span><span class="co">#&gt;    period difference q0.025 q0.975</span></span>
+<span><span class="co">#&gt; 1:   2020       0.03  -0.40   0.46</span></span>
+<span><span class="co">#&gt; 2:   2025       0.48  -0.83   1.78</span></span>
+<span><span class="co">#&gt; 3:   2030       1.07  -0.83   3.16</span></span>
+<span><span class="co">#&gt; 4:   2035       1.84  -0.88   4.49</span></span></code></pre></div>
+<p>In every sex and quintile, the summed causes give a lower life
+expectancy at 50 in 2035 than the all-cause forecast: by 2.1 to 2.4
+years on average for women and 1.6 to 1.9 years for men, in 88% to 94%
+of the paths. The 95% intervals of the difference are wide and include
+zero: the forecasts of the causes and of all causes are drawn
+independently, so the uncertainty of both enters the difference. The
+difference grows with the horizon, for both sexes in England from 0.03
+years in 2020 to 1.84 years in 2035.</p>
+<p>The contributions of the causes, by age, for both sexes in England in
+2035 (means over the paths); the last row is their sum, the m-ratio
+minus 1:</p>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">contrib</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_pessimism.html">mt_pessimism</a></span><span class="op">(</span><span class="va">fc_base</span>, by <span class="op">=</span> <span class="st">"cause"</span><span class="op">)</span></span>
+<span><span class="va">eng</span> <span class="op">&lt;-</span> <span class="va">contrib</span><span class="op">[</span><span class="va">period</span> <span class="op">==</span> <span class="fl">2035</span> <span class="op">&amp;</span> <span class="va">sex</span> <span class="op">==</span> <span class="st">"both"</span> <span class="op">&amp;</span> <span class="va">quintile</span> <span class="op">==</span> <span class="st">"England"</span>, <span class="fu">.</span><span class="op">(</span><span class="va">cause</span>, <span class="va">age</span>, <span class="va">mean</span><span class="op">)</span><span class="op">]</span></span>
+<span><span class="va">eng</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">rbind</a></span><span class="op">(</span><span class="va">eng</span>, <span class="va">eng</span><span class="op">[</span>, <span class="fu">.</span><span class="op">(</span>cause <span class="op">=</span> <span class="st">"m-ratio - 1"</span>, mean <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">mean</span><span class="op">)</span><span class="op">)</span>, by <span class="op">=</span> <span class="va">age</span><span class="op">]</span><span class="op">)</span></span>
+<span><span class="va">eng</span><span class="op">[</span>, <span class="fu">`:=`</span><span class="op">(</span>cause <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="va">cause</span>, <span class="fu"><a href="https://rdrr.io/r/base/unique.html" class="external-link">unique</a></span><span class="op">(</span><span class="va">cause</span><span class="op">)</span><span class="op">)</span>, mean <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">mean</span>, <span class="fl">2</span><span class="op">)</span><span class="op">)</span><span class="op">]</span></span>
+<span><span class="fu"><a href="https://rdrr.io/pkg/data.table/man/dcast.data.table.html" class="external-link">dcast</a></span><span class="op">(</span><span class="va">eng</span>, <span class="va">cause</span> <span class="op">~</span> <span class="va">age</span>, value.var <span class="op">=</span> <span class="st">"mean"</span><span class="op">)</span></span>
+<span><span class="co">#&gt;                 cause 50-54 55-59 60-64 65-69 70-74 75-79 80-84 85-89   90+</span></span>
+<span><span class="co">#&gt;  1:       lung_cancer -0.01 -0.01  0.00  0.02  0.02  0.01  0.01  0.01  0.01</span></span>
+<span><span class="co">#&gt;  2: colorectal_cancer  0.00  0.00  0.00  0.00  0.00  0.01  0.01  0.00  0.00</span></span>
+<span><span class="co">#&gt;  3:   breast_prostate  0.00 -0.01  0.00  0.00  0.00  0.01  0.01  0.01  0.01</span></span>
+<span><span class="co">#&gt;  4:     other_cancers -0.01  0.00  0.02  0.05  0.06  0.07  0.05  0.03  0.01</span></span>
+<span><span class="co">#&gt;  5:               ihd -0.04 -0.04 -0.06 -0.06 -0.06 -0.05 -0.05 -0.04 -0.03</span></span>
+<span><span class="co">#&gt;  6:            stroke -0.01 -0.01 -0.01 -0.02 -0.02 -0.02 -0.03 -0.03 -0.02</span></span>
+<span><span class="co">#&gt;  7: other_circulatory  0.00  0.00  0.00  0.00  0.01  0.01  0.01  0.00 -0.01</span></span>
+<span><span class="co">#&gt;  8:          dementia  0.00  0.00  0.01  0.03  0.09  0.20  0.35  0.53  0.60</span></span>
+<span><span class="co">#&gt;  9:       respiratory  0.00  0.00  0.02  0.02  0.03  0.03  0.03  0.03  0.02</span></span>
+<span><span class="co">#&gt; 10:          diabetes  0.00  0.00  0.00  0.00  0.00  0.00  0.00  0.00  0.00</span></span>
+<span><span class="co">#&gt; 11:     liver_alcohol  0.04  0.06  0.06  0.05  0.03  0.01  0.00  0.00  0.00</span></span>
+<span><span class="co">#&gt; 12:              rest  0.07  0.03  0.03  0.02  0.02  0.02 -0.01 -0.03 -0.06</span></span>
+<span><span class="co">#&gt; 13:       m-ratio - 1  0.04  0.03  0.07  0.12  0.19  0.29  0.38  0.51  0.52</span></span></code></pre></div>
+<p>The cause with the largest contribution at each age from 75 on,
+counted over the 18 series of sex by quintile (with their totals) and
+the four age groups:</p>
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">contrib</span><span class="op">[</span><span class="va">period</span> <span class="op">==</span> <span class="fl">2035</span> <span class="op">&amp;</span> <span class="va">age_lo</span> <span class="op">&gt;=</span> <span class="fl">75</span>, <span class="fu">.</span><span class="op">(</span>largest <span class="op">=</span> <span class="va">cause</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/which.min.html" class="external-link">which.max</a></span><span class="op">(</span><span class="va">mean</span><span class="op">)</span><span class="op">]</span><span class="op">)</span>, by <span class="op">=</span> <span class="fu">.</span><span class="op">(</span><span class="va">sex</span>, <span class="va">quintile</span>, <span class="va">age</span><span class="op">)</span><span class="op">]</span><span class="op">[</span></span>
+<span>  , <span class="va">.N</span>, by <span class="op">=</span> <span class="va">largest</span><span class="op">]</span></span>
+<span><span class="co">#&gt;     largest  N</span></span>
+<span><span class="co">#&gt; 1: dementia 72</span></span></code></pre></div>
+<p>The m-ratio rises with age, from between 1.03 and 1.07 at ages 50-64
+to 1.51 at 85-89 and 1.52 at 90 and over. At ages 50-64, liver disease
+and the residual group contribute most (up to 0.06 and 0.07), and
+ischaemic heart disease, which fell faster than all causes, contributes
+negatively (-0.04 to -0.06). From 70 on, dementia contributes most: 0.53
+at 85-89, more than the m-ratio minus 1 (0.51), because ischaemic heart
+disease, stroke and the residual group contribute negatively there.
+Dementia has the largest contribution at every age from 75 on in all 18
+series. For Japan in 1951-1990, Wilmoth (1995) attributed the pessimism
+mainly to the trends of cancer and heart disease, with the qualification
+that these trends may be biased by changes in diagnostic practice. The
+same qualification applies here: the recorded dementia rates rose
+steeply in 2001-2019, part of the rise may come from changes in
+diagnosis and in the recording of causes of death, and a forecast by
+cause extrapolates it.</p>
+<p>Wilmoth also shows that the pessimism can be approximated from the
+distributions of deaths by cause in two periods alone: all causes and
+each cause are projected at their rate of change between the two periods
+(his equations 12 and 14). <code><a href="../reference/mt_pessimism.html">mt_pessimism()</a></code> on the data
+computes this approximation, by default from the two halves of the
+observed years (2001-2009 and 2011-2019; with an odd number of years the
+middle one is left out), Wilmoth’s “first-to-second” method;
+<code>periods</code> gives other periods, here the first and the last
+three years (“first-to-last”). With <code>n_draws</code>, the deaths are
+Poisson draws, and the intervals show their sampling variation. The
+difference of life expectancy at 50 in 2035, mean and 95% interval:</p>
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">approx</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/data.table/man/rbindlist.html" class="external-link">rbindlist</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>  <span class="st">"Lee-Carter"</span> <span class="op">=</span> <span class="va">pess</span>,</span>
+<span>  <span class="st">"first-to-second"</span> <span class="op">=</span> <span class="fu"><a href="../reference/mt_pessimism.html">mt_pessimism</a></span><span class="op">(</span><span class="va">xa</span>, to <span class="op">=</span> <span class="fl">2035</span>, at <span class="op">=</span> <span class="fl">50</span>, n_draws <span class="op">=</span> <span class="fl">200</span>, seed <span class="op">=</span> <span class="fl">1</span>, paths <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>,</span>
+<span>  <span class="st">"first-to-last"</span> <span class="op">=</span> <span class="fu"><a href="../reference/mt_pessimism.html">mt_pessimism</a></span><span class="op">(</span><span class="va">xa</span>, periods <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="fl">2001</span><span class="op">:</span><span class="fl">2003</span>, <span class="fl">2017</span><span class="op">:</span><span class="fl">2019</span><span class="op">)</span>, to <span class="op">=</span> <span class="fl">2035</span>, at <span class="op">=</span> <span class="fl">50</span>, n_draws <span class="op">=</span> <span class="fl">200</span>,</span>
+<span>                                 seed <span class="op">=</span> <span class="fl">1</span>, paths <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  idcol <span class="op">=</span> <span class="st">"method"</span>, use.names <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Warning in pess_from_data(x, var, total_level, periods, h, to, n_draws, : 1</span></span>
+<span><span class="co">#&gt; cells of age, cause and draw have no deaths in the first period and some in the</span></span>
+<span><span class="co">#&gt; second: their first-period deaths are set to 0.5.</span></span>
+<span><span class="co">#&gt; Warning in pess_from_data(x, var, total_level, periods, h, to, n_draws, : 38</span></span>
+<span><span class="co">#&gt; cells of age, cause and draw have no deaths in the first period and some in the</span></span>
+<span><span class="co">#&gt; second: their first-period deaths are set to 0.5.</span></span>
+<span><span class="va">tab</span> <span class="op">&lt;-</span> <span class="va">approx</span><span class="op">[</span><span class="va">period</span> <span class="op">==</span> <span class="fl">2035</span> <span class="op">&amp;</span> <span class="va">measure</span> <span class="op">==</span> <span class="st">"difference"</span> <span class="op">&amp;</span> <span class="va">sex</span> <span class="op">!=</span> <span class="st">"both"</span>,</span>
+<span>              <span class="fu">.</span><span class="op">(</span>difference <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">sprintf</a></span><span class="op">(</span><span class="st">"%.1f (%.1f to %.1f)"</span>, <span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">value</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/stats/quantile.html" class="external-link">quantile</a></span><span class="op">(</span><span class="va">value</span>, <span class="fl">0.025</span><span class="op">)</span>,</span>
+<span>                                     <span class="fu"><a href="https://rdrr.io/r/stats/quantile.html" class="external-link">quantile</a></span><span class="op">(</span><span class="va">value</span>, <span class="fl">0.975</span><span class="op">)</span><span class="op">)</span><span class="op">)</span>, by <span class="op">=</span> <span class="fu">.</span><span class="op">(</span><span class="va">sex</span>, <span class="va">quintile</span>, <span class="va">method</span><span class="op">)</span><span class="op">]</span></span>
+<span><span class="va">tab</span><span class="op">[</span>, <span class="va">method</span> <span class="op">:=</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="va">method</span>, <span class="fu"><a href="https://rdrr.io/r/base/unique.html" class="external-link">unique</a></span><span class="op">(</span><span class="va">method</span><span class="op">)</span><span class="op">)</span><span class="op">]</span></span>
+<span><span class="fu"><a href="https://rdrr.io/pkg/data.table/man/dcast.data.table.html" class="external-link">dcast</a></span><span class="op">(</span><span class="va">tab</span>, <span class="va">sex</span> <span class="op">+</span> <span class="va">quintile</span> <span class="op">~</span> <span class="va">method</span>, value.var <span class="op">=</span> <span class="st">"difference"</span><span class="op">)</span></span>
+<span><span class="co">#&gt;        sex quintile        Lee-Carter  first-to-second    first-to-last</span></span>
+<span><span class="co">#&gt;  1: female  England 2.2 (-0.7 to 5.1) 3.7 (3.7 to 3.8) 2.5 (2.4 to 2.5)</span></span>
+<span><span class="co">#&gt;  2: female       Q1 2.1 (-1.5 to 5.7) 3.6 (3.5 to 3.7) 2.3 (2.3 to 2.4)</span></span>
+<span><span class="co">#&gt;  3: female       Q2 2.2 (-1.2 to 5.2) 3.6 (3.5 to 3.7) 2.4 (2.3 to 2.5)</span></span>
+<span><span class="co">#&gt;  4: female       Q3 2.3 (-1.1 to 5.3) 3.7 (3.6 to 3.8) 2.5 (2.4 to 2.6)</span></span>
+<span><span class="co">#&gt;  5: female       Q4 2.2 (-0.5 to 5.2) 3.8 (3.7 to 3.9) 2.5 (2.4 to 2.6)</span></span>
+<span><span class="co">#&gt;  6: female       Q5 2.4 (-1.4 to 6.0) 4.1 (4.0 to 4.2) 2.7 (2.6 to 2.8)</span></span>
+<span><span class="co">#&gt;  7:   male  England 1.8 (-0.5 to 4.5) 3.2 (3.2 to 3.3) 2.0 (2.0 to 2.1)</span></span>
+<span><span class="co">#&gt;  8:   male       Q1 1.6 (-0.7 to 4.0) 3.1 (3.0 to 3.2) 1.9 (1.8 to 2.0)</span></span>
+<span><span class="co">#&gt;  9:   male       Q2 1.7 (-0.8 to 4.2) 3.1 (3.0 to 3.3) 2.0 (1.9 to 2.1)</span></span>
+<span><span class="co">#&gt; 10:   male       Q3 1.7 (-0.9 to 4.5) 3.2 (3.1 to 3.3) 2.0 (2.0 to 2.1)</span></span>
+<span><span class="co">#&gt; 11:   male       Q4 1.9 (-0.5 to 4.7) 3.3 (3.2 to 3.4) 2.1 (2.0 to 2.2)</span></span>
+<span><span class="co">#&gt; 12:   male       Q5 1.8 (-0.9 to 4.8) 3.3 (3.2 to 3.5) 2.0 (1.9 to 2.1)</span></span></code></pre></div>
+<p>The m-ratio and the contribution of dementia by age in the
+first-to-second approximation, both sexes in England, 2035:</p>
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">approx_cause</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_pessimism.html">mt_pessimism</a></span><span class="op">(</span><span class="va">xa</span>, by <span class="op">=</span> <span class="st">"cause"</span>, to <span class="op">=</span> <span class="fl">2035</span><span class="op">)</span></span>
+<span><span class="va">approx_cause</span><span class="op">[</span><span class="va">period</span> <span class="op">==</span> <span class="fl">2035</span> <span class="op">&amp;</span> <span class="va">sex</span> <span class="op">==</span> <span class="st">"both"</span> <span class="op">&amp;</span> <span class="va">quintile</span> <span class="op">==</span> <span class="st">"England"</span>,</span>
+<span>             <span class="fu">.</span><span class="op">(</span>m_ratio <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fl">1</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">mean</span><span class="op">)</span>, <span class="fl">2</span><span class="op">)</span>, dementia <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">mean</span><span class="op">[</span><span class="va">cause</span> <span class="op">==</span> <span class="st">"dementia"</span><span class="op">]</span>, <span class="fl">2</span><span class="op">)</span><span class="op">)</span>, by <span class="op">=</span> <span class="va">age</span><span class="op">]</span></span>
+<span><span class="co">#&gt;      age m_ratio dementia</span></span>
+<span><span class="co">#&gt; 1: 50-54    1.06     0.00</span></span>
+<span><span class="co">#&gt; 2: 55-59    1.06     0.00</span></span>
+<span><span class="co">#&gt; 3: 60-64    1.08     0.01</span></span>
+<span><span class="co">#&gt; 4: 65-69    1.15     0.06</span></span>
+<span><span class="co">#&gt; 5: 70-74    1.26     0.17</span></span>
+<span><span class="co">#&gt; 6: 75-79    1.46     0.42</span></span>
+<span><span class="co">#&gt; 7: 80-84    1.79     0.82</span></span>
+<span><span class="co">#&gt; 8: 85-89    2.10     1.18</span></span>
+<span><span class="co">#&gt; 9:   90+    2.31     1.44</span></span></code></pre></div>
+<p>The approximations agree with the Lee-Carter forecasts in sign and in
+the larger differences for women, and their size depends on the periods:
+from the halves, the summed causes give a life expectancy at 50 in 2035
+lower by 3.1 to 4.1 years, from the first and the last three years by
+1.9 to 2.7 years, against 1.6 to 2.4 years from the Lee-Carter
+forecasts. The Poisson intervals are narrow (0.2 years or less on either
+side): the sampling variation of the deaths matters little next to the
+choice of the periods and of the model. The warnings come from dementia
+at 50-54, the cause and age with the fewest deaths (see “Ages”): in some
+Poisson draws it has no deaths in the first period, more often in the
+three-year periods, and these deaths are set to 0.5. The approximation
+from the halves projects each cause from 2015, the midpoint of the
+second period, twenty years ahead; dementia contributes 1.18 to its
+m-ratio at 85-89 (2.10) and 1.44 at 90 and over (2.31), more than twice
+its contributions in the Lee-Carter forecasts. In both, the pessimism of
+the forecasts by cause comes mainly from dementia at old ages.</p>
 </div>
 <div class="section level3">
 <h3 id="four-ways-to-make-them-add-up">Four ways to make them add up<a class="anchor" aria-label="anchor" href="#four-ways-to-make-them-add-up"></a>
@@ -239,7 +418,7 @@ quintile are kept, and the causes of each are scaled, path by path, so
 that they add up to it (Athanasopoulos, Ahmed and Hyndman 2009). The
 totals over sexes and quintiles are sums.</li>
 </ul>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">all_cause</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_strata.html">mt_strata</a></span><span class="op">(</span><span class="va">xa</span><span class="op">)</span><span class="op">[</span><span class="va">cause</span> <span class="op">==</span> <span class="st">"all"</span> <span class="op">&amp;</span> <span class="va">sex</span> <span class="op">!=</span> <span class="st">"both"</span> <span class="op">&amp;</span> <span class="va">quintile</span> <span class="op">!=</span> <span class="st">"England"</span>, <span class="va">label</span><span class="op">]</span></span>
 <span><span class="va">fc</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="st">"separate"</span> <span class="op">=</span> <span class="va">fc_base</span>,</span>
 <span>           <span class="st">"bottom-up"</span> <span class="op">=</span> <span class="fu"><a href="../reference/mt_reconcile.html">mt_reconcile</a></span><span class="op">(</span><span class="va">fc_base</span>, <span class="va">h</span>, method <span class="op">=</span> <span class="st">"bottom_up"</span><span class="op">)</span>,</span>
@@ -279,7 +458,7 @@ projection made some bottom forecasts negative; the non-negative
 reconciliation of Wickramasuriya, Turlach and Hyndman (2020) then holds
 them at zero. The values held at zero by WLS (age, year, stratum and
 path), by cause, and the first year in which they occur:</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">zero</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/which.html" class="external-link">which</a></span><span class="op">(</span><span class="va">fc</span><span class="op">$</span><span class="va">WLS</span><span class="op">$</span><span class="va">rates</span> <span class="op">&lt;</span> <span class="fl">1e-9</span>, arr.ind <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span><span class="va">zeros</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/data.table/man/data.table.html" class="external-link">data.table</a></span><span class="op">(</span>cause <span class="op">=</span> <span class="va">fc</span><span class="op">$</span><span class="va">WLS</span><span class="op">$</span><span class="va">strata</span><span class="op">$</span><span class="va">cause</span><span class="op">[</span><span class="va">zero</span><span class="op">[</span>, <span class="fl">3</span><span class="op">]</span><span class="op">]</span>, year <span class="op">=</span> <span class="va">fc</span><span class="op">$</span><span class="va">WLS</span><span class="op">$</span><span class="va">periods</span><span class="op">[</span><span class="va">zero</span><span class="op">[</span>, <span class="fl">2</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span>
 <span><span class="va">zeros</span><span class="op">[</span>, <span class="fu">.</span><span class="op">(</span>values <span class="op">=</span> <span class="va">.N</span>, from <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">min</a></span><span class="op">(</span><span class="va">year</span><span class="op">)</span><span class="op">)</span>, by <span class="op">=</span> <span class="va">cause</span><span class="op">]</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/order.html" class="external-link">order</a></span><span class="op">(</span><span class="op">-</span><span class="va">values</span><span class="op">)</span><span class="op">]</span></span>
@@ -297,11 +476,11 @@ mid-2020s on: WLS moves each forecast in proportion to the variance of
 its own draws, so the causes with the most uncertain trends absorb most
 of the adjustment, and some of their paths reach zero.</p>
 <p>Life expectancy at 50 from all causes in 2035:</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/mt_compare.html">mt_plot_compare</a></span><span class="op">(</span><span class="va">fc</span>, periods <span class="op">=</span> <span class="fl">2035</span>, at <span class="op">=</span> <span class="fl">50</span>,</span>
 <span>                strata <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"female.Q1.all"</span>, <span class="st">"female.Q5.all"</span>, <span class="st">"male.Q1.all"</span>, <span class="st">"male.Q5.all"</span>, <span class="st">"both.England.all"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <p><img src="causes-deprivation-plot-le-methods-1.png"></p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/mt_compare.html">mt_compare_forecasts</a></span><span class="op">(</span><span class="va">fc</span>, periods <span class="op">=</span> <span class="fl">2035</span>, at <span class="op">=</span> <span class="fl">50</span>, strata <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"female.Q1.all"</span>, <span class="st">"female.Q5.all"</span>, <span class="st">"both.England.all"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt;               label period         separate        bottom-up              WLS</span></span>
 <span><span class="co">#&gt; 1: both.England.all   2035 35.9 (34.2-37.5) 33.6 (32.7-34.4) 35.4 (35.2-35.7)</span></span>
@@ -313,7 +492,7 @@ of the adjustment, and some of their paths reach zero.</p>
 <span><span class="co">#&gt; 3: 39.2 (37.9-40.5) 39.9 (37.5-42.2)</span></span></code></pre></div>
 <p>The age-standardised death rates (per 100,000, ages 50 and over) of
 some causes for both sexes in England:</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/mt_compare.html">mt_compare_forecasts</a></span><span class="op">(</span><span class="va">fc</span>, quantity <span class="op">=</span> <span class="st">"asr"</span>, periods <span class="op">=</span> <span class="fl">2035</span>,</span>
 <span>                     strata <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"both.England."</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"lung_cancer"</span>, <span class="st">"ihd"</span>, <span class="st">"dementia"</span>, <span class="st">"respiratory"</span><span class="op">)</span><span class="op">)</span>, digits <span class="op">=</span> <span class="fl">0</span><span class="op">)</span></span>
 <span><span class="co">#&gt;                       label period       separate      bottom-up           WLS</span></span>
@@ -343,22 +522,160 @@ to 83 per 100,000, lung cancer from 113 to 99, respiratory diseases from
 141 to 110.</p>
 </div>
 <div class="section level3">
+<h3 id="causes-as-a-composition">Causes as a composition<a class="anchor" aria-label="anchor" href="#causes-as-a-composition"></a>
+</h3>
+<p>Reconciliation adjusts forecasts that were made separately. A model
+of all causes together gives coherent forecasts directly.
+<code><a href="../reference/coda_causes.html">coda_causes()</a></code> (Oeppen 2008) treats the deaths of a
+multiple-decrement life table by age and cause in each year as one
+composition, transforms it by centred log-ratios and describes its
+change over time by the first components of a singular value
+decomposition; the causes add up to all causes in every path. By default
+it has one component, shared by all causes (“CoDA” below). Kjærgaard et
+al. (2019) call this model CT-CoDA (they use three components) and
+extend it to 2S-CoDA in two ways:</p>
+<ul>
+<li>the ages and causes are weighted by their mean life-table deaths,
+and the years t by <code>0.1 * 0.9^(T - t)</code>, where T is the last
+training year (<code>weights = "deaths", rho = 0.1</code>), so that the
+large causes and the recent years determine the joint component;</li>
+<li>each cause gets one individual component for the variation that the
+joint component leaves (<code>individual = TRUE</code>).</li>
+</ul>
+<p><code><a href="../reference/coda_causes.html">coda_causes()</a></code> fits each group of strata that differ only
+in the cause. <code>reconciled(method = "bottom_up")</code> keeps the
+forecasts of the ten series by sex and quintile and sums them to the
+totals over sexes and quintiles, so that the forecasts add up in all
+three directions:</p>
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">coda</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="st">"CoDA"</span> <span class="op">=</span> <span class="fu"><a href="../reference/coda_causes.html">coda_causes</a></span><span class="op">(</span><span class="op">)</span>, <span class="st">"2S-CoDA"</span> <span class="op">=</span> <span class="fu"><a href="../reference/coda_causes.html">coda_causes</a></span><span class="op">(</span>weights <span class="op">=</span> <span class="st">"deaths"</span>, rho <span class="op">=</span> <span class="fl">0.1</span>, individual <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">fit_coda</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span><span class="va">coda</span>, <span class="kw">function</span><span class="op">(</span><span class="va">spec</span><span class="op">)</span> <span class="fu"><a href="../reference/mt_fit.html">mt_fit</a></span><span class="op">(</span><span class="fu"><a href="../reference/reconciled.html">reconciled</a></span><span class="op">(</span><span class="va">spec</span>, <span class="va">h</span>, method <span class="op">=</span> <span class="st">"bottom_up"</span><span class="op">)</span>, <span class="va">xa</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<p><code><a href="../reference/mt_parameters.html">mt_parameters()</a></code> of 2S-CoDA gives the share of the
+variation of each cause (the squared Frobenius norm of its centred
+log-ratio deaths) that the joint and the individual component explain,
+as in Fig. 4 of Kjærgaard et al. (2019); median and range over the ten
+series by sex and quintile:</p>
+<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">par_2s</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_parameters.html">mt_parameters</a></span><span class="op">(</span><span class="va">fit_coda</span><span class="op">[[</span><span class="st">"2S-CoDA"</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span>
+<span><span class="va">ex</span> <span class="op">&lt;-</span> <span class="va">par_2s</span><span class="op">[</span><span class="va">parameter</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"explained_joint"</span>, <span class="st">"explained_individual"</span><span class="op">)</span> <span class="op">&amp;</span> <span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">grepl</a></span><span class="op">(</span><span class="st">"both|England"</span>, <span class="va">stratum</span><span class="op">)</span><span class="op">]</span></span>
+<span><span class="va">ex</span><span class="op">[</span>, <span class="va">part</span> <span class="op">:=</span> <span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">sub</a></span><span class="op">(</span><span class="st">"explained_"</span>, <span class="st">""</span>, <span class="va">parameter</span><span class="op">)</span><span class="op">]</span></span>
+<span><span class="va">ex</span> <span class="op">&lt;-</span> <span class="va">ex</span><span class="op">[</span>, <span class="fu">.</span><span class="op">(</span>share <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">sprintf</a></span><span class="op">(</span><span class="st">"%.2f (%.2f-%.2f)"</span>, <span class="fu"><a href="https://rdrr.io/r/stats/median.html" class="external-link">median</a></span><span class="op">(</span><span class="va">value</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">min</a></span><span class="op">(</span><span class="va">value</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="va">value</span><span class="op">)</span><span class="op">)</span><span class="op">)</span>, by <span class="op">=</span> <span class="fu">.</span><span class="op">(</span>cause <span class="op">=</span> <span class="va">index</span>, <span class="va">part</span><span class="op">)</span><span class="op">]</span></span>
+<span><span class="va">ex</span><span class="op">[</span>, <span class="va">cause</span> <span class="op">:=</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="va">cause</span>, <span class="fu"><a href="https://rdrr.io/r/base/unique.html" class="external-link">unique</a></span><span class="op">(</span><span class="va">cause</span><span class="op">)</span><span class="op">)</span><span class="op">]</span></span>
+<span><span class="fu"><a href="https://rdrr.io/pkg/data.table/man/dcast.data.table.html" class="external-link">dcast</a></span><span class="op">(</span><span class="va">ex</span>, <span class="va">cause</span> <span class="op">~</span> <span class="va">part</span>, value.var <span class="op">=</span> <span class="st">"share"</span><span class="op">)</span><span class="op">[</span>, <span class="fu">.</span><span class="op">(</span><span class="va">cause</span>, <span class="va">joint</span>, <span class="va">individual</span><span class="op">)</span><span class="op">]</span></span>
+<span><span class="co">#&gt;                 cause            joint       individual</span></span>
+<span><span class="co">#&gt;  1:       lung_cancer 0.67 (0.63-0.74) 0.18 (0.12-0.22)</span></span>
+<span><span class="co">#&gt;  2: colorectal_cancer 0.53 (0.17-0.67) 0.16 (0.12-0.31)</span></span>
+<span><span class="co">#&gt;  3:   breast_prostate 0.50 (0.41-0.67) 0.19 (0.10-0.36)</span></span>
+<span><span class="co">#&gt;  4:     other_cancers 0.76 (0.48-0.86) 0.12 (0.07-0.24)</span></span>
+<span><span class="co">#&gt;  5:               ihd 0.90 (0.83-0.92) 0.06 (0.04-0.09)</span></span>
+<span><span class="co">#&gt;  6:            stroke 0.82 (0.77-0.87) 0.07 (0.05-0.09)</span></span>
+<span><span class="co">#&gt;  7: other_circulatory 0.19 (0.10-0.31) 0.35 (0.25-0.56)</span></span>
+<span><span class="co">#&gt;  8:          dementia 0.62 (0.62-0.74) 0.22 (0.17-0.27)</span></span>
+<span><span class="co">#&gt;  9:       respiratory 0.48 (0.35-0.71) 0.26 (0.14-0.36)</span></span>
+<span><span class="co">#&gt; 10:          diabetes 0.33 (0.16-0.45) 0.30 (0.24-0.40)</span></span>
+<span><span class="co">#&gt; 11:     liver_alcohol 0.43 (0.39-0.55) 0.23 (0.18-0.41)</span></span>
+<span><span class="co">#&gt; 12:              rest 0.47 (0.36-0.56) 0.26 (0.17-0.34)</span></span></code></pre></div>
+<p>The share of the variation of all causes explained by the joint
+component, range over the ten series (CoDA: unweighted; 2S-CoDA: with
+the weights of ages, causes and years):</p>
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">sapply</a></span><span class="op">(</span><span class="va">fit_coda</span>, <span class="kw">function</span><span class="op">(</span><span class="va">fit</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="va">e</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_parameters.html">mt_parameters</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span><span class="op">[</span><span class="va">parameter</span> <span class="op">==</span> <span class="st">"explained"</span> <span class="op">&amp;</span> <span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">grepl</a></span><span class="op">(</span><span class="st">"both|England"</span>, <span class="va">stratum</span><span class="op">)</span>, <span class="va">value</span><span class="op">]</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">sprintf</a></span><span class="op">(</span><span class="st">"%.2f-%.2f"</span>, <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">min</a></span><span class="op">(</span><span class="va">e</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="va">e</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="op">}</span><span class="op">)</span></span>
+<span><span class="co">#&gt;        CoDA     2S-CoDA </span></span>
+<span><span class="co">#&gt; "0.55-0.65" "0.88-0.93"</span></span></code></pre></div>
+<p>The joint component explains most of the variation of ischaemic heart
+disease (median 0.90), stroke (0.82) and other cancers (0.76), and less
+than half of that of respiratory diseases (0.48), the residual group
+(0.47), liver disease (0.43), diabetes (0.33) and other circulatory
+diseases (0.19). The individual components add most for other
+circulatory diseases (0.35) and diabetes (0.30), and least for ischaemic
+heart disease and stroke (0.06 and 0.07). With its weights, the joint
+component of 2S-CoDA explains 0.88 to 0.93 of the variation of all
+causes; the one component of CoDA explains 0.55 to 0.65 of the
+unweighted variation. The two shares use different weights, so they show
+how much each component describes in its own fit and do not rank the
+models.</p>
+<p>Life expectancy at 50 in 2035 and the age-standardised rates of four
+causes for both sexes in England, from the separate and the bottom-up
+Lee-Carter forecasts above and the two compositional models:</p>
+<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">fc_coda</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span><span class="va">fit_coda</span>, <span class="va">mt_forecast</span>, to <span class="op">=</span> <span class="fl">2035</span>, n_draws <span class="op">=</span> <span class="fl">500</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
+<span><span class="va">fc_cause</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">fc</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"separate"</span>, <span class="st">"bottom-up"</span><span class="op">)</span><span class="op">]</span>, <span class="va">fc_coda</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/mt_compare.html">mt_compare_forecasts</a></span><span class="op">(</span><span class="va">fc_cause</span>, periods <span class="op">=</span> <span class="fl">2035</span>, at <span class="op">=</span> <span class="fl">50</span>, strata <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"female.Q1.all"</span>, <span class="st">"female.Q5.all"</span>, <span class="st">"both.England.all"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co">#&gt;               label period         separate        bottom-up             CoDA</span></span>
+<span><span class="co">#&gt; 1: both.England.all   2035 35.9 (34.2-37.5) 33.6 (32.7-34.4) 37.3 (36.8-37.8)</span></span>
+<span><span class="co">#&gt; 2:    female.Q1.all   2035 33.0 (30.2-35.8) 30.9 (28.7-33.0) 34.7 (33.3-36.3)</span></span>
+<span><span class="co">#&gt; 3:    female.Q5.all   2035 39.9 (37.5-42.2) 37.3 (34.6-40.5) 41.1 (39.2-42.8)</span></span>
+<span><span class="co">#&gt;             2S-CoDA</span></span>
+<span><span class="co">#&gt; 1: 37.2 (36.8-37.7)</span></span>
+<span><span class="co">#&gt; 2: 34.5 (33.3-36.1)</span></span>
+<span><span class="co">#&gt; 3: 40.8 (39.6-42.1)</span></span>
+<span><span class="fu"><a href="../reference/mt_compare.html">mt_compare_forecasts</a></span><span class="op">(</span><span class="va">fc_cause</span>, quantity <span class="op">=</span> <span class="st">"asr"</span>, periods <span class="op">=</span> <span class="fl">2035</span>,</span>
+<span>                     strata <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"both.England."</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"lung_cancer"</span>, <span class="st">"ihd"</span>, <span class="st">"dementia"</span>, <span class="st">"respiratory"</span><span class="op">)</span><span class="op">)</span>, digits <span class="op">=</span> <span class="fl">0</span><span class="op">)</span></span>
+<span><span class="co">#&gt;                       label period       separate      bottom-up          CoDA</span></span>
+<span><span class="co">#&gt; 1:    both.England.dementia   2035 727 (266-2148) 899 (624-1385) 583 (547-617)</span></span>
+<span><span class="co">#&gt; 2:         both.England.ihd   2035   104 (81-133)   105 (96-115)    72 (57-87)</span></span>
+<span><span class="co">#&gt; 3: both.England.lung_cancer   2035  113 (107-121)  124 (114-140)    75 (67-83)</span></span>
+<span><span class="co">#&gt; 4: both.England.respiratory   2035  141 (140-148)  143 (122-170)    88 (80-97)</span></span>
+<span><span class="co">#&gt;          2S-CoDA</span></span>
+<span><span class="co">#&gt; 1: 583 (542-619)</span></span>
+<span><span class="co">#&gt; 2:    72 (60-86)</span></span>
+<span><span class="co">#&gt; 3:    74 (65-86)</span></span>
+<span><span class="co">#&gt; 4:    86 (78-94)</span></span></code></pre></div>
+<p>The observed rates of these causes in 2001 and 2019:</p>
+<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/mt_compare.html">mt_compare_forecasts</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>observed <span class="op">=</span> <span class="fu"><a href="../reference/mt_subset.html">mt_subset</a></span><span class="op">(</span><span class="va">xa</span>, <span class="va">sex</span> <span class="op">==</span> <span class="st">"both"</span> <span class="op">&amp;</span> <span class="va">quintile</span> <span class="op">==</span> <span class="st">"England"</span><span class="op">)</span><span class="op">)</span>, quantity <span class="op">=</span> <span class="st">"asr"</span>,</span>
+<span>                     periods <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2001</span>, <span class="fl">2019</span><span class="op">)</span>, strata <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"both.England."</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"lung_cancer"</span>, <span class="st">"ihd"</span>, <span class="st">"dementia"</span>,</span>
+<span>                                                                                 <span class="st">"respiratory"</span><span class="op">)</span><span class="op">)</span>, digits <span class="op">=</span> <span class="fl">0</span><span class="op">)</span></span>
+<span><span class="co">#&gt;                       label period      observed</span></span>
+<span><span class="co">#&gt; 1:    both.England.dementia   2001 106 (104-108)</span></span>
+<span><span class="co">#&gt; 2:    both.England.dementia   2019 296 (294-299)</span></span>
+<span><span class="co">#&gt; 3:         both.England.ihd   2001 613 (610-617)</span></span>
+<span><span class="co">#&gt; 4:         both.England.ihd   2019 237 (235-239)</span></span>
+<span><span class="co">#&gt; 5: both.England.lung_cancer   2001 165 (163-166)</span></span>
+<span><span class="co">#&gt; 6: both.England.lung_cancer   2019 129 (128-131)</span></span>
+<span><span class="co">#&gt; 7: both.England.respiratory   2001 149 (147-151)</span></span>
+<span><span class="co">#&gt; 8: both.England.respiratory   2019 137 (136-138)</span></span></code></pre></div>
+<p>The compositional models forecast a higher life expectancy at 50 than
+both Lee-Carter forecasts: 37.3 and 37.2 years for England in 2035,
+against 35.9 years from the all-cause forecast and 33.6 from bottom-up,
+with narrower intervals (36.8-37.8 for CoDA). Their sum of the causes is
+more optimistic than the all-cause Lee-Carter forecast, the opposite of
+the separate forecasts by cause. They forecast lower rates of all four
+causes: ischaemic heart disease 72 per 100,000 against 104 and 105, lung
+cancer 75 and 74 against 113 and 124, and dementia 583 against 727 and
+899, with a much narrower interval for dementia (547-617 for CoDA,
+against 266-2148 and 624-1385). Respiratory diseases fell from 149 to
+137 per 100,000 between 2001 and 2019; Lee-Carter keeps them near that
+level (141 and 143), and the compositional models bring them down by
+about a third (88 and 86). In these models the rate of a cause follows
+from the forecast life-table deaths of all ages and causes (Oeppen 2008,
+eq. 7), so the trends of the causes are tied together. The individual
+components of 2S-CoDA change the forecasts shown little: life expectancy
+by at most 0.3 years, the rates by at most 2 per 100,000.</p>
+</div>
+<div class="section level3">
 <h3 id="which-way-forecast-best">Which way forecast best<a class="anchor" aria-label="anchor" href="#which-way-forecast-best"></a>
 </h3>
 <p>A backtest from the origins 2010-2014, five years ahead, with the
-reconciliation inside each fit (<code><a href="../reference/reconciled.html">reconciled()</a></code>), scores the
-log death rates of all 234 strata, the age-standardised rates
-(<code>asr</code>, log scale) and life expectancy at 50
-(<code>life_expectancy</code>), and the differences between each
-quintile and Q1 (<code>asr_gap</code>,
+reconciliation inside each fit (<code><a href="../reference/reconciled.html">reconciled()</a></code>), compares the
+four reconciliations of Lee-Carter, the separate forecasts and the two
+compositional models made coherent bottom-up. It scores the log death
+rates of all 234 strata, the age-standardised rates (<code>asr</code>,
+log scale) and life expectancy at 50 (<code>life_expectancy</code>), and
+the differences between each quintile and Q1 (<code>asr_gap</code>,
 <code>life_expectancy_gap</code>):</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">lc</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/lee_carter.html">lee_carter</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="va">cand</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="st">"separate"</span> <span class="op">=</span> <span class="va">lc</span>,</span>
 <span>             <span class="st">"bottom-up"</span> <span class="op">=</span> <span class="fu"><a href="../reference/reconciled.html">reconciled</a></span><span class="op">(</span><span class="va">lc</span>, <span class="va">h</span>, method <span class="op">=</span> <span class="st">"bottom_up"</span><span class="op">)</span>,</span>
 <span>             <span class="st">"WLS"</span> <span class="op">=</span> <span class="fu"><a href="../reference/reconciled.html">reconciled</a></span><span class="op">(</span><span class="va">lc</span>, <span class="va">h</span>, method <span class="op">=</span> <span class="st">"wls"</span><span class="op">)</span>,</span>
 <span>             <span class="st">"MinT"</span> <span class="op">=</span> <span class="fu"><a href="../reference/reconciled.html">reconciled</a></span><span class="op">(</span><span class="va">lc</span>, <span class="va">h</span>, method <span class="op">=</span> <span class="st">"mint"</span><span class="op">)</span>,</span>
-<span>             <span class="st">"proportional"</span> <span class="op">=</span> <span class="fu"><a href="../reference/reconciled.html">reconciled</a></span><span class="op">(</span><span class="va">lc</span>, <span class="va">h</span>, method <span class="op">=</span> <span class="st">"proportional"</span>, fixed <span class="op">=</span> <span class="va">all_cause</span><span class="op">)</span><span class="op">)</span></span>
+<span>             <span class="st">"proportional"</span> <span class="op">=</span> <span class="fu"><a href="../reference/reconciled.html">reconciled</a></span><span class="op">(</span><span class="va">lc</span>, <span class="va">h</span>, method <span class="op">=</span> <span class="st">"proportional"</span>, fixed <span class="op">=</span> <span class="va">all_cause</span><span class="op">)</span>,</span>
+<span>             <span class="st">"CoDA"</span> <span class="op">=</span> <span class="fu"><a href="../reference/reconciled.html">reconciled</a></span><span class="op">(</span><span class="va">coda</span><span class="op">$</span><span class="va">CoDA</span>, <span class="va">h</span>, method <span class="op">=</span> <span class="st">"bottom_up"</span><span class="op">)</span>,</span>
+<span>             <span class="st">"2S-CoDA"</span> <span class="op">=</span> <span class="fu"><a href="../reference/reconciled.html">reconciled</a></span><span class="op">(</span><span class="va">coda</span><span class="op">[[</span><span class="st">"2S-CoDA"</span><span class="op">]</span><span class="op">]</span>, <span class="va">h</span>, method <span class="op">=</span> <span class="st">"bottom_up"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">bt1</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_compare.html">mt_compare</a></span><span class="op">(</span><span class="va">cand</span>, <span class="va">xa</span>, origins <span class="op">=</span> <span class="fl">2010</span><span class="op">:</span><span class="fl">2014</span>, h <span class="op">=</span> <span class="fl">5</span>, n_draws <span class="op">=</span> <span class="fl">200</span>, quantities <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"life_expectancy"</span>, <span class="st">"asr"</span><span class="op">)</span>,</span>
 <span>                  contrast <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>var <span class="op">=</span> <span class="st">"quintile"</span>, ref <span class="op">=</span> <span class="st">"Q1"</span><span class="op">)</span>, cores <span class="op">=</span> <span class="fl">4</span><span class="op">)</span></span></code></pre></div>
 <p>The warnings of this backtest are not shown: at every origin, WLS and
@@ -367,7 +684,7 @@ in the forecasts above.</p>
 <p>The log death rates of all strata, by level of the hierarchy (bottom:
 sex by quintile by cause; aggregates; total: both sexes, England, all
 causes):</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/mt_compare.html">mt_score_table</a></span><span class="op">(</span><span class="va">bt1</span>, metrics <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"crps"</span>, <span class="st">"cov95"</span><span class="op">)</span>, targets <span class="op">=</span> <span class="st">"rate"</span>, hierarchy <span class="op">=</span> <span class="va">h</span><span class="op">)</span></span>
 <span><span class="co">#&gt;            model     level   crps cov95</span></span>
 <span><span class="co">#&gt;  1:     separate    bottom 0.1130 0.849</span></span>
@@ -384,10 +701,17 @@ causes):</p>
 <span><span class="co">#&gt; 12:         MinT     total 0.0393 0.160</span></span>
 <span><span class="co">#&gt; 13: proportional    bottom 0.1170 0.876</span></span>
 <span><span class="co">#&gt; 14: proportional aggregate 0.0873 0.731</span></span>
-<span><span class="co">#&gt; 15: proportional     total 0.0401 0.293</span></span></code></pre></div>
+<span><span class="co">#&gt; 15: proportional     total 0.0401 0.293</span></span>
+<span><span class="co">#&gt; 16:         CoDA    bottom 0.1350 0.837</span></span>
+<span><span class="co">#&gt; 17:         CoDA aggregate 0.0989 0.708</span></span>
+<span><span class="co">#&gt; 18:         CoDA     total 0.0582 0.258</span></span>
+<span><span class="co">#&gt; 19:      2S-CoDA    bottom 0.1350 0.784</span></span>
+<span><span class="co">#&gt; 20:      2S-CoDA aggregate 0.1010 0.615</span></span>
+<span><span class="co">#&gt; 21:      2S-CoDA     total 0.0630 0.160</span></span>
+<span><span class="co">#&gt;            model     level   crps cov95</span></span></code></pre></div>
 <p>The age-standardised rates of the causes, and their ratio between Q5
 and Q1:</p>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/mt_compare.html">mt_score_table</a></span><span class="op">(</span><span class="va">bt1</span><span class="op">[</span><span class="va">cause</span> <span class="op">!=</span> <span class="st">"all"</span><span class="op">]</span>, metrics <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"crps"</span>, <span class="st">"cov95"</span><span class="op">)</span>, targets <span class="op">=</span> <span class="st">"asr"</span>, hierarchy <span class="op">=</span> <span class="va">h</span><span class="op">)</span></span>
 <span><span class="co">#&gt;            model     level crps_asr cov95_asr</span></span>
 <span><span class="co">#&gt;  1:     separate    bottom   0.0562     0.879</span></span>
@@ -400,16 +724,22 @@ and Q1:</p>
 <span><span class="co">#&gt;  8:         MinT aggregate   0.0584     0.550</span></span>
 <span><span class="co">#&gt;  9: proportional    bottom   0.0641     0.904</span></span>
 <span><span class="co">#&gt; 10: proportional aggregate   0.0606     0.734</span></span>
+<span><span class="co">#&gt; 11:         CoDA    bottom   0.0709     0.740</span></span>
+<span><span class="co">#&gt; 12:         CoDA aggregate   0.0715     0.558</span></span>
+<span><span class="co">#&gt; 13:      2S-CoDA    bottom   0.0743     0.677</span></span>
+<span><span class="co">#&gt; 14:      2S-CoDA aggregate   0.0757     0.468</span></span>
 <span><span class="fu"><a href="../reference/mt_compare.html">mt_score_table</a></span><span class="op">(</span><span class="va">bt1</span><span class="op">[</span><span class="va">cause</span> <span class="op">!=</span> <span class="st">"all"</span> <span class="op">&amp;</span> <span class="va">quintile</span> <span class="op">==</span> <span class="st">"Q5"</span><span class="op">]</span>, metrics <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"crps"</span>, <span class="st">"cov95"</span><span class="op">)</span>, targets <span class="op">=</span> <span class="st">"asr_gap"</span><span class="op">)</span></span>
 <span><span class="co">#&gt;           model crps_asr_gap cov95_asr_gap</span></span>
 <span><span class="co">#&gt; 1:     separate       0.0398         0.984</span></span>
 <span><span class="co">#&gt; 2:    bottom-up       0.0381         0.988</span></span>
 <span><span class="co">#&gt; 3:          WLS       0.0362         0.957</span></span>
 <span><span class="co">#&gt; 4:         MinT       0.0362         0.960</span></span>
-<span><span class="co">#&gt; 5: proportional       0.0405         0.992</span></span></code></pre></div>
+<span><span class="co">#&gt; 5: proportional       0.0405         0.992</span></span>
+<span><span class="co">#&gt; 6:         CoDA       0.0358         0.981</span></span>
+<span><span class="co">#&gt; 7:      2S-CoDA       0.0330         0.968</span></span></code></pre></div>
 <p>Life expectancy at 50 from all causes, and its gap between Q5 and
 Q1:</p>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/mt_compare.html">mt_score_table</a></span><span class="op">(</span><span class="va">bt1</span><span class="op">[</span><span class="va">cause</span> <span class="op">==</span> <span class="st">"all"</span><span class="op">]</span>, metrics <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"crps"</span>, <span class="st">"cov95"</span><span class="op">)</span>, targets <span class="op">=</span> <span class="st">"life_expectancy"</span>, hierarchy <span class="op">=</span> <span class="va">h</span><span class="op">)</span></span>
 <span><span class="co">#&gt;            model     level crps_le cov95_le</span></span>
 <span><span class="co">#&gt;  1:     separate aggregate   0.300    0.769</span></span>
@@ -422,6 +752,10 @@ Q1:</p>
 <span><span class="co">#&gt;  8:         MinT     total   0.346    0.120</span></span>
 <span><span class="co">#&gt;  9: proportional aggregate   0.307    0.675</span></span>
 <span><span class="co">#&gt; 10: proportional     total   0.361    0.240</span></span>
+<span><span class="co">#&gt; 11:         CoDA aggregate   0.465    0.421</span></span>
+<span><span class="co">#&gt; 12:         CoDA     total   0.540    0.160</span></span>
+<span><span class="co">#&gt; 13:      2S-CoDA aggregate   0.517    0.221</span></span>
+<span><span class="co">#&gt; 14:      2S-CoDA     total   0.577    0.040</span></span>
 <span><span class="fu"><a href="../reference/mt_compare.html">mt_score_table</a></span><span class="op">(</span><span class="va">bt1</span><span class="op">[</span><span class="va">cause</span> <span class="op">==</span> <span class="st">"all"</span> <span class="op">&amp;</span> <span class="va">quintile</span> <span class="op">==</span> <span class="st">"Q5"</span><span class="op">]</span>, metrics <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"crps"</span>, <span class="st">"cov95"</span><span class="op">)</span>,</span>
 <span>               targets <span class="op">=</span> <span class="st">"life_expectancy_gap"</span>, by <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"model"</span>, <span class="st">"sex"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt;            model    sex crps_le_gap cov95_le_gap</span></span>
@@ -439,11 +773,18 @@ Q1:</p>
 <span><span class="co">#&gt; 12:         MinT   both       0.112         0.88</span></span>
 <span><span class="co">#&gt; 13: proportional female       0.185         1.00</span></span>
 <span><span class="co">#&gt; 14: proportional   male       0.127         1.00</span></span>
-<span><span class="co">#&gt; 15: proportional   both       0.128         1.00</span></span></code></pre></div>
+<span><span class="co">#&gt; 15: proportional   both       0.128         1.00</span></span>
+<span><span class="co">#&gt; 16:         CoDA female       0.174         1.00</span></span>
+<span><span class="co">#&gt; 17:         CoDA   male       0.180         1.00</span></span>
+<span><span class="co">#&gt; 18:         CoDA   both       0.157         1.00</span></span>
+<span><span class="co">#&gt; 19:      2S-CoDA female       0.158         0.96</span></span>
+<span><span class="co">#&gt; 20:      2S-CoDA   male       0.136         1.00</span></span>
+<span><span class="co">#&gt; 21:      2S-CoDA   both       0.152         0.88</span></span>
+<span><span class="co">#&gt;            model    sex crps_le_gap cov95_le_gap</span></span></code></pre></div>
 <p>Observed life expectancy at 50 in England, and the mean error of the
 median forecast of life expectancy at 50 (forecast minus observed,
 years) by horizon:</p>
-<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb28"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/mt_compare.html">mt_compare_forecasts</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>observed <span class="op">=</span> <span class="fu"><a href="../reference/mt_subset.html">mt_subset</a></span><span class="op">(</span><span class="va">xa</span>, <span class="va">cause</span> <span class="op">==</span> <span class="st">"all"</span> <span class="op">&amp;</span> <span class="va">quintile</span> <span class="op">==</span> <span class="st">"England"</span><span class="op">)</span><span class="op">)</span>,</span>
 <span>                     periods <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2001</span>, <span class="fl">2011</span>, <span class="fl">2019</span><span class="op">)</span>, at <span class="op">=</span> <span class="fl">50</span><span class="op">)</span></span>
 <span><span class="co">#&gt;                 label period         observed</span></span>
@@ -456,7 +797,7 @@ years) by horizon:</p>
 <span><span class="co">#&gt; 7:   male.England.all   2001 28.5 (28.5-28.6)</span></span>
 <span><span class="co">#&gt; 8:   male.England.all   2011 31.2 (31.2-31.3)</span></span>
 <span><span class="co">#&gt; 9:   male.England.all   2019 32.0 (32.0-32.0)</span></span></code></pre></div>
-<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb29"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">bias</span> <span class="op">&lt;-</span> <span class="va">bt1</span><span class="op">[</span><span class="va">cause</span> <span class="op">==</span> <span class="st">"all"</span> <span class="op">&amp;</span> <span class="va">target</span> <span class="op">==</span> <span class="st">"life_expectancy"</span>, <span class="fu">.</span><span class="op">(</span>error <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">median</span> <span class="op">-</span> <span class="va">observed</span><span class="op">)</span>, <span class="fl">2</span><span class="op">)</span><span class="op">)</span>,</span>
 <span>            by <span class="op">=</span> <span class="fu">.</span><span class="op">(</span><span class="va">model</span>, <span class="va">horizon</span><span class="op">)</span><span class="op">]</span></span>
 <span><span class="fu"><a href="https://rdrr.io/pkg/data.table/man/dcast.data.table.html" class="external-link">dcast</a></span><span class="op">(</span><span class="va">bias</span>, <span class="va">model</span> <span class="op">~</span> <span class="va">horizon</span>, value.var <span class="op">=</span> <span class="st">"error"</span><span class="op">)</span></span>
@@ -465,38 +806,57 @@ years) by horizon:</p>
 <span><span class="co">#&gt; 2:    bottom-up 0.07 0.16 0.21 0.26 0.29</span></span>
 <span><span class="co">#&gt; 3:          WLS 0.11 0.24 0.35 0.46 0.55</span></span>
 <span><span class="co">#&gt; 4:         MinT 0.11 0.24 0.34 0.45 0.56</span></span>
-<span><span class="co">#&gt; 5: proportional 0.10 0.26 0.40 0.54 0.68</span></span></code></pre></div>
+<span><span class="co">#&gt; 5: proportional 0.10 0.26 0.40 0.54 0.68</span></span>
+<span><span class="co">#&gt; 6:         CoDA 0.17 0.38 0.57 0.77 0.96</span></span>
+<span><span class="co">#&gt; 7:      2S-CoDA 0.17 0.38 0.59 0.80 1.00</span></span></code></pre></div>
 <p>Life expectancy at 50 of both sexes in England rose by 2.4 years from
 2001 to 2011 and by 0.6 years from 2011 to 2019. Every method forecast
 it too high, by more the further ahead: the all-cause forecasts by 0.68
-years five years ahead, the summed causes (bottom-up) by 0.29 years.
-Sums of cause-specific forecasts tend to fall more slowly than forecasts
-of all causes (Wilmoth 1995), and in a decade in which improvement
-slowed this made them more accurate. The results by target:</p>
+years five years ahead, the summed causes (bottom-up) by 0.29 years, the
+compositional models by 0.96 (CoDA) and 1.00 years (2S-CoDA). Sums of
+cause-specific forecasts tend to fall more slowly than forecasts of all
+causes (Wilmoth 1995), and in a decade in which improvement slowed this
+made them more accurate; the compositional models, whose forecasts by
+cause are more optimistic than the all-cause forecasts, were the least
+accurate. The results by target:</p>
 <ul>
 <li>
 <strong>All-cause life expectancy at 50</strong>: bottom-up forecast
 it best by far (CRPS 0.177 years for the series by sex and quintile and
-their sums over sexes or quintiles, against 0.300-0.307), with the
-highest 95% coverage (0.83). For England as a whole its intervals were
-too narrow (0.48): the 120 bottom forecasts are drawn independently, so
-their errors partly cancel in the sum (“Dependence between
-groups”).</li>
+their sums over sexes or quintiles, against 0.300-0.307 for the other
+forecasts from Lee-Carter and 0.465 and 0.517 for CoDA and 2S-CoDA),
+with the highest 95% coverage (0.83). For England as a whole its
+intervals were too narrow (0.48): the 120 bottom forecasts are drawn
+independently, so their errors partly cancel in the sum (“Dependence
+between groups”).</li>
 <li>
 <strong>Gaps between Q5 and Q1</strong>: WLS and MinT forecast the
-gaps of life expectancy and of the cause-specific rates best (CRPS of
-the life expectancy gap of women 0.122 and 0.121, against 0.146 for
-bottom-up and 0.185 for separate forecasts), but the 95% intervals of
-their life expectancy covered only 0.34 of the observed values.</li>
+gaps of life expectancy best (CRPS of the life expectancy gap of women
+0.122 and 0.121, against 0.146 for bottom-up, 0.158 for 2S-CoDA and
+0.185 for separate forecasts), but the 95% intervals of their life
+expectancy covered only 0.34 of the observed values. The gaps of the
+cause-specific rates were forecast best by 2S-CoDA (CRPS 0.0330), then
+by CoDA (0.0358) and by WLS and MinT (0.0362).</li>
 <li>
 <strong>Cause-specific rates</strong>: WLS and MinT made them less
 accurate (CRPS of the ASR of the bottom series 0.0595 against 0.0562 for
 separate forecasts and 0.0563 for bottom-up). Proportional scaling made
-them least accurate (0.0641) and left all-cause life expectancy as
-inaccurate as the all-cause forecasts it keeps.</li>
+them less accurate still (0.0641) and left all-cause life expectancy as
+inaccurate as the all-cause forecasts it keeps. The compositional models
+forecast them least accurately (0.0709 for CoDA, 0.0743 for 2S-CoDA),
+with 95% coverage of 0.74 and 0.68.</li>
 <li>
-<strong>Single rates of the bottom series</strong>: the methods
-differ little (CRPS 0.113-0.117).</li>
+<strong>Single rates of the bottom series</strong>: the forecasts
+from Lee-Carter differ little (CRPS 0.113-0.117); CoDA and 2S-CoDA are
+less accurate (0.135).</li>
+<li>
+<strong>CoDA and 2S-CoDA</strong>: the 95% intervals of their life
+expectancy at 50 covered only 0.42 and 0.22 of the observed values
+(series by sex and quintile and their sums): the forecasts were too high
+and the intervals narrow. 2S-CoDA forecast the gaps between Q5 and Q1
+more accurately than CoDA, the rates of the bottom series as accurately,
+and the other targets less accurately. Which variant forecasts better
+depends on the data and the horizon.</li>
 </ul>
 <p>Part 2 uses bottom-up reconciliation: it forecast all-cause life
 expectancy best, and the cause-specific rates as well as separate
@@ -538,7 +898,7 @@ noise of small counts from the trend.</li>
 the mixture in an inner backtest on the training years (stacking of
 predictive distributions, Yao et al. 2018, here with the CRPS). An
 ensemble with equal weights shows what the weights add.</p>
-<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb30"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">window_lc</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">window</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>spec <span class="op">=</span> <span class="fu"><a href="../reference/lee_carter.html">lee_carter</a></span><span class="op">(</span><span class="op">)</span>, prep <span class="op">=</span> <span class="fu"><a href="../reference/mt_prep.html">mt_prep</a></span><span class="op">(</span><span class="fu"><a href="../reference/mt_prep.html">step_window</a></span><span class="op">(</span><span class="va">window</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">components</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>  <span class="st">"Lee-Carter"</span> <span class="op">=</span> <span class="fu"><a href="../reference/lee_carter.html">lee_carter</a></span><span class="op">(</span><span class="op">)</span>,</span>
@@ -562,7 +922,7 @@ are estimated on the series they are used for.
 <code>recalibrated(by = "cause")</code> around the reconciled model
 rescales the spread of the bottom series with one factor per cause and
 recomputes the totals as their sums, so the forecasts stay coherent.</p>
-<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb31"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">cause_groups</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sets.html" class="external-link">setdiff</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/unique.html" class="external-link">unique</a></span><span class="op">(</span><span class="fu"><a href="../reference/mt_strata.html">mt_strata</a></span><span class="op">(</span><span class="va">xa</span><span class="op">)</span><span class="op">$</span><span class="va">cause</span><span class="op">)</span>, <span class="st">"all"</span><span class="op">)</span></span>
 <span><span class="va">bu</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">spec</span><span class="op">)</span> <span class="fu"><a href="../reference/reconciled.html">reconciled</a></span><span class="op">(</span><span class="va">spec</span>, <span class="va">h</span>, method <span class="op">=</span> <span class="st">"bottom_up"</span><span class="op">)</span></span>
 <span><span class="va">recal</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">spec</span><span class="op">)</span> <span class="fu"><a href="../reference/recalibrated.html">recalibrated</a></span><span class="op">(</span><span class="va">spec</span>, years <span class="op">=</span> <span class="fl">3</span>, n_origins <span class="op">=</span> <span class="fl">2</span>, by <span class="op">=</span> <span class="st">"cause"</span>, n_draws <span class="op">=</span> <span class="fl">50</span><span class="op">)</span></span>
@@ -637,7 +997,7 @@ instead of the default 100 to save time.</p>
 <div class="section level3">
 <h3 id="backtest-against-lee-carter">Backtest against Lee-Carter<a class="anchor" aria-label="anchor" href="#backtest-against-lee-carter"></a>
 </h3>
-<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb32"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">models</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="st">"Lee-Carter"</span> <span class="op">=</span> <span class="fu">bu</span><span class="op">(</span><span class="fu"><a href="../reference/lee_carter.html">lee_carter</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span>,</span>
 <span>               <span class="st">"Lee-Carter, recalibrated"</span> <span class="op">=</span> <span class="fu">recal</span><span class="op">(</span><span class="fu">bu</span><span class="op">(</span><span class="fu"><a href="../reference/lee_carter.html">lee_carter</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span><span class="op">)</span>,</span>
 <span>               <span class="st">"ensemble, equal weights"</span> <span class="op">=</span> <span class="fu">full_ensemble</span><span class="op">(</span><span class="st">"equal"</span><span class="op">)</span>,</span>
@@ -646,7 +1006,7 @@ instead of the default 100 to save time.</p>
 <span>                  contrast <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>var <span class="op">=</span> <span class="st">"quintile"</span>, ref <span class="op">=</span> <span class="st">"Q1"</span><span class="op">)</span>, cores <span class="op">=</span> <span class="fl">4</span><span class="op">)</span></span></code></pre></div>
 <p>The age-standardised rates of the causes (bottom strata and
 aggregates), and their ratio between Q5 and Q1:</p>
-<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb33"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">metrics</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"crps"</span>, <span class="st">"cov50"</span>, <span class="st">"cov80"</span>, <span class="st">"cov95"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/mt_compare.html">mt_score_table</a></span><span class="op">(</span><span class="va">bt2</span><span class="op">[</span><span class="va">cause</span> <span class="op">!=</span> <span class="st">"all"</span><span class="op">]</span>, metrics <span class="op">=</span> <span class="va">metrics</span>, targets <span class="op">=</span> <span class="st">"asr"</span>, hierarchy <span class="op">=</span> <span class="va">h</span><span class="op">)</span></span>
 <span><span class="co">#&gt;                       model     level crps_asr cov50_asr cov80_asr cov95_asr</span></span>
@@ -671,7 +1031,7 @@ aggregates), and their ratio between Q5 and Q1:</p>
 <span><span class="co">#&gt; 4:         0.972</span></span></code></pre></div>
 <p>Life expectancy at 50 from all causes, and its gap between Q5 and
 Q1:</p>
-<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb34"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/mt_compare.html">mt_score_table</a></span><span class="op">(</span><span class="va">bt2</span><span class="op">[</span><span class="va">cause</span> <span class="op">==</span> <span class="st">"all"</span><span class="op">]</span>, metrics <span class="op">=</span> <span class="va">metrics</span>, targets <span class="op">=</span> <span class="st">"life_expectancy"</span>, hierarchy <span class="op">=</span> <span class="va">h</span><span class="op">)</span></span>
 <span><span class="co">#&gt;                       model     level crps_le cov50_le cov80_le cov95_le</span></span>
 <span><span class="co">#&gt; 1:               Lee-Carter aggregate   0.148   0.3870    0.672    0.838</span></span>
@@ -690,7 +1050,7 @@ Q1:</p>
 <span><span class="co">#&gt; 4:       ensemble, stacking      0.2230        0.194          0.5        0.806</span></span></code></pre></div>
 <p>The mean error of the median forecast of the gap in life expectancy
 at 50 between Q5 and Q1 (forecast minus observed, years):</p>
-<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb35"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">gap</span> <span class="op">&lt;-</span> <span class="va">bt2</span><span class="op">[</span><span class="va">cause</span> <span class="op">==</span> <span class="st">"all"</span> <span class="op">&amp;</span> <span class="va">quintile</span> <span class="op">==</span> <span class="st">"Q5"</span> <span class="op">&amp;</span> <span class="va">target</span> <span class="op">==</span> <span class="st">"life_expectancy_gap"</span><span class="op">]</span></span>
 <span><span class="fu"><a href="https://rdrr.io/pkg/data.table/man/dcast.data.table.html" class="external-link">dcast</a></span><span class="op">(</span><span class="va">gap</span><span class="op">[</span>, <span class="fu">.</span><span class="op">(</span>error <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">median</span> <span class="op">-</span> <span class="va">observed</span><span class="op">)</span>, <span class="fl">2</span><span class="op">)</span><span class="op">)</span>, by <span class="op">=</span> <span class="fu">.</span><span class="op">(</span><span class="va">model</span>, <span class="va">sex</span><span class="op">)</span><span class="op">]</span>, <span class="va">model</span> <span class="op">~</span> <span class="va">sex</span>, value.var <span class="op">=</span> <span class="st">"error"</span><span class="op">)</span></span>
 <span><span class="co">#&gt;                       model  both female  male</span></span>
@@ -740,7 +1100,7 @@ a unit root (its AR(1) coefficient is bounded at 0.99), so it reverts
 very slowly.</p>
 <p>The CRPS of the age-standardised rates of each cause (bottom strata),
 relative to Lee-Carter:</p>
-<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb36"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">sc</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_score.html">mt_score</a></span><span class="op">(</span><span class="va">bt2</span><span class="op">[</span><span class="va">cause</span> <span class="op">!=</span> <span class="st">"all"</span> <span class="op">&amp;</span> <span class="va">sex</span> <span class="op">!=</span> <span class="st">"both"</span> <span class="op">&amp;</span> <span class="va">quintile</span> <span class="op">!=</span> <span class="st">"England"</span><span class="op">]</span>, by <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"model"</span>, <span class="st">"cause"</span><span class="op">)</span>,</span>
 <span>               target <span class="op">=</span> <span class="st">"asr"</span><span class="op">)</span></span>
 <span><span class="va">sc</span><span class="op">[</span>, <span class="va">relative</span> <span class="op">:=</span> <span class="va">crps</span> <span class="op">/</span> <span class="va">crps</span><span class="op">[</span><span class="va">model</span> <span class="op">==</span> <span class="st">"Lee-Carter"</span><span class="op">]</span>, by <span class="op">=</span> <span class="va">cause</span><span class="op">]</span></span>
@@ -752,7 +1112,7 @@ relative to Lee-Carter:</p>
 <span>                subtitle <span class="op">=</span> <span class="st">"Age-standardised rates by sex and quintile, origins 2013-2016, 1-3 years ahead"</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="../reference/mt_plot_style.html">theme_mortensor</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
 <p><img src="causes-deprivation-plot-relative-1.png"></p>
-<div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb37"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/pkg/data.table/man/dcast.data.table.html" class="external-link">dcast</a></span><span class="op">(</span><span class="va">sc</span><span class="op">[</span><span class="va">model</span> <span class="op">!=</span> <span class="st">"Lee-Carter"</span>, <span class="fu">.</span><span class="op">(</span><span class="va">cause</span>, <span class="va">model</span>, relative <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">relative</span>, <span class="fl">2</span><span class="op">)</span><span class="op">)</span><span class="op">]</span>, <span class="va">cause</span> <span class="op">~</span> <span class="va">model</span>, value.var <span class="op">=</span> <span class="st">"relative"</span><span class="op">)</span></span>
 <span><span class="co">#&gt;                 cause Lee-Carter, recalibrated ensemble, equal weights</span></span>
 <span><span class="co">#&gt;  1:   breast_prostate                     1.02                    0.90</span></span>
@@ -800,7 +1160,7 @@ the equal-weighted cosine estimate, with critical values from a t
 distribution (Lazarus, Lewis, Stock and Watson 2018). With four origins
 the test has one degree of freedom (<code>df</code>), so it finds only
 large and consistent differences:</p>
-<div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb38"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">dm</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">rbind</a></span><span class="op">(</span></span>
 <span>  <span class="fu"><a href="../reference/mt_dm_test.html">mt_dm_test</a></span><span class="op">(</span><span class="va">bt2</span><span class="op">[</span><span class="va">cause</span> <span class="op">!=</span> <span class="st">"all"</span> <span class="op">&amp;</span> <span class="va">sex</span> <span class="op">!=</span> <span class="st">"both"</span> <span class="op">&amp;</span> <span class="va">quintile</span> <span class="op">!=</span> <span class="st">"England"</span><span class="op">]</span>, ref <span class="op">=</span> <span class="st">"Lee-Carter"</span>, targets <span class="op">=</span> <span class="st">"asr"</span><span class="op">)</span>,</span>
 <span>  <span class="fu"><a href="../reference/mt_dm_test.html">mt_dm_test</a></span><span class="op">(</span><span class="va">bt2</span><span class="op">[</span><span class="va">cause</span> <span class="op">!=</span> <span class="st">"all"</span> <span class="op">&amp;</span> <span class="va">quintile</span> <span class="op">==</span> <span class="st">"Q5"</span><span class="op">]</span>, ref <span class="op">=</span> <span class="st">"Lee-Carter"</span>, targets <span class="op">=</span> <span class="st">"asr_gap"</span><span class="op">)</span>,</span>
@@ -831,7 +1191,7 @@ the origins.</p>
 <div class="section level3">
 <h3 id="weights-and-recalibration-on-all-data">Weights and recalibration on all data<a class="anchor" aria-label="anchor" href="#weights-and-recalibration-on-all-data"></a>
 </h3>
-<div class="sourceCode" id="cb28"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb39"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">fit_ens</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_fit.html">mt_fit</a></span><span class="op">(</span><span class="fu">full_ensemble</span><span class="op">(</span><span class="st">"crps_stack"</span><span class="op">)</span>, <span class="va">xa</span>, cores <span class="op">=</span> <span class="fl">4</span><span class="op">)</span></span>
 <span><span class="va">weights</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_parameters.html">mt_parameters</a></span><span class="op">(</span><span class="va">fit_ens</span><span class="op">)</span><span class="op">[</span><span class="va">parameter</span> <span class="op">==</span> <span class="st">"weight"</span>, <span class="fu">.</span><span class="op">(</span>cause <span class="op">=</span> <span class="va">group</span>, component <span class="op">=</span> <span class="va">index</span>, weight <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">value</span>, <span class="fl">2</span><span class="op">)</span><span class="op">)</span><span class="op">]</span></span>
 <span><span class="fu"><a href="https://rdrr.io/pkg/data.table/man/dcast.data.table.html" class="external-link">dcast</a></span><span class="op">(</span><span class="va">weights</span>, <span class="va">cause</span> <span class="op">~</span> <span class="va">component</span>, value.var <span class="op">=</span> <span class="st">"weight"</span><span class="op">)</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"cause"</span>, <span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">components</span><span class="op">)</span><span class="op">)</span>, with <span class="op">=</span> <span class="cn">FALSE</span><span class="op">]</span></span>
@@ -936,12 +1296,30 @@ coherent paths</td>
 </td>
 </tr>
 <tr class="odd">
+<td>Are the forecasts by cause more pessimistic?</td>
+<td>yes: summed causes give a life expectancy at 50 in 2035 lower by
+1.6-2.4 years, mostly through dementia at 75 and over</td>
+<td>separate Lee-Carter forecasts and Wilmoth’s approximation from two
+periods</td>
+<td><code><a href="../reference/mt_pessimism.html">mt_pessimism()</a></code></td>
+</tr>
+<tr class="even">
 <td>Which reconciliation?</td>
 <td>bottom-up</td>
 <td>the most accurate all-cause life expectancy at 50 in 2011-2019</td>
 <td>
 <code><a href="../reference/reconciled.html">reconciled()</a></code>, <code><a href="../reference/mt_compare.html">mt_compare()</a></code>,
 <code>mt_score_table(hierarchy = )</code>
+</td>
+</tr>
+<tr class="odd">
+<td>A compositional model of the causes?</td>
+<td>Lee-Carter bottom-up here</td>
+<td>CoDA and 2S-CoDA forecast life expectancy too high and the rates of
+the causes less accurately; 2S-CoDA forecast the gaps of the
+cause-specific rates best</td>
+<td>
+<code><a href="../reference/coda_causes.html">coda_causes()</a></code>, <code><a href="../reference/mt_parameters.html">mt_parameters()</a></code>
 </td>
 </tr>
 <tr class="even">
@@ -956,58 +1334,68 @@ coherent paths</td>
 </tr>
 </tbody>
 </table>
-<p>In these data, an ensemble for each cause forecast the rates of most
-causes more accurately than Lee-Carter one to three years ahead, and
-all-cause life expectancy about as well with equal weights. With
-stacking weights it forecast the gaps between the most and the least
-deprived quintile worst of the four models. The data allow only short
-inner backtests: the stacking weights rest on one inner origin with two
-years ahead, and the spread factors on two origins. Whether the gains
-for the rates hold over longer horizons cannot be checked with 19 years
-of data.</p>
+<p>In these data, the sum of separate forecasts of the causes was more
+pessimistic than the forecast of all causes, mostly through dementia at
+old ages, and in 2011-2019 it forecast all-cause life expectancy at 50
+most accurately; the compositional models were more optimistic and less
+accurate. An ensemble for each cause forecast the rates of most causes
+more accurately than Lee-Carter one to three years ahead, and all-cause
+life expectancy about as well with equal weights. With stacking weights
+it forecast the gaps between the most and the least deprived quintile
+worst of the four models. The data allow only short inner backtests: the
+stacking weights rest on one inner origin with two years ahead, and the
+spread factors on two origins. Whether the gains for the rates hold over
+longer horizons cannot be checked with 19 years of data.</p>
 </div>
 <div class="section level2">
 <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a>
 </h2>
 <p>Athanasopoulos G, Ahmed RA, Hyndman RJ (2009). Hierarchical forecasts
 for Australian domestic tourism. <em>International Journal of
-Forecasting</em> 25: 146-166.</p>
+Forecasting</em> 25(1): 146-166. <a href="doi:10.1016/j.ijforecast.2008.07.004" class="uri">doi:10.1016/j.ijforecast.2008.07.004</a>.</p>
 <p>Diebold FX, Mariano RS (1995). Comparing predictive accuracy.
-<em>Journal of Business &amp; Economic Statistics</em> 13(3):
-253-263.</p>
+<em>Journal of Business &amp; Economic Statistics</em> 13(3): 253-263.
+<a href="doi:10.1080/07350015.1995.10524599" class="uri">doi:10.1080/07350015.1995.10524599</a>.</p>
 <p>Harvey AC (1989). <em>Forecasting, Structural Time Series Models and
-the Kalman Filter</em>. Cambridge University Press.</p>
+the Kalman Filter</em>. Cambridge University Press. <a href="doi:10.1017/CBO9781107049994" class="uri">doi:10.1017/CBO9781107049994</a>.</p>
 <p>Hyndman RJ, Lee AJ, Wang E (2016). Fast computation of reconciled
 forecasts for hierarchical and grouped time series. <em>Computational
-Statistics &amp; Data Analysis</em> 97: 16-32.</p>
+Statistics &amp; Data Analysis</em> 97: 16-32. <a href="doi:10.1016/j.csda.2015.11.007" class="uri">doi:10.1016/j.csda.2015.11.007</a>.</p>
 <p>Hyndman RJ, Ullah MS (2007). Robust forecasting of mortality and
 fertility rates: a functional data approach. <em>Computational
-Statistics &amp; Data Analysis</em> 51(10): 4942-4956.</p>
+Statistics &amp; Data Analysis</em> 51(10): 4942-4956. <a href="doi:10.1016/j.csda.2006.07.028" class="uri">doi:10.1016/j.csda.2006.07.028</a>.</p>
+<p>Kjærgaard S, Ergemen YE, Kallestrup-Lamb M, Oeppen J,
+Lindahl-Jacobsen R (2019). Forecasting causes of death by using
+compositional data analysis: the case of cancer deaths. <em>Journal of
+the Royal Statistical Society Series C</em> 68(5): 1351-1370. <a href="doi:10.1111/rssc.12357" class="uri">doi:10.1111/rssc.12357</a>.</p>
 <p>Lazarus E, Lewis DJ, Stock JH, Watson MW (2018). HAR inference:
 recommendations for practice. <em>Journal of Business &amp; Economic
-Statistics</em> 36(4): 541-559.</p>
+Statistics</em> 36(4): 541-559. <a href="doi:10.1080/07350015.2018.1506926" class="uri">doi:10.1080/07350015.2018.1506926</a>.</p>
 <p>Lee RD, Carter LR (1992). Modeling and forecasting U.S. mortality.
 <em>Journal of the American Statistical Association</em> 87(419):
-659-671.</p>
+659-671. <a href="doi:10.1080/01621459.1992.10475265" class="uri">doi:10.1080/01621459.1992.10475265</a>.</p>
 <p>Li N, Lee R (2005). Coherent mortality forecasts for a group of
 populations: an extension of the Lee-Carter method. <em>Demography</em>
-42(3): 575-594.</p>
+42(3): 575-594. <a href="doi:10.1353/dem.2005.0021" class="uri">doi:10.1353/dem.2005.0021</a>.</p>
+<p>Oeppen J (2008). Coherent forecasting of multiple-decrement life
+tables: a test using Japanese cause of death data. CODAWORK’08,
+Universitat de Girona. <a href="https://hdl.handle.net/10256/742" class="external-link uri">https://hdl.handle.net/10256/742</a>.</p>
 <p>Van Schaeybroeck B, Vannitsem S (2015). Ensemble post-processing
 using member-by-member approaches: theoretical aspects. <em>Quarterly
-Journal of the Royal Meteorological Society</em> 141(688): 807-818.</p>
+Journal of the Royal Meteorological Society</em> 141(688): 807-818. <a href="doi:10.1002/qj.2397" class="uri">doi:10.1002/qj.2397</a>.</p>
 <p>Wickramasuriya SL, Athanasopoulos G, Hyndman RJ (2019). Optimal
 forecast reconciliation for hierarchical and grouped time series through
 trace minimization. <em>Journal of the American Statistical
-Association</em> 114(526): 804-819.</p>
+Association</em> 114(526): 804-819. <a href="doi:10.1080/01621459.2018.1448825" class="uri">doi:10.1080/01621459.2018.1448825</a>.</p>
 <p>Wickramasuriya SL, Turlach BA, Hyndman RJ (2020). Optimal
 non-negative forecast reconciliation. <em>Statistics and Computing</em>
-30: 1167-1182.</p>
+30(5): 1167-1182. <a href="doi:10.1007/s11222-020-09930-0" class="uri">doi:10.1007/s11222-020-09930-0</a>.</p>
 <p>Wilmoth JR (1995). Are mortality projections always more pessimistic
 when disaggregated by cause of death? <em>Mathematical Population
-Studies</em> 5(4): 293-319.</p>
+Studies</em> 5(4): 293-319. <a href="doi:10.1080/08898489509525409" class="uri">doi:10.1080/08898489509525409</a>.</p>
 <p>Yao Y, Vehtari A, Simpson D, Gelman A (2018). Using stacking to
 average Bayesian predictive distributions (with discussion).
-<em>Bayesian Analysis</em> 13(3): 917-1007.</p>
+<em>Bayesian Analysis</em> 13(3): 917-1007. <a href="doi:10.1214/17-BA1091" class="uri">doi:10.1214/17-BA1091</a>.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

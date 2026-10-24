@@ -31,7 +31,7 @@ aggregates are the sums of the bottom strata.'></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">mortensor</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -398,6 +398,7 @@ Article 32. <a href="https://doi.org/10.2202/1544-6115.1175" class="external-lin
 <span class="r-in"><span><span class="va">h</span> <span class="op">&lt;-</span> <span class="fu"><a href="mt_hierarchy.html">mt_hierarchy</a></span><span class="op">(</span>sex <span class="op">=</span> <span class="st">"both"</span>, region <span class="op">=</span> <span class="st">"all"</span>, quintile <span class="op">=</span> <span class="st">"all"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="mt_fit.html">mt_fit</a></span><span class="op">(</span><span class="fu">reconciled</span><span class="op">(</span><span class="fu"><a href="lee_carter.html">lee_carter</a></span><span class="op">(</span><span class="op">)</span>, <span class="va">h</span>, method <span class="op">=</span> <span class="st">"wls"</span><span class="op">)</span>, <span class="fu"><a href="mt_aggregate_strata.html">mt_aggregate_strata</a></span><span class="op">(</span><span class="va">x</span>, <span class="va">h</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">fc</span> <span class="op">&lt;-</span> <span class="fu"><a href="mt_forecast.html">mt_forecast</a></span><span class="op">(</span><span class="va">fit</span>, h <span class="op">=</span> <span class="fl">5</span>, n_draws <span class="op">=</span> <span class="fl">50</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="co"># \donttest{</span></span></span>
 <span class="r-in"><span><span class="co"># the Schaake shuffle of the separate Lee-Carter forecasts, then MinT with</span></span></span>
 <span class="r-in"><span><span class="co"># the covariance of the errors of forecasts from 4 inner origins</span></span></span>
 <span class="r-in"><span><span class="va">sm</span> <span class="op">&lt;-</span> <span class="fu">reconciled</span><span class="op">(</span><span class="fu"><a href="lee_carter.html">lee_carter</a></span><span class="op">(</span><span class="op">)</span>, <span class="va">h</span>, method <span class="op">=</span> <span class="st">"mint"</span>, dependence <span class="op">=</span> <span class="st">"schaake"</span>, covariance <span class="op">=</span> <span class="st">"errors"</span>,</span></span>
@@ -412,7 +413,6 @@ Article 32. <a href="https://doi.org/10.2202/1544-6115.1175" class="external-lin
 <span class="r-in"><span><span class="va">fc_sm</span> <span class="op">&lt;-</span> <span class="fu"><a href="mt_forecast.html">mt_forecast</a></span><span class="op">(</span><span class="va">fit_sm</span>, h <span class="op">=</span> <span class="fl">5</span>, n_draws <span class="op">=</span> <span class="fl">50</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">fc_sm</span><span class="op">$</span><span class="va">schaake</span><span class="op">$</span><span class="va">dates</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] 15</span>
-<span class="r-in"><span><span class="co"># \donttest{</span></span></span>
 <span class="r-in"><span><span class="co"># score-optimal reconciliation, trained on forecasts of 2012-2019 from 4 origins</span></span></span>
 <span class="r-in"><span><span class="va">es</span> <span class="op">&lt;-</span> <span class="fu">reconciled</span><span class="op">(</span><span class="fu"><a href="lee_carter.html">lee_carter</a></span><span class="op">(</span><span class="op">)</span>, <span class="va">h</span>, method <span class="op">=</span> <span class="st">"energy_score"</span>, years <span class="op">=</span> <span class="fl">8</span>, n_origins <span class="op">=</span> <span class="fl">4</span>, horizon <span class="op">=</span> <span class="fl">3</span>,</span></span>
 <span class="r-in"><span>                 control <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>max_iter <span class="op">=</span> <span class="fl">200</span><span class="op">)</span><span class="op">)</span></span></span>

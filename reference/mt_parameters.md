@@ -27,7 +27,10 @@ ensembles also `component`, for fits by groups also `group`.
   of change), `k` (period index), and the drift and innovation standard
   deviation of `k`; with `rotate = TRUE` also the ultimate pattern
   `b_ultimate`; with `family = "nb"` also the dispersion `nb_dispersion`
-  (variance `mu + phi mu^2`);
+  (variance `mu + phi mu^2`; one per age group with a dispersion by
+  age); with `jump_off = "filtered"` also the filtered index of the last
+  year `k_filtered`, its standard error `se_k_filtered` and the
+  state-space estimates `filter_sigma`, `filter_lambda`, `filter_drift`;
 
 - [`li_lee()`](li_lee.md), [`product_ratio()`](product_ratio.md): the
   common factor of each group (`B`, `K`, its drift and standard
@@ -45,7 +48,11 @@ ensembles also `component`, for fits by groups also `group`.
   `sd_K`) and per stratum `a`, `b`, `k` and the ARIMA model of `k`.
   [`coda_causes()`](coda_causes.md): per group, as [`coda()`](coda.md),
   with parts by age and cause (`b1`, `k1`, `b2`, `k2`, ... with several
-  components);
+  components); with `individual = TRUE` also the individual components
+  of each cause (`b_<cause>`, `k_<cause>`, `order_k_<cause>`, ...) and
+  the explained variation of each cause (`explained_joint`,
+  `explained_individual`), and with weights the weights of the parts
+  (`w_part`) and years (`w_time`);
 
 - [`coda_multiway()`](coda_multiway.md): the common age patterns `b`,
   time indexes `k` (with `order_k`, `arima_k`, `sd_k`), population
@@ -67,9 +74,14 @@ ensembles also `component`, for fits by groups also `group`.
   smoothing parameters over age (`lambda_age`) and years
   (`lambda_year`), the effective dimension (`ed`), the criterion (`bic`
   or `aic`) and the dispersion (deviance divided by the number of cells
-  minus the effective dimension); for [`cp_splines()`](cp_splines.md)
-  also the bounds of the rates of ageing and of change per age
-  (`ageing_lower`, `ageing_upper`, `change_lower`, `change_upper`).
+  minus the effective dimension); with
+  `p_splines(overdispersion = "age")` the smooth dispersion by age
+  (`dispersion`), the bias-corrected mean Pearson statistics by age that
+  it smooths (`dispersion_raw`), its smoothing parameter
+  (`lambda_dispersion`) and the dispersion `tau` of these statistics
+  (`dispersion_tau`); for [`cp_splines()`](cp_splines.md) also the
+  bounds of the rates of ageing and of change per age (`ageing_lower`,
+  `ageing_upper`, `change_lower`, `change_upper`).
 
 - [`saint()`](saint.md): per trend (`"trend <group>"`) the indexes
   `alpha`, `beta`, `kappa`, `zeta` by year, the frailty variance
@@ -79,6 +91,18 @@ ensembles also `component`, for fits by groups also `group`.
   `C_delta`, `lambda`, `Omega`) and the standard deviations `sd_kappa`,
   `sd_zeta`; per stratum with a spread the spread parameters `y1` ...
   `y5` by year and their VAR(1) (`ar` or `A`, and `Omega`);
+
+- [`relative_model()`](relative_model.md): per group
+  (`"reference <group>"`) the reference parameters `alpha`, `beta` (by
+  age), `kappa` (by year), `gamma` (by year of birth), the `drift` and
+  `sd` of `kappa`, the ARIMA(1,1,0) model of `gamma` (`ar_gamma`,
+  `drift_gamma`, `sd_gamma`), and the log-likelihood, effective number
+  of parameters, number of cells and BIC of the reference part
+  (`loglik`, `npar`, `nobs`, `bic`); per group
+  (`"subpopulations <group>"`) the common `beta` and the same statistics
+  of the subpopulation part; per subpopulation `alpha`, `kappa`, the
+  `drift` and `sd` of `kappa` and the correlation `cor` of its
+  innovations with those of each subpopulation of the group;
 
 - [`bohk_rau()`](bohk_rau.md): posterior medians and 90% intervals of
   the curve parameters `b1` and `b2` by age and of the variance and
@@ -101,7 +125,9 @@ ensembles also `component`, for fits by groups also `group`.
 - [`cae()`](cae.md): the common age effects `beta1`, `beta2`, ... of
   each group (rows labelled `common <g> (<strata>)`), and per stratum
   the centring `a`, the period effects `kappa1`, `kappa2`, ..., their
-  drift (`drift_kappa1`, ...), the standard deviation of their
+  drift (`drift_kappa1`, ...; with `index = "coherent"` the common drift
+  of the group for order 1 and 0 for the others, whose autoregressive
+  coefficients are `phi_kappa2`, ...), the standard deviation of their
   innovations (`sd_kappa1`, ...) and the correlation of their
   innovations with those of the same order of every stratum
   (`cor_kappa1`, ..., indexed by the other stratum); rows of stratum

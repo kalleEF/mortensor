@@ -58,14 +58,16 @@ mt_score(
     consecutive origins of the backtest, for every cell forecast from
     both. Stoeldraijer et al. (2013) name robustness as a purpose of a
     forecast: small changes in the observations when the data are
-    updated should result in only modest changes in the forecasts. They
-    give no measure; the revision between consecutive origins, each of
-    which adds a year of data with the default origins, is a
-    package-specific mapping onto the rolling origins (reference
-    unknown). A revision belongs to the later origin and its horizon;
-    the first origin has none. Origins further apart than one year (for
-    example `origins = c(2005, 2007)`) give revisions over several years
-    of data.
+    updated should result in only modest changes in the forecasts.
+    Stoeldraijer et al. (2018) measure it by the standard deviation of
+    the changes of the forecast for one target year between successive
+    fitting periods. The mean absolute revision over all cells forecast
+    from consecutive origins, each of which adds a year of data with the
+    default origins, is a package-specific summary of these changes
+    (reference unknown). A revision belongs to the later origin and its
+    horizon; the first origin has none. Origins further apart than one
+    year (for example `origins = c(2005, 2007)`) give revisions over
+    several years of data.
 
 ## Value
 
@@ -95,6 +97,12 @@ different mortality forecasting methods and explicit assumptions on
 projected future life expectancy: the case of the Netherlands.
 *Demographic Research* 29(13): 323-354.
 [doi:10.4054/DemRes.2013.29.13](https://doi.org/10.4054/DemRes.2013.29.13)
+
+Stoeldraijer L, van Duin C, van Wissen L, Janssen F (2018). Comparing
+strategies for matching mortality forecasts to the most recently
+observed data: exploring the trade-off between accuracy and robustness.
+*Genus* 74: 16.
+[doi:10.1186/s41118-018-0041-y](https://doi.org/10.1186/s41118-018-0041-y)
 
 ## Examples
 

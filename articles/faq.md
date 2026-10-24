@@ -171,10 +171,16 @@ improvements to all ages and years, as in Bohk-Ewald and Rau (2017);
 Mixtures of models ([`ensemble()`](../reference/ensemble.md)) widen the
 intervals where the models disagree, and the negative binomial family of
 [`stanmomo()`](../reference/stanmomo.md) allows for overdispersion.
-[`recalibrated()`](../reference/recalibrated.md) rescales the spread of
-any model’s draws to its forecast errors in the last years of the
-training data (by default ten); on England & Wales men it raised the 95%
-coverage of Lee-Carter from 0.63 to 0.85. Check calibration with
+Death counts often vary more than Poisson counts:
+`lee_carter(family = "nb", dispersion = "age")` estimates one dispersion
+per age (Li, Hardy and Tan 2009) and widens the intervals where the
+variation is large, and `p_splines(overdispersion = "age")` lets the
+dispersion vary smoothly over age (Djeundje and Currie 2011); the
+vignette “Overdispersion: extra variation in death counts” compares
+them. [`recalibrated()`](../reference/recalibrated.md) rescales the
+spread of any model’s draws to its forecast errors in the last years of
+the training data (by default ten); on England & Wales men it raised the
+95% coverage of Lee-Carter from 0.63 to 0.85. Check calibration with
 [`mt_backtest()`](../reference/mt_backtest.md) and
 [`mt_plot_coverage()`](../reference/mt_plot.md), and by horizon with
 `mt_score_table(by = c("model", "horizon"))`. Where coverage falls with
@@ -297,7 +303,15 @@ forecast year, the jump-off adjustment of Lee and Miller (2001);
 `lee_carter(jump_off = "observed")` and `li_lee(jump_off = "observed")`
 do the same within the model. The observed rates of one year carry their
 random variation into every forecast year, which matters where deaths
-are few. The other settings of [`anchored()`](../reference/anchored.md)
+are few. Three published options reduce it within
+[`lee_carter()`](../reference/lee_carter.md): the mean observed log
+rates of the last years (`jump_off_years`; Stoeldraijer et al. 2018),
+the Kalman filter estimate of the index in the last year
+(`jump_off = "filtered"`; De Jong and Tickle 2006) and a fit constrained
+to the observed rates of the last year (`jump_off = "constrained"`; Li,
+Hardy and Tan 2009). Stoeldraijer et al. (2018) found the last observed
+year most accurate and an average over several years most robust to data
+updates. The other settings of [`anchored()`](../reference/anchored.md)
 are package-specific: the offset of the last `years` years, shrunk where
 deaths are few (`shrink = TRUE`) and fading out over `decay` years.
 “Where a forecast starts: the jump-off” compares the starting points in
@@ -398,7 +412,9 @@ the reconciliation from the base model’s past forecasts (Panagiotelis et
 al. 2023); in the package’s backtests it was less accurate than `"wls"`,
 so compare it in a backtest before using it. Over long horizons, sums of
 cause forecasts tend to be more pessimistic than forecasts of all causes
-(Wilmoth 1995), so compare the two before choosing. Reconciliation of
+(Wilmoth 1995), so compare the two before choosing:
+[`mt_pessimism()`](../reference/mt_pessimism.md) measures the difference
+in life expectancy and the contribution of each cause. Reconciliation of
 deaths uses exposures of the forecast years; supply population
 projections as `exposure` when they are available. See “Coherent
 forecasts: totals and their parts” and the applied vignettes “Inequality
@@ -423,8 +439,16 @@ recent years. In `coda(coherent = TRUE)` the point forecasts of the
 deviations from the common trend level off (ARIMA(1,1,0) models;
 Bergeron-Boucher et al. 2017): the point forecasts of the distributions
 of deaths by age do not diverge, and their intervals widen with the
-horizon. Backtests over a few years rarely tell these models apart; the
-choice is an assumption to state.
+horizon. `cae(index = "coherent")` gives all strata one common drift and
+lets their other period effects revert to zero (Enchev, Kleinow and
+Cairns 2017), so the expected rates do not diverge.
+[`relative_model()`](../reference/relative_model.md) gives
+subpopulations, such as deprivation quintiles, the trend of their
+national population plus their own drifting improvement differences, so
+a gap that widened keeps widening; with `deviation = "constant"` the
+differences stay at their last values (Villegas and Haberman 2014).
+Backtests over a few years rarely tell these models apart; the choice is
+an assumption to state.
 
 ### Which ages and causes explain a gap, and how much is composition?
 
@@ -538,8 +562,20 @@ Coroneo L, Iacone F (2020). Comparing predictive accuracy in small
 samples using fixed-smoothing asymptotics. *Journal of Applied
 Econometrics* 35(4): 391-409. <doi:10.1002/jae.2756>.
 
+De Jong P, Tickle L (2006). Extending Lee-Carter mortality forecasting.
+*Mathematical Population Studies* 13(1): 1-18.
+<doi:10.1080/08898480500452109>.
+
 Diebold FX, Mariano RS (1995). Comparing predictive accuracy. *Journal
 of Business & Economic Statistics* 13(3): 253-263.
+
+Djeundje VAB, Currie ID (2011). Smoothing dispersed counts with
+applications to mortality data. *Annals of Actuarial Science* 5(1):
+33-52. <doi:10.1017/S1748499510000047>.
+
+Enchev V, Kleinow T, Cairns AJG (2017). Multi-population mortality
+models: fitting, forecasting and comparisons. *Scandinavian Actuarial
+Journal* 2017(4): 319-342. <doi:10.1080/03461238.2015.1133450>.
 
 Harvey AC (1989). *Forecasting, Structural Time Series Models and the
 Kalman Filter*. Cambridge University Press.
@@ -564,6 +600,10 @@ Statistics* 36(4): 541-559.
 Lee R, Miller T (2001). Evaluating the performance of the Lee-Carter
 method for forecasting mortality. *Demography* 38(4): 537-549.
 
+Li JS-H, Hardy MR, Tan KS (2009). Uncertainty in mortality forecasting:
+an extension to the classical Lee-Carter approach. *ASTIN Bulletin*
+39(1): 137-164. <doi:10.2143/AST.39.1.2038060>.
+
 Li N, Lee R, Gerland P (2013). Extending the Lee-Carter method to model
 the rotation of age patterns of mortality decline for long-term
 projections. *Demography* 50(6): 2037-2051.
@@ -583,17 +623,27 @@ Probabilistic forecast reconciliation: properties, evaluation and score
 optimisation. *European Journal of Operational Research* 306(2):
 693-706. <doi:10.1016/j.ejor.2022.07.040>.
 
-Rizzi S, Gampe J, Eilers PHC (2015). Efficient estimation of smooth
-distributions from coarsely grouped data. *American Journal of
-Epidemiology* 182(2): 138-147. <doi:10.1093/aje/kwv020>.
-
 Riffe T, Tursun-zade R, Trias Llimós S (2024). Arriaga meets Kitagawa.
 Life expectancy decomposition with population subgroups. MPIDR Working
 Paper WP-2024-029. <doi:10.4054/MPIDR-WP-2024-029>.
 
+Rizzi S, Gampe J, Eilers PHC (2015). Efficient estimation of smooth
+distributions from coarsely grouped data. *American Journal of
+Epidemiology* 182(2): 138-147. <doi:10.1093/aje/kwv020>.
+
 Shang HL (2012). Point and interval forecasts of age-specific life
 expectancies: a model averaging approach. *Demographic Research* 27(21):
 593-644. <doi:10.4054/DemRes.2012.27.21>.
+
+Stoeldraijer L, van Duin C, van Wissen L, Janssen F (2018). Comparing
+strategies for matching mortality forecasts to the most recently
+observed data: exploring the trade-off between accuracy and robustness.
+*Genus* 74: 16. <doi:10.1186/s41118-018-0041-y>.
+
+Villegas AM, Haberman S (2014). On the modeling and forecasting of
+socioeconomic mortality differentials: an application to deprivation and
+mortality in England. *North American Actuarial Journal* 18(1): 168-193.
+<doi:10.1080/10920277.2013.866034>.
 
 Wilmoth JR (1995). Are mortality projections always more pessimistic
 when disaggregated by cause of death? *Mathematical Population Studies*

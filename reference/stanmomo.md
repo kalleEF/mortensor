@@ -113,6 +113,6 @@ if (requireNamespace("StanMoMo", quietly = TRUE)) {
   fit <- mt_fit(stanmomo("lc", chains = 1, iter = 400, h_max = 10), x)
   fc <- mt_forecast(fit, h = 10, n_draws = 100, seed = 1)
 }
-#> Warning: StanMoMo Lee-Carter: StanMoMo chains have not converged (largest R-hat 1.10); use more `iter` or `chains`. (diagnostics of 1 stratum/strata of the fit).
+#> Warning: StanMoMo Lee-Carter: warnings in 2 stratum/strata, for example female: StanMoMo chains have not converged (largest R-hat 1.12); use more `iter` or `chains`. (see the diagnostics of the fit).
 # }
 ```

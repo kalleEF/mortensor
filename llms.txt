@@ -46,12 +46,12 @@ StMoMo, StanMoMo, demography, ggplot2) use them when installed.
 | Harmonisation | [`mt_regroup()`](reference/mt_regroup.md), [`mt_ungroup()`](reference/mt_ungroup.md) (penalized composite link model with exposure offset, 1D/2D; monotone interpolation; deprecated spline and GAM methods), [`mt_plot_ungroup()`](reference/ungroup-diagnostics.md) and [`mt_ungroup_check()`](reference/ungroup-diagnostics.md) (diagnostics), [`mt_smooth()`](reference/mt_smooth.md) (over age, over time or both; P-splines, Whittaker, GAM), [`mt_smooth_check()`](reference/mt_smooth_check.md), [`mt_plot_smooth()`](reference/mt_smooth_check.md) |
 | Preprocessing pipelines | [`mt_prep()`](reference/mt_prep.md) with [`step_ungroup()`](reference/mt_prep.md), [`step_smooth()`](reference/mt_prep.md), [`step_regroup()`](reference/mt_prep.md), [`step_grid()`](reference/mt_prep.md), [`step_shocks()`](reference/mt_prep.md), [`step_window()`](reference/mt_prep.md); models fitted to smoothed rates take their observation noise from the raw rates |
 | Describing the past | [`mt_observed()`](reference/mt_observed.md), [`life_expectancy()`](reference/life_expectancy.md), [`asr()`](reference/derived.md), [`prob_dying()`](reference/derived.md) on data, [`mt_contrast()`](reference/mt_contrast.md) (gaps, ratios), [`mt_inequality()`](reference/mt_inequality.md) (SII, RII), [`lifespan_variation()`](reference/lifespan_variation.md) (e-dagger, entropy, Gini, standard deviation, IQR), [`standard_population()`](reference/standard_population.md) |
-| Models | [`rwd()`](reference/rwd.md), [`lee_carter()`](reference/lee_carter.md) (Poisson or SVD with the adjustments and period choice of demography; optional rotation of the age pattern, Li, Lee and Gerland 2013; negative binomial deaths, Delwarde, Denuit and Partrat 2007), [`coda()`](reference/coda.md) (compositional model of life-table deaths and its coherent version, Oeppen 2008; Bergeron-Boucher et al. 2017), [`p_splines()`](reference/p_splines.md) (two-dimensional P-splines, Currie, Durban and Eilers 2004), [`cp_splines()`](reference/cp_splines.md) (constrained P-splines, Camarda 2019), [`bohk_rau()`](reference/bohk_rau.md) (age-specific rates of mortality improvement, Bohk-Ewald and Rau 2017), [`arima_series()`](reference/arima_series.md), [`ets_series()`](reference/arima_series.md), [`hyndman_ullah()`](reference/hyndman_ullah.md) (demography), [`stmomo()`](reference/stmomo.md) (APC, CBD, RH, M6, M7, M8, Plat, LC), [`apci()`](reference/apci.md) (age-period-cohort-improvement model, Richards et al. 2019), [`stanmomo()`](reference/stanmomo.md) (LC, RH, APC, CBD and M6, Bayesian, in Stan), [`li_lee()`](reference/li_lee.md), [`cae()`](reference/cae.md) (common age effect model, Kleinow 2015), [`saint()`](reference/saint.md) (trend of a reference population and stationary spreads, Jarner and Kryger 2011; Jarner and Jallbjørn 2022), [`coherent_fdm()`](reference/coherent_fdm.md) (demography), [`apc_bayes()`](reference/apc_bayes.md) and [`apc_select()`](reference/apc_select.md) (bamp), [`nordpred_apc()`](reference/nordpred_apc.md) (Nordpred age-period-cohort model, Møller et al. 2003); experimental: [`tucker3()`](reference/tucker3.md) (three-way Lee-Carter), [`coda_multiway()`](reference/coda_multiway.md) (multiway compositional model, Bergeron-Boucher et al. 2018), [`coda_causes()`](reference/coda_causes.md); deprecated: [`product_ratio()`](reference/product_ratio.md), [`cause_shares()`](reference/cause_shares.md) |
+| Models | [`rwd()`](reference/rwd.md), [`lee_carter()`](reference/lee_carter.md) (Poisson or SVD with the adjustments and period choice of demography; optional rotation of the age pattern, Li, Lee and Gerland 2013; negative binomial deaths, Delwarde, Denuit and Partrat 2007, with a dispersion by age, Li, Hardy and Tan 2009; averaged, filtered and constrained jump-off, Stoeldraijer et al. 2018, De Jong and Tickle 2006), [`coda()`](reference/coda.md) (compositional model of life-table deaths and its coherent version, Oeppen 2008; Bergeron-Boucher et al. 2017), [`p_splines()`](reference/p_splines.md) (two-dimensional P-splines, Currie, Durban and Eilers 2004; smooth dispersion by age, Djeundje and Currie 2011), [`cp_splines()`](reference/cp_splines.md) (constrained P-splines, Camarda 2019), [`bohk_rau()`](reference/bohk_rau.md) (age-specific rates of mortality improvement, Bohk-Ewald and Rau 2017), [`arima_series()`](reference/arima_series.md), [`ets_series()`](reference/arima_series.md), [`hyndman_ullah()`](reference/hyndman_ullah.md) (demography), [`stmomo()`](reference/stmomo.md) (APC, CBD, RH, M6, M7, M8, Plat, LC), [`apci()`](reference/apci.md) (age-period-cohort-improvement model, Richards et al. 2019), [`stanmomo()`](reference/stanmomo.md) (LC, RH, APC, CBD and M6, Bayesian, in Stan), [`li_lee()`](reference/li_lee.md), [`cae()`](reference/cae.md) (common age effect model, Kleinow 2015; non-diverging forecasts, Enchev, Kleinow and Cairns 2017), [`relative_model()`](reference/relative_model.md) (subpopulations relative to a reference population, Villegas and Haberman 2014), [`saint()`](reference/saint.md) (trend of a reference population and stationary spreads, Jarner and Kryger 2011; Jarner and Jallbjørn 2022), [`coherent_fdm()`](reference/coherent_fdm.md) (demography), [`apc_bayes()`](reference/apc_bayes.md) and [`apc_select()`](reference/apc_select.md) (bamp), [`nordpred_apc()`](reference/nordpred_apc.md) (Nordpred age-period-cohort model, Møller et al. 2003); experimental: [`tucker3()`](reference/tucker3.md) (three-way Lee-Carter), [`coda_multiway()`](reference/coda_multiway.md) (multiway compositional model, Bergeron-Boucher et al. 2018), [`coda_causes()`](reference/coda_causes.md) (also 2S-CoDA, Kjærgaard et al. 2019); deprecated: [`product_ratio()`](reference/product_ratio.md), [`cause_shares()`](reference/cause_shares.md) |
 | Wrappers for any model | [`ensemble()`](reference/ensemble.md) (weights from inner backtests: stacking of predictive distributions with the CRPS, Yao et al. 2018; life expectancy bias, Kontis et al. 2017; inverse CRPS; `top_k`), [`stratified()`](reference/stratified.md) (different models for groups of strata), [`reconciled()`](reference/reconciled.md) (optionally with the Schaake shuffle of Clark et al. 2004, of every cell or of whole stratum paths, and MinT weights from past errors), [`coupled()`](reference/coupled.md) and [`mt_couple()`](reference/coupled.md) (separate forecasts given the dependence of a joint model by ensemble copula coupling, Schefzik et al. 2013), [`recalibrated()`](reference/recalibrated.md) (spread fitted to the errors of the last 10 years, optionally by age band or for life expectancy), [`anchored()`](reference/anchored.md) (jump-off at the observed level), [`bootstrapped()`](reference/bootstrapped.md), [`tuned()`](reference/mt_tune.md) and [`mt_tune()`](reference/mt_tune.md) (model and preprocessing settings chosen by forecast accuracy on the last years: hold-out or rolling origins, full or two-stage grids) |
 | Coherence | [`mt_hierarchy()`](reference/mt_hierarchy.md), [`mt_aggregate_strata()`](reference/mt_aggregate_strata.md), [`mt_reconcile()`](reference/mt_reconcile.md) and [`reconciled()`](reference/reconciled.md) (bottom-up, WLS, MinT, structural, OLS, proportional; draw by draw; non-negative; `fixed` nodes such as a trusted all-cause total; score-optimal reconciliation learnt from past forecasts, Panagiotelis et al. 2023), [`mt_coherence()`](reference/mt_coherence.md), [`mt_plot_coherence()`](reference/mt_coherence.md), [`mt_aggregate_draws()`](reference/mt_aggregate_draws.md), [`mt_order_strata()`](reference/mt_order_strata.md) |
 | Forecasts | [`mt_fit()`](reference/mt_fit.md), [`summary()`](https://rdrr.io/r/base/summary.html), [`mt_parameters()`](reference/mt_parameters.md), [`residuals()`](https://rdrr.io/r/stats/residuals.html), [`mt_forecast()`](reference/mt_forecast.md) (simulated paths), [`mt_jump_off()`](reference/mt_jump_off.md), [`mt_summarise()`](reference/mt_draws.md), [`mt_deaths()`](reference/mt_deaths.md), [`mt_disaggregate()`](reference/mt_disaggregate.md) with [`mt_shape_rates()`](reference/mt_shape_rates.md) and [`mt_disaggregate_check()`](reference/mt_disaggregate_check.md) |
 | Evaluation and comparison | [`mt_backtest()`](reference/mt_backtest.md) (rolling origin, no leakage; rates, life expectancy, ASR), [`mt_score()`](reference/mt_score.md) (CRPS, WIS, coverage, PIT, MAE, RMSE, MASE; also of gaps between strata), [`mt_compare()`](reference/mt_compare.md) and [`mt_score_table()`](reference/mt_compare.md) (several models in one backtest, by level of a hierarchy), [`mt_dm_test()`](reference/mt_dm_test.md) (Diebold-Mariano tests of differences in accuracy), [`mt_compare_forecasts()`](reference/mt_compare.md), [`mt_plot_compare()`](reference/mt_compare.md), [`mt_plot_backtest_design()`](reference/mt_plot_design.md), [`mt_plot_tuning()`](reference/mt_plot_design.md), [`mt_plot_pit()`](reference/mt_plot_design.md) |
-| Decomposition | [`mt_decompose()`](reference/mt_decompose.md) (differences by age, cause and subgroup: Arriaga, Horiuchi, stepwise replacement, Kitagawa, and Arriaga meets Kitagawa for subgroup composition; on observed data, forecast draws or both), [`mt_plot_decomposition()`](reference/mt_plot_decomposition.md) |
+| Decomposition | [`mt_decompose()`](reference/mt_decompose.md) (differences by age, cause and subgroup: Arriaga, Horiuchi, stepwise replacement, Kitagawa, and Arriaga meets Kitagawa for subgroup composition; on observed data, forecast draws or both), [`mt_plot_decomposition()`](reference/mt_plot_decomposition.md), [`mt_pessimism()`](reference/mt_pessimism.md) (how much more pessimistic summed cause forecasts are, Wilmoth 1995) |
 | Excess mortality | [`mt_excess()`](reference/mt_excess.md) (observed minus expected deaths or life expectancy, with intervals from a baseline model; by age, stratum and year, cumulative), [`mt_plot_excess()`](reference/mt_excess.md) |
 | Results and plots | [`life_table()`](reference/life_table.md), [`life_expectancy()`](reference/life_expectancy.md), [`prob_dying()`](reference/derived.md), [`asr()`](reference/derived.md), [`yll()`](reference/derived.md), [`mt_contrast()`](reference/mt_contrast.md), [`mt_inequality()`](reference/mt_inequality.md), [`lifespan_variation()`](reference/lifespan_variation.md), [`mt_plot_forecast()`](reference/mt_plot.md), [`mt_plot_life_expectancy()`](reference/mt_plot.md), [`mt_plot_contrast()`](reference/mt_plot_contrast.md), [`mt_plot_scores()`](reference/mt_plot_more.md), [`mt_plot_shares()`](reference/mt_plot_more.md), [`theme_mortensor()`](reference/mt_plot_style.md), [`mt_export()`](reference/mt_export.md), [`as_demogdata()`](reference/as_demogdata.md), [`as_stmomodata()`](reference/as_demogdata.md) |
 
@@ -99,17 +99,19 @@ Vignettes:
 - **Start**: *Getting started*, *Your own data, from CSV to report*.
 - **Concepts, one at a time**: *Ungrouping age groups: methods and
   diagnostics*, *Smoothing death rates*, *Where a forecast starts: the
-  jump-off*, *Backtesting and scores*, *Tuning and recalibration*,
-  *Coherent forecasts: totals and their parts*, *Decomposing differences
-  in life expectancy*.
+  jump-off*, *Backtesting and scores*, *Overdispersion: extra variation
+  in death counts*, *Tuning and recalibration*, *Coherent forecasts:
+  totals and their parts*, *Dependence between groups*, *Decomposing
+  differences in life expectancy*, *Lifespan variation*.
 - **Models**: *Choosing and combining models* (implemented and wrapped
   models side by side, ensembles of any combination), *Model reference*,
-  *Bayesian age-period-cohort models with bamp*, *Comparison with
-  demography, bamp and StMoMo*.
+  *Bayesian age-period-cohort models with bamp*.
+- **Benchmarks**: *Benchmarks: how well the pipeline works*, *Comparison
+  with demography, bamp and StMoMo*.
 - **Applications**: *Inequality in England: life expectancy and causes
   of death by deprivation* (ONS), *Causes of death by deprivation:
   coherent and combined forecasts* (ONS), *Differences between the
-  German Laender* (Destatis).
+  German Laender* (Destatis), *Excess mortality*.
 - **Help**: *Frequently asked questions*, *Function map*.
 
 ## Development
@@ -209,8 +211,8 @@ pipelines refitted in backtests.
 Describe the past
 
 Observed indicators with Poisson intervals, gaps between strata,
-inequality indices, lifespan variation, decompositions and excess
-mortality (which also work on forecasts).
+inequality indices, lifespan variation, decompositions, excess mortality
+and the pessimism of forecasts by cause (which also work on forecasts).
 
 - [`mt_observed()`](mt_observed.md) : Observed rates as draws
 - [`life_expectancy()`](life_expectancy.md) : Life expectancy from rates
@@ -239,6 +241,8 @@ mortality (which also work on forecasts).
   out of sample
 - [`mt_excess()`](mt_excess.md) [`mt_plot_excess()`](mt_excess.md) :
   Excess mortality
+- [`mt_pessimism()`](mt_pessimism.md) : Pessimism of forecasts by cause
+  of death
 
 ## 
 
@@ -282,6 +286,8 @@ Models for several populations and causes
   model of life-table deaths for subpopulations
 - [`saint()`](saint.md) : SAINT model: trend of a reference population
   and stationary spreads
+- [`relative_model()`](relative_model.md) : Relative model of
+  subpopulations and a reference population
 - [`tucker3()`](tucker3.md) : Tucker3 tensor model across strata
   (three-way Lee-Carter model)
 - [`cause_shares()`](cause_shares.md) : Coherent multi-cause forecasts
@@ -442,6 +448,7 @@ Each article explains one step with a simple model and figures.
 - [Smoothing death rates](smoothing.md):
 - [Where a forecast starts: the jump-off](jump-off.md):
 - [Backtesting and scores](backtesting.md):
+- [Overdispersion: extra variation in death counts](overdispersion.md):
 - [Tuning and recalibration](tuning-recalibration.md):
 - [Coherent forecasts: totals and their parts](coherence.md):
 - [Dependence between groups](dependence.md):

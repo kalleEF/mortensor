@@ -8,7 +8,7 @@
 ``` r
 lee_carter(
   method = c("poisson", "svd"),
-  jump_off = c("fitted", "observed"),
+  jump_off = c("fitted", "observed", "filtered", "constrained"),
   bootstrap = FALSE,
   n_boot = 100,
   adjust = c("dt", "dxt", "e0", "none"),
@@ -16,7 +16,9 @@ lee_carter(
   min_years = 20,
   rotate = FALSE,
   rotation = c(e0_start = 80, e0_end = 102, power = 0.5),
-  family = c("poisson", "nb")
+  family = c("poisson", "nb"),
+  dispersion = c("global", "age"),
+  jump_off_years = 1
 )
 ```
 
@@ -29,9 +31,15 @@ lee_carter(
 
 - jump_off:
 
-  `"fitted"` (forecasts start from the fitted rates of the last year) or
+  `"fitted"` (forecasts start from the fitted rates of the last year),
   `"observed"` (from the observed rates of the last year; Lee and Miller
-  2001).
+  2001; with `jump_off_years > 1` from their mean over the last years,
+  Stoeldraijer et al. 2018), `"filtered"` (from the rates at the Kalman
+  filter estimate of the index in the last year; De Jong and
+  Tickle 2006) or `"constrained"` (the maximum likelihood fit is
+  constrained to the observed rates of the last year, the forecast
+  origin correction of Li, Hardy and Tan 2009; `method = "poisson"`
+  only). See "Jump-off" above.
 
 - bootstrap:
 
@@ -74,6 +82,18 @@ lee_carter(
   Distribution of the deaths for `method = "poisson"`: `"poisson"`
   (Brouhns, Denuit and Vermunt 2002) or `"nb"` (negative binomial;
   Delwarde, Denuit and Partrat 2007).
+
+- dispersion:
+
+  Dispersion of the negative binomial deaths (`family = "nb"`):
+  `"global"` (one for all ages; Delwarde, Denuit and Partrat 2007) or
+  `"age"` (one per age group of the data; Li, Hardy and Tan 2009).
+
+- jump_off_years:
+
+  For `jump_off = "observed"`: the number of last observed years whose
+  mean log rates give the jump-off rates (default 1, the last year; 2 to
+  5 in Stoeldraijer et al. 2018).
 
 ## Value
 
@@ -146,6 +166,88 @@ that is a property of the model: see
 overdispersed models such as `family = "nb"` below or
 `stanmomo("lc", family = "nb")` ([`stanmomo()`](stanmomo.md)).
 
+**Jump-off.** The jump-off rates are the rates of the last year `T` of
+the fitting period, from which the forecast starts. Stoeldraijer et al.
+(2018) compare six options for the Lee-Carter model; their names are in
+quotes:
+
+- `jump_off = "fitted"`: "model values", `a[x] + b[x] k[T]` (Lee and
+  Carter 1992);
+
+- `jump_off = "observed"`: "last observed values", the observed log
+  rates of year `T` (Lee and Miller 2001): `a[x]` is replaced by them
+  and `k` is 0 in year `T`;
+
+- `jump_off = "observed", jump_off_years = n` (`n` = 2 to 5 in the
+  paper): "average n years observed". `a[x]` is the mean of the observed
+  log rates of the last `n` years and `k` is 0 at the midpoint of these
+  years; the random walk with drift carries the mean from the midpoint
+  to year `T`, so the jump-off rates are that mean plus
+  `b[x] d (n - 1) / 2`, with `d` the drift of `k`. The paper does not
+  say how the index at the midpoint relates to the fitted index of year
+  `T`; this reading (the forecast does not depend on `k[T]`) reproduces
+  its results for French men (below), where the mean of the fitted index
+  over the `n` years does not.
+
+Stoeldraijer et al. call a forecast accurate if its out-of-sample errors
+in historical data are small (mean absolute error of life expectancy at
+65 one and five years ahead), and robust if it changes little when one
+more year of data is added (standard deviation of the changes of the
+forecast life expectancy at 65 in 2020 between successive fitting
+periods). In eight Western European countries the last observed values
+were the most accurate for most countries and an average of observed
+years the most robust; more years averaged gave more robust and less
+accurate forecasts. For French men (Human Mortality Database in
+[`StanMoMo::FRMaleData`](https://rdrr.io/pkg/StanMoMo/man/FRMaleData.html),
+a later release than the paper's; ages 0-94 and 95+; fitting periods
+from 1960 to 2005, ..., 2014; `method = "svd"`), the mean absolute
+errors and the standard deviations of the last observed values and of
+the averages are within 0.03 years of Table 8a of the paper. Those of
+the model values differ by up to 0.08 years: the mean error of the
+fitted log rates at ages 65 and over in 2005-2014 is -0.002 with these
+data and 0.005 in the paper (Table 9a), and a shift of the log rates at
+these ages by 0.007 moves life expectancy at 65 by 0.05 years.
+[`anchored()`](anchored.md) moves the jump-off of any model.
+
+**Filtered jump-off** (`jump_off = "filtered"`; De Jong and Tickle
+2006). The paper writes the Lee-Carter model in state-space form (eq.
+6): `y[t] = a + b alpha[t] + eps[t]` for the vector of log rates of year
+`t`, and `alpha[t + 1] = delta + alpha[t] + lambda eta[t]`, with
+independent normal `eps[t]` (variance `sigma^2` at every age) and
+`eta[t]` (variance `sigma^2`), `b'b = 1` and the signal-to-noise ratio
+`lambda`. The forecast starts from
+`a + b E(alpha[T] | y[1], ..., y[T])`, the Kalman filter estimate of the
+index in the jump-off year (eq. 15). The paper estimates `b` and
+`lambda` by maximum likelihood with the Kalman filter, then `a`, `delta`
+and `sigma` given them (Section 5), for a model with B-spline age
+effects (eq. 2; eq. 6 is its case without splines, the model fitted
+here). Here `a` and `b` are those of the Lee-Carter fit (`method`), in
+the scale `sum(b) = 1` of `k`; given them, `sigma`, `lambda`, `delta`
+and the level of the index in the first year are estimated by maximum
+likelihood of the paper's model for the observed log rates. The filtered
+index is computed in closed form (generalised least squares for the
+level and the drift and the best linear prediction of the index), which
+equals the Kalman filter with a diffuse initial state. Without state
+noise (`lambda = 0`, which is the estimate in some short or noisy
+series) it is the value in year `T` of the linear trend fitted to the
+per-year indices `z[t] = b'(y[t] - a) / b'b`; with little observation
+noise (large `lambda`) it approaches `z[T]`, the projection of the
+observed log rates of year `T` on the age pattern, which is `k[T]` for
+`method = "svd", adjust = "none"`. Only the start changes: the forecast
+keeps the drift and the innovations of `k` (the paper's forecast uses
+the maximum likelihood drift and adds the variance of the filtered
+index). Package-specific (reference unknown): cells without deaths enter
+with 0.5 deaths, as for `jump_off = "observed"`; age groups without
+deaths in the fitting period are left out; with `bootstrap = TRUE` each
+bootstrap fit filters the observed rates with its own `a` and `b`.
+[`mt_parameters()`](mt_parameters.md) reports the filtered index
+(`k_filtered`), its standard error (`se_k_filtered`, which includes the
+uncertainty of the level and the drift) and the estimates
+`filter_sigma`, `filter_lambda` and `filter_drift` (per year, in the
+units of `k`). The paper's data (Australian women, 1921-2000) are not in
+an R package; tests check the limiting cases, a Kalman filter and
+recovery on simulated data.
+
 **Negative binomial version** (`family = "nb"`; Delwarde, Denuit and
 Partrat 2007). Following the paper:
 
@@ -189,6 +291,68 @@ reproduces the paper's dispersions (Section 3.3), AIC (Section 3.4) and
 drifts and standard deviations of `k` (Sections 3.5 and 3.6) within 1%;
 the paper's column labelled `sigma^2` holds the standard deviation
 (divisor `T - 1`).
+
+**Dispersion by age** (`family = "nb"` with `dispersion = "age"`; Li,
+Hardy and Tan 2009). Following the paper:
+
+- each cell consists of clusters whose deaths are Poisson given a gamma
+  distributed frailty with mean 1 and a variance that depends on age.
+  The deaths of the cell are then negative binomial with mean
+  `mu = E exp(a[x] + b[x] k[t])` and variance `mu + alpha[x] mu^2`
+  (Section 3, eq. 5-12), with one dispersion `alpha[x]` per age group of
+  the data; `alpha[x]` near 0 gives the Poisson model;
+
+- `a`, `b`, `k` and `alpha` are estimated by maximum likelihood (eq.
+  13): the Newton updates of `a`, `b` and `k` of Appendix 1, alternated
+  with the estimate of each `alpha[x]` given the fitted deaths of its
+  age group;
+
+- `jump_off = "constrained"` applies the forecast origin correction
+  (Section 3 and Appendix 2): `a[x]` is the observed log rate of the
+  last year `T` (the paper writes `a[x] = m[x, T]`; `a` is on the log
+  scale of eq. 1), `k[T] = 0`, and `b` and `k` are estimated by maximum
+  likelihood under these constraints. The fitted rates of the last year
+  are the observed ones, and the log-likelihood is lower than without
+  the constraints (footnote 3). With `family = "poisson"` it gives the
+  original model with the correction, which the paper fits for
+  comparison (Section 4.2);
+
+- interval forecasts come from the parametric bootstrap of Section 3:
+  `bootstrap = TRUE` simulates negative binomial deaths from the fitted
+  model, re-estimates `a`, `b` and `k` (with `jump_off = "constrained"`,
+  `a` comes from the simulated deaths of the last year, as the
+  correction is part of the estimation in Section 3), and simulates `k`
+  from the time series model of each refit. The dispersions are those of
+  the fit: step 2(a) re-estimates `a`, `b` and `k`. The paper's method
+  is
+  `lee_carter(family = "nb", dispersion = "age", jump_off = "constrained", bootstrap = TRUE)`;
+
+- predictive draws (`mt_forecast(predictive = TRUE)`) are negative
+  binomial deaths with the dispersion of their age group (size
+  `1 / alpha[x]`), the observation model of eq. (10). The paper's
+  intervals describe the central death rates, which are the draws
+  without `predictive`.
+
+Package-specific (reference unknown): as for one dispersion, the updates
+start from the Poisson estimates (Appendix 1 recommends them), and each
+`alpha[x]` is maximised by Newton steps on `log(alpha[x])` with step
+halving (the paper: Newton steps on `alpha[x]`). Its estimate is 0 where
+the derivative of the log-likelihood at 0 is not positive. The paper
+fits an ARIMA model to `k` without naming the model it chose; here `k`
+follows a random walk with drift, and the draws of each bootstrap fit
+include the uncertainty of its drift, as all draws of `lee_carter()`.
+With `jump_off = "constrained"`, an age group without deaths in the last
+year starts from the rate of 0.5 deaths. Age groups without deaths in
+all years keep their constant rate and have Poisson deaths (dispersion
+0). As with one dispersion, a fit that does not converge fails;
+`jump_off = "constrained"` has no fallbacks either. Each `alpha[x]` is
+estimated from cells that also estimate `a[x]`, `b[x]` and `k`. Like
+other maximum likelihood estimates of a variance it is biased downwards:
+by about `2 / T` with `T` years, and more at the ages that carry most of
+the information on `k` (many deaths and a small dispersion). The paper
+uses data of the Human Mortality Database for the United States and
+Canada, ages 0-99, 1950-2004 (Section 4.1). The packages demography and
+StMoMo do not hold these series, so its estimates are not reproduced.
 
 `rotate = TRUE` rotates the age pattern of decline as life expectancy
 rises (Li, Lee and Gerland 2013; status: published, with the deviations
@@ -239,9 +403,9 @@ Deviations of the rotation from Li, Lee and Gerland (2013):
   `log m[x, t] = log m[x, T] + B[x, t] (k*[t] - k[T])`. Eq. (4) writes
   `a[x] + B[x, t] K[t]` with `a` the last observed log rates (as
   `jump_off = "observed"`) or their mean over the years; with
-  `jump_off = "fitted"` the fitted rates of year `T` are the starting
-  point (package-specific), which keeps the jump-off rates when `B`
-  departs from `b`;
+  `jump_off = "fitted"` (or `"filtered"`) the fitted (or filtered) rates
+  of year `T` are the starting point (package-specific), which keeps the
+  jump-off rates when `B` departs from `b`;
 
 - the paper extends the open age group to age 130 with a logistic model
   before fitting (footnote 3); here the age groups of the data are used,
@@ -267,10 +431,25 @@ Lee R, Miller T (2001). Evaluating the performance of the Lee-Carter
 method for forecasting mortality. *Demography* 38(4): 537-549.
 [doi:10.1353/dem.2001.0036](https://doi.org/10.1353/dem.2001.0036)
 
+Stoeldraijer L, van Duin C, van Wissen L, Janssen F (2018). Comparing
+strategies for matching mortality forecasts to the most recently
+observed data: exploring the trade-off between accuracy and robustness.
+*Genus* 74: 16.
+[doi:10.1186/s41118-018-0041-y](https://doi.org/10.1186/s41118-018-0041-y)
+
+De Jong P, Tickle L (2006). Extending Lee-Carter mortality forecasting.
+*Mathematical Population Studies* 13(1): 1-18.
+[doi:10.1080/08898480500452109](https://doi.org/10.1080/08898480500452109)
+
 Delwarde A, Denuit M, Partrat C (2007). Negative binomial version of the
 Lee-Carter model for mortality forecasting. *Applied Stochastic Models
 in Business and Industry* 23(5): 385-401.
 [doi:10.1002/asmb.679](https://doi.org/10.1002/asmb.679)
+
+Li JS-H, Hardy MR, Tan KS (2009). Uncertainty in mortality forecasting:
+an extension to the classical Lee-Carter approach. *ASTIN Bulletin*
+39(1): 137-164.
+[doi:10.2143/AST.39.1.2038060](https://doi.org/10.2143/AST.39.1.2038060)
 
 Brouhns N, Denuit M, Van Keilegom I (2005). Bootstrapping the Poisson
 log-bilinear model for mortality forecasting. *Scandinavian Actuarial
@@ -426,4 +605,101 @@ mt_parameters(fit_nb)[parameter == "nb_dispersion"]
 #>     <char>        <char> <char>        <num>
 #> 1:  female nb_dispersion        2.913877e-05
 #> 2:    male nb_dispersion        0.000000e+00
+# dispersion by age with the forecast origin correction and the parametric
+# bootstrap (Li, Hardy and Tan 2009)
+fit_lht <- mt_fit(lee_carter(family = "nb", dispersion = "age", jump_off = "constrained",
+                             bootstrap = TRUE, n_boot = 20), mt_subset(x, sex == "female"))
+mt_parameters(fit_lht)[parameter == "nb_dispersion"]
+#>     stratum     parameter  index        value
+#>      <char>        <char> <char>        <num>
+#>  1:  female nb_dispersion     30 1.332502e-02
+#>  2:  female nb_dispersion     31 4.772923e-03
+#>  3:  female nb_dispersion     32 4.053318e-03
+#>  4:  female nb_dispersion     33 1.236417e-03
+#>  5:  female nb_dispersion     34 0.000000e+00
+#>  6:  female nb_dispersion     35 0.000000e+00
+#>  7:  female nb_dispersion     36 0.000000e+00
+#>  8:  female nb_dispersion     37 8.228632e-04
+#>  9:  female nb_dispersion     38 4.278345e-03
+#> 10:  female nb_dispersion     39 0.000000e+00
+#> 11:  female nb_dispersion     40 0.000000e+00
+#> 12:  female nb_dispersion     41 0.000000e+00
+#> 13:  female nb_dispersion     42 2.691890e-03
+#> 14:  female nb_dispersion     43 0.000000e+00
+#> 15:  female nb_dispersion     44 3.367764e-05
+#> 16:  female nb_dispersion     45 6.100974e-03
+#> 17:  female nb_dispersion     46 1.888541e-03
+#> 18:  female nb_dispersion     47 1.450254e-03
+#> 19:  female nb_dispersion     48 0.000000e+00
+#> 20:  female nb_dispersion     49 0.000000e+00
+#> 21:  female nb_dispersion     50 0.000000e+00
+#> 22:  female nb_dispersion     51 2.742291e-03
+#> 23:  female nb_dispersion     52 3.108202e-04
+#> 24:  female nb_dispersion     53 0.000000e+00
+#> 25:  female nb_dispersion     54 1.143663e-03
+#> 26:  female nb_dispersion     55 5.628666e-03
+#> 27:  female nb_dispersion     56 0.000000e+00
+#> 28:  female nb_dispersion     57 8.045295e-04
+#> 29:  female nb_dispersion     58 0.000000e+00
+#> 30:  female nb_dispersion     59 0.000000e+00
+#> 31:  female nb_dispersion     60 0.000000e+00
+#> 32:  female nb_dispersion     61 0.000000e+00
+#> 33:  female nb_dispersion     62 8.316641e-05
+#> 34:  female nb_dispersion     63 8.191533e-04
+#> 35:  female nb_dispersion     64 1.580029e-04
+#> 36:  female nb_dispersion     65 0.000000e+00
+#> 37:  female nb_dispersion     66 3.316936e-04
+#> 38:  female nb_dispersion     67 5.760218e-04
+#> 39:  female nb_dispersion     68 0.000000e+00
+#> 40:  female nb_dispersion     69 0.000000e+00
+#> 41:  female nb_dispersion     70 1.959614e-04
+#> 42:  female nb_dispersion     71 0.000000e+00
+#> 43:  female nb_dispersion     72 0.000000e+00
+#> 44:  female nb_dispersion     73 0.000000e+00
+#> 45:  female nb_dispersion     74 3.327211e-04
+#> 46:  female nb_dispersion     75 0.000000e+00
+#> 47:  female nb_dispersion     76 2.120416e-04
+#> 48:  female nb_dispersion     77 0.000000e+00
+#> 49:  female nb_dispersion     78 0.000000e+00
+#> 50:  female nb_dispersion     79 0.000000e+00
+#> 51:  female nb_dispersion     80 0.000000e+00
+#> 52:  female nb_dispersion     81 4.490368e-04
+#> 53:  female nb_dispersion     82 1.416356e-04
+#> 54:  female nb_dispersion     83 0.000000e+00
+#> 55:  female nb_dispersion     84 3.430378e-05
+#> 56:  female nb_dispersion     85 9.622345e-05
+#> 57:  female nb_dispersion     86 0.000000e+00
+#> 58:  female nb_dispersion     87 0.000000e+00
+#> 59:  female nb_dispersion     88 0.000000e+00
+#> 60:  female nb_dispersion     89 0.000000e+00
+#> 61:  female nb_dispersion     90 0.000000e+00
+#> 62:  female nb_dispersion     91 3.060295e-05
+#> 63:  female nb_dispersion     92 1.258580e-05
+#> 64:  female nb_dispersion     93 0.000000e+00
+#> 65:  female nb_dispersion     94 2.127695e-05
+#> 66:  female nb_dispersion     95 0.000000e+00
+#> 67:  female nb_dispersion     96 7.320695e-05
+#> 68:  female nb_dispersion     97 0.000000e+00
+#> 69:  female nb_dispersion     98 2.175004e-04
+#> 70:  female nb_dispersion     99 1.609601e-04
+#> 71:  female nb_dispersion   100+ 6.562962e-04
+#>     stratum     parameter  index        value
+#>      <char>        <char> <char>        <num>
+# jump-off: mean of the last three observed years (Stoeldraijer et al.
+# 2018) and the Kalman filter estimate (De Jong and Tickle 2006)
+fit_av <- mt_fit(lee_carter(jump_off = "observed", jump_off_years = 3), x)
+fit_kf <- mt_fit(lee_carter(jump_off = "filtered"), x)
+mt_parameters(fit_kf)[grepl("filter", parameter)]
+#>     stratum     parameter  index        value
+#>      <char>        <char> <char>        <num>
+#>  1:  female    k_filtered   2019 -13.31314483
+#>  2:  female se_k_filtered   2019   0.39234808
+#>  3:  female  filter_sigma          0.06480888
+#>  4:  female filter_lambda          0.81877306
+#>  5:  female  filter_drift         -0.87267723
+#>  6:    male    k_filtered   2019 -12.32094921
+#>  7:    male se_k_filtered   2019   0.38782858
+#>  8:    male  filter_sigma          0.05381630
+#>  9:    male filter_lambda          1.79159067
+#> 10:    male  filter_drift         -0.94477645
 ```

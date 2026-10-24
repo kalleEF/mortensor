@@ -19,7 +19,7 @@ parameters."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">mortensor</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -105,8 +105,10 @@ gives about one knot per five years (see Details).</p></dd>
 
 
 <dt id="arg-overdispersion">overdispersion<a class="anchor" aria-label="anchor" href="#arg-overdispersion"></a></dt>
-<dd><p>Account for overdispersion in the choice of the
-smoothing parameters and in the draws.</p></dd>
+<dd><p><code>FALSE</code> (default): Poisson deaths. <code>TRUE</code>: one
+dispersion for all cells in the choice of the smoothing parameters and
+in the draws (MortalitySmooth). <code>"age"</code>: a dispersion for each age that
+varies smoothly over age (Djeundje and Currie 2011; see Details).</p></dd>
 
 
 <dt id="arg-lambda-range">lambda_range<a class="anchor" aria-label="anchor" href="#arg-lambda-range"></a></dt>
@@ -167,6 +169,39 @@ the smoothing parameters and the penalty, as in
 <code>psi2 (B'WB + psi2 P)^-1</code>. MortalitySmooth's <code><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict()</a></code> instead refits
 the forecast without <code>psi2</code> in the penalty and multiplies the standard
 errors by <code>sqrt(psi2)</code>.</p>
+<p><strong>Dispersion by age.</strong> <code>overdispersion = "age"</code> replaces the Poisson
+assumption by the first two moments of the deaths, <code>E[D] = E m</code> and
+<code>var(D) = phi[x] E[D]</code>, with a dispersion <code>phi[x]</code> for each age that
+varies smoothly over age (Djeundje and Currie 2011, eq. 2.1; Model 3,
+eq. 5.26). Rates and dispersions are estimated by the bias corrected
+scheme of the paper (section 4):</p><ol><li><p>Start with <code>phi = 1</code> at every age.</p></li>
+<li><p>Fit the rates by penalised quasi-likelihood: the scoring algorithm
+with the weights of the cells divided by their dispersion (eq. 3.13).
+The smoothing parameters minimise the criterion of the scaled
+deviance: the deviance of each cell divided by its dispersion, plus
+<code>log(n)</code> (BIC, eq. 3.16) or 2 (AIC) times the effective dimension.</p></li>
+<li><p>For each age, compute the bias-corrected mean Pearson statistic
+<code>d[x]</code>: the sum of <code>(D - mu)^2 / mu</code> over its years, divided by its
+number of cells <code>n[x]</code> minus its contribution to the effective
+dimension, the sum of its diagonal elements of the hat matrix (eq.
+4.20 and 4.21).</p></li>
+<li><p>Smooth the statistics over age by penalised quasi-likelihood with
+<code>E[d] = phi</code>, <code>var(d) = tau phi^2 / n[x]</code> and the link <code>-1 / phi = Ba beta</code> (eq. 4.22): the B-splines over age of the rates and a
+difference penalty of order <code>pord[1]</code> (eq. 5.28). The smoothing
+parameter minimises the scaled BIC of this fit.</p></li>
+<li><p>Repeat steps 2 to 4 until no dispersion changes by more than 1e-5
+relative to its value (section 5.2.2), at most 50 times.</p></li>
+</ol><p>The forecast fit keeps the dispersions of the ages in the weights, and
+the draws come from the covariance <code>(B'WB + P)^-1</code> with <code>W</code> the fitted
+deaths divided by their dispersion. In the paper's example (CMI assured
+lives, ages 40-90, section 5.2.3) the dispersion down-weights the fit to
+the data and the selected surface is smoother: the effective dimension
+is 46 under the Poisson assumption, 36 with one dispersion and 33 with
+the dispersion by age, and the confidence intervals of the forecast are
+narrower. With a single age, <code>"age"</code> gives one dispersion, the
+bias-corrected mean Pearson statistic (eq. 4.20). The fit selects the
+smoothing parameters in every round, so it takes several times as long
+as the Poisson fit.</p>
 <p><strong>Data.</strong> Ages are placed at the midpoints of their cells, an open
 interval at its lower bound plus half the width of the interval below it
 (as in <code><a href="mt_smooth.html">mt_smooth()</a></code>). Cells with missing deaths or exposures, and cells
@@ -180,7 +215,21 @@ are about five years of age and five calendar years apart, <code>floor(n / 5)</c
 wider than one year, <code>n</code> is the number of single years that the cell
 ages span. The smoothing parameters are searched on a grid with steps of
 1 on the log10 scale, followed by a continuous search near the best grid
-point (MortalitySmooth: two grid searches with steps of 2 and 0.5).</p>
+point (MortalitySmooth: two grid searches with steps of 2 and 0.5).
+With <code>overdispersion = "age"</code>: <code>tau</code> is the mean Pearson statistic of the
+smooth of step 4, <code>sum(n[x] (d[x] - phi[x])^2 / phi[x]^2)</code> divided by the
+number of ages minus its effective dimension, alternated with the choice
+of its smoothing parameter as <code>psi2</code> with <code>overdispersion = TRUE</code> (at
+most 5 times; the paper estimates <code>tau</code> without stating how); that
+smoothing parameter is searched over <code>lambda_range</code> as those of the
+rates; ages without data get weight 0 in step 4, so the smooth gives
+their dispersion; predictive draws add Poisson variation of the deaths,
+as with <code>overdispersion = TRUE</code>, because the quasi-likelihood defines
+the mean and variance of the deaths but no distribution, and the paper
+gives no predictive distribution. The paper's full extended
+quasi-likelihood scheme (mean deviances by age, eq. 2.6) is not offered:
+it underestimates the dispersion (section 4, Figure 4), and the paper
+reports its results with the bias corrected scheme.</p>
     </div>
     <div class="section level2">
     <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a></h2>
@@ -192,6 +241,9 @@ counts with P-splines. R package version 2.3.4 (CRAN archive).</p>
 <p>Camarda CG (2019). Smooth constrained mortality forecasting.
 <em>Demographic Research</em> 41(38): 1091-1130.
 <a href="https://doi.org/10.4054/DemRes.2019.41.38" class="external-link">doi:10.4054/DemRes.2019.41.38</a></p>
+<p>Djeundje VAB, Currie ID (2011). Smoothing dispersed counts with
+applications to mortality data. <em>Annals of Actuarial Science</em> 5(1):
+33-52. <a href="https://doi.org/10.1017/S1748499510000047" class="external-link">doi:10.1017/S1748499510000047</a></p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
@@ -217,6 +269,86 @@ time trends; <code><a href="mt_smooth.html">mt_smooth()</a></code> for smoothing
 <span class="r-out co"><span class="r-pr">#&gt;</span>  8:    male          ed        3.669204e+01</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>  9:    male         bic        1.575542e+03</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 10:    male  dispersion        1.057821e+00</span>
+<span class="r-in"><span><span class="co"># dispersion that varies smoothly over age (Djeundje and Currie 2011),</span></span></span>
+<span class="r-in"><span><span class="co"># smoothing parameters of the rates given</span></span></span>
+<span class="r-in"><span><span class="va">fit_age</span> <span class="op">&lt;-</span> <span class="fu"><a href="mt_fit.html">mt_fit</a></span><span class="op">(</span><span class="fu">p_splines</span><span class="op">(</span>lambda <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">1000</span><span class="op">)</span>, overdispersion <span class="op">=</span> <span class="st">"age"</span><span class="op">)</span>, <span class="va">x</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">p</span> <span class="op">&lt;-</span> <span class="fu"><a href="mt_parameters.html">mt_parameters</a></span><span class="op">(</span><span class="va">fit_age</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">p</span><span class="op">[</span><span class="va">parameter</span> <span class="op">==</span> <span class="st">"dispersion"</span> <span class="op">&amp;</span> <span class="va">stratum</span> <span class="op">==</span> <span class="st">"female"</span><span class="op">]</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     stratum  parameter  index       value</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>      &lt;char&gt;     &lt;char&gt; &lt;char&gt;       &lt;num&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  1:  female dispersion     30   0.9671517</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2:  female dispersion     31   0.9790779</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  3:  female dispersion     32   0.9909822</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  4:  female dispersion     33   1.0029657</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  5:  female dispersion     34   1.0151403</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  6:  female dispersion     35   1.0276151</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  7:  female dispersion     36   1.0403023</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  8:  female dispersion     37   1.0529406</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  9:  female dispersion     38   1.0652390</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 10:  female dispersion     39   1.0768806</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 11:  female dispersion     40   1.0875171</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 12:  female dispersion     41   1.0965968</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 13:  female dispersion     42   1.1033598</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 14:  female dispersion     43   1.1070284</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 15:  female dispersion     44   1.1068512</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 16:  female dispersion     45   1.1021625</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 17:  female dispersion     46   1.0929401</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 18:  female dispersion     47   1.0799393</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 19:  female dispersion     48   1.0639887</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 20:  female dispersion     49   1.0458979</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 21:  female dispersion     50   1.0264255</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 22:  female dispersion     51   1.0063595</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 23:  female dispersion     52   0.9865562</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 24:  female dispersion     53   0.9677634</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 25:  female dispersion     54   0.9506179</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 26:  female dispersion     55   0.9356685</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 27:  female dispersion     56   0.9233800</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 28:  female dispersion     57   0.9141380</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 29:  female dispersion     58   0.9083311</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 30:  female dispersion     59   0.9063910</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 31:  female dispersion     60   0.9088306</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 32:  female dispersion     61   0.9159990</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 33:  female dispersion     62   0.9275124</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 34:  female dispersion     63   0.9428972</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 35:  female dispersion     64   0.9616961</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 36:  female dispersion     65   0.9834203</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 37:  female dispersion     66   1.0074322</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 38:  female dispersion     67   1.0326511</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 39:  female dispersion     68   1.0576762</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 40:  female dispersion     69   1.0808251</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 41:  female dispersion     70   1.1001516</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 42:  female dispersion     71   1.1137971</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 43:  female dispersion     72   1.1213488</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 44:  female dispersion     73   1.1230756</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 45:  female dispersion     74   1.1194434</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 46:  female dispersion     75   1.1110671</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 47:  female dispersion     76   1.0987179</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 48:  female dispersion     77   1.0836321</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 49:  female dispersion     78   1.0671696</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 50:  female dispersion     79   1.0505653</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 51:  female dispersion     80   1.0349148</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 52:  female dispersion     81   1.0211342</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 53:  female dispersion     82   1.0095068</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 54:  female dispersion     83   0.9999902</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 55:  female dispersion     84   0.9925590</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 56:  female dispersion     85   0.9872098</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 57:  female dispersion     86   0.9839948</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 58:  female dispersion     87   0.9834807</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 59:  female dispersion     88   0.9866502</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 60:  female dispersion     89   0.9945922</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 61:  female dispersion     90   1.0085854</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 62:  female dispersion     91   1.0302970</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 63:  female dispersion     92   1.0634685</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 64:  female dispersion     93   1.1149781</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 65:  female dispersion     94   1.1955604</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 66:  female dispersion     95   1.3242876</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 67:  female dispersion     96   1.5403639</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 68:  female dispersion     97   1.9309526</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 69:  female dispersion     98   2.7450798</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 70:  female dispersion     99   5.2136555</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 71:  female dispersion   100+ 262.7173992</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     stratum  parameter  index       value</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>      &lt;char&gt;     &lt;char&gt; &lt;char&gt;       &lt;num&gt;</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

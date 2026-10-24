@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">mortensor</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -198,9 +198,16 @@ These are safeguards of this package and are reported as warnings.</li>
 with drift; the drift and the innovation variance are estimated from the
 year-to-year changes of <code>k(t)</code>.</li>
 <li>
-<strong>Jump-off</strong>: fitted rates of the last year (default)
-or observed rates (<code>jump_off = "observed"</code>; Lee and Miller
-2001).</li>
+<strong>Jump-off</strong>: fitted rates of the last year (default),
+observed rates (<code>jump_off = "observed"</code>; Lee and Miller
+2001), the mean observed log rates of the last <code>n</code> years
+(<code>jump_off = "observed", jump_off_years = n</code>; Stoeldraijer et
+al. 2018), the Kalman filter estimate of the index in the last year
+(<code>jump_off = "filtered"</code>; De Jong and Tickle 2006) or a fit
+constrained to the observed rates of the last year
+(<code>jump_off = "constrained"</code>; Li, Hardy and Tan 2009). All but
+the first are opt-in; they are described below, and
+<code><a href="../articles/jump-off.html">vignette("jump-off")</a></code> compares them.</li>
 <li>
 <strong>Uncertainty in the draws</strong>: innovations of
 <code>k(t)</code> and the uncertainty of its drift. <code>a(x)</code>
@@ -232,6 +239,58 @@ Wales men aged 55-89 (origins 1996-2001, 10 years ahead), the CRPS of
 log rates was 0.072 with both families and the 95% intervals covered
 0.67 of the observed rates (Poisson 0.63).</li>
 <li>
+<strong>Dispersion by age</strong>
+(<code>family = "nb", dispersion = "age"</code>, opt-in; Li, Hardy and
+Tan 2009): the deaths of a cell come from clusters with a gamma
+distributed frailty whose variance depends on age, so they are negative
+binomial with variance <code>mu + alpha(x) mu^2</code> and one
+dispersion <code>alpha(x)</code> per age group. <code>a</code>,
+<code>b</code>, <code>k</code> and the dispersions are estimated by
+maximum likelihood (the Newton updates of Appendix 1 of the paper), and
+predictive draws are negative binomial with the dispersion of each age.
+Package-specific: the choices listed for one dispersion, and the random
+walk with drift of <code>k(t)</code> (the paper fits an ARIMA model
+without naming it). Like other maximum likelihood estimates of
+variances, the dispersions are biased downwards, most at ages with many
+deaths and a small dispersion, which carry most of the information on
+<code>k(t)</code>.</li>
+<li>
+<strong>Forecast origin correction</strong>
+(<code>jump_off = "constrained"</code>, opt-in; Li, Hardy and Tan 2009,
+Appendix 2): <code>a(x)</code> is the observed log rate of the last year
+<code>T</code>, <code>k(T) = 0</code>, and <code>b</code> and
+<code>k</code> are estimated by maximum likelihood under these
+constraints, so the fitted rates of the last year are the observed ones.
+It works with Poisson and negative binomial deaths
+(<code>method = "poisson"</code> only). With
+<code>bootstrap = TRUE</code> the draws follow the parametric bootstrap
+of the paper: resamples of the fitted deaths (negative binomial with the
+dispersions of the fit), refits of <code>a</code>, <code>b</code> and
+<code>k</code> (with <code>a</code> from the resampled last year) and
+paths of <code>k</code> from the random walk with drift of each refit.
+The paper’s method is
+<code>lee_carter(family = "nb", dispersion = "age", jump_off = "constrained", bootstrap = TRUE)</code>.</li>
+<li>
+<strong>Averaged and filtered jump-off</strong> (opt-in).
+<code>jump_off = "observed", jump_off_years = n</code> is the “average n
+years observed” of Stoeldraijer et al. (2018): the mean observed log
+rates of the last <code>n</code> years, placed at the midpoint of these
+years and carried to the last year by the drift of <code>k(t)</code>.
+With this reading the package reproduces their Table 8a for French men
+within 0.03 years (<code><a href="../reference/lee_carter.html">?lee_carter</a></code>).
+<code>jump_off = "filtered"</code> writes the model in the state-space
+form of De Jong and Tickle (2006),
+<code>log m(x,t) = a(x) + b(x) alpha(t) + e(x,t)</code> with a random
+walk with drift for <code>alpha(t)</code>, estimates the noise variances
+and the drift by maximum likelihood given <code>a</code> and
+<code>b</code> of the fit, and starts the forecast from the Kalman
+filter estimate of <code>alpha</code> in the last year; the drift and
+the innovations of <code>k(t)</code> stay those of the Lee-Carter fit.
+The paper also estimates <code>b</code> by maximum likelihood. When the
+estimate of the state noise is 0, which happens in short or noisy
+series, the start is the value of the linear trend of the index in the
+last year.</li>
+<li>
 <strong>Rotation</strong> (<code>rotate = TRUE</code>; Li, Lee and
 Gerland 2013): as life expectancy at birth rises from
 <code>e0_start</code> (80) to <code>e0_end</code> (102), the age pattern
@@ -250,6 +309,62 @@ it is that of the Lee-Carter draws. Rotation needs ages from 0 and
 computes life tables for every path and year, which is about 20 times
 slower.</li>
 </ul>
+<p>An example with England by sex (<code>ons_data</code>, all ages,
+2001-2019), the deaths pooled over the deprivation deciles. The
+dispersions by age of the negative binomial model at some ages, and the
+one dispersion of <code>dispersion = "global"</code>, both times
+1000:</p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">en</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_data.html">mt_data</a></span><span class="op">(</span>deaths <span class="op">=</span> <span class="va">ons_data</span>, population <span class="op">=</span> <span class="va">ons_data</span>, by <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"sex"</span>, <span class="st">"imd_decile"</span><span class="op">)</span>, age <span class="op">=</span> <span class="st">"age_group"</span>,</span>
+<span>              value <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>deaths <span class="op">=</span> <span class="st">"all_causes"</span>, population <span class="op">=</span> <span class="st">"population"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">en</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_as_exposure.html">mt_as_exposure</a></span><span class="op">(</span><span class="va">en</span>, type <span class="op">=</span> <span class="st">"midyear"</span><span class="op">)</span></span>
+<span><span class="va">en</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_group_levels.html">mt_group_levels</a></span><span class="op">(</span><span class="va">en</span>, <span class="st">"imd_decile"</span>, <span class="kw">function</span><span class="op">(</span><span class="va">d</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="st">"England"</span>, <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">d</span><span class="op">)</span><span class="op">)</span>, name <span class="op">=</span> <span class="st">"area"</span><span class="op">)</span></span>
+<span><span class="va">ages</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"0"</span>, <span class="st">"1-4"</span>, <span class="st">"20-24"</span>, <span class="st">"40-44"</span>, <span class="st">"60-64"</span>, <span class="st">"80-84"</span>, <span class="st">"90+"</span><span class="op">)</span></span>
+<span><span class="va">fit_nb</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_fit.html">mt_fit</a></span><span class="op">(</span><span class="fu"><a href="../reference/lee_carter.html">lee_carter</a></span><span class="op">(</span>family <span class="op">=</span> <span class="st">"nb"</span>, dispersion <span class="op">=</span> <span class="st">"age"</span><span class="op">)</span>, <span class="va">en</span><span class="op">)</span></span>
+<span><span class="va">disp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_parameters.html">mt_parameters</a></span><span class="op">(</span><span class="va">fit_nb</span><span class="op">)</span><span class="op">[</span><span class="va">parameter</span> <span class="op">==</span> <span class="st">"nb_dispersion"</span><span class="op">]</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fl">1000</span> <span class="op">*</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">sapply</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/split.html" class="external-link">split</a></span><span class="op">(</span><span class="va">disp</span>, <span class="va">disp</span><span class="op">$</span><span class="va">stratum</span><span class="op">)</span>, <span class="kw">function</span><span class="op">(</span><span class="va">d</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/stats/setNames.html" class="external-link">setNames</a></span><span class="op">(</span><span class="va">d</span><span class="op">$</span><span class="va">value</span>, <span class="va">d</span><span class="op">$</span><span class="va">index</span><span class="op">)</span><span class="op">[</span><span class="va">ages</span><span class="op">]</span><span class="op">)</span>, <span class="fl">2</span><span class="op">)</span></span>
+<span><span class="co">#&gt;       female.England male.England</span></span>
+<span><span class="co">#&gt; 0               1.07         1.17</span></span>
+<span><span class="co">#&gt; 1-4             4.56         5.19</span></span>
+<span><span class="co">#&gt; 20-24           0.03         2.48</span></span>
+<span><span class="co">#&gt; 40-44           0.02         0.26</span></span>
+<span><span class="co">#&gt; 60-64           0.03         0.08</span></span>
+<span><span class="co">#&gt; 80-84           0.35         0.31</span></span>
+<span><span class="co">#&gt; 90+             0.85         0.57</span></span>
+<span><span class="fu"><a href="../reference/mt_parameters.html">mt_parameters</a></span><span class="op">(</span><span class="fu"><a href="../reference/mt_fit.html">mt_fit</a></span><span class="op">(</span><span class="fu"><a href="../reference/lee_carter.html">lee_carter</a></span><span class="op">(</span>family <span class="op">=</span> <span class="st">"nb"</span><span class="op">)</span>, <span class="va">en</span><span class="op">)</span><span class="op">)</span><span class="op">[</span><span class="va">parameter</span> <span class="op">==</span> <span class="st">"nb_dispersion"</span>,</span>
+<span>                                                     <span class="fu">.</span><span class="op">(</span><span class="va">stratum</span>, value <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fl">1000</span> <span class="op">*</span> <span class="va">value</span>, <span class="fl">2</span><span class="op">)</span><span class="op">)</span><span class="op">]</span></span>
+<span><span class="co">#&gt;           stratum value</span></span>
+<span><span class="co">#&gt;            &lt;char&gt; &lt;num&gt;</span></span>
+<span><span class="co">#&gt; 1: female.England  0.31</span></span>
+<span><span class="co">#&gt; 2:   male.England  0.41</span></span></code></pre></div>
+<p>The dispersions are largest at ages 1-4 and, for men, at 20-24. They
+are smallest at ages 20-64 for women and at 60-64 for men, and higher
+again at 80 and over. The one dispersion of
+<code>dispersion = "global"</code> (0.31 and 0.41) is smaller than those
+at ages 0-4 and larger than those at ages 40-64.</p>
+<p>The step of life expectancy at birth from its observed value in 2019
+to the forecast for 2020, for the five jump-offs
+(<code><a href="../reference/mt_jump_off.html">mt_jump_off()</a></code>); each step contains one year of forecast
+improvement:</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">jump_offs</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>fitted <span class="op">=</span> <span class="fu"><a href="../reference/lee_carter.html">lee_carter</a></span><span class="op">(</span><span class="op">)</span>, observed <span class="op">=</span> <span class="fu"><a href="../reference/lee_carter.html">lee_carter</a></span><span class="op">(</span>jump_off <span class="op">=</span> <span class="st">"observed"</span><span class="op">)</span>,</span>
+<span>                  <span class="st">"mean of 3 years"</span> <span class="op">=</span> <span class="fu"><a href="../reference/lee_carter.html">lee_carter</a></span><span class="op">(</span>jump_off <span class="op">=</span> <span class="st">"observed"</span>, jump_off_years <span class="op">=</span> <span class="fl">3</span><span class="op">)</span>,</span>
+<span>                  filtered <span class="op">=</span> <span class="fu"><a href="../reference/lee_carter.html">lee_carter</a></span><span class="op">(</span>jump_off <span class="op">=</span> <span class="st">"filtered"</span><span class="op">)</span>,</span>
+<span>                  constrained <span class="op">=</span> <span class="fu"><a href="../reference/lee_carter.html">lee_carter</a></span><span class="op">(</span>jump_off <span class="op">=</span> <span class="st">"constrained"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">steps</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span><span class="va">jump_offs</span>, <span class="kw">function</span><span class="op">(</span><span class="va">s</span><span class="op">)</span> <span class="fu"><a href="../reference/mt_jump_off.html">mt_jump_off</a></span><span class="op">(</span><span class="fu"><a href="../reference/mt_forecast.html">mt_forecast</a></span><span class="op">(</span><span class="fu"><a href="../reference/mt_fit.html">mt_fit</a></span><span class="op">(</span><span class="va">s</span>, <span class="va">en</span><span class="op">)</span>, h <span class="op">=</span> <span class="fl">1</span>, n_draws <span class="op">=</span> <span class="fl">200</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/t.html" class="external-link">t</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">sapply</a></span><span class="op">(</span><span class="va">steps</span>, <span class="kw">function</span><span class="op">(</span><span class="va">s</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/setNames.html" class="external-link">setNames</a></span><span class="op">(</span><span class="va">s</span><span class="op">$</span><span class="va">step_observed</span>, <span class="va">s</span><span class="op">$</span><span class="va">label</span><span class="op">)</span>, <span class="fl">2</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co">#&gt;                 female.England male.England</span></span>
+<span><span class="co">#&gt; fitted                    0.19         0.29</span></span>
+<span><span class="co">#&gt; observed                  0.15         0.24</span></span>
+<span><span class="co">#&gt; mean of 3 years           0.05         0.23</span></span>
+<span><span class="co">#&gt; filtered                  0.02         0.24</span></span>
+<span><span class="co">#&gt; constrained               0.15         0.23</span></span></code></pre></div>
+<p>For women, the mean of three years and the filtered start give steps
+0.10 and 0.13 years smaller than the observed jump-off: both depend on
+more years than the last one. For men all steps lie between 0.23 and
+0.29 years. The constrained fit has the observed rates of 2019 as its
+fitted rates, and its step is close to that of the observed
+jump-off.</p>
 </div>
 <div class="section level3">
 <h3 id="compositional-data-model-coda">Compositional data model: <code>coda()</code><a class="anchor" aria-label="anchor" href="#compositional-data-model-coda"></a>
@@ -383,7 +498,8 @@ standard errors for given smoothing parameters.</p>
 smoothing parameters minimise the BIC (default) or the AIC. Cells with
 missing deaths or exposures get weight 0, so the surface interpolates
 them. <code>overdispersion = TRUE</code> takes a dispersion parameter
-into the choice of the smoothing parameters and into the draws.
+into the choice of the smoothing parameters and into the draws,
+<code>overdispersion = "age"</code> a dispersion for each age (below).
 <code>infant = TRUE</code> gives the first year of life coefficients of
 its own (Camarda 2019).</li>
 <li>
@@ -415,7 +531,45 @@ Wales men aged 30-100, and 0.115 against 0.085 on French women aged
 On England &amp; Wales men the 95% intervals of life expectancy at 30
 covered 0.40 of the observed values (Lee-Carter 0.90): the intervals of
 summary measures are narrow.</li>
+<li>
+<strong>Dispersion by age</strong>
+(<code>overdispersion = "age"</code>, opt-in; Djeundje and Currie 2011):
+the variance of the deaths is <code>phi(x)</code> times their mean, with
+a dispersion for each age that varies smoothly over age (Model 3 of the
+paper). The fit follows the paper’s bias corrected scheme: the penalised
+fit of the rates with the weights of the cells divided by
+<code>phi(x)</code> and the smoothing parameters chosen by the BIC of
+the scaled deviance, alternated with a smooth over age of the
+bias-corrected mean Pearson statistics of the ages, until the
+dispersions converge. The forecast and its draws keep the dispersions in
+the weights. The scaled deviance favours smoother surfaces; in the
+paper’s example the forecast intervals of the expected rates were
+narrower than under the Poisson assumption. Package-specific: the
+estimate of the variance parameter of the smooth of the dispersions, and
+Poisson variation in predictive draws (the paper gives the mean and
+variance of the deaths, no distribution). The fit takes several times as
+long as the Poisson fit. <code><a href="../articles/overdispersion.html">vignette("overdispersion")</a></code> treats
+overdispersed deaths in more detail.</li>
 </ul>
+<p>The dispersions by age for England by sex (the data of the Lee-Carter
+example above), at the same ages:</p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">fit_ps</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_fit.html">mt_fit</a></span><span class="op">(</span><span class="fu"><a href="../reference/p_splines.html">p_splines</a></span><span class="op">(</span>overdispersion <span class="op">=</span> <span class="st">"age"</span><span class="op">)</span>, <span class="va">en</span><span class="op">)</span></span>
+<span><span class="va">disp_ps</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_parameters.html">mt_parameters</a></span><span class="op">(</span><span class="va">fit_ps</span><span class="op">)</span><span class="op">[</span><span class="va">parameter</span> <span class="op">==</span> <span class="st">"dispersion"</span><span class="op">]</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">sapply</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/split.html" class="external-link">split</a></span><span class="op">(</span><span class="va">disp_ps</span>, <span class="va">disp_ps</span><span class="op">$</span><span class="va">stratum</span><span class="op">)</span>, <span class="kw">function</span><span class="op">(</span><span class="va">d</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/stats/setNames.html" class="external-link">setNames</a></span><span class="op">(</span><span class="va">d</span><span class="op">$</span><span class="va">value</span>, <span class="va">d</span><span class="op">$</span><span class="va">index</span><span class="op">)</span><span class="op">[</span><span class="va">ages</span><span class="op">]</span><span class="op">)</span>, <span class="fl">1</span><span class="op">)</span></span>
+<span><span class="co">#&gt;       female.England male.England</span></span>
+<span><span class="co">#&gt; 0                1.8          1.4</span></span>
+<span><span class="co">#&gt; 1-4              1.7          1.4</span></span>
+<span><span class="co">#&gt; 20-24            1.5          1.8</span></span>
+<span><span class="co">#&gt; 40-44            1.6          2.4</span></span>
+<span><span class="co">#&gt; 60-64            2.9          3.8</span></span>
+<span><span class="co">#&gt; 80-84           22.7          8.7</span></span>
+<span><span class="co">#&gt; 90+             81.3         24.4</span></span></code></pre></div>
+<p>The dispersions lie between 1.4 and 2.4 up to age 44 and rise steeply
+at old ages, to 81 for women and 24 for men at 90 and over. Where deaths
+are many, their variation from year to year around the smooth surface is
+large relative to Poisson variation, and the dispersion also takes up
+any misfit of the surface.</p>
 </div>
 <div class="section level3">
 <h3 id="constrained-p-splines-cp_splines">Constrained P-splines: <code>cp_splines()</code><a class="anchor" aria-label="anchor" href="#constrained-p-splines-cp_splines"></a>
@@ -788,15 +942,35 @@ effects; the fit reports the mean squared error and the approximate BIC
 of eq. (4)-(5). As in the paper, the data need more years than age
 groups.</li>
 <li>
-<strong>Forecast</strong> (package-specific; the paper does not
-forecast): all period effects follow one multivariate random walk with
-drift with correlated innovations, as StMoMo forecasts several indexes.
-Each population keeps its own drift, so forecasts of different
-populations can diverge.</li>
+<strong>Forecast</strong> (default <code>index = "rwd"</code>,
+package-specific; the paper does not forecast): all period effects
+follow one multivariate random walk with drift with correlated
+innovations, as StMoMo forecasts several indexes. Each population keeps
+its own drift, so forecasts of different populations can diverge.</li>
 <li>
-<strong>Uncertainty</strong>: correlated innovations and the drift
-uncertainty; <code>a</code> and <code>beta</code> are fixed. Predictive
-draws add Poisson variation of the deaths given the rates.</li>
+<strong>Coherent forecast</strong> (<code>index = "coherent"</code>,
+opt-in; Enchev, Kleinow and Cairns 2017, Table 10, Model 3): the first
+period effects of all populations follow a multivariate random walk with
+one common drift, and the further period effects revert to zero as AR(1)
+processes (a vector autoregression with a diagonal matrix). The expected
+log rates of two populations then keep the difference of their first
+period effects in the last year, so they do not diverge; the variance of
+the difference still grows with the horizon unless the innovations are
+perfectly correlated. Package-specific: the common drift is the mean
+year-to-year change with equal weight per population (one drift per
+group of <code>common_by</code>), the AR(1) coefficients are
+least-squares estimates bounded to <code>|phi| &lt;= 0.99</code>, and
+one covariance matrix holds the innovations of all populations and
+orders. The paper estimates the model by Poisson maximum likelihood with
+other constraints; <code><a href="../reference/cae.html">cae()</a></code> applies its forecasting model to
+the least-squares estimates of Kleinow (2015), so forecasts can differ
+from those of the paper.</li>
+<li>
+<strong>Uncertainty</strong>: correlated innovations and the
+uncertainty of the drift (of the common drift with
+<code>index = "coherent"</code>, whose AR(1) coefficients are fixed);
+<code>a</code> and <code>beta</code> are fixed. Predictive draws add
+Poisson variation of the deaths given the rates.</li>
 <li>
 <strong>Package-specific</strong>: the paper’s criterion is
 minimised by Jacobi rotations (Cardoso and Souloumiac 1996); the paper
@@ -808,8 +982,20 @@ bottom strata.</li>
 <li>
 <strong>Use</strong>: populations that share the age pattern of
 change and differ in its speed. <code><a href="../articles/dependence.html">vignette("dependence")</a></code>
-shows the dependence it gives to totals and gaps.</li>
+shows the dependence it gives to totals and gaps, and what the common
+drift does to the gaps between deprivation quintiles in England.</li>
 </ul>
+<p>The drifts of the first period effects of the 40 strata of
+<code><a href="../reference/mt_example_regions.html">mt_example_regions()</a></code>: the own drifts of the default
+forecast and the common drift of <code>index = "coherent"</code>, which
+is their mean:</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">xr</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_example_regions.html">mt_example_regions</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="va">own</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_parameters.html">mt_parameters</a></span><span class="op">(</span><span class="fu"><a href="../reference/mt_fit.html">mt_fit</a></span><span class="op">(</span><span class="fu"><a href="../reference/cae.html">cae</a></span><span class="op">(</span><span class="op">)</span>, <span class="va">xr</span><span class="op">)</span><span class="op">)</span><span class="op">[</span><span class="va">parameter</span> <span class="op">==</span> <span class="st">"drift_kappa1"</span>, <span class="va">value</span><span class="op">]</span></span>
+<span><span class="va">common</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_parameters.html">mt_parameters</a></span><span class="op">(</span><span class="fu"><a href="../reference/mt_fit.html">mt_fit</a></span><span class="op">(</span><span class="fu"><a href="../reference/cae.html">cae</a></span><span class="op">(</span>index <span class="op">=</span> <span class="st">"coherent"</span><span class="op">)</span>, <span class="va">xr</span><span class="op">)</span><span class="op">)</span><span class="op">[</span><span class="va">parameter</span> <span class="op">==</span> <span class="st">"drift_kappa1"</span>, <span class="va">value</span><span class="op">]</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>own_min <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">min</a></span><span class="op">(</span><span class="va">own</span><span class="op">)</span>, own_max <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="va">own</span><span class="op">)</span>, own_mean <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">own</span><span class="op">)</span>, common <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/unique.html" class="external-link">unique</a></span><span class="op">(</span><span class="va">common</span><span class="op">)</span><span class="op">)</span>, <span class="fl">4</span><span class="op">)</span></span>
+<span><span class="co">#&gt;  own_min  own_max own_mean   common </span></span>
+<span><span class="co">#&gt;  -0.0598  -0.0228  -0.0435  -0.0435</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="trend-of-a-reference-population-and-spreads-saint-opt-in">Trend of a reference population and spreads: <code>saint()</code>
@@ -1043,7 +1229,66 @@ predictive draws as well (all package-specific).</li>
 causes (<code><a href="../reference/mt_example_causes.html">mt_example_causes()</a></code>, origins 2008-2012, 5 years
 ahead), its CRPS of log rates was 0.082, against 0.063 for Lee-Carter
 models per cause reconciled with WLS.</li>
+<li>
+<strong>Weights and cause-specific components</strong> (opt-in;
+Kjærgaard et al. 2019). Kjærgaard et al. call the model above CT-CoDA
+and extend it to 2S-CoDA. <code>weights = "deaths"</code> weights each
+age and cause by its mean life-table deaths over the years, so that
+small causes count less, and <code>rho</code> weights the years by
+<code>rho (1 - rho)^(T - t)</code>, after Hyndman, Booth and Yasmeen
+(2013). With weights, the joint components come from a weighted
+(generalised) singular value decomposition.
+<code>individual = TRUE</code> adds one component per cause, the first
+component of the singular value decomposition of its residuals after the
+joint components: the joint and individual components of Lock et
+al. (2013), in two steps. 2S-CoDA is
+<code>coda_causes(weights = "deaths", rho = 0.1, individual = TRUE)</code>,
+with <code>jump_off = "fitted"</code> for the forecast of the paper’s
+eq. (7); its CT-CoDA has <code>rank = 3</code>. Every index has its own
+ARIMA model of <code>order</code> (the paper selects the orders by a
+unit-root test and AIC). The paper gives point forecasts.
+Package-specific: the draws refit the same weighted decomposition to
+bootstrap samples, with the residuals of each cell drawn from its own
+part and the years drawn with probabilities proportional to their
+weights; pooled residuals would move the large residuals of small,
+down-weighted causes into the parts that determine the fit.
+<code><a href="../reference/mt_parameters.html">mt_parameters()</a></code> reports, for each cause, the share of its
+variation (the squared norm of its centred clr deaths) explained by the
+joint and by the individual components, as in Fig. 4 of the paper
+(<code>explained_joint</code>, <code>explained_individual</code>).
+VECM-CoDA, the paper’s third model, is not implemented.</li>
 </ul>
+<p>The shares for England by sex (<code>ons_data</code>, the cause
+groups <code>ons_cause_groups</code> and the rest, ages 50 and over,
+2001-2019):</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">causes</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">ons_data</span><span class="op">)</span><span class="op">[</span><span class="op">-</span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="fl">7</span><span class="op">)</span><span class="op">]</span></span>
+<span><span class="va">xc</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_data.html">mt_data</a></span><span class="op">(</span>deaths <span class="op">=</span> <span class="va">ons_data</span>, population <span class="op">=</span> <span class="va">ons_data</span>, by <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"sex"</span>, <span class="st">"imd_decile"</span>, <span class="st">"cause"</span><span class="op">)</span>, age <span class="op">=</span> <span class="st">"age_group"</span>,</span>
+<span>              value <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>deaths <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>all <span class="op">=</span> <span class="st">"all_causes"</span>, <span class="va">causes</span><span class="op">)</span>, population <span class="op">=</span> <span class="st">"population"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">xc</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_subset.html">mt_subset</a></span><span class="op">(</span><span class="fu"><a href="../reference/mt_as_exposure.html">mt_as_exposure</a></span><span class="op">(</span><span class="va">xc</span>, type <span class="op">=</span> <span class="st">"midyear"</span><span class="op">)</span>, ages <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">50</span>, <span class="cn">Inf</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">xc</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_group_levels.html">mt_group_levels</a></span><span class="op">(</span><span class="va">xc</span>, <span class="st">"imd_decile"</span>, <span class="kw">function</span><span class="op">(</span><span class="va">d</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="st">"England"</span>, <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">d</span><span class="op">)</span><span class="op">)</span>, name <span class="op">=</span> <span class="st">"area"</span><span class="op">)</span></span>
+<span><span class="va">xc</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_group_levels.html">mt_group_levels</a></span><span class="op">(</span><span class="va">xc</span>, <span class="st">"cause"</span>, <span class="va">ons_cause_groups</span>, other <span class="op">=</span> <span class="st">"rest"</span>, total <span class="op">=</span> <span class="st">"all"</span>, additive <span class="op">=</span> <span class="st">"rates"</span><span class="op">)</span></span>
+<span><span class="va">fit_2s</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_fit.html">mt_fit</a></span><span class="op">(</span><span class="fu"><a href="../reference/coda_causes.html">coda_causes</a></span><span class="op">(</span>weights <span class="op">=</span> <span class="st">"deaths"</span>, rho <span class="op">=</span> <span class="fl">0.1</span>, individual <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>, <span class="va">xc</span><span class="op">)</span></span>
+<span><span class="va">ex</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mt_parameters.html">mt_parameters</a></span><span class="op">(</span><span class="va">fit_2s</span><span class="op">)</span><span class="op">[</span><span class="va">parameter</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"explained_joint"</span>, <span class="st">"explained_individual"</span><span class="op">)</span><span class="op">]</span></span>
+<span><span class="va">ex</span><span class="op">$</span><span class="va">column</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">sub</a></span><span class="op">(</span><span class="st">"causes: (.*)[.]England"</span>, <span class="st">"\\1"</span>, <span class="va">ex</span><span class="op">$</span><span class="va">stratum</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">sub</a></span><span class="op">(</span><span class="st">"explained_"</span>, <span class="st">""</span>, <span class="va">ex</span><span class="op">$</span><span class="va">parameter</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">sapply</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/split.html" class="external-link">split</a></span><span class="op">(</span><span class="va">ex</span>, <span class="va">ex</span><span class="op">$</span><span class="va">column</span><span class="op">)</span>, <span class="kw">function</span><span class="op">(</span><span class="va">d</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/stats/setNames.html" class="external-link">setNames</a></span><span class="op">(</span><span class="va">d</span><span class="op">$</span><span class="va">value</span>, <span class="va">d</span><span class="op">$</span><span class="va">index</span><span class="op">)</span><span class="op">)</span>, <span class="fl">2</span><span class="op">)</span></span>
+<span><span class="co">#&gt;                   female individual female joint male individual male joint</span></span>
+<span><span class="co">#&gt; lung_cancer                    0.19         0.77            0.16       0.79</span></span>
+<span><span class="co">#&gt; colorectal_cancer              0.12         0.68            0.09       0.82</span></span>
+<span><span class="co">#&gt; breast_prostate                0.07         0.85            0.11       0.79</span></span>
+<span><span class="co">#&gt; other_cancers                  0.12         0.82            0.09       0.88</span></span>
+<span><span class="co">#&gt; ihd                            0.07         0.91            0.05       0.93</span></span>
+<span><span class="co">#&gt; stroke                         0.05         0.92            0.05       0.92</span></span>
+<span><span class="co">#&gt; other_circulatory              0.25         0.39            0.21       0.51</span></span>
+<span><span class="co">#&gt; dementia                       0.12         0.83            0.12       0.81</span></span>
+<span><span class="co">#&gt; respiratory                    0.14         0.79            0.23       0.57</span></span>
+<span><span class="co">#&gt; diabetes                       0.30         0.42            0.33       0.55</span></span>
+<span><span class="co">#&gt; liver_alcohol                  0.10         0.77            0.14       0.75</span></span>
+<span><span class="co">#&gt; rest                           0.24         0.55            0.27       0.62</span></span></code></pre></div>
+<p>The joint component explains 0.91 to 0.93 of the variation of
+ischaemic heart disease and stroke. For other circulatory diseases and
+diabetes it explains 0.39 to 0.55, and their individual components a
+further 0.21 to 0.33.</p>
 <p>The alternative is separate models per cause made coherent with the
 all-cause forecast by <code><a href="../reference/reconciled.html">reconciled()</a></code> (below).
 <code><a href="../reference/cause_shares.html">cause_shares()</a></code>, a Tucker model of cause shares without a
@@ -1066,9 +1311,13 @@ are package-specific options: the offset of the last <code>years</code>
 years, shrunk towards the stratum mean where deaths are few
 (<code>shrink = TRUE</code>, empirical Bayes with the moment estimator
 of DerSimonian and Laird 1986), and a linear fade over
-<code>decay</code> years. <code><a href="../reference/mt_jump_off.html">mt_jump_off()</a></code> reports the step
-between the last observed (and fitted) year and the first forecast
-year.</p>
+<code>decay</code> years. <code>anchored(years = n)</code> is a variant
+of the averaged jump-off of Stoeldraijer et al. (2018),
+<code>lee_carter(jump_off = "observed", jump_off_years = n)</code>: its
+offset is the log ratio of observed to fitted deaths of these years, so
+the forecast also keeps the change of the fitted rates from these years
+to the last year. <code><a href="../reference/mt_jump_off.html">mt_jump_off()</a></code> reports the step between
+the last observed (and fitted) year and the first forecast year.</p>
 </div>
 <div class="section level2">
 <h2 id="combining-models">Combining models<a class="anchor" aria-label="anchor" href="#combining-models"></a>
@@ -1335,10 +1584,11 @@ tuning compares across windows.</p>
 <td><code><a href="../reference/lee_carter.html">lee_carter()</a></code></td>
 <td>yes</td>
 <td>yes</td>
-<td>with <code>bootstrap = TRUE</code>
-</td>
-<td>Poisson, predictive draws (negative binomial with
+<td>with <code>bootstrap = TRUE</code> (negative binomial resamples with
 <code>family = "nb"</code>)</td>
+<td>Poisson, predictive draws (negative binomial with
+<code>family = "nb"</code>, with a dispersion per age with
+<code>dispersion = "age"</code>)</td>
 </tr>
 <tr class="even">
 <td><code><a href="../reference/rwd.html">rwd()</a></code></td>
@@ -1352,8 +1602,11 @@ tuning compares across windows.</p>
 <td>no index; the penalty extends the coefficients, with variance
 growing with the horizon</td>
 <td>in the coefficients</td>
-<td>yes (normal approximation of the coefficients)</td>
-<td>Poisson, predictive draws</td>
+<td>yes (normal approximation of the coefficients; with
+<code>overdispersion</code>, the weights divided by the
+dispersions)</td>
+<td>Poisson, predictive draws (also with
+<code>overdispersion</code>)</td>
 </tr>
 <tr class="even">
 <td><code><a href="../reference/cp_splines.html">cp_splines()</a></code></td>
@@ -1387,8 +1640,10 @@ growing with the horizon</td>
 </tr>
 <tr class="even">
 <td><code><a href="../reference/cae.html">cae()</a></code></td>
-<td>yes (correlated across populations)</td>
-<td>yes</td>
+<td>yes (correlated across populations; with
+<code>index = "coherent"</code> AR(1) processes beyond the first period
+effects)</td>
+<td>yes (one common drift with <code>index = "coherent"</code>)</td>
 <td>no</td>
 <td>Poisson, predictive draws</td>
 </tr>
@@ -1418,11 +1673,13 @@ also the residual variation)</td>
 <td>
 <code><a href="../reference/coda.html">coda()</a></code>, <code><a href="../reference/coda_causes.html">coda_causes()</a></code>
 </td>
-<td>yes (resampled innovations)</td>
+<td>yes (resampled innovations; with <code>individual = TRUE</code> also
+of the cause components)</td>
 <td>yes (index model refitted)</td>
 <td>
 <code>b</code>, <code>k</code> and the index model (residual
-bootstrap); <code>a</code> fixed</td>
+bootstrap, residuals by part with <code>weights = "deaths"</code>);
+<code>a</code> fixed</td>
 <td>Poisson, predictive draws (<code><a href="../reference/coda_causes.html">coda_causes()</a></code>: all-cause
 deaths split multinomially between the causes)</td>
 </tr>
@@ -1544,7 +1801,8 @@ are deaths drawn given the rates of each draw and the exposures, divided
 by the exposures: Poisson, the observation model of the Poisson
 Lee-Carter model (Brouhns, Denuit and Vermunt 2002), or negative
 binomial with the estimated dispersion for
-<code>lee_carter(family = "nb")</code> and with the dispersion of the
+<code>lee_carter(family = "nb")</code> (of each age with
+<code>dispersion = "age"</code>) and with the dispersion of the
 posterior draw for <code>stanmomo(family = "nb")</code>. No other
 observation noise is added. For models of observed rates
 (<code><a href="../reference/rwd.html">rwd()</a></code>, <code><a href="../reference/arima_series.html">arima_series()</a></code>,
@@ -1647,6 +1905,8 @@ with an application to the Lee-Carter model. <em>Statistical
 Modelling</em> 13(1): 69-93. <a href="doi:10.1177/1471082X12471373" class="uri">doi:10.1177/1471082X12471373</a>.</p>
 <p>Currie ID, Durban M, Eilers PHC (2004). Smoothing and forecasting
 mortality rates. <em>Statistical Modelling</em> 4(4): 279-298.</p>
+<p>De Jong P, Tickle L (2006). Extending Lee-Carter mortality
+forecasting. <em>Mathematical Population Studies</em> 13(1): 1-18. <a href="doi:10.1080/08898480500452109" class="uri">doi:10.1080/08898480500452109</a>.</p>
 <p>De Lathauwer L, De Moor B, Vandewalle J (2000). On the best rank-1
 and rank-(R1, R2, …, RN) approximation of higher-order tensors. <em>SIAM
 Journal on Matrix Analysis and Applications</em> 21(4): 1324-1342.</p>
@@ -1661,9 +1921,15 @@ sampled frequency table when the expected marginal totals are known.
 <p>Diebold FX, Mariano RS (1995). Comparing predictive accuracy.
 <em>Journal of Business &amp; Economic Statistics</em> 13(3):
 253-263.</p>
+<p>Djeundje VAB, Currie ID (2011). Smoothing dispersed counts with
+applications to mortality data. <em>Annals of Actuarial Science</em>
+5(1): 33-52. <a href="doi:10.1017/S1748499510000047" class="uri">doi:10.1017/S1748499510000047</a>.</p>
 <p>Dong Z, Shang HL, Hui F, Bruhn A (2025). A compositional approach to
 modeling cause-specific mortality with zero counts. <em>Annals of
 Actuarial Science</em> 19(3): 416-441. <a href="doi:10.1017/S1748499524000320" class="uri">doi:10.1017/S1748499524000320</a>.</p>
+<p>Enchev V, Kleinow T, Cairns AJG (2017). Multi-population mortality
+models: fitting, forecasting and comparisons. <em>Scandinavian Actuarial
+Journal</em> 2017(4): 319-342. <a href="doi:10.1080/03461238.2015.1133450" class="uri">doi:10.1080/03461238.2015.1133450</a>.</p>
 <p>Flury BN (1984). Common principal components in k groups. <em>Journal
 of the American Statistical Association</em> 79(388): 892-898. <a href="doi:10.1080/01621459.1984.10477108" class="uri">doi:10.1080/01621459.1984.10477108</a>.</p>
 <p>Gallo M (2015). Tucker3 model for compositional data.
@@ -1718,6 +1984,10 @@ Research</em> 6(15): 409-454. <a href="doi:10.4054/DemRes.2002.6.15" class="uri"
 <p>Kessy SR, Sherris M, Villegas AM, Ziveyi J (2022). Mortality
 forecasting using stacked regression ensembles. <em>Scandinavian
 Actuarial Journal</em> 2022(7): 591-626.</p>
+<p>Kjærgaard S, Ergemen YE, Kallestrup-Lamb M, Oeppen J,
+Lindahl-Jacobsen R (2019). Forecasting causes of death by using
+compositional data analysis: the case of cancer deaths. <em>Journal of
+the Royal Statistical Society Series C</em> 68(5): 1351-1370. <a href="doi:10.1111/rssc.12357" class="uri">doi:10.1111/rssc.12357</a>.</p>
 <p>Kleinow T (2015). A common age effect model for the mortality of
 multiple populations. <em>Insurance: Mathematics and Economics</em> 63:
 147-152. <a href="doi:10.1016/j.insmatheco.2015.03.023" class="uri">doi:10.1016/j.insmatheco.2015.03.023</a>.</p>
@@ -1736,12 +2006,18 @@ method for forecasting mortality. <em>Demography</em> 38(4):
 <p>Lee RD, Carter LR (1992). Modeling and forecasting U.S. mortality.
 <em>Journal of the American Statistical Association</em> 87(419):
 659-671.</p>
+<p>Li JS-H, Hardy MR, Tan KS (2009). Uncertainty in mortality
+forecasting: an extension to the classical Lee-Carter approach.
+<em>ASTIN Bulletin</em> 39(1): 137-164. <a href="doi:10.2143/AST.39.1.2038060" class="uri">doi:10.2143/AST.39.1.2038060</a>.</p>
 <p>Li N, Lee R (2005). Coherent mortality forecasts for a group of
 populations: an extension of the Lee-Carter method. <em>Demography</em>
 42(3): 575-594.</p>
 <p>Li N, Lee R, Gerland P (2013). Extending the Lee-Carter method to
 model the rotation of age patterns of mortality decline for long-term
 projections. <em>Demography</em> 50(6): 2037-2051. <a href="doi:10.1007/s13524-013-0232-2" class="uri">doi:10.1007/s13524-013-0232-2</a>.</p>
+<p>Lock EF, Hoadley KA, Marron JS, Nobel AB (2013). Joint and individual
+variation explained (JIVE) for integrated analysis of multiple data
+types. <em>Annals of Applied Statistics</em> 7(1): 523-542. <a href="doi:10.1214/12-AOAS597" class="uri">doi:10.1214/12-AOAS597</a>.</p>
 <p>Møller B, Fekjær H, Hakulinen T, Sigvaldason H, Storm HH, Talbäck M,
 Haldorsen T (2003). Prediction of cancer incidence in the Nordic
 countries: empirical comparison of different approaches. <em>Statistics
@@ -1804,6 +2080,10 @@ of the American Statistical Association</em> 79(388): 916-921. <a href="doi:10.1
 <p>Spiegelhalter DJ, Best NG, Carlin BP, van der Linde A (2002).
 Bayesian measures of model complexity and fit. <em>Journal of the Royal
 Statistical Society B</em> 64(4): 583-639.</p>
+<p>Stoeldraijer L, van Duin C, van Wissen L, Janssen F (2018). Comparing
+strategies for matching mortality forecasts to the most recently
+observed data: exploring the trade-off between accuracy and robustness.
+<em>Genus</em> 74(1): 16. <a href="doi:10.1186/s41118-018-0041-y" class="uri">doi:10.1186/s41118-018-0041-y</a>.</p>
 <p>Tashman LJ (2000). Out-of-sample tests of forecasting accuracy: an
 analysis and review. <em>International Journal of Forecasting</em>
 16(4): 437-450.</p>

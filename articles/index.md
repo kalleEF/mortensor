@@ -14,6 +14,7 @@ Each article explains one step with a simple model and figures.
 - [Smoothing death rates](smoothing.md):
 - [Where a forecast starts: the jump-off](jump-off.md):
 - [Backtesting and scores](backtesting.md):
+- [Overdispersion: extra variation in death counts](overdispersion.md):
 - [Tuning and recalibration](tuning-recalibration.md):
 - [Coherent forecasts: totals and their parts](coherence.md):
 - [Dependence between groups](dependence.md):

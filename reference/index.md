@@ -86,8 +86,8 @@ pipelines refitted in backtests.
 Describe the past
 
 Observed indicators with Poisson intervals, gaps between strata,
-inequality indices, lifespan variation, decompositions and excess
-mortality (which also work on forecasts).
+inequality indices, lifespan variation, decompositions, excess mortality
+and the pessimism of forecasts by cause (which also work on forecasts).
 
 - [`mt_observed()`](mt_observed.md) : Observed rates as draws
 - [`life_expectancy()`](life_expectancy.md) : Life expectancy from rates
@@ -116,6 +116,8 @@ mortality (which also work on forecasts).
   out of sample
 - [`mt_excess()`](mt_excess.md) [`mt_plot_excess()`](mt_excess.md) :
   Excess mortality
+- [`mt_pessimism()`](mt_pessimism.md) : Pessimism of forecasts by cause
+  of death
 
 ## 
 
@@ -159,6 +161,8 @@ Models for several populations and causes
   model of life-table deaths for subpopulations
 - [`saint()`](saint.md) : SAINT model: trend of a reference population
   and stationary spreads
+- [`relative_model()`](relative_model.md) : Relative model of
+  subpopulations and a reference population
 - [`tucker3()`](tucker3.md) : Tucker3 tensor model across strata
   (three-way Lee-Carter model)
 - [`cause_shares()`](cause_shares.md) : Coherent multi-cause forecasts

@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">mortensor</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -125,7 +125,7 @@ width of its intervals.</p>
 intervals include the joint uncertainty of all strata. The same
 functions describe observed data.</p>
 <p align="center">
-<img src="function-map-results.png" width="813" alt="Map 3, from draws to results: forecast draws (mt_draws) and observed data (mt_data) give indicators (life_expectancy(), lifespan_variation(), asr(), prob_dying(), yll(), mt_deaths()), comparisons (mt_contrast(), mt_inequality(), mt_decompose(), and mt_excess() for observed data against a baseline fit) and output (mt_summarise(), plots including mt_plot_excess(), mt_export()); draws can be aggregated or refined (mt_aggregate_draws(), mt_disaggregate(), mt_coherence())."></p>
+<img src="function-map-results.png" width="813" alt="Map 3, from draws to results: forecast draws (mt_draws) and observed data (mt_data) give indicators (life_expectancy(), lifespan_variation(), asr(), prob_dying(), yll(), mt_deaths()), comparisons (mt_contrast(), mt_inequality(), mt_decompose(), mt_pessimism(), and mt_excess() for observed data against a baseline fit) and output (mt_summarise(), plots including mt_plot_excess(), mt_export()); draws can be aggregated or refined (mt_aggregate_draws(), mt_disaggregate(), mt_coherence())."></p>
 </div>
 <div class="section level2">
 <h2 id="functions-by-purpose">Functions by purpose<a class="anchor" aria-label="anchor" href="#functions-by-purpose"></a>
@@ -316,18 +316,21 @@ smoothers in one figure</td>
 <tr class="even">
 <td>Model</td>
 <td>
-<code><a href="../reference/lee_carter.html">lee_carter()</a></code> (optionally rotated or with negative
-binomial deaths), <code><a href="../reference/rwd.html">rwd()</a></code>, <code><a href="../reference/p_splines.html">p_splines()</a></code>,
-<code><a href="../reference/cp_splines.html">cp_splines()</a></code>, <code><a href="../reference/bohk_rau.html">bohk_rau()</a></code>,
-<code><a href="../reference/li_lee.html">li_lee()</a></code>, <code><a href="../reference/cae.html">cae()</a></code>, <code><a href="../reference/saint.html">saint()</a></code>,
-<code><a href="../reference/hyndman_ullah.html">hyndman_ullah()</a></code>, <code><a href="../reference/coherent_fdm.html">coherent_fdm()</a></code>,
-<code><a href="../reference/coda.html">coda()</a></code> (also coherent), <code><a href="../reference/coda_multiway.html">coda_multiway()</a></code>,
-<code><a href="../reference/stmomo.html">stmomo()</a></code> (including the Plat model), <code><a href="../reference/apci.html">apci()</a></code>,
-<code><a href="../reference/stanmomo.html">stanmomo()</a></code>, <code><a href="../reference/arima_series.html">arima_series()</a></code>,
-<code><a href="../reference/arima_series.html">ets_series()</a></code>, <code><a href="../reference/apc_bayes.html">apc_bayes()</a></code>,
-<code><a href="../reference/nordpred_apc.html">nordpred_apc()</a></code>, <code><a href="../reference/tucker3.html">tucker3()</a></code>,
-<code><a href="../reference/coda_causes.html">coda_causes()</a></code>; deprecated: <code><a href="../reference/product_ratio.html">product_ratio()</a></code>
-(use <code><a href="../reference/coherent_fdm.html">coherent_fdm()</a></code>), <code><a href="../reference/cause_shares.html">cause_shares()</a></code> (use
+<code><a href="../reference/lee_carter.html">lee_carter()</a></code> (optionally rotated, with negative
+binomial deaths and a dispersion by age, or with averaged, filtered or
+constrained jump-off), <code><a href="../reference/rwd.html">rwd()</a></code>, <code><a href="../reference/p_splines.html">p_splines()</a></code>
+(optionally with a dispersion by age), <code><a href="../reference/cp_splines.html">cp_splines()</a></code>,
+<code><a href="../reference/bohk_rau.html">bohk_rau()</a></code>, <code><a href="../reference/li_lee.html">li_lee()</a></code>, <code><a href="../reference/cae.html">cae()</a></code>
+(optionally with a common drift), <code><a href="../reference/saint.html">saint()</a></code>,
+<code><a href="../reference/relative_model.html">relative_model()</a></code>, <code><a href="../reference/hyndman_ullah.html">hyndman_ullah()</a></code>,
+<code><a href="../reference/coherent_fdm.html">coherent_fdm()</a></code>, <code><a href="../reference/coda.html">coda()</a></code> (also coherent),
+<code><a href="../reference/coda_multiway.html">coda_multiway()</a></code>, <code><a href="../reference/stmomo.html">stmomo()</a></code> (including the Plat
+model), <code><a href="../reference/apci.html">apci()</a></code>, <code><a href="../reference/stanmomo.html">stanmomo()</a></code>,
+<code><a href="../reference/arima_series.html">arima_series()</a></code>, <code><a href="../reference/arima_series.html">ets_series()</a></code>,
+<code><a href="../reference/apc_bayes.html">apc_bayes()</a></code>, <code><a href="../reference/nordpred_apc.html">nordpred_apc()</a></code>,
+<code><a href="../reference/tucker3.html">tucker3()</a></code>, <code><a href="../reference/coda_causes.html">coda_causes()</a></code> (also 2S-CoDA);
+deprecated: <code><a href="../reference/product_ratio.html">product_ratio()</a></code> (use
+<code><a href="../reference/coherent_fdm.html">coherent_fdm()</a></code>), <code><a href="../reference/cause_shares.html">cause_shares()</a></code> (use
 <code><a href="../reference/reconciled.html">reconciled()</a></code> or <code><a href="../reference/coda_causes.html">coda_causes()</a></code>),
 <code>rwd(observation_noise = TRUE)</code> (use
 <code>arima_series(order = c(0, 1, 1), drift = TRUE)</code>),
@@ -391,11 +394,13 @@ its past forecasts to its median (<code>method = "errors"</code>)</td>
 <tr class="odd">
 <td>Jump-off</td>
 <td>
-<code><a href="../reference/anchored.html">anchored()</a></code>, <code><a href="../reference/mt_jump_off.html">mt_jump_off()</a></code>
+<code><a href="../reference/anchored.html">anchored()</a></code>, <code><a href="../reference/mt_jump_off.html">mt_jump_off()</a></code>;
+<code>lee_carter(jump_off = )</code>
 </td>
 <td>start forecasts at the observed rates of the last year (optionally
-of several years, shrunk and fading out); report the first-year
-step</td>
+of several years, shrunk and fading out), at their mean over the last
+years, at the Kalman filter estimate or from a fit constrained to the
+last year; report the first-year step</td>
 <td>
 <code>mt_spec</code>, <code>mt_draws</code>
 </td>
@@ -533,6 +538,18 @@ variation and interquartile range of the age at death</td>
 </tr>
 <tr class="even">
 <td>Report</td>
+<td><code><a href="../reference/mt_pessimism.html">mt_pessimism()</a></code></td>
+<td>how much lower life expectancy is when causes are forecast
+separately and summed than in an all-cause forecast (Wilmoth 1995), by
+age and cause, or approximated from two observed periods</td>
+<td>
+<code>mt_draws</code> (total and causes) or
+<code>mt_data</code>
+</td>
+<td>table</td>
+</tr>
+<tr class="odd">
+<td>Report</td>
 <td>
 <code><a href="../reference/mt_excess.html">mt_excess()</a></code>, <code><a href="../reference/mt_excess.html">mt_plot_excess()</a></code>
 </td>
@@ -544,7 +561,7 @@ expected values of a baseline model, by age, stratum and year</td>
 </td>
 <td>table, ggplot</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>Report</td>
 <td>
 <code><a href="../reference/derived.html">yll()</a></code>, <code><a href="../reference/mt_deaths.html">mt_deaths()</a></code>
@@ -553,7 +570,7 @@ expected values of a baseline model, by age, stratum and year</td>
 <td><code>mt_draws</code></td>
 <td>table, array</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>Report</td>
 <td>
 <code><a href="../reference/life_table.html">life_table()</a></code>, <code><a href="../reference/standard_population.html">standard_population()</a></code>
@@ -564,7 +581,7 @@ esp1976, who2000</td>
 <td>rates, name</td>
 <td>table</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>Check</td>
 <td><code><a href="../reference/mt_open_check.html">mt_open_check()</a></code></td>
 <td>old-age hazard laws fitted below a cut age and scored against the
@@ -572,7 +589,7 @@ observed deaths above it</td>
 <td><code>mt_data</code></td>
 <td>table</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>Report</td>
 <td>
 <code><a href="../reference/mt_contrast.html">mt_contrast()</a></code>, <code><a href="../reference/mt_inequality.html">mt_inequality()</a></code>,
@@ -584,7 +601,7 @@ observed deaths above it</td>
 </td>
 <td>table, ggplot</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>Report</td>
 <td>
 <code><a href="../reference/mt_compare.html">mt_compare_forecasts()</a></code>,
@@ -596,7 +613,7 @@ reconciliation methods) side by side</td>
 </td>
 <td>table, ggplot</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>Report</td>
 <td>
 <code><a href="../reference/mt_decompose.html">mt_decompose()</a></code>,
@@ -612,7 +629,7 @@ years with gaps)</td>
 <td>
 <code>mt_decomposition</code>, table, ggplot</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>Report</td>
 <td>
 <code><a href="../reference/mt_plot.html">mt_plot_forecast()</a></code>, <code><a href="../reference/mt_plot.html">mt_plot_age()</a></code>,
@@ -624,7 +641,7 @@ years with gaps)</td>
 <td>draws, data, tables</td>
 <td>ggplot, file</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>Data</td>
 <td>
 <code>ons_data</code>, <code>ons_cause_groups</code>,
@@ -637,7 +654,7 @@ years with gaps)</td>
 <td>tables, <code>mt_data</code>
 </td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>Report</td>
 <td>
 <code><a href="../reference/mt_plot_style.html">theme_mortensor()</a></code>,
@@ -648,7 +665,7 @@ years with gaps)</td>
 <td></td>
 <td>theme, scales</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>Disaggregate</td>
 <td>
 <code><a href="../reference/mt_disaggregate.html">mt_disaggregate()</a></code>, <code><a href="../reference/mt_shape_rates.html">mt_shape_rates()</a></code>,
@@ -662,7 +679,7 @@ deprecated)</td>
 <td>
 <code>mt_draws</code>, table, ggplot</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>Exchange</td>
 <td>
 <code><a href="../reference/as_demogdata.html">as_demogdata()</a></code>, <code><a href="../reference/as_demogdata.html">as_stmomodata()</a></code>
@@ -673,7 +690,7 @@ deprecated)</td>
 <code>demogdata</code>, <code>StMoMoData</code>
 </td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>Extend</td>
 <td><code><a href="../reference/new_mt_spec.html">new_mt_spec()</a></code></td>
 <td>constructor for developers adding a model (methods for the internal

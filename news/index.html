@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">mortensor</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -41,10 +41,32 @@
     </div>
 
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.1.9000" id="mortensor-019000-development-of-020">mortensor 0.1.9000 (development of 0.2.0)<a class="anchor" aria-label="anchor" href="#mortensor-019000-development-of-020"></a></h2>
+<h2 class="pkg-version" data-toc-text="0.2.0" id="mortensor-020">mortensor 0.2.0<a class="anchor" aria-label="anchor" href="#mortensor-020"></a></h2>
 <p>Clean break: the 0.1.x interface is replaced (see <code>dev/revamp-plan.md</code>).</p>
 <div class="section level3">
-<h3 id="dependence-between-strata-from-training-years-faster-bottom-up-reconciliation-0-1-9000">Dependence between strata from training years; faster bottom-up reconciliation<a class="anchor" aria-label="anchor" href="#dependence-between-strata-from-training-years-faster-bottom-up-reconciliation-0-1-9000"></a></h3>
+<h3 id="methods-from-the-full-texts-of-the-remaining-plan-items-0-2-0">Methods from the full texts of the remaining plan items<a class="anchor" aria-label="anchor" href="#methods-from-the-full-texts-of-the-remaining-plan-items-0-2-0"></a></h3>
+<p>Work package E8: the items of <code>dev/generalisation-plan.md</code> that waited for full texts, implemented from the papers. All are opt-in; defaults are unchanged.</p>
+<ul><li>
+<code>lee_carter(family = "nb", dispersion = "age")</code> estimates one dispersion of the negative binomial deaths per age group by maximum likelihood (Li, Hardy and Tan 2009). <code>jump_off = "constrained"</code> fits the model with the paper’s forecast origin correction: <code>a[x]</code> is the observed log rate of the last year and <code>k[T] = 0</code>. With <code>bootstrap = TRUE</code> this is the paper’s parametric bootstrap. Predictive draws, also through wrappers, draw negative binomial deaths with the dispersion of each age.</li>
+<li>
+<code>lee_carter(jump_off = "observed", jump_off_years = n)</code> starts the forecast from the mean observed log rates of the last <code>n</code> years, placed at their midpoint and moved to the last year by the drift: the “average n years observed” jump-off of Stoeldraijer et al. (2018). For French men it reproduces their Table 8a within 0.03 years.</li>
+<li>
+<code>lee_carter(jump_off = "filtered")</code> starts the forecast from the Kalman filter estimate of the index in the last year under the state-space Lee-Carter model of De Jong and Tickle (2006). Its variances, drift and initial level are estimated by maximum likelihood given <code>a</code> and <code>b</code>. <code><a href="../reference/mt_parameters.html">mt_parameters()</a></code> reports the filtered index and the estimates.</li>
+<li>The help of <code><a href="../reference/anchored.html">anchored()</a></code> lists the six jump-off options of Stoeldraijer et al. (2018) and how to get each. <code>anchored(years = n)</code> is a package-specific variant of their averaged jump-off.</li>
+<li>
+<code>p_splines(overdispersion = "age")</code> estimates a dispersion for each age that varies smoothly over age (Djeundje and Currie 2011, bias-corrected scheme). The dispersions divide the weights of the fit and the deviance of the criterion, and they are iterated with the fit. <code><a href="../reference/mt_parameters.html">mt_parameters()</a></code> reports them. Predictive draws stay Poisson, as with <code>overdispersion = TRUE</code>.</li>
+<li>
+<code><a href="../reference/coda_causes.html">coda_causes()</a></code> gains the extensions of Kjærgaard et al. (2019): <code>weights = "deaths"</code> weights ages and causes by their mean life-table deaths, <code>rho</code> weights the years by <code>rho (1 - rho)^(T - t)</code>, both through a generalised SVD of the joint components, and <code>individual = TRUE</code> adds one component per cause from a plain SVD of its residuals. <code>coda_causes(weights = "deaths", rho = 0.1, individual = TRUE)</code> is their 2S-CoDA. <code><a href="../reference/mt_parameters.html">mt_parameters()</a></code> reports the variation of each cause that the joint and individual components explain.</li>
+<li>
+<code>cae(index = "coherent")</code> forecasts the common age effect model with Model 3 of Enchev, Kleinow and Cairns (2017, Table 10): the first period effects of all populations follow a random walk with one common drift, and the others revert to 0 as AR(1) processes. The expected rates of the populations do not diverge.</li>
+<li>New <code><a href="../reference/relative_model.html">relative_model()</a></code>: the relative model of Villegas and Haberman
+<ol start="2014" style="list-style-type: decimal"><li>for subpopulations, such as deprivation quintiles, and the population they belong to. The reference has a Lee-Carter model, with cohort effects if <code>cohort = TRUE</code> (Renshaw and Haberman 2006; Hunt and Villegas 2015). Each subpopulation’s log rates are the reference’s plus an age pattern of level differences and a common age pattern times its own index. The reference is a stratum of the data or an <code>mt_data</code> object with more ages and years. All parameters are joint Poisson maximum likelihood estimates. The subpopulation indexes follow a multivariate random walk with drift (<code>deviation = "mrwd"</code>), independent random walks (<code>"rwd"</code>) or stay at their last values (<code>"constant"</code>): the processes the paper compares. Tests check the recovery of the parameters, the effective numbers of parameters of the paper’s Table 1 and agreement with <code><a href="../reference/lee_carter.html">lee_carter()</a></code> and <code><a href="https://rdrr.io/pkg/StMoMo/man/rh.html" class="external-link">StMoMo::rh()</a></code> without subpopulations.</li>
+</ol></li>
+<li>New <code><a href="../reference/mt_pessimism.html">mt_pessimism()</a></code> measures how much more pessimistic the sum of cause forecasts is than a forecast of all causes (Wilmoth 1995): life expectancy of both and their difference, the m-ratio by age and the contribution of each cause, path by path. For observed data it gives Wilmoth’s approximation from the distributions of deaths by cause in two periods. Tests reproduce Table 1 of the paper.</li>
+<li>Tests: three comparisons of doubles from different arithmetic paths now allow rounding. The snapshot of the cause shares plot draws closed-form random walks. Both had failed on macOS. The R-devel job of R-CMD-check has 120 minutes to install its dependencies from source.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="dependence-between-strata-from-training-years-faster-bottom-up-reconciliation-0-2-0">Dependence between strata from training years; faster bottom-up reconciliation<a class="anchor" aria-label="anchor" href="#dependence-between-strata-from-training-years-faster-bottom-up-reconciliation-0-2-0"></a></h3>
 <p>Work package E7.</p>
 <ul><li>
 <code>dependence = "empirical"</code> in <code><a href="../reference/reconciled.html">reconciled()</a></code> and <code><a href="../reference/mt_reconcile.html">mt_reconcile()</a></code> is no longer deprecated and is reimplemented as the Schaake shuffle (Clark et al. 2004) with the stratum as margin: each draw’s whole path of a stratum (all ages and forecast years) moves intact, so every stratum keeps exactly its forecast and the dependence between its ages and years; only the pairing across strata changes. Paths are ranked by the change of their log age-standardised death rate over the forecast years, and the ranks follow the observed annual changes of the same summary in distinct training years (one standard population for all strata). Series of three or more years give a template; with fewer the draws are left unchanged with a warning. The choices of margin and summary are package-specific. Results on four data sets (backtests of totals): it improves the totals where strata move together (simulated correlated strata, ONS quintiles, German Laender) and leaves single strata unchanged; on <code><a href="../reference/mt_example_regions.html">mt_example_regions()</a></code>, whose separate forecasts already covered the totals, the totals became too wide. The Poisson variation of the observed changes weakens the dependence it gives.</li>
@@ -52,7 +74,7 @@
 <code>reconciled(method = "bottom_up")</code> fits the base model to the bottom strata only and builds the aggregates from their draws, so no time is spent on forecasts that bottom-up discards and inner backtests (ensemble weights, tuning, recalibration) use the bottom strata. Models whose structure involves aggregates (<code><a href="../reference/tucker3.html">tucker3()</a></code>, <code><a href="../reference/coda_multiway.html">coda_multiway()</a></code>, <code><a href="../reference/saint.html">saint()</a></code>, <code><a href="../reference/coda_causes.html">coda_causes()</a></code>) are still fitted to all strata. Point draws of per-stratum models are unchanged; predictive draws use a different random stream with the same distribution. The vignettes that use bottom-up reconciliation are re-knitted.</li>
 </ul></div>
 <div class="section level3">
-<h3 id="published-methods-from-the-generalisation-plan-0-1-9000">Published methods from the generalisation plan<a class="anchor" aria-label="anchor" href="#published-methods-from-the-generalisation-plan-0-1-9000"></a></h3>
+<h3 id="published-methods-from-the-generalisation-plan-0-2-0">Published methods from the generalisation plan<a class="anchor" aria-label="anchor" href="#published-methods-from-the-generalisation-plan-0-2-0"></a></h3>
 <p>Work package E6: the items of <code>dev/generalisation-plan.md</code> whose sources are available, implemented from the papers. All are opt-in; defaults are unchanged.</p>
 <p>Combining models:</p>
 <ul><li>
@@ -88,12 +110,12 @@
 </ul><p>Not implemented, because only abstracts were available or the method would be package-specific: see the roadmap of the plan.</p>
 </div>
 <div class="section level3">
-<h3 id="benchmarks-0-1-9000">Benchmarks<a class="anchor" aria-label="anchor" href="#benchmarks-0-1-9000"></a></h3>
+<h3 id="benchmarks-0-2-0">Benchmarks<a class="anchor" aria-label="anchor" href="#benchmarks-0-2-0"></a></h3>
 <ul><li>New vignette “Benchmarks: how well the pipeline works”: interval calibration of the standard models on data simulated from the Lee-Carter model with Poisson deaths, rolling-origin backtests on four real data sets (England &amp; Wales men, France women, England by sex and deprivation quintile, German Laender by sex), and the behaviour of the pipeline on input tables with 26 typical defects, on small populations and on a table of 288,000 rows. The results are precomputed by <code>dev/benchmarks.R</code> and reported without thresholds. On data from its own model, the 95% intervals of <code><a href="../reference/lee_carter.html">lee_carter()</a></code> covered 95.9% of the true rates; on the real data 63% to 80%, and the mixture of Lee-Carter and the random walk 93% to 99%.</li>
 <li>The articles have a section “Benchmarks” with this vignette and the comparison with demography, bamp and StMoMo.</li>
 </ul></div>
 <div class="section level3">
-<h3 id="new-published-models-dependence-between-groups-0-1-9000">New published models; dependence between groups<a class="anchor" aria-label="anchor" href="#new-published-models-dependence-between-groups-0-1-9000"></a></h3>
+<h3 id="new-published-models-dependence-between-groups-0-2-0">New published models; dependence between groups<a class="anchor" aria-label="anchor" href="#new-published-models-dependence-between-groups-0-2-0"></a></h3>
 <p>Work package E5, implemented from the full papers. All new methods are opt-in; defaults are unchanged.</p>
 <ul><li>
 <code>lee_carter(family = "nb")</code>: negative binomial Lee-Carter model (Delwarde, Denuit and Partrat 2007), maximum likelihood with one dispersion parameter; predictive draws are negative binomial. On French data (demography package) the dispersion and drift agree with the paper’s estimates within 1%.</li>
@@ -113,12 +135,12 @@
 <li>The performance study scripts in <code>dev/</code> (calibration, tuning, stress tests, the 0.1 regression baseline) are removed; their reports stay.</li>
 </ul></div>
 <div class="section level3">
-<h3 id="testing-0-1-9000">Testing<a class="anchor" aria-label="anchor" href="#testing-0-1-9000"></a></h3>
+<h3 id="testing-0-2-0">Testing<a class="anchor" aria-label="anchor" href="#testing-0-2-0"></a></h3>
 <ul><li>The performance validation suite is removed: the <code>validation/</code> directory, its GitHub workflow, the benchmark helpers and the slow tests with thresholds on coverage, CRPS, accuracy and runtime. Forecast performance depends on the data; check it on your own data with <code><a href="../reference/mt_backtest.html">mt_backtest()</a></code>.</li>
 <li>The correctness tests stay: agreement with reference implementations and published values, exact identities, coherence and parameter recovery. Checks of the former suite that were not yet unit tests are now unit tests.</li>
 </ul></div>
 <div class="section level3">
-<h3 id="methods-checked-against-the-full-papers-new-published-models-0-1-9000">Methods checked against the full papers; new published models<a class="anchor" aria-label="anchor" href="#methods-checked-against-the-full-papers-new-published-models-0-1-9000"></a></h3>
+<h3 id="methods-checked-against-the-full-papers-new-published-models-0-2-0">Methods checked against the full papers; new published models<a class="anchor" aria-label="anchor" href="#methods-checked-against-the-full-papers-new-published-models-0-2-0"></a></h3>
 <p>Work package E4. The full texts of papers that were earlier available only as abstracts were read (sources and access in <code>dev/methods-audit.md</code>), and the implementations follow them. Results change.</p>
 <p>Corrected to the papers:</p>
 <ul><li>
@@ -149,7 +171,7 @@
 <p>Documentation: <code>dev/generalisation-plan.md</code> plans experimental generalisations of the deprecated package methods, grounded in verified literature.</p>
 </div>
 <div class="section level3">
-<h3 id="published-methods-as-defaults-audit-of-package-specific-methods-0-1-9000">Published methods as defaults (audit of package-specific methods)<a class="anchor" aria-label="anchor" href="#published-methods-as-defaults-audit-of-package-specific-methods-0-1-9000"></a></h3>
+<h3 id="published-methods-as-defaults-audit-of-package-specific-methods-0-2-0">Published methods as defaults (audit of package-specific methods)<a class="anchor" aria-label="anchor" href="#published-methods-as-defaults-audit-of-package-specific-methods-0-2-0"></a></h3>
 <p>Every method was checked against its published source (<code>dev/methods-audit.md</code>; article “Methods and sources”). Defaults are now the published methods; package-specific options are labelled “package-specific (reference unknown)” in their help pages; package inventions with a published counterpart in the package are deprecated (they work and warn with class <code>mt_warning_deprecated</code>). Results change.</p>
 <p>Predictive draws:</p>
 <ul><li>Deaths are Poisson given the model’s rates (Brouhns, Denuit and Vermunt 2002). The extra-Poisson layer estimated from in-sample residuals is removed: it had no published source, counted observation noise twice for <code><a href="../reference/tucker3.html">tucker3()</a></code> and the functional data models, replaced the posterior predictive of the Bayesian models, and the validation generator added the same noise. <code>stanmomo(family = "nb")</code> uses its posterior negative-binomial predictive. Intervals of models of smooth rates are narrower: 95% coverage of <code><a href="../reference/lee_carter.html">lee_carter()</a></code> on England &amp; Wales men (ages 30-100, check <code>backtest_ew</code>) falls from 0.746 to 0.632; on simulated Lee-Carter data with Poisson deaths it is 0.944.</li>
@@ -191,7 +213,7 @@
 <li>Warnings of joint models name the message once instead of an example stratum.</li>
 </ul></div>
 <div class="section level3">
-<h3 id="published-methods-added-0-1-9000">Published methods added<a class="anchor" aria-label="anchor" href="#published-methods-added-0-1-9000"></a></h3>
+<h3 id="published-methods-added-0-2-0">Published methods added<a class="anchor" aria-label="anchor" href="#published-methods-added-0-2-0"></a></h3>
 <p>Models:</p>
 <ul><li>
 <code><a href="../reference/coda.html">coda()</a></code>: the compositional data model of life-table deaths (Oeppen 2008; Bergeron-Boucher et al. 2017), adapted from MortalityForecast 0.8.1, whose fitted values and point forecasts it reproduces. The coherent model of several populations (<code>coherent = TRUE</code> or <code>common_by</code>) has a common component and stratum deviations that follow AR(1) processes. The open age interval follows the indexes. Validation (checks <code>coda_ew</code>, <code>coda_coherent_fr</code>): CRPS on England &amp; Wales men 0.055 against 0.069 for <code><a href="../reference/lee_carter.html">lee_carter()</a></code>; coherent model on France 0.077 against 0.080 for <code><a href="../reference/li_lee.html">li_lee()</a></code>.</li>
@@ -217,7 +239,7 @@
 <li>“Backtesting and scores” tests the differences between models with <code><a href="../reference/mt_dm_test.html">mt_dm_test()</a></code>; “Choosing and combining models” adds CoDa and M7 and a test from 16 origins; “Coherent forecasts” describes score-optimal reconciliation; “Model reference”, FAQ, README and the function map (diagrams redrawn) cover the new functions.</li>
 </ul></div>
 <div class="section level3">
-<h3 id="fixes-from-a-review-of-the-whole-package-0-1-9000">Fixes from a review of the whole package<a class="anchor" aria-label="anchor" href="#fixes-from-a-review-of-the-whole-package-0-1-9000"></a></h3>
+<h3 id="fixes-from-a-review-of-the-whole-package-0-2-0">Fixes from a review of the whole package<a class="anchor" aria-label="anchor" href="#fixes-from-a-review-of-the-whole-package-0-2-0"></a></h3>
 <p>Data:</p>
 <ul><li>
 <code><a href="../reference/mt_group_levels.html">mt_group_levels()</a></code> takes numeric <code>total</code>, <code>other</code> and <code>keep</code> levels as labels, keeps an unlisted level named like a group in that group (as <code><a href="../reference/mt_relabel.html">mt_relabel()</a></code> to an existing level does), and refuses a group named like the total.</li>
@@ -273,7 +295,7 @@
 <li>The README and the function map article show their diagrams as images (drawn from <code>dev/diagrams/*.mmd</code> by <code>dev/diagrams/render.js</code>), because the GitHub mobile app does not draw Mermaid diagrams; the website no longer loads Mermaid.</li>
 </ul></div>
 <div class="section level3">
-<h3 id="engineering-0-1-9000">Engineering<a class="anchor" aria-label="anchor" href="#engineering-0-1-9000"></a></h3>
+<h3 id="engineering-0-2-0">Engineering<a class="anchor" aria-label="anchor" href="#engineering-0-2-0"></a></h3>
 <ul><li>
 <code><a href="../reference/mt_parameters.html">mt_parameters()</a></code> works for <code><a href="../reference/ensemble.html">ensemble()</a></code> (the parameters of each component, column <code>component</code>, and the weights), <code><a href="../reference/stratified.html">stratified()</a></code> and <code>tuned(by = )</code> (column <code>group</code>), also inside other wrappers.</li>
 <li>
@@ -282,7 +304,7 @@
 <code><a href="../reference/coherent_fdm.html">coherent_fdm()</a></code> forecasts about three times faster: the ARFIMA models of the ratios are prepared once per coefficient instead of once per simulated path (<code>forecast::simulate()</code> refits them at every call). The draws are identical.</li>
 </ul></div>
 <div class="section level3">
-<h3 id="stanmomo-recalibration-0-1-9000">StanMoMo, recalibration<a class="anchor" aria-label="anchor" href="#stanmomo-recalibration-0-1-9000"></a></h3>
+<h3 id="stanmomo-recalibration-0-2-0">StanMoMo, recalibration<a class="anchor" aria-label="anchor" href="#stanmomo-recalibration-0-2-0"></a></h3>
 <ul><li>
 <code><a href="../reference/stanmomo.html">stanmomo()</a></code> wraps the Bayesian Lee-Carter, Renshaw-Haberman, APC, CBD and M6 models of StanMoMo (Barigou et al. 2023), Poisson or negative binomial; draws are posterior draws of the expected rates, fits warn when the chains have not converged. Validation check <code>stanmomo_ew</code>.</li>
 <li>
@@ -291,7 +313,7 @@
 <code><a href="../reference/hyndman_ullah.html">hyndman_ullah()</a></code> keeps smoothing the rates over age by default.</li>
 </ul></div>
 <div class="section level3">
-<h3 id="vignettes-restructured-models-and-diagnostics-added-0-1-9000">Vignettes restructured, models and diagnostics added<a class="anchor" aria-label="anchor" href="#vignettes-restructured-models-and-diagnostics-added-0-1-9000"></a></h3>
+<h3 id="vignettes-restructured-models-and-diagnostics-added-0-2-0">Vignettes restructured, models and diagnostics added<a class="anchor" aria-label="anchor" href="#vignettes-restructured-models-and-diagnostics-added-0-2-0"></a></h3>
 <ul><li>The vignettes are reorganised: one concept per vignette with a simple model, a model vignette, and two applied pipelines. New: “Choosing and combining models” (implemented and wrapped models side by side, ensembles of any combination), “Ungrouping age groups: methods and diagnostics” (replaces “Data at different granularities”), “Inequality in England” and “Differences between the German Laender” (replace the deprivation, causes, regions and HMD forecasting vignettes). Every step of the applied pipelines is chosen in a backtest of the quantity the question is about.</li>
 <li>
 <code><a href="../reference/coherent_fdm.html">coherent_fdm()</a></code>: the product-ratio method with functional data models of demography (Hyndman, Booth and Yasmeen 2013), with simulated paths, groups (<code>common_by</code>) and hierarchies.</li>
@@ -304,7 +326,7 @@
 <li>Fixes: StMoMo cohort models now have fitted rates for clipped cohorts (their fitted life expectancy dropped to zero in the last years); a missing rate gives a missing life expectancy instead of certain death; <code>mt_smooth(along = "period")</code> uses Whittaker smoothing by default; errors raised inside <code><a href="https://rdrr.io/r/base/do.call.html" class="external-link">do.call()</a></code> no longer print the whole function; <code><a href="../reference/mt_inequality.html">mt_inequality()</a></code> leaves out levels not in <code>order</code> (such as a hierarchy total); the legend order of <code><a href="../reference/mt_plot_more.html">mt_plot_shares()</a></code> is fixed.</li>
 </ul></div>
 <div class="section level3">
-<h3 id="comparing-models-and-forecasts-0-1-9000">Comparing models and forecasts<a class="anchor" aria-label="anchor" href="#comparing-models-and-forecasts-0-1-9000"></a></h3>
+<h3 id="comparing-models-and-forecasts-0-2-0">Comparing models and forecasts<a class="anchor" aria-label="anchor" href="#comparing-models-and-forecasts-0-2-0"></a></h3>
 <ul><li>
 <code><a href="../reference/mt_compare.html">mt_compare()</a></code> backtests a named list of models (each with its own preprocessing) on the same origins; <code><a href="../reference/mt_compare.html">mt_score_table()</a></code> shows the scores of rates, life expectancy and ASR side by side.</li>
 <li>
@@ -326,7 +348,7 @@
 <li>“Getting started” is one short pass through the main steps; “Coherent forecasts: totals and their parts” (live, no longer precomputed) explains bottom-up, reconciliation and fixed totals with one figure each and a small backtest.</li>
 </ul></div>
 <div class="section level3">
-<h3 id="tuning-and-recalibration-0-1-9000">Tuning and recalibration<a class="anchor" aria-label="anchor" href="#tuning-and-recalibration-0-1-9000"></a></h3>
+<h3 id="tuning-and-recalibration-0-2-0">Tuning and recalibration<a class="anchor" aria-label="anchor" href="#tuning-and-recalibration-0-2-0"></a></h3>
 <ul><li>
 <code><a href="../reference/hyndman_ullah.html">hyndman_ullah()</a></code> smooths the rates of each year over age with <code><a href="https://pkg.robjhyndman.com/demography/reference/smooth.demogdata.html" class="external-link">demography::smooth.demogdata()</a></code> before the decomposition (<code>smooth = TRUE</code>, settings in <code>smooth_args</code>), as in Hyndman and Ullah (2007). Before, it decomposed raw rates, contrary to its documentation, and the model errors that <code><a href="https://rdrr.io/r/stats/simulate.html" class="external-link">simulate()</a></code> resamples contained the observation noise that predictive draws add a second time. <code>smooth = FALSE</code> keeps the old behaviour (label “unsmoothed”).</li>
 <li>
@@ -360,11 +382,11 @@
 <li>Benchmark of tuning and calibration (<code>dev/tuning.md</code>, validation check <code>tuning_ew</code>): tuning the fitting window of Lee-Carter on a 10-year hold-out improved forecasts on England &amp; Wales and France; tuning the components and smoothing of fdm the same way did not; calibration brought the 95% coverage of all models close to nominal.</li>
 </ul></div>
 <div class="section level3">
-<h3 id="function-map-0-1-9000">Function map<a class="anchor" aria-label="anchor" href="#function-map-0-1-9000"></a></h3>
+<h3 id="function-map-0-2-0">Function map<a class="anchor" aria-label="anchor" href="#function-map-0-2-0"></a></h3>
 <ul><li>The diagrams of the function map and the README fit the width of the website, and their labels are no longer clipped (Bootstrap’s paragraph margin inside mermaid labels made the boxes too small). Map 1 lists the preparation steps in their usual order and leaves smoothing to <code><a href="../reference/mt_prep.html">step_smooth()</a></code> inside fits; <code><a href="../reference/mt_prep.html">mt_prep()</a></code> feeds <code><a href="../reference/mt_fit.html">mt_fit()</a></code>; the function table lists every exported function.</li>
 </ul></div>
 <div class="section level3">
-<h3 id="changes-after-the-third-and-fourth-applied-reviews-0-1-9000">Changes after the third and fourth applied reviews<a class="anchor" aria-label="anchor" href="#changes-after-the-third-and-fourth-applied-reviews-0-1-9000"></a></h3>
+<h3 id="changes-after-the-third-and-fourth-applied-reviews-0-2-0">Changes after the third and fourth applied reviews<a class="anchor" aria-label="anchor" href="#changes-after-the-third-and-fourth-applied-reviews-0-2-0"></a></h3>
 <p>Two further reviews (<code>dev/review-applied-3.md</code>, <code>-4.md</code>; an epidemiologist and a demographer working through the vignettes on their own questions).</p>
 <ul><li>
 <code><a href="../reference/mt_decompose.html">mt_decompose()</a></code>:
@@ -394,7 +416,7 @@
 <li>Vignettes: all-cause forecasts implied by the causes against all-cause models (Wilmoth 1995) in the causes and regional vignettes; proportional reconciliation; decomposition of forecasts (jump-off, the model’s own change, change of the gap, comparison of two models); calibrated Lee-Carter without smoothing in “Forecasting and backtesting”; corrected interpretations and numbers in the deprivation vignette and the FAQ.</li>
 </ul></div>
 <div class="section level3">
-<h3 id="decomposition-0-1-9000">Decomposition<a class="anchor" aria-label="anchor" href="#decomposition-0-1-9000"></a></h3>
+<h3 id="decomposition-0-2-0">Decomposition<a class="anchor" aria-label="anchor" href="#decomposition-0-2-0"></a></h3>
 <ul><li>
 <code><a href="../reference/mt_decompose.html">mt_decompose()</a></code> splits the difference in a mortality summary between two sets of rates into contributions of ages, causes and population subgroups, as post-processing of observed data (optionally with Poisson draws), forecast draws (draw by draw, so contributions have intervals), or both (an observed year against a forecast year, or two objects). Comparisons: between levels of a stratum variable (<code>var</code>, <code>ref</code>), between years (<code>periods</code>), or between two objects (<code>y</code>). Methods: symmetric Arriaga for life expectancy with causes split by the implied sensitivity (exact), the line integral of Horiuchi, Wilmoth and Pletcher (2008) and stepwise replacement of Andreev, Shkolnikov and Begun (2002) for any quantity (life expectancy, probability of dying, age-standardised rate, or a function of the rates), and Kitagawa’s rate and age-structure components of the crude death rate. With <code>groups</code>, the composition of a population of subgroups is separated from their mortality: as in Riffe, Tursun-zade and Trias Llimós (2024, “Arriaga meets Kitagawa”), with subgroups blended at the radix (<code>composition = "radix"</code>), or for the pooled rates (<code>"pooled"</code>, composition effects by age).</li>
 <li>
@@ -402,7 +424,7 @@
 <li>Results agree with DemoDecomp (<code>horiuchi()</code>, <code>stepwise_replacement()</code>) and LEdecomp (<code>arriaga_sym()</code>) to machine precision on the same life table, and the Kitagawa step reproduces Table 1 of Riffe et al. (2024). New validation check <code>decomposition</code>; article “Decomposing differences in life expectancy” on the ONS data; plan in <code>dev/decomposition-plan.md</code>.</li>
 </ul></div>
 <div class="section level3">
-<h3 id="smoothing-jump-off-and-fixed-totals-methods-of-the-earlier-uk-analysis-0-1-9000">Smoothing, jump-off and fixed totals (methods of the earlier UK analysis)<a class="anchor" aria-label="anchor" href="#smoothing-jump-off-and-fixed-totals-methods-of-the-earlier-uk-analysis-0-1-9000"></a></h3>
+<h3 id="smoothing-jump-off-and-fixed-totals-methods-of-the-earlier-uk-analysis-0-2-0">Smoothing, jump-off and fixed totals (methods of the earlier UK analysis)<a class="anchor" aria-label="anchor" href="#smoothing-jump-off-and-fixed-totals-methods-of-the-earlier-uk-analysis-0-2-0"></a></h3>
 <ul><li>Smoothing over time: <code>mt_smooth(along = "period", method = "whittaker")</code> (one smoothing parameter per stratum, chosen by GCV pooled over ages) and over the age-period surface with a quasi-Poisson GAM, <code>mt_smooth(dims = 2, method = "gam")</code> (<code>te(age, year)</code>, about one second per stratum; the 2D P-spline takes minutes). <code><a href="../reference/mt_smooth_check.html">mt_smooth_check()</a></code> reports how far the smoother moved the data (median absolute log difference, dispersion of the raw deaths around the smoothed ones, variance ratio of year-to-year changes, correlation); <code><a href="../reference/mt_smooth_check.html">mt_plot_smooth()</a></code> shows observed points against smoothed lines.</li>
 <li>Models fitted to smoothed data keep the raw deaths (<code>fit$raw_D</code>): observation noise of predictive draws, residuals, observed rates, the MASE scale of backtests and the empirical copula of reconciliation refer to the data before smoothing. Before, noise was estimated from the smoothed rates, which made intervals too narrow.</li>
 <li>Smoothing over time narrows the intervals of models with a period index; combined with <code><a href="../reference/recalibrated.html">recalibrated()</a></code> it gave the best calibrated forecasts for England &amp; Wales men (Lee-Carter on the GAM surface, calibrated: CRPS 0.0646, 95% coverage 0.91 against 0.0687 and 0.75). On the ONS quintiles smoothing over time made the forecasts worse.</li>
@@ -416,7 +438,7 @@
 <li>Vignettes: “Forecasting and backtesting with HMD data” (chosen period, anchoring, smoothing with calibration, scores of life expectancy), “Forecasting mortality by deprivation quintile” (smoothing check, jump-off, backtests of anchoring and smoothing), “Coherent forecasts” (coherence plot, a fixed total), “Causes of death by deprivation” (causes reconciled to a fixed all-cause forecast). New validation check <code>smoothing_jumpoff</code>.</li>
 </ul></div>
 <div class="section level3">
-<h3 id="calibration-deprivation-and-coherence-vignettes-0-1-9000">Calibration, deprivation and coherence vignettes<a class="anchor" aria-label="anchor" href="#calibration-deprivation-and-coherence-vignettes-0-1-9000"></a></h3>
+<h3 id="calibration-deprivation-and-coherence-vignettes-0-2-0">Calibration, deprivation and coherence vignettes<a class="anchor" aria-label="anchor" href="#calibration-deprivation-and-coherence-vignettes-0-2-0"></a></h3>
 <ul><li>
 <code><a href="../reference/recalibrated.html">recalibrated()</a></code> wraps any model specification (including <code><a href="../reference/ensemble.html">ensemble()</a></code>, <code><a href="../reference/reconciled.html">reconciled()</a></code> and <code><a href="../reference/bootstrapped.html">bootstrapped()</a></code>) and recalibrates the spread of its forecast draws, optionally also the drift, on the last <code>years</code> (default
 <ol start="10" style="list-style-type: decimal"><li>of the training data. The base model is refitted at several origins in that window. A horizon-dependent spread factor (and drift correction) is chosen by minimum CRPS, or by the interval score of one central interval (<code>target = "interval"</code>). Observation noise is modelled as in <code><a href="../reference/mt_backtest.html">mt_backtest()</a></code>, and draws of an ensemble get the noise of their component. Reconciled models are calibrated at the bottom level and stay coherent. <code>by</code> gives separate factors for groups of strata. <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> and <code><a href="../reference/mt_parameters.html">mt_parameters()</a></code> report the factors.</li>
@@ -430,7 +452,7 @@
 <li>Vignettes “Forecasting mortality by deprivation quintile” (ONS: inequality indicators, backtests by quintile, calibration, gap forecasts by model, fitting period) and “Coherent forecasts: what reconciliation changes” (ONS sex x quintile with totals: incoherence of separate forecasts, each reconciliation method’s effect on forecasts, intervals and backtest accuracy per level, dependence between strata). The regional vignette adds forecasts for every Land and compares the reconciliation methods on them.</li>
 </ul></div>
 <div class="section level3">
-<h3 id="changes-after-two-applied-reviews-and-stress-tests-0-1-9000">Changes after two applied reviews and stress tests<a class="anchor" aria-label="anchor" href="#changes-after-two-applied-reviews-and-stress-tests-0-1-9000"></a></h3>
+<h3 id="changes-after-two-applied-reviews-and-stress-tests-0-2-0">Changes after two applied reviews and stress tests<a class="anchor" aria-label="anchor" href="#changes-after-two-applied-reviews-and-stress-tests-0-2-0"></a></h3>
 <ul><li><p>Renamed for clarity: model wrappers are nouns like the other model constructors, <code><a href="../reference/ensemble.html">ensemble()</a></code>, <code><a href="../reference/reconciled.html">reconciled()</a></code>, <code><a href="../reference/mt_tune.html">tuned()</a></code>, <code><a href="../reference/bootstrapped.html">bootstrapped()</a></code> (were <code>mt_ensemble()</code>, <code>mt_reconciled()</code>, <code>mt_tuned()</code>, <code>mt_bootstrap()</code>); <code><a href="../reference/mt_order_strata.html">mt_order_strata()</a></code> (was <code>mt_cohere()</code>); <code><a href="../reference/mt_parameters.html">mt_parameters()</a></code> replaces <code>lc_parameters()</code> and <code>apc_effects()</code>; <code>mt_window()</code> is internal (<code>mt_subset(periods = )</code>).</p></li>
 <li><p>Hierarchies: additivity per variable (<code>mt_hierarchy(region = "DE", cause = list(total = "all", additive = "rates"))</code>); exposures of crossed region-by-cause hierarchies are summed over regions and taken once over causes in aggregation, validation and reconciliation. Before, all-cause exposures were multiplied by the number of causes.</p></li>
 <li><p><code><a href="../reference/mt_fill_suppressed.html">mt_fill_suppressed()</a></code> takes the bounds of suppressed counts (<code>lower</code>, <code>upper</code>), also without published totals; it stops when no total of the hierarchy is in the data and leaves uncovered cells missing (before, they kept the exposures as starting values).</p></li>

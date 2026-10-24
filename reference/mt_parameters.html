@@ -9,7 +9,7 @@ model type that has interpretable parameters:"></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">mortensor</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -73,7 +73,9 @@ for ensembles also <code>component</code>, for fits by groups also <code>group</
 <ul><li><p><code><a href="lee_carter.html">lee_carter()</a></code>: <code>a</code> (age pattern), <code>b</code> (age pattern of change), <code>k</code>
 (period index), and the drift and innovation standard deviation of <code>k</code>;
 with <code>rotate = TRUE</code> also the ultimate pattern <code>b_ultimate</code>; with
-<code>family = "nb"</code> also the dispersion <code>nb_dispersion</code> (variance <code>mu + phi mu^2</code>);</p></li>
+<code>family = "nb"</code> also the dispersion <code>nb_dispersion</code> (variance <code>mu + phi mu^2</code>; one per age group with a dispersion by age); with <code>jump_off = "filtered"</code> also the filtered index of the last year <code>k_filtered</code>, its
+standard error <code>se_k_filtered</code> and the state-space estimates
+<code>filter_sigma</code>, <code>filter_lambda</code>, <code>filter_drift</code>;</p></li>
 <li><p><code><a href="li_lee.html">li_lee()</a></code>, <code><a href="product_ratio.html">product_ratio()</a></code>: the common factor of each group (<code>B</code>,
 <code>K</code>, its drift and standard deviation), and per stratum the deviations
 <code>a</code>, <code>b</code>, <code>k</code> and their AR(1) coefficient <code>phi</code> and standard deviation;</p></li>
@@ -86,7 +88,12 @@ Kannisto model of each year (<code>kannisto_a</code>, <code>kannisto_b</code>); 
 model gives per group of <code>common_by</code> the common <code>a</code>, <code>B</code>, <code>K</code> (with
 <code>order_K</code>, <code>arima_K</code>, <code>sd_K</code>) and per stratum <code>a</code>, <code>b</code>, <code>k</code> and the
 ARIMA model of <code>k</code>. <code><a href="coda_causes.html">coda_causes()</a></code>: per group, as <code><a href="coda.html">coda()</a></code>, with parts
-by age and cause (<code>b1</code>, <code>k1</code>, <code>b2</code>, <code>k2</code>, ... with several components);</p></li>
+by age and cause (<code>b1</code>, <code>k1</code>, <code>b2</code>, <code>k2</code>, ... with several components);
+with <code>individual = TRUE</code> also the individual components of each cause
+(<code>b_&lt;cause&gt;</code>, <code>k_&lt;cause&gt;</code>, <code>order_k_&lt;cause&gt;</code>, ...) and the explained
+variation of each cause (<code>explained_joint</code>, <code>explained_individual</code>),
+and with weights the weights of the parts (<code>w_part</code>) and years
+(<code>w_time</code>);</p></li>
 <li><p><code><a href="coda_multiway.html">coda_multiway()</a></code>: the common age patterns <code>b</code>, time indexes <code>k</code> (with
 <code>order_k</code>, <code>arima_k</code>, <code>sd_k</code>), population markers <code>gamma</code> and core <code>g</code>
 (index <code>p,q,r</code>), numbered with several components, and the share of
@@ -101,9 +108,14 @@ of the identified quantities;</p></li>
 <li><p><code><a href="p_splines.html">p_splines()</a></code>, <code><a href="cp_splines.html">cp_splines()</a></code>: the smoothing parameters over age
 (<code>lambda_age</code>) and years (<code>lambda_year</code>), the effective dimension
 (<code>ed</code>), the criterion (<code>bic</code> or <code>aic</code>) and the dispersion (deviance
-divided by the number of cells minus the effective dimension); for
-<code><a href="cp_splines.html">cp_splines()</a></code> also the bounds of the rates of ageing and of change per
-age (<code>ageing_lower</code>, <code>ageing_upper</code>, <code>change_lower</code>, <code>change_upper</code>).</p></li>
+divided by the number of cells minus the effective dimension); with
+<code>p_splines(overdispersion = "age")</code> the smooth dispersion by age
+(<code>dispersion</code>), the bias-corrected mean Pearson statistics by age that
+it smooths (<code>dispersion_raw</code>), its smoothing parameter
+(<code>lambda_dispersion</code>) and the dispersion <code>tau</code> of these statistics
+(<code>dispersion_tau</code>); for <code><a href="cp_splines.html">cp_splines()</a></code> also the bounds of the rates of
+ageing and of change per age (<code>ageing_lower</code>, <code>ageing_upper</code>,
+<code>change_lower</code>, <code>change_upper</code>).</p></li>
 <li><p><code><a href="saint.html">saint()</a></code>: per trend (<code>"trend &lt;group&gt;"</code>) the indexes <code>alpha</code>, <code>beta</code>,
 <code>kappa</code>, <code>zeta</code> by year, the frailty variance <code>sigma2</code>, the
 pseudo-log-likelihood <code>loglik</code>, the <code>drift</code> and covariance <code>cov</code> of
@@ -112,6 +124,16 @@ error-correction model: <code>a11</code>, <code>a21</code>, <code>a32</code>, <c
 <code>lambda</code>, <code>Omega</code>) and the standard deviations <code>sd_kappa</code>, <code>sd_zeta</code>;
 per stratum with a spread the spread parameters <code>y1</code> ... <code>y5</code> by year
 and their VAR(1) (<code>ar</code> or <code>A</code>, and <code>Omega</code>);</p></li>
+<li><p><code><a href="relative_model.html">relative_model()</a></code>: per group (<code>"reference &lt;group&gt;"</code>) the reference
+parameters <code>alpha</code>, <code>beta</code> (by age), <code>kappa</code> (by year), <code>gamma</code> (by
+year of birth), the <code>drift</code> and <code>sd</code> of <code>kappa</code>, the ARIMA(1,1,0) model
+of <code>gamma</code> (<code>ar_gamma</code>, <code>drift_gamma</code>, <code>sd_gamma</code>), and the
+log-likelihood, effective number of parameters, number of cells and BIC
+of the reference part (<code>loglik</code>, <code>npar</code>, <code>nobs</code>, <code>bic</code>); per group
+(<code>"subpopulations &lt;group&gt;"</code>) the common <code>beta</code> and the same statistics
+of the subpopulation part; per subpopulation <code>alpha</code>, <code>kappa</code>, the
+<code>drift</code> and <code>sd</code> of <code>kappa</code> and the correlation <code>cor</code> of its
+innovations with those of each subpopulation of the group;</p></li>
 <li><p><code><a href="bohk_rau.html">bohk_rau()</a></code>: posterior medians and 90% intervals of the curve
 parameters <code>b1</code> and <code>b2</code> by age and of the variance and hyperparameters,
 the least-squares values <code>theta1</code>, <code>theta2</code> (exponential core model) and
@@ -130,12 +152,14 @@ the recent trend;</p></li>
 <li><p><code><a href="cae.html">cae()</a></code>: the common age effects <code>beta1</code>, <code>beta2</code>, ... of each group
 (rows labelled <code>common &lt;g&gt; (&lt;strata&gt;)</code>), and per stratum the centring
 <code>a</code>, the period effects <code>kappa1</code>, <code>kappa2</code>, ..., their drift
-(<code>drift_kappa1</code>, ...), the standard deviation of their innovations
-(<code>sd_kappa1</code>, ...) and the correlation of their innovations with those
-of the same order of every stratum (<code>cor_kappa1</code>, ..., indexed by the
-other stratum); rows of stratum <code>"model"</code> give the mean squared error
-of the centred log rates (<code>mse</code>) and the approximate BIC of Kleinow
-(2015, eq. 5; <code>bic</code>).</p></li>
+(<code>drift_kappa1</code>, ...; with <code>index = "coherent"</code> the common drift of the
+group for order 1 and 0 for the others, whose autoregressive
+coefficients are <code>phi_kappa2</code>, ...), the standard deviation of their
+innovations (<code>sd_kappa1</code>, ...) and the correlation of their innovations
+with those of the same order of every stratum (<code>cor_kappa1</code>, ...,
+indexed by the other stratum); rows of stratum <code>"model"</code> give the mean
+squared error of the centred log rates (<code>mse</code>) and the approximate BIC
+of Kleinow (2015, eq. 5; <code>bic</code>).</p></li>
 </ul><p>Fits of wrapped packages (StMoMo, demography) keep the original fitted
 object in <code>fit$fits[[i]]</code>, where the methods of those packages apply.</p>
 <p>Wrappers return the parameters of the model they wrap (<code><a href="recalibrated.html">recalibrated()</a></code>

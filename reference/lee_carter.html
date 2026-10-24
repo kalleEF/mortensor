@@ -9,7 +9,7 @@ sum(k) = 0, fitted per stratum:"></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">mortensor</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -52,7 +52,7 @@ sum(k) = 0, fitted per stratum:"></head><body>
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">lee_carter</span><span class="op">(</span></span>
 <span>  method <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"poisson"</span>, <span class="st">"svd"</span><span class="op">)</span>,</span>
-<span>  jump_off <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"fitted"</span>, <span class="st">"observed"</span><span class="op">)</span>,</span>
+<span>  jump_off <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"fitted"</span>, <span class="st">"observed"</span>, <span class="st">"filtered"</span>, <span class="st">"constrained"</span><span class="op">)</span>,</span>
 <span>  bootstrap <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  n_boot <span class="op">=</span> <span class="fl">100</span>,</span>
 <span>  adjust <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"dt"</span>, <span class="st">"dxt"</span>, <span class="st">"e0"</span>, <span class="st">"none"</span><span class="op">)</span>,</span>
@@ -60,7 +60,9 @@ sum(k) = 0, fitted per stratum:"></head><body>
 <span>  min_years <span class="op">=</span> <span class="fl">20</span>,</span>
 <span>  rotate <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  rotation <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>e0_start <span class="op">=</span> <span class="fl">80</span>, e0_end <span class="op">=</span> <span class="fl">102</span>, power <span class="op">=</span> <span class="fl">0.5</span><span class="op">)</span>,</span>
-<span>  family <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"poisson"</span>, <span class="st">"nb"</span><span class="op">)</span></span>
+<span>  family <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"poisson"</span>, <span class="st">"nb"</span><span class="op">)</span>,</span>
+<span>  dispersion <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"global"</span>, <span class="st">"age"</span><span class="op">)</span>,</span>
+<span>  jump_off_years <span class="op">=</span> <span class="fl">1</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -75,8 +77,14 @@ sum(k) = 0, fitted per stratum:"></head><body>
 
 <dt id="arg-jump-off">jump_off<a class="anchor" aria-label="anchor" href="#arg-jump-off"></a></dt>
 <dd><p><code>"fitted"</code> (forecasts start from the fitted rates of the
-last year) or <code>"observed"</code> (from the observed rates of the last year;
-Lee and Miller 2001).</p></dd>
+last year), <code>"observed"</code> (from the observed rates of the last year; Lee
+and Miller 2001; with <code>jump_off_years &gt; 1</code> from their mean over the last
+years, Stoeldraijer et al. 2018), <code>"filtered"</code> (from the rates at the
+Kalman filter estimate of the index in the last year; De Jong and
+Tickle 2006) or <code>"constrained"</code> (the maximum likelihood fit is
+constrained to the observed rates of the last year, the forecast origin
+correction of Li, Hardy and Tan 2009; <code>method = "poisson"</code> only). See
+"Jump-off" above.</p></dd>
 
 
 <dt id="arg-bootstrap">bootstrap<a class="anchor" aria-label="anchor" href="#arg-bootstrap"></a></dt>
@@ -119,6 +127,18 @@ complete (<code>e0_end</code>, default 102), and the exponent of the weights
 <dd><p>Distribution of the deaths for <code>method = "poisson"</code>:
 <code>"poisson"</code> (Brouhns, Denuit and Vermunt 2002) or <code>"nb"</code> (negative
 binomial; Delwarde, Denuit and Partrat 2007).</p></dd>
+
+
+<dt id="arg-dispersion">dispersion<a class="anchor" aria-label="anchor" href="#arg-dispersion"></a></dt>
+<dd><p>Dispersion of the negative binomial deaths (<code>family = "nb"</code>): <code>"global"</code> (one for all ages; Delwarde, Denuit and Partrat
+2007) or <code>"age"</code> (one per age group of the data; Li, Hardy and Tan
+2009).</p></dd>
+
+
+<dt id="arg-jump-off-years">jump_off_years<a class="anchor" aria-label="anchor" href="#arg-jump-off-years"></a></dt>
+<dd><p>For <code>jump_off = "observed"</code>: the number of last
+observed years whose mean log rates give the jump-off rates (default 1,
+the last year; 2 to 5 in Stoeldraijer et al. 2018).</p></dd>
 
 </dl></div>
     <div class="section level2">
@@ -175,6 +195,77 @@ Lee-Carter model (Brouhns, Denuit and Vermunt 2002); no other observation
 noise is added. If intervals are too narrow on real data, that is a
 property of the model: see <code><a href="recalibrated.html">recalibrated()</a></code>, <code><a href="ensemble.html">ensemble()</a></code>, or
 overdispersed models such as <code>family = "nb"</code> below or <code>stanmomo("lc", family = "nb")</code> (<code><a href="stanmomo.html">stanmomo()</a></code>).</p>
+<p><strong>Jump-off.</strong> The jump-off rates are the rates of the last year <code>T</code> of
+the fitting period, from which the forecast starts. Stoeldraijer et al.
+(2018) compare six options for the Lee-Carter model; their names are in
+quotes:</p><ul><li><p><code>jump_off = "fitted"</code>: "model values", <code>a[x] + b[x] k[T]</code> (Lee and
+Carter 1992);</p></li>
+<li><p><code>jump_off = "observed"</code>: "last observed values", the observed log rates
+of year <code>T</code> (Lee and Miller 2001): <code>a[x]</code> is replaced by them and <code>k</code> is
+0 in year <code>T</code>;</p></li>
+<li><p><code>jump_off = "observed", jump_off_years = n</code> (<code>n</code> = 2 to 5 in the
+paper): "average n years observed". <code>a[x]</code> is the mean of the observed
+log rates of the last <code>n</code> years and <code>k</code> is 0 at the midpoint of these
+years; the random walk with drift carries the mean from the midpoint to
+year <code>T</code>, so the jump-off rates are that mean plus <code>b[x] d (n - 1) / 2</code>,
+with <code>d</code> the drift of <code>k</code>. The paper does not say how the index at the
+midpoint relates to the fitted index of year <code>T</code>; this reading (the
+forecast does not depend on <code>k[T]</code>) reproduces its results for French
+men (below), where the mean of the fitted index over the <code>n</code> years does
+not.</p></li>
+</ul><p>Stoeldraijer et al. call a forecast accurate if its out-of-sample errors
+in historical data are small (mean absolute error of life expectancy at
+65 one and five years ahead), and robust if it changes little when one
+more year of data is added (standard deviation of the changes of the
+forecast life expectancy at 65 in 2020 between successive fitting
+periods). In eight Western European countries the last observed values
+were the most accurate for most countries and an average of observed
+years the most robust; more years averaged gave more robust and less
+accurate forecasts. For French men (Human Mortality Database in
+<code><a href="https://rdrr.io/pkg/StanMoMo/man/FRMaleData.html" class="external-link">StanMoMo::FRMaleData</a></code>, a later release than the paper's; ages 0-94 and
+95+; fitting periods from 1960 to 2005, ..., 2014; <code>method = "svd"</code>), the
+mean absolute errors and the standard deviations of the last observed
+values and of the averages are within 0.03 years of Table 8a of the
+paper. Those of the model values differ by up to 0.08 years: the mean
+error of the fitted log rates at ages 65 and over in 2005-2014 is -0.002
+with these data and 0.005 in the paper (Table 9a), and a shift of the log
+rates at these ages by 0.007 moves life expectancy at 65 by 0.05 years.
+<code><a href="anchored.html">anchored()</a></code> moves the jump-off of any model.</p>
+<p><strong>Filtered jump-off</strong> (<code>jump_off = "filtered"</code>; De Jong and Tickle 2006).
+The paper writes the Lee-Carter model in state-space form (eq. 6): <code>y[t] = a + b alpha[t] + eps[t]</code> for the vector of log rates of year <code>t</code>, and
+<code>alpha[t + 1] = delta + alpha[t] + lambda eta[t]</code>, with independent normal
+<code>eps[t]</code> (variance <code>sigma^2</code> at every age) and <code>eta[t]</code> (variance
+<code>sigma^2</code>), <code>b'b = 1</code> and the signal-to-noise ratio <code>lambda</code>. The forecast
+starts from <code>a + b E(alpha[T] | y[1], ..., y[T])</code>, the Kalman filter
+estimate of the index in the jump-off year (eq. 15). The paper estimates
+<code>b</code> and <code>lambda</code> by maximum likelihood with the Kalman filter, then <code>a</code>,
+<code>delta</code> and <code>sigma</code> given them (Section 5), for a model with B-spline age
+effects (eq. 2; eq. 6 is its case without splines, the model fitted
+here). Here <code>a</code> and <code>b</code> are those of the Lee-Carter fit (<code>method</code>), in
+the scale <code>sum(b) = 1</code> of <code>k</code>; given them, <code>sigma</code>, <code>lambda</code>, <code>delta</code>
+and the level of the index in the first year are estimated by maximum
+likelihood of the paper's model for the observed log rates. The filtered
+index is computed in closed form (generalised least squares for the
+level and the drift and the best linear prediction of the index), which
+equals the Kalman filter with a diffuse initial state. Without state
+noise (<code>lambda = 0</code>, which is the estimate in some short or noisy series)
+it is the value in year <code>T</code> of the linear trend fitted to the per-year
+indices <code>z[t] = b'(y[t] - a) / b'b</code>; with little
+observation noise (large <code>lambda</code>) it approaches <code>z[T]</code>, the projection
+of the observed log rates of year <code>T</code> on the age pattern, which is <code>k[T]</code>
+for <code>method = "svd", adjust = "none"</code>. Only the start changes: the
+forecast keeps the drift and the innovations of <code>k</code> (the paper's forecast
+uses the maximum likelihood drift and adds the variance of the filtered
+index). Package-specific (reference unknown): cells without deaths enter
+with 0.5 deaths, as for <code>jump_off = "observed"</code>; age groups without deaths
+in the fitting period are left out; with <code>bootstrap = TRUE</code> each
+bootstrap fit filters the observed rates with its own <code>a</code> and <code>b</code>.
+<code><a href="mt_parameters.html">mt_parameters()</a></code> reports the filtered index (<code>k_filtered</code>), its standard
+error (<code>se_k_filtered</code>, which includes the uncertainty of the level and
+the drift) and the estimates <code>filter_sigma</code>, <code>filter_lambda</code> and
+<code>filter_drift</code> (per year, in the units of <code>k</code>). The paper's data
+(Australian women, 1921-2000) are not in an R package; tests check the
+limiting cases, a Kalman filter and recovery on simulated data.</p>
 <p><strong>Negative binomial version</strong> (<code>family = "nb"</code>; Delwarde, Denuit and
 Partrat 2007). Following the paper:</p><ul><li><p>the deaths are negative binomial with mean <code>mu = E exp(a[x] + b[x] k[t])</code> and variance <code>mu + phi mu^2</code>, a Poisson distribution mixed over
 a gamma distributed random effect of each cell (Section 2.2). The
@@ -208,6 +299,57 @@ Human Mortality Database series in <code><a href="https://pkg.robjhyndman.com/de
 paper's dispersions (Section 3.3), AIC (Section 3.4) and drifts and
 standard deviations of <code>k</code> (Sections 3.5 and 3.6) within 1%; the paper's
 column labelled <code>sigma^2</code> holds the standard deviation (divisor <code>T - 1</code>).</p>
+<p><strong>Dispersion by age</strong> (<code>family = "nb"</code> with <code>dispersion = "age"</code>; Li,
+Hardy and Tan 2009). Following the paper:</p><ul><li><p>each cell consists of clusters whose deaths are Poisson given a gamma
+distributed frailty with mean 1 and a variance that depends on age. The
+deaths of the cell are then negative binomial with mean <code>mu = E exp(a[x] + b[x] k[t])</code> and variance <code>mu + alpha[x] mu^2</code> (Section 3, eq.
+5-12), with one dispersion <code>alpha[x]</code> per age group of the data;
+<code>alpha[x]</code> near 0 gives the Poisson model;</p></li>
+<li><p><code>a</code>, <code>b</code>, <code>k</code> and <code>alpha</code> are estimated by maximum likelihood (eq. 13):
+the Newton updates of <code>a</code>, <code>b</code> and <code>k</code> of Appendix 1, alternated with
+the estimate of each <code>alpha[x]</code> given the fitted deaths of its age
+group;</p></li>
+<li><p><code>jump_off = "constrained"</code> applies the forecast origin correction
+(Section 3 and Appendix 2): <code>a[x]</code> is the observed log rate of the last
+year <code>T</code> (the paper writes <code>a[x] = m[x, T]</code>; <code>a</code> is on the log scale of
+eq. 1), <code>k[T] = 0</code>, and <code>b</code> and <code>k</code> are estimated by maximum
+likelihood under these constraints. The fitted rates of the last year
+are the observed ones, and the log-likelihood is lower than without the
+constraints (footnote 3). With <code>family = "poisson"</code> it gives the
+original model with the correction, which the paper fits for comparison
+(Section 4.2);</p></li>
+<li><p>interval forecasts come from the parametric bootstrap of Section 3:
+<code>bootstrap = TRUE</code> simulates negative binomial deaths from the fitted
+model, re-estimates <code>a</code>, <code>b</code> and <code>k</code> (with <code>jump_off = "constrained"</code>,
+<code>a</code> comes from the simulated deaths of the last year, as the correction
+is part of the estimation in Section 3), and simulates
+<code>k</code> from the time series model of each refit. The dispersions are those
+of the fit: step 2(a) re-estimates <code>a</code>, <code>b</code> and <code>k</code>. The paper's method
+is <code>lee_carter(family = "nb", dispersion = "age", jump_off = "constrained", bootstrap = TRUE)</code>;</p></li>
+<li><p>predictive draws (<code>mt_forecast(predictive = TRUE)</code>) are negative
+binomial deaths with the dispersion of their age group (size <code>1 / alpha[x]</code>), the observation model of eq. (10). The paper's intervals
+describe the central death rates, which are the draws without
+<code>predictive</code>.</p></li>
+</ul><p>Package-specific (reference unknown): as for one dispersion, the updates
+start from the Poisson estimates (Appendix 1 recommends them), and each
+<code>alpha[x]</code> is maximised by Newton steps on <code>log(alpha[x])</code> with step
+halving (the paper: Newton steps on <code>alpha[x]</code>). Its estimate is 0 where
+the derivative of the log-likelihood at 0 is not positive. The paper fits
+an ARIMA model to <code>k</code> without naming the model it chose; here <code>k</code> follows
+a random walk with drift, and the draws of each bootstrap fit include the
+uncertainty of its drift, as all draws of <code>lee_carter()</code>. With <code>jump_off = "constrained"</code>, an age group without deaths in the last year starts from
+the rate of 0.5 deaths. Age groups without deaths in all years keep their
+constant rate and have Poisson deaths (dispersion 0). As with one
+dispersion, a fit
+that does not converge fails; <code>jump_off = "constrained"</code> has no
+fallbacks either. Each <code>alpha[x]</code> is estimated from cells that also
+estimate <code>a[x]</code>, <code>b[x]</code> and <code>k</code>. Like other maximum likelihood estimates
+of a variance it is biased downwards: by about <code>2 / T</code> with <code>T</code> years,
+and more at the ages that carry most of the information on <code>k</code> (many
+deaths and a small dispersion). The paper uses data of the Human
+Mortality Database for the United States and Canada, ages 0-99,
+1950-2004 (Section 4.1). The packages demography and StMoMo do not hold
+these series, so its estimates are not reproduced.</p>
 <p><code>rotate = TRUE</code> rotates the age pattern of decline as life expectancy
 rises (Li, Lee and Gerland 2013; status: published, with the deviations
 listed below). In long-lived populations the decline of mortality slows
@@ -246,9 +388,10 @@ expectancy; here every draw is rotated with its own path of life
 expectancy;</p></li>
 <li><p>rates change from the jump-off year <code>T</code>, <code>log m[x, t] = log m[x, T] + B[x, t] (k*[t] - k[T])</code>. Eq. (4) writes <code>a[x] + B[x, t] K[t]</code> with <code>a</code>
 the last observed log rates (as <code>jump_off = "observed"</code>) or their mean
-over the years; with <code>jump_off = "fitted"</code> the fitted rates of year <code>T</code>
-are the starting point (package-specific), which keeps the jump-off
-rates when <code>B</code> departs from <code>b</code>;</p></li>
+over the years; with <code>jump_off = "fitted"</code> (or <code>"filtered"</code>) the fitted
+(or filtered) rates of year <code>T</code> are the starting point
+(package-specific), which keeps the jump-off rates when <code>B</code> departs
+from <code>b</code>;</p></li>
 <li><p>the paper extends the open age group to age 130 with a logistic model
 before fitting (footnote 3); here the age groups of the data are used,
 and life expectancy closes the open interval with <code>L = l / m</code>
@@ -268,9 +411,19 @@ conditions of variable mortality decline. <em>Population Studies</em> 56(3):
 <p>Lee R, Miller T (2001). Evaluating the performance of the Lee-Carter
 method for forecasting mortality. <em>Demography</em> 38(4): 537-549.
 <a href="https://doi.org/10.1353/dem.2001.0036" class="external-link">doi:10.1353/dem.2001.0036</a></p>
+<p>Stoeldraijer L, van Duin C, van Wissen L, Janssen F (2018). Comparing
+strategies for matching mortality forecasts to the most recently observed
+data: exploring the trade-off between accuracy and robustness. <em>Genus</em>
+74: 16. <a href="https://doi.org/10.1186/s41118-018-0041-y" class="external-link">doi:10.1186/s41118-018-0041-y</a></p>
+<p>De Jong P, Tickle L (2006). Extending Lee-Carter mortality forecasting.
+<em>Mathematical Population Studies</em> 13(1): 1-18.
+<a href="https://doi.org/10.1080/08898480500452109" class="external-link">doi:10.1080/08898480500452109</a></p>
 <p>Delwarde A, Denuit M, Partrat C (2007). Negative binomial version of the
 Lee-Carter model for mortality forecasting. <em>Applied Stochastic Models in
 Business and Industry</em> 23(5): 385-401. <a href="https://doi.org/10.1002/asmb.679" class="external-link">doi:10.1002/asmb.679</a></p>
+<p>Li JS-H, Hardy MR, Tan KS (2009). Uncertainty in mortality forecasting:
+an extension to the classical Lee-Carter approach. <em>ASTIN Bulletin</em> 39(1):
+137-164. <a href="https://doi.org/10.2143/AST.39.1.2038060" class="external-link">doi:10.2143/AST.39.1.2038060</a></p>
 <p>Brouhns N, Denuit M, Van Keilegom I (2005). Bootstrapping the Poisson
 log-bilinear model for mortality forecasting. <em>Scandinavian Actuarial
 Journal</em> 2005(3): 212-224.</p>
@@ -419,6 +572,103 @@ In Schoen R (ed.) <em>Dynamic Demographic Analysis</em>. Springer, 285-310.
 <span class="r-out co"><span class="r-pr">#&gt;</span>     &lt;char&gt;        &lt;char&gt; &lt;char&gt;        &lt;num&gt;</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1:  female nb_dispersion        2.913877e-05</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2:    male nb_dispersion        0.000000e+00</span>
+<span class="r-in"><span><span class="co"># dispersion by age with the forecast origin correction and the parametric</span></span></span>
+<span class="r-in"><span><span class="co"># bootstrap (Li, Hardy and Tan 2009)</span></span></span>
+<span class="r-in"><span><span class="va">fit_lht</span> <span class="op">&lt;-</span> <span class="fu"><a href="mt_fit.html">mt_fit</a></span><span class="op">(</span><span class="fu">lee_carter</span><span class="op">(</span>family <span class="op">=</span> <span class="st">"nb"</span>, dispersion <span class="op">=</span> <span class="st">"age"</span>, jump_off <span class="op">=</span> <span class="st">"constrained"</span>,</span></span>
+<span class="r-in"><span>                             bootstrap <span class="op">=</span> <span class="cn">TRUE</span>, n_boot <span class="op">=</span> <span class="fl">20</span><span class="op">)</span>, <span class="fu"><a href="mt_subset.html">mt_subset</a></span><span class="op">(</span><span class="va">x</span>, <span class="va">sex</span> <span class="op">==</span> <span class="st">"female"</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="mt_parameters.html">mt_parameters</a></span><span class="op">(</span><span class="va">fit_lht</span><span class="op">)</span><span class="op">[</span><span class="va">parameter</span> <span class="op">==</span> <span class="st">"nb_dispersion"</span><span class="op">]</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     stratum     parameter  index        value</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>      &lt;char&gt;        &lt;char&gt; &lt;char&gt;        &lt;num&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  1:  female nb_dispersion     30 1.332502e-02</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2:  female nb_dispersion     31 4.772923e-03</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  3:  female nb_dispersion     32 4.053318e-03</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  4:  female nb_dispersion     33 1.236417e-03</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  5:  female nb_dispersion     34 0.000000e+00</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  6:  female nb_dispersion     35 0.000000e+00</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  7:  female nb_dispersion     36 0.000000e+00</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  8:  female nb_dispersion     37 8.228632e-04</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  9:  female nb_dispersion     38 4.278345e-03</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 10:  female nb_dispersion     39 0.000000e+00</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 11:  female nb_dispersion     40 0.000000e+00</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 12:  female nb_dispersion     41 0.000000e+00</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 13:  female nb_dispersion     42 2.691890e-03</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 14:  female nb_dispersion     43 0.000000e+00</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 15:  female nb_dispersion     44 3.367764e-05</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 16:  female nb_dispersion     45 6.100974e-03</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 17:  female nb_dispersion     46 1.888541e-03</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 18:  female nb_dispersion     47 1.450254e-03</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 19:  female nb_dispersion     48 0.000000e+00</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 20:  female nb_dispersion     49 0.000000e+00</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 21:  female nb_dispersion     50 0.000000e+00</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 22:  female nb_dispersion     51 2.742291e-03</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 23:  female nb_dispersion     52 3.108202e-04</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 24:  female nb_dispersion     53 0.000000e+00</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 25:  female nb_dispersion     54 1.143663e-03</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 26:  female nb_dispersion     55 5.628666e-03</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 27:  female nb_dispersion     56 0.000000e+00</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 28:  female nb_dispersion     57 8.045295e-04</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 29:  female nb_dispersion     58 0.000000e+00</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 30:  female nb_dispersion     59 0.000000e+00</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 31:  female nb_dispersion     60 0.000000e+00</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 32:  female nb_dispersion     61 0.000000e+00</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 33:  female nb_dispersion     62 8.316641e-05</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 34:  female nb_dispersion     63 8.191533e-04</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 35:  female nb_dispersion     64 1.580029e-04</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 36:  female nb_dispersion     65 0.000000e+00</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 37:  female nb_dispersion     66 3.316936e-04</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 38:  female nb_dispersion     67 5.760218e-04</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 39:  female nb_dispersion     68 0.000000e+00</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 40:  female nb_dispersion     69 0.000000e+00</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 41:  female nb_dispersion     70 1.959614e-04</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 42:  female nb_dispersion     71 0.000000e+00</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 43:  female nb_dispersion     72 0.000000e+00</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 44:  female nb_dispersion     73 0.000000e+00</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 45:  female nb_dispersion     74 3.327211e-04</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 46:  female nb_dispersion     75 0.000000e+00</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 47:  female nb_dispersion     76 2.120416e-04</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 48:  female nb_dispersion     77 0.000000e+00</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 49:  female nb_dispersion     78 0.000000e+00</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 50:  female nb_dispersion     79 0.000000e+00</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 51:  female nb_dispersion     80 0.000000e+00</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 52:  female nb_dispersion     81 4.490368e-04</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 53:  female nb_dispersion     82 1.416356e-04</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 54:  female nb_dispersion     83 0.000000e+00</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 55:  female nb_dispersion     84 3.430378e-05</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 56:  female nb_dispersion     85 9.622345e-05</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 57:  female nb_dispersion     86 0.000000e+00</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 58:  female nb_dispersion     87 0.000000e+00</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 59:  female nb_dispersion     88 0.000000e+00</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 60:  female nb_dispersion     89 0.000000e+00</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 61:  female nb_dispersion     90 0.000000e+00</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 62:  female nb_dispersion     91 3.060295e-05</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 63:  female nb_dispersion     92 1.258580e-05</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 64:  female nb_dispersion     93 0.000000e+00</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 65:  female nb_dispersion     94 2.127695e-05</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 66:  female nb_dispersion     95 0.000000e+00</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 67:  female nb_dispersion     96 7.320695e-05</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 68:  female nb_dispersion     97 0.000000e+00</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 69:  female nb_dispersion     98 2.175004e-04</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 70:  female nb_dispersion     99 1.609601e-04</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 71:  female nb_dispersion   100+ 6.562962e-04</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     stratum     parameter  index        value</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>      &lt;char&gt;        &lt;char&gt; &lt;char&gt;        &lt;num&gt;</span>
+<span class="r-in"><span><span class="co"># jump-off: mean of the last three observed years (Stoeldraijer et al.</span></span></span>
+<span class="r-in"><span><span class="co"># 2018) and the Kalman filter estimate (De Jong and Tickle 2006)</span></span></span>
+<span class="r-in"><span><span class="va">fit_av</span> <span class="op">&lt;-</span> <span class="fu"><a href="mt_fit.html">mt_fit</a></span><span class="op">(</span><span class="fu">lee_carter</span><span class="op">(</span>jump_off <span class="op">=</span> <span class="st">"observed"</span>, jump_off_years <span class="op">=</span> <span class="fl">3</span><span class="op">)</span>, <span class="va">x</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">fit_kf</span> <span class="op">&lt;-</span> <span class="fu"><a href="mt_fit.html">mt_fit</a></span><span class="op">(</span><span class="fu">lee_carter</span><span class="op">(</span>jump_off <span class="op">=</span> <span class="st">"filtered"</span><span class="op">)</span>, <span class="va">x</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="mt_parameters.html">mt_parameters</a></span><span class="op">(</span><span class="va">fit_kf</span><span class="op">)</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">grepl</a></span><span class="op">(</span><span class="st">"filter"</span>, <span class="va">parameter</span><span class="op">)</span><span class="op">]</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     stratum     parameter  index        value</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>      &lt;char&gt;        &lt;char&gt; &lt;char&gt;        &lt;num&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  1:  female    k_filtered   2019 -13.31314483</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2:  female se_k_filtered   2019   0.39234808</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  3:  female  filter_sigma          0.06480888</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  4:  female filter_lambda          0.81877306</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  5:  female  filter_drift         -0.87267723</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  6:    male    k_filtered   2019 -12.32094921</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  7:    male se_k_filtered   2019   0.38782858</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  8:    male  filter_sigma          0.05381630</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  9:    male filter_lambda          1.79159067</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 10:    male  filter_drift         -0.94477645</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

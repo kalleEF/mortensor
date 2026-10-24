@@ -22,6 +22,7 @@
 <url><loc>/articles/model-choice.html</loc></url>
 <url><loc>/articles/models.html</loc></url>
 <url><loc>/articles/mortensor.html</loc></url>
+<url><loc>/articles/overdispersion.html</loc></url>
 <url><loc>/articles/own-data.html</loc></url>
 <url><loc>/articles/smoothing.html</loc></url>
 <url><loc>/articles/tuning-recalibration.html</loc></url>
@@ -99,6 +100,7 @@
 <url><loc>/reference/mt_operator.html</loc></url>
 <url><loc>/reference/mt_order_strata.html</loc></url>
 <url><loc>/reference/mt_parameters.html</loc></url>
+<url><loc>/reference/mt_pessimism.html</loc></url>
 <url><loc>/reference/mt_plot.html</loc></url>
 <url><loc>/reference/mt_plot_contrast.html</loc></url>
 <url><loc>/reference/mt_plot_decomposition.html</loc></url>
@@ -133,6 +135,7 @@
 <url><loc>/reference/product_ratio.html</loc></url>
 <url><loc>/reference/recalibrated.html</loc></url>
 <url><loc>/reference/reconciled.html</loc></url>
+<url><loc>/reference/relative_model.html</loc></url>
 <url><loc>/reference/rwd.html</loc></url>
 <url><loc>/reference/saint.html</loc></url>
 <url><loc>/reference/score_samples.html</loc></url>
