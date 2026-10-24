@@ -63,6 +63,13 @@ The forecasts are *predictive*: they describe the observed death rates
 of the test years, including the Poisson noise of the counts, because the
 observed rates are what they are compared with.
 
+A cell without deaths has no finite log rate: the backtest counts it as
+half a death, the observed and the forecast deaths alike. The scores of
+such cells can dominate the means of sparse data, so `mt_score()` reports
+their number (`n_floored`). Life expectancy and the age-standardised
+rate, which sum the deaths over age before scoring, or coarser age groups
+(`step_regroup()`) avoid the floor.
+
 ## Scores
 
 ### Interval coverage

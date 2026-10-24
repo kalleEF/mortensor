@@ -70,5 +70,5 @@ utils::globalVariables(c(
   "band", "ref", "noise", "density",
   "comparison", "xvar", "fvar", "max_residual", "q0.025", "q0.975", "forecast", "fitted", "prep", "V1",
   "unit", "loss", "selected", "se", "method", "col", "setting", "score", "part", "from", "to", "draws", "plugin",
-  "sape_", "revision_", "cov90", "hw80", "hw90", "hw95", "aic", "delta_aic", "nll", "law"
+  "sape_", "revision_", "cov90", "hw80", "hw90", "hw95", "aic", "delta_aic", "nll", "law", "floored"
 ))

@@ -72,7 +72,9 @@ An object of class \code{mt_backtest}: a \code{data.table} with one row per
 observed cell, origin and horizon: \code{model}, \code{prep} (the preprocessing
 steps, \code{"none"} without), \code{origin}, \code{horizon},
 stratum columns, \code{age_lo}, \code{age_hi}, \code{period}, \code{observed} (log rate),
-the MASE scale \code{scale} (mean absolute year-to-year change in the
+\code{floored} (\code{TRUE} where the observed deaths are below 0.5, so that the
+log rate uses the floor of half a death; \code{NA} on rows of derived
+quantities), the MASE scale \code{scale} (mean absolute year-to-year change in the
 training data), \code{target} (\code{"rate"}, or the derived quantity), the
 forecast \code{median} and \code{mean}, and the scores \code{crps}, \code{wis}, \code{ae}
 (absolute error of the median), \code{cov50}, \code{cov80}, \code{cov95} and \code{pit}
@@ -111,7 +113,12 @@ convention of this package; reference unknown). The predictive draws of
 deaths are first summed from the grid to the observed cell and then
 floored in the same way, so that draws and observations are treated
 alike; a floor per grid cell would put the draws of a grouped cell with
-few deaths above the observation.
+few deaths above the observation. The column \code{floored} marks the cells
+whose observed deaths are below half a death, and \code{\link[=mt_score]{mt_score()}} counts
+them (\code{n_floored}). The scores of floored cells can dominate the means
+of sparse data. The derived quantities (\code{quantities = "asr"} or
+\code{"life_expectancy"}), which aggregate the deaths over age before
+scoring, or coarser age groups (\code{step_regroup()}) avoid the floor.
 
 Strata without forecast draws at an origin (the model failed in them or
 gave missing rates) are not scored, with a warning of class

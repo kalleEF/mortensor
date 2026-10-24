@@ -62,8 +62,13 @@ root mean squared error of the median (\code{rmse}), MASE
 change of the training data, as the mean absolute scaled error of
 Hyndman and Koehler 2006; rates only), empirical coverage
 of the 50\%, 80\% and 95\% intervals, mean PIT, the number of scored
-cells and the \code{unit} of CRPS, WIS and absolute error (log rates, or
-years for life expectancy). Backtests of the same model with different
+cells (\code{n}), the number of them whose observed deaths were floored at
+half a death (\code{n_floored}, see \code{\link[=mt_backtest]{mt_backtest()}}; for \code{target = "rate"},
+\code{NA} for other targets and for backtest tables without the column
+\code{floored}) and the \code{unit} of CRPS, WIS and absolute error (log rates,
+or years for life expectancy). The scores of floored cells can
+dominate the means of sparse data; the derived quantities and coarser
+age groups avoid the floor. Backtests of the same model with different
 preprocessing (column \code{prep}) are scored separately. With \code{measures},
 the columns \code{sape}, \code{cov90}, \code{hw80}, \code{hw90}, \code{hw95} and \code{revision}
 follow.

@@ -97,7 +97,7 @@ observed data.
 | Fit | `mt_fit()` | estimate | `mt_spec`, `mt_data` | `mt_fit` |
 | Inspect | `summary()`, `mt_parameters()`, `fitted()`, `residuals()`, `mt_plot_residuals()` | model, assumptions, estimates, fit | `mt_fit` | text, table, plot |
 | Forecast | `mt_forecast()`, `mt_summarise()` | simulated paths and their quantiles | `mt_fit` | `mt_draws`, table |
-| Evaluate | `mt_backtest()`, `mt_score()` | rolling-origin scores of rates, life expectancy or ASR, and of gaps between strata (`contrast`); optional SAPE, 90% coverage and interval half-widths of life expectancy (Raftery et al. 2013) and revisions between consecutive origins (`measures`) | `mt_spec`, `mt_data` | table |
+| Evaluate | `mt_backtest()`, `mt_score()` | rolling-origin scores of rates, life expectancy or ASR, and of gaps between strata (`contrast`); the number of cells without deaths, floored at half a death (`n_floored`); optional SAPE, 90% coverage and interval half-widths of life expectancy (Raftery et al. 2013) and revisions between consecutive origins (`measures`) | `mt_spec`, `mt_data` | table |
 | Evaluate | `mt_compare()`, `mt_score_table()` | backtests of several models on the same origins; scores of rates, life expectancy and gaps side by side, by level of a hierarchy or by horizon | named list of `mt_spec`, `mt_data` | table |
 | Evaluate | `mt_dm_test()` | Diebold-Mariano tests: is one model more accurate than another, per horizon, beyond chance? | backtest from `mt_compare()` | table |
 | Evaluate | `mt_plot_scores()`, `mt_plot_coverage()`, `mt_plot_pit()`, `mt_plot_backtest_design()`, `mt_plot_tuning()` | scores by horizon or model, interval coverage, PIT histograms, the design of a backtest, tuning scores | backtest, tuning | ggplot |

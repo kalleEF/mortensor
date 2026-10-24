@@ -63,7 +63,12 @@
 #' deaths are first summed from the grid to the observed cell and then
 #' floored in the same way, so that draws and observations are treated
 #' alike; a floor per grid cell would put the draws of a grouped cell with
-#' few deaths above the observation.
+#' few deaths above the observation. The column `floored` marks the cells
+#' whose observed deaths are below half a death, and [mt_score()] counts
+#' them (`n_floored`). The scores of floored cells can dominate the means
+#' of sparse data. The derived quantities (`quantities = "asr"` or
+#' `"life_expectancy"`), which aggregate the deaths over age before
+#' scoring, or coarser age groups (`step_regroup()`) avoid the floor.
 #'
 #' Strata without forecast draws at an origin (the model failed in them or
 #' gave missing rates) are not scored, with a warning of class
@@ -104,7 +109,9 @@
 #'   observed cell, origin and horizon: `model`, `prep` (the preprocessing
 #'   steps, `"none"` without), `origin`, `horizon`,
 #'   stratum columns, `age_lo`, `age_hi`, `period`, `observed` (log rate),
-#'   the MASE scale `scale` (mean absolute year-to-year change in the
+#'   `floored` (`TRUE` where the observed deaths are below 0.5, so that the
+#'   log rate uses the floor of half a death; `NA` on rows of derived
+#'   quantities), the MASE scale `scale` (mean absolute year-to-year change in the
 #'   training data), `target` (`"rate"`, or the derived quantity), the
 #'   forecast `median` and `mean`, and the scores `crps`, `wis`, `ae`
 #'   (absolute error of the median), `cov50`, `cov80`, `cov95` and `pit`
@@ -274,7 +281,7 @@ backtest_origin <- function(spec, data, origin, h, prep, n_draws, seed, score_es
     r <- cbind(
       data.table(model = spec$label, prep = prep_label(prep), origin = origin, horizon = o$period_lo - origin,
                  stratum = s, age_lo = o$age_lo, age_hi = o$age_hi, period = o$period_lo, observed = y,
-                 scale = scale, target = "rate"),
+                 floored = o$value < 0.5, scale = scale, target = "rate"),
       sc)
     if (keep_draws) r[, draws := lapply(seq_len(nrow(X)), function(i) X[i, ])]
     rows[[length(rows) + 1L]] <- r
@@ -304,7 +311,7 @@ backtest_origin <- function(spec, data, origin, h, prep, n_draws, seed, score_es
 quantity_rows <- function(qr, spec, prep, origin, s) {
   out <- cbind(data.table(model = spec$label, prep = prep_label(prep), origin = origin, horizon = qr$period - origin,
                           stratum = s, age_lo = NA_real_, age_hi = NA_real_, period = qr$period,
-                          observed = qr$observed, scale = NA_real_, target = qr$target),
+                          observed = qr$observed, floored = NA, scale = NA_real_, target = qr$target),
                qr$scores)
   if (!is.null(qr$plugin)) out[, plugin := qr$plugin]
   out
@@ -583,8 +590,13 @@ wis_from_quantiles <- function(Q, y, probs) {
 #'   change of the training data, as the mean absolute scaled error of
 #'   Hyndman and Koehler 2006; rates only), empirical coverage
 #'   of the 50%, 80% and 95% intervals, mean PIT, the number of scored
-#'   cells and the `unit` of CRPS, WIS and absolute error (log rates, or
-#'   years for life expectancy). Backtests of the same model with different
+#'   cells (`n`), the number of them whose observed deaths were floored at
+#'   half a death (`n_floored`, see [mt_backtest()]; for `target = "rate"`,
+#'   `NA` for other targets and for backtest tables without the column
+#'   `floored`) and the `unit` of CRPS, WIS and absolute error (log rates,
+#'   or years for life expectancy). The scores of floored cells can
+#'   dominate the means of sparse data; the derived quantities and coarser
+#'   age groups avoid the floor. Backtests of the same model with different
 #'   preprocessing (column `prep`) are scored separately. With `measures`,
 #'   the columns `sape`, `cov90`, `hw80`, `hw90`, `hw95` and `revision`
 #'   follow.
@@ -632,10 +644,13 @@ mt_score <- function(backtest, by = "model",
   }
   if (!nrow(bt)) mt_abort(sprintf("The backtest holds no scores for target \"%s\".", target), class = "argument")
   rates_only <- identical(target, "rate")
+  # cells whose observed deaths were floored at half a death (rates only)
+  count_floored <- rates_only && "floored" %in% names(bt)
   by <- score_by(bt, by)
   out <- bt[, list(crps = mean(crps), wis = mean(wis), mae = mean(ae), rmse = sqrt(mean(ae^2)),
                    mase = if (rates_only) mean(ae / scale, na.rm = TRUE) else NA_real_,
-                   cov50 = mean(cov50), cov80 = mean(cov80), cov95 = mean(cov95), pit_mean = mean(pit), n = .N),
+                   cov50 = mean(cov50), cov80 = mean(cov80), cov95 = mean(cov95), pit_mean = mean(pit), n = .N,
+                   n_floored = if (count_floored) sum(floored %in% TRUE) else NA_integer_),
             by = by]
   out[, unit := switch(target, rate = "log rate", life_expectancy = "years", asr = "log rate (ASR)",
                        life_expectancy_gap = "years (difference)", asr_gap = "log rate ratio (ASR)")]

@@ -332,6 +332,12 @@ are safeguards of this package). With many small cells:
 `mt_forecast()` warns when forecast death rates exceed 1, the clearest sign
 that a model is unstable for the data.
 
+In a backtest, a cell without deaths counts as half a death. The scores
+of such cells can dominate the mean scores of the log rates;
+`mt_score()` reports their number (`n_floored`). Score life expectancy
+or the age-standardised rate (`quantities` in `mt_backtest()`), which sum
+the deaths over age first, or use coarser age groups (`step_regroup()`).
+
 ### Which function aggregates what?
 
 | Function | Combines | Example |
