@@ -129,6 +129,13 @@ averages over the particular events of a single period.</p>
 <p>The forecasts are <em>predictive</em>: they describe the observed
 death rates of the test years, including the Poisson noise of the
 counts, because the observed rates are what they are compared with.</p>
+<p>A cell without deaths has no finite log rate: the backtest counts it
+as half a death, the observed and the forecast deaths alike. The scores
+of such cells can dominate the means of sparse data, so
+<code><a href="../reference/mt_score.html">mt_score()</a></code> reports their number (<code>n_floored</code>).
+Life expectancy and the age-standardised rate, which sum the deaths over
+age before scoring, or coarser age groups (<code><a href="../reference/mt_prep.html">step_regroup()</a></code>)
+avoid the floor.</p>
 </div>
 <div class="section level2">
 <h2 id="scores">Scores<a class="anchor" aria-label="anchor" href="#scores"></a>
@@ -269,10 +276,15 @@ male life expectancy at birth, out of sample over ten years.</p>
 </h3>
 <p>A forecast also changes when a year of data is added. Stoeldraijer et
 al. (2013) name robustness as a purpose of a forecast: small changes in
-the observations should change the forecast only modestly. They give no
-measure. <code>measures = "revision"</code> gives the mean absolute
-change of the forecast median of each cell (stratum, age group, year)
-between consecutive origins, a measure of this package:</p>
+the observations should change the forecast only modestly. Stoeldraijer
+et al. (2018) measure it by the standard deviation of the changes of the
+forecast of one target year over successive forecasts, which
+<code>measures = "robustness"</code> gives for each target year with
+<code>by = c("model", "period")</code>; the target year must be forecast
+from at least three origins. <code>measures = "revision"</code> gives
+the mean absolute change of the forecast median of each cell (stratum,
+age group, year) between consecutive origins, a measure of this
+package:</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/mt_score.html">mt_score</a></span><span class="op">(</span><span class="va">bt</span>, measures <span class="op">=</span> <span class="st">"revision"</span><span class="op">)</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">model</span>, <span class="va">crps</span>, <span class="va">revision</span><span class="op">)</span><span class="op">]</span></span>
 <span><span class="co">#&gt;          model       crps   revision</span></span>
@@ -410,6 +422,10 @@ probabilistic projections of life expectancy for all countries.
 different mortality forecasting methods and explicit assumptions on
 projected future life expectancy: the case of the Netherlands.
 <em>Demographic Research</em> 29(13): 323-354.</p>
+<p>Stoeldraijer L, van Duin C, van Wissen L, Janssen F (2018). Comparing
+strategies for matching mortality forecasts to the most recently
+observed data: exploring the trade-off between accuracy and robustness.
+<em>Genus</em> 74: 16. <a href="doi:10.1186/s41118-018-0041-y" class="uri">doi:10.1186/s41118-018-0041-y</a>.</p>
 <p>Tashman LJ (2000). Out-of-sample tests of forecasting accuracy: an
 analysis and review. <em>International Journal of Forecasting</em>
 16(4): 437-450.</p>

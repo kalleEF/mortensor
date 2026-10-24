@@ -92,9 +92,7 @@ fit, and the diagnostics report the largest gap to a single group total
 every group total, a post-hoc rescaling of this package that creates
 jumps at the group boundaries. `method = "monotone"` interpolates the
 cumulative counts and reproduces every group total, without using the
-exposures. The spline methods `"hyman_kannisto"`, `"natural_gompertz"`
-and `"gam"` are deprecated: they have no published source. Check your
-own result with
+exposures. Check your own result with
 [`mt_plot_ungroup()`](../reference/ungroup-diagnostics.md) and
 [`mt_ungroup_check()`](../reference/ungroup-diagnostics.md); see
 “Ungrouping age groups: methods and diagnostics”.
@@ -311,13 +309,15 @@ the Kalman filter estimate of the index in the last year
 to the observed rates of the last year (`jump_off = "constrained"`; Li,
 Hardy and Tan 2009). Stoeldraijer et al. (2018) found the last observed
 year most accurate and an average over several years most robust to data
-updates. The other settings of [`anchored()`](../reference/anchored.md)
-are package-specific: the offset of the last `years` years, shrunk where
-deaths are few (`shrink = TRUE`) and fading out over `decay` years.
-“Where a forecast starts: the jump-off” compares the starting points in
-a backtest. Decompositions of a change from an observed to a forecast
-year include the step; [`mt_decompose()`](../reference/mt_decompose.md)
-reports it (`jump_off`) and can start from the fitted rates
+updates; `mt_score(measures = "robustness")` gives their measure of
+robustness for a backtest. The other settings of
+[`anchored()`](../reference/anchored.md) are package-specific: the
+offset of the last `years` years, shrunk where deaths are few
+(`shrink = TRUE`) and fading out over `decay` years. “Where a forecast
+starts: the jump-off” compares the starting points in a backtest.
+Decompositions of a change from an observed to a forecast year include
+the step; [`mt_decompose()`](../reference/mt_decompose.md) reports it
+(`jump_off`) and can start from the fitted rates
 (`observed = "fitted"`).
 
 ### What is the difference between predictive draws and forecast rates?
@@ -369,6 +369,14 @@ are safeguards of this package). With many small cells:
 
 [`mt_forecast()`](../reference/mt_forecast.md) warns when forecast death
 rates exceed 1, the clearest sign that a model is unstable for the data.
+
+In a backtest, a cell without deaths counts as half a death. The scores
+of such cells can dominate the mean scores of the log rates;
+[`mt_score()`](../reference/mt_score.md) reports their number
+(`n_floored`). Score life expectancy or the age-standardised rate
+(`quantities` in [`mt_backtest()`](../reference/mt_backtest.md)), which
+sum the deaths over age first, or use coarser age groups
+([`step_regroup()`](../reference/mt_prep.md)).
 
 ### Which function aggregates what?
 

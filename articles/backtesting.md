@@ -68,6 +68,14 @@ The forecasts are *predictive*: they describe the observed death rates
 of the test years, including the Poisson noise of the counts, because
 the observed rates are what they are compared with.
 
+A cell without deaths has no finite log rate: the backtest counts it as
+half a death, the observed and the forecast deaths alike. The scores of
+such cells can dominate the means of sparse data, so
+[`mt_score()`](../reference/mt_score.md) reports their number
+(`n_floored`). Life expectancy and the age-standardised rate, which sum
+the deaths over age before scoring, or coarser age groups
+([`step_regroup()`](../reference/mt_prep.md)) avoid the floor.
+
 ## Scores
 
 ### Interval coverage
@@ -221,10 +229,14 @@ expectancy at birth, out of sample over ten years.
 
 A forecast also changes when a year of data is added. Stoeldraijer et
 al. (2013) name robustness as a purpose of a forecast: small changes in
-the observations should change the forecast only modestly. They give no
-measure. `measures = "revision"` gives the mean absolute change of the
-forecast median of each cell (stratum, age group, year) between
-consecutive origins, a measure of this package:
+the observations should change the forecast only modestly. Stoeldraijer
+et al. (2018) measure it by the standard deviation of the changes of the
+forecast of one target year over successive forecasts, which
+`measures = "robustness"` gives for each target year with
+`by = c("model", "period")`; the target year must be forecast from at
+least three origins. `measures = "revision"` gives the mean absolute
+change of the forecast median of each cell (stratum, age group, year)
+between consecutive origins, a measure of this package:
 
 ``` r
 
@@ -376,6 +388,11 @@ Stoeldraijer L, van Duin C, van Wissen L, Janssen F (2013). Impact of
 different mortality forecasting methods and explicit assumptions on
 projected future life expectancy: the case of the Netherlands.
 *Demographic Research* 29(13): 323-354.
+
+Stoeldraijer L, van Duin C, van Wissen L, Janssen F (2018). Comparing
+strategies for matching mortality forecasts to the most recently
+observed data: exploring the trade-off between accuracy and robustness.
+*Genus* 74: 16. <doi:10.1186/s41118-018-0041-y>.
 
 Tashman LJ (2000). Out-of-sample tests of forecasting accuracy: an
 analysis and review. *International Journal of Forecasting* 16(4):

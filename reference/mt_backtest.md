@@ -104,8 +104,10 @@ mt_backtest(
 An object of class `mt_backtest`: a `data.table` with one row per
 observed cell, origin and horizon: `model`, `prep` (the preprocessing
 steps, `"none"` without), `origin`, `horizon`, stratum columns,
-`age_lo`, `age_hi`, `period`, `observed` (log rate), the MASE scale
-`scale` (mean absolute year-to-year change in the training data),
+`age_lo`, `age_hi`, `period`, `observed` (log rate), `floored` (`TRUE`
+where the observed deaths are below 0.5, so that the log rate uses the
+floor of half a death; `NA` on rows of derived quantities), the MASE
+scale `scale` (mean absolute year-to-year change in the training data),
 `target` (`"rate"`, or the derived quantity), the forecast `median` and
 `mean`, and the scores `crps`, `wis`, `ae` (absolute error of the
 median), `cov50`, `cov80`, `cov95` and `pit` (randomised for ties), and
@@ -139,7 +141,13 @@ convention of this package; reference unknown). The predictive draws of
 deaths are first summed from the grid to the observed cell and then
 floored in the same way, so that draws and observations are treated
 alike; a floor per grid cell would put the draws of a grouped cell with
-few deaths above the observation.
+few deaths above the observation. The column `floored` marks the cells
+whose observed deaths are below half a death, and
+[`mt_score()`](mt_score.md) counts them (`n_floored`). The scores of
+floored cells can dominate the means of sparse data. The derived
+quantities (`quantities = "asr"` or `"life_expectancy"`), which
+aggregate the deaths over age before scoring, or coarser age groups
+([`step_regroup()`](mt_prep.md)) avoid the floor.
 
 Strata without forecast draws at an origin (the model failed in them or
 gave missing rates) are not scored, with a warning of class
@@ -191,7 +199,7 @@ mt_score(bt)
 #>                     model       crps        wis        mae      rmse     mase
 #>                    <char>      <num>      <num>      <num>     <num>    <num>
 #> 1: Random walk with drift 0.05507087 0.04923878 0.07405228 0.1188856 1.265727
-#>        cov50    cov80     cov95  pit_mean     n     unit
-#>        <num>    <num>     <num>     <num> <int>   <char>
-#> 1: 0.6415493 0.878169 0.9591549 0.4867606  1420 log rate
+#>        cov50    cov80     cov95  pit_mean     n n_floored     unit
+#>        <num>    <num>     <num>     <num> <int>     <int>   <char>
+#> 1: 0.6415493 0.878169 0.9591549 0.4867606  1420         0 log rate
 ```

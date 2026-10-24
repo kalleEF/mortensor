@@ -63,7 +63,7 @@ outer <code><a href="mt_backtest.html">mt_backtest()</a></code>):</p>
 <span>  <span class="va">spec</span>,</span>
 <span>  years <span class="op">=</span> <span class="fl">10</span>,</span>
 <span>  n_origins <span class="op">=</span> <span class="fl">5</span>,</span>
-<span>  scale <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"constant"</span>, <span class="st">"horizon"</span>, <span class="st">"per_horizon"</span><span class="op">)</span>,</span>
+<span>  scale <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"constant"</span>, <span class="st">"per_horizon"</span><span class="op">)</span>,</span>
 <span>  bias <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  target <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"crps"</span>, <span class="st">"interval"</span><span class="op">)</span>,</span>
 <span>  level <span class="op">=</span> <span class="fl">0.95</span>,</span>
@@ -98,9 +98,7 @@ forecast horizon (see "Factors per horizon").</p></dd>
 
 <dt id="arg-scale">scale<a class="anchor" aria-label="anchor" href="#arg-scale"></a></dt>
 <dd><p><code>"constant"</code> (default: one spread factor \(s_1\) for all
-horizons), <code>"per_horizon"</code> (one factor for each horizon) or the
-deprecated <code>"horizon"</code> (spread factor \(s_1 h^{\gamma}\),
-package-specific; use <code>"per_horizon"</code>).</p></dd>
+horizons) or <code>"per_horizon"</code> (one factor for each horizon).</p></dd>
 
 
 <dt id="arg-bias">bias<a class="anchor" aria-label="anchor" href="#arg-bias"></a></dt>
@@ -158,13 +156,13 @@ arguments keep their defaults.</p></dd>
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>A model specification. The fitted object has a <code>calibration</code>
 element: a <code>data.table</code> with one row per group and age band
-(<code>scale_h1</code>, <code>slope</code>, <code>drift</code>, the number of observed cells and of
+(<code>scale_h1</code>, <code>drift</code>, the number of observed cells and of
 scored values, the number of inner forecasts (stratum x origin), CRPS
 and coverage of the inner forecasts before and after calibration, and
 with <code>n_boot</code> the intervals <code>scale_h1_lo</code>, <code>scale_h1_hi</code>, ...). With
 <code>scale = "per_horizon"</code> it has one row per group, age band and horizon,
 with <code>horizon</code>, <code>origins</code> (inner origins of the horizon), <code>scale</code> and
-<code>drift</code> in place of <code>scale_h1</code>, <code>slope</code> and <code>drift</code> (and <code>scale_lo</code>,
+<code>drift</code> in place of <code>scale_h1</code> and <code>drift</code> (and <code>scale_lo</code>,
 <code>scale_hi</code>, ... with <code>n_boot</code>). With <code>method = "errors"</code> it has one row
 per horizon: <code>horizon</code>, <code>origins</code> (error vectors), <code>cells</code> (ages x
 strata of each vector), <code>mean_error</code>, <code>tuning</code> (\(\pi_h\)) and
@@ -182,9 +180,10 @@ remaining years of the window;</p></li>
 $$\log m^* = \tilde m + b\,h + s(h)\,(\log m - \tilde m),$$
 where \(\tilde m\) is the median of the draws in the cell, \(h\) the
 horizon, \(s(h)\) a spread factor, one value \(s_1\) for all
-horizons (<code>scale = "constant"</code>, default) or \(s_1 h^{\gamma}\)
-(<code>scale = "horizon"</code>, deprecated), held constant beyond the longest horizon of the
-window, or one value \(s_h\) for each horizon (<code>scale = "per_horizon"</code>), and \(b\) a correction of the drift per year (<code>bias = TRUE</code>; with <code>scale = "per_horizon"</code> one \(b_h\) for each horizon);</p></li>
+horizons (<code>scale = "constant"</code>, default) or one value \(s_h\) for
+each horizon (<code>scale = "per_horizon"</code>), and \(b\) a correction of
+the drift per year (<code>bias = TRUE</code>; with <code>scale = "per_horizon"</code> one
+\(b_h\) for each horizon);</p></li>
 <li><p>the parameters minimise the mean CRPS (or the interval score,
 <code>target</code>) of the log death rates in the window, with the Poisson (or
 the model's negative binomial) variation of the observed deaths, as in
@@ -291,9 +290,8 @@ range of its \(M\) errors. For exchangeable errors, the range of
 \((M - 1) / (M + 1)\): 0.82 for 10 origins, 0.33 for two. Horizons that
 few origins reach therefore get narrow intervals; a long <code>years</code> with
 <code>n_origins = years - 1</code> gives each horizon more origins.</p>
-<p><strong>Package-specific options</strong> (reference unknown): the power law of the
-spread factor over the horizon (<code>scale = "horizon"</code>), the correction of
-the drift (<code>bias = TRUE</code>), separate factors for age bands (<code>ages</code>) and
+<p><strong>Package-specific options</strong> (reference unknown): the correction of the
+drift (<code>bias = TRUE</code>), separate factors for age bands (<code>ages</code>) and
 calibration on life expectancy or the age-standardised rate (<code>quantity</code>).
 The drift correction and the age bands have published analogues of
 another form. EMOS corrects the bias of the forecasts in its predictive
@@ -308,27 +306,26 @@ et al. (2005, section 3a) note that distinct regions may need distinct
 training periods; <code>ages</code> estimates separate factors for bands of ages
 that the user chooses.</p>
 <p><strong>Estimation.</strong> The parameters are bounded: \(s_1\) (and \(s_h\))
-between 0.1 and 20, \(\gamma\) between -1 and 1, and \(b\) between
--0.05 and 0.05 (log rate per year). With one parameter (<code>scale = "constant"</code> or, for each horizon, <code>"per_horizon"</code>, with <code>bias = FALSE</code>)
-the log factor is found by <code><a href="https://rdrr.io/r/stats/optimize.html" class="external-link">stats::optimize()</a></code> within its bounds;
-otherwise the parameters are found by Nelder-Mead (<code><a href="https://rdrr.io/r/stats/optim.html" class="external-link">stats::optim()</a></code>,
-relative tolerance 1e-6, at most 300 iterations), started at
-\(s_1 = 1\), \(\gamma = 0\), \(b = 0\), with values outside the
-bounds rejected. The observation noise of the scored forecasts is
-simulated once (common random numbers), so the score is a deterministic
-function of the parameters. In this calibration sample, cells with 50 or
-more expected deaths get Poisson deaths from the normal approximation
-(mean and variance equal to the expected deaths, truncated at zero); the
-other cells get quantiles of the Poisson or negative binomial
-distribution (package-specific, reference unknown).</p>
+between 0.1 and 20, and \(b\) between -0.05 and 0.05 (log rate per
+year). With one parameter (<code>scale = "constant"</code> or, for each horizon,
+<code>"per_horizon"</code>, with <code>bias = FALSE</code>) the log factor is found by
+<code><a href="https://rdrr.io/r/stats/optimize.html" class="external-link">stats::optimize()</a></code> within its bounds; otherwise the parameters are
+found by Nelder-Mead (<code><a href="https://rdrr.io/r/stats/optim.html" class="external-link">stats::optim()</a></code>, relative tolerance 1e-6, at most
+300 iterations), started at \(s_1 = 1\) and \(b = 0\), with values
+outside the bounds rejected. The observation noise of the scored
+forecasts is simulated once (common random numbers), so the score is a
+deterministic function of the parameters. In this calibration sample,
+cells with 50 or more expected deaths get Poisson deaths from the normal
+approximation (mean and variance equal to the expected deaths, truncated
+at zero); the other cells get quantiles of the Poisson or negative
+binomial distribution (package-specific, reference unknown).</p>
 <p><strong>Long horizons.</strong> The parameters are estimated on horizons 1 to
 \(h_{max}\), the distance from the first origin to the last training
-year (10 years with the defaults). With <code>scale = "constant"</code> or
-<code>"horizon"</code>, the spread factor and the drift correction are held at
-their values at \(h_{max}\) beyond it. A forecast more than twice as
-long as \(h_{max}\) gives a warning (class <code>mt_warning_recalibrate</code>),
-because nothing in the training data shows how the spread of the model
-is wrong at such horizons. With the defaults this concerns forecasts of
+year (10 years with the defaults). With <code>scale = "constant"</code>, the spread
+factor and the drift correction of \(h_{max}\) are used beyond it. A
+forecast more than twice as long as \(h_{max}\) gives a warning (class
+<code>mt_warning_recalibrate</code>), because nothing in the training data shows
+how the spread of the model is wrong at such horizons. With the defaults this concerns forecasts of
 more than 20 years (<code><a href="mt_forecast.html">mt_forecast()</a></code> forecasts 10 by default); give a
 longer <code>years</code> for long projections, or accept the constant factor. The
 per-horizon methods stop instead (see above).</p>
@@ -413,9 +410,9 @@ Computational and Graphical Statistics</em> 26(2): 330-343.
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">x</span> <span class="op">&lt;-</span> <span class="fu"><a href="mt_example.html">mt_example</a></span><span class="op">(</span>deaths <span class="op">=</span> <span class="st">"single"</span>, years <span class="op">=</span> <span class="fl">1990</span><span class="op">:</span><span class="fl">2019</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="mt_fit.html">mt_fit</a></span><span class="op">(</span><span class="fu">recalibrated</span><span class="op">(</span><span class="fu"><a href="lee_carter.html">lee_carter</a></span><span class="op">(</span><span class="op">)</span>, years <span class="op">=</span> <span class="fl">8</span>, n_origins <span class="op">=</span> <span class="fl">3</span>, n_draws <span class="op">=</span> <span class="fl">50</span><span class="op">)</span>, <span class="va">x</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">fit</span><span class="op">$</span><span class="va">calibration</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     group     band  scale_h1 slope drift cells scored crps_before crps_after</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>    &lt;char&gt;   &lt;char&gt;     &lt;num&gt; &lt;num&gt; &lt;num&gt; &lt;int&gt;  &lt;num&gt;       &lt;num&gt;      &lt;num&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1:    all all ages 0.7630612     0     0  2414   2414  0.03388302 0.03386637</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     group     band  scale_h1 drift cells scored crps_before crps_after</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    &lt;char&gt;   &lt;char&gt;     &lt;num&gt; &lt;num&gt; &lt;int&gt;  &lt;num&gt;       &lt;num&gt;      &lt;num&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1:    all all ages 0.7630612     0  2414   2414  0.03388302 0.03386637</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    cov80_before cov80_after cov95_before cov95_after forecasts</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>           &lt;num&gt;       &lt;num&gt;        &lt;num&gt;       &lt;num&gt;     &lt;int&gt;</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1:    0.7531069   0.7311516    0.8956089   0.8860812         6</span>

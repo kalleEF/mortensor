@@ -400,12 +400,13 @@ observed values).
 [`mt_score()`](../reference/mt_score.md) gives the measures of
 Stoeldraijer et al. for the forecasts of life expectancy at birth: `mae`
 is the mean absolute error of the median forecast, here one and five
-years ahead, and `measures = "revision"` the mean absolute revision, the
-change of the median forecast of a stratum and year between consecutive
-origins, each of which adds one year of data. The paper’s robustness is
-the standard deviation of such changes for one target year and life
-expectancy at 65; the revision averages their absolute values over all
-years forecast from consecutive origins.
+years ahead, and `measures = "robustness"` the standard deviation of the
+changes of the median forecast of one target year between consecutive
+origins, each of which adds one year of data
+(`by = c("model", "period")`; the paper: life expectancy at 65 in 2020).
+Below, `measures = "revision"`, a summary of this package, averages the
+absolute changes of the median forecast of each stratum and year over
+all years forecast from consecutive origins.
 
 ``` r
 

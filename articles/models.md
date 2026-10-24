@@ -840,10 +840,6 @@ with the functional data models of demography:
   does for the point forecasts. Predictive draws add Poisson variation
   of the deaths given the rates.
 
-[`product_ratio()`](../reference/product_ratio.md), a Lee-Carter version
-of the method without a published source, is deprecated in favour of
-[`coherent_fdm()`](../reference/coherent_fdm.md).
-
 ### Multiway compositional model: `coda_multiway()` (experimental)
 
 [`coda_multiway()`](../reference/coda_multiway.md) is the three-way
@@ -1022,8 +1018,7 @@ explains 0.39 to 0.55, and their individual components a further 0.21 to
 
 The alternative is separate models per cause made coherent with the
 all-cause forecast by [`reconciled()`](../reference/reconciled.md)
-(below). [`cause_shares()`](../reference/cause_shares.md), a Tucker
-model of cause shares without a published source, is deprecated.
+(below).
 
 ## Jump-off: `anchored()`
 
@@ -1080,10 +1075,6 @@ the forecast origin:
   absolute errors, following Bates and Granger (1969); the CRPS of a
   point forecast is its absolute error, and the extension to predictive
   distributions is package-specific.
-- `weights = "stack"` is deprecated: it stacks the median forecasts
-  (Breiman 1996; for mortality, Kessy et al. 2022) and uses the weights,
-  which optimise the weighted mean of the medians, as mixture
-  probabilities.
 
 `top_k` keeps the components with the lowest inner CRPS
 (package-specific). The mixture contains the uncertainty of each
@@ -1216,18 +1207,16 @@ within each cell are kept, so the draws remain paths. Calibration widens
 models that were persistently too narrow (Lee-Carter on England & Wales
 men: 95% coverage 0.63 to 0.85 in the backtest of “Tuning and
 recalibration”) and can narrow mixtures that were already wide.
-Package-specific options: a factor that changes with the horizon as
-`s1 h^gamma` (`scale = "horizon"`), a correction of the drift
-(`bias = TRUE`), separate factors for age bands (`ages`) and calibration
-of the intervals of life expectancy or the ASR (`quantity`), which also
-depend on how the ages move together; `n_boot` reports bootstrap
-intervals of the factors. The drift correction and the age bands have
-published analogues of another form: the bias correction in the
-predictive mean of EMOS (Gneiting et al. 2005) and post-processing for
-each location separately (Van Schaeybroeck and Vannitsem 2015). Beyond
-the longest horizon of the window the factors stay constant. Calibration
-keeps the model and its settings; choosing the settings themselves is
-tuning (below).
+Package-specific options: a correction of the drift (`bias = TRUE`),
+separate factors for age bands (`ages`) and calibration of the intervals
+of life expectancy or the ASR (`quantity`), which also depend on how the
+ages move together; `n_boot` reports bootstrap intervals of the factors.
+The drift correction and the age bands have published analogues of
+another form: the bias correction in the predictive mean of EMOS
+(Gneiting et al. 2005) and post-processing for each location separately
+(Van Schaeybroeck and Vannitsem 2015). Beyond the longest horizon of the
+window the factors stay constant. Calibration keeps the model and its
+settings; choosing the settings themselves is tuning (below).
 
 Two opt-in variants work per horizon. `scale = "per_horizon"` estimates
 one factor for each horizon from the inner forecasts of that horizon
@@ -1306,9 +1295,7 @@ compares across windows.
 | `recalibrated(method = "errors")` | resampled errors of past forecasts | in the errors | in the errors | in the errors (draws of observed rates) |
 | [`anchored()`](../reference/anchored.md) | of the base model | of the base model |  | as the base model |
 
-The deprecated `rwd(observation_noise = TRUE)`,
-[`product_ratio()`](../reference/product_ratio.md) and
-[`cause_shares()`](../reference/cause_shares.md) are left out.
+The deprecated `rwd(observation_noise = TRUE)` is left out.
 
 Predictive draws (`predictive = TRUE`, always used in backtests)
 describe observable rates. For models of expected rates they are deaths
@@ -1392,8 +1379,6 @@ conditions of variable mortality decline. *Population Studies* 56(3):
 Bracher J, Ray EL, Gneiting T, Reich NG (2021). Evaluating epidemic
 forecasts in an interval format. *PLoS Computational Biology* 17(2):
 e1008618.
-
-Breiman L (1996). Stacked regressions. *Machine Learning* 24(1): 49-64.
 
 Brouhns N, Denuit M, Van Keilegom I (2005). Bootstrapping the Poisson
 log-bilinear model for mortality forecasting. *Scandinavian Actuarial
@@ -1541,10 +1526,6 @@ populations: the SAINT model. *ASTIN Bulletin* 41(2): 377-418.
 Keilman N, Pham DQ, Hetland A (2002). Why population forecasts should be
 probabilistic: illustrated by the case of Norway. *Demographic Research*
 6(15): 409-454. <doi:10.4054/DemRes.2002.6.15>.
-
-Kessy SR, Sherris M, Villegas AM, Ziveyi J (2022). Mortality forecasting
-using stacked regression ensembles. *Scandinavian Actuarial Journal*
-2022(7): 591-626.
 
 Kjærgaard S, Ergemen YE, Kallestrup-Lamb M, Oeppen J, Lindahl-Jacobsen R
 (2019). Forecasting causes of death by using compositional data

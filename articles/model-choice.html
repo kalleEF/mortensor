@@ -454,10 +454,10 @@ future.</p>
 <p>Weights can be equal, set by hand, or estimated from an inner
 backtest on the training data only (<code>weights = "crps"</code>:
 inversely proportional to the CRPS of each component;
-<code>"stack"</code>: the combination that minimised the error of the
-median forecasts), and <code>top_k</code> keeps the best components.
-CRPS weights and <code>top_k</code> are package-specific (see the
-article “Methods and sources”):</p>
+<code>"crps_stack"</code>: the stacking weights that minimise the CRPS
+of the mixture), and <code>top_k</code> keeps the best components. CRPS
+weights and <code>top_k</code> are package-specific (see the article
+“Methods and sources”):</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">ens</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>  <span class="st">"equal: Lee-Carter, fdm, APC, M6, Bayesian APC"</span> <span class="op">=</span></span>

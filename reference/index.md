@@ -165,12 +165,8 @@ Models for several populations and causes
   subpopulations and a reference population
 - [`tucker3()`](tucker3.md) : Tucker3 tensor model across strata
   (three-way Lee-Carter model)
-- [`cause_shares()`](cause_shares.md) : Coherent multi-cause forecasts
-  with cause shares (deprecated)
 - [`coda_causes()`](coda_causes.md) : Multiple-decrement CoDa model of
   causes of death (experimental)
-- [`product_ratio()`](product_ratio.md) : Lee-Carter version of the
-  product-ratio method (deprecated)
 
 ## 
 

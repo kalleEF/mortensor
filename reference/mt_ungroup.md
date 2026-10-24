@@ -13,7 +13,7 @@ mt_ungroup(
   data,
   age = NULL,
   dims = 1,
-  method = c("pclm", "monotone", "hyman_kannisto", "natural_gompertz", "gam"),
+  method = c("pclm", "monotone"),
   exposure_method = c("pclm", "monotone"),
   lambda = NULL,
   criterion = c("bic", "aic"),
@@ -22,9 +22,7 @@ mt_ungroup(
   pord = 2,
   lambda_range = c(0.01, 1e+08),
   preserve_totals = FALSE,
-  open_split = c("pclm", "stationary"),
-  tail = c("kannisto", "gompertz"),
-  tail_width = 2
+  open_split = c("pclm", "stationary")
 )
 ```
 
@@ -44,24 +42,19 @@ mt_ungroup(
 
 - dims:
 
-  1 or 2 (for `method = "pclm"`; `"gam"` is always 2D, the other methods
-  1D). The 2D PCLM takes about 10 seconds per stratum on the package
-  example ([`mt_example()`](mt_example.md): 13 age groups, 71 grid ages,
-  30 years).
+  1 or 2 (for `method = "pclm"`; `"monotone"` is 1D). The 2D PCLM takes
+  about 10 seconds per stratum on the package example
+  ([`mt_example()`](mt_example.md): 13 age groups, 71 grid ages, 30
+  years).
 
 - method:
 
   Method for deaths: `"pclm"` (default), or `"monotone"`, the monotone
   cubic interpolation of Hyman (1983) of the cumulative deaths (counts
-  only, 1D, ignores exposures; group totals reproduced exactly).
-  Deprecated, without a published source: `"hyman_kannisto"` (monotone
-  spline of log group rates with a Kannisto tail), `"natural_gompertz"`
-  (natural spline with a log-linear tail) and `"gam"` (2D tensor-product
-  GAM of log group rates over age and year with a Kannisto tail, package
-  mgcv); they need exposures on the grid and rescale to the
-  exposure-weighted group rates. The vignette "Ungrouping age groups:
-  methods and diagnostics" compares methods on data with known single
-  years; [`mt_plot_ungroup()`](ungroup-diagnostics.md) and
+  only, 1D, ignores exposures; group totals reproduced exactly). The
+  vignette "Ungrouping age groups: methods and diagnostics" compares
+  methods on data with known single years;
+  [`mt_plot_ungroup()`](ungroup-diagnostics.md) and
   [`mt_ungroup_check()`](ungroup-diagnostics.md) check a result.
 
 - exposure_method:
@@ -102,13 +95,6 @@ mt_ungroup(
   ungrouped as rates: `"pclm"` (default, the PCLM of the exposures,
   Rizzi, Gampe and Eilers 2015) or `"stationary"` (package-specific
   stationary-population weights); see Details.
-
-- tail, tail_width:
-
-  For the deprecated `method = "gam"`: the parametric curve that takes
-  over from the GAM above the start of the last age group (`"kannisto"`,
-  logistic, or `"gompertz"`, log-linear), fitted to the GAM rates from
-  age 70, and the width (years) of the logistic blend between the two.
 
 ## Value
 
@@ -267,11 +253,6 @@ dimensions ungroup uses fixed smoothing parameters (1, 1) and a knot
 every 7 cells by default; here both parameters are chosen by BIC with a
 knot every `kr` years and periods.
 
-The methods `"hyman_kannisto"`, `"natural_gompertz"` and `"gam"` are
-deprecated: they are heuristics of this package without a published
-source. They still work, with a warning of class
-`mt_warning_deprecated`.
-
 In backtests use [`step_ungroup()`](mt_prep.md) so that ungrouping, in
 particular in 2D, sees only the training window.
 
@@ -317,19 +298,19 @@ u
 head(attr(u, "ungroup"))
 #>    measure stratum period       method lambda_age lambda_period       ed
 #>     <char>   <int> <char>       <char>      <num>         <num>    <num>
-#> 1:  deaths       1   2010 pclm_rate_1d  18319.326            NA 6.511396
-#> 2:  deaths       1   2011 pclm_rate_1d  27689.765            NA 6.082500
+#> 1:  deaths       1   2010 pclm_rate_1d  18319.323            NA 6.511396
+#> 2:  deaths       1   2011 pclm_rate_1d  27689.910            NA 6.082495
 #> 3:  deaths       1   2012 pclm_rate_1d   7709.080            NA 7.443061
 #> 4:  deaths       1   2013 pclm_rate_1d   2190.986            NA 8.906068
-#> 5:  deaths       1   2014 pclm_rate_1d   1862.520            NA 9.109097
+#> 5:  deaths       1   2014 pclm_rate_1d   1862.519            NA 9.109098
 #> 6:  deaths       2   2010 pclm_rate_1d  18106.191            NA 6.839731
 #>    max_rel_diff at_bound open_iterations open_converged
 #>           <num>   <lgcl>           <int>         <lgcl>
 #> 1:   0.05830036    FALSE              NA             NA
-#> 2:   0.06314061    FALSE              NA             NA
+#> 2:   0.06314078    FALSE              NA             NA
 #> 3:   0.04830307    FALSE              NA             NA
 #> 4:   0.06514775    FALSE              NA             NA
-#> 5:   0.02661997    FALSE              NA             NA
+#> 5:   0.02661996    FALSE              NA             NA
 #> 6:   0.04527347    FALSE              NA             NA
 # rescaled to the observed group totals (post-hoc step of the package)
 ut <- mt_ungroup(x, preserve_totals = TRUE)

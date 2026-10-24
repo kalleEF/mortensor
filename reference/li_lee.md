@@ -78,10 +78,6 @@ property of the model (see [`recalibrated()`](recalibrated.md),
 [`ensemble()`](ensemble.md), or overdispersed models such as
 `stanmomo(family = "nb")`).
 
-[`product_ratio()`](product_ratio.md), a Lee-Carter version of the
-product-ratio method, is deprecated; use
-[`coherent_fdm()`](coherent_fdm.md).
-
 ## References
 
 Li N, Lee R (2005). Coherent mortality forecasts for a group of

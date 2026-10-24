@@ -122,8 +122,7 @@ ARFIMA models, so the differences between the strata stay bounded and
 revert towards their recent level.</p></li>
 </ul><p>Forecasts of the strata are products of the two. This is the method of
 <code><a href="https://pkg.robjhyndman.com/demography/reference/coherentfdm.html" class="external-link">demography::coherentfdm()</a></code> and <code>forecast()</code> for its result; <code><a href="li_lee.html">li_lee()</a></code>
-is a related model with a common Lee-Carter factor. The Lee-Carter
-version <code><a href="product_ratio.html">product_ratio()</a></code> is deprecated in its favour.</p>
+is a related model with a common Lee-Carter factor.</p>
 <p>Draws simulate the product and each ratio (uncertainty of the scores and
 resampled model errors, as <code><a href="https://rdrr.io/r/stats/simulate.html" class="external-link">simulate()</a></code> for functional forecasts in
 demography) and multiply them; the ratios of each path are rescaled so

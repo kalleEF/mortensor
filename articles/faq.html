@@ -166,11 +166,9 @@ to a single group total (<code>max_rel_diff</code>).
 group total, a post-hoc rescaling of this package that creates jumps at
 the group boundaries. <code>method = "monotone"</code> interpolates the
 cumulative counts and reproduces every group total, without using the
-exposures. The spline methods <code>"hyman_kannisto"</code>,
-<code>"natural_gompertz"</code> and <code>"gam"</code> are deprecated:
-they have no published source. Check your own result with
-<code><a href="../reference/ungroup-diagnostics.html">mt_plot_ungroup()</a></code> and <code><a href="../reference/ungroup-diagnostics.html">mt_ungroup_check()</a></code>; see
-“Ungrouping age groups: methods and diagnostics”.</p>
+exposures. Check your own result with <code><a href="../reference/ungroup-diagnostics.html">mt_plot_ungroup()</a></code> and
+<code><a href="../reference/ungroup-diagnostics.html">mt_ungroup_check()</a></code>; see “Ungrouping age groups: methods and
+diagnostics”.</p>
 </div>
 <div class="section level3">
 <h3 id="can-i-split-the-open-interval-90-into-single-years">Can I split the open interval 90+ into single years?<a class="anchor" aria-label="anchor" href="#can-i-split-the-open-interval-90-into-single-years"></a>
@@ -487,15 +485,16 @@ et al. 2018), the Kalman filter estimate of the index in the last year
 constrained to the observed rates of the last year
 (<code>jump_off = "constrained"</code>; Li, Hardy and Tan 2009).
 Stoeldraijer et al. (2018) found the last observed year most accurate
-and an average over several years most robust to data updates. The other
-settings of <code><a href="../reference/anchored.html">anchored()</a></code> are package-specific: the offset of
-the last <code>years</code> years, shrunk where deaths are few
-(<code>shrink = TRUE</code>) and fading out over <code>decay</code>
-years. “Where a forecast starts: the jump-off” compares the starting
-points in a backtest. Decompositions of a change from an observed to a
-forecast year include the step; <code><a href="../reference/mt_decompose.html">mt_decompose()</a></code> reports it
-(<code>jump_off</code>) and can start from the fitted rates
-(<code>observed = "fitted"</code>).</p>
+and an average over several years most robust to data updates;
+<code>mt_score(measures = "robustness")</code> gives their measure of
+robustness for a backtest. The other settings of <code><a href="../reference/anchored.html">anchored()</a></code>
+are package-specific: the offset of the last <code>years</code> years,
+shrunk where deaths are few (<code>shrink = TRUE</code>) and fading out
+over <code>decay</code> years. “Where a forecast starts: the jump-off”
+compares the starting points in a backtest. Decompositions of a change
+from an observed to a forecast year include the step;
+<code><a href="../reference/mt_decompose.html">mt_decompose()</a></code> reports it (<code>jump_off</code>) and can
+start from the fitted rates (<code>observed = "fitted"</code>).</p>
 </div>
 <div class="section level3">
 <h3 id="what-is-the-difference-between-predictive-draws-and-forecast-rates">What is the difference between predictive draws and forecast
@@ -546,6 +545,13 @@ rates;</li>
 </ul>
 <p><code><a href="../reference/mt_forecast.html">mt_forecast()</a></code> warns when forecast death rates exceed 1,
 the clearest sign that a model is unstable for the data.</p>
+<p>In a backtest, a cell without deaths counts as half a death. The
+scores of such cells can dominate the mean scores of the log rates;
+<code><a href="../reference/mt_score.html">mt_score()</a></code> reports their number (<code>n_floored</code>).
+Score life expectancy or the age-standardised rate
+(<code>quantities</code> in <code><a href="../reference/mt_backtest.html">mt_backtest()</a></code>), which sum the
+deaths over age first, or use coarser age groups
+(<code><a href="../reference/mt_prep.html">step_regroup()</a></code>).</p>
 </div>
 <div class="section level3">
 <h3 id="which-function-aggregates-what">Which function aggregates what?<a class="anchor" aria-label="anchor" href="#which-function-aggregates-what"></a>

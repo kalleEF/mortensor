@@ -76,8 +76,7 @@ A model specification.
 Forecasts of the strata are products of the two. This is the method of
 [`demography::coherentfdm()`](https://pkg.robjhyndman.com/demography/reference/coherentfdm.html)
 and `forecast()` for its result; [`li_lee()`](li_lee.md) is a related
-model with a common Lee-Carter factor. The Lee-Carter version
-[`product_ratio()`](product_ratio.md) is deprecated in its favour.
+model with a common Lee-Carter factor.
 
 Draws simulate the product and each ratio (uncertainty of the scores and
 resampled model errors, as

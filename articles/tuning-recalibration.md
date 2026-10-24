@@ -223,9 +223,6 @@ data at hand is a question for a backtest.
 Further options of [`recalibrated()`](../reference/recalibrated.md) are
 specific to this package (reference unknown):
 
-- `scale = "horizon"` (deprecated; use `scale = "per_horizon"`): a
-  factor that changes with the horizon as a power law,
-  `scale_h1 * h^slope`;
 - `bias = TRUE`: a correction of the drift (the published analogue is
   the bias correction in the predictive mean of EMOS, Gneiting et
   al. 2005);

@@ -92,19 +92,37 @@ intervals with their mean half-widths; with <code>by = c("model", "horizon")</co
 intervals (Raftery et al. 2013, Table 1);</p></li>
 <li><p><code>"revision"</code>: the mean absolute revision, the absolute change of the
 forecast median of a cell (stratum, age group, year) between
-consecutive origins of the backtest, for every cell forecast from both.
-Stoeldraijer et al. (2013) name robustness as a purpose of a forecast:
-small changes in the observations when the data are updated should
-result in only modest changes in the forecasts. Stoeldraijer et al.
-(2018) measure it by the standard deviation of the changes of the
-forecast for one target year between successive fitting periods. The
-mean absolute revision over all cells forecast from consecutive
-origins, each of which adds a year of data with the default origins,
-is a package-specific summary of these changes (reference unknown).
-A revision belongs to the later
-origin and its horizon; the first origin has none. Origins further
-apart than one year (for example <code>origins = c(2005, 2007)</code>) give
-revisions over several years of data.</p></li>
+consecutive origins of the backtest, for every cell forecast from
+both. It is a summary of this package (reference unknown).
+Stoeldraijer et al. (2013) name robustness as a purpose of a
+forecast: small changes in the observations when the data are
+updated should result in only modest changes in the forecasts. A
+revision belongs to the later origin and its horizon; the first
+origin has none. Origins further apart than one year (for example
+<code>origins = c(2005, 2007)</code>) give revisions over several years of
+data. The published measure of robustness is <code>"robustness"</code>;</p></li>
+<li><p><code>"robustness"</code>: the robustness of Stoeldraijer et al. (2018), "the
+standard deviation (SD) of the increase/decrease" of the forecast of
+one target year over successive forecasts, each with one more year
+of data; a lower standard deviation means a more robust forecast.
+They forecast life expectancy at age 65 in 2020 from the fitting
+periods 1960-2005, ..., 1960-2014. Here, for each cell (stratum, age
+group, target year and target), it is the sample standard deviation
+(<code><a href="https://rdrr.io/r/stats/sd.html" class="external-link">stats::sd()</a></code>) of the revisions of the forecast median between
+consecutive origins (as for <code>"revision"</code>), for cells with at least
+two revisions (<code>NA</code> otherwise); the column <code>robustness</code> is the mean
+of these standard deviations over the cells of a group, each cell
+counted once. With one stratum, <code>target = "life_expectancy"</code> and one
+target year (<code>by = c("model", "period")</code>) this is the published
+measure; the mean over several cells is package-specific (reference
+unknown). The revisions of a cell span several origins and horizons,
+so <code>by</code> cannot contain <code>"horizon"</code> or <code>"origin"</code>: group by the target
+year (<code>"period"</code>). The target years of a backtest are observed
+years, so the origins and <code>h</code> must reach them from every origin: for
+example <code>origins = 2005:2014</code> and <code>h = 10</code> forecast 2015 from all ten
+origins, one year apart like the fitting periods of the paper. The
+life expectancy of a backtest is that at the first age of the grid,
+so at age 65 for data from age 65.</p></li>
 </ul></dd>
 
 </dl></div>
@@ -116,11 +134,16 @@ root mean squared error of the median (<code>rmse</code>), MASE
 change of the training data, as the mean absolute scaled error of
 Hyndman and Koehler 2006; rates only), empirical coverage
 of the 50%, 80% and 95% intervals, mean PIT, the number of scored
-cells and the <code>unit</code> of CRPS, WIS and absolute error (log rates, or
-years for life expectancy). Backtests of the same model with different
+cells (<code>n</code>), the number of them whose observed deaths were floored at
+half a death (<code>n_floored</code>, see <code><a href="mt_backtest.html">mt_backtest()</a></code>; <code>NA</code> for targets other
+than <code>"rate"</code> and for backtest tables without the column <code>floored</code>)
+and the <code>unit</code> of CRPS, WIS and absolute error (log rates, or years for
+life expectancy). The scores of floored cells can
+dominate the means of sparse data; the derived quantities and coarser
+age groups avoid the floor. Backtests of the same model with different
 preprocessing (column <code>prep</code>) are scored separately. With <code>measures</code>,
-the columns <code>sape</code>, <code>cov90</code>, <code>hw80</code>, <code>hw90</code>, <code>hw95</code> and <code>revision</code>
-follow.</p>
+the columns <code>sape</code>, <code>cov90</code>, <code>hw80</code>, <code>hw90</code>, <code>hw95</code>, <code>revision</code> and
+<code>robustness</code> follow.</p>
     </div>
     <div class="section level2">
     <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a></h2>
@@ -152,13 +175,13 @@ data: exploring the trade-off between accuracy and robustness. <em>Genus</em>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 3: Random walk with drift       3 0.05565911 0.04972059 0.07710375 0.11415199</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 4: Random walk with drift       4 0.05812890 0.05190181 0.07358098 0.11643492</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 5: Random walk with drift       5 0.06429823 0.05740455 0.08308110 0.12352441</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>        mase     cov50     cov80     cov95  pit_mean     n     unit</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>       &lt;num&gt;     &lt;num&gt;     &lt;num&gt;     &lt;num&gt;     &lt;num&gt; &lt;int&gt;   &lt;char&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1: 1.048261 0.4859155 0.7253521 0.8661972 0.5020423   142 log rate</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2: 1.157779 0.6126761 0.8591549 0.9718310 0.5157746   142 log rate</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3: 1.386932 0.6478873 0.8943662 0.9647887 0.4927465   142 log rate</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4: 1.287454 0.7183099 0.9577465 1.0000000 0.4763380   142 log rate</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 5: 1.459025 0.7605634 0.9507042 1.0000000 0.4895070   142 log rate</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        mase     cov50     cov80     cov95  pit_mean     n n_floored     unit</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       &lt;num&gt;     &lt;num&gt;     &lt;num&gt;     &lt;num&gt;     &lt;num&gt; &lt;int&gt;     &lt;int&gt;   &lt;char&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1: 1.048261 0.4859155 0.7253521 0.8661972 0.5020423   142         0 log rate</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2: 1.157779 0.6126761 0.8591549 0.9718310 0.5157746   142         0 log rate</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3: 1.386932 0.6478873 0.8943662 0.9647887 0.4927465   142         0 log rate</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4: 1.287454 0.7183099 0.9577465 1.0000000 0.4763380   142         0 log rate</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5: 1.459025 0.7605634 0.9507042 1.0000000 0.4895070   142         0 log rate</span>
 <span class="r-in"><span><span class="co"># life expectancy: SAPE and 90% coverage by horizon (Raftery et al. 2013),</span></span></span>
 <span class="r-in"><span><span class="co"># revisions between consecutive origins</span></span></span>
 <span class="r-in"><span><span class="va">bl</span> <span class="op">&lt;-</span> <span class="fu"><a href="mt_backtest.html">mt_backtest</a></span><span class="op">(</span><span class="fu"><a href="rwd.html">rwd</a></span><span class="op">(</span><span class="op">)</span>, <span class="va">x</span>, origins <span class="op">=</span> <span class="fl">2004</span><span class="op">:</span><span class="fl">2007</span>, h <span class="op">=</span> <span class="fl">5</span>, n_draws <span class="op">=</span> <span class="fl">100</span>,</span></span>
@@ -172,13 +195,44 @@ data: exploring the trade-off between accuracy and robustness. <em>Genus</em>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 3: Random walk with drift       3 0.06926703 0.06167666 0.09661399 0.10912573</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 4: Random walk with drift       4 0.08127709 0.07284445 0.09343235 0.11813568</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 5: Random walk with drift       5 0.09710010 0.08682756 0.12023575 0.16650060</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     mase cov50 cov80 cov95 pit_mean     n   unit      sape cov90   revision</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>    &lt;num&gt; &lt;num&gt; &lt;num&gt; &lt;num&gt;    &lt;num&gt; &lt;int&gt; &lt;char&gt;     &lt;num&gt; &lt;num&gt;      &lt;num&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1:    NA 0.625 0.750     1  0.52750     8  years 0.7986443     1 0.09423038</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2:    NA 0.625 1.000     1  0.55875     8  years 0.6208891     1 0.10963108</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3:    NA 0.750 1.000     1  0.50625     8  years 0.6485447     1 0.12096127</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4:    NA 0.750 1.000     1  0.53250     8  years 0.5303456     1 0.13076723</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 5:    NA 0.750 0.875     1  0.55875     8  years 0.5496038     1         NA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     mase cov50 cov80 cov95 pit_mean     n n_floored   unit      sape cov90</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    &lt;num&gt; &lt;num&gt; &lt;num&gt; &lt;num&gt;    &lt;num&gt; &lt;int&gt;     &lt;int&gt; &lt;char&gt;     &lt;num&gt; &lt;num&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1:    NA 0.625 0.750     1  0.52750     8        NA  years 0.7986443     1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2:    NA 0.625 1.000     1  0.55875     8        NA  years 0.6208891     1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3:    NA 0.750 1.000     1  0.50625     8        NA  years 0.6485447     1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4:    NA 0.750 1.000     1  0.53250     8        NA  years 0.5303456     1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5:    NA 0.750 0.875     1  0.55875     8        NA  years 0.5496038     1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>      revision</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>         &lt;num&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1: 0.09423038</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2: 0.10963108</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3: 0.12096127</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4: 0.13076723</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5:         NA</span>
+<span class="r-in"><span><span class="co"># robustness (Stoeldraijer et al. 2018) of each target year: 2008 and</span></span></span>
+<span class="r-in"><span><span class="co"># 2009 are forecast from all four origins</span></span></span>
+<span class="r-in"><span><span class="fu">mt_score</span><span class="op">(</span><span class="va">bl</span>, by <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"model"</span>, <span class="st">"period"</span><span class="op">)</span>, target <span class="op">=</span> <span class="st">"life_expectancy"</span>,</span></span>
+<span class="r-in"><span>         measures <span class="op">=</span> <span class="st">"robustness"</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>                     model period       crps        wis        mae       rmse</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>                    &lt;char&gt;  &lt;num&gt;      &lt;num&gt;      &lt;num&gt;      &lt;num&gt;      &lt;num&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1: Random walk with drift   2005 0.03567047 0.03165998 0.05139350 0.06238901</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2: Random walk with drift   2006 0.07705623 0.06836422 0.12534838 0.12792663</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3: Random walk with drift   2007 0.05311679 0.04720499 0.06603429 0.07483395</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4: Random walk with drift   2008 0.05608048 0.05022010 0.05675972 0.07472110</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5: Random walk with drift   2009 0.06191777 0.05566069 0.05994773 0.07285361</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6: Random walk with drift   2010 0.09545905 0.08509163 0.13337241 0.16187205</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 7: Random walk with drift   2011 0.08459577 0.07581569 0.10584468 0.13570146</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 8: Random walk with drift   2012 0.14888367 0.13152272 0.23659860 0.25792984</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     mase     cov50 cov80 cov95 pit_mean     n n_floored   unit robustness</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    &lt;num&gt;     &lt;num&gt; &lt;num&gt; &lt;num&gt;    &lt;num&gt; &lt;int&gt;     &lt;int&gt; &lt;char&gt;      &lt;num&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1:    NA 1.0000000   1.0     1  0.45500     2        NA  years         NA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2:    NA 0.2500000   0.5     1  0.85250     4        NA  years         NA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3:    NA 0.6666667   1.0     1  0.49000     6        NA  years  0.1367226</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4:    NA 0.8750000   1.0     1  0.49875     8        NA  years  0.1383298</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5:    NA 1.0000000   1.0     1  0.49500     8        NA  years  0.1546668</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6:    NA 0.3333333   1.0     1  0.48000     6        NA  years  0.2498016</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 7:    NA 0.7500000   1.0     1  0.54500     4        NA  years         NA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 8:    NA 0.5000000   0.5     1  0.60000     2        NA  years         NA</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

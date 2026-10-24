@@ -34,11 +34,11 @@ ensembles also `component`, for fits by groups also `group`.
   `k_filtered`, its standard error `se_k_filtered` and the state-space
   estimates `filter_sigma`, `filter_lambda`, `filter_drift`;
 
-- [`li_lee()`](li_lee.md), [`product_ratio()`](product_ratio.md): the
-  common factor of each group (`B`, `K`, its drift and standard
-  deviation), per stratum the deviations `a`, `b`, `k` and their AR(1)
-  coefficient `phi` and standard deviation, and the number of stratum
-  factors fitted (`ratio_order`, stratum `"model"`);
+- [`li_lee()`](li_lee.md): the common factor of each group (`B`, `K`,
+  its drift and standard deviation), per stratum the deviations `a`,
+  `b`, `k` and their AR(1) coefficient `phi` and standard deviation, and
+  the number of stratum factors fitted (`ratio_order`, stratum
+  `"model"`);
 
 - [`coda()`](coda.md): the centre `a` (geometric mean distribution of
   life-table deaths), the loadings `b`, the index `k` with the order

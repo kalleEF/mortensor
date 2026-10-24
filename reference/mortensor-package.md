@@ -35,9 +35,8 @@ The package is organised in layers:
   fitted with [`mt_fit()`](mt_fit.md) (optionally tuned with
   [`tuned()`](mt_tune.md)) and forecast with
   [`mt_forecast()`](mt_forecast.md) as simulated paths
-  ([mt_draws](mt_draws.md)). [`product_ratio()`](product_ratio.md) and
-  [`cause_shares()`](cause_shares.md) are deprecated. The article
-  "Methods and sources" lists the published source of every method.
+  ([mt_draws](mt_draws.md)). The article "Methods and sources" lists the
+  published source of every method.
 
 - **Hierarchies**: [`mt_hierarchy()`](mt_hierarchy.md) describes crossed
   or nested strata (for example sex x region x deprivation quintile with

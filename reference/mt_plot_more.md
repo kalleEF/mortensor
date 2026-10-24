@@ -7,7 +7,8 @@
 - `mt_plot_shares()`: shares of each cause in the deaths over the
   selected ages, observed and forecast (median and 95% interval), from a
   forecast with a cause variable among the strata (for example from
-  [`cause_shares()`](cause_shares.md)).
+  [`reconciled()`](reconciled.md) with causes in its hierarchy, or from
+  [`coda_causes()`](coda_causes.md) with `var` and `total_level` given).
 
 - `mt_plot_scores()`: mean score of each model by horizon or age from a
   backtest, or one bar per model (`by = "model"`); `target` selects

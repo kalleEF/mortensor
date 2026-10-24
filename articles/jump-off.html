@@ -458,12 +458,14 @@ observed values).</p>
 <p><code><a href="../reference/mt_score.html">mt_score()</a></code> gives the measures of Stoeldraijer et al. for
 the forecasts of life expectancy at birth: <code>mae</code> is the mean
 absolute error of the median forecast, here one and five years ahead,
-and <code>measures = "revision"</code> the mean absolute revision, the
-change of the median forecast of a stratum and year between consecutive
-origins, each of which adds one year of data. The paper’s robustness is
-the standard deviation of such changes for one target year and life
-expectancy at 65; the revision averages their absolute values over all
-years forecast from consecutive origins.</p>
+and <code>measures = "robustness"</code> the standard deviation of the
+changes of the median forecast of one target year between consecutive
+origins, each of which adds one year of data
+(<code>by = c("model", "period")</code>; the paper: life expectancy at
+65 in 2020). Below, <code>measures = "revision"</code>, a summary of
+this package, averages the absolute changes of the median forecast of
+each stratum and year over all years forecast from consecutive
+origins.</p>
 <div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">acc</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/data.table/man/dcast.data.table.html" class="external-link">dcast</a></span><span class="op">(</span><span class="fu"><a href="../reference/mt_score.html">mt_score</a></span><span class="op">(</span><span class="va">bt_lc</span>, by <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"model"</span>, <span class="st">"horizon"</span><span class="op">)</span>, target <span class="op">=</span> <span class="st">"life_expectancy"</span><span class="op">)</span><span class="op">[</span><span class="va">horizon</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">5</span><span class="op">)</span><span class="op">]</span>,</span>
 <span>             <span class="va">model</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"mae_"</span>, <span class="va">horizon</span><span class="op">)</span>, value.var <span class="op">=</span> <span class="st">"mae"</span><span class="op">)</span></span>

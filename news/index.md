@@ -40,6 +40,60 @@ Work package R1 of `dev/review-0.2-plan.md`.
   `mt_error_hierarchy` and names the cause when the draws hold no
   aggregate strata of the hierarchy.
 
+### Removed deprecated code, scores of floored cells and robustness (R4)
+
+Work package R4 of `dev/review-0.2-plan.md`, with the decisions of the
+owner.
+
+#### Breaking changes
+
+The functions and options deprecated in 0.2.0 are removed. Each warned
+with the name of its published replacement.
+
+- `product_ratio()` is removed. Use
+  [`coherent_fdm()`](../reference/coherent_fdm.md), the product-ratio
+  method of Hyndman, Booth and Yasmeen (2013).
+- `cause_shares()` is removed. Use
+  [`reconciled()`](../reference/reconciled.md) with a hierarchy of
+  causes, or [`coda_causes()`](../reference/coda_causes.md).
+- `ensemble(weights = "stack")` is removed. Use
+  `weights = "crps_stack"`, the stacking weights that minimise the CRPS
+  of the mixture.
+- `recalibrated(scale = "horizon")` is removed. Use
+  `scale = "per_horizon"`. The calibration table loses the column
+  `slope`, and [`mt_parameters()`](../reference/mt_parameters.md) the
+  row `slope`.
+- The spline methods of [`mt_ungroup()`](../reference/mt_ungroup.md)
+  (`"hyman_kannisto"`, `"natural_gompertz"`, `"gam"`) and its arguments
+  `tail` and `tail_width` are removed. Use `method = "pclm"` (default)
+  or `"monotone"`.
+- The spline methods of
+  [`mt_disaggregate()`](../reference/mt_disaggregate.md)
+  (`"hyman_kannisto"`, `"natural_gompertz"`) are removed. Use
+  `method = "shape"`.
+- `mt_shape_rates(method = "gam")` is removed. Use `method = "last"`.
+
+`rwd(observation_noise = TRUE)` and `tucker3(transform = "coda")` stay
+deprecated.
+
+#### Scores
+
+- [`mt_backtest()`](../reference/mt_backtest.md) marks the rate rows
+  whose observed deaths are below half a death (column `floored`), and
+  [`mt_score()`](../reference/mt_score.md) counts them (`n_floored`,
+  after `n`). The scores of such cells can dominate the means of sparse
+  data; life expectancy and the ASR (`quantities`) or coarser age groups
+  ([`step_regroup()`](../reference/mt_prep.md)) avoid the floor.
+- `mt_score(measures = "robustness")` gives the robustness of
+  Stoeldraijer et al. (2018): the standard deviation of the changes of
+  the forecast median of a target year between consecutive origins. With
+  one stratum, life expectancy and one target year
+  (`by = c("model", "period")`) it is the published measure; the mean
+  over several cells is package-specific. Grouping by horizon or origin
+  stops with class `mt_error_argument`. The help of
+  `measures = "revision"` labels the mean absolute revision as a measure
+  of this package.
+
 ### Small corrections and labels (R2)
 
 Work package R2 of `dev/review-0.2-plan.md`.
@@ -497,11 +551,10 @@ Models:
   Lee-Carter model of Russolillo, Giordano and Haberman (2011), without
   the residual noise layer; experimental. 95% coverage on simulated
   Lee-Carter data 0.748.
-- Deprecated: [`product_ratio()`](../reference/product_ratio.md) (use
-  [`coherent_fdm()`](../reference/coherent_fdm.md)),
-  [`cause_shares()`](../reference/cause_shares.md) (use
-  [`reconciled()`](../reference/reconciled.md) over a cause hierarchy
-  with `additive = "rates"`, or
+- Deprecated: `product_ratio()` (use
+  [`coherent_fdm()`](../reference/coherent_fdm.md)), `cause_shares()`
+  (use [`reconciled()`](../reference/reconciled.md) over a cause
+  hierarchy with `additive = "rates"`, or
   [`coda_causes()`](../reference/coda_causes.md)),
   `rwd(observation_noise = TRUE)` (use
   `arima_series(order = c(0, 1, 1), drift = TRUE)`, its published
@@ -614,7 +667,7 @@ Models:
 - [`coda_causes()`](../reference/coda_causes.md) (experimental): the
   multiple-decrement form of the CoDa model for causes of death, which
   add up to all causes in every draw. Less accurate than
-  [`cause_shares()`](../reference/cause_shares.md) on simulated causes.
+  `cause_shares()` on simulated causes.
 - `lee_carter(rotate = TRUE)`: rotation of the age pattern of decline as
   life expectancy rises (Li, Lee and Gerland 2013, as in MortCast); life
   expectancy at birth stays that of the unrotated forecast. On France,
@@ -733,14 +786,13 @@ Models:
   matches life expectancy again (it could silently leave the index
   unadjusted); [`stmomo()`](../reference/stmomo.md) forecasts one year;
   [`tucker3()`](../reference/tucker3.md),
-  [`li_lee()`](../reference/li_lee.md) and
-  [`product_ratio()`](../reference/product_ratio.md) run with a single
-  age group; [`coherent_fdm()`](../reference/coherent_fdm.md) reports
-  groups with fewer than two strata.
-- [`cause_shares()`](../reference/cause_shares.md): predictive draws are
-  those of the total model, with its deaths split between the causes, so
-  the causes add up to the total in every draw; the extra variation of
-  the shares beyond multinomial sampling is estimated as such.
+  [`li_lee()`](../reference/li_lee.md) and `product_ratio()` run with a
+  single age group; [`coherent_fdm()`](../reference/coherent_fdm.md)
+  reports groups with fewer than two strata.
+- `cause_shares()`: predictive draws are those of the total model, with
+  its deaths split between the causes, so the causes add up to the total
+  in every draw; the extra variation of the shares beyond multinomial
+  sampling is estimated as such.
 
 Wrappers and hierarchies:
 
@@ -1235,9 +1287,8 @@ own questions).
   Model reference (series models, calibration, sources of uncertainty of
   every model), FAQ, [`mt_validate()`](../reference/mt_validate.md)
   checks, help pages of [`ensemble()`](../reference/ensemble.md),
-  [`reconciled()`](../reference/reconciled.md),
-  [`cause_shares()`](../reference/cause_shares.md) and the derived
-  quantities.
+  [`reconciled()`](../reference/reconciled.md), `cause_shares()` and the
+  derived quantities.
 - Vignettes “Forecasting mortality by deprivation quintile” (ONS:
   inequality indicators, backtests by quintile, calibration, gap
   forecasts by model, fitting period) and “Coherent forecasts: what
@@ -1388,10 +1439,8 @@ own questions).
 - Ports of the 0.1 models and methods:
   [`hyndman_ullah()`](../reference/hyndman_ullah.md),
   [`stmomo()`](../reference/stmomo.md) (APC, CBD, RH, M6, LC),
-  [`li_lee()`](../reference/li_lee.md),
-  [`product_ratio()`](../reference/product_ratio.md),
-  [`cause_shares()`](../reference/cause_shares.md) (Tucker4-ILR
-  multi-cause forecasts),
+  [`li_lee()`](../reference/li_lee.md), `product_ratio()`,
+  `cause_shares()` (Tucker4-ILR multi-cause forecasts),
   [`mt_reconcile()`](../reference/mt_reconcile.md) (MinT, WLS, OLS),
   [`mt_order_strata()`](../reference/mt_order_strata.md), stacking
   weights in [`ensemble()`](../reference/ensemble.md), Whittaker and GAM
@@ -1430,8 +1479,7 @@ own questions).
 - Vignettes “Getting started” and “Causes of death by deprivation” use
   `ons_data`; the 0.1-to-0.2 migration vignette is removed.
 
-- [`li_lee()`](../reference/li_lee.md) and
-  [`product_ratio()`](../reference/product_ratio.md) gain
+- [`li_lee()`](../reference/li_lee.md) and `product_ratio()` gain
   `jump_off = "observed"`; Lee-Carter labels name their variant (SVD,
   observed jump-off, bootstrap).
 

@@ -46,10 +46,7 @@ the deaths). HMD data downloaded directly are read with
 With `dims = 2`, the PCLM estimates a smooth surface over age and year
 instead of each year separately. The PCLM estimates rates, so the
 irregular sizes of birth cohorts stay in the exposures; the monotone
-spline splits the counts and does not use the exposures. The methods
-`"hyman_kannisto"`, `"natural_gompertz"` and `"gam"` are deprecated:
-they are heuristics of this package without a published source, and they
-still work with a warning.
+spline splits the counts and does not use the exposures.
 
 Here the grid ends at age 99. When it ends with an open interval (for
 example 100+), the PCLM of the rates expands that interval into single

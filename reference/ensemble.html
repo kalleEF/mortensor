@@ -81,8 +81,8 @@ draws.</p>
 
 
 <dt id="arg-weights">weights<a class="anchor" aria-label="anchor" href="#arg-weights"></a></dt>
-<dd><p><code>"equal"</code>, <code>"crps_stack"</code>, <code>"bias"</code>, <code>"crps"</code>, the
-deprecated <code>"stack"</code>, or a numeric vector.</p></dd>
+<dd><p><code>"equal"</code>, <code>"crps_stack"</code>, <code>"bias"</code>, <code>"crps"</code>, or a
+numeric vector.</p></dd>
 
 
 <dt id="arg-inner-origins-inner-h">inner_origins, inner_h<a class="anchor" aria-label="anchor" href="#arg-inner-origins-inner-h"></a></dt>
@@ -178,16 +178,7 @@ extends these weights to predictive distributions. This extension, the
 log rates as the scored quantity and the use of the weights as mixture
 probabilities are package-specific. <code>top_k = 2</code> keeps the two
 components with the lowest inner CRPS, as Shang's combination of the
-two best models;</p></li>
-<li><p><code>"stack"</code> (deprecated; use <code>"crps_stack"</code>): weights that minimise the
-squared error of the weighted mean of the components' median forecasts
-(log rates) in the same inner backtest, constrained to be non-negative
-and to sum to 1. This is stacking of point forecasts (Breiman 1996;
-for mortality, Kessy, Sherris, Villegas and Ziveyi 2022). Using these
-weights as the probabilities of the mixture is a deviation: they are
-optimal for the linear combination of the medians, not for the mixture
-distribution, whose median is not the weighted mean of the medians. It
-still works and warns (class <code>mt_warning_deprecated</code>).</p></li>
+two best models.</p></li>
 </ul><p>Each draw of the ensemble comes from one component for all strata, so
 paths keep the dependence between strata and the coherence of reconciled
 components (<code><a href="reconciled.html">reconciled()</a></code>). A component that fails in a stratum is
@@ -198,7 +189,7 @@ and reconciled models, and other ensembles. The components must forecast
 the same strata: with <code><a href="reconciled.html">reconciled()</a></code> components, add the aggregates of the
 hierarchy to the data first (<code><a href="mt_aggregate_strata.html">mt_aggregate_strata()</a></code>).</p>
 <p>Weights from the inner backtest (<code>"crps_stack"</code>, <code>"bias"</code>, <code>"crps"</code>,
-<code>"stack"</code>, <code>top_k</code>) use only the training data, so they never use data
+<code>top_k</code>) use only the training data, so they never use data
 after the forecast origin, also inside an outer backtest. They compare
 the components on the cells that all of them forecast. A component whose
 inner backtest fails gets weight 0; when every inner backtest fails, the
@@ -225,7 +216,6 @@ averaging for mortality forecasting using leave-future-out validation.
 <a href="https://doi.org/10.1016/j.ijforecast.2022.01.011" class="external-link">doi:10.1016/j.ijforecast.2022.01.011</a></p>
 <p>Bates JM, Granger CWJ (1969). The combination of forecasts. <em>Operational
 Research Quarterly</em> 20(4): 451-468.</p>
-<p>Breiman L (1996). Stacked regressions. <em>Machine Learning</em> 24(1): 49-64.</p>
 <p>Gneiting T, Raftery AE (2007). Strictly proper scoring rules, prediction,
 and estimation. <em>Journal of the American Statistical Association</em>
 102(477): 359-378. <a href="https://doi.org/10.1198/016214506000001437" class="external-link">doi:10.1198/016214506000001437</a></p>
@@ -233,9 +223,6 @@ and estimation. <em>Journal of the American Statistical Association</em>
 <em>Electronic Journal of Statistics</em> 7: 1747-1782.</p>
 <p>Harvey AC (1989). <em>Forecasting, Structural Time Series Models and the
 Kalman Filter</em>. Cambridge University Press.</p>
-<p>Kessy SR, Sherris M, Villegas AM, Ziveyi J (2022). Mortality forecasting
-using stacked regression ensembles. <em>Scandinavian Actuarial Journal</em>
-2022(7): 591-626.</p>
 <p>Kontis V, Bennett JE, Mathers CD, Li G, Foreman K, Ezzati M (2017).
 Future life expectancy in 35 industrialised countries: projections with a
 Bayesian model ensemble. <em>The Lancet</em> 389(10076): 1323-1335.

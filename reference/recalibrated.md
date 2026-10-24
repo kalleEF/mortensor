@@ -15,7 +15,7 @@ recalibrated(
   spec,
   years = 10,
   n_origins = 5,
-  scale = c("constant", "horizon", "per_horizon"),
+  scale = c("constant", "per_horizon"),
   bias = FALSE,
   target = c("crps", "interval"),
   level = 0.95,
@@ -48,10 +48,8 @@ recalibrated(
 
 - scale:
 
-  `"constant"` (default: one spread factor \\s_1\\ for all horizons),
-  `"per_horizon"` (one factor for each horizon) or the deprecated
-  `"horizon"` (spread factor \\s_1 h^{\gamma}\\, package-specific; use
-  `"per_horizon"`).
+  `"constant"` (default: one spread factor \\s_1\\ for all horizons) or
+  `"per_horizon"` (one factor for each horizon).
 
 - bias:
 
@@ -107,18 +105,18 @@ recalibrated(
 ## Value
 
 A model specification. The fitted object has a `calibration` element: a
-`data.table` with one row per group and age band (`scale_h1`, `slope`,
-`drift`, the number of observed cells and of scored values, the number
-of inner forecasts (stratum x origin), CRPS and coverage of the inner
-forecasts before and after calibration, and with `n_boot` the intervals
+`data.table` with one row per group and age band (`scale_h1`, `drift`,
+the number of observed cells and of scored values, the number of inner
+forecasts (stratum x origin), CRPS and coverage of the inner forecasts
+before and after calibration, and with `n_boot` the intervals
 `scale_h1_lo`, `scale_h1_hi`, ...). With `scale = "per_horizon"` it has
 one row per group, age band and horizon, with `horizon`, `origins`
 (inner origins of the horizon), `scale` and `drift` in place of
-`scale_h1`, `slope` and `drift` (and `scale_lo`, `scale_hi`, ... with
-`n_boot`). With `method = "errors"` it has one row per horizon:
-`horizon`, `origins` (error vectors), `cells` (ages x strata of each
-vector), `mean_error`, `tuning` (\\\pi_h\\) and `coverage` (share of the
-inner errors within the tuned interval). For the per-horizon methods,
+`scale_h1` and `drift` (and `scale_lo`, `scale_hi`, ... with `n_boot`).
+With `method = "errors"` it has one row per horizon: `horizon`,
+`origins` (error vectors), `cells` (ages x strata of each vector),
+`mean_error`, `tuning` (\\\pi_h\\) and `coverage` (share of the inner
+errors within the tuned interval). For the per-horizon methods,
 `calibration_hmax` is the longest horizon that forecasts can reach.
 
 ## Details
@@ -131,12 +129,10 @@ inner errors within the tuned interval). For the per-horizon methods,
     \tilde m + b\\h + s(h)\\(\log m - \tilde m),\$\$ where \\\tilde m\\
     is the median of the draws in the cell, \\h\\ the horizon, \\s(h)\\
     a spread factor, one value \\s_1\\ for all horizons
-    (`scale = "constant"`, default) or \\s_1 h^{\gamma}\\
-    (`scale = "horizon"`, deprecated), held constant beyond the longest
-    horizon of the window, or one value \\s_h\\ for each horizon
-    (`scale = "per_horizon"`), and \\b\\ a correction of the drift per
-    year (`bias = TRUE`; with `scale = "per_horizon"` one \\b_h\\ for
-    each horizon);
+    (`scale = "constant"`, default) or one value \\s_h\\ for each
+    horizon (`scale = "per_horizon"`), and \\b\\ a correction of the
+    drift per year (`bias = TRUE`; with `scale = "per_horizon"` one
+    \\b_h\\ for each horizon);
 
 3.  the parameters minimise the mean CRPS (or the interval score,
     `target`) of the log death rates in the window, with the Poisson (or
@@ -258,9 +254,8 @@ the range of \\M\\ errors contains a further one with probability
 few origins reach therefore get narrow intervals; a long `years` with
 `n_origins = years - 1` gives each horizon more origins.
 
-**Package-specific options** (reference unknown): the power law of the
-spread factor over the horizon (`scale = "horizon"`), the correction of
-the drift (`bias = TRUE`), separate factors for age bands (`ages`) and
+**Package-specific options** (reference unknown): the correction of the
+drift (`bias = TRUE`), separate factors for age bands (`ages`) and
 calibration on life expectancy or the age-standardised rate
 (`quantity`). The drift correction and the age bands have published
 analogues of another form. EMOS corrects the bias of the forecasts in
@@ -276,34 +271,32 @@ periods; `ages` estimates separate factors for bands of ages that the
 user chooses.
 
 **Estimation.** The parameters are bounded: \\s_1\\ (and \\s_h\\)
-between 0.1 and 20, \\\gamma\\ between -1 and 1, and \\b\\ between -0.05
-and 0.05 (log rate per year). With one parameter (`scale = "constant"`
-or, for each horizon, `"per_horizon"`, with `bias = FALSE`) the log
-factor is found by
+between 0.1 and 20, and \\b\\ between -0.05 and 0.05 (log rate per
+year). With one parameter (`scale = "constant"` or, for each horizon,
+`"per_horizon"`, with `bias = FALSE`) the log factor is found by
 [`stats::optimize()`](https://rdrr.io/r/stats/optimize.html) within its
 bounds; otherwise the parameters are found by Nelder-Mead
 ([`stats::optim()`](https://rdrr.io/r/stats/optim.html), relative
-tolerance 1e-6, at most 300 iterations), started at \\s_1 = 1\\,
-\\\gamma = 0\\, \\b = 0\\, with values outside the bounds rejected. The
-observation noise of the scored forecasts is simulated once (common
-random numbers), so the score is a deterministic function of the
-parameters. In this calibration sample, cells with 50 or more expected
-deaths get Poisson deaths from the normal approximation (mean and
-variance equal to the expected deaths, truncated at zero); the other
-cells get quantiles of the Poisson or negative binomial distribution
-(package-specific, reference unknown).
+tolerance 1e-6, at most 300 iterations), started at \\s_1 = 1\\ and \\b
+= 0\\, with values outside the bounds rejected. The observation noise of
+the scored forecasts is simulated once (common random numbers), so the
+score is a deterministic function of the parameters. In this calibration
+sample, cells with 50 or more expected deaths get Poisson deaths from
+the normal approximation (mean and variance equal to the expected
+deaths, truncated at zero); the other cells get quantiles of the Poisson
+or negative binomial distribution (package-specific, reference unknown).
 
 **Long horizons.** The parameters are estimated on horizons 1 to
 \\h\_{max}\\, the distance from the first origin to the last training
-year (10 years with the defaults). With `scale = "constant"` or
-`"horizon"`, the spread factor and the drift correction are held at
-their values at \\h\_{max}\\ beyond it. A forecast more than twice as
-long as \\h\_{max}\\ gives a warning (class `mt_warning_recalibrate`),
-because nothing in the training data shows how the spread of the model
-is wrong at such horizons. With the defaults this concerns forecasts of
-more than 20 years ([`mt_forecast()`](mt_forecast.md) forecasts 10 by
-default); give a longer `years` for long projections, or accept the
-constant factor. The per-horizon methods stop instead (see above).
+year (10 years with the defaults). With `scale = "constant"`, the spread
+factor and the drift correction of \\h\_{max}\\ are used beyond it. A
+forecast more than twice as long as \\h\_{max}\\ gives a warning (class
+`mt_warning_recalibrate`), because nothing in the training data shows
+how the spread of the model is wrong at such horizons. With the defaults
+this concerns forecasts of more than 20 years
+([`mt_forecast()`](mt_forecast.md) forecasts 10 by default); give a
+longer `years` for long projections, or accept the constant factor. The
+per-horizon methods stop instead (see above).
 
 The wrapper works with any specification, including
 [`ensemble()`](ensemble.md), [`bootstrapped()`](bootstrapped.md) and
@@ -403,9 +396,9 @@ Computational and Graphical Statistics* 26(2): 330-343.
 x <- mt_example(deaths = "single", years = 1990:2019)
 fit <- mt_fit(recalibrated(lee_carter(), years = 8, n_origins = 3, n_draws = 50), x)
 fit$calibration
-#>     group     band  scale_h1 slope drift cells scored crps_before crps_after
-#>    <char>   <char>     <num> <num> <num> <int>  <num>       <num>      <num>
-#> 1:    all all ages 0.7630612     0     0  2414   2414  0.03388302 0.03386637
+#>     group     band  scale_h1 drift cells scored crps_before crps_after
+#>    <char>   <char>     <num> <num> <int>  <num>       <num>      <num>
+#> 1:    all all ages 0.7630612     0  2414   2414  0.03388302 0.03386637
 #>    cov80_before cov80_after cov95_before cov95_after forecasts
 #>           <num>       <num>        <num>       <num>     <int>
 #> 1:    0.7531069   0.7311516    0.8956089   0.8860812         6
