@@ -91,15 +91,17 @@ test_that("the filtered index has the limits of the state-space model", {
   expect_equal(f0$z, z)
   expect_equal(f0$level, unname(stats::fitted(ols)[30]))
   expect_equal(f0$drift, unname(stats::coef(ols)[2]))
-  # with little observation noise: the per-year index of year T
-  f_inf <- mortensor:::lc_filter(s$y, s$a, s$b, lambda = 1e5)
-  expect_equal(f_inf$level, z[30], tolerance = 1e-8)
+  # with little observation noise: the per-year index of year T. lambda =
+  # 1e3 is 5e-7 from the limit; much larger values make V = I + lambda^2 M so
+  # ill-conditioned that the rounding of the BLAS shows in the fifth digit
+  f_inf <- mortensor:::lc_filter(s$y, s$a, s$b, lambda = 1e3)
+  expect_equal(f_inf$level, z[30], tolerance = 1e-6)
   # its error is then the observation error of z[T]
-  expect_equal(f_inf$se, f_inf$sigma / sqrt(sum(s$b^2)), tolerance = 1e-6)
+  expect_equal(f_inf$se, f_inf$sigma / sqrt(sum(s$b^2)), tolerance = 1e-5)
   # one age: the filter then returns the observed log rate of year T
   y1 <- s$y[3, , drop = FALSE]
-  f1 <- mortensor:::lc_filter(y1, s$a[3], s$b[3], lambda = 1e5)
-  expect_equal(s$a[3] + s$b[3] * f1$level, y1[1, 30], tolerance = 1e-8)
+  f1 <- mortensor:::lc_filter(y1, s$a[3], s$b[3], lambda = 1e3)
+  expect_equal(s$a[3] + s$b[3] * f1$level, y1[1, 30], tolerance = 1e-6)
   # the estimate lies between the limits here, and its likelihood is maximal
   fe <- mortensor:::lc_filter(s$y, s$a, s$b)
   expect_gt(fe$lambda, 0)
