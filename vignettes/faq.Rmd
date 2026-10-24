@@ -469,7 +469,9 @@ to make them reproducible.
 
 Lee-Carter, Li-Lee and random walks fit in seconds even for hundreds of
 strata. One-dimensional PCLM ungrouping takes about two seconds per stratum
-for 30 years of single ages; the two-dimensional version is much slower.
+for 30 years of single ages; the two-dimensional version, and the
+two-dimensional P-spline smoothing of `mt_smooth()`, about 10 seconds per
+stratum (`mt_example()`: 71 grid ages, 30 years).
 `apc_bayes()` runs MCMC chains: with `mcmc_control("fast")` from about
 ten seconds (8 age groups, 10 years) to one or two minutes per stratum (19
 age groups, 14 years). `bohk_rau()` takes about 6 seconds per stratum for

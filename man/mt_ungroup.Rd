@@ -31,7 +31,9 @@ otherwise single years of age from the lowest age to the start of the
 open interval.}
 
 \item{dims}{1 or 2 (for \code{method = "pclm"}; \code{"gam"} is always 2D, the
-other methods 1D).}
+other methods 1D). The 2D PCLM takes about 10 seconds per stratum on
+the package example (\code{mt_example()}: 13 age groups, 71 grid ages, 30
+years).}
 
 \item{method}{Method for deaths: \code{"pclm"} (default), or \code{"monotone"}, the
 monotone cubic interpolation of Hyman (1983) of the cumulative deaths
@@ -104,7 +106,9 @@ counts cannot represent cohort waves and is refused).
 \item \code{dims = 1} fits each stratum and period separately; \code{dims = 2} fits a
 smooth age-period surface of rates per stratum with two smoothing
 parameters, the PCLM of rates over age and period with exposures of
-Rizzi et al. (2019).
+Rizzi et al. (2019). Its products with the tensor basis over age and
+period are computed in array form, as in generalised linear array
+models (Currie, Durban and Eilers 2006).
 }
 
 \strong{Group totals.} The PCLM reproduces the total over all groups of a fit
@@ -240,6 +244,11 @@ head(attr(u, "ungroup"))
 ut <- mt_ungroup(x, preserve_totals = TRUE)
 }
 \references{
+Currie ID, Durban M, Eilers PHC (2006). Generalized linear array models
+with applications to multidimensional smoothing. \emph{Journal of the Royal
+Statistical Society Series B} 68(2): 259-280.
+\doi{10.1111/j.1467-9868.2006.00543.x}
+
 Eilers PHC (2007). Ill-posed problems with counts, the composite link model
 and penalized likelihood. \emph{Statistical Modelling} 7(3): 239-254.
 

@@ -65,12 +65,15 @@
 #' improves a forecast is a question for a backtest; the vignette
 #' "Smoothing death rates" shows one. Use [mt_smooth_check()] to see how
 #' much was removed and [mt_plot_smooth()] to look at it. The 2D P-spline
-#' surface is slow for many ages and years (minutes per stratum); the 2D
-#' GAM takes about a second.
+#' surface computes its products with the tensor basis in array form
+#' (Currie, Durban and Eilers 2006); its run time and that of the 2D GAM
+#' are given under `dims`.
 #'
 #' @param data An [mt_data] object.
 #' @param dims 1 (over one direction, see `along`) or 2 (age-period
-#'   surface; `"pspline"` or `"gam"`).
+#'   surface; `"pspline"` or `"gam"`). The 2D P-spline surface takes about
+#'   10 seconds per stratum on the package example (`mt_example(deaths =
+#'   "single")`: 71 ages, 30 years), the 2D GAM about 2 seconds.
 #' @param method `"pspline"` (Poisson P-splines, default), `"whittaker"` or
 #'   `"gam"` (package \pkg{mgcv}); see Details. With `dims = 1` and
 #'   `along = "period"` the default is `"whittaker"`.
@@ -97,6 +100,11 @@
 #' @references
 #' Currie ID, Durban M, Eilers PHC (2004). Smoothing and forecasting
 #' mortality rates. *Statistical Modelling* 4(4): 279-298.
+#'
+#' Currie ID, Durban M, Eilers PHC (2006). Generalized linear array models
+#' with applications to multidimensional smoothing. *Journal of the Royal
+#' Statistical Society Series B* 68(2): 259-280.
+#' \doi{10.1111/j.1467-9868.2006.00543.x}
 #'
 #' Eilers PHC (2003). A perfect smoother. *Analytical Chemistry* 75(14):
 #' 3631-3636.
