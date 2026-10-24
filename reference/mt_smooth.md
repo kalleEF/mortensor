@@ -41,7 +41,10 @@ mt_smooth(
 - dims:
 
   1 (over one direction, see `along`) or 2 (age-period surface;
-  `"pspline"` or `"gam"`).
+  `"pspline"` or `"gam"`). The 2D P-spline surface takes about 10
+  seconds per stratum on the package example
+  (`mt_example(deaths = "single")`: 71 ages, 30 years), the 2D GAM about
+  2 seconds.
 
 - lambda:
 
@@ -158,13 +161,19 @@ cause-specific rates of small regions. Whether smoothing improves a
 forecast is a question for a backtest; the vignette "Smoothing death
 rates" shows one. Use [`mt_smooth_check()`](mt_smooth_check.md) to see
 how much was removed and [`mt_plot_smooth()`](mt_smooth_check.md) to
-look at it. The 2D P-spline surface is slow for many ages and years
-(minutes per stratum); the 2D GAM takes about a second.
+look at it. The 2D P-spline surface computes its products with the
+tensor basis in array form (Currie, Durban and Eilers 2006); its run
+time and that of the 2D GAM are given under `dims`.
 
 ## References
 
 Currie ID, Durban M, Eilers PHC (2004). Smoothing and forecasting
 mortality rates. *Statistical Modelling* 4(4): 279-298.
+
+Currie ID, Durban M, Eilers PHC (2006). Generalized linear array models
+with applications to multidimensional smoothing. *Journal of the Royal
+Statistical Society Series B* 68(2): 259-280.
+[doi:10.1111/j.1467-9868.2006.00543.x](https://doi.org/10.1111/j.1467-9868.2006.00543.x)
 
 Eilers PHC (2003). A perfect smoother. *Analytical Chemistry* 75(14):
 3631-3636.
@@ -183,11 +192,11 @@ s <- mt_smooth(x)
 head(attr(s, "smooth"))
 #>    measure stratum period     method lambda_age lambda_period       ed
 #>     <char>   <int> <char>     <char>      <num>         <num>    <num>
-#> 1:  deaths       1   2001 pspline_1d   61501.32            NA 6.073524
+#> 1:  deaths       1   2001 pspline_1d   61501.39            NA 6.073523
 #> 2:  deaths       1   2002 pspline_1d   29356.92            NA 7.071097
 #> 3:  deaths       1   2003 pspline_1d   23158.84            NA 7.425411
 #> 4:  deaths       2   2001 pspline_1d   91819.37            NA 5.632183
-#> 5:  deaths       2   2002 pspline_1d   20711.87            NA 7.711462
+#> 5:  deaths       2   2002 pspline_1d   20711.89            NA 7.711461
 #> 6:  deaths       2   2003 pspline_1d   76056.64            NA 5.855391
 #>    max_rel_diff at_bound open_iterations open_converged
 #>           <num>   <lgcl>           <int>         <lgcl>

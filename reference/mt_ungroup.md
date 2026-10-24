@@ -45,7 +45,9 @@ mt_ungroup(
 - dims:
 
   1 or 2 (for `method = "pclm"`; `"gam"` is always 2D, the other methods
-  1D).
+  1D). The 2D PCLM takes about 10 seconds per stratum on the package
+  example ([`mt_example()`](mt_example.md): 13 age groups, 71 grid ages,
+  30 years).
 
 - method:
 
@@ -132,7 +134,9 @@ boundary of the search range.
 - `dims = 1` fits each stratum and period separately; `dims = 2` fits a
   smooth age-period surface of rates per stratum with two smoothing
   parameters, the PCLM of rates over age and period with exposures of
-  Rizzi et al. (2019).
+  Rizzi et al. (2019). Its products with the tensor basis over age and
+  period are computed in array form, as in generalised linear array
+  models (Currie, Durban and Eilers 2006).
 
 **Group totals.** The PCLM reproduces the total over all groups of a fit
 (the penalty leaves the level of the latent curve free), but not each
@@ -266,6 +270,11 @@ particular in 2D, sees only the training window.
 
 ## References
 
+Currie ID, Durban M, Eilers PHC (2006). Generalized linear array models
+with applications to multidimensional smoothing. *Journal of the Royal
+Statistical Society Series B* 68(2): 259-280.
+[doi:10.1111/j.1467-9868.2006.00543.x](https://doi.org/10.1111/j.1467-9868.2006.00543.x)
+
 Eilers PHC (2007). Ill-posed problems with counts, the composite link
 model and penalized likelihood. *Statistical Modelling* 7(3): 239-254.
 
@@ -301,19 +310,19 @@ u
 head(attr(u, "ungroup"))
 #>    measure stratum period       method lambda_age lambda_period       ed
 #>     <char>   <int> <char>       <char>      <num>         <num>    <num>
-#> 1:  deaths       1   2010 pclm_rate_1d  18319.323            NA 6.511396
-#> 2:  deaths       1   2011 pclm_rate_1d  27689.910            NA 6.082495
+#> 1:  deaths       1   2010 pclm_rate_1d  18319.326            NA 6.511396
+#> 2:  deaths       1   2011 pclm_rate_1d  27689.765            NA 6.082500
 #> 3:  deaths       1   2012 pclm_rate_1d   7709.080            NA 7.443061
 #> 4:  deaths       1   2013 pclm_rate_1d   2190.986            NA 8.906068
-#> 5:  deaths       1   2014 pclm_rate_1d   1862.519            NA 9.109098
+#> 5:  deaths       1   2014 pclm_rate_1d   1862.520            NA 9.109097
 #> 6:  deaths       2   2010 pclm_rate_1d  18106.191            NA 6.839731
 #>    max_rel_diff at_bound open_iterations open_converged
 #>           <num>   <lgcl>           <int>         <lgcl>
 #> 1:   0.05830036    FALSE              NA             NA
-#> 2:   0.06314078    FALSE              NA             NA
+#> 2:   0.06314061    FALSE              NA             NA
 #> 3:   0.04830307    FALSE              NA             NA
 #> 4:   0.06514775    FALSE              NA             NA
-#> 5:   0.02661996    FALSE              NA             NA
+#> 5:   0.02661997    FALSE              NA             NA
 #> 6:   0.04527347    FALSE              NA             NA
 # rescaled to the observed group totals (post-hoc step of the package)
 ut <- mt_ungroup(x, preserve_totals = TRUE)

@@ -38,7 +38,9 @@ pclm_fit(
 
 - B:
 
-  Basis matrix (fine cells x coefficients).
+  Basis matrix (fine cells x coefficients), or a tensor basis over fine
+  ages and periods from `pclm_tensor()`, whose products are computed in
+  array form (Currie, Durban and Eilers 2006).
 
 - pen:
 
@@ -65,3 +67,10 @@ pclm_fit(
 A list with `gamma`, `beta`, `mu` (fitted observed counts), `lambda`,
 `ed` (effective dimension), `dev`, `ic`, `se_eta`, `converged` and
 `at_bound`.
+
+## References
+
+Currie ID, Durban M, Eilers PHC (2006). Generalized linear array models
+with applications to multidimensional smoothing. *Journal of the Royal
+Statistical Society Series B* 68(2): 259-280.
+[doi:10.1111/j.1467-9868.2006.00543.x](https://doi.org/10.1111/j.1467-9868.2006.00543.x)

@@ -58,6 +58,12 @@
 <li>
 <code><a href="../reference/mt_coherence.html">mt_coherence()</a></code> stops with class <code>mt_error_hierarchy</code> and names the cause when the draws hold no aggregate strata of the hierarchy.</li>
 </ul></div>
+<div class="section level3">
+<h3 id="faster-two-dimensional-ungrouping-and-smoothing-r3-0-2-0-9000">Faster two-dimensional ungrouping and smoothing (R3)<a class="anchor" aria-label="anchor" href="#faster-two-dimensional-ungrouping-and-smoothing-r3-0-2-0-9000"></a></h3>
+<p>Work package R3 of <code>dev/review-0.2-plan.md</code>.</p>
+<ul><li>
+<code>mt_ungroup(dims = 2)</code> and <code>mt_smooth(dims = 2)</code> (P-splines) compute the products with the tensor basis over age and period in array form, as in generalised linear array models (Currie, Durban and Eilers 2006), and solve the banded system within its band. The model, the penalties, the criterion and the search of the smoothing parameters are unchanged. With fixed smoothing parameters the results equal those of 0.2.0 within a relative difference of 1e-8. Chosen smoothing parameters near the upper end of <code>lambda_range</code>, where the criterion is nearly flat, can differ by rounding error; the code of 0.2.0 differs from itself by as much when the rows of the data are reordered. On <code><a href="../reference/mt_example.html">mt_example()</a></code> a two-dimensional fit takes about 10 seconds per stratum, against about 1.5 minutes (ungrouping) and 6 minutes (smoothing) before.</li>
+</ul></div>
 </div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.2.0" id="mortensor-020">mortensor 0.2.0<a class="anchor" aria-label="anchor" href="#mortensor-020"></a></h2>

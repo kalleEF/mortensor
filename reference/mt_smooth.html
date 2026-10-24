@@ -103,7 +103,8 @@ Poisson deaths given the model's rates, as without smoothing.</p>
 
 <dt id="arg-dims">dims<a class="anchor" aria-label="anchor" href="#arg-dims"></a></dt>
 <dd><p>1 (over one direction, see <code>along</code>) or 2 (age-period
-surface; <code>"pspline"</code> or <code>"gam"</code>).</p></dd>
+surface; <code>"pspline"</code> or <code>"gam"</code>). The 2D P-spline surface takes about
+10 seconds per stratum on the package example (<code>mt_example(deaths = "single")</code>: 71 ages, 30 years), the 2D GAM about 2 seconds.</p></dd>
 
 
 <dt id="arg-lambda">lambda<a class="anchor" aria-label="anchor" href="#arg-lambda"></a></dt>
@@ -211,13 +212,18 @@ data such as cause-specific rates of small regions. Whether smoothing
 improves a forecast is a question for a backtest; the vignette
 "Smoothing death rates" shows one. Use <code><a href="mt_smooth_check.html">mt_smooth_check()</a></code> to see how
 much was removed and <code><a href="mt_smooth_check.html">mt_plot_smooth()</a></code> to look at it. The 2D P-spline
-surface is slow for many ages and years (minutes per stratum); the 2D
-GAM takes about a second.</p>
+surface computes its products with the tensor basis in array form
+(Currie, Durban and Eilers 2006); its run time and that of the 2D GAM
+are given under <code>dims</code>.</p>
     </div>
     <div class="section level2">
     <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a></h2>
     <p>Currie ID, Durban M, Eilers PHC (2004). Smoothing and forecasting
 mortality rates. <em>Statistical Modelling</em> 4(4): 279-298.</p>
+<p>Currie ID, Durban M, Eilers PHC (2006). Generalized linear array models
+with applications to multidimensional smoothing. <em>Journal of the Royal
+Statistical Society Series B</em> 68(2): 259-280.
+<a href="https://doi.org/10.1111/j.1467-9868.2006.00543.x" class="external-link">doi:10.1111/j.1467-9868.2006.00543.x</a></p>
 <p>Eilers PHC (2003). A perfect smoother. <em>Analytical Chemistry</em> 75(14):
 3631-3636.</p>
 <p>Whittaker ET (1923). On a new method of graduation. <em>Proceedings of the
@@ -233,11 +239,11 @@ Edinburgh Mathematical Society</em> 41: 63-75.</p>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="va">s</span>, <span class="st">"smooth"</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    measure stratum period     method lambda_age lambda_period       ed</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     &lt;char&gt;   &lt;int&gt; &lt;char&gt;     &lt;char&gt;      &lt;num&gt;         &lt;num&gt;    &lt;num&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1:  deaths       1   2001 pspline_1d   61501.32            NA 6.073524</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1:  deaths       1   2001 pspline_1d   61501.39            NA 6.073523</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2:  deaths       1   2002 pspline_1d   29356.92            NA 7.071097</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 3:  deaths       1   2003 pspline_1d   23158.84            NA 7.425411</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 4:  deaths       2   2001 pspline_1d   91819.37            NA 5.632183</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 5:  deaths       2   2002 pspline_1d   20711.87            NA 7.711462</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5:  deaths       2   2002 pspline_1d   20711.89            NA 7.711461</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 6:  deaths       2   2003 pspline_1d   76056.64            NA 5.855391</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    max_rel_diff at_bound open_iterations open_converged</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>           &lt;num&gt;   &lt;lgcl&gt;           &lt;int&gt;         &lt;lgcl&gt;</span>

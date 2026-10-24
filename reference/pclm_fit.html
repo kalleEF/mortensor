@@ -89,7 +89,9 @@ log scale unless fixed.</p>
 
 
 <dt id="arg-b">B<a class="anchor" aria-label="anchor" href="#arg-b"></a></dt>
-<dd><p>Basis matrix (fine cells x coefficients).</p></dd>
+<dd><p>Basis matrix (fine cells x coefficients), or a tensor basis
+over fine ages and periods from <code>pclm_tensor()</code>, whose products are
+computed in array form (Currie, Durban and Eilers 2006).</p></dd>
 
 
 <dt id="arg-pen">pen<a class="anchor" aria-label="anchor" href="#arg-pen"></a></dt>
@@ -117,6 +119,13 @@ log scale unless fixed.</p>
     <p>A list with <code>gamma</code>, <code>beta</code>, <code>mu</code> (fitted observed counts),
 <code>lambda</code>, <code>ed</code> (effective dimension), <code>dev</code>, <code>ic</code>, <code>se_eta</code>,
 <code>converged</code> and <code>at_bound</code>.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a></h2>
+    <p>Currie ID, Durban M, Eilers PHC (2006). Generalized linear array models
+with applications to multidimensional smoothing. <em>Journal of the Royal
+Statistical Society Series B</em> 68(2): 259-280.
+<a href="https://doi.org/10.1111/j.1467-9868.2006.00543.x" class="external-link">doi:10.1111/j.1467-9868.2006.00543.x</a></p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
