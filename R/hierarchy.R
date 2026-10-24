@@ -1659,6 +1659,7 @@ shrink_cov <- function(X, shrink = "auto", center = TRUE) {
 #' h <- mt_hierarchy(sex = "both", region = "all", quintile = "all")
 #' fit <- mt_fit(reconciled(lee_carter(), h, method = "wls"), mt_aggregate_strata(x, h))
 #' fc <- mt_forecast(fit, h = 5, n_draws = 50, seed = 1)
+#' \donttest{
 #' # the Schaake shuffle of the separate Lee-Carter forecasts, then MinT with
 #' # the covariance of the errors of forecasts from 4 inner origins
 #' sm <- reconciled(lee_carter(), h, method = "mint", dependence = "schaake", covariance = "errors",
@@ -1667,7 +1668,6 @@ shrink_cov <- function(X, shrink = "auto", center = TRUE) {
 #' fit_sm$reconcile$errors$n[1:3, ]
 #' fc_sm <- mt_forecast(fit_sm, h = 5, n_draws = 50, seed = 1)
 #' fc_sm$schaake$dates
-#' \donttest{
 #' # score-optimal reconciliation, trained on forecasts of 2012-2019 from 4 origins
 #' es <- reconciled(lee_carter(), h, method = "energy_score", years = 8, n_origins = 4, horizon = 3,
 #'                  control = list(max_iter = 200))

@@ -195,8 +195,8 @@ Subpopulations need deaths in every age group and every year.
 }
 
 \examples{
-x <- mt_data(deaths = ons_data, population = ons_data, by = c("sex", "imd_decile"), age = "age_group",
-             value = c(deaths = "all_causes", population = "population"))
+x <- mt_data(deaths = ons_data, population = ons_data, by = c("sex", "imd_decile"),
+             age = "age_group", value = c(deaths = "all_causes", population = "population"))
 x <- mt_as_exposure(x, type = "midyear")
 x <- mt_group_levels(x, "imd_decile", function(d) paste0("Q", ceiling(as.numeric(d) / 2)),
                      name = "quintile")
