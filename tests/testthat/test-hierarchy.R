@@ -104,6 +104,14 @@ test_that("hierarchical Li-Lee pools bottom strata within each sex", {
   expect_mt_model(li_lee(common_by = "sex"), data = x, n_draws = 10)
 })
 
+test_that("mt_coherence() needs the aggregate strata in the draws", {
+  x <- mt_example_regions(years = 2005:2014, regions = 2)
+  fc <- mt_forecast(mt_fit(lee_carter(), x), h = 2, n_draws = 5, seed = 1)
+  err <- expect_error(mt_coherence(fc, h3()), "no aggregate strata", class = "mt_error_hierarchy")
+  expect_match(conditionMessage(err), "mt_aggregate_strata\\(\\)")
+  expect_error(mt_plot_coherence(fc, h3()), class = "mt_error_hierarchy")
+})
+
 test_that("draws are aggregated over strata and ages", {
   x <- mt_example(deaths = "single", years = 2000:2012)
   fc <- mt_forecast(mt_fit(lee_carter(), x), h = 2, n_draws = 10, seed = 1)

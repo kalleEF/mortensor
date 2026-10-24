@@ -72,6 +72,9 @@
 #' iterations converge slowly, as known for this model (Section 2.5), and
 #' their fixed point is found with Anderson acceleration (Anderson 1965;
 #' Walker and Ni 2011), which extrapolates from the last ten iterations.
+#' The iterations of the Lee-Carter reference are not accelerated: they
+#' converge within a few hundred iterations, and extrapolations can lead
+#' them to a fixed point of lower likelihood.
 #' The iterations stop when one iteration changes no fitted log rate by
 #' more than `1e-9` (at most 5,000 iterations; a warning of class
 #' `mt_warning_relative_model` otherwise). The fit reproduces
@@ -469,12 +472,19 @@ relative_check_deaths <- function(Dr, D, cohort, rlabels, labels, targets) {
 # kappa', beta' and gamma' (both parts), alpha, kappa and beta
 # (subpopulations), then the constraints (19)-(23) and, with cohort effects,
 # the approximately invariant transformation of Hunt and Villegas (2015) for
-# (26), as in StMoMo:::fit.rh() with approxConst = TRUE. The fixed point of
-# these iterations is found with Anderson acceleration (Anderson 1965;
-# Walker and Ni 2011, Algorithm AA with the last `memory` differences); an
-# extrapolation with non-finite rates restarts it. The iterations stop when
-# one iteration changes no linear predictor by more than `tol`.
-relative_fit_group <- function(Dr, Er, D, E, W, jj, cohort, tol = 1e-9, maxit = 5000, accelerate = TRUE,
+# (26), as in StMoMo:::fit.rh() with approxConst = TRUE. With cohort effects
+# (`accelerate`), the fixed point of these iterations is found with Anderson
+# acceleration (Anderson 1965; Walker and Ni 2011, Algorithm AA with the last
+# `memory` differences); an extrapolation with non-finite rates restarts it.
+# The Lee-Carter reference takes the plain iterations: accelerated, they
+# reached fixed points of lower likelihood, or none within `maxit`, on
+# England's deprivation quintiles (ons_data, ages 50 and over). With cohort
+# effects the plain iterations are not monotone in the likelihood (the
+# transformation changes the rates slightly), so a monotonicity control of
+# the extrapolations does not apply; the accelerated iterations reach the
+# fixed point of the plain ones in the tests. The iterations stop when one
+# iteration changes no linear predictor by more than `tol`.
+relative_fit_group <- function(Dr, Er, D, E, W, jj, cohort, tol = 1e-9, maxit = 5000, accelerate = cohort,
                                memory = 10) {
   na_r <- nrow(Dr)
   nt_r <- ncol(Dr)
@@ -853,9 +863,7 @@ relative_parameters <- function(fit) {
   lab <- fit$strata$label
   ages <- fit$age$labels
   yrs <- as.character(fit$periods)
-  row <- function(stratum, parameter, index, value) {
-    data.table(stratum = stratum, parameter = parameter, index = as.character(index), value = as.numeric(value))
-  }
+  row <- param_rows
   rbindlist(lapply(seq_along(f$models), function(g) {
     m <- f$models[[g]]
     r <- m$ref

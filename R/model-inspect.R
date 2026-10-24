@@ -5,6 +5,8 @@
 #'
 #' * [lee_carter()]: `a` (age pattern), `b` (age pattern of change), `k`
 #'   (period index), and the drift and innovation standard deviation of `k`;
+#'   with `choose_period = TRUE`, `k` of the years of the chosen fitting
+#'   period and its first year (`first_year`);
 #'   with `rotate = TRUE` also the ultimate pattern `b_ultimate`; with
 #'   `family = "nb"` also the dispersion `nb_dispersion` (variance `mu + phi
 #'   mu^2`; one per age group with a dispersion by age); with `jump_off =
@@ -12,8 +14,10 @@
 #'   standard error `se_k_filtered` and the state-space estimates
 #'   `filter_sigma`, `filter_lambda`, `filter_drift`;
 #' * [li_lee()], [product_ratio()]: the common factor of each group (`B`,
-#'   `K`, its drift and standard deviation), and per stratum the deviations
-#'   `a`, `b`, `k` and their AR(1) coefficient `phi` and standard deviation;
+#'   `K`, its drift and standard deviation), per stratum the deviations
+#'   `a`, `b`, `k` and their AR(1) coefficient `phi` and standard deviation,
+#'   and the number of stratum factors fitted (`ratio_order`, stratum
+#'   `"model"`);
 #' * [coda()]: the centre `a` (geometric mean distribution of life-table
 #'   deaths), the loadings `b`, the index `k` with the order (`order_k`),
 #'   coefficients (`arima_k`) and innovation standard deviation (`sd_k`) of
@@ -29,11 +33,18 @@
 #'   variation of each cause (`explained_joint`, `explained_individual`),
 #'   and with weights the weights of the parts (`w_part`) and years
 #'   (`w_time`);
-#' * [coda_multiway()]: the common age patterns `b`, time indexes `k` (with
+#' * [coda_multiway()]: the ranks used (`rank`, indexed `age`, `time`,
+#'   `population`), the common age patterns `b`, time indexes `k` (with
 #'   `order_k`, `arima_k`, `sd_k`), population markers `gamma` and core `g`
 #'   (index `p,q,r`), numbered with several components, and the share of
 #'   variation explained; per stratum the centre `a`, the parameters of the
 #'   open age interval or of the Kannisto model of each year;
+#' * [tucker3()]: the ranks used (`rank`, indexed `age`, `period`,
+#'   `stratum`), the factors of age (`A1`, `A2`, ...), period (`B1`, ...)
+#'   and stratum (`C1`, ...), the drifts of the period factors (`drift_B1`,
+#'   ..., with `ts = "rwd"`), the core `g` (index `p,q,r`) and the share of
+#'   the sum of squares explained (`explained`), all of stratum `"common"`;
+#'   per stratum the centre `a` (with `centre = TRUE`);
 #' * [rwd()]: drift and innovation standard deviation per age (and, with
 #'   `observation_noise = TRUE`, the variances of level and noise);
 #' * [apc_bayes()]: posterior medians and 90% intervals of the age, period
@@ -200,18 +211,59 @@ group_parameters <- function(fit) {
   }), fill = TRUE)
 }
 
+# Rows of mt_parameters(): one row per element of `value`; `stratum`,
+# `parameter` and `index` have one element or one per value, and with several
+# values at least one of them tells the values apart. Other lengths are an
+# error of the package, which would otherwise recycle labels or values
+# silently
+param_rows <- function(stratum, parameter, index, value) {
+  n <- length(value)
+  len <- c(length(stratum), length(parameter), length(index))
+  if (!n || any(len != 1L & len != n) || (n > 1L && all(len == 1L))) {
+    mt_abort(sprintf(paste("Internal error in mt_parameters(): parameter %s of %s has %d value(s) and %d index",
+                           "label(s). Please report this."), parameter[1], stratum[1], n, len[3]),
+             class = "internal", call = NULL)
+  }
+  data.table(stratum = stratum, parameter = parameter, index = as.character(index), value = as.numeric(value))
+}
+
+# First years of the fitting periods chosen by lee_carter(choose_period =
+# TRUE), one per stratum fitted (NULL for other fits); also inside a
+# bottom-up reconciled model and the groups of a fit by groups
+chosen_first_years <- function(fit) {
+  base <- bottom_base_fit(fit)
+  if (!is.null(base)) return(chosen_first_years(base))
+  if (!is.null(fit$group_fits)) return(unlist(lapply(fit$group_fits, chosen_first_years)))
+  fits <- fit$fits
+  if (!is.list(fits) || !is.null(names(fits))) return(NULL)
+  unlist(lapply(fits, function(f) if (is.list(f)) f[["first_year"]]))
+}
+
+# The fitting period where lee_carter(choose_period = TRUE) shortened it, for
+# print() and summary(): "1991-2011", or with first years that differ
+# between strata "1985-2011 to 1991-2011 by stratum"; NULL otherwise
+chosen_period_text <- function(fit) {
+  fy <- chosen_first_years(fit)
+  if (!length(fy) || all(fy <= min(fit$periods))) return(NULL)
+  last <- as.integer(max(fit$periods))
+  if (length(unique(fy)) == 1L) return(sprintf("%d-%d", as.integer(fy[1]), last))
+  sprintf("%d-%d to %d-%d by stratum", as.integer(min(fy)), last, as.integer(max(fy)), last)
+}
+
 base_parameters <- function(fit, sp) {
   lab <- fit$strata$label
   ages <- fit$age$labels
   yrs <- as.character(fit$periods)
-  row <- function(stratum, parameter, index, value) {
-    data.table(stratum = stratum, parameter = parameter, index = as.character(index), value = as.numeric(value))
-  }
+  row <- param_rows
   if (inherits(sp, "mt_spec_lee_carter")) {
     return(rbindlist(lapply(seq_along(fit$fits), function(s) {
       f <- fit$fits[[s]]
       if (is.null(f)) return(NULL)
-      rbind(row(lab[s], "a", ages, f$a), row(lab[s], "b", ages, f$b), row(lab[s], "k", yrs, f$k),
+      # a chosen fitting period (choose_period = TRUE): k of its years only
+      fy <- f[["first_year"]]
+      k_yrs <- if (is.null(fy)) yrs else yrs[fit$periods >= fy]
+      rbind(row(lab[s], "a", ages, f$a), row(lab[s], "b", ages, f$b), row(lab[s], "k", k_yrs, f$k),
+            if (!is.null(fy)) row(lab[s], "first_year", "", fy),
             row(lab[s], "drift_k", "", f$drift), row(lab[s], "sd_k", "", f$sigma_k),
             if (!is.null(f$dispersion)) {
               row(lab[s], "nb_dispersion", if (is.null(f$age_nb_size)) "" else ages, f$dispersion)
@@ -276,8 +328,11 @@ base_parameters <- function(fit, sp) {
                     row(lab[s], paste0("sd_k", j), "", st$ar[[j]]$sigma))
             })))
     }))
-    return(rbind(common, own))
+    # the number of stratum factors fitted (`ratio_order`, capped by the data)
+    order <- f[["ratio_order"]] %||% ncol(f$strata[[1]]$b)
+    return(rbind(common, own, row("model", "ratio_order", "", order)))
   }
+  if (inherits(sp, "mt_spec_tucker3")) return(tucker3_parameters(fit))
   if (inherits(sp, "mt_spec_cae")) {
     f <- fit$fits
     p <- dim(f$kappa)[1]
@@ -335,8 +390,8 @@ bohk_rau_parameters <- function(fit) {
   }
   row <- function(s, parameter, index, x) {
     v <- q(x)
-    data.table(stratum = s, parameter = parameter, index = as.character(index), value = v[, 1], lower = v[, 2],
-               upper = v[, 3])
+    out <- param_rows(s, parameter, index, v[, 1])
+    out[, c("lower", "upper") := list(v[, 2], v[, 3])]
   }
   rbindlist(lapply(seq_along(fit$fits), function(s) {
     f <- fit$fits[[s]]
@@ -403,8 +458,10 @@ nordpred_parameters <- function(fit) {
 #' fitted rates, as a long table; values far beyond 2 in absolute value
 #' point to structure that the model misses (for example cohort effects) or
 #' to overdispersion. `summary()` describes the model, its sources of
-#' uncertainty and the fit; [mt_plot_residuals()] shows the residuals as an
-#' age-period heat map.
+#' uncertainty and the fit, and the fitting period where
+#' `lee_carter(choose_period = TRUE)` chose a shorter one (as `print()`
+#' does); [mt_plot_residuals()] shows the residuals as an age-period heat
+#' map.
 #'
 #' @param object An `mt_fit` object.
 #' @param type `"deviance"` or `"pearson"`.
@@ -477,7 +534,7 @@ summary.mt_fit <- function(object, ...) {
   res <- tryCatch(stats::residuals(object), error = function(e) NULL)
   structure(list(label = object$spec$label, assumptions = model_assumptions(object$spec),
                  strata = nrow(object$strata), ages = object$age$labels, periods = range(object$periods),
-                 prep = object$prep, diagnostics = object$diagnostics,
+                 fitted_period = chosen_period_text(object), prep = object$prep, diagnostics = object$diagnostics,
                  deviance = if (!is.null(res) && nrow(res)) sum(res$residual^2) else NA_real_,
                  cells = if (!is.null(res)) nrow(res) else NA_integer_,
                  large_residuals = if (!is.null(res) && nrow(res)) mean(abs(res$residual) > 2) else NA_real_,
@@ -491,6 +548,9 @@ print.summary.mt_fit <- function(x, ...) {
   cat(sprintf("%s\n", x$label))
   cat(sprintf("  data: %d strata; ages %s to %s; periods %d-%d\n", x$strata, x$ages[1], x$ages[length(x$ages)],
               x$periods[1], x$periods[2]))
+  if (!is.null(x$fitted_period)) {
+    cat(sprintf("  fitting period: %s (chosen; Booth, Maindonald and Smith 2002)\n", x$fitted_period))
+  }
   if (!is.null(x$prep)) {
     cat(sprintf("  preprocessing: %s\n", paste(vapply(x$prep$steps, function(s) paste0("step_", s$type), ""),
                                                collapse = ", ")))

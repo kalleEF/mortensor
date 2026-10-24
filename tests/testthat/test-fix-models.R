@@ -83,12 +83,14 @@ test_that("cause shares keep causes adding up in predictive draws and follow the
 
 test_that("joint models run with a single age group", {
   x <- mt_regroup(mt_example(deaths = "single", years = 2000:2019), age = 30)
-  for (spec in list(tucker3(), li_lee())) {
+  for (spec in list(tucker3(ranks = c(1, 2, 2)), li_lee())) {
     fit <- mt_fit(spec, x)
     expect_true(all(fit$diagnostics$status == "ok"))
     fc <- mt_forecast(fit, h = 2, n_draws = 5, seed = 1, predictive = TRUE)
     expect_equal(dim(fc$rates), c(1, 2, 2, 5))
   }
+  # the default ranks are reduced to the one age group
+  expect_warning(mt_fit(tucker3(), x), "c\\(1, 2, 2\\) are used", class = "mt_warning_argument")
 })
 
 test_that("fits with random numbers follow set.seed() and do not depend on cores", {

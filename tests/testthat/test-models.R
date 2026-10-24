@@ -72,6 +72,97 @@ test_that("SVD Lee-Carter reproduces the fitted rates of demography::lca", {
   expect_lt(max(abs(mine - ref)), 1e-5)
 })
 
+test_that("the chosen fitting period is that of demography::lca(breakmethod = \"bms\")", {
+  skip_if_not_installed("StMoMo")
+  skip_if_not_installed("demography")
+  ew <- StMoMo::EWMaleData
+  ages <- 0:89
+  yrs <- 1961:2011
+  D <- ew$Dxt[as.character(ages), as.character(yrs)]
+  E <- ew$Ext[as.character(ages), as.character(yrs)]
+  dd <- demography::demogdata(data = D / E, pop = E, ages = ages, years = yrs, type = "mortality", label = "EW",
+                              name = "male")
+  l <- demography::lca(dd, chooseperiod = TRUE, breakmethod = "bms", interpolate = FALSE)
+  # the mean deviance ratios of Booth, Maindonald and Smith (2002) of the SVD
+  # fits from each candidate first year (minperiod = min_years = 20)
+  start <- mortensor:::bms_start(D, E, function(D, E) mortensor:::lc_svd(D, E), 20)
+  ratio <- attr(start, "ratio")
+  expect_length(ratio, length(yrs) - 20)
+  expect_equal(ratio, as.numeric(l$mdevs[seq_along(ratio), 3]), tolerance = 1e-6)
+  # the same first year (1991) with the Poisson and the SVD fits
+  x <- mt_subset(as_mt_data(ew), ages = c(0, 90))
+  expect_identical(mt_grid(x)$age$labels, as.character(ages))
+  for (method in c("poisson", "svd")) {
+    fit <- mt_fit(lee_carter(method = method, choose_period = TRUE), x)
+    expect_equal(fit$fits[[1]]$first_year, min(l$year))
+  }
+})
+
+test_that("a chosen fitting period: one k per fitted year in the parameters, and print() and summary() name it", {
+  skip_if_not_installed("StMoMo")
+  x <- mt_subset(as_mt_data(StMoMo::EWMaleData), ages = c(0, 90))
+  expect_no_warning(fit <- mt_fit(lee_carter(choose_period = TRUE), x))
+  f <- fit$fits[[1]]
+  expect_identical(f$first_year, 1991)
+  expect_no_warning(p <- mt_parameters(fit))
+  k <- p[parameter == "k"]
+  expect_identical(k$index, as.character(1991:2011))
+  expect_equal(k$value, f$k, ignore_attr = TRUE)
+  expect_equal(p[parameter == "first_year"]$value, 1991)
+  expect_true(all(is.na(fitted(fit)[, as.character(1961:1990), 1])))
+  expect_false(anyNA(fitted(fit)[, as.character(1991:2011), 1]))
+  expect_output(print(fit), "periods 1961-2011 \\(fitted 1991-2011\\)")
+  expect_output(print(summary(fit)), "fitting period: 1991-2011")
+  # without a shorter period nothing is added; first years that differ
+  # between strata
+  expect_null(mortensor:::chosen_period_text(mt_fit(lee_carter(), mt_subset(x, periods = c(1991, 2011)))))
+  two <- list(fits = list(list(first_year = 1985), list(first_year = 1991)), periods = 1961:2011)
+  expect_identical(mortensor:::chosen_period_text(two), "1985-2011 to 1991-2011 by stratum")
+  # rows of the table: labels and values of different lengths are an error
+  expect_error(mortensor:::param_rows("s", "k", as.character(1961:2011), f$k), class = "mt_error_internal")
+  expect_error(mortensor:::param_rows("s", "k", "", 1:2), class = "mt_error_internal")
+  expect_error(mortensor:::param_rows("s", "k", "", numeric()), class = "mt_error_internal")
+  expect_identical(nrow(mortensor:::param_rows("s", c("mse", "bic"), "", 1:2)), 2L)
+})
+
+test_that("SVD Lee-Carter keeps the SVD index in a year without a root of the total deaths, with a warning", {
+  x <- mt_example(deaths = "single", years = 2000:2019)
+  # no deaths at any age in 2010 (stratum 1): the fitted total deaths are
+  # positive for every k
+  x$obs$deaths[stratum == 1 & period_lo == 2010, value := 0]
+  expect_warning(fit <- mt_fit(lee_carter(method = "svd"), x), "2010", class = "mt_warning_model_fit")
+  expect_equal(fit$fits[[1]]$no_root_years, 2010)
+  expect_null(fit$fits[[2]]$no_root_years)
+  expect_match(fit$diagnostics$message[1], "keep the index of the SVD")
+  expect_identical(fit$diagnostics$message[2], "")
+  # the fitted rates of 2010 are those of the SVD (adjust = "none"), the
+  # other years match the observed total deaths
+  D <- fit$train_D[, , 1]
+  E <- fit$train_E[, , 1]
+  none <- mortensor:::lc_svd(D, E, adjust = "none")
+  dt <- mortensor:::lc_svd(D, E, adjust = "dt")
+  expect_identical(dt$no_root, 11L)
+  t10 <- match("2010", colnames(D))
+  expect_equal(dt$a + dt$b * dt$k[t10], none$a + none$b * none$k[t10], tolerance = 1e-10)
+  mu <- E * exp(dt$a + outer(dt$b, dt$k))
+  expect_equal(colSums(mu)[-t10], colSums(D)[-t10], tolerance = 1e-8)
+  expect_length(none$no_root, 0)
+  # an age pattern of both signs: the young improve, the old worsen, and in
+  # 2010 the deaths are half those of the trend, below the fitted total
+  # deaths of every index
+  tt <- -10:9
+  E <- matrix(1e6, 10, 20)
+  D <- round(exp(-7 + 0.3 * (1:10) + outer(seq(1, -0.8, length.out = 10), -0.05 * tt)) * E)
+  D[, 11] <- round(D[, 11] / 2)
+  none <- mortensor:::lc_svd(D, E, adjust = "none")
+  expect_true(any(none$b < 0) && any(none$b > 0))
+  low <- stats::optimize(function(k) sum(E[, 11] * exp(none$a + none$b * k)), c(-500, 500))$objective
+  expect_gt(low, sum(D[, 11]))
+  dt <- mortensor:::lc_svd(D, E, adjust = "dt")
+  expect_true(11L %in% dt$no_root)
+  expect_equal(dt$a + outer(dt$b, dt$k), none$a + outer(none$b, none$k), tolerance = 1e-10)
+})
+
 test_that("Lee-Carter constraints hold and parameters can be extracted", {
   fit <- mt_fit(lee_carter(), mt_example(deaths = "single", years = 2001:2015))
   p <- mt_parameters(fit)
@@ -108,7 +199,41 @@ test_that("tucker3 works with one stratum", {
   x1 <- x
   x1$obs <- lapply(x1$obs, function(o) o[o$stratum == 1])
   x1$strata <- x1$strata[1]
-  expect_mt_model(tucker3(), data = x1)
+  expect_mt_model(tucker3(ranks = c(2, 2, 1)), data = x1)
+  # the default ranks c(2, 2, 2) are reduced to the one stratum
+  expect_warning(fit <- mt_fit(tucker3(), x1), "c\\(2, 2, 1\\) are used", class = "mt_warning_argument")
+  expect_equal(fit$fits$ranks, c(2, 2, 1))
+})
+
+test_that("orders and ranks above what the data allow are capped with a warning and reported", {
+  # 6 age groups and 10 years: li_lee(ratio_order = 10) stopped with
+  # "subscript out of bounds"
+  x <- mt_regroup(mt_example(deaths = "single", years = 2010:2019), age = c(30, 40, 50, 60, 70, 80))
+  expect_length(mt_grid(x)$age, 6)
+  expect_warning(fit <- mt_fit(li_lee(ratio_order = 10), x), "ratio_order = 10.*6 stratum factor\\(s\\) are fitted",
+                 class = "mt_warning_argument")
+  p <- mt_parameters(fit)
+  expect_equal(p[parameter == "ratio_order"]$value, 6)
+  expect_true(all(paste0("k", 1:6) %in% p$parameter))
+  expect_false("k7" %in% p$parameter)
+  # six factors per stratum reproduce its log rates (with 0.5 deaths in empty
+  # cells)
+  expect_equal(log(fitted(fit)), log(pmax(fit$train_D, 0.5) / fit$train_E), tolerance = 1e-8)
+  expect_s3_class(mt_forecast(fit, h = 3, n_draws = 5, seed = 1), "mt_draws")
+  # 71 single ages and 10 years: at most 8 factors
+  expect_warning(f8 <- mt_fit(li_lee(ratio_order = 10), mt_example(deaths = "single", years = 2010:2019)),
+                 "8 stratum factor", class = "mt_warning_argument")
+  expect_equal(mt_parameters(f8)[parameter == "ratio_order"]$value, 8)
+  expect_no_warning(f2 <- mt_fit(li_lee(ratio_order = 2), x))
+  expect_equal(mt_parameters(f2)[parameter == "ratio_order"]$value, 2)
+  # Tucker3 on 6 x 10 x 2: at most ranks c(5, 9, 2)
+  expect_warning(ft <- mt_fit(tucker3(ranks = c(5, 5, 5)), x), "c\\(5, 5, 5\\).*c\\(5, 5, 2\\) are used",
+                 class = "mt_warning_argument")
+  pt <- mt_parameters(ft)
+  expect_equal(pt[parameter == "rank"]$value, c(5, 5, 2))
+  expect_identical(pt[parameter == "rank"]$index, c("age", "period", "stratum"))
+  expect_false("C3" %in% pt$parameter)
+  expect_no_warning(mt_fit(tucker3(ranks = c(5, 9, 2)), x))
 })
 
 test_that("ensemble mixes component draws and drops failed components", {
@@ -208,7 +333,20 @@ test_that("parameters, fitted values, residuals and summaries are available", {
   expect_lt(abs(mean(r$residual)), 1)
   expect_output(print(summary(fit)), "Li-Lee")
   expect_output(print(summary(mt_fit(lee_carter(), x))), "Poisson deviance")
-  expect_error(mt_parameters(mt_fit(tucker3(), x)), class = "mt_error_argument")
+  # Tucker3: the table holds the whole decomposition, which gives the fitted
+  # log rates back
+  ft <- mt_fit(tucker3(), x)
+  pt <- mt_parameters(ft)
+  expect_equal(pt[parameter == "rank"]$value, c(2, 2, 2))
+  expect_equal(pt[parameter == "explained"]$value, ft$fits$fit_pct / 100)
+  U <- lapply(c("A", "B", "C"), function(m) {
+    cbind(pt[parameter == paste0(m, 1)]$value, pt[parameter == paste0(m, 2)]$value)
+  })
+  G <- array(pt[parameter == "g"]$value, c(2, 2, 2))
+  a <- cbind(pt[stratum == "female" & parameter == "a"]$value, pt[stratum == "male" & parameter == "a"]$value)
+  X <- mortensor:::tucker_add_centre(mortensor:::tucker_reconstruct(G, U), a)
+  expect_equal(X, log(fitted(ft)), tolerance = 1e-10, ignore_attr = TRUE)
+  expect_equal(pt[parameter == "drift_B1"]$value, mean(diff(U[[2]][, 1])))
 })
 
 test_that("quiet_try() keeps errors printed by try() out of a redirected try.outFile (knitr)", {

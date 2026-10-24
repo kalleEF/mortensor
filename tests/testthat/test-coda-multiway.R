@@ -238,6 +238,29 @@ test_that("the observed jump-off starts every population at its observed deaths"
   }
 })
 
+test_that("ranks above what the data allow are reduced with a warning, in the parameters and the label", {
+  x <- mt_example_regions(years = 2000:2014, regions = 2)
+  # the population rank is capped by the product of the other two
+  expect_warning(fit <- mt_fit(coda_multiway(ranks = c(2, 2, 9)), x), "c\\(2, 2, 9\\).*c\\(2, 2, 4\\) are used",
+                 class = "mt_warning_argument")
+  expect_equal(fit$fits$ranks, c(2, 2, 4))
+  p <- mt_parameters(fit)
+  expect_equal(p[parameter == "rank"]$value, c(2, 2, 4))
+  expect_identical(p[parameter == "rank"]$index, c("age", "time", "population"))
+  expect_true("gamma4" %in% p$parameter)
+  expect_false("gamma5" %in% p$parameter)
+  expect_identical(fit$spec$label, "Multiway CoDa (ranks 2/2/4)")
+  expect_identical(mt_forecast(fit, h = 2, n_draws = 5, seed = 1)$model, "Multiway CoDa (ranks 2/2/4)")
+  # within the limits, no warning and the label of the specification
+  expect_no_warning(f2 <- mt_fit(coda_multiway(ranks = c(2, 2, 4)), x))
+  expect_identical(f2$spec$label, "Multiway CoDa (ranks 2/2/4)")
+  expect_equal(mt_parameters(f2)[parameter == "rank"]$value, c(2, 2, 4))
+  # the years: 6 years allow 5 time indexes
+  expect_warning(f5 <- mt_fit(coda_multiway(ranks = c(2, 8, 4)), mt_subset(x, periods = c(2009, 2014))),
+                 "c\\(2, 5, 4\\) are used", class = "mt_warning_argument")
+  expect_equal(f5$fits$ranks, c(2, 5, 4))
+})
+
 test_that("mt_parameters() and summary() describe the multiway fit", {
   x <- mt_example_regions(years = 2000:2014, regions = 2)
   fit <- mt_fit(coda_multiway(), x)

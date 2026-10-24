@@ -14,7 +14,12 @@ coda_multiway(
 }
 \arguments{
 \item{ranks}{Numbers of components \code{c(age, time, population)}, by default
-\code{c(1, 1, 1)}. They are reduced where the data allow fewer components.}
+\code{c(1, 1, 1)}. They are reduced where the data allow fewer components
+(at most the number of parts of the composition minus 1, of years minus
+1 and of populations, and no rank above the product of the other two),
+with a warning (class \code{mt_warning_argument}) that names the requested
+and the ranks used; the label of the fit and \code{\link[=mt_parameters]{mt_parameters()}}
+(\code{rank}) give the ranks used.}
 
 \item{order}{ARIMA order \code{c(p, d, q)} of each time index; \code{c(0, 1, 0)} by
 default (random walk, Bergeron-Boucher et al. 2018, Section 5).}

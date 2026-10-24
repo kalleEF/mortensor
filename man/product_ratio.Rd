@@ -7,7 +7,8 @@
 product_ratio(ratio_order = 1, jump_off = c("fitted", "observed"))
 }
 \arguments{
-\item{ratio_order}{Number of stratum-specific (ratio) factors.}
+\item{ratio_order}{Number of stratum-specific (ratio) factors, capped as
+in \code{\link[=li_lee]{li_lee()}}.}
 
 \item{jump_off}{\code{"fitted"} (forecasts start from the fitted rates of the
 last year) or \code{"observed"} (forecasts are multiplied by the ratio of
