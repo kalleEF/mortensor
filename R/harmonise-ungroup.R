@@ -9,7 +9,9 @@
 #' * **Exposures** observed coarser than the grid are ungrouped first, as
 #'   counts by the PCLM (`exposure_method = "pclm"`) or by the monotone cubic
 #'   interpolation of Hyman (1983) applied to the cumulative counts
-#'   (`"monotone"`), which reproduces the group totals exactly.
+#'   (`"monotone"`), which reproduces the group totals exactly. The PCLM of
+#'   the exposures chooses its own smoothing parameter by `criterion`; a
+#'   `lambda` given for the deaths is not used for the exposures.
 #' * **Deaths** are ungrouped as **rates** when exposures are available on
 #'   the grid: the exposures enter the composite link as offset (Rizzi, Gampe
 #'   and Eilers 2015), so cohort-size waves stay in the exposures and the
@@ -173,8 +175,9 @@
 #'   years; [mt_plot_ungroup()] and [mt_ungroup_check()] check a result.
 #' @param exposure_method `"pclm"` or `"monotone"` (Hyman 1983).
 #' @param lambda Fixed smoothing parameter(s); `NULL` selects them by
-#'   `criterion`. The split of the exposure of an open interval of the grid
-#'   (`open_split = "pclm"`) always selects its own (see Details).
+#'   `criterion`, for the deaths. The ungrouping of grouped exposures and the
+#'   split of the exposure of an open interval of the grid (`open_split =
+#'   "pclm"`) always select their own (see Details).
 #' @param criterion `"bic"` or `"aic"`.
 #' @param kr Knot spacing in years (age and period).
 #' @param deg,pord Degree of the B-splines and order of the difference
@@ -262,7 +265,10 @@ mt_ungroup <- function(data, age = NULL, dims = 1,
               lambda_range = lambda_range, preserve_totals = preserve_totals, infant = TRUE, open_split = open_split)
   diag_rows <- list()
   if (!is.null(data$obs$exposure) && needs_ungroup(data$obs$exposure, g)) {
-    res <- ungroup_counts_1d(data$obs$exposure, g, data$omega, ctl, exposure_method, "exposure")
+    # exposures, not deaths: their PCLM chooses its own smoothing parameter
+    ctl_exposure <- ctl
+    ctl_exposure["lambda"] <- list(NULL)
+    res <- ungroup_counts_1d(data$obs$exposure, g, data$omega, ctl_exposure, exposure_method, "exposure")
     data$obs$exposure <- res$obs
     diag_rows <- c(diag_rows, list(res$diag))
   }

@@ -50,8 +50,8 @@ years; \code{\link[=mt_plot_ungroup]{mt_plot_ungroup()}} and \code{\link[=mt_ung
 \item{exposure_method}{\code{"pclm"} or \code{"monotone"} (Hyman 1983).}
 
 \item{lambda}{Fixed smoothing parameter(s); \code{NULL} selects them by
-\code{criterion}. The split of the exposure of an open interval of the grid
-(\code{open_split = "pclm"}) always selects its own (see Details).}
+\code{criterion}, for the deaths. The ungrouping of grouped exposures and the
+split of the exposure of an open interval of the grid (\code{open_split = "pclm"}) always select their own (see Details).}
 
 \item{criterion}{\code{"bic"} or \code{"aic"}.}
 
@@ -97,7 +97,9 @@ rescaling.
 \item \strong{Exposures} observed coarser than the grid are ungrouped first, as
 counts by the PCLM (\code{exposure_method = "pclm"}) or by the monotone cubic
 interpolation of Hyman (1983) applied to the cumulative counts
-(\code{"monotone"}), which reproduces the group totals exactly.
+(\code{"monotone"}), which reproduces the group totals exactly. The PCLM of
+the exposures chooses its own smoothing parameter by \code{criterion}; a
+\code{lambda} given for the deaths is not used for the exposures.
 \item \strong{Deaths} are ungrouped as \strong{rates} when exposures are available on
 the grid: the exposures enter the composite link as offset (Rizzi, Gampe
 and Eilers 2015), so cohort-size waves stay in the exposures and the

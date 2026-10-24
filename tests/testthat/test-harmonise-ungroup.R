@@ -75,6 +75,13 @@ test_that("open intervals are expanded to omega and exposures can be ungrouped f
   expect_equal(sum(e_est), sum(e_true), tolerance = 1e-8)
   expect_lt(median(abs(log(e_est[1:60, , ] / e_true[1:60, , ]))), 0.05)
   expect_false(anyNA(mt_array(u, "deaths")))
+  # the PCLM of the exposures chooses its own smoothing parameter: a fixed
+  # `lambda` for the deaths leaves the exposures unchanged
+  e_bic <- mt_array(suppressWarnings(mt_ungroup(xr)), "exposure")
+  for (lam in list(1e6, c(100, 10))) {
+    u_lam <- suppressWarnings(mt_ungroup(xr, lambda = lam, dims = length(lam)))
+    expect_identical(mt_array(u_lam, "exposure"), e_bic)
+  }
 })
 
 test_that("ungrouped rates are close to the simulated truth", {
