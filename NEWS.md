@@ -47,6 +47,20 @@ unchanged.
   effects of all populations follow a random walk with one common drift,
   and the others revert to 0 as AR(1) processes. The expected rates of the
   populations do not diverge.
+* New `relative_model()`: the relative model of Villegas and Haberman
+  (2014) for subpopulations, such as deprivation quintiles, and the
+  population they belong to. The reference has a Lee-Carter model, with
+  cohort effects if `cohort = TRUE` (Renshaw and Haberman 2006; Hunt and
+  Villegas 2015). Each subpopulation's log rates are the reference's plus
+  an age pattern of level differences and a common age pattern times its
+  own index. The reference is a stratum of the data or an `mt_data` object
+  with more ages and years. All parameters are joint Poisson maximum
+  likelihood estimates. The subpopulation indexes follow a multivariate
+  random walk with drift (`deviation = "mrwd"`), independent random walks
+  (`"rwd"`) or stay at their last values (`"constant"`): the processes the
+  paper compares. Tests check the recovery of the parameters, the effective
+  numbers of parameters of the paper's Table 1 and agreement with
+  `lee_carter()` and `StMoMo::rh()` without subpopulations.
 * New `mt_pessimism()` measures how much more pessimistic the sum of cause
   forecasts is than a forecast of all causes (Wilmoth 1995): life
   expectancy of both and their difference, the m-ratio by age and the

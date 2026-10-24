@@ -401,8 +401,12 @@ of the distributions of deaths by age do not diverge, and their
 intervals widen with the horizon. `cae(index = "coherent")` gives all
 strata one common drift and lets their other period effects revert to
 zero (Enchev, Kleinow and Cairns 2017), so the expected rates do not
-diverge. Backtests over a few years rarely tell these models apart; the
-choice is an assumption to state.
+diverge. `relative_model()` gives subpopulations, such as deprivation
+quintiles, the trend of their national population plus their own drifting
+improvement differences, so a gap that widened keeps widening; with
+`deviation = "constant"` the differences stay at their last values
+(Villegas and Haberman 2014). Backtests over a few years rarely tell these
+models apart; the choice is an assumption to state.
 
 ### Which ages and causes explain a gap, and how much is composition?
 
@@ -585,6 +589,11 @@ Stoeldraijer L, van Duin C, van Wissen L, Janssen F (2018). Comparing
 strategies for matching mortality forecasts to the most recently observed
 data: exploring the trade-off between accuracy and robustness. *Genus*
 74: 16. doi:10.1186/s41118-018-0041-y.
+
+Villegas AM, Haberman S (2014). On the modeling and forecasting of
+socioeconomic mortality differentials: an application to deprivation and
+mortality in England. *North American Actuarial Journal* 18(1): 168-193.
+doi:10.1080/10920277.2013.866034.
 
 Wilmoth JR (1995). Are mortality projections always more pessimistic when
 disaggregated by cause of death? *Mathematical Population Studies* 5(4):

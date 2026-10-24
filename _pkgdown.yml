@@ -73,6 +73,7 @@ reference:
       - coherent_fdm
       - coda_multiway
       - saint
+      - relative_model
       - tucker3
       - cause_shares
       - coda_causes
