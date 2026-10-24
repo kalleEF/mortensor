@@ -30,6 +30,53 @@ Work package R1 of `dev/review-0.2-plan.md`.
 * `mt_coherence()` stops with class `mt_error_hierarchy` and names the
   cause when the draws hold no aggregate strata of the hierarchy.
 
+## Removed deprecated code, scores of floored cells and robustness (R4)
+
+Work package R4 of `dev/review-0.2-plan.md`, with the decisions of the
+owner.
+
+### Breaking changes
+
+The functions and options deprecated in 0.2.0 are removed. Each warned
+with the name of its published replacement.
+
+* `product_ratio()` is removed. Use `coherent_fdm()`, the product-ratio
+  method of Hyndman, Booth and Yasmeen (2013).
+* `cause_shares()` is removed. Use `reconciled()` with a hierarchy of
+  causes, or `coda_causes()`.
+* `ensemble(weights = "stack")` is removed. Use `weights =
+  "crps_stack"`, the stacking weights that minimise the CRPS of the
+  mixture.
+* `recalibrated(scale = "horizon")` is removed. Use `scale =
+  "per_horizon"`. The calibration table loses the column `slope`, and
+  `mt_parameters()` the row `slope`.
+* The spline methods of `mt_ungroup()` (`"hyman_kannisto"`,
+  `"natural_gompertz"`, `"gam"`) and its arguments `tail` and
+  `tail_width` are removed. Use `method = "pclm"` (default) or
+  `"monotone"`.
+* The spline methods of `mt_disaggregate()` (`"hyman_kannisto"`,
+  `"natural_gompertz"`) are removed. Use `method = "shape"`.
+* `mt_shape_rates(method = "gam")` is removed. Use `method = "last"`.
+
+`rwd(observation_noise = TRUE)` and `tucker3(transform = "coda")` stay
+deprecated.
+
+### Scores
+
+* `mt_backtest()` marks the rate rows whose observed deaths are below half
+  a death (column `floored`), and `mt_score()` counts them (`n_floored`,
+  after `n`). The scores of such cells can dominate the means of sparse
+  data; life expectancy and the ASR (`quantities`) or coarser age groups
+  (`step_regroup()`) avoid the floor.
+* `mt_score(measures = "robustness")` gives the robustness of Stoeldraijer
+  et al. (2018): the standard deviation of the changes of the forecast
+  median of a target year between consecutive origins. With one stratum,
+  life expectancy and one target year (`by = c("model", "period")`) it is
+  the published measure; the mean over several cells is package-specific.
+  Grouping by horizon or origin stops with class `mt_error_argument`. The
+  help of `measures = "revision"` labels the mean absolute revision as a
+  measure of this package.
+
 ## Small corrections and labels (R2)
 
 Work package R2 of `dev/review-0.2-plan.md`.

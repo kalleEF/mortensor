@@ -22,7 +22,7 @@ vignettes that use the changed code (`CLAUDE.md`).
 | F08 smoothing of the open-interval split | low | code | confirmed | own BIC choice or document (R2) |
 | F09 summary of a chosen period | low | reviewer's output | confirmed | report the fitted period (R1) |
 | F10 deprecated code | low | code | confirmed | owner decision (R4) |
-| F11 unused internal functions | low | grep: `axis_from_bounds()`, `Matrix_diag()` and `relative_kernel()` are unused; `oldage_internal()`, `coda_multiway_point()`, `nordpred_projection()` and `saint_trend_rates()` are used by tests; `mt_inform()` is the messaging function `CLAUDE.md` prescribes | partly confirmed | delete the three unused ones (R4) |
+| F11 unused internal functions | low | grep: `axis_from_bounds()`, `Matrix_diag()` and `relative_kernel()` are unused; `oldage_internal()`, `coda_multiway_point()`, `nordpred_projection()` and `saint_trend_rates()` are used by tests; `mt_inform()` is the messaging function `CLAUDE.md` prescribes | partly confirmed | delete the three unused ones (R2) |
 | F12 seed of the Lee-Carter bootstrap | low | reproduced: two fits with `mt_forecast(seed = 1)` differ | confirmed | `seed = NULL` (R2) |
 | F13 tests of the period choice | low | test files | confirmed | add tests (R1) |
 | F14 floored cells in mean scores | low | reviewer's backtest | confirmed | owner decision (R4) |
@@ -96,27 +96,29 @@ vignettes that use the changed code (`CLAUDE.md`).
 
 ### R4. Decisions of the owner
 
-- F10: remove the deprecated functions and options in a later version.
-  They are `product_ratio()`, `cause_shares()`,
-  `ensemble(weights = "stack")`, `recalibrated(scale = "horizon")`, the
-  spline methods of `mt_ungroup()`, and the deprecated methods of
-  `mt_disaggregate()` and `mt_shape_rates()`. Their warnings already name
-  the published replacements. Proposal: remove them in 0.3.0, with a NEWS
-  entry listing each replacement.
-- F11: delete `axis_from_bounds()`, `Matrix_diag()` and
+The owner decided on 2026-10-24:
+
+- F10: remove the deprecated functions and options now, in the
+  development version after 0.2.0 (next release 0.3.0): `product_ratio()`,
+  `cause_shares()`, `ensemble(weights = "stack")`,
+  `recalibrated(scale = "horizon")`, the spline methods of `mt_ungroup()`,
+  and the deprecated methods of `mt_disaggregate()` and
+  `mt_shape_rates()`, with a NEWS entry listing each replacement.
+  `rwd(observation_noise = TRUE)` and `tucker3(transform = "coda")` were
+  not part of the decision and stay deprecated.
+- F11 (moved into R2): delete `axis_from_bounds()`, `Matrix_diag()` and
   `relative_kernel()`. Keep the test helpers and `mt_inform()`.
-- F14: the scores of cells floored at 0.5 deaths. Options: report the
-  number of floored observations in `mt_score()` (one column), or leave the
-  documented behaviour as it is. Scoring on deaths is already available
-  through `quantities`.
-- From E8, not a review finding: Stoeldraijer et al. (2018) define
-  robustness as the standard deviation of the changes of the forecast for
-  one target year between successive fitting periods. `mt_score()` reports
-  the package-specific mean absolute revision. The published measure could
-  be added as an opt-in measure.
+- F14: report the number of floored observations in `mt_score()` (column
+  `n_floored`), with a help sentence on the derived quantities and coarser
+  age groups.
+- From E8, not a review finding: add the robustness measure of
+  Stoeldraijer et al. (2018), the standard deviation of the changes of the
+  forecast for one target year between successive fitting periods, as an
+  opt-in measure of `mt_score()`, tested against a hand computation. The
+  mean absolute revision stays, labelled package-specific.
 
 ## 3. Order
 
-R1, then R2, then R3. R4 waits for the owner's decisions. Each work
+R1, then R3, then R2, then R4 (after the owner's decisions). Each work
 package is one pull request with its tests, lint, the help, NEWS and the
 progress log; R3 also re-knits the ungrouping and smoothing vignettes.
