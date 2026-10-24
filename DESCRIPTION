@@ -24,6 +24,7 @@ Depends:
 Imports:
     data.table (>= 1.14.0),
     Matrix,
+    methods,
     splines,
     stats,
     utils
