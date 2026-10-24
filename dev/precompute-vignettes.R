@@ -6,6 +6,7 @@
 suppressMessages(devtools::load_all(".", quiet = TRUE))
 old <- setwd("vignettes")
 on.exit(setwd(old))
-for (v in c("bayesian-apc", "model-choice", "inequality-england", "laender-germany", "causes-deprivation")) {
+for (v in c("bayesian-apc", "model-choice", "inequality-england", "laender-germany", "causes-deprivation",
+            "overdispersion")) {
   knitr::knit(paste0(v, ".Rmd.orig"), output = paste0(v, ".Rmd"))
 }
