@@ -64,8 +64,14 @@ window of a backtest.
 * **Forecast**: `k(t)` follows a random walk with drift; the drift and
   the innovation variance are estimated from the year-to-year changes of
   `k(t)`.
-* **Jump-off**: fitted rates of the last year (default) or observed rates
-  (`jump_off = "observed"`; Lee and Miller 2001).
+* **Jump-off**: fitted rates of the last year (default), observed rates
+  (`jump_off = "observed"`; Lee and Miller 2001), the mean observed log
+  rates of the last `n` years (`jump_off = "observed", jump_off_years =
+  n`; Stoeldraijer et al. 2018), the Kalman filter estimate of the index
+  in the last year (`jump_off = "filtered"`; De Jong and Tickle 2006) or a
+  fit constrained to the observed rates of the last year (`jump_off =
+  "constrained"`; Li, Hardy and Tan 2009). All but the first are opt-in;
+  they are described below, and `vignette("jump-off")` compares them.
 * **Uncertainty in the draws**: innovations of `k(t)` and the uncertainty
   of its drift. `a(x)` and `b(x)` are fixed; `bootstrap = TRUE` (Poisson
   resamples of the fitted deaths; Renshaw and Haberman 2008) or
@@ -89,6 +95,45 @@ window of a backtest.
   example backtest on England & Wales men aged 55-89 (origins 1996-2001,
   10 years ahead), the CRPS of log rates was 0.072 with both families and
   the 95% intervals covered 0.67 of the observed rates (Poisson 0.63).
+* **Dispersion by age** (`family = "nb", dispersion = "age"`, opt-in; Li,
+  Hardy and Tan 2009): the deaths of a cell come from clusters with a gamma
+  distributed frailty whose variance depends on age, so they are negative
+  binomial with variance `mu + alpha(x) mu^2` and one dispersion `alpha(x)`
+  per age group. `a`, `b`, `k` and the dispersions are estimated by maximum
+  likelihood (the Newton updates of Appendix 1 of the paper), and
+  predictive draws are negative binomial with the dispersion of each age.
+  Package-specific: the choices listed for one dispersion, and the random
+  walk with drift of `k(t)` (the paper fits an ARIMA model without naming
+  it). Like other maximum likelihood estimates of variances, the
+  dispersions are biased downwards, most at ages with many deaths and a
+  small dispersion, which carry most of the information on `k(t)`.
+* **Forecast origin correction** (`jump_off = "constrained"`, opt-in; Li,
+  Hardy and Tan 2009, Appendix 2): `a(x)` is the observed log rate of the
+  last year `T`, `k(T) = 0`, and `b` and `k` are estimated by maximum
+  likelihood under these constraints, so the fitted rates of the last year
+  are the observed ones. It works with Poisson and negative binomial deaths
+  (`method = "poisson"` only). With `bootstrap = TRUE` the draws follow the
+  parametric bootstrap of the paper: resamples of the fitted deaths
+  (negative binomial with the dispersions of the fit), refits of `a`, `b`
+  and `k` (with `a` from the resampled last year) and paths of `k` from the
+  random walk with drift of each refit. The paper's method is
+  `lee_carter(family = "nb", dispersion = "age", jump_off = "constrained",
+  bootstrap = TRUE)`.
+* **Averaged and filtered jump-off** (opt-in). `jump_off = "observed",
+  jump_off_years = n` is the "average n years observed" of Stoeldraijer et
+  al. (2018): the mean observed log rates of the last `n` years, placed at
+  the midpoint of these years and carried to the last year by the drift of
+  `k(t)`. With this reading the package reproduces their Table 8a for
+  French men within 0.03 years (`?lee_carter`). `jump_off = "filtered"`
+  writes the model in the state-space form of De Jong and Tickle (2006),
+  `log m(x,t) = a(x) + b(x) alpha(t) + e(x,t)` with a random walk with
+  drift for `alpha(t)`, estimates the noise variances and the drift by
+  maximum likelihood given `a` and `b` of the fit, and starts the forecast
+  from the Kalman filter estimate of `alpha` in the last year; the drift
+  and the innovations of `k(t)` stay those of the Lee-Carter fit. The paper also
+  estimates `b` by maximum likelihood. When the estimate of the state noise
+  is 0, which happens in short or noisy series, the start is the value of
+  the linear trend of the index in the last year.
 * **Rotation** (`rotate = TRUE`; Li, Lee and Gerland 2013): as life
   expectancy at birth rises from `e0_start` (80) to `e0_end` (102), the age
   pattern of decline moves from `b(x)` to an ultimate pattern with equal
@@ -104,6 +149,48 @@ window of a backtest.
   separate model; here it is that of the Lee-Carter draws. Rotation needs
   ages from 0 and computes life tables for every path and year, which is
   about 20 times slower.
+
+An example with England by sex (`ons_data`, all ages, 2001-2019), the
+deaths pooled over the deprivation deciles. The dispersions by age of the
+negative binomial model at some ages, and the one dispersion of
+`dispersion = "global"`, both times 1000:
+
+```{r}
+en <- mt_data(deaths = ons_data, population = ons_data, by = c("sex", "imd_decile"), age = "age_group",
+              value = c(deaths = "all_causes", population = "population"))
+en <- mt_as_exposure(en, type = "midyear")
+en <- mt_group_levels(en, "imd_decile", function(d) rep("England", length(d)), name = "area")
+ages <- c("0", "1-4", "20-24", "40-44", "60-64", "80-84", "90+")
+fit_nb <- mt_fit(lee_carter(family = "nb", dispersion = "age"), en)
+disp <- mt_parameters(fit_nb)[parameter == "nb_dispersion"]
+round(1000 * sapply(split(disp, disp$stratum), function(d) setNames(d$value, d$index)[ages]), 2)
+mt_parameters(mt_fit(lee_carter(family = "nb"), en))[parameter == "nb_dispersion",
+                                                     .(stratum, value = round(1000 * value, 2))]
+```
+
+The dispersions are largest at ages 1-4 and, for men, at 20-24. They are
+smallest at ages 20-64 for women and at 60-64 for men, and higher again
+at 80 and over. The one dispersion of `dispersion = "global"` (0.31 and 0.41) is
+smaller than those at ages 0-4 and larger than those at ages 40-64.
+
+The step of life expectancy at birth from its observed value in 2019 to
+the forecast for 2020, for the five jump-offs (`mt_jump_off()`); each step
+contains one year of forecast improvement:
+
+```{r}
+jump_offs <- list(fitted = lee_carter(), observed = lee_carter(jump_off = "observed"),
+                  "mean of 3 years" = lee_carter(jump_off = "observed", jump_off_years = 3),
+                  filtered = lee_carter(jump_off = "filtered"),
+                  constrained = lee_carter(jump_off = "constrained"))
+steps <- lapply(jump_offs, function(s) mt_jump_off(mt_forecast(mt_fit(s, en), h = 1, n_draws = 200, seed = 1)))
+t(sapply(steps, function(s) round(setNames(s$step_observed, s$label), 2)))
+```
+
+For women, the mean of three years and the filtered start give steps
+0.10 and 0.13 years smaller than the observed jump-off: both depend on
+more years than the last one. For men all steps lie between 0.23 and 0.29
+years. The constrained fit has the observed rates of 2019 as its fitted
+rates, and its step is close to that of the observed jump-off.
 
 ### Compositional data model: `coda()`
 
@@ -211,8 +298,9 @@ forecasts and standard errors for given smoothing parameters.
   parameters minimise the BIC (default) or the AIC. Cells with missing
   deaths or exposures get weight 0, so the surface interpolates them.
   `overdispersion = TRUE` takes a dispersion parameter into the choice of
-  the smoothing parameters and into the draws. `infant = TRUE` gives the
-  first year of life coefficients of its own (Camarda 2019).
+  the smoothing parameters and into the draws, `overdispersion = "age"` a
+  dispersion for each age (below). `infant = TRUE` gives the first year of
+  life coefficients of its own (Camarda 2019).
 * **Forecast**: part of the fit. The basis over years is extended over the
   forecast years, which enter with weight 0; their coefficients follow
   from the penalty. With `pord = 2` each age continues the trend of its
@@ -235,6 +323,38 @@ forecasts and standard errors for given smoothing parameters.
   the 95% intervals of life
   expectancy at 30 covered 0.40 of the observed values (Lee-Carter 0.90):
   the intervals of summary measures are narrow.
+* **Dispersion by age** (`overdispersion = "age"`, opt-in; Djeundje and
+  Currie 2011): the variance of the deaths is `phi(x)` times their mean,
+  with a dispersion for each age that varies smoothly over age (Model 3 of
+  the paper). The fit follows the paper's bias corrected scheme: the
+  penalised fit of the rates with the weights of the cells divided by
+  `phi(x)` and the smoothing parameters chosen by the BIC of the scaled
+  deviance, alternated with a smooth over age of the bias-corrected mean
+  Pearson statistics of the ages, until the dispersions converge. The
+  forecast and its draws keep the dispersions in the weights. The scaled
+  deviance favours smoother surfaces; in the paper's example the forecast
+  intervals of the expected rates were narrower than under the Poisson
+  assumption. Package-specific: the estimate of the variance parameter of
+  the smooth of the dispersions, and Poisson variation in predictive draws
+  (the paper gives the mean and variance of the deaths, no distribution).
+  The fit takes several times as long as the Poisson fit.
+  `vignette("overdispersion")` treats overdispersed deaths in more
+  detail.
+
+The dispersions by age for England by sex (the data of the Lee-Carter
+example above), at the same ages:
+
+```{r}
+fit_ps <- mt_fit(p_splines(overdispersion = "age"), en)
+disp_ps <- mt_parameters(fit_ps)[parameter == "dispersion"]
+round(sapply(split(disp_ps, disp_ps$stratum), function(d) setNames(d$value, d$index)[ages]), 1)
+```
+
+The dispersions lie between 1.4 and 2.4 up to age 44 and rise steeply at
+old ages, to 81 for women and 24 for men at 90 and over. Where deaths are
+many, their variation from year to year around the smooth surface is
+large relative to Poisson variation, and the dispersion also takes up any
+misfit of the surface.
 
 ### Constrained P-splines: `cp_splines()`
 
@@ -529,14 +649,31 @@ agree with those of nordpred to a relative difference below 1e-7.
   effects; the fit reports the mean squared error and the approximate BIC
   of eq. (4)-(5). As in the paper, the data need more years than age
   groups.
-* **Forecast** (package-specific; the paper does not forecast): all
-  period effects follow one multivariate random walk with drift with
-  correlated innovations, as StMoMo forecasts several indexes. Each
-  population keeps its own drift, so forecasts of different populations
-  can diverge.
-* **Uncertainty**: correlated innovations and the drift uncertainty;
-  `a` and `beta` are fixed. Predictive draws add Poisson variation of the
-  deaths given the rates.
+* **Forecast** (default `index = "rwd"`, package-specific; the paper does
+  not forecast): all period effects follow one multivariate random walk
+  with drift with correlated innovations, as StMoMo forecasts several
+  indexes. Each population keeps its own drift, so forecasts of different
+  populations can diverge.
+* **Coherent forecast** (`index = "coherent"`, opt-in; Enchev, Kleinow and
+  Cairns 2017, Table 10, Model 3): the first period effects of all
+  populations follow a multivariate random walk with one common drift,
+  and the further period effects revert to zero as AR(1) processes (a
+  vector autoregression with a diagonal matrix). The expected log rates of
+  two populations then keep the difference of their first period effects
+  in the last year, so they do not diverge; the variance of the difference
+  still grows with the horizon unless the innovations are perfectly
+  correlated. Package-specific: the common drift is the mean year-to-year
+  change with equal weight per population (one drift per group of
+  `common_by`), the AR(1) coefficients are least-squares estimates bounded
+  to `|phi| <= 0.99`, and one covariance matrix holds the innovations of
+  all populations and orders. The paper estimates the model by Poisson
+  maximum likelihood with other constraints; `cae()` applies its
+  forecasting model to the least-squares estimates of Kleinow (2015), so
+  forecasts can differ from those of the paper.
+* **Uncertainty**: correlated innovations and the uncertainty of the
+  drift (of the common drift with `index = "coherent"`, whose AR(1)
+  coefficients are fixed); `a` and `beta` are fixed. Predictive draws add
+  Poisson variation of the deaths given the rates.
 * **Package-specific**: the paper's criterion is minimised by Jacobi
   rotations (Cardoso and Souloumiac 1996); the paper uses the F-G algorithm;
   the columns are ordered by the variation summed over populations; zero
@@ -545,7 +682,19 @@ agree with those of nordpred to a relative difference below 1e-7.
   come from the bottom strata.
 * **Use**: populations that share the age pattern of change and differ in
   its speed. `vignette("dependence")` shows the dependence it gives to
-  totals and gaps.
+  totals and gaps, and what the common drift does to the gaps between
+  deprivation quintiles in England.
+
+The drifts of the first period effects of the 40 strata of
+`mt_example_regions()`: the own drifts of the default forecast and the
+common drift of `index = "coherent"`, which is their mean:
+
+```{r}
+xr <- mt_example_regions()
+own <- mt_parameters(mt_fit(cae(), xr))[parameter == "drift_kappa1", value]
+common <- mt_parameters(mt_fit(cae(index = "coherent"), xr))[parameter == "drift_kappa1", value]
+round(c(own_min = min(own), own_max = max(own), own_mean = mean(own), common = unique(common)), 4)
+```
 
 ### Trend of a reference population and spreads: `saint()` (opt-in)
 
@@ -727,6 +876,51 @@ multiple-decrement life table (eq. 7 of the paper).
   (`mt_example_causes()`, origins 2008-2012, 5 years ahead), its CRPS of
   log rates was 0.082, against 0.063 for Lee-Carter models per cause
   reconciled with WLS.
+* **Weights and cause-specific components** (opt-in; Kjærgaard et al.
+  2019). Kjærgaard et al. call the model above CT-CoDA and extend it to
+  2S-CoDA. `weights = "deaths"` weights each age and cause by its mean
+  life-table deaths over the years, so that small causes count less, and
+  `rho` weights the years by `rho (1 - rho)^(T - t)`, after Hyndman, Booth
+  and Yasmeen (2013). With weights, the joint components come from a
+  weighted (generalised) singular value decomposition. `individual = TRUE`
+  adds one component per cause, the first component of the singular value
+  decomposition of its residuals after the joint components: the joint and
+  individual components of Lock et al. (2013), in two steps. 2S-CoDA is
+  `coda_causes(weights = "deaths", rho = 0.1, individual = TRUE)`, with
+  `jump_off = "fitted"` for the forecast of the paper's eq. (7); its
+  CT-CoDA has `rank = 3`. Every index has its own ARIMA model of `order`
+  (the paper selects the orders by a unit-root test and AIC). The paper
+  gives point forecasts. Package-specific: the draws refit the same
+  weighted decomposition to bootstrap samples, with the residuals of each
+  cell drawn from its own part and the years drawn with probabilities
+  proportional to their weights; pooled residuals would move the large
+  residuals of small, down-weighted causes into the parts that determine
+  the fit. `mt_parameters()` reports, for each cause, the share of its
+  variation (the squared norm of its centred clr deaths) explained by the
+  joint and by the individual components, as in Fig. 4 of the paper
+  (`explained_joint`, `explained_individual`). VECM-CoDA, the paper's third
+  model, is not implemented.
+
+The shares for England by sex (`ons_data`, the cause groups
+`ons_cause_groups` and the rest, ages 50 and over, 2001-2019):
+
+```{r}
+causes <- names(ons_data)[-(1:7)]
+xc <- mt_data(deaths = ons_data, population = ons_data, by = c("sex", "imd_decile", "cause"), age = "age_group",
+              value = list(deaths = c(all = "all_causes", causes), population = "population"))
+xc <- mt_subset(mt_as_exposure(xc, type = "midyear"), ages = c(50, Inf))
+xc <- mt_group_levels(xc, "imd_decile", function(d) rep("England", length(d)), name = "area")
+xc <- mt_group_levels(xc, "cause", ons_cause_groups, other = "rest", total = "all", additive = "rates")
+fit_2s <- mt_fit(coda_causes(weights = "deaths", rho = 0.1, individual = TRUE), xc)
+ex <- mt_parameters(fit_2s)[parameter %in% c("explained_joint", "explained_individual")]
+ex$column <- paste(sub("causes: (.*)[.]England", "\\1", ex$stratum), sub("explained_", "", ex$parameter))
+round(sapply(split(ex, ex$column), function(d) setNames(d$value, d$index)), 2)
+```
+
+The joint component explains 0.91 to 0.93 of the variation of ischaemic
+heart disease and stroke. For other circulatory diseases and diabetes it
+explains 0.39 to 0.55, and their individual components a further 0.21 to
+0.33.
 
 The alternative is separate models per cause made coherent with the
 all-cause forecast by `reconciled()` (below). `cause_shares()`, a Tucker
@@ -745,8 +939,13 @@ forecast year, which matters where deaths are few. The other settings are
 package-specific options: the offset of the last `years` years, shrunk
 towards the stratum mean where deaths are few (`shrink = TRUE`, empirical
 Bayes with the moment estimator of DerSimonian and Laird 1986), and a
-linear fade over `decay` years. `mt_jump_off()` reports the step between
-the last observed (and fitted) year and the first forecast year.
+linear fade over `decay` years. `anchored(years = n)` is a variant of the
+averaged jump-off of Stoeldraijer et al. (2018), `lee_carter(jump_off =
+"observed", jump_off_years = n)`: its offset is the log ratio of observed
+to fitted deaths of these years, so the forecast also keeps the change of
+the fitted rates from these years to the last year. `mt_jump_off()`
+reports the step between the last observed (and fitted) year and the
+first forecast year.
 
 ## Combining models
 
@@ -971,18 +1170,18 @@ across windows.
 
 | Model | Index innovations | Drift | Parameters | Observation noise |
 |---|---|---|---|---|
-| `lee_carter()` | yes | yes | with `bootstrap = TRUE` | Poisson, predictive draws (negative binomial with `family = "nb"`) |
+| `lee_carter()` | yes | yes | with `bootstrap = TRUE` (negative binomial resamples with `family = "nb"`) | Poisson, predictive draws (negative binomial with `family = "nb"`, with a dispersion per age with `dispersion = "age"`) |
 | `rwd()` | yes (observed changes) | yes | no | contained in the changes |
-| `p_splines()` | no index; the penalty extends the coefficients, with variance growing with the horizon | in the coefficients | yes (normal approximation of the coefficients) | Poisson, predictive draws |
+| `p_splines()` | no index; the penalty extends the coefficients, with variance growing with the horizon | in the coefficients | yes (normal approximation of the coefficients; with `overdispersion`, the weights divided by the dispersions) | Poisson, predictive draws (also with `overdispersion`) |
 | `cp_splines()` | no | through the bootstrap | yes (residual bootstrap of the fit) | Poisson, predictive draws |
 | `bohk_rau()` | yes (noise of the future improvements) | posterior (curve of each age) | yes (posterior) | Poisson, predictive draws |
 | `arima_series()`, `ets_series()` | yes | as the fitted model | no | contained in the series |
 | `li_lee()` | yes (common and stratum) | common factor | no | Poisson, predictive draws |
-| `cae()` | yes (correlated across populations) | yes | no | Poisson, predictive draws |
+| `cae()` | yes (correlated across populations; with `index = "coherent"` AR(1) processes beyond the first period effects) | yes (one common drift with `index = "coherent"`) | no | Poisson, predictive draws |
 | `saint()` | yes (trend indexes and spreads) | level and slope of the trend | no | Poisson, predictive draws |
 | `coherent_fdm()` | yes (product and ratios) | as fdm (product) | no | Poisson, predictive draws |
 | `tucker3()` | yes (period factors) | yes | no | Poisson, predictive draws (with `residual_noise = TRUE` also the residual variation) |
-| `coda()`, `coda_causes()` | yes (resampled innovations) | yes (index model refitted) | `b`, `k` and the index model (residual bootstrap); `a` fixed | Poisson, predictive draws (`coda_causes()`: all-cause deaths split multinomially between the causes) |
+| `coda()`, `coda_causes()` | yes (resampled innovations; with `individual = TRUE` also of the cause components) | yes (index model refitted) | `b`, `k` and the index model (residual bootstrap, residuals by part with `weights = "deaths"`); `a` fixed | Poisson, predictive draws (`coda_causes()`: all-cause deaths split multinomially between the causes) |
 | `coda_multiway()` | yes (resampled innovations, shared by the strata) | no | no | Poisson, predictive draws |
 | `hyndman_ullah()` | yes | as fdm | no | Poisson, predictive draws |
 | `stmomo()` (including `"plat"`) | yes | yes | no | Poisson, predictive draws |
@@ -1007,10 +1206,11 @@ observable rates. For models of expected rates they are deaths drawn
 given the rates of each draw and the exposures, divided by the exposures:
 Poisson, the observation model of the Poisson Lee-Carter model (Brouhns,
 Denuit and Vermunt 2002), or negative binomial with the estimated
-dispersion for `lee_carter(family = "nb")` and with the dispersion of the
-posterior draw for `stanmomo(family = "nb")`. No other observation noise
-is added. For models of observed rates (`rwd()`, `arima_series()`,
-`ets_series()`) the draws already describe observable rates and nothing
+dispersion for `lee_carter(family = "nb")` (of each age with `dispersion =
+"age"`) and with the dispersion of the posterior draw for
+`stanmomo(family = "nb")`. No other observation noise is added. For
+models of observed rates (`rwd()`, `arima_series()`, `ets_series()`) the
+draws already describe observable rates and nothing
 is added, unless the model was fitted to smoothed rates (`step_smooth()`):
 then predictive draws add Poisson deaths as well. Forecast draws of
 models of expected rates without `predictive` describe the expected
@@ -1124,6 +1324,10 @@ application to the Lee-Carter model. *Statistical Modelling* 13(1):
 Currie ID, Durban M, Eilers PHC (2004). Smoothing and forecasting
 mortality rates. *Statistical Modelling* 4(4): 279-298.
 
+De Jong P, Tickle L (2006). Extending Lee-Carter mortality forecasting.
+*Mathematical Population Studies* 13(1): 1-18.
+doi:10.1080/08898480500452109.
+
 De Lathauwer L, De Moor B, Vandewalle J (2000). On the best rank-1 and
 rank-(R1, R2, ..., RN) approximation of higher-order tensors. *SIAM
 Journal on Matrix Analysis and Applications* 21(4): 1324-1342.
@@ -1142,9 +1346,17 @@ DerSimonian R, Laird N (1986). Meta-analysis in clinical trials.
 Diebold FX, Mariano RS (1995). Comparing predictive accuracy. *Journal of
 Business & Economic Statistics* 13(3): 253-263.
 
+Djeundje VAB, Currie ID (2011). Smoothing dispersed counts with
+applications to mortality data. *Annals of Actuarial Science* 5(1):
+33-52. doi:10.1017/S1748499510000047.
+
 Dong Z, Shang HL, Hui F, Bruhn A (2025). A compositional approach to
 modeling cause-specific mortality with zero counts. *Annals of Actuarial
 Science* 19(3): 416-441. doi:10.1017/S1748499524000320.
+
+Enchev V, Kleinow T, Cairns AJG (2017). Multi-population mortality
+models: fitting, forecasting and comparisons. *Scandinavian Actuarial
+Journal* 2017(4): 319-342. doi:10.1080/03461238.2015.1133450.
 
 Flury BN (1984). Common principal components in k groups. *Journal of the
 American Statistical Association* 79(388): 892-898.
@@ -1218,6 +1430,11 @@ Kessy SR, Sherris M, Villegas AM, Ziveyi J (2022). Mortality forecasting
 using stacked regression ensembles. *Scandinavian Actuarial Journal*
 2022(7): 591-626.
 
+Kjærgaard S, Ergemen YE, Kallestrup-Lamb M, Oeppen J, Lindahl-Jacobsen R
+(2019). Forecasting causes of death by using compositional data analysis:
+the case of cancer deaths. *Journal of the Royal Statistical Society
+Series C* 68(5): 1351-1370. doi:10.1111/rssc.12357.
+
 Kleinow T (2015). A common age effect model for the mortality of multiple
 populations. *Insurance: Mathematics and Economics* 63: 147-152.
 doi:10.1016/j.insmatheco.2015.03.023.
@@ -1241,6 +1458,10 @@ for forecasting mortality. *Demography* 38(4): 537-549.
 Lee RD, Carter LR (1992). Modeling and forecasting U.S. mortality.
 *Journal of the American Statistical Association* 87(419): 659-671.
 
+Li JS-H, Hardy MR, Tan KS (2009). Uncertainty in mortality forecasting:
+an extension to the classical Lee-Carter approach. *ASTIN Bulletin* 39(1):
+137-164. doi:10.2143/AST.39.1.2038060.
+
 Li N, Lee R (2005). Coherent mortality forecasts for a group of
 populations: an extension of the Lee-Carter method. *Demography* 42(3):
 575-594.
@@ -1249,6 +1470,10 @@ Li N, Lee R, Gerland P (2013). Extending the Lee-Carter method to model
 the rotation of age patterns of mortality decline for long-term
 projections. *Demography* 50(6): 2037-2051.
 doi:10.1007/s13524-013-0232-2.
+
+Lock EF, Hoadley KA, Marron JS, Nobel AB (2013). Joint and individual
+variation explained (JIVE) for integrated analysis of multiple data types.
+*Annals of Applied Statistics* 7(1): 523-542. doi:10.1214/12-AOAS597.
 
 Møller B, Fekjær H, Hakulinen T, Sigvaldason H, Storm HH, Talbäck M,
 Haldorsen T (2003). Prediction of cancer incidence in the Nordic
@@ -1330,6 +1555,11 @@ doi:10.1080/01621459.1984.10477111.
 Spiegelhalter DJ, Best NG, Carlin BP, van der Linde A (2002). Bayesian
 measures of model complexity and fit. *Journal of the Royal Statistical
 Society B* 64(4): 583-639.
+
+Stoeldraijer L, van Duin C, van Wissen L, Janssen F (2018). Comparing
+strategies for matching mortality forecasts to the most recently observed
+data: exploring the trade-off between accuracy and robustness. *Genus*
+74(1): 16. doi:10.1186/s41118-018-0041-y.
 
 Tashman LJ (2000). Out-of-sample tests of forecasting accuracy: an
 analysis and review. *International Journal of Forecasting* 16(4):

@@ -174,3 +174,171 @@ test_that("mt_parameters() and summary() describe cae() fits", {
   expect_match(mortensor:::model_assumptions(cae(order = 2)), "Kleinow 2015")
   expect_output(print(summary(fit)), "Common age effect")
 })
+
+# index = "coherent": the forecasting model of Enchev, Kleinow and Cairns (2017, Table 10, Model 3)
+
+# Exact rates of a CAE model of order 2 whose period effects follow that
+# model: kappa1 of K populations a random walk with a common drift `d` and
+# correlated innovations, kappa2 AR(1) processes with coefficients `phi`
+cae_coherent_truth <- function(n = 8, nt = 1000, d = -0.03, phi = c(0.3, 0.6, 0.8), seed = 1) {
+  set.seed(seed)
+  K <- length(phi)
+  beta <- qr.Q(qr(cbind(seq(1, 2, length.out = n), sin(seq_len(n)))))
+  beta <- sweep(beta, 2, sign(colSums(beta)), "*")
+  a <- sapply(seq_len(K), function(i) -6 + 0.3 * (seq_len(n) - 1) + 0.1 * i)
+  S1 <- 0.15^2 * (0.5 + 0.5 * diag(K))
+  S2 <- 0.1^2 * (0.3 + 0.7 * diag(K))
+  k1 <- t(apply(d + t(chol(S1)) %*% matrix(rnorm(K * nt), K), 1, cumsum))
+  e2 <- t(chol(S2)) %*% matrix(rnorm(K * nt), K)
+  k2 <- e2
+  for (t in 2:nt) k2[, t] <- phi * k2[, t - 1] + e2[, t]
+  logm <- array(NA_real_, c(n, nt, K))
+  for (i in seq_len(K)) logm[, , i] <- a[, i] + beta %*% rbind(k1[i, ], k2[i, ])
+  list(beta = beta, d = d, phi = phi, S1 = S1, S2 = S2, logm = logm)
+}
+
+test_that("cae(index = \"coherent\") with one population and order 1 equals the random walk with drift", {
+  x <- mt_subset(mt_regroup(mt_example(), age = "deaths"), sex == "female")
+  f_rw <- mt_fit(cae(), x)
+  f_co <- mt_fit(cae(index = "coherent"), x)
+  expect_equal(f_co$fits$drift, f_rw$fits$drift)
+  expect_equal(f_co$fits$common_drift, f_rw$fits$drift)
+  expect_equal(f_co$fits$sigma, f_rw$fits$sigma)
+  fc_rw <- mt_forecast(f_rw, h = 6, n_draws = 50, seed = 3)
+  fc_co <- mt_forecast(f_co, h = 6, n_draws = 50, seed = 3)
+  expect_equal(fc_co$rates, fc_rw$rates, tolerance = 1e-10)
+  # order 2: the first period effect keeps its own drift, the second is an AR(1) through the origin
+  f2 <- mt_fit(cae(order = 2, index = "coherent"), x)$fits
+  k <- f2$kappa[, , 1]
+  nt <- ncol(k)
+  expect_equal(f2$drift, c((k[1, nt] - k[1, 1]) / (nt - 1), 0), ignore_attr = TRUE)
+  expect_equal(f2$phi, c(1, sum(k[2, -1] * k[2, -nt]) / sum(k[2, -nt]^2)))
+})
+
+test_that("cae(index = \"coherent\") estimates a common drift, AR(1) coefficients and one covariance", {
+  x <- cae_data()
+  fit <- mt_fit(cae(order = 2, index = "coherent"), x)
+  f <- fit$fits
+  ns <- nrow(fit$strata)
+  nt <- dim(f$kappa)[2]
+  K <- matrix(aperm(f$kappa, c(1, 3, 2)), 2 * ns)
+  # the common drift: mean year-to-year change of the first period effects, every population with the same weight
+  d <- mean((f$kappa[1, nt, ] - f$kappa[1, 1, ]) / (nt - 1))
+  expect_equal(f$common_drift, d)
+  expect_equal(f$drift, rep(c(d, 0), ns))
+  phi <- vapply(seq_len(ns), function(s) {
+    k <- f$kappa[2, , s]
+    sum(k[-1] * k[-nt]) / sum(k[-nt]^2)
+  }, 0)
+  expect_equal(f$phi, as.vector(rbind(1, phi)))
+  expect_true(all(abs(phi) < 0.99))
+  R <- K[, -1] - f$phi * K[, -nt] - f$drift
+  expect_equal(f$sigma, tcrossprod(R) / (nt - 2))
+  # the same age effects, period effects and fitted rates as index = "rwd"
+  rw <- mt_fit(cae(order = 2), x)
+  expect_equal(fitted(fit), fitted(rw))
+  expect_equal(f$kappa, rw$fits$kappa)
+  # first period effects with equal drifts: the common drift is that drift, the covariance that of "rwd"
+  k1 <- f$kappa[1, , , drop = FALSE]
+  own <- (k1[1, nt, ] - k1[1, 1, ]) / (nt - 1)
+  k1[1, , ] <- k1[1, , ] - outer(seq_len(nt) - 1, own - d)
+  eq <- mortensor:::cae_index_fit(k1, f$group, f$members, "coherent")
+  eq_rw <- mortensor:::cae_index_fit(k1, f$group, f$members, "rwd")
+  expect_equal(eq$drift, rep(d, ns))
+  expect_equal(eq_rw$drift, rep(d, ns))
+  expect_equal(eq$sigma, eq_rw$sigma)
+  expect_equal(eq$sigma, rw$fits$sigma[seq(1, 2 * ns, by = 2), seq(1, 2 * ns, by = 2)])
+})
+
+test_that("cae(index = \"coherent\") recovers the parameters of data simulated from its forecasting model", {
+  tr <- cae_coherent_truth()
+  E <- array(1e20, dim(tr$logm))
+  f <- fit_arrays(cae(order = 2, index = "coherent"), exp(tr$logm) * E, E)
+  # age effects up to a small rotation: the sample period effects of the two orders are not exactly orthogonal
+  expect_lt(max(abs(f$beta[[1]] - tr$beta)), 1e-3)
+  n <- dim(tr$logm)[2] - 1
+  expect_lt(abs(f$common_drift - tr$d), 4 * sqrt(sum(tr$S1) / 9 / n))
+  expect_lt(max(abs(f$phi[c(2, 4, 6)] - tr$phi)), 4 * sqrt((1 - 0.3^2) / n))
+  expect_equal(sqrt(diag(f$sigma)[c(1, 3, 5)]), sqrt(diag(tr$S1)), tolerance = 0.1)
+  expect_equal(sqrt(diag(f$sigma)[c(2, 4, 6)]), sqrt(diag(tr$S2)), tolerance = 0.1)
+  expect_lt(max(abs(stats::cov2cor(f$sigma[c(1, 3, 5), c(1, 3, 5)]) - stats::cov2cor(tr$S1))), 0.1)
+  expect_lt(max(abs(stats::cov2cor(f$sigma[c(2, 4, 6), c(2, 4, 6)]) - stats::cov2cor(tr$S2))), 0.1)
+  # innovations of the two orders are independent in the simulation
+  expect_lt(max(abs(stats::cov2cor(f$sigma)[c(1, 3, 5), c(2, 4, 6)])), 0.1)
+})
+
+test_that("cae(index = \"coherent\") draws follow the forecasting model", {
+  x <- cae_data()
+  fit <- mt_fit(cae(order = 2, index = "coherent"), mt_subset(x, region == "R1", sex == "female"))
+  f <- fit$fits
+  h <- 8
+  fc <- mt_forecast(fit, h = h, n_draws = 6000, seed = 1)
+  # period effects of the draws [order and stratum, draw] in the last forecast year
+  y <- log(fc$rates[, h, , ]) - as.vector(f$a)
+  ns <- ncol(f$a)
+  kd <- matrix(NA_real_, 2 * ns, dim(y)[3])
+  for (s in seq_len(ns)) kd[(s - 1) * 2 + 1:2, ] <- crossprod(f$beta[[1]], y[, s, ])
+  # mean phi^h last + drift (1 + phi + ... + phi^(h - 1)); covariance sigma[r, s] times the sum over k < h of
+  # (phi_r phi_s)^k, plus h^2 times the variance of the common drift for the first period effects
+  g <- function(z) ifelse(abs(z - 1) < 1e-12, h, (1 - z^h) / (1 - z))
+  mu <- f$phi^h * f$last + f$drift * g(f$phi)
+  V <- f$sigma * g(outer(f$phi, f$phi))
+  first <- f$drift_group > 0
+  V[first, first] <- V[first, first] + h^2 * drop(f$drift_weights %*% f$sigma %*% t(f$drift_weights)) / f$n_changes
+  sdv <- sqrt(diag(V))
+  expect_lt(max(abs(rowMeans(kd) - mu) / sdv), 0.06)
+  expect_equal(sqrt(diag(stats::cov(t(kd)))), sdv, tolerance = 0.05)
+  expect_lt(max(abs(stats::cor(t(kd)) - stats::cov2cor(V))), 0.05)
+  # the common drift cancels in the differences of the first period effects: their expected value stays at
+  # the last fitted year, and their variance is h times the variance of the differences of the innovations
+  i <- which(first)[1:2]
+  w <- c(1, -1)
+  dk <- drop(w %*% kd[i, ])
+  expect_lt(abs(mean(dk) - sum(w * f$last[i])) / stats::sd(dk), 0.06)
+  expect_equal(stats::var(dk), h * drop(w %*% f$sigma[i, i] %*% w), tolerance = 0.06)
+})
+
+test_that("cae(index = \"coherent\") with common_by and hierarchies gives each group its own drift", {
+  x <- cae_data()
+  fit <- mt_fit(cae(common_by = "sex", index = "coherent"), x)
+  expect_length(fit$fits$common_drift, 2)
+  women <- mt_fit(cae(index = "coherent"), mt_subset(x, sex == "female"))
+  g <- fit$fits$group[which(fit$strata$sex == "female")[1]]
+  expect_equal(fit$fits$common_drift[g], women$fits$common_drift)
+  expect_equal(unique(fit$fits$drift[fit$fits$group == g]), women$fits$common_drift)
+  # aggregates take the common drift of the bottom strata
+  h <- mt_hierarchy(quintile = "all")
+  fa <- mt_fit(cae(order = 2, index = "coherent"), mt_aggregate_strata(x, h))
+  fb <- mt_fit(cae(order = 2, index = "coherent"), x)
+  expect_equal(fa$fits$common_drift, fb$fits$common_drift)
+  expect_equal(fa$fits$drift[fa$fits$drift_group > 0], rep(fb$fits$common_drift, nrow(fa$strata)))
+  rc <- mt_forecast(mt_fit(reconciled(cae(index = "coherent"), h, method = "bottom_up"), x), h = 2, n_draws = 20,
+                    seed = 1)
+  expect_lt(coherence_gap(rc, h), 1e-8)
+  expect_mt_model(cae(order = 2, common_by = "sex", index = "coherent"), data = x, n_draws = 10)
+})
+
+test_that("cae(index = \"coherent\") bounds the AR(1) coefficients and reports its parameters", {
+  # exact rates of order 2 whose second period effects are slow waves: phi above 0.99
+  n <- 6
+  nt <- 100
+  beta <- qr.Q(qr(cbind(seq(1, 2, length.out = n), cos(seq_len(n)))))
+  tt <- seq_len(nt)
+  logm <- array(NA_real_, c(n, nt, 2))
+  for (i in 1:2) logm[, , i] <- -5 + beta %*% rbind(-0.1 * i * tt, (0.5 + i) * cos(pi * tt / nt))
+  E <- array(1e12, dim(logm))
+  expect_warning(f <- fit_arrays(cae(order = 2, index = "coherent"), exp(logm) * E, E), class = "mt_warning_cae")
+  expect_equal(f$phi[c(2, 4)], c(0.99, 0.99))
+  expect_true(all(f$bounded[c(2, 4)]))
+  expect_error(cae(index = "nonsense"), class = "mt_error_argument")
+  expect_identical(cae()$params$index, "rwd")
+  fit <- mt_fit(cae(order = 2, index = "coherent"), cae_data())
+  p <- mt_parameters(fit)
+  expect_true(all(c("phi_kappa2", "drift_kappa1", "drift_kappa2") %in% p$parameter))
+  expect_false("phi_kappa1" %in% p$parameter)
+  expect_equal(unique(p[parameter == "drift_kappa1", value]), fit$fits$common_drift)
+  expect_equal(unique(p[parameter == "drift_kappa2", value]), 0)
+  expect_equal(p[parameter == "phi_kappa2", value], fit$fits$phi[seq(2, length(fit$fits$phi), by = 2)])
+  expect_match(mortensor:::model_assumptions(cae(order = 2, index = "coherent")), "Enchev")
+  expect_match(fit$spec$label, "coherent")
+})

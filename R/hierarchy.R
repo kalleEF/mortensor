@@ -1240,10 +1240,14 @@ permute_component <- function(component, perm) {
 }
 
 # Values per stratum and draw [stratum, draw] (components, sizes of the
-# negative binomial distribution of the deaths) after the paths of each
-# stratum were permuted
+# negative binomial distribution of the deaths; sizes [age, stratum, draw]
+# with a dispersion by age) after the paths of each stratum were permuted
 permute_rows <- function(x, perm) {
   if (is.null(x) || is.null(perm)) return(x)
+  if (length(dim(x)) == 3L) {
+    for (a in seq_len(dim(x)[1])) x[a, , ] <- permute_rows(matrix(x[a, , ], dim(x)[2]), perm)
+    return(x)
+  }
   matrix(x[cbind(rep(seq_len(nrow(perm)), ncol(perm)), as.vector(perm))], nrow(perm))
 }
 
@@ -1655,6 +1659,7 @@ shrink_cov <- function(X, shrink = "auto", center = TRUE) {
 #' h <- mt_hierarchy(sex = "both", region = "all", quintile = "all")
 #' fit <- mt_fit(reconciled(lee_carter(), h, method = "wls"), mt_aggregate_strata(x, h))
 #' fc <- mt_forecast(fit, h = 5, n_draws = 50, seed = 1)
+#' \donttest{
 #' # the Schaake shuffle of the separate Lee-Carter forecasts, then MinT with
 #' # the covariance of the errors of forecasts from 4 inner origins
 #' sm <- reconciled(lee_carter(), h, method = "mint", dependence = "schaake", covariance = "errors",
@@ -1663,7 +1668,6 @@ shrink_cov <- function(X, shrink = "auto", center = TRUE) {
 #' fit_sm$reconcile$errors$n[1:3, ]
 #' fc_sm <- mt_forecast(fit_sm, h = 5, n_draws = 50, seed = 1)
 #' fc_sm$schaake$dates
-#' \donttest{
 #' # score-optimal reconciliation, trained on forecasts of 2012-2019 from 4 origins
 #' es <- reconciled(lee_carter(), h, method = "energy_score", years = 8, n_origins = 4, horizon = 3,
 #'                  control = list(max_iter = 200))
@@ -1771,6 +1775,9 @@ mt_fit.mt_spec_reconciled <- function(spec, data, prep = NULL, cores = 1, ...) {
 fits_bottom_alone <- function(spec) {
   if (!inherits(spec, "mt_spec")) return(TRUE)
   if (spec$model %in% c("tucker3", "coda_multiway", "saint", "coda_causes", "cause_shares")) return(FALSE)
+  # relative_model(): reference strata of the data (often aggregates), or a
+  # reference population of its own
+  if (spec$model == "relative") return(inherits(spec$params$reference, "mt_data"))
   p <- spec$params
   inner <- switch(spec$model,
                   ensemble = p$components,
@@ -1946,8 +1953,14 @@ take_draws <- function(A, draw) {
 }
 
 # Rows [bottom stratum, draw] of a matrix for all nodes of a hierarchy
-# (aggregates NA); vectors (one value per draw) and NULL are kept
+# (aggregates NA; [age, stratum, draw] for sizes with a dispersion by age);
+# vectors (one value per draw) and NULL are kept
 node_rows <- function(x, hs) {
+  if (length(dim(x)) == 3L) {
+    out <- array(NA_real_, c(dim(x)[1], nrow(hs$S), dim(x)[3]))
+    out[, hs$bottom, ] <- x
+    return(out)
+  }
   if (!is.matrix(x)) return(x)
   out <- matrix(NA, nrow(hs$S), ncol(x))
   storage.mode(out) <- storage.mode(x)

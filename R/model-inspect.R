@@ -7,7 +7,10 @@
 #'   (period index), and the drift and innovation standard deviation of `k`;
 #'   with `rotate = TRUE` also the ultimate pattern `b_ultimate`; with
 #'   `family = "nb"` also the dispersion `nb_dispersion` (variance `mu + phi
-#'   mu^2`);
+#'   mu^2`; one per age group with a dispersion by age); with `jump_off =
+#'   "filtered"` also the filtered index of the last year `k_filtered`, its
+#'   standard error `se_k_filtered` and the state-space estimates
+#'   `filter_sigma`, `filter_lambda`, `filter_drift`;
 #' * [li_lee()], [product_ratio()]: the common factor of each group (`B`,
 #'   `K`, its drift and standard deviation), and per stratum the deviations
 #'   `a`, `b`, `k` and their AR(1) coefficient `phi` and standard deviation;
@@ -21,6 +24,11 @@
 #'   `order_K`, `arima_K`, `sd_K`) and per stratum `a`, `b`, `k` and the
 #'   ARIMA model of `k`. [coda_causes()]: per group, as [coda()], with parts
 #'   by age and cause (`b1`, `k1`, `b2`, `k2`, ... with several components);
+#'   with `individual = TRUE` also the individual components of each cause
+#'   (`b_<cause>`, `k_<cause>`, `order_k_<cause>`, ...) and the explained
+#'   variation of each cause (`explained_joint`, `explained_individual`),
+#'   and with weights the weights of the parts (`w_part`) and years
+#'   (`w_time`);
 #' * [coda_multiway()]: the common age patterns `b`, time indexes `k` (with
 #'   `order_k`, `arima_k`, `sd_k`), population markers `gamma` and core `g`
 #'   (index `p,q,r`), numbered with several components, and the share of
@@ -35,9 +43,14 @@
 #' * [p_splines()], [cp_splines()]: the smoothing parameters over age
 #'   (`lambda_age`) and years (`lambda_year`), the effective dimension
 #'   (`ed`), the criterion (`bic` or `aic`) and the dispersion (deviance
-#'   divided by the number of cells minus the effective dimension); for
-#'   [cp_splines()] also the bounds of the rates of ageing and of change per
-#'   age (`ageing_lower`, `ageing_upper`, `change_lower`, `change_upper`).
+#'   divided by the number of cells minus the effective dimension); with
+#'   `p_splines(overdispersion = "age")` the smooth dispersion by age
+#'   (`dispersion`), the bias-corrected mean Pearson statistics by age that
+#'   it smooths (`dispersion_raw`), its smoothing parameter
+#'   (`lambda_dispersion`) and the dispersion `tau` of these statistics
+#'   (`dispersion_tau`); for [cp_splines()] also the bounds of the rates of
+#'   ageing and of change per age (`ageing_lower`, `ageing_upper`,
+#'   `change_lower`, `change_upper`).
 #' * [saint()]: per trend (`"trend <group>"`) the indexes `alpha`, `beta`,
 #'   `kappa`, `zeta` by year, the frailty variance `sigma2`, the
 #'   pseudo-log-likelihood `loglik`, the `drift` and covariance `cov` of
@@ -46,6 +59,16 @@
 #'   `lambda`, `Omega`) and the standard deviations `sd_kappa`, `sd_zeta`;
 #'   per stratum with a spread the spread parameters `y1` ... `y5` by year
 #'   and their VAR(1) (`ar` or `A`, and `Omega`);
+#' * [relative_model()]: per group (`"reference <group>"`) the reference
+#'   parameters `alpha`, `beta` (by age), `kappa` (by year), `gamma` (by
+#'   year of birth), the `drift` and `sd` of `kappa`, the ARIMA(1,1,0) model
+#'   of `gamma` (`ar_gamma`, `drift_gamma`, `sd_gamma`), and the
+#'   log-likelihood, effective number of parameters, number of cells and BIC
+#'   of the reference part (`loglik`, `npar`, `nobs`, `bic`); per group
+#'   (`"subpopulations <group>"`) the common `beta` and the same statistics
+#'   of the subpopulation part; per subpopulation `alpha`, `kappa`, the
+#'   `drift` and `sd` of `kappa` and the correlation `cor` of its
+#'   innovations with those of each subpopulation of the group;
 #' * [bohk_rau()]: posterior medians and 90% intervals of the curve
 #'   parameters `b1` and `b2` by age and of the variance and hyperparameters,
 #'   the least-squares values `theta1`, `theta2` (exponential core model) and
@@ -64,12 +87,14 @@
 #' * [cae()]: the common age effects `beta1`, `beta2`, ... of each group
 #'   (rows labelled `common <g> (<strata>)`), and per stratum the centring
 #'   `a`, the period effects `kappa1`, `kappa2`, ..., their drift
-#'   (`drift_kappa1`, ...), the standard deviation of their innovations
-#'   (`sd_kappa1`, ...) and the correlation of their innovations with those
-#'   of the same order of every stratum (`cor_kappa1`, ..., indexed by the
-#'   other stratum); rows of stratum `"model"` give the mean squared error
-#'   of the centred log rates (`mse`) and the approximate BIC of Kleinow
-#'   (2015, eq. 5; `bic`).
+#'   (`drift_kappa1`, ...; with `index = "coherent"` the common drift of the
+#'   group for order 1 and 0 for the others, whose autoregressive
+#'   coefficients are `phi_kappa2`, ...), the standard deviation of their
+#'   innovations (`sd_kappa1`, ...) and the correlation of their innovations
+#'   with those of the same order of every stratum (`cor_kappa1`, ...,
+#'   indexed by the other stratum); rows of stratum `"model"` give the mean
+#'   squared error of the centred log rates (`mse`) and the approximate BIC
+#'   of Kleinow (2015, eq. 5; `bic`).
 #'
 #' Fits of wrapped packages (StMoMo, demography) keep the original fitted
 #' object in `fit$fits[[i]]`, where the methods of those packages apply.
@@ -188,8 +213,15 @@ base_parameters <- function(fit, sp) {
       if (is.null(f)) return(NULL)
       rbind(row(lab[s], "a", ages, f$a), row(lab[s], "b", ages, f$b), row(lab[s], "k", yrs, f$k),
             row(lab[s], "drift_k", "", f$drift), row(lab[s], "sd_k", "", f$sigma_k),
-            if (!is.null(f$dispersion)) row(lab[s], "nb_dispersion", "", f$dispersion),
-            if (!is.null(f$b_ultimate)) row(lab[s], "b_ultimate", ages, f$b_ultimate))
+            if (!is.null(f$dispersion)) {
+              row(lab[s], "nb_dispersion", if (is.null(f$age_nb_size)) "" else ages, f$dispersion)
+            },
+            if (!is.null(f$b_ultimate)) row(lab[s], "b_ultimate", ages, f$b_ultimate),
+            if (!is.null(f$filter)) {
+              row(lab[s], c("k_filtered", "se_k_filtered", "filter_sigma", "filter_lambda", "filter_drift"),
+                  c(yrs[length(yrs)], yrs[length(yrs)], "", "", ""),
+                  c(f$filter$level, f$filter$se, f$filter$sigma, f$filter$lambda, f$filter$drift))
+            })
     })))
   }
   if (inherits(sp, c("mt_spec_coda", "mt_spec_coda_causes"))) return(coda_parameters(fit, sp))
@@ -201,7 +233,12 @@ base_parameters <- function(fit, sp) {
       b <- f$bounds
       rbind(row(lab[s], "lambda_age", "", f$lambda[1]), row(lab[s], "lambda_year", "", f$lambda[2]),
             row(lab[s], "ed", "", f$ed), row(lab[s], f$criterion, "", f$ic),
-            row(lab[s], "dispersion", "", f$dispersion),
+            row(lab[s], "dispersion", if (is.null(f$phi)) "" else ages, f$dispersion),
+            if (!is.null(f$phi)) {
+              rbind(row(lab[s], "dispersion_raw", ages, f$dispersion_raw),
+                    row(lab[s], "lambda_dispersion", "", f$lambda_dispersion),
+                    row(lab[s], "dispersion_tau", "", f$dispersion_tau))
+            },
             if (!is.null(b)) {
               rbindlist(lapply(c("ageing_lower", "ageing_upper", "change_lower", "change_upper"),
                                function(nm) row(lab[s], nm, ages, b[[nm]])))
@@ -258,6 +295,7 @@ base_parameters <- function(fit, sp) {
               same <- (seq_len(ns) - 1L) * p + j
               rbind(row(lab[s], paste0("kappa", j), yrs, f$kappa[j, , s]),
                     row(lab[s], paste0("drift_kappa", j), "", f$drift[i]),
+                    if (identical(f$index, "coherent") && j > 1) row(lab[s], paste0("phi_kappa", j), "", f$phi[i]),
                     row(lab[s], paste0("sd_kappa", j), "", sdv[i]),
                     row(lab[s], paste0("cor_kappa", j), lab, cr[i, same]))
             })))
@@ -265,6 +303,7 @@ base_parameters <- function(fit, sp) {
     return(rbind(common, own, row("model", c("mse", "bic"), "", c(f$mse, f$bic))))
   }
   if (inherits(sp, "mt_spec_saint")) return(saint_parameters(fit))
+  if (inherits(sp, "mt_spec_relative")) return(relative_parameters(fit))
   if (inherits(sp, "mt_spec_bohk_rau")) return(bohk_rau_parameters(fit))
   if (inherits(sp, "mt_spec_apci")) return(apci_parameters(fit))
   if (inherits(sp, "mt_spec_nordpred")) return(nordpred_parameters(fit))
@@ -517,7 +556,10 @@ model_assumptions <- function(spec) {
   switch(class(spec)[1],
          mt_spec_lee_carter = paste(
            "log m(x,t) = a(x) + b(x) k(t), estimated by",
-           if (identical(p$family, "nb")) {
+           if (identical(p$family, "nb") && !identical(p$dispersion %||% "global", "global")) {
+             paste("negative binomial maximum likelihood (Li, Hardy and Tan 2009): deaths with mean mu and",
+                   "variance mu + alpha(x) mu^2, one dispersion alpha(x) per age group.")
+           } else if (identical(p$family, "nb")) {
              paste("negative binomial maximum likelihood (Delwarde, Denuit and Partrat 2007): deaths with mean mu",
                    "and variance mu + phi mu^2, one dispersion phi for all ages and years.")
            } else if (p$method == "poisson") {
@@ -533,14 +575,33 @@ model_assumptions <- function(spec) {
                none = "with k(t) from the SVD (not refitted)"), ".")
            },
            "k(t) follows a random walk with drift; draws include",
-           "its innovations and the uncertainty of the drift. a(x) and b(x) are fixed",
-           "(parameter uncertainty with bootstrapped()). Predictive draws add",
+           "its innovations and the uncertainty of the drift.",
+           if (isTRUE(p$bootstrap)) {
+             keep <- identical(p$family, "nb") && !identical(p$dispersion %||% "global", "global")
+             sprintf(paste("a(x), b(x) and k(t) are re-estimated on %d resamples of the fitted deaths (parametric",
+                           "bootstrap), each with its own drift.%s"), p$n_boot,
+                     if (keep) " The refits keep the dispersions of the fit." else "")
+           } else {
+             "a(x) and b(x) are fixed (parameter uncertainty with bootstrapped())."
+           },
+           "Predictive draws add",
            if (identical(p$family, "nb")) {
              "negative binomial variation of the deaths given the rates, with the estimated dispersion."
            } else {
              "Poisson variation of the deaths given the rates."
            },
-           "Jump-off:", p$jump_off, "rates.",
+           "Jump-off:", switch(p$jump_off,
+             constrained = paste("observed rates of the last year, as constraints of the fit (a(x) = log m(x,T),",
+                                 "k(T) = 0; Li, Hardy and Tan 2009)."),
+             filtered = paste("rates at the Kalman filter estimate of k in the last year (De Jong and Tickle",
+                              "2006)."),
+             observed = if ((p$jump_off_years %||% 1) > 1) {
+               sprintf(paste("mean observed log rates of the last %d years, moved from their midpoint to the",
+                             "last year by the drift (Stoeldraijer et al. 2018)."), p$jump_off_years)
+             } else {
+               "observed rates."
+             },
+             paste(p$jump_off, "rates.")),
            if (isTRUE(p$rotate)) {
              sprintf(paste("b(x) rotates towards an ultimate pattern (flat below 65) as life expectancy at birth",
                            "of each path rises from %g to %g (Li, Lee and Gerland 2013); k(t) is solved again so",
@@ -549,12 +610,28 @@ model_assumptions <- function(spec) {
            }),
          mt_spec_p_splines = paste(
            "Two-dimensional P-splines (Currie, Durban and Eilers 2004; MortalitySmooth): log m(x,t) is a B-spline",
-           "surface over age and year with difference penalties on its coefficients, fitted by penalised Poisson",
-           sprintf("likelihood with smoothing parameters chosen by %s.", toupper(p$criterion)),
+           "surface over age and year with difference penalties on its coefficients, fitted by penalised",
+           sprintf("%s with smoothing parameters chosen by %s.",
+                   if (identical(p$overdispersion, "age")) "quasi-likelihood" else "Poisson likelihood",
+                   toupper(p$criterion)),
            "The forecast extends the basis over the forecast years with weight 0, so the penalty (order",
-           sprintf("%d over years) extrapolates the trend of each age.", p$pord[2]),
+           sprintf("%d over years) extrapolates the trend of each age.%s", p$pord[2],
+                   if (identical(p$overdispersion, "age")) {
+                     paste(" The variance of the deaths is a dispersion times their mean, the dispersion varying",
+                           "smoothly over age (Djeundje and Currie 2011): it divides the weights of the fit and",
+                           "the deviance in the criterion, and is estimated by smoothing bias-corrected Pearson",
+                           "statistics over age.")
+                   } else {
+                     ""
+                   }),
            "Draws come from the normal approximation of the coefficients (covariance of the penalised",
-           if (isTRUE(p$overdispersion)) "likelihood, scaled by the overdispersion);" else "likelihood);",
+           if (isTRUE(p$overdispersion)) {
+             "likelihood, scaled by the overdispersion);"
+           } else if (identical(p$overdispersion, "age")) {
+             "quasi-likelihood with the dispersions by age);"
+           } else {
+             "likelihood);"
+           },
            "their variance grows with the horizon. Predictive draws add Poisson variation of the deaths."),
          mt_spec_cp_splines = paste(
            "CP-splines (Camarda 2019): two-dimensional P-splines, with coefficients of their own for age 0 where",
@@ -593,11 +670,21 @@ model_assumptions <- function(spec) {
            "beta_j(x) kappa_j(t,i); the age effects beta (orthonormal columns) are common to the populations",
            if (!is.null(p$common_by)) "of each group of `common_by`",
            "and estimated by least-squares common principal components of the centred log rates (equal weight",
-           "per population); kappa = t(beta) times the centred rates. Forecast (package-specific; the paper",
-           "does not forecast): the period effects of all populations follow one multivariate random walk with",
-           "drift with correlated normal innovations; draws include the innovations and the drift uncertainty;",
-           "a and beta are fixed. Each population keeps its own drift, so forecasts can diverge. Predictive",
-           "draws add Poisson variation of the deaths given the rates."),
+           "per population); kappa = t(beta) times the centred rates.",
+           if (identical(p$index, "coherent")) {
+             paste("Forecast (Enchev, Kleinow and Cairns 2017, Table 10, Model 3): kappa_1 of all populations a",
+                   "multivariate random walk with a common drift", if (!is.null(p$common_by)) "per group",
+                   "(the mean change, equal weights), kappa_2, ... AR(1) processes reverting to 0 (diagonal",
+                   "VAR(1), least squares through the origin, |phi| <= 0.99), so the expected rates of the",
+                   "populations do not diverge; one covariance of all innovations; draws include the innovations",
+                   "and the uncertainty of the common drift; a, beta and phi are fixed.")
+           } else {
+             paste("Forecast (package-specific; the paper does not forecast): the period effects of all",
+                   "populations follow one multivariate random walk with drift with correlated normal innovations;",
+                   "draws include the innovations and the drift uncertainty; a and beta are fixed. Each population",
+                   "keeps its own drift, so forecasts can diverge.")
+           },
+           "Predictive draws add Poisson variation of the deaths given the rates."),
          mt_spec_coupled = paste(model_assumptions(p$base), sprintf(paste(
            "Coupled (ensemble copula coupling, ECC-R; Schefzik et al. 2013): the draws of each age, year and",
            "stratum keep the values of this model, reordered so that their ranks follow the draws of %s; the",
@@ -622,6 +709,7 @@ model_assumptions <- function(spec) {
            "so the spread reverts towards zero. Draws include the innovations of the trend indexes and of the",
            "spread; parameters are fixed. Frailty selection makes rates of improvement change over time.",
            "Predictive draws add Poisson variation of the deaths given the rates. Jump-off: fitted rates."),
+         mt_spec_relative = relative_assumptions(spec),
          mt_spec_coherent_fdm = paste(
            "Product-ratio method with functional data models (Hyndman, Booth and Yasmeen 2013; demography):",
            "rates smoothed over age; the geometric mean of the strata (per group of `common_by`) and the ratio",

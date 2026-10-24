@@ -1,6 +1,7 @@
 # Numerical core of the compositional (CoDa) models coda(), coda(coherent =
 # TRUE) and coda_causes(), written from Bergeron-Boucher, Canudas-Romo,
-# Oeppen and Vaupel (2017) and Oeppen (2008). The supplementary R code of
+# Oeppen and Vaupel (2017) and Oeppen (2008), with the weighted two-step
+# decomposition of Kjaergaard et al. (2019). The supplementary R code of
 # Bergeron-Boucher et al. (2017) (CoDaForecast.R, Demographic Research)
 # states no licence; it is not copied here, and its results serve as test
 # references (tests/testthat/test-coda.R).
@@ -242,15 +243,97 @@ kannisto_ml <- function(D, E, t) {
 # component [part, year] removed before the decomposition (coherent model).
 # `adjust`: the first forecast step of an ARIMA(0, 1, q) index with drift is
 # corrected to the drift (Bergeron-Boucher et al. 2017, eq. 20).
-coda_core <- function(Z, rank = 1, order = c(0, 1, 1), drift = TRUE, common = NULL, adjust = TRUE) {
+# `w_part`, `w_time`, `rows`: weights of the parts and years and the rows of
+# each cause for the individual components of the two-step model of
+# Kjaergaard et al. (2019) (coda_decompose()); NULL for the unweighted
+# decomposition without individual components. The decomposition and the
+# bootstrap settings are then kept in `decomp`; `rank` counts all indexes
+# and `n_joint` the joint ones.
+coda_core <- function(Z, rank = 1, order = c(0, 1, 1), drift = TRUE, common = NULL, adjust = TRUE,
+                      w_part = NULL, w_time = NULL, rows = NULL) {
   alpha <- rowMeans(Z)
   H <- Z - alpha
   if (!is.null(common)) H <- H - common
   rank <- min(rank, nrow(H) - 1, ncol(H) - 1)
-  sv <- coda_svd(H, rank)
-  list(alpha = alpha, b = sv$b, k = sv$k, explained = sv$explained, rank = rank,
-       ts = lapply(seq_len(rank), function(j) index_arima_fit(sv$k[, j], order, drift)),
+  if (is.null(w_part) && is.null(w_time) && is.null(rows)) {
+    sv <- coda_svd(H, rank)
+    return(list(alpha = alpha, b = sv$b, k = sv$k, explained = sv$explained, rank = rank,
+                ts = lapply(seq_len(rank), function(j) index_arima_fit(sv$k[, j], order, drift)),
+                order = order, drift = drift, adjust = adjust, resid = H - sv$b %*% t(sv$k), Z_last = Z[, ncol(Z)]))
+  }
+  dec <- list(rank = rank, w_part = w_part, w_time = w_time, rows = rows)
+  sv <- coda_decompose(H, dec)
+  r_all <- ncol(sv$k)
+  list(alpha = alpha, b = sv$b, k = sv$k, explained = sv$explained, rank = r_all, n_joint = rank,
+       b_individual = sv$b_individual, decomp = dec,
+       ts = lapply(seq_len(r_all), function(j) index_arima_fit(sv$k[, j], order, drift)),
        order = order, drift = drift, adjust = adjust, resid = H - sv$b %*% t(sv$k), Z_last = Z[, ncol(Z)])
+}
+
+# Two-step decomposition of a centred clr matrix H [part, year] (Kjaergaard
+# et al. 2019, Section 2.4, eq. 9-12): the first `dec$rank` components of
+# the generalized SVD with weights `dec$w_part` of the parts and
+# `dec$w_time` of the years give the joint components `b` and `k` (eq. 9-11);
+# with `dec$rows` (rows of each cause), the residuals of each cause get the
+# first component of their (unweighted) SVD, as the paper names it for eq.
+# (12) (individual loadings `b_individual` [part, cause], zero outside the
+# rows of the cause, and indexes). In `b`, the individual loadings are
+# centred over all parts, which leaves the closed composition unchanged and
+# keeps the fit on the clr scale. `ref`: a fit whose loadings fix the signs
+# (bootstrap refits).
+coda_decompose <- function(H, dec, ref = NULL) {
+  r <- dec$rank
+  jt <- coda_gsvd(H, r, dec$w_part, dec$w_time, ref = if (!is.null(ref)) ref$b[, seq_len(r), drop = FALSE])
+  if (is.null(dec$rows)) return(jt)
+  E <- H - jt$b %*% t(jt$k)
+  nc <- length(dec$rows)
+  B <- matrix(0, nrow(H), nc)
+  K <- matrix(0, ncol(H), nc)
+  ex <- numeric(nc)
+  for (i in seq_len(nc)) {
+    ri <- dec$rows[[i]]
+    s <- coda_svd(E[ri, , drop = FALSE], 1, ref = if (!is.null(ref)) ref$b_individual[ri, i, drop = FALSE])
+    B[ri, i] <- s$b
+    K[, i] <- s$k
+    ex[i] <- s$explained
+  }
+  list(b = cbind(jt$b, sweep(B, 2, colMeans(B))), k = cbind(jt$k, K), explained = c(jt$explained, ex),
+       b_individual = B)
+}
+
+# First `rank` components of the generalized SVD of C [part, year] with
+# diagonal weights of the parts and years (van Loan 1976; Abdi 2007): the
+# SVD of diag(sqrt(w_part)) C diag(sqrt(w_time)), whose first components
+# minimise sum w_part[p] w_time[t] (C[p, t] - sum_j b[p, j] k[t, j])^2. The
+# loadings are scaled to unit length (as coda_svd()); the indexes are
+# k = t(C) diag(w_part) b, which do not depend on the weights of the years
+# given b. NULL weights are unit weights. `explained`: share of the weighted
+# sum of squares of each component.
+coda_gsvd <- function(C, rank = 1, w_part = NULL, w_time = NULL, ref = NULL) {
+  wp <- w_part %||% rep(1, nrow(C))
+  wt <- w_time %||% rep(1, ncol(C))
+  s <- svd(sqrt(wp) * C * rep(sqrt(wt), each = nrow(C)), nu = rank, nv = 0)
+  b <- s$u[, seq_len(rank), drop = FALSE] / sqrt(wp)
+  b <- b / rep(sqrt(colSums(b^2)), each = nrow(b))
+  b_w <- b * wp
+  # indexes: weighted least squares of each year on the loadings
+  k <- t(solve(crossprod(b, b_w), crossprod(b_w, C)))
+  sg <- coda_signs(b, k, ref)
+  list(b = sg$b, k = sg$k, explained = s$d[seq_len(rank)]^2 / max(sum(s$d^2), .Machine$double.xmin))
+}
+
+# Signs of components: aligned with `ref` (columns of b) where given,
+# otherwise each index increases over the years (Bergeron-Boucher et al.
+# 2017, p. 533)
+coda_signs <- function(b, k, ref = NULL) {
+  for (j in seq_len(ncol(b))) {
+    flip <- if (!is.null(ref)) sum(b[, j] * ref[, j]) < 0 else k[nrow(k), j] < k[1, j]
+    if (isTRUE(flip)) {
+      b[, j] <- -b[, j]
+      k[, j] <- -k[, j]
+    }
+  }
+  list(b = b, k = k)
 }
 
 # First `rank` components of the SVD of a centred matrix C [part, year]:
@@ -263,25 +346,31 @@ coda_svd <- function(C, rank = 1, ref = NULL) {
   s <- svd(t(C), nu = rank, nv = rank)
   b <- s$v[, seq_len(rank), drop = FALSE]
   k <- s$u[, seq_len(rank), drop = FALSE] * rep(s$d[seq_len(rank)], each = nrow(s$u))
-  for (j in seq_len(rank)) {
-    flip <- if (!is.null(ref)) sum(b[, j] * ref[, j]) < 0 else k[nrow(k), j] < k[1, j]
-    if (isTRUE(flip)) {
-      b[, j] <- -b[, j]
-      k[, j] <- -k[, j]
-    }
-  }
-  list(b = b, k = k, explained = s$d[seq_len(rank)]^2 / max(sum(s$d^2), .Machine$double.xmin))
+  sg <- coda_signs(b, k, ref)
+  list(b = sg$b, k = sg$k, explained = s$d[seq_len(rank)]^2 / max(sum(s$d^2), .Machine$double.xmin))
 }
 
 # Least-squares loadings of the log rate of the open interval on the
-# indexes (columns of X), the open-interval analogue of b[x] (package-specific)
-coda_open_fit <- function(lo, X) {
+# indexes (columns of X), the open-interval analogue of b[x] (package-specific).
+# `w`: weights of the years (weighted least squares).
+coda_open_fit <- function(lo, X, w = NULL) {
   X <- cbind(1, X)
-  cf <- qr.coef(qr(X), lo)
+  cf <- if (is.null(w)) qr.coef(qr(X), lo) else qr.coef(qr(sqrt(w) * X), sqrt(w) * lo)
   cf[is.na(cf)] <- 0
   res <- lo - X %*% cf
   list(a = cf[[1]], b = unname(cf[-1]), last = lo[length(lo)], y = lo,
        sd = sqrt(sum(res^2) / max(length(lo) - ncol(X), 1)))
+}
+
+# Open-interval regression of a CoDa fit: on the joint indexes only (the
+# loadings of individual indexes are zero; package-specific), weighted by the
+# weights of the years of the decomposition
+coda_open_core <- function(lo, core) {
+  nj <- core$n_joint %||% core$rank
+  if (is.null(core$decomp)) return(coda_open_fit(lo, core$k))
+  out <- coda_open_fit(lo, core$k[, seq_len(nj), drop = FALSE], core$decomp$w_time)
+  out$b <- c(out$b, rep(0, core$rank - nj))
+  out
 }
 
 # Point forecasts of the indexes [h, rank]: means of the ARIMA models, the
@@ -306,12 +395,15 @@ coda_index_mean <- function(core, h) {
 # ceiling(sqrt(n_draws)) refits share the paths. `open_y`: log rate of the
 # open interval (or its part not explained by the common component),
 # regressed on the indexes of each refit [h, draw]. The order of the draws is
-# random.
+# random. A fit with a two-step decomposition (`core$decomp`) is refitted
+# with the same decomposition and weights of the joint components
+# (coda_resample() draws its residuals).
 coda_boot <- function(core, h, n_draws, open_y = NULL) {
   r <- core$rank
   np <- nrow(core$b)
   fitted <- core$b %*% t(core$k)
   R <- core$resid
+  dec <- core$decomp
   out <- array(0, c(np, h, n_draws))
   open <- if (!is.null(open_y)) matrix(0, h, n_draws) else NULL
   n_rep <- ceiling(sqrt(n_draws))
@@ -320,14 +412,18 @@ coda_boot <- function(core, h, n_draws, open_y = NULL) {
   while (j0 < n_draws) {
     m <- min(n_k, n_draws - j0)
     idx <- j0 + seq_len(m)
-    Hs <- fitted + matrix(R[sample.int(length(R), length(R), replace = TRUE)], nrow(R))
-    sv <- coda_svd(Hs, r, ref = core$b)
+    if (is.null(dec)) {
+      Hs <- fitted + matrix(R[sample.int(length(R), length(R), replace = TRUE)], nrow(R))
+      sv <- coda_svd(Hs, r, ref = core$b)
+    } else {
+      sv <- coda_decompose(fitted + coda_resample(R, dec), dec, ref = core)
+    }
     paths <- lapply(seq_len(r), function(j) {
       index_arima_paths(index_arima_fit(sv$k[, j], core$order, core$drift), h, m)
     })
     for (j in seq_len(r)) out[, , idx] <- out[, , idx, drop = FALSE] + outer(sv$b[, j], paths[[j]])
     if (!is.null(open_y)) {
-      cf <- coda_open_fit(open_y, sv$k)
+      cf <- coda_open_core(open_y, list(k = sv$k, rank = r, n_joint = core$n_joint, decomp = dec))
       open[, idx] <- cf$a
       for (j in seq_len(r)) open[, idx] <- open[, idx] + cf$b[j] * paths[[j]]
     }
@@ -335,6 +431,26 @@ coda_boot <- function(core, h, n_draws, open_y = NULL) {
   }
   perm <- sample.int(n_draws)
   list(Z = out[, , perm, drop = FALSE], open = if (!is.null(open)) open[, perm, drop = FALSE])
+}
+
+# Residuals [part, year] for a bootstrap refit of a two-step decomposition
+# (package-specific; reference unknown). Without weights, cell by cell from
+# all residuals (Bergeron-Boucher et al. 2017, Appendix B). With weights of
+# the parts, each cell takes a residual of its own part, as the weighted fit
+# leaves residuals of very different size in different parts; with weights
+# of the years, the year of the residual is drawn with probability
+# proportional to its weight, the weighted empirical distribution that the
+# fit uses.
+coda_resample <- function(R, dec) {
+  np <- nrow(R)
+  nt <- ncol(R)
+  prob <- dec$w_time
+  if (is.null(dec$w_part)) {
+    cells <- sample.int(length(R), length(R), replace = TRUE, prob = if (!is.null(prob)) rep(prob, each = np))
+    return(matrix(R[cells], np))
+  }
+  yr <- sample.int(nt, np * nt, replace = TRUE, prob = prob)
+  matrix(R[cbind(rep(seq_len(np), nt), yr)], np)
 }
 
 # Centring of simulated clr deaths Z [part, h, draw] (and log open rates

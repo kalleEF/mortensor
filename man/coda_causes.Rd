@@ -11,7 +11,10 @@ coda_causes(
   residual = "auto",
   rank = 1,
   order = c(0, 1, 1),
-  drift = TRUE
+  drift = TRUE,
+  weights = c("equal", "deaths"),
+  rho = NULL,
+  individual = FALSE
 )
 }
 \arguments{
@@ -31,6 +34,16 @@ unexplained in the median cell).}
 Japan).}
 
 \item{order, drift}{ARIMA order and drift of each index, as in \code{\link[=coda]{coda()}}.}
+
+\item{weights}{Weights of the parts (ages by cause) in the decomposition:
+\code{"equal"} (Oeppen 2008) or \code{"deaths"}, their mean life-table deaths
+(Kjærgaard et al. 2019, eq. 10).}
+
+\item{rho}{\code{NULL} (equal weights of the years) or the weight of the last
+year, a number between 0 and 1: years weighted by \code{rho (1 - rho)^(T - t)} (Kjærgaard et al. 2019, eq. 11; they use 0.1).}
+
+\item{individual}{Add one individual component per cause to the joint
+components (Kjærgaard et al. 2019, eq. 12).}
 }
 \value{
 A model specification.
@@ -39,8 +52,11 @@ A model specification.
 \code{coda_causes()} forecasts death rates by cause with the multiple-decrement
 form of the compositional Lee-Carter model, which Oeppen (2008) proposed
 and tested on Japanese causes of death. Causes add up to all causes in
-every draw. The model is experimental. Status: published, with the
-deviations listed below; section numbers refer to Oeppen (2008).
+every draw. The options \code{weights}, \code{rho} and \code{individual} add the
+extensions of Kjærgaard, Ergemen, Kallestrup-Lamb, Oeppen and
+Lindahl-Jacobsen (2019). The model is experimental. Status: published,
+with the deviations listed below; section numbers refer to Oeppen (2008),
+and to Kjærgaard et al. (2019) for the extensions.
 }
 \details{
 \strong{Model (Sections 3, 6 and 8.3).} In each group (the strata that differ
@@ -97,16 +113,89 @@ exposures and split them multinomially between the causes by the cause
 shares of the draw, so that the causes also add up to all causes in
 predictive draws; no other observation noise is added (package-specific).
 
-The extensions of Kjærgaard, Ergemen, Kallestrup-Lamb, Oeppen and
-Lindahl-Jacobsen (2019) are not implemented, nor is the alpha-transformation
-that Dong, Shang, Hui and Bruhn (2025) use in place of the clr for
-compositions of causes with zero counts. Compare the model with
-\code{\link[=reconciled]{reconciled()}} separate models in a backtest before using it.
+\strong{Weights and individual components (Kjærgaard et al. 2019, Section
+2.4).} Kjærgaard et al. call the model above CT-CoDA and extend it to
+the two-step model 2S-CoDA with two elements, weights of the parts and
+years and cause-specific components. They are options here:
+\itemize{
+\item \code{weights = "deaths"} weights each part (age by cause) by its temporal
+mean of the life-table deaths, \code{w[x, i] = dbar[x, i] / sum(dbar)} (eq.
+10), so that a large cause counts more than a small one and splitting a
+cause does not double its weight;
+\item \code{rho} weights the years \verb{t = 1, ..., T} by \code{rho (1 - rho)^(T - t)} (eq.
+11, after Hyndman, Booth and Yasmeen 2013): the last year gets the weight
+\code{rho}, earlier years less. The paper uses \code{rho = 0.1}, chosen by
+cross-validation (Section 2.8). Eq. (11) states \verb{t = 1, ..., T - 1}; the
+text gives the last year the weight \code{rho}, which the package follows;
+\item with weights, the components are the first ones of a generalized
+singular value decomposition (van Loan 1976) with these weights of the
+parts and years: they minimise the sum over parts and years of
+\verb{w[x, i] w[t]} times the squared residual of eq. (9). The centre \code{a} is
+the unweighted geometric mean, as in CT-CoDA (Section 2.4: 2S-CoDA
+"follows the same first steps"). Loadings have unit length; the index
+of each year is the weighted least-squares fit of that year;
+\item \code{individual = TRUE} adds the cause-specific components of eq. (12): the
+residuals of each cause after the joint components (\code{rank} of them; the
+paper uses one) get the first component of their own unweighted SVD,
+\verb{b_i[x] k_i[t]}, as the paper names it for this step (Section 2.4); the
+weights of eq. (10) and (11) apply to the joint components of eq. (9).
+This follows the joint and individual components of Lock et al. (2013)
+in two steps without iteration, as in the paper.
+}
+
+\code{coda_causes(weights = "deaths", rho = 0.1, individual = TRUE)} is
+2S-CoDA; with \code{jump_off = "fitted"}, forecasts start from the model, as in
+eq. (7) of the paper. \code{rank = 3} is the paper's CT-CoDA (Section 2.8).
+Every index, joint or individual, has its own ARIMA model of \code{order} and
+\code{drift}, independent of the others. The paper selects the order of
+integration of each index by the augmented Dickey-Fuller test and the ARMA
+orders by AIC, with a drift for the rank-one indexes (Section 2.8); the
+settings of the test are not given, and the package uses \code{order}. Further
+choices of the package (reference unknown): in the clr deaths, the
+individual loadings are centred over all parts, which leaves the closed
+composition unchanged; the log rate of an open age interval is regressed
+on the joint indexes only, weighted by the weights of the years; a
+residual cause gets an individual component, the survivors of a closed
+age range none. The paper gives point forecasts only. Draws refit the
+same decomposition (with the same weights of the joint components) to
+bootstrap samples. With weights of the parts, each cell takes a residual
+of its own part: pooled resampling (Appendix B of Bergeron-Boucher et al.
+2017) would move the large residuals of small, down-weighted parts into
+the parts that determine the weighted fit, and on \code{\link[=mt_example_causes]{mt_example_causes()}}
+it about doubled the innovation standard deviation of the refitted index.
+With weights of the years, the year of each residual is drawn with
+probability proportional to its weight. \code{\link[=mt_parameters]{mt_parameters()}} gives the
+individual loadings and indexes as \verb{b_<cause>} and \verb{k_<cause>}
+with their ARIMA models and the share of the residual variation of the
+cause after the joint components that they explain (\verb{explained_<cause>}),
+the weights \code{w_part} and
+\code{w_time}, and the share of the variation of each cause explained by the
+joint and the individual components (\code{explained_joint},
+\code{explained_individual}; squared Frobenius norms of the centred clr deaths
+of the cause, Section 3.3.1 and Fig. 4).
+
+The paper replaces zero counts by half a death; zeros here are replaced
+multiplicatively, as above. The paper's third model, VECM-CoDA (Section
+2.5: one SVD per cause and a cointegrated vector error correction model
+of the cause indexes, with the Johansen test), is not implemented. The
+paper's data (France, Institut National d'Etudes Démographiques,
+1955-2008; the Netherlands, Statistics Netherlands, 1958-2014; 5-year age
+groups from 25) are not available to the package, so its numbers (Table
+\enumerate{
+\item are not reproduced. The alpha-transformation that Dong, Shang, Hui and Bruhn
+(2025) use in place of the clr for compositions of causes with zero
+counts is not implemented. Compare the model with \code{\link[=reconciled]{reconciled()}} separate
+models in a backtest before using it.
+}
 }
 \examples{
 x <- mt_example_causes(years = 2005:2019)
 fit <- mt_fit(coda_causes(), x)
 fc <- mt_forecast(fit, h = 5, n_draws = 50, seed = 1)
+# 2S-CoDA of Kjaergaard et al. (2019): weights and individual components
+fit2 <- mt_fit(coda_causes(weights = "deaths", rho = 0.1, individual = TRUE), x)
+p <- mt_parameters(fit2)
+p[parameter \%in\% c("explained_joint", "explained_individual")]
 }
 \references{
 Oeppen J (2008). Coherent forecasting of multiple-decrement life tables:
@@ -121,6 +210,17 @@ Kjærgaard S, Ergemen YE, Kallestrup-Lamb M, Oeppen J, Lindahl-Jacobsen R
 (2019). Forecasting causes of death by using compositional data analysis:
 the case of cancer deaths. \emph{Journal of the Royal Statistical Society
 Series C} 68(5): 1351-1370. \doi{10.1111/rssc.12357}
+
+van Loan CF (1976). Generalizing the singular value decomposition. \emph{SIAM
+Journal on Numerical Analysis} 13(1): 76-83. \doi{10.1137/0713009}
+
+Hyndman RJ, Booth H, Yasmeen F (2013). Coherent mortality forecasting: the
+product-ratio method with functional time series models. \emph{Demography}
+50(1): 261-283. \doi{10.1007/s13524-012-0145-5}
+
+Lock EF, Hoadley KA, Marron JS, Nobel AB (2013). Joint and individual
+variation explained (JIVE) for integrated analysis of multiple data types.
+\emph{Annals of Applied Statistics} 7(1): 523-542. \doi{10.1214/12-AOAS597}
 
 Dong Z, Shang HL, Hui F, Bruhn A (2025). A compositional approach to
 modeling cause-specific mortality with zero counts. \emph{Annals of Actuarial

@@ -23,7 +23,9 @@ model type that has interpretable parameters:
 \item \code{\link[=lee_carter]{lee_carter()}}: \code{a} (age pattern), \code{b} (age pattern of change), \code{k}
 (period index), and the drift and innovation standard deviation of \code{k};
 with \code{rotate = TRUE} also the ultimate pattern \code{b_ultimate}; with
-\code{family = "nb"} also the dispersion \code{nb_dispersion} (variance \verb{mu + phi mu^2});
+\code{family = "nb"} also the dispersion \code{nb_dispersion} (variance \verb{mu + phi mu^2}; one per age group with a dispersion by age); with \code{jump_off = "filtered"} also the filtered index of the last year \code{k_filtered}, its
+standard error \code{se_k_filtered} and the state-space estimates
+\code{filter_sigma}, \code{filter_lambda}, \code{filter_drift};
 \item \code{\link[=li_lee]{li_lee()}}, \code{\link[=product_ratio]{product_ratio()}}: the common factor of each group (\code{B},
 \code{K}, its drift and standard deviation), and per stratum the deviations
 \code{a}, \code{b}, \code{k} and their AR(1) coefficient \code{phi} and standard deviation;
@@ -37,6 +39,11 @@ model gives per group of \code{common_by} the common \code{a}, \code{B}, \code{K
 \code{order_K}, \code{arima_K}, \code{sd_K}) and per stratum \code{a}, \code{b}, \code{k} and the
 ARIMA model of \code{k}. \code{\link[=coda_causes]{coda_causes()}}: per group, as \code{\link[=coda]{coda()}}, with parts
 by age and cause (\code{b1}, \code{k1}, \code{b2}, \code{k2}, ... with several components);
+with \code{individual = TRUE} also the individual components of each cause
+(\verb{b_<cause>}, \verb{k_<cause>}, \verb{order_k_<cause>}, ...) and the explained
+variation of each cause (\code{explained_joint}, \code{explained_individual}),
+and with weights the weights of the parts (\code{w_part}) and years
+(\code{w_time});
 \item \code{\link[=coda_multiway]{coda_multiway()}}: the common age patterns \code{b}, time indexes \code{k} (with
 \code{order_k}, \code{arima_k}, \code{sd_k}), population markers \code{gamma} and core \code{g}
 (index \verb{p,q,r}), numbered with several components, and the share of
@@ -51,9 +58,14 @@ of the identified quantities;
 \item \code{\link[=p_splines]{p_splines()}}, \code{\link[=cp_splines]{cp_splines()}}: the smoothing parameters over age
 (\code{lambda_age}) and years (\code{lambda_year}), the effective dimension
 (\code{ed}), the criterion (\code{bic} or \code{aic}) and the dispersion (deviance
-divided by the number of cells minus the effective dimension); for
-\code{\link[=cp_splines]{cp_splines()}} also the bounds of the rates of ageing and of change per
-age (\code{ageing_lower}, \code{ageing_upper}, \code{change_lower}, \code{change_upper}).
+divided by the number of cells minus the effective dimension); with
+\code{p_splines(overdispersion = "age")} the smooth dispersion by age
+(\code{dispersion}), the bias-corrected mean Pearson statistics by age that
+it smooths (\code{dispersion_raw}), its smoothing parameter
+(\code{lambda_dispersion}) and the dispersion \code{tau} of these statistics
+(\code{dispersion_tau}); for \code{\link[=cp_splines]{cp_splines()}} also the bounds of the rates of
+ageing and of change per age (\code{ageing_lower}, \code{ageing_upper},
+\code{change_lower}, \code{change_upper}).
 \item \code{\link[=saint]{saint()}}: per trend (\code{"trend <group>"}) the indexes \code{alpha}, \code{beta},
 \code{kappa}, \code{zeta} by year, the frailty variance \code{sigma2}, the
 pseudo-log-likelihood \code{loglik}, the \code{drift} and covariance \code{cov} of
@@ -62,6 +74,16 @@ error-correction model: \code{a11}, \code{a21}, \code{a32}, \code{a42}, \code{C_
 \code{lambda}, \code{Omega}) and the standard deviations \code{sd_kappa}, \code{sd_zeta};
 per stratum with a spread the spread parameters \code{y1} ... \code{y5} by year
 and their VAR(1) (\code{ar} or \code{A}, and \code{Omega});
+\item \code{\link[=relative_model]{relative_model()}}: per group (\code{"reference <group>"}) the reference
+parameters \code{alpha}, \code{beta} (by age), \code{kappa} (by year), \code{gamma} (by
+year of birth), the \code{drift} and \code{sd} of \code{kappa}, the ARIMA(1,1,0) model
+of \code{gamma} (\code{ar_gamma}, \code{drift_gamma}, \code{sd_gamma}), and the
+log-likelihood, effective number of parameters, number of cells and BIC
+of the reference part (\code{loglik}, \code{npar}, \code{nobs}, \code{bic}); per group
+(\code{"subpopulations <group>"}) the common \code{beta} and the same statistics
+of the subpopulation part; per subpopulation \code{alpha}, \code{kappa}, the
+\code{drift} and \code{sd} of \code{kappa} and the correlation \code{cor} of its
+innovations with those of each subpopulation of the group;
 \item \code{\link[=bohk_rau]{bohk_rau()}}: posterior medians and 90\% intervals of the curve
 parameters \code{b1} and \code{b2} by age and of the variance and hyperparameters,
 the least-squares values \code{theta1}, \code{theta2} (exponential core model) and
@@ -80,12 +102,14 @@ the recent trend;
 \item \code{\link[=cae]{cae()}}: the common age effects \code{beta1}, \code{beta2}, ... of each group
 (rows labelled \verb{common <g> (<strata>)}), and per stratum the centring
 \code{a}, the period effects \code{kappa1}, \code{kappa2}, ..., their drift
-(\code{drift_kappa1}, ...), the standard deviation of their innovations
-(\code{sd_kappa1}, ...) and the correlation of their innovations with those
-of the same order of every stratum (\code{cor_kappa1}, ..., indexed by the
-other stratum); rows of stratum \code{"model"} give the mean squared error
-of the centred log rates (\code{mse}) and the approximate BIC of Kleinow
-(2015, eq. 5; \code{bic}).
+(\code{drift_kappa1}, ...; with \code{index = "coherent"} the common drift of the
+group for order 1 and 0 for the others, whose autoregressive
+coefficients are \code{phi_kappa2}, ...), the standard deviation of their
+innovations (\code{sd_kappa1}, ...) and the correlation of their innovations
+with those of the same order of every stratum (\code{cor_kappa1}, ...,
+indexed by the other stratum); rows of stratum \code{"model"} give the mean
+squared error of the centred log rates (\code{mse}) and the approximate BIC
+of Kleinow (2015, eq. 5; \code{bic}).
 }
 
 Fits of wrapped packages (StMoMo, demography) keep the original fitted

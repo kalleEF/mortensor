@@ -1,6 +1,76 @@
-# mortensor 0.1.9000 (development of 0.2.0)
+# mortensor 0.2.0
 
 Clean break: the 0.1.x interface is replaced (see `dev/revamp-plan.md`).
+
+## Methods from the full texts of the remaining plan items
+
+Work package E8: the items of `dev/generalisation-plan.md` that waited
+for full texts, implemented from the papers. All are opt-in; defaults are
+unchanged.
+
+* `lee_carter(family = "nb", dispersion = "age")` estimates one dispersion
+  of the negative binomial deaths per age group by maximum likelihood (Li,
+  Hardy and Tan 2009). `jump_off = "constrained"` fits the model with the
+  paper's forecast origin correction: `a[x]` is the observed log rate of
+  the last year and `k[T] = 0`. With `bootstrap = TRUE` this is the
+  paper's parametric bootstrap. Predictive draws, also through wrappers,
+  draw negative binomial deaths with the dispersion of each age.
+* `lee_carter(jump_off = "observed", jump_off_years = n)` starts the
+  forecast from the mean observed log rates of the last `n` years, placed
+  at their midpoint and moved to the last year by the drift: the "average
+  n years observed" jump-off of Stoeldraijer et al. (2018). For French men
+  it reproduces their Table 8a within 0.03 years.
+* `lee_carter(jump_off = "filtered")` starts the forecast from the Kalman
+  filter estimate of the index in the last year under the state-space
+  Lee-Carter model of De Jong and Tickle (2006). Its variances, drift and
+  initial level are estimated by maximum likelihood given `a` and `b`.
+  `mt_parameters()` reports the filtered index and the estimates.
+* The help of `anchored()` lists the six jump-off options of Stoeldraijer
+  et al. (2018) and how to get each. `anchored(years = n)` is a
+  package-specific variant of their averaged jump-off.
+* `p_splines(overdispersion = "age")` estimates a dispersion for each age
+  that varies smoothly over age (Djeundje and Currie 2011, bias-corrected
+  scheme). The dispersions divide the weights of the fit and the deviance
+  of the criterion, and they are iterated with the fit. `mt_parameters()`
+  reports them. Predictive draws stay Poisson, as with
+  `overdispersion = TRUE`.
+* `coda_causes()` gains the extensions of Kjærgaard et al. (2019):
+  `weights = "deaths"` weights ages and causes by their mean life-table
+  deaths, `rho` weights the years by `rho (1 - rho)^(T - t)`, both through
+  a generalised SVD of the joint components, and `individual = TRUE` adds
+  one component per cause from a plain SVD of its residuals.
+  `coda_causes(weights = "deaths", rho = 0.1, individual = TRUE)` is their
+  2S-CoDA. `mt_parameters()` reports the variation of each cause that the
+  joint and individual components explain.
+* `cae(index = "coherent")` forecasts the common age effect model with
+  Model 3 of Enchev, Kleinow and Cairns (2017, Table 10): the first period
+  effects of all populations follow a random walk with one common drift,
+  and the others revert to 0 as AR(1) processes. The expected rates of the
+  populations do not diverge.
+* New `relative_model()`: the relative model of Villegas and Haberman
+  (2014) for subpopulations, such as deprivation quintiles, and the
+  population they belong to. The reference has a Lee-Carter model, with
+  cohort effects if `cohort = TRUE` (Renshaw and Haberman 2006; Hunt and
+  Villegas 2015). Each subpopulation's log rates are the reference's plus
+  an age pattern of level differences and a common age pattern times its
+  own index. The reference is a stratum of the data or an `mt_data` object
+  with more ages and years. All parameters are joint Poisson maximum
+  likelihood estimates. The subpopulation indexes follow a multivariate
+  random walk with drift (`deviation = "mrwd"`), independent random walks
+  (`"rwd"`) or stay at their last values (`"constant"`): the processes the
+  paper compares. Tests check the recovery of the parameters, the effective
+  numbers of parameters of the paper's Table 1 and agreement with
+  `lee_carter()` and `StMoMo::rh()` without subpopulations.
+* New `mt_pessimism()` measures how much more pessimistic the sum of cause
+  forecasts is than a forecast of all causes (Wilmoth 1995): life
+  expectancy of both and their difference, the m-ratio by age and the
+  contribution of each cause, path by path. For observed data it gives
+  Wilmoth's approximation from the distributions of deaths by cause in two
+  periods. Tests reproduce Table 1 of the paper.
+* Tests: three comparisons of doubles from different arithmetic paths now
+  allow rounding. The snapshot of the cause shares plot draws closed-form
+  random walks. Both had failed on macOS. The R-devel job of R-CMD-check
+  has 120 minutes to install its dependencies from source.
 
 ## Dependence between strata from training years; faster bottom-up reconciliation
 

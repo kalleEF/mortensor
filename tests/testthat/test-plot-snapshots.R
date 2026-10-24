@@ -1,8 +1,10 @@
 # Visual regression tests (vdiffr). Inputs are small and seeded; Tucker
 # factor signs are fixed in hooi(), so the plots are reproducible across
-# platforms. The snapshots were made with ggplot2 4.0; older versions draw
-# differently and skip. Update snapshots with testthat::snapshot_review()
-# after an intended change or a new ggplot2 release.
+# platforms. The cause shares come from closed-form random walks: shares of
+# an iterative fit differed on macOS in the digits that the SVG keeps. The
+# snapshots were made with ggplot2 4.0; older versions draw differently and
+# skip. Update snapshots with testthat::snapshot_review() after an intended
+# change or a new ggplot2 release.
 
 snapshot_inputs <- function() {
   x <- mt_example(deaths = "single", years = 2006:2019)
@@ -27,6 +29,7 @@ test_that("plots match their snapshots", {
   vdiffr::expect_doppelganger("scores by horizon", mt_plot_scores(s$bt))
   vdiffr::expect_doppelganger("tucker factors", mt_plot_tucker(mt_fit(tucker3(ranks = c(2, 2, 2)), s$x)))
   xc <- mt_example_causes(years = 2008:2019)
-  fcc <- mt_forecast(mt_fit(suppressWarnings(cause_shares(ranks = c(2, 2, 2, 2))), xc), h = 3, n_draws = 50, seed = 1)
+  hc <- mt_hierarchy(cause = list(total = "all", additive = "rates"))
+  fcc <- mt_forecast(mt_fit(reconciled(rwd(), hc, method = "bottom_up"), xc), h = 3, n_draws = 50, seed = 1)
   vdiffr::expect_doppelganger("cause shares", mt_plot_shares(fcc))
 })

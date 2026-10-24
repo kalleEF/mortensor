@@ -399,11 +399,13 @@ time; their intervals were calibrated in simulation, and a Brass benchmark
 did well because their data came from a Brass model.
 
 **Proposal.**
-- `relative_model(reference = lee_carter(), deviation = c("ar1", "rw",
-  "rwd"))`: a model of the reference stratum (England, Germany), and each
-  stratum's log ratio to it as an age pattern times an index (Villegas and
-  Haberman 2014; SAINT). `"ar1"` is coherent; `"rw"` and `"rwd"` let gaps
-  persist or trend. It generalises `product_ratio()`.
+- Done in E8 from the full text: `relative_model(reference, cohort =,
+  deviation = c("mrwd", "rwd", "constant"))`, a Lee-Carter (or
+  age-period-cohort) model of the reference stratum and each stratum's log
+  ratio to it as level differences plus an age pattern times its own index
+  (Villegas and Haberman 2014). The paper compares these three processes
+  of the indexes; stationary deviations come from `li_lee()`,
+  `coherent_fdm()` and `saint()`.
 - Test `bootstrapped(arima_series(order = c(0, 1, 1), drift = TRUE))` for the
   missing parameter uncertainty; if coverage stays low, a state-space
   `local_level()` with signal-to-noise ratios pooled over ages (Harvey 1989;
@@ -511,7 +513,7 @@ countries' trends.
 |---|---|---|
 | E5 | Negative binomial Lee-Carter; APCI; SAINT; common age effect model; ensemble copula coupling; multiway CoDa; CoDa review; removal of the performance validation suite | done in E5 |
 | E6 | `ensemble(weights = "crps_stack")` (Yao et al. 2018) and `"bias"` (Kontis et al. 2017), `"crps"` relabelled (Shang 2012), `"stack"` deprecated; `recalibrated(scale = "per_horizon")` (Gneiting et al. 2005) and `method = "errors"` (Keilman et al. 2002; Shang and Hyndman 2017), `scale = "horizon"` deprecated; coverage by horizon in `mt_score_table()`; Schaake shuffle (Clark et al. 2004), and in E7 `dependence = "empirical"` as the Schaake shuffle of whole stratum paths; MinT with the covariance of past errors; the old-age laws of Feehan (2018) with `open = "aic"`; `mt_open_check()` (Thatcher et al. 1998); SAPE, 90% coverage and half-widths (Raftery et al. 2013) and revisions in `mt_score()`; vignettes "Benchmarks" and on causes of death by deprivation | done in E6 |
-| Blocked: only abstracts available | age-specific dispersion (Li, Hardy and Tan 2009); smooth dispersion for `p_splines()` (Djeundje and Currie 2011); non-diverging forecasts of `cae()` (Enchev, Kleinow and Cairns 2017); filtered jump-off (De Jong and Tickle 2006); `mt_pessimism()` (Wilmoth 1995); joint components of `coda_causes()` (Kjærgaard et al. 2019); a choice of the deviation process for deprivation groups (Villegas and Haberman 2014); relabelling `anchored(years)` (the study summarised by Janssen 2018) | open |
+| E8 | From the full texts: dispersion by age and the forecast origin correction of `lee_carter()` (Li, Hardy and Tan 2009); `p_splines(overdispersion = "age")` (Djeundje and Currie 2011); `cae(index = "coherent")` (Enchev, Kleinow and Cairns 2017); the averaged jump-off `lee_carter(jump_off_years = )` (Stoeldraijer et al. 2018, the study Janssen 2018 summarises) and the filtered jump-off `lee_carter(jump_off = "filtered")` (De Jong and Tickle 2006); `mt_pessimism()` (Wilmoth 1995); 2S-CoDA in `coda_causes()` (Kjærgaard et al. 2019); `relative_model()` with the deviation processes that Villegas and Haberman (2014) compare | done in E8 |
 | Not implemented: package-specific or without an accessible source | `scale = "scaled_error"`; `anchored(decay = "ar1")`; a pooled local level model; shrinkage and bootstrap intervals of ensemble weights; `mt_dispersion()`; the variogram score | none |
 
 Each item is one work package with correctness tests, NEWS, progress log,
@@ -519,13 +521,14 @@ help, vignettes and pkgdown (`CLAUDE.md`). New methods are opt-in.
 
 **Decisions.** Taken on 2026-10-19 (Section 0) and 2026-10-20: implement
 every item whose source is available. `ensemble(weights = "crps")` is
-relabelled. Open: whether to offer a choice of the deviation process for
-deprivation groups (stationary, random walk, random walk with drift),
-which waits for the full text of Villegas and Haberman (2014); until then
-the reverting models (`li_lee()`, `coherent_fdm()`, `saint()`), separate
-trends (`lee_carter()` per stratum) and common age effects with their own
-drifts (`cae()`) are available, and the vignettes state their assumption
-on the gaps.
+relabelled. The deviation process for deprivation groups is settled by
+the full text of Villegas and Haberman (2014): the paper compares a
+multivariate random walk with drift, independent random walks and
+constant indexes of the subpopulations, which `relative_model(deviation =
+)` offers. The paper does not compare stationary deviations; the
+reverting models (`li_lee()`, `coherent_fdm()`, `saint()`) provide them,
+and the vignettes state each model's assumption on the gaps. Items whose
+papers have no full text remain listed in the sections above.
 
 ## 4. References
 
@@ -545,10 +548,10 @@ the literature collections or the package's roxygen references.
 - Clark M, Gangopadhyay S, Hay L, Rajagopalan B, Wilby R (2004). The Schaake shuffle: a method for reconstructing space-time variability in forecasted precipitation and temperature fields. Journal of Hydrometeorology 5(1): 243-262. doi:10.1175/1525-7541(2004)005<0243:TSSAMF>2.0.CO;2
 - Coroneo L, Iacone F (2020). Comparing predictive accuracy in small samples using fixed-smoothing asymptotics. Journal of Applied Econometrics 35(4): 391-409. doi:10.1002/jae.2756
 - Currie ID, Durban M, Eilers PHC (2004). Smoothing and forecasting mortality rates. Statistical Modelling 4(4): 279-298. doi:10.1191/1471082X04st080oa (abstract)
-- De Jong P, Tickle L (2006). Extending Lee-Carter mortality forecasting. Mathematical Population Studies 13(1): 1-18. doi:10.1080/08898480500452109 (abstract)
-- Delwarde A, Denuit M, Partrat C (2007). Negative binomial version of the Lee-Carter model for mortality forecasting. Applied Stochastic Models in Business and Industry 23(5): 385-401. doi:10.1002/asmb.679 (abstract)
-- Djeundje VAB, Currie ID (2011). Smoothing dispersed counts with applications to mortality data. Annals of Actuarial Science 5(1): 33-52. doi:10.1017/S1748499510000047 (abstract)
-- Enchev V, Kleinow T, Cairns AJG (2017). Multi-population mortality models: fitting, forecasting and comparisons. Scandinavian Actuarial Journal 2017(4): 319-342. doi:10.1080/03461238.2015.1133450 (abstract)
+- De Jong P, Tickle L (2006). Extending Lee-Carter mortality forecasting. Mathematical Population Studies 13(1): 1-18. doi:10.1080/08898480500452109
+- Delwarde A, Denuit M, Partrat C (2007). Negative binomial version of the Lee-Carter model for mortality forecasting. Applied Stochastic Models in Business and Industry 23(5): 385-401. doi:10.1002/asmb.679
+- Djeundje VAB, Currie ID (2011). Smoothing dispersed counts with applications to mortality data. Annals of Actuarial Science 5(1): 33-52. doi:10.1017/S1748499510000047
+- Enchev V, Kleinow T, Cairns AJG (2017). Multi-population mortality models: fitting, forecasting and comparisons. Scandinavian Actuarial Journal 2017(4): 319-342. doi:10.1080/03461238.2015.1133450
 - Feehan DM (2018). Separating the signal from the noise: evidence for deceleration in old-age death rates. Demography 55(6): 2025-2044. doi:10.1007/s13524-018-0728-x
 - Gneiting T, Raftery AE, Westveld AH, Goldman T (2005). Calibrated probabilistic forecasting using ensemble model output statistics and minimum CRPS estimation. Monthly Weather Review 133(5): 1098-1118. doi:10.1175/MWR2904.1
 - Gneiting T, Ranjan R (2013). Combining predictive distributions. Electronic Journal of Statistics 7: 1747-1782.
@@ -557,15 +560,15 @@ the literature collections or the package's roxygen references.
 - Hyndman RJ, Ahmed RA, Athanasopoulos G, Shang HL (2011). Optimal combination forecasts for hierarchical time series. Computational Statistics & Data Analysis 55(9): 2579-2589. doi:10.1016/j.csda.2011.03.006
 - Hyndman RJ, Booth H, Yasmeen F (2013). Coherent mortality forecasting: the product-ratio method with functional time series models. Demography 50(1): 261-283. doi:10.1007/s13524-012-0145-5
 - Janssen F (2018). Advances in mortality forecasting: introduction. Genus 74(1): 21. doi:10.1186/s41118-018-0045-7
-- Jarner SF, Jallbjørn S (2022). The SAINT model: a decade later. ASTIN Bulletin 52(2): 483-517. doi:10.1017/asb.2021.37 (abstract)
+- Jarner SF, Jallbjørn S (2022). The SAINT model: a decade later. ASTIN Bulletin 52(2): 483-517. doi:10.1017/asb.2021.37
 - Jarner SF, Kryger EM (2011). Modelling adult mortality in small populations: the SAINT model. ASTIN Bulletin 41(2): 377-418. doi:10.2143/AST.41.2.2136982 (not registered with Crossref; abstract)
 - Keilman N, Pham DQ, Hetland A (2002). Why population forecasts should be probabilistic - illustrated by the case of Norway. Demographic Research 6(15): 409-454. doi:10.4054/DemRes.2002.6.15
-- Kjærgaard S, Ergemen YE, Kallestrup-Lamb M, Oeppen J, Lindahl-Jacobsen R (2019). Forecasting causes of death by using compositional data analysis: the case of cancer deaths. Journal of the Royal Statistical Society Series C 68(5): 1351-1370. doi:10.1111/rssc.12357 (abstract)
-- Kleinow T (2015). A common age effect model for the mortality of multiple populations. Insurance: Mathematics and Economics 63: 147-152. doi:10.1016/j.insmatheco.2015.03.023 (abstract)
+- Kjærgaard S, Ergemen YE, Kallestrup-Lamb M, Oeppen J, Lindahl-Jacobsen R (2019). Forecasting causes of death by using compositional data analysis: the case of cancer deaths. Journal of the Royal Statistical Society Series C 68(5): 1351-1370. doi:10.1111/rssc.12357
+- Kleinow T (2015). A common age effect model for the mortality of multiple populations. Insurance: Mathematics and Economics 63: 147-152. doi:10.1016/j.insmatheco.2015.03.023
 - Kontis V, Bennett JE, Mathers CD, Li G, Foreman K, Ezzati M (2017). Future life expectancy in 35 industrialised countries: projections with a Bayesian model ensemble. The Lancet 389(10076): 1323-1335. doi:10.1016/S0140-6736(16)32381-9
 - Lazarus E, Lewis DJ, Stock JH, Watson MW (2018). HAR inference: recommendations for practice. Journal of Business & Economic Statistics 36(4): 541-559. doi:10.1080/07350015.2018.1506926 (abstract)
 - Lee R, Miller T (2001). Evaluating the performance of the Lee-Carter method for forecasting mortality. Demography 38(4): 537-549. doi:10.1353/dem.2001.0036 (abstract)
-- Li JS-H, Hardy MR, Tan KS (2009). Uncertainty in mortality forecasting: an extension to the classical Lee-Carter approach. ASTIN Bulletin 39(1): 137-164. doi:10.2143/AST.39.1.2038060 (abstract)
+- Li JS-H, Hardy MR, Tan KS (2009). Uncertainty in mortality forecasting: an extension to the classical Lee-Carter approach. ASTIN Bulletin 39(1): 137-164. doi:10.2143/AST.39.1.2038060
 - Li N, Lee R, Gerland P (2013). Extending the Lee-Carter method to model the rotation of age patterns of mortality decline for long-term projections. Demography 50(6): 2037-2051. doi:10.1007/s13524-013-0232-2
 - Li Q, Reuser M, Kraus C, Alho J (2007). Aging of a giant: a stochastic population forecast for China, 2001-2050. MPIDR Working Paper WP-2007-032. doi:10.4054/MPIDR-WP-2007-032
 - McCullagh P, Nelder JA (1989). Generalized Linear Models (2nd ed.). Chapman and Hall.
@@ -580,13 +583,14 @@ the literature collections or the package's roxygen references.
 - Shang HL (2012). Point and interval forecasts of age-specific life expectancies: a model averaging approach. Demographic Research 27(21): 593-644. doi:10.4054/DemRes.2012.27.21
 - Shang HL, Hyndman RJ (2017). Grouped functional time series forecasting: an application to age-specific mortality rates. Journal of Computational and Graphical Statistics 26(2): 330-343. doi:10.1080/10618600.2016.1237877
 - Stoeldraijer L, van Duin C, van Wissen L, Janssen F (2013). Impact of different mortality forecasting methods and explicit assumptions on projected future life expectancy: the case of the Netherlands. Demographic Research 29(13): 323-354. doi:10.4054/DemRes.2013.29.13
+- Stoeldraijer L, van Duin C, van Wissen L, Janssen F (2018). Comparing strategies for matching mortality forecasts to the most recently observed data: exploring the trade-off between accuracy and robustness. Genus 74: 16. doi:10.1186/s41118-018-0041-y
 - Thatcher AR, Kannisto V, Vaupel JW (1998). The Force of Mortality at Ages 80 to 120. Monographs on Population Aging 5. Odense University Press.
 - Torri T, Vaupel JW (2012). Forecasting life expectancy in an international context. International Journal of Forecasting 28(2): 519-531. doi:10.1016/j.ijforecast.2011.01.009 (abstract)
 - Van Schaeybroeck B, Vannitsem S (2015). Ensemble post-processing using member-by-member approaches: theoretical aspects. Quarterly Journal of the Royal Meteorological Society 141(688): 807-818. doi:10.1002/qj.2397 (abstract)
-- Villegas AM, Haberman S (2014). On the modeling and forecasting of socioeconomic mortality differentials: an application to deprivation and mortality in England. North American Actuarial Journal 18(1): 168-193. doi:10.1080/10920277.2013.866034 (abstract)
+- Villegas AM, Haberman S (2014). On the modeling and forecasting of socioeconomic mortality differentials: an application to deprivation and mortality in England. North American Actuarial Journal 18(1): 168-193. doi:10.1080/10920277.2013.866034
 - Villegas AM, Haberman S, Kaishev VK, Millossovich P (2017). A comparative study of two-population models for the assessment of basis risk in longevity hedges. ASTIN Bulletin 47(3): 631-679. doi:10.1017/asb.2017.18 (abstract)
 - Wen J, Cairns AJG, Kleinow T (2021). Fitting multi-population mortality models to socio-economic groups. Annals of Actuarial Science 15(1): 144-172. doi:10.1017/S1748499520000184 (abstract)
 - Wickramasuriya SL, Athanasopoulos G, Hyndman RJ (2019). Optimal forecast reconciliation for hierarchical and grouped time series through trace minimization. Journal of the American Statistical Association 114(526): 804-819. doi:10.1080/01621459.2018.1448825
-- Wilmoth JR (1995). Are mortality projections always more pessimistic when disaggregated by cause of death? Mathematical Population Studies 5(4): 293-319. doi:10.1080/08898489509525409 (abstract)
+- Wilmoth JR (1995). Are mortality projections always more pessimistic when disaggregated by cause of death? Mathematical Population Studies 5(4): 293-319. doi:10.1080/08898489509525409
 - Xu C, Xie Y (2023). Conformal prediction for time series. IEEE Transactions on Pattern Analysis and Machine Intelligence 45(10): 11575-11587. doi:10.1109/TPAMI.2023.3272339
 - Yao Y, Vehtari A, Simpson D, Gelman A (2018). Using stacking to average Bayesian predictive distributions (with discussion). Bayesian Analysis 13(3): 917-1007. doi:10.1214/17-BA1091
