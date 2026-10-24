@@ -135,10 +135,13 @@ published multiway compositional model of Bergeron-Boucher, Simonacci,
 Oeppen and Gallo (2018), or [`coda()`](coda.md) (`coherent = TRUE`) for
 a common component with deviations per stratum.
 
-Ranks are reduced to the array dimensions where needed, so the model
-also runs with one stratum or one age group. The model is experimental:
-compare it with established models such as [`li_lee()`](li_lee.md) in a
-backtest before using it.
+Ranks are reduced to the array dimensions where needed (at most the
+number of age groups minus 1, of years minus 1 and of strata, and at
+least 1), so the model also runs with one stratum or one age group; a
+warning (class `mt_warning_argument`) names the requested and the ranks
+used, which [`mt_parameters()`](mt_parameters.md) reports (`rank`). The
+model is experimental: compare it with established models such as
+[`li_lee()`](li_lee.md) in a backtest before using it.
 
 ## References
 

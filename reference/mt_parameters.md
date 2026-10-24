@@ -25,17 +25,20 @@ ensembles also `component`, for fits by groups also `group`.
 
 - [`lee_carter()`](lee_carter.md): `a` (age pattern), `b` (age pattern
   of change), `k` (period index), and the drift and innovation standard
-  deviation of `k`; with `rotate = TRUE` also the ultimate pattern
-  `b_ultimate`; with `family = "nb"` also the dispersion `nb_dispersion`
-  (variance `mu + phi mu^2`; one per age group with a dispersion by
-  age); with `jump_off = "filtered"` also the filtered index of the last
-  year `k_filtered`, its standard error `se_k_filtered` and the
-  state-space estimates `filter_sigma`, `filter_lambda`, `filter_drift`;
+  deviation of `k`; with `choose_period = TRUE`, `k` of the years of the
+  chosen fitting period and its first year (`first_year`); with
+  `rotate = TRUE` also the ultimate pattern `b_ultimate`; with
+  `family = "nb"` also the dispersion `nb_dispersion` (variance
+  `mu + phi mu^2`; one per age group with a dispersion by age); with
+  `jump_off = "filtered"` also the filtered index of the last year
+  `k_filtered`, its standard error `se_k_filtered` and the state-space
+  estimates `filter_sigma`, `filter_lambda`, `filter_drift`;
 
 - [`li_lee()`](li_lee.md), [`product_ratio()`](product_ratio.md): the
   common factor of each group (`B`, `K`, its drift and standard
-  deviation), and per stratum the deviations `a`, `b`, `k` and their
-  AR(1) coefficient `phi` and standard deviation;
+  deviation), per stratum the deviations `a`, `b`, `k` and their AR(1)
+  coefficient `phi` and standard deviation, and the number of stratum
+  factors fitted (`ratio_order`, stratum `"model"`);
 
 - [`coda()`](coda.md): the centre `a` (geometric mean distribution of
   life-table deaths), the loadings `b`, the index `k` with the order
@@ -54,12 +57,20 @@ ensembles also `component`, for fits by groups also `group`.
   `explained_individual`), and with weights the weights of the parts
   (`w_part`) and years (`w_time`);
 
-- [`coda_multiway()`](coda_multiway.md): the common age patterns `b`,
-  time indexes `k` (with `order_k`, `arima_k`, `sd_k`), population
-  markers `gamma` and core `g` (index `p,q,r`), numbered with several
+- [`coda_multiway()`](coda_multiway.md): the ranks used (`rank`, indexed
+  `age`, `time`, `population`), the common age patterns `b`, time
+  indexes `k` (with `order_k`, `arima_k`, `sd_k`), population markers
+  `gamma` and core `g` (index `p,q,r`), numbered with several
   components, and the share of variation explained; per stratum the
   centre `a`, the parameters of the open age interval or of the Kannisto
   model of each year;
+
+- [`tucker3()`](tucker3.md): the ranks used (`rank`, indexed `age`,
+  `period`, `stratum`), the factors of age (`A1`, `A2`, ...), period
+  (`B1`, ...) and stratum (`C1`, ...), the drifts of the period factors
+  (`drift_B1`, ..., with `ts = "rwd"`), the core `g` (index `p,q,r`) and
+  the share of the sum of squares explained (`explained`), all of
+  stratum `"common"`; per stratum the centre `a` (with `centre = TRUE`);
 
 - [`rwd()`](rwd.md): drift and innovation standard deviation per age
   (and, with `observation_noise = TRUE`, the variances of level and

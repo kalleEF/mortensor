@@ -9,7 +9,9 @@ Poisson deaths given the fitted rates, as a long table; values far
 beyond 2 in absolute value point to structure that the model misses (for
 example cohort effects) or to overdispersion.
 [`summary()`](https://rdrr.io/r/base/summary.html) describes the model,
-its sources of uncertainty and the fit;
+its sources of uncertainty and the fit, and the fitting period where
+`lee_carter(choose_period = TRUE)` chose a shorter one (as
+[`print()`](https://rdrr.io/r/base/print.html) does);
 [`mt_plot_residuals()`](mt_plot_residuals.md) shows the residuals as an
 age-period heat map.
 

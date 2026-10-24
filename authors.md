@@ -10,13 +10,13 @@ Source:
 [`DESCRIPTION`](https://github.com/kalleEF/mortensor/blob/main/DESCRIPTION)
 
 Emmert-Fees K (2026). *mortensor: Flexible Mortality Forecasting Across
-Data Granularities*. R package version 0.2.0,
+Data Granularities*. R package version 0.2.0.9000,
 <https://github.com/kalleEF/mortensor>.
 
     @Manual{,
       title = {mortensor: Flexible Mortality Forecasting Across Data Granularities},
       author = {Karl Emmert-Fees},
       year = {2026},
-      note = {R package version 0.2.0},
+      note = {R package version 0.2.0.9000},
       url = {https://github.com/kalleEF/mortensor},
     }

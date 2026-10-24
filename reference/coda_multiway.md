@@ -27,7 +27,12 @@ coda_multiway(
 - ranks:
 
   Numbers of components `c(age, time, population)`, by default
-  `c(1, 1, 1)`. They are reduced where the data allow fewer components.
+  `c(1, 1, 1)`. They are reduced where the data allow fewer components
+  (at most the number of parts of the composition minus 1, of years
+  minus 1 and of populations, and no rank above the product of the other
+  two), with a warning (class `mt_warning_argument`) that names the
+  requested and the ranks used; the label of the fit and
+  [`mt_parameters()`](mt_parameters.md) (`rank`) give the ranks used.
 
 - order:
 

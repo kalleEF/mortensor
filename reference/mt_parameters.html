@@ -9,7 +9,7 @@ model type that has interpretable parameters:"></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">mortensor</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -72,13 +72,17 @@ for ensembles also <code>component</code>, for fits by groups also <code>group</
 
 <ul><li><p><code><a href="lee_carter.html">lee_carter()</a></code>: <code>a</code> (age pattern), <code>b</code> (age pattern of change), <code>k</code>
 (period index), and the drift and innovation standard deviation of <code>k</code>;
+with <code>choose_period = TRUE</code>, <code>k</code> of the years of the chosen fitting
+period and its first year (<code>first_year</code>);
 with <code>rotate = TRUE</code> also the ultimate pattern <code>b_ultimate</code>; with
 <code>family = "nb"</code> also the dispersion <code>nb_dispersion</code> (variance <code>mu + phi mu^2</code>; one per age group with a dispersion by age); with <code>jump_off = "filtered"</code> also the filtered index of the last year <code>k_filtered</code>, its
 standard error <code>se_k_filtered</code> and the state-space estimates
 <code>filter_sigma</code>, <code>filter_lambda</code>, <code>filter_drift</code>;</p></li>
 <li><p><code><a href="li_lee.html">li_lee()</a></code>, <code><a href="product_ratio.html">product_ratio()</a></code>: the common factor of each group (<code>B</code>,
-<code>K</code>, its drift and standard deviation), and per stratum the deviations
-<code>a</code>, <code>b</code>, <code>k</code> and their AR(1) coefficient <code>phi</code> and standard deviation;</p></li>
+<code>K</code>, its drift and standard deviation), per stratum the deviations
+<code>a</code>, <code>b</code>, <code>k</code> and their AR(1) coefficient <code>phi</code> and standard deviation,
+and the number of stratum factors fitted (<code>ratio_order</code>, stratum
+<code>"model"</code>);</p></li>
 <li><p><code><a href="coda.html">coda()</a></code>: the centre <code>a</code> (geometric mean distribution of life-table
 deaths), the loadings <code>b</code>, the index <code>k</code> with the order (<code>order_k</code>),
 coefficients (<code>arima_k</code>) and innovation standard deviation (<code>sd_k</code>) of
@@ -94,11 +98,18 @@ with <code>individual = TRUE</code> also the individual components of each cause
 variation of each cause (<code>explained_joint</code>, <code>explained_individual</code>),
 and with weights the weights of the parts (<code>w_part</code>) and years
 (<code>w_time</code>);</p></li>
-<li><p><code><a href="coda_multiway.html">coda_multiway()</a></code>: the common age patterns <code>b</code>, time indexes <code>k</code> (with
+<li><p><code><a href="coda_multiway.html">coda_multiway()</a></code>: the ranks used (<code>rank</code>, indexed <code>age</code>, <code>time</code>,
+<code>population</code>), the common age patterns <code>b</code>, time indexes <code>k</code> (with
 <code>order_k</code>, <code>arima_k</code>, <code>sd_k</code>), population markers <code>gamma</code> and core <code>g</code>
 (index <code>p,q,r</code>), numbered with several components, and the share of
 variation explained; per stratum the centre <code>a</code>, the parameters of the
 open age interval or of the Kannisto model of each year;</p></li>
+<li><p><code><a href="tucker3.html">tucker3()</a></code>: the ranks used (<code>rank</code>, indexed <code>age</code>, <code>period</code>,
+<code>stratum</code>), the factors of age (<code>A1</code>, <code>A2</code>, ...), period (<code>B1</code>, ...)
+and stratum (<code>C1</code>, ...), the drifts of the period factors (<code>drift_B1</code>,
+..., with <code>ts = "rwd"</code>), the core <code>g</code> (index <code>p,q,r</code>) and the share of
+the sum of squares explained (<code>explained</code>), all of stratum <code>"common"</code>;
+per stratum the centre <code>a</code> (with <code>centre = TRUE</code>);</p></li>
 <li><p><code><a href="rwd.html">rwd()</a></code>: drift and innovation standard deviation per age (and, with
 <code>observation_noise = TRUE</code>, the variances of level and noise);</p></li>
 <li><p><code><a href="apc_bayes.html">apc_bayes()</a></code>: posterior medians and 90% intervals of the age, period

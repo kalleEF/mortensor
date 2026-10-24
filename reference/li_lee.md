@@ -4,9 +4,11 @@ Joint model for several strata (for example women and men, or regions)
 whose forecasts do not diverge in the long run (Li and Lee 2005):
 `log m[x,t,i] = a[x,i] + B[x] K[t] + b[x,i] k[t,i]`. The common factor
 `B K` is a Lee-Carter model of the pooled rates (sum of deaths over sum
-of exposures, SVD with `K` refitted to the total deaths of each year);
-the stratum factors `b k` are the first `ratio_order` components of an
-SVD of the residuals of each stratum.
+of exposures, SVD with `K` refitted to the total deaths of each year; a
+year where the search finds no such `K` keeps the SVD index, as with
+`adjust = "dt"` in [`lee_carter()`](lee_carter.md)); the stratum factors
+`b k` are the first `ratio_order` components of an SVD of the residuals
+of each stratum.
 
 ## Usage
 
@@ -18,7 +20,11 @@ li_lee(ratio_order = 1, common_by = NULL, jump_off = c("fitted", "observed"))
 
 - ratio_order:
 
-  Number of stratum-specific factors.
+  Number of stratum-specific factors. It is capped by the number of age
+  groups and the number of years minus 2, with a warning (class
+  `mt_warning_argument`) that names the requested and the fitted number;
+  [`mt_parameters()`](mt_parameters.md) reports the fitted number
+  (`ratio_order`).
 
 - common_by:
 

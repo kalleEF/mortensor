@@ -1,5 +1,45 @@
 # Changelog
 
+## mortensor 0.2.0.9000
+
+### Fixes from the review of 0.2.0 (R1)
+
+Work package R1 of `dev/review-0.2-plan.md`.
+
+- [`mt_parameters()`](../reference/mt_parameters.md) of
+  `lee_carter(choose_period = TRUE)` gives `k` for the years of the
+  chosen fitting period, labelled with those years, and its first year
+  (`first_year`). Every parameter table stops with class
+  `mt_error_internal` when labels and values differ in length.
+- [`print()`](https://rdrr.io/r/base/print.html) and
+  [`summary()`](https://rdrr.io/r/base/summary.html) of a fit name the
+  fitting period chosen by `lee_carter(choose_period = TRUE)`.
+- [`relative_model()`](../reference/relative_model.md) with a Lee-Carter
+  reference uses plain Newton iterations. The acceleration, now used
+  only with cohort effects, led some fits to a fixed point of lower
+  likelihood or to no convergence within 5,000 iterations (deprivation
+  quintiles of England in `ons_data`). Fits with a Lee-Carter reference
+  can change. The vignette “Inequality in England” is re-knitted: the
+  relative model forecasts the gap of men at 7.6 years in 2035.
+- `li_lee(ratio_order = )` caps the order by the number of age groups
+  and by the number of years minus 2.
+  [`li_lee()`](../reference/li_lee.md),
+  [`tucker3()`](../reference/tucker3.md) and
+  [`coda_multiway()`](../reference/coda_multiway.md) warn with class
+  `mt_warning_argument` when they reduce the requested order or ranks,
+  and [`mt_parameters()`](../reference/mt_parameters.md) reports the
+  values used (`ratio_order`, `rank`). The label of a
+  [`coda_multiway()`](../reference/coda_multiway.md) fit names the ranks
+  used. [`mt_parameters()`](../reference/mt_parameters.md) gains a
+  method for [`tucker3()`](../reference/tucker3.md).
+- `lee_carter(method = "svd", adjust = "dt")` warns with class
+  `mt_warning_model_fit` and records in `no_root_years` the years in
+  which the search finds no index that gives the observed total deaths.
+  These years keep the SVD index; a year without deaths is one of them.
+- [`mt_coherence()`](../reference/mt_coherence.md) stops with class
+  `mt_error_hierarchy` and names the cause when the draws hold no
+  aggregate strata of the hierarchy.
+
 ## mortensor 0.2.0
 
 Clean break: the 0.1.x interface is replaced (see `dev/revamp-plan.md`).

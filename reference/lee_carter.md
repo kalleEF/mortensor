@@ -52,7 +52,16 @@ lee_carter(
 - adjust:
 
   Re-estimation of `k[t]` for `method = "svd"`: `"dt"`, `"dxt"`, `"e0"`
-  or `"none"`.
+  or `"none"`. With `"dt"`, `k[t]` is the root of the total-deaths
+  equation found by a search around the SVD index (package-specific: a
+  bracket of `k[t] +/- (10 + 10 |k[t]|)`, extended while the fitted
+  total deaths do not cross the observed ones). A year where the search
+  finds no root keeps the index of the SVD: a year without deaths has
+  none, and with an age pattern `b` of both signs the fitted total
+  deaths are not monotone in `k[t]` and the search fails in most years.
+  A warning (class `mt_warning_model_fit`, in the diagnostics of the
+  fit) names these years, which the fit of the stratum also holds
+  (`no_root_years`).
 
 - choose_period:
 

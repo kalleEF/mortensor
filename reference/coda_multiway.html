@@ -21,7 +21,7 @@ coda() (coherent = TRUE) and li_lee() in a backtest before using it."></head><bo
 
     <a class="navbar-brand me-2" href="../index.html">mortensor</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -83,7 +83,12 @@ refer to that paper. The model is experimental: compare it with
 
 <dl><dt id="arg-ranks">ranks<a class="anchor" aria-label="anchor" href="#arg-ranks"></a></dt>
 <dd><p>Numbers of components <code>c(age, time, population)</code>, by default
-<code>c(1, 1, 1)</code>. They are reduced where the data allow fewer components.</p></dd>
+<code>c(1, 1, 1)</code>. They are reduced where the data allow fewer components
+(at most the number of parts of the composition minus 1, of years minus
+1 and of populations, and no rank above the product of the other two),
+with a warning (class <code>mt_warning_argument</code>) that names the requested
+and the ranks used; the label of the fit and <code><a href="mt_parameters.html">mt_parameters()</a></code>
+(<code>rank</code>) give the ranks used.</p></dd>
 
 
 <dt id="arg-order">order<a class="anchor" aria-label="anchor" href="#arg-order"></a></dt>

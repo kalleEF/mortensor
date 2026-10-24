@@ -17,7 +17,8 @@ product_ratio(ratio_order = 1, jump_off = c("fitted", "observed"))
 
 - ratio_order:
 
-  Number of stratum-specific (ratio) factors.
+  Number of stratum-specific (ratio) factors, capped as in
+  [`li_lee()`](li_lee.md).
 
 - jump_off:
 

@@ -5,15 +5,19 @@ Pearson residuals of the death counts, assuming Poisson deaths given the
 fitted rates, as a long table; values far beyond 2 in absolute value
 point to structure that the model misses (for example cohort effects) or
 to overdispersion. summary() describes the model, its sources of
-uncertainty and the fit; mt_plot_residuals() shows the residuals as an
-age-period heat map."><meta property="og:description" content="fitted() returns the in-sample fitted death rates as an array [age, period, stratum] (NA for models without fitted values, such as the
+uncertainty and the fit, and the fitting period where
+lee_carter(choose_period = TRUE) chose a shorter one (as print()
+does); mt_plot_residuals() shows the residuals as an age-period heat
+map."><meta property="og:description" content="fitted() returns the in-sample fitted death rates as an array [age, period, stratum] (NA for models without fitted values, such as the
 plain random walk). residuals() returns deviance residuals (default) or
 Pearson residuals of the death counts, assuming Poisson deaths given the
 fitted rates, as a long table; values far beyond 2 in absolute value
 point to structure that the model misses (for example cohort effects) or
 to overdispersion. summary() describes the model, its sources of
-uncertainty and the fit; mt_plot_residuals() shows the residuals as an
-age-period heat map."></head><body>
+uncertainty and the fit, and the fitting period where
+lee_carter(choose_period = TRUE) chose a shorter one (as print()
+does); mt_plot_residuals() shows the residuals as an age-period heat
+map."></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -21,7 +25,7 @@ age-period heat map."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">mortensor</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -62,8 +66,10 @@ Pearson residuals of the death counts, assuming Poisson deaths given the
 fitted rates, as a long table; values far beyond 2 in absolute value
 point to structure that the model misses (for example cohort effects) or
 to overdispersion. <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> describes the model, its sources of
-uncertainty and the fit; <code><a href="mt_plot_residuals.html">mt_plot_residuals()</a></code> shows the residuals as an
-age-period heat map.</p>
+uncertainty and the fit, and the fitting period where
+<code>lee_carter(choose_period = TRUE)</code> chose a shorter one (as <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code>
+does); <code><a href="mt_plot_residuals.html">mt_plot_residuals()</a></code> shows the residuals as an age-period heat
+map.</p>
     </div>
 
     <div class="section level2">

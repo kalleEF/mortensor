@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">mortensor</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -40,6 +40,25 @@
       <small>Source: <a href="https://github.com/kalleEF/mortensor/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.2.0.9000" id="mortensor-0209000">mortensor 0.2.0.9000<a class="anchor" aria-label="anchor" href="#mortensor-0209000"></a></h2>
+<div class="section level3">
+<h3 id="fixes-from-the-review-of-r1-0-2-0-9000">Fixes from the review of 0.2.0 (R1)<a class="anchor" aria-label="anchor" href="#fixes-from-the-review-of-r1-0-2-0-9000"></a></h3>
+<p>Work package R1 of <code>dev/review-0.2-plan.md</code>.</p>
+<ul><li>
+<code><a href="../reference/mt_parameters.html">mt_parameters()</a></code> of <code>lee_carter(choose_period = TRUE)</code> gives <code>k</code> for the years of the chosen fitting period, labelled with those years, and its first year (<code>first_year</code>). Every parameter table stops with class <code>mt_error_internal</code> when labels and values differ in length.</li>
+<li>
+<code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> and <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> of a fit name the fitting period chosen by <code>lee_carter(choose_period = TRUE)</code>.</li>
+<li>
+<code><a href="../reference/relative_model.html">relative_model()</a></code> with a Lee-Carter reference uses plain Newton iterations. The acceleration, now used only with cohort effects, led some fits to a fixed point of lower likelihood or to no convergence within 5,000 iterations (deprivation quintiles of England in <code>ons_data</code>). Fits with a Lee-Carter reference can change. The vignette “Inequality in England” is re-knitted: the relative model forecasts the gap of men at 7.6 years in 2035.</li>
+<li>
+<code>li_lee(ratio_order = )</code> caps the order by the number of age groups and by the number of years minus 2. <code><a href="../reference/li_lee.html">li_lee()</a></code>, <code><a href="../reference/tucker3.html">tucker3()</a></code> and <code><a href="../reference/coda_multiway.html">coda_multiway()</a></code> warn with class <code>mt_warning_argument</code> when they reduce the requested order or ranks, and <code><a href="../reference/mt_parameters.html">mt_parameters()</a></code> reports the values used (<code>ratio_order</code>, <code>rank</code>). The label of a <code><a href="../reference/coda_multiway.html">coda_multiway()</a></code> fit names the ranks used. <code><a href="../reference/mt_parameters.html">mt_parameters()</a></code> gains a method for <code><a href="../reference/tucker3.html">tucker3()</a></code>.</li>
+<li>
+<code>lee_carter(method = "svd", adjust = "dt")</code> warns with class <code>mt_warning_model_fit</code> and records in <code>no_root_years</code> the years in which the search finds no index that gives the observed total deaths. These years keep the SVD index; a year without deaths is one of them.</li>
+<li>
+<code><a href="../reference/mt_coherence.html">mt_coherence()</a></code> stops with class <code>mt_error_hierarchy</code> and names the cause when the draws hold no aggregate strata of the hierarchy.</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.2.0" id="mortensor-020">mortensor 0.2.0<a class="anchor" aria-label="anchor" href="#mortensor-020"></a></h2>
 <p>Clean break: the 0.1.x interface is replaced (see <code>dev/revamp-plan.md</code>).</p>

@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">mortensor</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -291,7 +291,9 @@ deaths by age (<code>"dxt"</code>) or life expectancy
 Maindonald and Smith (2002); Lee and Miller (2001)</td>
 <td>published; age groups without deaths get a constant rate, and the
 ridge and SVD fallbacks for sparse counts are package-specific
-safeguards that warn</td>
+safeguards that warn; with <code>adjust = "dt"</code>, years where the
+root search (package-specific bracket) finds no index keep the SVD
+index, with a warning</td>
 </tr>
 <tr class="even">
 <td><code>lee_carter(choose_period = TRUE)</code></td>
@@ -629,12 +631,13 @@ processes the paper compares</td>
 <td>Villegas and Haberman (2014); Renshaw and Haberman (2006); Hunt and
 Villegas (2015)</td>
 <td>published, deviations: the fitting steps of StMoMo’s
-<code>rh(approxConst = TRUE)</code> with an acceleration step
-(package-specific numerics, same estimates); the reference as a stratum
-of the data or a separate <code>mt_data</code> object. The effective
-numbers of parameters match the paper’s Table 1 for the models without
-cohort effects (171); with cohort effects the package counts 363 cohorts
-where the paper reports 353</td>
+<code>rh(approxConst = TRUE)</code>, with an acceleration step for the
+age-period-cohort reference (package-specific numerics, same estimates;
+the Lee-Carter reference takes the plain steps); the reference as a
+stratum of the data or a separate <code>mt_data</code> object. The
+effective numbers of parameters match the paper’s Table 1 for the models
+without cohort effects (171); with cohort effects the package counts 363
+cohorts where the paper reports 353</td>
 </tr>
 <tr class="odd">
 <td><code><a href="../reference/coda.html">coda()</a></code></td>

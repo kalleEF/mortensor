@@ -13,7 +13,7 @@ section and equation numbers refer to that paper."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">mortensor</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -172,10 +172,13 @@ open age interval and its 0.5 deaths in empty cells are package-specific.
 Use <code><a href="coda_multiway.html">coda_multiway()</a></code>, the published multiway compositional model of
 Bergeron-Boucher, Simonacci, Oeppen and Gallo (2018), or <code><a href="coda.html">coda()</a></code>
 (<code>coherent = TRUE</code>) for a common component with deviations per stratum.</p>
-<p>Ranks are reduced to the array dimensions where needed, so the model also
-runs with one stratum or one age group. The model is experimental: compare
-it with established models such as <code><a href="li_lee.html">li_lee()</a></code> in a backtest before using
-it.</p>
+<p>Ranks are reduced to the array dimensions where needed (at most the
+number of age groups minus 1, of years minus 1 and of strata, and at
+least 1), so the model also runs with one stratum or one age group; a
+warning (class <code>mt_warning_argument</code>) names the requested and the ranks
+used, which <code><a href="mt_parameters.html">mt_parameters()</a></code> reports (<code>rank</code>). The model is
+experimental: compare it with established models such as <code><a href="li_lee.html">li_lee()</a></code> in a
+backtest before using it.</p>
     </div>
     <div class="section level2">
     <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a></h2>
