@@ -314,8 +314,7 @@ Each age: `log m(x,t) = log m(x,t-1) + mu(x) + e(x,t)`.
 
 The random walk with drift observed with noise (local level model with
 drift; Harvey 1989) is `arima_series(order = c(0, 1, 1), drift = TRUE)`,
-its reduced form, below. `rwd(observation_noise = TRUE)`, a moment
-estimator of this package for the same model, is deprecated.
+its reduced form, below.
 
 ### Two-dimensional P-splines: `p_splines()`
 
@@ -921,8 +920,8 @@ the centred array that the model explains, the paper’s measure of fit
   `ranks = c(1, 10, 10)`. `residual_noise = TRUE` adds the in-sample
   residual variation, which counts the observation noise twice.
 
-`transform = "coda"` is deprecated (use
-[`coda_multiway()`](../reference/coda_multiway.md)). The model is
+For a compositional version over age, period and stratum use
+[`coda_multiway()`](../reference/coda_multiway.md). The model is
 experimental: compare it with established models such as
 [`li_lee()`](../reference/li_lee.md) in a backtest before using it.
 
@@ -1294,8 +1293,6 @@ compares across windows.
 | [`recalibrated()`](../reference/recalibrated.md) | of the base model, rescaled | rescaled (optional correction) |  | as the base model |
 | `recalibrated(method = "errors")` | resampled errors of past forecasts | in the errors | in the errors | in the errors (draws of observed rates) |
 | [`anchored()`](../reference/anchored.md) | of the base model | of the base model |  | as the base model |
-
-The deprecated `rwd(observation_noise = TRUE)` is left out.
 
 Predictive draws (`predictive = TRUE`, always used in backtests)
 describe observable rates. For models of expected rates they are deaths

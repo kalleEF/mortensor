@@ -72,9 +72,18 @@ with the name of its published replacement.
   (`"hyman_kannisto"`, `"natural_gompertz"`) are removed. Use
   `method = "shape"`.
 - `mt_shape_rates(method = "gam")` is removed. Use `method = "last"`.
+- `rwd(observation_noise = TRUE)` and its argument are removed. Use
+  `arima_series(order = c(0, 1, 1), drift = TRUE)`, the local level
+  model with drift fitted by maximum likelihood.
+  [`mt_parameters()`](../reference/mt_parameters.md) of
+  [`rwd()`](../reference/rwd.md) loses the rows `var_level` and
+  `var_noise`.
+- `tucker3(transform = "coda")` and the argument `transform` are
+  removed. Use [`coda_multiway()`](../reference/coda_multiway.md), the
+  multiway compositional model of Bergeron-Boucher, Simonacci, Oeppen
+  and Gallo (2018).
 
-`rwd(observation_noise = TRUE)` and `tucker3(transform = "coda")` stay
-deprecated.
+No function or option of the package is deprecated any more.
 
 #### Scores
 

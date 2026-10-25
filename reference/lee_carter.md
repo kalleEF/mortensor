@@ -640,14 +640,14 @@ mt_parameters(fit_lht)[parameter == "nb_dispersion"]
 #>  5:  female nb_dispersion     34 0.000000e+00
 #>  6:  female nb_dispersion     35 0.000000e+00
 #>  7:  female nb_dispersion     36 0.000000e+00
-#>  8:  female nb_dispersion     37 8.228632e-04
-#>  9:  female nb_dispersion     38 4.278345e-03
+#>  8:  female nb_dispersion     37 8.228629e-04
+#>  9:  female nb_dispersion     38 4.278346e-03
 #> 10:  female nb_dispersion     39 0.000000e+00
 #> 11:  female nb_dispersion     40 0.000000e+00
 #> 12:  female nb_dispersion     41 0.000000e+00
 #> 13:  female nb_dispersion     42 2.691890e-03
 #> 14:  female nb_dispersion     43 0.000000e+00
-#> 15:  female nb_dispersion     44 3.367764e-05
+#> 15:  female nb_dispersion     44 3.367922e-05
 #> 16:  female nb_dispersion     45 6.100974e-03
 #> 17:  female nb_dispersion     46 1.888541e-03
 #> 18:  female nb_dispersion     47 1.450254e-03
@@ -660,7 +660,7 @@ mt_parameters(fit_lht)[parameter == "nb_dispersion"]
 #> 25:  female nb_dispersion     54 1.143663e-03
 #> 26:  female nb_dispersion     55 5.628666e-03
 #> 27:  female nb_dispersion     56 0.000000e+00
-#> 28:  female nb_dispersion     57 8.045295e-04
+#> 28:  female nb_dispersion     57 8.045293e-04
 #> 29:  female nb_dispersion     58 0.000000e+00
 #> 30:  female nb_dispersion     59 0.000000e+00
 #> 31:  female nb_dispersion     60 0.000000e+00
@@ -688,22 +688,22 @@ mt_parameters(fit_lht)[parameter == "nb_dispersion"]
 #> 53:  female nb_dispersion     82 1.416356e-04
 #> 54:  female nb_dispersion     83 0.000000e+00
 #> 55:  female nb_dispersion     84 3.430378e-05
-#> 56:  female nb_dispersion     85 9.622345e-05
+#> 56:  female nb_dispersion     85 9.622357e-05
 #> 57:  female nb_dispersion     86 0.000000e+00
 #> 58:  female nb_dispersion     87 0.000000e+00
 #> 59:  female nb_dispersion     88 0.000000e+00
 #> 60:  female nb_dispersion     89 0.000000e+00
 #> 61:  female nb_dispersion     90 0.000000e+00
-#> 62:  female nb_dispersion     91 3.060295e-05
-#> 63:  female nb_dispersion     92 1.258580e-05
+#> 62:  female nb_dispersion     91 3.060301e-05
+#> 63:  female nb_dispersion     92 1.258555e-05
 #> 64:  female nb_dispersion     93 0.000000e+00
-#> 65:  female nb_dispersion     94 2.127695e-05
+#> 65:  female nb_dispersion     94 2.127698e-05
 #> 66:  female nb_dispersion     95 0.000000e+00
-#> 67:  female nb_dispersion     96 7.320695e-05
+#> 67:  female nb_dispersion     96 7.320684e-05
 #> 68:  female nb_dispersion     97 0.000000e+00
-#> 69:  female nb_dispersion     98 2.175004e-04
+#> 69:  female nb_dispersion     98 2.175003e-04
 #> 70:  female nb_dispersion     99 1.609601e-04
-#> 71:  female nb_dispersion   100+ 6.562962e-04
+#> 71:  female nb_dispersion   100+ 6.562964e-04
 #>     stratum     parameter  index        value
 #>      <char>        <char> <char>        <num>
 # jump-off: mean of the last three observed years (Stoeldraijer et al.
@@ -713,14 +713,14 @@ fit_kf <- mt_fit(lee_carter(jump_off = "filtered"), x)
 mt_parameters(fit_kf)[grepl("filter", parameter)]
 #>     stratum     parameter  index        value
 #>      <char>        <char> <char>        <num>
-#>  1:  female    k_filtered   2019 -13.31314483
-#>  2:  female se_k_filtered   2019   0.39234808
+#>  1:  female    k_filtered   2019 -13.31314481
+#>  2:  female se_k_filtered   2019   0.39234807
 #>  3:  female  filter_sigma          0.06480888
-#>  4:  female filter_lambda          0.81877306
+#>  4:  female filter_lambda          0.81877304
 #>  5:  female  filter_drift         -0.87267723
-#>  6:    male    k_filtered   2019 -12.32094921
+#>  6:    male    k_filtered   2019 -12.32094920
 #>  7:    male se_k_filtered   2019   0.38782858
 #>  8:    male  filter_sigma          0.05381630
-#>  9:    male filter_lambda          1.79159067
+#>  9:    male filter_lambda          1.79159060
 #> 10:    male  filter_drift         -0.94477645
 ```

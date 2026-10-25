@@ -76,7 +76,11 @@
 <li>The spline methods of <code><a href="../reference/mt_disaggregate.html">mt_disaggregate()</a></code> (<code>"hyman_kannisto"</code>, <code>"natural_gompertz"</code>) are removed. Use <code>method = "shape"</code>.</li>
 <li>
 <code>mt_shape_rates(method = "gam")</code> is removed. Use <code>method = "last"</code>.</li>
-</ul><p><code>rwd(observation_noise = TRUE)</code> and <code>tucker3(transform = "coda")</code> stay deprecated.</p>
+<li>
+<code>rwd(observation_noise = TRUE)</code> and its argument are removed. Use <code>arima_series(order = c(0, 1, 1), drift = TRUE)</code>, the local level model with drift fitted by maximum likelihood. <code><a href="../reference/mt_parameters.html">mt_parameters()</a></code> of <code><a href="../reference/rwd.html">rwd()</a></code> loses the rows <code>var_level</code> and <code>var_noise</code>.</li>
+<li>
+<code>tucker3(transform = "coda")</code> and the argument <code>transform</code> are removed. Use <code><a href="../reference/coda_multiway.html">coda_multiway()</a></code>, the multiway compositional model of Bergeron-Boucher, Simonacci, Oeppen and Gallo (2018).</li>
+</ul><p>No function or option of the package is deprecated any more.</p>
 </div>
 <div class="section level4">
 <h4 id="scores-0-2-0-9000">Scores<a class="anchor" aria-label="anchor" href="#scores-0-2-0-9000"></a></h4>

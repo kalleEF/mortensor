@@ -10,7 +10,6 @@ section and equation numbers refer to that paper.
 ``` r
 tucker3(
   ranks = c(2, 2, 2),
-  transform = c("log", "coda"),
   ts = c("rwd", "arima", "ets"),
   residual_noise = FALSE,
   centre = TRUE,
@@ -31,11 +30,6 @@ tucker3(
   age and period and up to 4 for strata). For selection by forecast
   accuracy use [`tuned()`](mt_tune.md).
 
-- transform:
-
-  `"log"`, or the deprecated `"coda"` (use
-  [`coda_multiway()`](coda_multiway.md)).
-
 - ts:
 
   Forecast method for the period factors: `"rwd"`, `"arima"`, `"ets"`.
@@ -43,10 +37,10 @@ tucker3(
 - residual_noise:
 
   Add the in-sample residual variation (per age and stratum, normal on
-  the transformed scale) to the draws. The residuals contain the
-  observation noise of the training years, which predictive draws add
-  again as Poisson variation, so the noise is then counted twice.
-  Default `FALSE` (earlier development versions: `TRUE`).
+  the log scale) to the draws. The residuals contain the observation
+  noise of the training years, which predictive draws add again as
+  Poisson variation, so the noise is then counted twice. Default `FALSE`
+  (earlier development versions: `TRUE`).
 
 - centre:
 
@@ -125,15 +119,11 @@ or overdispersed models such as `stanmomo(family = "nb")`).
   closed age group 95-99; an open age interval is treated like the other
   age groups.
 
-**Deprecated:** `transform = "coda"` (centred log-ratio transformed
-life-table deaths in place of log rates) still works and warns (class
-`mt_warning_deprecated`). Its forecast of all period factors by a
-multivariate random walk, its auxiliary random walk for the rate of the
-open age interval and its 0.5 deaths in empty cells are
-package-specific. Use [`coda_multiway()`](coda_multiway.md), the
-published multiway compositional model of Bergeron-Boucher, Simonacci,
-Oeppen and Gallo (2018), or [`coda()`](coda.md) (`coherent = TRUE`) for
-a common component with deviations per stratum.
+For a compositional model of the life-table deaths over age, period and
+stratum use [`coda_multiway()`](coda_multiway.md), the multiway
+compositional model of Bergeron-Boucher, Simonacci, Oeppen and Gallo
+(2018), or [`coda()`](coda.md) (`coherent = TRUE`) for a common
+component with deviations per stratum.
 
 Ranks are reduced to the array dimensions where needed (at most the
 number of age groups minus 1, of years minus 1 and of strata, and at

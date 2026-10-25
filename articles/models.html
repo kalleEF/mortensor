@@ -478,8 +478,7 @@ describe observed rates, so predictive draws add nothing.</li>
 <p>The random walk with drift observed with noise (local level model
 with drift; Harvey 1989) is
 <code>arima_series(order = c(0, 1, 1), drift = TRUE)</code>, its reduced
-form, below. <code>rwd(observation_noise = TRUE)</code>, a moment
-estimator of this package for the same model, is deprecated.</p>
+form, below.</p>
 </div>
 <div class="section level3">
 <h3 id="two-dimensional-p-splines-p_splines">Two-dimensional P-splines: <code>p_splines()</code><a class="anchor" aria-label="anchor" href="#two-dimensional-p-splines-p_splines"></a>
@@ -1186,10 +1185,10 @@ intervals covered about 74% with the default ranks and 95% with
 adds the in-sample residual variation, which counts the observation
 noise twice.</li>
 </ul>
-<p><code>transform = "coda"</code> is deprecated (use
-<code><a href="../reference/coda_multiway.html">coda_multiway()</a></code>). The model is experimental: compare it
-with established models such as <code><a href="../reference/li_lee.html">li_lee()</a></code> in a backtest
-before using it.</p>
+<p>For a compositional version over age, period and stratum use
+<code><a href="../reference/coda_multiway.html">coda_multiway()</a></code>. The model is experimental: compare it with
+established models such as <code><a href="../reference/li_lee.html">li_lee()</a></code> in a backtest before
+using it.</p>
 </div>
 <div class="section level3">
 <h3 id="causes-of-death">Causes of death<a class="anchor" aria-label="anchor" href="#causes-of-death"></a>
@@ -1781,8 +1780,6 @@ draws</td>
 </tr>
 </tbody>
 </table>
-<p>The deprecated <code>rwd(observation_noise = TRUE)</code> is left
-out.</p>
 <p>Predictive draws (<code>predictive = TRUE</code>, always used in
 backtests) describe observable rates. For models of expected rates they
 are deaths drawn given the rates of each draw and the exposures, divided

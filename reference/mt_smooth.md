@@ -192,11 +192,11 @@ s <- mt_smooth(x)
 head(attr(s, "smooth"))
 #>    measure stratum period     method lambda_age lambda_period       ed
 #>     <char>   <int> <char>     <char>      <num>         <num>    <num>
-#> 1:  deaths       1   2001 pspline_1d   61501.32            NA 6.073524
+#> 1:  deaths       1   2001 pspline_1d   61501.39            NA 6.073523
 #> 2:  deaths       1   2002 pspline_1d   29356.92            NA 7.071097
 #> 3:  deaths       1   2003 pspline_1d   23158.84            NA 7.425411
 #> 4:  deaths       2   2001 pspline_1d   91819.37            NA 5.632183
-#> 5:  deaths       2   2002 pspline_1d   20711.87            NA 7.711462
+#> 5:  deaths       2   2002 pspline_1d   20711.89            NA 7.711461
 #> 6:  deaths       2   2003 pspline_1d   76056.64            NA 5.855391
 #>    max_rel_diff at_bound open_iterations open_converged
 #>           <num>   <lgcl>           <int>         <lgcl>

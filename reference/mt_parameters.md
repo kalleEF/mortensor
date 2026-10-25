@@ -72,9 +72,7 @@ ensembles also `component`, for fits by groups also `group`.
   the share of the sum of squares explained (`explained`), all of
   stratum `"common"`; per stratum the centre `a` (with `centre = TRUE`);
 
-- [`rwd()`](rwd.md): drift and innovation standard deviation per age
-  (and, with `observation_noise = TRUE`, the variances of level and
-  noise);
+- [`rwd()`](rwd.md): drift and innovation standard deviation per age;
 
 - [`apc_bayes()`](apc_bayes.md): posterior medians and 90% intervals of
   the age, period and cohort effects (logit scale, bamp's

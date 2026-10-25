@@ -58,7 +58,6 @@ section and equation numbers refer to that paper.</p>
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">tucker3</span><span class="op">(</span></span>
 <span>  ranks <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2</span>, <span class="fl">2</span>, <span class="fl">2</span><span class="op">)</span>,</span>
-<span>  transform <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"log"</span>, <span class="st">"coda"</span><span class="op">)</span>,</span>
 <span>  ts <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"rwd"</span>, <span class="st">"arima"</span>, <span class="st">"ets"</span><span class="op">)</span>,</span>
 <span>  residual_noise <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  centre <span class="op">=</span> <span class="cn">TRUE</span>,</span>
@@ -80,10 +79,6 @@ age and period and up to 4 for strata). For selection by forecast
 accuracy use <code><a href="mt_tune.html">tuned()</a></code>.</p></dd>
 
 
-<dt id="arg-transform">transform<a class="anchor" aria-label="anchor" href="#arg-transform"></a></dt>
-<dd><p><code>"log"</code>, or the deprecated <code>"coda"</code> (use <code><a href="coda_multiway.html">coda_multiway()</a></code>).</p></dd>
-
-
 <dt id="arg-ts">ts<a class="anchor" aria-label="anchor" href="#arg-ts"></a></dt>
 <dd><p>Forecast method for the period factors: <code>"rwd"</code>, <code>"arima"</code>,
 <code>"ets"</code>.</p></dd>
@@ -91,7 +86,7 @@ accuracy use <code><a href="mt_tune.html">tuned()</a></code>.</p></dd>
 
 <dt id="arg-residual-noise">residual_noise<a class="anchor" aria-label="anchor" href="#arg-residual-noise"></a></dt>
 <dd><p>Add the in-sample residual variation (per age and
-stratum, normal on the transformed scale) to the draws. The residuals
+stratum, normal on the log scale) to the draws. The residuals
 contain the observation noise of the training years, which predictive
 draws add again as Poisson variation, so the noise is then counted
 twice. Default <code>FALSE</code> (earlier development versions: <code>TRUE</code>).</p></dd>
@@ -164,12 +159,8 @@ criterion (<code>ranks = "bic"</code>, <code>"aic"</code>), and the replacement 
 by 0.5 before taking logarithms. The paper's data end with the closed
 age group 95-99; an open age interval is treated like the other age
 groups.</p></li>
-</ul><p><strong>Deprecated:</strong> <code>transform = "coda"</code> (centred log-ratio transformed
-life-table deaths in place of log rates) still works and warns (class
-<code>mt_warning_deprecated</code>). Its forecast of all period factors by a
-multivariate random walk, its auxiliary random walk for the rate of the
-open age interval and its 0.5 deaths in empty cells are package-specific.
-Use <code><a href="coda_multiway.html">coda_multiway()</a></code>, the published multiway compositional model of
+</ul><p>For a compositional model of the life-table deaths over age, period and
+stratum use <code><a href="coda_multiway.html">coda_multiway()</a></code>, the multiway compositional model of
 Bergeron-Boucher, Simonacci, Oeppen and Gallo (2018), or <code><a href="coda.html">coda()</a></code>
 (<code>coherent = TRUE</code>) for a common component with deviations per stratum.</p>
 <p>Ranks are reduced to the array dimensions where needed (at most the
