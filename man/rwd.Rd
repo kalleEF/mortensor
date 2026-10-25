@@ -4,20 +4,13 @@
 \alias{rwd}
 \title{Random walk with drift on log death rates}
 \usage{
-rwd(
-  drift_window = NULL,
-  innovations = c("bootstrap", "gaussian"),
-  observation_noise = FALSE
-)
+rwd(drift_window = NULL, innovations = c("bootstrap", "gaussian"))
 }
 \arguments{
 \item{drift_window}{Number of most recent years used for drift and
 innovations (\code{NULL}: all years).}
 
 \item{innovations}{\code{"bootstrap"} or \code{"gaussian"}.}
-
-\item{observation_noise}{Deprecated: model the log rates as a random walk
-plus noise (see Details); use \code{arima_series(order = c(0, 1, 1), drift = TRUE)}.}
 }
 \value{
 A model specification.
@@ -41,23 +34,10 @@ estimated variance, and normal drift uncertainty.
 Zero death counts are replaced by 0.5 before taking logs. The draws
 describe observed rates, so predictive draws add nothing.
 
-\strong{Deprecated: \code{observation_noise = TRUE}.} This variant treats the log
-rate as a random walk with drift observed with noise (a local level
-model with drift), with variances estimated by a moment estimator of this
-package without a published source: from the variance and first
-autocovariance of the year-to-year changes, the noise variance as the
-Poisson part (one over the deaths) plus an extra part common to all ages,
-clamped to at most 0.45 times the variance of the changes, the level
-variance to at least 0.1 times it, and shrunk towards the median of the
-ages with a prior standard deviation of three times that median; the
-level is Kalman filtered and the draws are paths of the level, to which
-predictive draws add Poisson variation of the deaths. It still works and
-warns (class \code{mt_warning_deprecated}). The published equivalent is the
-local level model with drift fitted by maximum likelihood (Harvey 1989),
-whose reduced form for the observed log rates is ARIMA(0,1,1) with drift:
-\code{arima_series(order = c(0, 1, 1), drift = TRUE)}. With a \code{drift_window},
-the variant is fitted to the years of the window and fitted rates of
-earlier years are missing.
+A random walk with drift observed with noise (the local level model with
+drift, Harvey 1989) has ARIMA(0,1,1) with drift as its reduced form for
+the observed log rates: \code{arima_series(order = c(0, 1, 1), drift = TRUE)}
+fits it by maximum likelihood.
 }
 \examples{
 x <- mt_example(deaths = "single")

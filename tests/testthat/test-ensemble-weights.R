@@ -1,6 +1,6 @@
 # Weights of ensemble(): stacking of predictive distributions with the CRPS
-# (Yao et al. 2018), the bias weights of Kontis et al. (2017) and the
-# deprecated stacking of medians
+# (Yao et al. 2018), the bias weights of Kontis et al. (2017), and the error
+# of the removed stacking of medians
 
 # CRPS of a weighted empirical distribution (atoms x, probabilities p) by its
 # definition, the integral of (F(z) - 1{z >= y})^2 (Gneiting and Raftery

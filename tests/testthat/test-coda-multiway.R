@@ -62,7 +62,7 @@ test_that("coda_multiway() satisfies the model contract", {
   expect_mt_model(stratified("sex", female = coda_multiway(), male = coda_multiway()), data = x)
 })
 
-test_that("coda_multiway() checks its arguments and replaces tucker3(transform = \"coda\")", {
+test_that("coda_multiway() checks its arguments", {
   sp <- coda_multiway()
   expect_s3_class(sp, "mt_spec_coda_multiway")
   expect_true(sp$joint)
@@ -78,7 +78,6 @@ test_that("coda_multiway() checks its arguments and replaces tucker3(transform =
   expect_error(coda_multiway(order = c(0, 3, 0)), class = "mt_error_argument")
   expect_error(coda_multiway(drift = NA), class = "mt_error_argument")
   expect_error(coda_multiway(jump_off = "actual"))
-  expect_warning(tucker3(transform = "coda"), "coda_multiway\\(\\)", class = "mt_warning_deprecated")
 })
 
 test_that("the multiway fit recovers a known rank-1 structure exactly", {

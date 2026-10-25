@@ -6,7 +6,6 @@
 \usage{
 tucker3(
   ranks = c(2, 2, 2),
-  transform = c("log", "coda"),
   ts = c("rwd", "arima", "ets"),
   residual_noise = FALSE,
   centre = TRUE,
@@ -22,13 +21,11 @@ of parameters of the factor matrices and the core; ranks up to 6 for
 age and period and up to 4 for strata). For selection by forecast
 accuracy use \code{\link[=tuned]{tuned()}}.}
 
-\item{transform}{\code{"log"}, or the deprecated \code{"coda"} (use \code{\link[=coda_multiway]{coda_multiway()}}).}
-
 \item{ts}{Forecast method for the period factors: \code{"rwd"}, \code{"arima"},
 \code{"ets"}.}
 
 \item{residual_noise}{Add the in-sample residual variation (per age and
-stratum, normal on the transformed scale) to the draws. The residuals
+stratum, normal on the log scale) to the draws. The residuals
 contain the observation noise of the training years, which predictive
 draws add again as Poisson variation, so the noise is then counted
 twice. Default \code{FALSE} (earlier development versions: \code{TRUE}).}
@@ -106,12 +103,8 @@ age group 95-99; an open age interval is treated like the other age
 groups.
 }
 
-\strong{Deprecated:} \code{transform = "coda"} (centred log-ratio transformed
-life-table deaths in place of log rates) still works and warns (class
-\code{mt_warning_deprecated}). Its forecast of all period factors by a
-multivariate random walk, its auxiliary random walk for the rate of the
-open age interval and its 0.5 deaths in empty cells are package-specific.
-Use \code{\link[=coda_multiway]{coda_multiway()}}, the published multiway compositional model of
+For a compositional model of the life-table deaths over age, period and
+stratum use \code{\link[=coda_multiway]{coda_multiway()}}, the multiway compositional model of
 Bergeron-Boucher, Simonacci, Oeppen and Gallo (2018), or \code{\link[=coda]{coda()}}
 (\code{coherent = TRUE}) for a common component with deviations per stratum.
 

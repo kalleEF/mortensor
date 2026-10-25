@@ -60,8 +60,7 @@ and stratum (\code{C1}, ...), the drifts of the period factors (\code{drift_B1},
 ..., with \code{ts = "rwd"}), the core \code{g} (index \verb{p,q,r}) and the share of
 the sum of squares explained (\code{explained}), all of stratum \code{"common"};
 per stratum the centre \code{a} (with \code{centre = TRUE});
-\item \code{\link[=rwd]{rwd()}}: drift and innovation standard deviation per age (and, with
-\code{observation_noise = TRUE}, the variances of level and noise);
+\item \code{\link[=rwd]{rwd()}}: drift and innovation standard deviation per age;
 \item \code{\link[=apc_bayes]{apc_bayes()}}: posterior medians and 90\% intervals of the age, period
 and cohort effects (logit scale, bamp's identification), and the
 Gelman-Rubin statistics (\code{rhat}, values below 1.1 indicate convergence)

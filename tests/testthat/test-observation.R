@@ -1,5 +1,5 @@
 # Observation model of predictive draws (Poisson given the rates, negative
-# binomial for stanmomo(family = "nb")), deprecated package inventions,
+# binomial for stanmomo(family = "nb")), the removed deprecated options,
 # safeguards that warn, and the three-way Lee-Carter model
 
 test_that("predictive draws are Poisson deaths given the rates of each draw", {
@@ -108,29 +108,17 @@ test_that("stanmomo(family = \"nb\") draws deaths with the posterior dispersion 
   expect_gt(stats::var(as.vector((D - mu) / sqrt(mu))), 5)
 })
 
-test_that("package inventions with a published counterpart are deprecated and still work", {
-  count <- function(expr) {
-    n <- 0
-    withCallingHandlers(expr, mt_warning_deprecated = function(w) {
-      n <<- n + 1
-      invokeRestart("muffleWarning")
-    })
-    n
-  }
-  expect_equal(count(rwd(observation_noise = TRUE)), 1)
-  expect_equal(count(tucker3(transform = "coda")), 1)
-  expect_no_warning(rwd())
-  expect_no_warning(tucker3())
-  expect_no_warning(li_lee())
-  x <- mt_example(deaths = "single", years = 2000:2015)
-  fc <- suppressWarnings(mt_forecast(mt_fit(rwd(observation_noise = TRUE), x), h = 2, n_draws = 10, seed = 1))
-  expect_s3_class(fc, "mt_draws")
-})
-
-test_that("the deprecated functions removed in 0.3.0 are no longer exported", {
+test_that("the deprecated functions and options removed in 0.3.0 are gone", {
   ours <- getNamespaceExports("mortensor")
   expect_false("product_ratio" %in% ours)
   expect_false("cause_shares" %in% ours)
+  expect_false("observation_noise" %in% names(formals(rwd)))
+  expect_false("transform" %in% names(formals(tucker3)))
+  expect_error(rwd(observation_noise = TRUE))
+  expect_error(tucker3(transform = "coda"))
+  expect_no_warning(rwd())
+  expect_no_warning(tucker3())
+  expect_no_warning(li_lee())
 })
 
 test_that("arima_series() fits a given order: the local level model with drift", {

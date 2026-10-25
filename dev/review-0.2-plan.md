@@ -105,7 +105,10 @@ The owner decided on 2026-10-24:
   and the deprecated methods of `mt_disaggregate()` and
   `mt_shape_rates()`, with a NEWS entry listing each replacement.
   `rwd(observation_noise = TRUE)` and `tucker3(transform = "coda")` were
-  not part of the decision and stay deprecated.
+  not part of this decision; on 2026-10-25 the owner decided to remove
+  them as well, since nothing else uses them and published replacements
+  exist (`arima_series(order = c(0, 1, 1), drift = TRUE)`,
+  `coda_multiway()`).
 - F11 (moved into R2): delete `axis_from_bounds()`, `Matrix_diag()` and
   `relative_kernel()`. Keep the test helpers and `mt_inform()`.
 - F14: report the number of floored observations in `mt_score()` (column
