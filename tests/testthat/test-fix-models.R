@@ -1,17 +1,5 @@
 # Regression tests for fixes in the base models
 
-test_that("rwd() with a drift window and observation noise fits and forecasts", {
-  x <- mt_example(deaths = "single", years = 2000:2019)
-  expect_warning(sp <- rwd(drift_window = 10, observation_noise = TRUE), class = "mt_warning_deprecated")
-  fit <- mt_fit(sp, x)
-  f <- fit$fits[[1]]$fitted
-  expect_equal(dim(f), c(length(fit$age), 20))
-  expect_true(all(is.na(f[, 1:10])))
-  expect_true(all(is.finite(f[, 11:20])))
-  fc <- mt_forecast(fit, h = 2, n_draws = 10, seed = 1, predictive = TRUE)
-  expect_false(anyNA(fc$rates))
-})
-
 test_that("Lee-Carter with a chosen period keeps its bootstrap fits", {
   x <- mt_example(deaths = "single", years = 2000:2019)
   set.seed(1)

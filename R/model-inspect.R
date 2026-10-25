@@ -45,8 +45,7 @@
 #'   ..., with `ts = "rwd"`), the core `g` (index `p,q,r`) and the share of
 #'   the sum of squares explained (`explained`), all of stratum `"common"`;
 #'   per stratum the centre `a` (with `centre = TRUE`);
-#' * [rwd()]: drift and innovation standard deviation per age (and, with
-#'   `observation_noise = TRUE`, the variances of level and noise);
+#' * [rwd()]: drift and innovation standard deviation per age;
 #' * [apc_bayes()]: posterior medians and 90% intervals of the age, period
 #'   and cohort effects (logit scale, bamp's identification), and the
 #'   Gelman-Rubin statistics (`rhat`, values below 1.1 indicate convergence)
@@ -301,11 +300,7 @@ base_parameters <- function(fit, sp) {
     return(rbindlist(lapply(seq_along(fit$fits), function(s) {
       f <- fit$fits[[s]]
       if (is.null(f)) return(NULL)
-      out <- rbind(row(lab[s], "drift", ages, f$mu), row(lab[s], "sd", ages, f$sigma))
-      if (!is.null(f$s2eta)) {
-        out <- rbind(out, row(lab[s], "var_level", ages, f$s2eta), row(lab[s], "var_noise", ages, f$s2e))
-      }
-      out
+      rbind(row(lab[s], "drift", ages, f$mu), row(lab[s], "sd", ages, f$sigma))
     })))
   }
   if (inherits(sp, "mt_spec_multipop")) {
@@ -703,17 +698,10 @@ model_assumptions <- function(spec) {
          mt_spec_coda = coda_assumptions(spec),
          mt_spec_coda_causes = coda_assumptions(spec),
          mt_spec_coda_multiway = coda_assumptions(spec),
-         mt_spec_rwd = if (isTRUE(p$observation_noise)) {
-           paste("Each age: log rate = level + noise, level a random walk with drift (local level model;",
-                 "deprecated variant). Variances from a moment estimator of this package (Poisson part plus a",
-                 "common extra part, clamped, level variance partly pooled over ages). Draws include level and",
-                 "drift uncertainty; predictive draws add Poisson variation of the deaths.")
-         } else {
-           paste0("Each age: log rate a random walk with drift, estimated from the year-to-year changes",
-                  if (!is.null(p$drift_window)) sprintf(" of the last %d years", p$drift_window) else "",
-                  "; draws resample the observed changes (", p$innovations, ") and the drift. Noise of observed ",
-                  "rates accumulates, so intervals are wide where deaths are few.")
-         },
+         mt_spec_rwd = paste0("Each age: log rate a random walk with drift, estimated from the year-to-year changes",
+                              if (!is.null(p$drift_window)) sprintf(" of the last %d years", p$drift_window) else "",
+                              "; draws resample the observed changes (", p$innovations, ") and the drift. Noise of ",
+                              "observed rates accumulates, so intervals are wide where deaths are few."),
          mt_spec_multipop = paste(
            "Li-Lee (Li and Lee 2005): log m(x,t,i) = a(x,i) + B(x) K(t) + b(x,i) k(t,i).",
            "The common factor (per group of `common_by`)",

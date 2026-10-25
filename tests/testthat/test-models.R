@@ -1,13 +1,10 @@
 test_that("every model satisfies the contract", {
   expect_mt_model(rwd())
   expect_mt_model(rwd(innovations = "gaussian", drift_window = 10))
-  expect_mt_model(suppressWarnings(rwd(observation_noise = TRUE)))
-  expect_mt_model(suppressWarnings(rwd(observation_noise = TRUE, innovations = "gaussian")))
   expect_mt_model(lee_carter())
   expect_mt_model(lee_carter(method = "svd", jump_off = "observed"))
   expect_mt_model(tucker3())
   expect_mt_model(tucker3(centre = FALSE))
-  expect_mt_model(suppressWarnings(tucker3(transform = "coda")))
   expect_mt_model(ensemble(lee_carter(), rwd()))
   skip_if_not_installed("forecast")
   expect_mt_model(ets_series(), h = 2, n_draws = 5)
@@ -213,23 +210,13 @@ test_that("the seed of lee_carter() reproduces the bootstrap parameters and fore
   expect_error(lee_carter(bootstrap = TRUE, seed = "a"), class = "mt_error_argument")
 })
 
-test_that("HOOI recovers an exact low-rank array and CoDa round trips", {
+test_that("HOOI recovers an exact low-rank array", {
   set.seed(1)
   U <- list(qr.Q(qr(matrix(rnorm(20), 10, 2))), qr.Q(qr(matrix(rnorm(16), 8, 2))), qr.Q(qr(matrix(rnorm(6), 3, 2))))
   G <- array(rnorm(8), c(2, 2, 2))
   X <- mortensor:::tucker_reconstruct(G, U)
   dec <- mortensor:::hooi(X, c(2, 2, 2))
   expect_lt(max(abs(mortensor:::tucker_reconstruct(dec$G, dec$U) - X)), 1e-8)
-  ages <- single_ages(30, 100)
-  m <- array(rep(3e-4 + 2e-5 * exp(0.1 * (30:100)), 6), c(71, 3, 2))
-  z <- mortensor:::coda_forward(m, ages)
-  back <- mortensor:::coda_backward(z, ages, open_rates = m[71, , ])
-  expect_lt(max(abs(back[-71, , ] / m[-71, , ] - 1)), 0.02)
-  closed <- single_ages(30, 99, open = FALSE)
-  z2 <- mortensor:::coda_forward(m[1:70, , , drop = FALSE], closed)
-  expect_equal(dim(z2)[1], 71)
-  back2 <- mortensor:::coda_backward(z2, closed)
-  expect_lt(max(abs(back2 / m[1:70, , ] - 1)), 0.02)
 })
 
 test_that("tucker3 works with one stratum", {
@@ -309,25 +296,6 @@ test_that("forecast draws are summarised and life expectancy is computed path by
   expect_output(print(fc), "mt_draws")
 })
 
-test_that("the random walk plus noise separates noise from the trend", {
-  set.seed(1)
-  na <- 5
-  nt <- 30
-  level <- outer(log(seq(0.01, 0.05, length.out = na)), rep(1, nt)) + outer(rep(1, na), cumsum(rep(-0.02, nt)))
-  E <- matrix(1e4, na, nt)
-  D <- matrix(stats::rpois(na * nt, exp(level) * E), na, nt)
-  expect_warning(sp <- rwd(observation_noise = TRUE), class = "mt_warning_deprecated")
-  f <- fit_model(sp, D, E, seq_len(na), seq_len(nt))
-  # the level is deterministic here, so most of the variation of the changes is Poisson noise
-  expect_true(all(f$s2e > 0.8 * pmin(rowMeans(1 / D), 0.45 * f$sigma^2)))
-  expect_true(all(f$s2eta < 0.5 * f$sigma^2))
-  p_noise <- simulate_model(sp, f, h = 10, n_draws = 400)
-  p_plain <- simulate_model(rwd(), fit_model(rwd(), D, E, seq_len(na), seq_len(nt)), h = 10, n_draws = 400)
-  width <- function(p) mean(apply(log(p[, 10, ]), 1, stats::sd))
-  expect_lt(width(p_noise), width(p_plain))
-  expect_error(rwd(observation_noise = NA), class = "mt_error_argument")
-})
-
 test_that("ensemble draws come from one component for all strata", {
   x <- mt_example_causes(years = 2008:2019)
   h <- mt_hierarchy(cause = "all", additive = "rates")
@@ -364,8 +332,8 @@ test_that("parameters, fitted values, residuals and summaries are available", {
   fit <- mt_fit(li_lee(common_by = NULL), x)
   p <- mt_parameters(fit)
   expect_true(all(c("B", "K", "a", "b1", "k1", "phi1") %in% p$parameter))
-  pr <- mt_parameters(mt_fit(suppressWarnings(rwd(observation_noise = TRUE)), x))
-  expect_true(all(c("drift", "sd", "var_level", "var_noise") %in% pr$parameter))
+  pr <- mt_parameters(mt_fit(rwd(), x))
+  expect_setequal(unique(pr$parameter), c("drift", "sd"))
   f <- fitted(fit)
   expect_identical(dim(f), dim(fit$train_D))
   r <- residuals(fit)

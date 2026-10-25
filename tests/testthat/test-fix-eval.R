@@ -100,8 +100,8 @@ test_that("backtests with step_regroup() regroup the test data to the fit", {
 
 test_that("mt_compare() uses the same default origins for every model", {
   x <- mt_example(deaths = "single", years = 2006:2015)
-  rwn <- suppressWarnings(rwd(observation_noise = TRUE))
-  expect_warning(bt <- mt_compare(list(rw = rwd(), rwn = rwn), x, h = 3, n_draws = 20),
+  # tucker3() needs 6 training years, rwd() 3
+  expect_warning(bt <- mt_compare(list(rw = rwd(), tucker = tucker3()), x, h = 3, n_draws = 20),
                  class = "mt_warning_backtest_origin")
   o <- bt[, list(origins = paste(sort(unique(origin)), collapse = ",")), by = model]
   expect_equal(o$origins[1], o$origins[2])

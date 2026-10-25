@@ -62,12 +62,8 @@
 #'   age group 95-99; an open age interval is treated like the other age
 #'   groups.
 #'
-#' **Deprecated:** `transform = "coda"` (centred log-ratio transformed
-#' life-table deaths in place of log rates) still works and warns (class
-#' `mt_warning_deprecated`). Its forecast of all period factors by a
-#' multivariate random walk, its auxiliary random walk for the rate of the
-#' open age interval and its 0.5 deaths in empty cells are package-specific.
-#' Use [coda_multiway()], the published multiway compositional model of
+#' For a compositional model of the life-table deaths over age, period and
+#' stratum use [coda_multiway()], the multiway compositional model of
 #' Bergeron-Boucher, Simonacci, Oeppen and Gallo (2018), or [coda()]
 #' (`coherent = TRUE`) for a common component with deviations per stratum.
 #'
@@ -86,11 +82,10 @@
 #'   of parameters of the factor matrices and the core; ranks up to 6 for
 #'   age and period and up to 4 for strata). For selection by forecast
 #'   accuracy use [tuned()].
-#' @param transform `"log"`, or the deprecated `"coda"` (use [coda_multiway()]).
 #' @param ts Forecast method for the period factors: `"rwd"`, `"arima"`,
 #'   `"ets"`.
 #' @param residual_noise Add the in-sample residual variation (per age and
-#'   stratum, normal on the transformed scale) to the draws. The residuals
+#'   stratum, normal on the log scale) to the draws. The residuals
 #'   contain the observation noise of the training years, which predictive
 #'   draws add again as Poisson variation, so the noise is then counted
 #'   twice. Default `FALSE` (earlier development versions: `TRUE`).
@@ -127,36 +122,28 @@
 #' fit$fits$fit_pct
 #' fc <- mt_forecast(fit, h = 5, n_draws = 100, seed = 1)
 #' @export
-tucker3 <- function(ranks = c(2, 2, 2), transform = c("log", "coda"), ts = c("rwd", "arima", "ets"),
-                    residual_noise = FALSE, centre = TRUE, maxit = 200, tol = 1e-8) {
-  transform <- match.arg(transform)
+tucker3 <- function(ranks = c(2, 2, 2), ts = c("rwd", "arima", "ets"), residual_noise = FALSE, centre = TRUE,
+                    maxit = 200, tol = 1e-8) {
   ts <- match.arg(ts)
   check_flag(residual_noise, "residual_noise")
   check_flag(centre, "centre")
-  if (transform == "coda") {
-    mt_warn(paste("tucker3(transform = \"coda\") is deprecated: its forecast of the period factors, the open age",
-                  "interval and the empty cells are package-specific. Use coda_multiway(), the multiway",
-                  "compositional model of Bergeron-Boucher, Simonacci, Oeppen and Gallo (2018)."),
-            class = "deprecated")
-  }
   if (ts != "rwd") need_pkg("forecast", sprintf("for ts = \"%s\"", ts))
   if (is.character(ranks)) {
     check_choice(ranks, c("bic", "aic"), "ranks")
   } else if (length(ranks) != 3) {
     mt_abort("`ranks` needs three values or \"bic\"/\"aic\".", class = "argument")
   }
-  new_mt_spec("tucker3", list(ranks = ranks, transform = transform, ts = ts, residual_noise = residual_noise,
-                              centre = centre, maxit = maxit, tol = tol),
+  new_mt_spec("tucker3", list(ranks = ranks, ts = ts, residual_noise = residual_noise, centre = centre,
+                              maxit = maxit, tol = tol),
               joint = TRUE, min_periods = 6,
-              label = sprintf("Tucker3-%s%s", if (transform == "log") "Direct" else "CoDa",
-                              if (is.character(ranks)) sprintf(" (%s ranks)", toupper(ranks)) else ""))
+              label = paste0("Tucker3-Direct", if (is.character(ranks)) sprintf(" (%s ranks)", toupper(ranks))))
 }
 
 #' @export
 fit_model.mt_spec_tucker3 <- function(spec, D, E, ages, periods, ...) {
   p <- spec$params
   m <- pmax(D, 0.5) / E
-  X <- if (p$transform == "log") log(m) else coda_forward(m, ages)
+  X <- log(m)
   dims <- dim(X)
   # centring (Russolillo, Giordano and Haberman 2011): mean over the years of
   # each age and stratum, as a[x] of Lee-Carter
@@ -176,7 +163,7 @@ fit_model.mt_spec_tucker3 <- function(spec, D, E, ages, periods, ...) {
   # shares of the sum of squares of the decomposed array (Russolillo et al.
   # 2011, Table 4): squared core elements; their sum is the fit
   ss <- sum(Xc^2)
-  out <- list(dec = dec, ranks = ranks, transform = p$transform, ts = p$ts, ages = ages, alpha = alpha,
+  out <- list(dec = dec, ranks = ranks, ts = p$ts, ages = ages, alpha = alpha,
               resid_sd = apply(resid, c(1, 3), stats::sd), residual_noise = isTRUE(p$residual_noise),
               core_pct = 100 * dec$G^2 / ss, fit_pct = 100 * sum(dec$G^2) / ss)
   B <- dec$U[[2]]
@@ -185,20 +172,7 @@ fit_model.mt_spec_tucker3 <- function(spec, D, E, ages, periods, ...) {
   out$B_mu <- colMeans(dB)
   out$B_resid <- t(dB) - out$B_mu
   if (p$ts != "rwd") out$B_models <- fit_series_models(B, p$ts)
-  if (p$transform == "coda") {
-    open <- is.infinite(ages$upper[length(ages)])
-    if (open) {
-      lo <- log(m[length(ages), , , drop = FALSE])
-      lo <- matrix(lo, dims[2], dims[3])
-      out$open_last <- lo[dims[2], ]
-      dlo <- diff(lo)
-      out$open_mu <- colMeans(dlo)
-      out$open_resid <- t(dlo) - out$open_mu
-    }
-    out$fitted <- coda_backward(Xhat, ages, open_rates = if (open) m[length(ages), , ] else NULL)
-  } else {
-    out$fitted <- exp(Xhat)
-  }
+  out$fitted <- exp(Xhat)
   out
 }
 
@@ -213,8 +187,6 @@ simulate_model.mt_spec_tucker3 <- function(spec, fit, h, n_draws, ...) {
   } else {
     simulate_series_models(fit$B_models, h, n_draws)
   }
-  op <- NULL
-  if (!is.null(fit$open_last)) op <- rw_paths(fit$open_last, fit$open_mu, fit$open_resid, h, n_draws, "bootstrap")
   for (j in seq_len(n_draws)) {
     U <- dec$U
     U[[2]] <- t(matrix(Bp[, , j], ncol = h))
@@ -223,8 +195,7 @@ simulate_model.mt_spec_tucker3 <- function(spec, fit, h, n_draws, ...) {
       sdarr <- aperm(array(fit$resid_sd, c(na, ns, h)), c(1, 3, 2))
       Xf <- Xf + stats::rnorm(length(Xf), 0, as.vector(sdarr))
     }
-    out[, , , j] <- if (fit$transform == "log") exp(Xf) else
-      coda_backward(Xf, fit$ages, open_rates = if (is.null(op)) NULL else t(matrix(op[, , j], ncol = h)))
+    out[, , , j] <- exp(Xf)
   }
   out
 }
@@ -288,40 +259,6 @@ tucker_reconstruct <- function(G, U) {
   X <- G
   for (m in seq_along(U)) X <- mode_product(X, U[[m]], m)
   X
-}
-
-# CoDa: rates -> life-table deaths (composition over ages) -> clr. For a
-# closed age range the survivors at the upper bound are an extra component.
-coda_forward <- function(m, ages) {
-  d <- dim(m)
-  M <- matrix(m, d[1])
-  lt <- lt_columns(M, ages)
-  dx <- lt$dx
-  if (!is.infinite(ages$upper[d[1]])) dx <- rbind(dx, lt$lx[d[1], ] - lt$dx[d[1], ])
-  z <- log(pmax(dx, 1e-12))
-  z <- sweep(z, 2, colMeans(z))
-  array(z, c(nrow(z), d[-1]))
-}
-
-# inverse clr -> life-table deaths -> rates; open interval rate from the auxiliary series
-coda_backward <- function(Z, ages, open_rates = NULL) {
-  d <- dim(Z)
-  na <- length(ages)
-  Zm <- matrix(Z, d[1])
-  dx <- exp(Zm)
-  dx <- sweep(dx, 2, colSums(dx), "/")
-  dx <- dx[seq_len(na), , drop = FALSE]
-  lx <- rbind(1, 1 - apply(dx, 2, cumsum))[seq_len(na), , drop = FALSE]
-  n <- ages$upper - ages$lower
-  open <- is.infinite(n[na])
-  nn <- matrix(n, na, ncol(dx))
-  Lx <- nn * (lx - dx / 2)
-  m <- dx / Lx
-  if (open) {
-    if (is.null(open_rates)) mt_abort("The open interval needs an auxiliary rate series.", class = "model")
-    m[na, ] <- as.vector(open_rates)
-  }
-  array(pmax(m, 1e-12), c(na, d[-1]))
 }
 
 # Per-column ARIMA or ETS models (forecast package) for the period factors
