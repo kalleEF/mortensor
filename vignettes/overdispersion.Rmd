@@ -126,7 +126,7 @@ disp[index %in% c(0, 1, 10, 20, 30, 40, 60, 80, 90, 99), .(age = index, dispersi
 `mt_parameters()` reports the dispersions (`nb_dispersion`). The single
 dispersion is 0.0043: the rate of a cell varies around the model by a
 factor with a coefficient of variation of about 6.5% (`sqrt(0.0043)`). By
-age, the dispersion ranges from 0.00057 at age 80 (2.4%) to 0.053 at age 1
+age, the dispersion ranges from 0.00034 at age 91 (1.8%) to 0.053 at age 1
 (23%). The dashed line is the single dispersion:
 
 
