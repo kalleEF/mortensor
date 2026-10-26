@@ -139,6 +139,22 @@ Work package R3 of `dev/review-0.2-plan.md`.
   fit takes about 10 seconds per stratum, against about 1.5 minutes
   (ungrouping) and 6 minutes (smoothing) before.
 
+## Documentation and checks for the release
+
+* The FAQ on reproducible forecasts says that fits of several strata are
+  reproducible with any number of cores (`lee_carter(seed = )` or
+  `set.seed()`), with the chains of `apc_bayes()` as the exception.
+* The six precomputed vignettes are re-knitted with 0.3.0, and the
+  benchmark and package-comparison results recomputed. The vignette
+  "Overdispersion" names the smallest dispersion by age correctly (0.00034
+  at age 91).
+* `p_splines(overdispersion = TRUE)` is checked against MortalitySmooth
+  2.3.4 where that package is installed: the fit agrees within the
+  stopping rule of its dispersion iteration, and the forecast and standard
+  errors of `predict.Mort2Dsmooth()` are reproduced when the dispersion is
+  left out of the penalty of the refit, as `?p_splines` describes. The
+  help gives the size of this difference.
+
 # mortensor 0.2.0
 
 Clean break: the 0.1.x interface is replaced (see `dev/revamp-plan.md`).

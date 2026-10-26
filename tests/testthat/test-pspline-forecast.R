@@ -83,6 +83,37 @@ test_that("p_splines agrees with MortalitySmooth where it is installed", {
   expect_equal(sqrt(rowSums((X %*% Ainv) * X)), as.vector(pr$se.fit[, 52:61]), tolerance = 1e-6)
 })
 
+test_that("p_splines(overdispersion = TRUE) agrees with MortalitySmooth where it is installed", {
+  skip_if_not_installed("StMoMo")
+  skip_if_not_installed("MortalitySmooth")
+  m <- ew_matrices()
+  ms <- tryCatch(MortalitySmooth::Mort2Dsmooth(x = 30:100, y = m$years, Z = m$D, offset = log(m$E),
+                                               overdispersion = TRUE),
+                 error = function(e) NULL)
+  skip_if(is.null(ms), "MortalitySmooth::Mort2Dsmooth() fails in this R version")
+  f <- mortensor:::ps_fit_stratum(ps_spec_params(ms$lambdas), m$D, m$E, m$age, m$years, margin = 0.01,
+                                  overdispersion = TRUE)
+  # MortalitySmooth stops iterating psi2 at a relative change of 1e-3 and
+  # fits with the psi2 of the previous round; mortensor iterates it further
+  expect_equal(f$psi2, ms$psi2, tolerance = 1e-3)
+  expect_equal(log(f$fitted), unname(ms$logmortality), tolerance = 1e-5, ignore_attr = TRUE)
+  expect_equal(f$ed, ms$df, tolerance = 1e-4)
+  # predict.Mort2Dsmooth() refits the forecast without psi2 in the penalty and
+  # multiplies the standard errors by sqrt(psi2) (documented in ?p_splines):
+  # with psi2 = 1 in the refit, mortensor gives the same forecast and errors
+  pr <- stats::predict(ms, newdata = list(x = 30:100, y = 1961:2021), se.fit = TRUE)
+  f1 <- f
+  f1$psi2 <- 1
+  fx1 <- mortensor:::ps2_extend_fit(f1, 10, f$pord)
+  expect_equal(fx1$eta, unname(pr$fit), tolerance = 1e-8, ignore_attr = TRUE)
+  Ainv <- chol2inv(fx1$R)
+  X <- kronecker(fx1$my$B[52:61, ], f$ma$B)
+  expect_equal(sqrt(rowSums((X %*% Ainv) * X) * ms$psi2), as.vector(pr$se.fit[, 52:61]), tolerance = 1e-8)
+  # mortensor keeps psi2 in the penalty of the refit, as in the fit
+  fx <- mortensor:::ps2_extend_fit(f, 10, f$pord)
+  expect_gt(max(abs(fx$eta - unname(pr$fit))), 0.01)
+})
+
 test_that("cp_splines reproduces Camarda's (2019) code (stored values)", {
   skip_if_not_installed("demography")
   m <- fr_matrices()

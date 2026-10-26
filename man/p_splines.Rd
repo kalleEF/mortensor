@@ -96,7 +96,9 @@ the smoothing parameters and the penalty, as in
 \code{Mort2Dsmooth(overdispersion = TRUE)}, and the covariance is
 \verb{psi2 (B'WB + psi2 P)^-1}. MortalitySmooth's \code{predict()} instead refits
 the forecast without \code{psi2} in the penalty and multiplies the standard
-errors by \code{sqrt(psi2)}.
+errors by \code{sqrt(psi2)}. For England and Wales men (ages 30-100,
+1961-2011), the two forecasts differ by up to 0.08 on the log scale ten
+years ahead.
 
 \strong{Dispersion by age.} \code{overdispersion = "age"} replaces the Poisson
 assumption by the first two moments of the deaths, \verb{E[D] = E m} and
