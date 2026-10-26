@@ -100,7 +100,8 @@ Poisson noise is not taken for signal.
 With \code{"pspline"}, an open age interval of the grid is expanded into
 single years up to \code{omega} and its exposure is split by the PCLM of the
 exposures, as in \code{\link[=mt_ungroup]{mt_ungroup()}} (\code{open_split = "pclm"}, Rizzi, Gampe and
-Eilers 2015).
+Eilers 2015). This PCLM smooths exposures, not deaths, so it chooses its
+own smoothing parameter by \code{criterion}, also when \code{lambda} is given.
 
 The Whittaker smoother minimises \verb{sum(w (y - z)^2) + lambda sum((D z)^2)}
 for log rates \code{y}, weights \code{w} and differences \code{D} of order \code{pord}
