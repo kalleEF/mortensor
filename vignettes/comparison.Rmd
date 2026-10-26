@@ -175,7 +175,7 @@ adds no difference beyond Monte Carlo error.
   smooth rates only, the Poisson variation of the deaths in mortensor's
   predictive draws improves coverage: bamp on the ONS data covers 0.79 of
   observed rates at 95% natively and 0.91 through `apc_bayes()`, on
-  bamp's example 0.62 against 0.73; `lca()` on the ONS data 0.56 against
+  bamp's example 0.60 against 0.69; `lca()` on the ONS data 0.56 against
   0.77 for `lee_carter()`. The functional demographic model on France is
   more accurate through mortensor (CRPS 0.091 against 0.094, coverage
   0.66 against 0.59). The exceptions are the functional demographic model
@@ -200,9 +200,8 @@ adds no difference beyond Monte Carlo error.
 * The ensemble is never the most accurate (its CRPS is 10% above that of
   the best model on the ONS data, 5% on France and 31% on England & Wales
   men), but its coverage is near nominal on all three data sets, at the
-  cost of seconds; the Bayesian APC models took 34 (`apc_bayes()`) and 52
-  minutes (native bamp) per backtest on the ONS data, on a machine shared
-  with other jobs.
+  cost of seconds; the Bayesian APC models (`apc_bayes()` and native bamp)
+  took about 49 minutes each per backtest on the ONS data.
 
 On data like these, an ensemble is a robust default, and a backtest on the
 data at hand (`mt_backtest()`) decides whether a structured model such as an
