@@ -1,7 +1,7 @@
 # Precompute vignettes whose chunks take several minutes (MCMC, backtests). Run from the
 # package root; the vignettes use the development version of the package:
 #   Rscript dev/precompute-vignettes.R
-# Each knit takes 1-20 minutes, causes-deprivation about 55 minutes with four cores. The figures
+# Each knit takes 1-20 minutes, causes-deprivation about 66 minutes with four cores. The figures
 # are written next to the vignettes.
 suppressMessages(devtools::load_all(".", quiet = TRUE))
 old <- setwd("vignettes")
