@@ -22,7 +22,7 @@
 
     <a class="navbar-brand me-2" href="index.html">mortensor</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -66,7 +66,7 @@
 <blockquote>
 <p><strong>Caution: experimental, vibe-coded software. Use at your own risk.</strong> mortensor is written largely with AI coding assistants (“vibe-coded”). It has unit tests that check its methods against published results and reference implementations, but it has not been peer reviewed, its interfaces still change, and its results can be wrong in ways the tests do not catch. Check results independently before you use them in publications, reports or decisions.</p>
 </blockquote>
-<p><strong>Status:</strong> version 0.2 is a rewrite in development (see <code>dev/progress.md</code>).</p>
+<p><strong>Status:</strong> version 0.3.0. Interfaces can still change between versions; <code>NEWS.md</code> lists the changes and <code>dev/progress.md</code> the work packages.</p>
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
 </h2>
@@ -142,7 +142,7 @@
 <tr>
 <td>Evaluation and comparison</td>
 <td>
-<code><a href="reference/mt_backtest.html">mt_backtest()</a></code> (rolling origin, no leakage; rates, life expectancy, ASR), <code><a href="reference/mt_score.html">mt_score()</a></code> (CRPS, WIS, coverage, PIT, MAE, RMSE, MASE; also of gaps between strata), <code><a href="reference/mt_compare.html">mt_compare()</a></code> and <code><a href="reference/mt_compare.html">mt_score_table()</a></code> (several models in one backtest, by level of a hierarchy), <code><a href="reference/mt_dm_test.html">mt_dm_test()</a></code> (Diebold-Mariano tests of differences in accuracy), <code><a href="reference/mt_compare.html">mt_compare_forecasts()</a></code>, <code><a href="reference/mt_compare.html">mt_plot_compare()</a></code>, <code><a href="reference/mt_plot_design.html">mt_plot_backtest_design()</a></code>, <code><a href="reference/mt_plot_design.html">mt_plot_tuning()</a></code>, <code><a href="reference/mt_plot_design.html">mt_plot_pit()</a></code>
+<code><a href="reference/mt_backtest.html">mt_backtest()</a></code> (rolling origin, no leakage; rates, life expectancy, ASR), <code><a href="reference/mt_score.html">mt_score()</a></code> (CRPS, WIS, coverage, PIT, MAE, RMSE, MASE; also of gaps between strata; the number of cells floored at half a death; optional SAPE, revisions between origins and the robustness of Stoeldraijer et al. 2018), <code><a href="reference/mt_compare.html">mt_compare()</a></code> and <code><a href="reference/mt_compare.html">mt_score_table()</a></code> (several models in one backtest, by level of a hierarchy), <code><a href="reference/mt_dm_test.html">mt_dm_test()</a></code> (Diebold-Mariano tests of differences in accuracy), <code><a href="reference/mt_compare.html">mt_compare_forecasts()</a></code>, <code><a href="reference/mt_compare.html">mt_plot_compare()</a></code>, <code><a href="reference/mt_plot_design.html">mt_plot_backtest_design()</a></code>, <code><a href="reference/mt_plot_design.html">mt_plot_tuning()</a></code>, <code><a href="reference/mt_plot_design.html">mt_plot_pit()</a></code>
 </td>
 </tr>
 <tr>

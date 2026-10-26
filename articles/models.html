@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">mortensor</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -212,10 +212,11 @@ the first are opt-in; they are described below, and
 <strong>Uncertainty in the draws</strong>: innovations of
 <code>k(t)</code> and the uncertainty of its drift. <code>a(x)</code>
 and <code>b(x)</code> are fixed; <code>bootstrap = TRUE</code> (Poisson
-resamples of the fitted deaths; Renshaw and Haberman 2008) or
-<code><a href="../reference/bootstrapped.html">bootstrapped()</a></code> adds their uncertainty. Predictive draws add
-Poisson variation of the deaths given the rates, the observation model
-of the Poisson Lee-Carter model (Brouhns, Denuit and Vermunt 2002).</li>
+resamples of the fitted deaths; Renshaw and Haberman 2008, reproducible
+with <code>seed</code>) or <code><a href="../reference/bootstrapped.html">bootstrapped()</a></code> adds their
+uncertainty. Predictive draws add Poisson variation of the deaths given
+the rates, the observation model of the Poisson Lee-Carter model
+(Brouhns, Denuit and Vermunt 2002).</li>
 <li>
 <strong>Negative binomial deaths</strong>
 (<code>family = "nb"</code>, opt-in; Delwarde, Denuit and Partrat 2007):

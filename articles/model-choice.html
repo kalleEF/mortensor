@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">mortensor</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -261,13 +261,13 @@ again.</p>
 <span><span class="co">#&gt; 1: 27.0 (26.1-27.8) 28.0 (26.2-29.1) 28.5 (27.7-29.3) 27.3 (27.1-27.5)</span></span>
 <span><span class="co">#&gt; 2: 27.9 (26.6-28.9) 29.6 (28.1-30.9) 30.6 (28.3-32.1) 28.4 (28.2-28.6)</span></span>
 <span><span class="co">#&gt;            Bohk-Rau     Bayesian APC      Bayesian RH</span></span>
-<span><span class="co">#&gt; 1: 28.1 (27.5-28.2) 26.5 (25.5-27.4) 27.5 (26.5-28.4)</span></span>
-<span><span class="co">#&gt; 2: 29.9 (29.1-30.1) 26.7 (25.0-28.2) 28.5 (27.1-29.8)</span></span></code></pre></div>
+<span><span class="co">#&gt; 1: 28.1 (27.5-28.2) 26.6 (25.4-27.6) 27.5 (26.5-28.4)</span></span>
+<span><span class="co">#&gt; 2: 29.9 (29.1-30.1) 26.8 (24.9-28.4) 28.5 (27.1-29.8)</span></span></code></pre></div>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/mt_compare.html">mt_plot_compare</a></span><span class="op">(</span><span class="va">fc</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"random walk"</span>, <span class="st">"Lee-Carter"</span>, <span class="st">"fdm"</span>, <span class="st">"APC"</span>, <span class="st">"Bayesian APC"</span><span class="op">)</span><span class="op">]</span>, data <span class="op">=</span> <span class="va">ew</span><span class="op">)</span></span></code></pre></div>
 <p><img src="model-choice-plot-models-1.png"></p>
 <p>All models forecast a further rise, at different paces and with
-different uncertainty. By 2031 the medians range from 26.7 to 30.6
+different uncertainty. By 2031 the medians range from 26.8 to 30.6
 years:</p>
 <ul>
 <li>
@@ -324,7 +324,7 @@ years):</p>
 <span><span class="co">#&gt; 10:    P-splines 0.0565 0.628   0.352    0.400</span></span>
 <span><span class="co">#&gt; 11:   CP-splines 0.0624 0.359   0.497    0.100</span></span>
 <span><span class="co">#&gt; 12:     Bohk-Rau 0.0337 0.682   0.108    0.867</span></span>
-<span><span class="co">#&gt; 13: Bayesian APC 0.0733 0.644   0.583    0.533</span></span>
+<span><span class="co">#&gt; 13: Bayesian APC 0.0720 0.667   0.570    0.600</span></span>
 <span><span class="co">#&gt; 14:  Bayesian RH 0.0455 0.901   0.278    1.000</span></span></code></pre></div>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/mt_plot_more.html">mt_plot_scores</a></span><span class="op">(</span><span class="va">bt</span>, by <span class="op">=</span> <span class="st">"model"</span>, target <span class="op">=</span> <span class="st">"life_expectancy"</span><span class="op">)</span></span></code></pre></div>
@@ -489,13 +489,13 @@ the single models:</p>
 <span><span class="co">#&gt; 10:                                     P-splines 0.0565 0.628   0.352    0.400</span></span>
 <span><span class="co">#&gt; 11:                                    CP-splines 0.0624 0.359   0.497    0.100</span></span>
 <span><span class="co">#&gt; 12:                                      Bohk-Rau 0.0337 0.682   0.108    0.867</span></span>
-<span><span class="co">#&gt; 13:                                  Bayesian APC 0.0733 0.644   0.583    0.533</span></span>
+<span><span class="co">#&gt; 13:                                  Bayesian APC 0.0720 0.667   0.570    0.600</span></span>
 <span><span class="co">#&gt; 14:                                   Bayesian RH 0.0455 0.901   0.278    1.000</span></span>
-<span><span class="co">#&gt; 15: equal: Lee-Carter, fdm, APC, M6, Bayesian APC 0.0424 0.968   0.298    1.000</span></span>
+<span><span class="co">#&gt; 15: equal: Lee-Carter, fdm, APC, M6, Bayesian APC 0.0426 0.953   0.303    1.000</span></span>
 <span><span class="co">#&gt; 16:                     CRPS weights, best 3 of 6 0.0354 0.980   0.238    1.000</span></span></code></pre></div>
 <ul>
 <li>The <strong>equal-weight ensemble</strong> is more accurate than the
-average of its components (CRPS of the rates 0.042 against 0.051), and
+average of its components (CRPS of the rates 0.043 against 0.051), and
 its intervals cover. This always holds: the CRPS is a convex function of
 the forecast distribution, so the CRPS of a mixture is never larger than
 the weighted mean of the CRPS of its components. It includes the weak

@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">mortensor</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -41,28 +41,13 @@
     </div>
 
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.2.0.9000" id="mortensor-0209000">mortensor 0.2.0.9000<a class="anchor" aria-label="anchor" href="#mortensor-0209000"></a></h2>
+<h2 class="pkg-version" data-toc-text="0.3.0" id="mortensor-030">mortensor 0.3.0<a class="anchor" aria-label="anchor" href="#mortensor-030"></a></h2>
+<p>Release after the independent review of 0.2.0 (<code>dev/review-0.2.md</code>, plan <code>dev/review-0.2-plan.md</code>). It corrects wrong output and unclear errors, computes the two-dimensional ungrouping and smoothing in about 10 seconds per stratum instead of minutes, removes every deprecated function and option, and adds two scores to <code><a href="../reference/mt_score.html">mt_score()</a></code>. Code written for 0.2.0 that uses a removed function or option stops with an error; the list below names the replacement of each.</p>
 <div class="section level3">
-<h3 id="fixes-from-the-review-of-r1-0-2-0-9000">Fixes from the review of 0.2.0 (R1)<a class="anchor" aria-label="anchor" href="#fixes-from-the-review-of-r1-0-2-0-9000"></a></h3>
-<p>Work package R1 of <code>dev/review-0.2-plan.md</code>.</p>
-<ul><li>
-<code><a href="../reference/mt_parameters.html">mt_parameters()</a></code> of <code>lee_carter(choose_period = TRUE)</code> gives <code>k</code> for the years of the chosen fitting period, labelled with those years, and its first year (<code>first_year</code>). Every parameter table stops with class <code>mt_error_internal</code> when labels and values differ in length.</li>
-<li>
-<code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> and <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> of a fit name the fitting period chosen by <code>lee_carter(choose_period = TRUE)</code>.</li>
-<li>
-<code><a href="../reference/relative_model.html">relative_model()</a></code> with a Lee-Carter reference uses plain Newton iterations. The acceleration, now used only with cohort effects, led some fits to a fixed point of lower likelihood or to no convergence within 5,000 iterations (deprivation quintiles of England in <code>ons_data</code>). Fits with a Lee-Carter reference can change. The vignette “Inequality in England” is re-knitted: the relative model forecasts the gap of men at 7.6 years in 2035.</li>
-<li>
-<code>li_lee(ratio_order = )</code> caps the order by the number of age groups and by the number of years minus 2. <code><a href="../reference/li_lee.html">li_lee()</a></code>, <code><a href="../reference/tucker3.html">tucker3()</a></code> and <code><a href="../reference/coda_multiway.html">coda_multiway()</a></code> warn with class <code>mt_warning_argument</code> when they reduce the requested order or ranks, and <code><a href="../reference/mt_parameters.html">mt_parameters()</a></code> reports the values used (<code>ratio_order</code>, <code>rank</code>). The label of a <code><a href="../reference/coda_multiway.html">coda_multiway()</a></code> fit names the ranks used. <code><a href="../reference/mt_parameters.html">mt_parameters()</a></code> gains a method for <code><a href="../reference/tucker3.html">tucker3()</a></code>.</li>
-<li>
-<code>lee_carter(method = "svd", adjust = "dt")</code> warns with class <code>mt_warning_model_fit</code> and records in <code>no_root_years</code> the years in which the search finds no index that gives the observed total deaths. These years keep the SVD index; a year without deaths is one of them.</li>
-<li>
-<code><a href="../reference/mt_coherence.html">mt_coherence()</a></code> stops with class <code>mt_error_hierarchy</code> and names the cause when the draws hold no aggregate strata of the hierarchy.</li>
-</ul></div>
-<div class="section level3">
-<h3 id="removed-deprecated-code-scores-of-floored-cells-and-robustness-r4-0-2-0-9000">Removed deprecated code, scores of floored cells and robustness (R4)<a class="anchor" aria-label="anchor" href="#removed-deprecated-code-scores-of-floored-cells-and-robustness-r4-0-2-0-9000"></a></h3>
+<h3 id="removed-deprecated-code-scores-of-floored-cells-and-robustness-r4-0-3-0">Removed deprecated code, scores of floored cells and robustness (R4)<a class="anchor" aria-label="anchor" href="#removed-deprecated-code-scores-of-floored-cells-and-robustness-r4-0-3-0"></a></h3>
 <p>Work package R4 of <code>dev/review-0.2-plan.md</code>, with the decisions of the owner.</p>
 <div class="section level4">
-<h4 id="breaking-changes-0-2-0-9000">Breaking changes<a class="anchor" aria-label="anchor" href="#breaking-changes-0-2-0-9000"></a></h4>
+<h4 id="breaking-changes-0-3-0">Breaking changes<a class="anchor" aria-label="anchor" href="#breaking-changes-0-3-0"></a></h4>
 <p>The functions and options deprecated in 0.2.0 are removed. Each warned with the name of its published replacement.</p>
 <ul><li>
 <code>product_ratio()</code> is removed. Use <code><a href="../reference/coherent_fdm.html">coherent_fdm()</a></code>, the product-ratio method of Hyndman, Booth and Yasmeen (2013).</li>
@@ -83,7 +68,7 @@
 </ul><p>No function or option of the package is deprecated any more.</p>
 </div>
 <div class="section level4">
-<h4 id="scores-0-2-0-9000">Scores<a class="anchor" aria-label="anchor" href="#scores-0-2-0-9000"></a></h4>
+<h4 id="scores-0-3-0">Scores<a class="anchor" aria-label="anchor" href="#scores-0-3-0"></a></h4>
 <ul><li>
 <code><a href="../reference/mt_backtest.html">mt_backtest()</a></code> marks the rate rows whose observed deaths are below half a death (column <code>floored</code>), and <code><a href="../reference/mt_score.html">mt_score()</a></code> counts them (<code>n_floored</code>, after <code>n</code>). The scores of such cells can dominate the means of sparse data; life expectancy and the ASR (<code>quantities</code>) or coarser age groups (<code><a href="../reference/mt_prep.html">step_regroup()</a></code>) avoid the floor.</li>
 <li>
@@ -91,7 +76,23 @@
 </ul></div>
 </div>
 <div class="section level3">
-<h3 id="small-corrections-and-labels-r2-0-2-0-9000">Small corrections and labels (R2)<a class="anchor" aria-label="anchor" href="#small-corrections-and-labels-r2-0-2-0-9000"></a></h3>
+<h3 id="fixes-from-the-review-of-r1-0-3-0">Fixes from the review of 0.2.0 (R1)<a class="anchor" aria-label="anchor" href="#fixes-from-the-review-of-r1-0-3-0"></a></h3>
+<p>Work package R1 of <code>dev/review-0.2-plan.md</code>.</p>
+<ul><li>
+<code><a href="../reference/mt_parameters.html">mt_parameters()</a></code> of <code>lee_carter(choose_period = TRUE)</code> gives <code>k</code> for the years of the chosen fitting period, labelled with those years, and its first year (<code>first_year</code>). Every parameter table stops with class <code>mt_error_internal</code> when labels and values differ in length.</li>
+<li>
+<code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> and <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> of a fit name the fitting period chosen by <code>lee_carter(choose_period = TRUE)</code>.</li>
+<li>
+<code><a href="../reference/relative_model.html">relative_model()</a></code> with a Lee-Carter reference uses plain Newton iterations. The acceleration, now used only with cohort effects, led some fits to a fixed point of lower likelihood or to no convergence within 5,000 iterations (deprivation quintiles of England in <code>ons_data</code>). Fits with a Lee-Carter reference can change. The vignette “Inequality in England” is re-knitted: the relative model forecasts the gap of men at 7.6 years in 2035.</li>
+<li>
+<code>li_lee(ratio_order = )</code> caps the order by the number of age groups and by the number of years minus 2. <code><a href="../reference/li_lee.html">li_lee()</a></code>, <code><a href="../reference/tucker3.html">tucker3()</a></code> and <code><a href="../reference/coda_multiway.html">coda_multiway()</a></code> warn with class <code>mt_warning_argument</code> when they reduce the requested order or ranks, and <code><a href="../reference/mt_parameters.html">mt_parameters()</a></code> reports the values used (<code>ratio_order</code>, <code>rank</code>). The label of a <code><a href="../reference/coda_multiway.html">coda_multiway()</a></code> fit names the ranks used. <code><a href="../reference/mt_parameters.html">mt_parameters()</a></code> gains a method for <code><a href="../reference/tucker3.html">tucker3()</a></code>.</li>
+<li>
+<code>lee_carter(method = "svd", adjust = "dt")</code> warns with class <code>mt_warning_model_fit</code> and records in <code>no_root_years</code> the years in which the search finds no index that gives the observed total deaths. These years keep the SVD index; a year without deaths is one of them.</li>
+<li>
+<code><a href="../reference/mt_coherence.html">mt_coherence()</a></code> stops with class <code>mt_error_hierarchy</code> and names the cause when the draws hold no aggregate strata of the hierarchy.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="small-corrections-and-labels-r2-0-3-0">Small corrections and labels (R2)<a class="anchor" aria-label="anchor" href="#small-corrections-and-labels-r2-0-3-0"></a></h3>
 <p>Work package R2 of <code>dev/review-0.2-plan.md</code>.</p>
 <ul><li>The bootstrap of the CoDa time indexes (<code><a href="../reference/coda.html">coda()</a></code>, <code>coda(coherent = TRUE)</code>, <code><a href="../reference/coda_multiway.html">coda_multiway()</a></code>, <code><a href="../reference/coda_causes.html">coda_causes()</a></code>) resamples the innovations without the first <code>d</code> residuals of <code><a href="https://rdrr.io/r/stats/arima.html" class="external-link">stats::arima()</a></code>. These come from its diffuse initialisation and are near zero, so the draws are slightly wider. The vignettes “Choosing and combining models” and “Causes of death by deprivation” are re-knitted; “Lifespan variation” and “Model reference” give the new numbers. The Bayesian APC rows of “Choosing and combining models” also moved, because the chains of bamp are not seeded.</li>
 <li>
@@ -102,10 +103,17 @@
 <li>The unused internal functions <code>axis_from_bounds()</code>, <code>Matrix_diag()</code> and <code>relative_kernel()</code> are removed.</li>
 </ul></div>
 <div class="section level3">
-<h3 id="faster-two-dimensional-ungrouping-and-smoothing-r3-0-2-0-9000">Faster two-dimensional ungrouping and smoothing (R3)<a class="anchor" aria-label="anchor" href="#faster-two-dimensional-ungrouping-and-smoothing-r3-0-2-0-9000"></a></h3>
+<h3 id="faster-two-dimensional-ungrouping-and-smoothing-r3-0-3-0">Faster two-dimensional ungrouping and smoothing (R3)<a class="anchor" aria-label="anchor" href="#faster-two-dimensional-ungrouping-and-smoothing-r3-0-3-0"></a></h3>
 <p>Work package R3 of <code>dev/review-0.2-plan.md</code>.</p>
 <ul><li>
 <code>mt_ungroup(dims = 2)</code> and <code>mt_smooth(dims = 2)</code> (P-splines) compute the products with the tensor basis over age and period in array form, as in generalised linear array models (Currie, Durban and Eilers 2006), and solve the banded system within its band. The model, the penalties, the criterion and the search of the smoothing parameters are unchanged. With fixed smoothing parameters the results equal those of 0.2.0 within a relative difference of 1e-8. Chosen smoothing parameters near the upper end of <code>lambda_range</code>, where the criterion is nearly flat, can differ by rounding error; the code of 0.2.0 differs from itself by as much when the rows of the data are reordered. On <code><a href="../reference/mt_example.html">mt_example()</a></code> a two-dimensional fit takes about 10 seconds per stratum, against about 1.5 minutes (ungrouping) and 6 minutes (smoothing) before.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="documentation-and-checks-for-the-release-0-3-0">Documentation and checks for the release<a class="anchor" aria-label="anchor" href="#documentation-and-checks-for-the-release-0-3-0"></a></h3>
+<ul><li>The FAQ on reproducible forecasts says that fits of several strata are reproducible with any number of cores (<code>lee_carter(seed = )</code> or <code><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed()</a></code>), with the chains of <code><a href="../reference/apc_bayes.html">apc_bayes()</a></code> as the exception.</li>
+<li>The six precomputed vignettes are re-knitted with 0.3.0, and the benchmark and package-comparison results recomputed. The vignette “Overdispersion” names the smallest dispersion by age correctly (0.00034 at age 91).</li>
+<li>
+<code>p_splines(overdispersion = TRUE)</code> is checked against MortalitySmooth 2.3.4 where that package is installed: the fit agrees within the stopping rule of its dispersion iteration, and the forecast and standard errors of <code>predict.Mort2Dsmooth()</code> are reproduced when the dispersion is left out of the penalty of the refit, as <code><a href="../reference/p_splines.html">?p_splines</a></code> describes. The help gives the size of this difference.</li>
 </ul></div>
 </div>
     <div class="section level2">

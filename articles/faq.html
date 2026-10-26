@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">mortensor</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -730,11 +730,16 @@ same call. See “Excess mortality”.</p>
 (<code>mt_forecast(..., seed = 1)</code>,
 <code>mt_backtest(..., seed = 1)</code>). Backtests and
 <code><a href="../reference/recalibrated.html">recalibrated()</a></code> seed every origin separately, so their
-results do not depend on <code>cores</code>. Fits of several strata in
-parallel (<code>mt_fit(..., cores = )</code>) run in forked processes;
-for models with random steps in the fit, set
-<code>RNGkind("L'Ecuyer-CMRG")</code> and a seed before the call to make
-them reproducible.</p>
+results do not depend on <code>cores</code>. Fits of several strata
+(<code>mt_fit(..., cores = )</code>) give each stratum its own random
+number stream, started from the seed of the model
+(<code>lee_carter(seed = )</code> for the bootstrap of its parameters)
+or else from <code><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed()</a></code>, so models with random steps in the
+fit give the same results with any number of cores. The chains of
+<code><a href="../reference/apc_bayes.html">apc_bayes()</a></code> are the exception: with
+<code>mcmc_control(parallel = TRUE)</code>, the default, bamp runs them
+in a socket cluster without seeded streams, so results differ slightly
+between runs (<code><a href="../reference/mcmc_control.html">?mcmc_control</a></code>).</p>
 </div>
 <div class="section level3">
 <h3 id="how-long-does-it-take">How long does it take?<a class="anchor" aria-label="anchor" href="#how-long-does-it-take"></a>

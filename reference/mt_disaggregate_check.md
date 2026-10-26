@@ -72,7 +72,7 @@ mt_disaggregate_check(fc, fs, e)
 #> 2: female female   2021    4.440892e-16             0.3116803
 #> 3: female female   2022    4.440892e-16             0.3116803
 #> 4:   male   male   2020    4.440892e-16             0.2758296
-#> 5:   male   male   2021    3.330669e-16             0.2758296
+#> 5:   male   male   2021    4.440892e-16             0.2758296
 #> 6:   male   male   2022    4.440892e-16             0.2758296
 if (requireNamespace("ggplot2", quietly = TRUE)) mt_plot_disaggregation(fc, fs)
 ```

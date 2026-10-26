@@ -79,10 +79,11 @@ window of a backtest.
 - **Uncertainty in the draws**: innovations of `k(t)` and the
   uncertainty of its drift. `a(x)` and `b(x)` are fixed;
   `bootstrap = TRUE` (Poisson resamples of the fitted deaths; Renshaw
-  and Haberman 2008) or [`bootstrapped()`](../reference/bootstrapped.md)
-  adds their uncertainty. Predictive draws add Poisson variation of the
-  deaths given the rates, the observation model of the Poisson
-  Lee-Carter model (Brouhns, Denuit and Vermunt 2002).
+  and Haberman 2008, reproducible with `seed`) or
+  [`bootstrapped()`](../reference/bootstrapped.md) adds their
+  uncertainty. Predictive draws add Poisson variation of the deaths
+  given the rates, the observation model of the Poisson Lee-Carter model
+  (Brouhns, Denuit and Vermunt 2002).
 - **Negative binomial deaths** (`family = "nb"`, opt-in; Delwarde,
   Denuit and Partrat 2007): the deaths are negative binomial with
   variance `mu + phi mu^2` and one dispersion parameter `phi` for all

@@ -515,9 +515,15 @@ Yes, with a `seed` (`mt_forecast(..., seed = 1)`,
 `mt_backtest(..., seed = 1)`). Backtests and
 [`recalibrated()`](../reference/recalibrated.md) seed every origin
 separately, so their results do not depend on `cores`. Fits of several
-strata in parallel (`mt_fit(..., cores = )`) run in forked processes;
-for models with random steps in the fit, set `RNGkind("L'Ecuyer-CMRG")`
-and a seed before the call to make them reproducible.
+strata (`mt_fit(..., cores = )`) give each stratum its own random number
+stream, started from the seed of the model (`lee_carter(seed = )` for
+the bootstrap of its parameters) or else from
+[`set.seed()`](https://rdrr.io/r/base/Random.html), so models with
+random steps in the fit give the same results with any number of cores.
+The chains of [`apc_bayes()`](../reference/apc_bayes.md) are the
+exception: with `mcmc_control(parallel = TRUE)`, the default, bamp runs
+them in a socket cluster without seeded streams, so results differ
+slightly between runs ([`?mcmc_control`](../reference/mcmc_control.md)).
 
 ### How long does it take?
 

@@ -20,7 +20,7 @@ Versions used:
 
 res$settings$versions
 #>  mortensor demography       bamp     StMoMo   forecast 
-#> "0.1.9000"    "2.0.1"    "3.0.0"    "0.4.1"   "8.21.1"
+#>    "0.3.0"    "2.0.1"    "3.0.0"    "0.4.1"   "8.21.1"
 ```
 
 ## Fidelity
@@ -107,12 +107,12 @@ Differences are in units of the posterior standard deviation:
 res$fidelity$bamp[, lapply(.SD, function(v) if (is.numeric(v)) signif(v, 2) else v)]
 #>                        comparison max_abs_diff_median_in_sd
 #>                            <char>                     <num>
-#> 1:   apc_bayes() vs bamp (seed 1)                     0.068
-#> 2: bamp (seed 2) vs bamp (seed 1)                     0.054
+#> 1:   apc_bayes() vs bamp (seed 1)                     0.055
+#> 2: bamp (seed 2) vs bamp (seed 1)                     0.068
 #>    max_abs_diff_90_bounds_in_sd
 #>                           <num>
-#> 1:                         0.09
-#> 2:                         0.14
+#> 1:                         0.15
+#> 2:                         0.11
 ```
 
 ## Accuracy
@@ -177,45 +177,45 @@ for (d in unique(acc$data)) {
                          cov95 = fmt(cov95, 2), seconds = round(seconds))], row.names = FALSE)
 }
 #> 
-#> ONS England, sex x IMD quintile, 5-year groups
-#>                         model   crps  cov50  cov80  cov95 seconds
-#>                        <char> <char> <char> <char> <char>   <num>
-#>           Bayesian APC (bamp) 0.0623   0.46   0.75   0.91    2032
-#>                 bamp (native) 0.0667   0.37   0.62   0.79    3122
-#>                    Lee-Carter 0.0677   0.33   0.58   0.77       2
-#>        Li-Lee (common by sex) 0.0684   0.35   0.60   0.77       1
-#>             Ensemble (lc, rw) 0.0685   0.43   0.75   0.92       2
-#>       demography fdm (native) 0.0719   0.33   0.57   0.76      10
-#>  Functional demographic model 0.0726   0.34   0.62   0.81      30
-#>       demography lca (native) 0.0841   0.21   0.39   0.56       2
-#> 
-#> France (HMD via demography), single ages 0-95
-#>                         model   crps  cov50  cov80  cov95 seconds
-#>                        <char> <char> <char> <char> <char>   <num>
-#>        Random walk with drift 0.0765   0.65   0.91   0.98       2
-#>             Ensemble (lc, rw) 0.0803   0.47   0.82   0.97       3
-#>  Functional demographic model 0.0908   0.28   0.49   0.66      18
-#>       demography fdm (native) 0.0941   0.24   0.43   0.59      11
-#>       demography lca (native) 0.0982   0.31   0.54   0.74       1
-#>                    Lee-Carter 0.1040   0.26   0.46   0.65       1
-#> 
 #> England & Wales men (HMD via StMoMo), single ages 55-89
 #>                    model   crps  cov50  cov80  cov95 seconds
 #>                   <char> <char> <char> <char> <char>   <num>
 #>               StMoMo APC 0.0432   0.33   0.75   0.98       3
 #>   Random walk with drift 0.0554   0.48   0.80   0.97       0
-#>        Ensemble (lc, rw) 0.0566   0.38   0.73   0.94       0
+#>        Ensemble (lc, rw) 0.0566   0.38   0.73   0.94       1
 #>  demography lca (native) 0.0583   0.31   0.60   0.79       0
 #>               Lee-Carter 0.0624   0.28   0.52   0.74       0
 #>               StMoMo CBD 0.0635   0.33   0.57   0.76       1
 #>                StMoMo LC 0.0655   0.23   0.46   0.70       1
 #> 
+#> France (HMD via demography), single ages 0-95
+#>                         model   crps  cov50  cov80  cov95 seconds
+#>                        <char> <char> <char> <char> <char>   <num>
+#>        Random walk with drift 0.0765   0.65   0.91   0.98       2
+#>             Ensemble (lc, rw) 0.0803   0.47   0.82   0.97       2
+#>  Functional demographic model 0.0908   0.28   0.49   0.66      19
+#>       demography fdm (native) 0.0941   0.24   0.43   0.59      14
+#>       demography lca (native) 0.0982   0.31   0.54   0.74       2
+#>                    Lee-Carter 0.1040   0.26   0.46   0.65       2
+#> 
+#> ONS England, sex x IMD quintile, 5-year groups
+#>                         model   crps  cov50  cov80  cov95 seconds
+#>                        <char> <char> <char> <char> <char>   <num>
+#>           Bayesian APC (bamp) 0.0620   0.47   0.75   0.91    2933
+#>                 bamp (native) 0.0668   0.37   0.62   0.79    2913
+#>                    Lee-Carter 0.0677   0.33   0.58   0.77       2
+#>        Li-Lee (common by sex) 0.0684   0.35   0.60   0.77       2
+#>             Ensemble (lc, rw) 0.0685   0.43   0.75   0.92       3
+#>       demography fdm (native) 0.0719   0.33   0.57   0.76      12
+#>  Functional demographic model 0.0726   0.34   0.62   0.81      31
+#>       demography lca (native) 0.0841   0.21   0.39   0.56       2
+#> 
 #> bamp example data (8 age groups, 10 years)
 #>                   model   crps  cov50  cov80  cov95 seconds
 #>                  <char> <char> <char> <char> <char>   <num>
-#>     Bayesian APC (bamp) 0.2600   0.42   0.52   0.73      28
-#>           bamp (native) 0.2768   0.23   0.40   0.62      25
-#>              Lee-Carter 0.2881   0.31   0.56   0.71       0
+#>     Bayesian APC (bamp) 0.2559   0.42   0.54   0.69      34
+#>           bamp (native) 0.2753   0.23   0.42   0.60      32
+#>              Lee-Carter 0.2881   0.31   0.58   0.71       0
 #>  Random walk with drift 0.3460   0.54   0.81   0.85       0
 ```
 
@@ -254,8 +254,8 @@ the wrapper adds no difference beyond Monte Carlo error.
   smooth rates only, the Poisson variation of the deaths in mortensor’s
   predictive draws improves coverage: bamp on the ONS data covers 0.79
   of observed rates at 95% natively and 0.91 through
-  [`apc_bayes()`](../reference/apc_bayes.md), on bamp’s example 0.62
-  against 0.73; `lca()` on the ONS data 0.56 against 0.77 for
+  [`apc_bayes()`](../reference/apc_bayes.md), on bamp’s example 0.60
+  against 0.69; `lca()` on the ONS data 0.56 against 0.77 for
   [`lee_carter()`](../reference/lee_carter.md). The functional
   demographic model on France is more accurate through mortensor (CRPS
   0.091 against 0.094, coverage 0.66 against 0.59). The exceptions are
@@ -282,10 +282,9 @@ the wrapper adds no difference beyond Monte Carlo error.
 - The ensemble is never the most accurate (its CRPS is 10% above that of
   the best model on the ONS data, 5% on France and 31% on England &
   Wales men), but its coverage is near nominal on all three data sets,
-  at the cost of seconds; the Bayesian APC models took 34
-  ([`apc_bayes()`](../reference/apc_bayes.md)) and 52 minutes (native
-  bamp) per backtest on the ONS data, on a machine shared with other
-  jobs.
+  at the cost of seconds; the Bayesian APC models
+  ([`apc_bayes()`](../reference/apc_bayes.md) and native bamp) took
+  about 49 minutes each per backtest on the ONS data.
 
 On data like these, an ensemble is a robust default, and a backtest on
 the data at hand ([`mt_backtest()`](../reference/mt_backtest.md))

@@ -22,11 +22,11 @@ code and reads the stored results. Run on:
 
 res$settings[c("date", "versions")]
 #> $date
-#> [1] "2026-10-20"
+#> [1] "2026-10-26"
 #> 
 #> $versions
 #>  mortensor     StMoMo demography   forecast 
-#> "0.1.9000"    "0.4.1"    "2.0.1"   "8.21.1"
+#>    "0.3.0"    "0.4.1"    "2.0.1"   "8.21.1"
 ```
 
 Other vignettes hold further benchmarks: “Comparison with demography,
@@ -326,7 +326,7 @@ knitr::kable(res$defects[, .(defect, outcome, error = first(error), warning = fi
 | a mortality shock (+20%) in the last two years | no message |  |  | 4 strata; e0 in the last year 73.6-79.0 |
 | a region of 5,000 people, Lee-Carter for each region and sex | warning |  | Lee-Carter: No deaths in age group(s) 5-9, 15-19 in the training years: constant rate (0.5 deaths in all years), no trend. | 53% of its cells without deaths; draws with a rate above 1: 96% |
 | the same region with rwd(), li_lee(common_by = “sex”) and tucker3() | warning |  | Random walk with drift: forecast death rates above 1 in 62.0% of the draws (strata Island.female, Island.male, South.female; ages 30-34, 35-39, 50-54, 55-59). The model is unstable here, often beca… | draws with a rate above 1 in the small region: rwd 61%, li_lee 0%, tucker3 2% |
-| 400 districts x 2 sexes x 18 ages x 20 years (288,000 rows) | no message |  |  | reading 1.6 s; grouping and totals 0.5 s |
+| 400 districts x 2 sexes x 18 ages x 20 years (288,000 rows) | no message |  |  | reading 1.9 s; grouping and totals 0.6 s |
 
 Defects that would make a forecast wrong without notice stop the
 pipeline with an error that names the cells or strata: duplicated rows,

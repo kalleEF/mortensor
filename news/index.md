@@ -1,44 +1,15 @@
 # Changelog
 
-## mortensor 0.2.0.9000
+## mortensor 0.3.0
 
-### Fixes from the review of 0.2.0 (R1)
-
-Work package R1 of `dev/review-0.2-plan.md`.
-
-- [`mt_parameters()`](../reference/mt_parameters.md) of
-  `lee_carter(choose_period = TRUE)` gives `k` for the years of the
-  chosen fitting period, labelled with those years, and its first year
-  (`first_year`). Every parameter table stops with class
-  `mt_error_internal` when labels and values differ in length.
-- [`print()`](https://rdrr.io/r/base/print.html) and
-  [`summary()`](https://rdrr.io/r/base/summary.html) of a fit name the
-  fitting period chosen by `lee_carter(choose_period = TRUE)`.
-- [`relative_model()`](../reference/relative_model.md) with a Lee-Carter
-  reference uses plain Newton iterations. The acceleration, now used
-  only with cohort effects, led some fits to a fixed point of lower
-  likelihood or to no convergence within 5,000 iterations (deprivation
-  quintiles of England in `ons_data`). Fits with a Lee-Carter reference
-  can change. The vignette “Inequality in England” is re-knitted: the
-  relative model forecasts the gap of men at 7.6 years in 2035.
-- `li_lee(ratio_order = )` caps the order by the number of age groups
-  and by the number of years minus 2.
-  [`li_lee()`](../reference/li_lee.md),
-  [`tucker3()`](../reference/tucker3.md) and
-  [`coda_multiway()`](../reference/coda_multiway.md) warn with class
-  `mt_warning_argument` when they reduce the requested order or ranks,
-  and [`mt_parameters()`](../reference/mt_parameters.md) reports the
-  values used (`ratio_order`, `rank`). The label of a
-  [`coda_multiway()`](../reference/coda_multiway.md) fit names the ranks
-  used. [`mt_parameters()`](../reference/mt_parameters.md) gains a
-  method for [`tucker3()`](../reference/tucker3.md).
-- `lee_carter(method = "svd", adjust = "dt")` warns with class
-  `mt_warning_model_fit` and records in `no_root_years` the years in
-  which the search finds no index that gives the observed total deaths.
-  These years keep the SVD index; a year without deaths is one of them.
-- [`mt_coherence()`](../reference/mt_coherence.md) stops with class
-  `mt_error_hierarchy` and names the cause when the draws hold no
-  aggregate strata of the hierarchy.
+Release after the independent review of 0.2.0 (`dev/review-0.2.md`, plan
+`dev/review-0.2-plan.md`). It corrects wrong output and unclear errors,
+computes the two-dimensional ungrouping and smoothing in about 10
+seconds per stratum instead of minutes, removes every deprecated
+function and option, and adds two scores to
+[`mt_score()`](../reference/mt_score.md). Code written for 0.2.0 that
+uses a removed function or option stops with an error; the list below
+names the replacement of each.
 
 ### Removed deprecated code, scores of floored cells and robustness (R4)
 
@@ -103,6 +74,44 @@ No function or option of the package is deprecated any more.
   `measures = "revision"` labels the mean absolute revision as a measure
   of this package.
 
+### Fixes from the review of 0.2.0 (R1)
+
+Work package R1 of `dev/review-0.2-plan.md`.
+
+- [`mt_parameters()`](../reference/mt_parameters.md) of
+  `lee_carter(choose_period = TRUE)` gives `k` for the years of the
+  chosen fitting period, labelled with those years, and its first year
+  (`first_year`). Every parameter table stops with class
+  `mt_error_internal` when labels and values differ in length.
+- [`print()`](https://rdrr.io/r/base/print.html) and
+  [`summary()`](https://rdrr.io/r/base/summary.html) of a fit name the
+  fitting period chosen by `lee_carter(choose_period = TRUE)`.
+- [`relative_model()`](../reference/relative_model.md) with a Lee-Carter
+  reference uses plain Newton iterations. The acceleration, now used
+  only with cohort effects, led some fits to a fixed point of lower
+  likelihood or to no convergence within 5,000 iterations (deprivation
+  quintiles of England in `ons_data`). Fits with a Lee-Carter reference
+  can change. The vignette “Inequality in England” is re-knitted: the
+  relative model forecasts the gap of men at 7.6 years in 2035.
+- `li_lee(ratio_order = )` caps the order by the number of age groups
+  and by the number of years minus 2.
+  [`li_lee()`](../reference/li_lee.md),
+  [`tucker3()`](../reference/tucker3.md) and
+  [`coda_multiway()`](../reference/coda_multiway.md) warn with class
+  `mt_warning_argument` when they reduce the requested order or ranks,
+  and [`mt_parameters()`](../reference/mt_parameters.md) reports the
+  values used (`ratio_order`, `rank`). The label of a
+  [`coda_multiway()`](../reference/coda_multiway.md) fit names the ranks
+  used. [`mt_parameters()`](../reference/mt_parameters.md) gains a
+  method for [`tucker3()`](../reference/tucker3.md).
+- `lee_carter(method = "svd", adjust = "dt")` warns with class
+  `mt_warning_model_fit` and records in `no_root_years` the years in
+  which the search finds no index that gives the observed total deaths.
+  These years keep the SVD index; a year without deaths is one of them.
+- [`mt_coherence()`](../reference/mt_coherence.md) stops with class
+  `mt_error_hierarchy` and names the cause when the draws hold no
+  aggregate strata of the hierarchy.
+
 ### Small corrections and labels (R2)
 
 Work package R2 of `dev/review-0.2-plan.md`.
@@ -161,6 +170,24 @@ Work package R3 of `dev/review-0.2-plan.md`.
   reordered. On [`mt_example()`](../reference/mt_example.md) a
   two-dimensional fit takes about 10 seconds per stratum, against about
   1.5 minutes (ungrouping) and 6 minutes (smoothing) before.
+
+### Documentation and checks for the release
+
+- The FAQ on reproducible forecasts says that fits of several strata are
+  reproducible with any number of cores (`lee_carter(seed = )` or
+  [`set.seed()`](https://rdrr.io/r/base/Random.html)), with the chains
+  of [`apc_bayes()`](../reference/apc_bayes.md) as the exception.
+- The six precomputed vignettes are re-knitted with 0.3.0, and the
+  benchmark and package-comparison results recomputed. The vignette
+  “Overdispersion” names the smallest dispersion by age correctly
+  (0.00034 at age 91).
+- `p_splines(overdispersion = TRUE)` is checked against MortalitySmooth
+  2.3.4 where that package is installed: the fit agrees within the
+  stopping rule of its dispersion iteration, and the forecast and
+  standard errors of `predict.Mort2Dsmooth()` are reproduced when the
+  dispersion is left out of the penalty of the refit, as
+  [`?p_splines`](../reference/p_splines.md) describes. The help gives
+  the size of this difference.
 
 ## mortensor 0.2.0
 

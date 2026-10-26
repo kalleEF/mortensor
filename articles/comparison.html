@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">mortensor</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -89,7 +89,7 @@ Versions used:</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">res</span><span class="op">$</span><span class="va">settings</span><span class="op">$</span><span class="va">versions</span></span>
 <span><span class="co">#&gt;  mortensor demography       bamp     StMoMo   forecast </span></span>
-<span><span class="co">#&gt; "0.1.9000"    "2.0.1"    "3.0.0"    "0.4.1"   "8.21.1"</span></span></code></pre></div>
+<span><span class="co">#&gt;    "0.3.0"    "2.0.1"    "3.0.0"    "0.4.1"   "8.21.1"</span></span></code></pre></div>
 <div class="section level2">
 <h2 id="fidelity">Fidelity<a class="anchor" aria-label="anchor" href="#fidelity"></a>
 </h2>
@@ -162,12 +162,12 @@ are in units of the posterior standard deviation:</p>
 <code class="sourceCode R"><span><span class="va">res</span><span class="op">$</span><span class="va">fidelity</span><span class="op">$</span><span class="va">bamp</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span><span class="va">.SD</span>, <span class="kw">function</span><span class="op">(</span><span class="va">v</span><span class="op">)</span> <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">is.numeric</a></span><span class="op">(</span><span class="va">v</span><span class="op">)</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">signif</a></span><span class="op">(</span><span class="va">v</span>, <span class="fl">2</span><span class="op">)</span> <span class="kw">else</span> <span class="va">v</span><span class="op">)</span><span class="op">]</span></span>
 <span><span class="co">#&gt;                        comparison max_abs_diff_median_in_sd</span></span>
 <span><span class="co">#&gt;                            &lt;char&gt;                     &lt;num&gt;</span></span>
-<span><span class="co">#&gt; 1:   apc_bayes() vs bamp (seed 1)                     0.068</span></span>
-<span><span class="co">#&gt; 2: bamp (seed 2) vs bamp (seed 1)                     0.054</span></span>
+<span><span class="co">#&gt; 1:   apc_bayes() vs bamp (seed 1)                     0.055</span></span>
+<span><span class="co">#&gt; 2: bamp (seed 2) vs bamp (seed 1)                     0.068</span></span>
 <span><span class="co">#&gt;    max_abs_diff_90_bounds_in_sd</span></span>
 <span><span class="co">#&gt;                           &lt;num&gt;</span></span>
-<span><span class="co">#&gt; 1:                         0.09</span></span>
-<span><span class="co">#&gt; 2:                         0.14</span></span></code></pre></div>
+<span><span class="co">#&gt; 1:                         0.15</span></span>
+<span><span class="co">#&gt; 2:                         0.11</span></span></code></pre></div>
 </div>
 </div>
 <div class="section level2">
@@ -227,45 +227,45 @@ data.</p>
 <span>                         cov95 <span class="op">=</span> <span class="fu">fmt</span><span class="op">(</span><span class="va">cov95</span>, <span class="fl">2</span><span class="op">)</span>, seconds <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">seconds</span><span class="op">)</span><span class="op">)</span><span class="op">]</span>, row.names <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
 <span><span class="op">}</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; ONS England, sex x IMD quintile, 5-year groups</span></span>
-<span><span class="co">#&gt;                         model   crps  cov50  cov80  cov95 seconds</span></span>
-<span><span class="co">#&gt;                        &lt;char&gt; &lt;char&gt; &lt;char&gt; &lt;char&gt; &lt;char&gt;   &lt;num&gt;</span></span>
-<span><span class="co">#&gt;           Bayesian APC (bamp) 0.0623   0.46   0.75   0.91    2032</span></span>
-<span><span class="co">#&gt;                 bamp (native) 0.0667   0.37   0.62   0.79    3122</span></span>
-<span><span class="co">#&gt;                    Lee-Carter 0.0677   0.33   0.58   0.77       2</span></span>
-<span><span class="co">#&gt;        Li-Lee (common by sex) 0.0684   0.35   0.60   0.77       1</span></span>
-<span><span class="co">#&gt;             Ensemble (lc, rw) 0.0685   0.43   0.75   0.92       2</span></span>
-<span><span class="co">#&gt;       demography fdm (native) 0.0719   0.33   0.57   0.76      10</span></span>
-<span><span class="co">#&gt;  Functional demographic model 0.0726   0.34   0.62   0.81      30</span></span>
-<span><span class="co">#&gt;       demography lca (native) 0.0841   0.21   0.39   0.56       2</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; France (HMD via demography), single ages 0-95</span></span>
-<span><span class="co">#&gt;                         model   crps  cov50  cov80  cov95 seconds</span></span>
-<span><span class="co">#&gt;                        &lt;char&gt; &lt;char&gt; &lt;char&gt; &lt;char&gt; &lt;char&gt;   &lt;num&gt;</span></span>
-<span><span class="co">#&gt;        Random walk with drift 0.0765   0.65   0.91   0.98       2</span></span>
-<span><span class="co">#&gt;             Ensemble (lc, rw) 0.0803   0.47   0.82   0.97       3</span></span>
-<span><span class="co">#&gt;  Functional demographic model 0.0908   0.28   0.49   0.66      18</span></span>
-<span><span class="co">#&gt;       demography fdm (native) 0.0941   0.24   0.43   0.59      11</span></span>
-<span><span class="co">#&gt;       demography lca (native) 0.0982   0.31   0.54   0.74       1</span></span>
-<span><span class="co">#&gt;                    Lee-Carter 0.1040   0.26   0.46   0.65       1</span></span>
-<span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; England &amp; Wales men (HMD via StMoMo), single ages 55-89</span></span>
 <span><span class="co">#&gt;                    model   crps  cov50  cov80  cov95 seconds</span></span>
 <span><span class="co">#&gt;                   &lt;char&gt; &lt;char&gt; &lt;char&gt; &lt;char&gt; &lt;char&gt;   &lt;num&gt;</span></span>
 <span><span class="co">#&gt;               StMoMo APC 0.0432   0.33   0.75   0.98       3</span></span>
 <span><span class="co">#&gt;   Random walk with drift 0.0554   0.48   0.80   0.97       0</span></span>
-<span><span class="co">#&gt;        Ensemble (lc, rw) 0.0566   0.38   0.73   0.94       0</span></span>
+<span><span class="co">#&gt;        Ensemble (lc, rw) 0.0566   0.38   0.73   0.94       1</span></span>
 <span><span class="co">#&gt;  demography lca (native) 0.0583   0.31   0.60   0.79       0</span></span>
 <span><span class="co">#&gt;               Lee-Carter 0.0624   0.28   0.52   0.74       0</span></span>
 <span><span class="co">#&gt;               StMoMo CBD 0.0635   0.33   0.57   0.76       1</span></span>
 <span><span class="co">#&gt;                StMoMo LC 0.0655   0.23   0.46   0.70       1</span></span>
 <span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; France (HMD via demography), single ages 0-95</span></span>
+<span><span class="co">#&gt;                         model   crps  cov50  cov80  cov95 seconds</span></span>
+<span><span class="co">#&gt;                        &lt;char&gt; &lt;char&gt; &lt;char&gt; &lt;char&gt; &lt;char&gt;   &lt;num&gt;</span></span>
+<span><span class="co">#&gt;        Random walk with drift 0.0765   0.65   0.91   0.98       2</span></span>
+<span><span class="co">#&gt;             Ensemble (lc, rw) 0.0803   0.47   0.82   0.97       2</span></span>
+<span><span class="co">#&gt;  Functional demographic model 0.0908   0.28   0.49   0.66      19</span></span>
+<span><span class="co">#&gt;       demography fdm (native) 0.0941   0.24   0.43   0.59      14</span></span>
+<span><span class="co">#&gt;       demography lca (native) 0.0982   0.31   0.54   0.74       2</span></span>
+<span><span class="co">#&gt;                    Lee-Carter 0.1040   0.26   0.46   0.65       2</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ONS England, sex x IMD quintile, 5-year groups</span></span>
+<span><span class="co">#&gt;                         model   crps  cov50  cov80  cov95 seconds</span></span>
+<span><span class="co">#&gt;                        &lt;char&gt; &lt;char&gt; &lt;char&gt; &lt;char&gt; &lt;char&gt;   &lt;num&gt;</span></span>
+<span><span class="co">#&gt;           Bayesian APC (bamp) 0.0620   0.47   0.75   0.91    2933</span></span>
+<span><span class="co">#&gt;                 bamp (native) 0.0668   0.37   0.62   0.79    2913</span></span>
+<span><span class="co">#&gt;                    Lee-Carter 0.0677   0.33   0.58   0.77       2</span></span>
+<span><span class="co">#&gt;        Li-Lee (common by sex) 0.0684   0.35   0.60   0.77       2</span></span>
+<span><span class="co">#&gt;             Ensemble (lc, rw) 0.0685   0.43   0.75   0.92       3</span></span>
+<span><span class="co">#&gt;       demography fdm (native) 0.0719   0.33   0.57   0.76      12</span></span>
+<span><span class="co">#&gt;  Functional demographic model 0.0726   0.34   0.62   0.81      31</span></span>
+<span><span class="co">#&gt;       demography lca (native) 0.0841   0.21   0.39   0.56       2</span></span>
+<span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; bamp example data (8 age groups, 10 years)</span></span>
 <span><span class="co">#&gt;                   model   crps  cov50  cov80  cov95 seconds</span></span>
 <span><span class="co">#&gt;                  &lt;char&gt; &lt;char&gt; &lt;char&gt; &lt;char&gt; &lt;char&gt;   &lt;num&gt;</span></span>
-<span><span class="co">#&gt;     Bayesian APC (bamp) 0.2600   0.42   0.52   0.73      28</span></span>
-<span><span class="co">#&gt;           bamp (native) 0.2768   0.23   0.40   0.62      25</span></span>
-<span><span class="co">#&gt;              Lee-Carter 0.2881   0.31   0.56   0.71       0</span></span>
+<span><span class="co">#&gt;     Bayesian APC (bamp) 0.2559   0.42   0.54   0.69      34</span></span>
+<span><span class="co">#&gt;           bamp (native) 0.2753   0.23   0.42   0.60      32</span></span>
+<span><span class="co">#&gt;              Lee-Carter 0.2881   0.31   0.58   0.71       0</span></span>
 <span><span class="co">#&gt;  Random walk with drift 0.3460   0.54   0.81   0.85       0</span></span></code></pre></div>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ggplot2.tidyverse.org" class="external-link">ggplot2</a></span><span class="op">)</span></span>
@@ -300,7 +300,7 @@ package in 4 of 7 comparisons. Where the native intervals describe the
 smooth rates only, the Poisson variation of the deaths in mortensor’s
 predictive draws improves coverage: bamp on the ONS data covers 0.79 of
 observed rates at 95% natively and 0.91 through
-<code><a href="../reference/apc_bayes.html">apc_bayes()</a></code>, on bamp’s example 0.62 against 0.73;
+<code><a href="../reference/apc_bayes.html">apc_bayes()</a></code>, on bamp’s example 0.60 against 0.69;
 <code>lca()</code> on the ONS data 0.56 against 0.77 for
 <code><a href="../reference/lee_carter.html">lee_carter()</a></code>. The functional demographic model on France is
 more accurate through mortensor (CRPS 0.091 against 0.094, coverage 0.66
@@ -327,9 +327,9 @@ cover 92% to 98% (bamp’s example has only 48 scored cells).</li>
 <li>The ensemble is never the most accurate (its CRPS is 10% above that
 of the best model on the ONS data, 5% on France and 31% on England &amp;
 Wales men), but its coverage is near nominal on all three data sets, at
-the cost of seconds; the Bayesian APC models took 34
-(<code><a href="../reference/apc_bayes.html">apc_bayes()</a></code>) and 52 minutes (native bamp) per backtest on
-the ONS data, on a machine shared with other jobs.</li>
+the cost of seconds; the Bayesian APC models (<code><a href="../reference/apc_bayes.html">apc_bayes()</a></code>
+and native bamp) took about 49 minutes each per backtest on the ONS
+data.</li>
 </ul>
 <p>On data like these, an ensemble is a robust default, and a backtest
 on the data at hand (<code><a href="../reference/mt_backtest.html">mt_backtest()</a></code>) decides whether a
