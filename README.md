@@ -26,7 +26,7 @@ of them.
 > Check results independently before you use them in publications, reports
 > or decisions.
 
-**Status:** version 0.2 is a rewrite in development (see `dev/progress.md`).
+**Status:** version 0.3.0. Interfaces can still change between versions; `NEWS.md` lists the changes and `dev/progress.md` the work packages.
 
 ## Installation
 

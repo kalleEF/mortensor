@@ -1,34 +1,12 @@
-# mortensor 0.2.0.9000
+# mortensor 0.3.0
 
-## Fixes from the review of 0.2.0 (R1)
-
-Work package R1 of `dev/review-0.2-plan.md`.
-
-* `mt_parameters()` of `lee_carter(choose_period = TRUE)` gives `k` for
-  the years of the chosen fitting period, labelled with those years, and
-  its first year (`first_year`). Every parameter table stops with class
-  `mt_error_internal` when labels and values differ in length.
-* `print()` and `summary()` of a fit name the fitting period chosen by
-  `lee_carter(choose_period = TRUE)`.
-* `relative_model()` with a Lee-Carter reference uses plain Newton
-  iterations. The acceleration, now used only with cohort effects, led
-  some fits to a fixed point of lower likelihood or to no convergence
-  within 5,000 iterations (deprivation quintiles of England in
-  `ons_data`). Fits with a Lee-Carter reference can change. The vignette
-  "Inequality in England" is re-knitted: the relative model forecasts the
-  gap of men at 7.6 years in 2035.
-* `li_lee(ratio_order = )` caps the order by the number of age groups and
-  by the number of years minus 2. `li_lee()`, `tucker3()` and
-  `coda_multiway()` warn with class `mt_warning_argument` when they reduce
-  the requested order or ranks, and `mt_parameters()` reports the values
-  used (`ratio_order`, `rank`). The label of a `coda_multiway()` fit names
-  the ranks used. `mt_parameters()` gains a method for `tucker3()`.
-* `lee_carter(method = "svd", adjust = "dt")` warns with class
-  `mt_warning_model_fit` and records in `no_root_years` the years in which
-  the search finds no index that gives the observed total deaths. These
-  years keep the SVD index; a year without deaths is one of them.
-* `mt_coherence()` stops with class `mt_error_hierarchy` and names the
-  cause when the draws hold no aggregate strata of the hierarchy.
+Release after the independent review of 0.2.0 (`dev/review-0.2.md`, plan
+`dev/review-0.2-plan.md`). It corrects wrong output and unclear errors,
+computes the two-dimensional ungrouping and smoothing in about 10 seconds
+per stratum instead of minutes, removes every deprecated function and
+option, and adds two scores to `mt_score()`. Code written for 0.2.0 that
+uses a removed function or option stops with an error; the list below
+names the replacement of each.
 
 ## Removed deprecated code, scores of floored cells and robustness (R4)
 
@@ -82,6 +60,36 @@ No function or option of the package is deprecated any more.
   Grouping by horizon or origin stops with class `mt_error_argument`. The
   help of `measures = "revision"` labels the mean absolute revision as a
   measure of this package.
+
+## Fixes from the review of 0.2.0 (R1)
+
+Work package R1 of `dev/review-0.2-plan.md`.
+
+* `mt_parameters()` of `lee_carter(choose_period = TRUE)` gives `k` for
+  the years of the chosen fitting period, labelled with those years, and
+  its first year (`first_year`). Every parameter table stops with class
+  `mt_error_internal` when labels and values differ in length.
+* `print()` and `summary()` of a fit name the fitting period chosen by
+  `lee_carter(choose_period = TRUE)`.
+* `relative_model()` with a Lee-Carter reference uses plain Newton
+  iterations. The acceleration, now used only with cohort effects, led
+  some fits to a fixed point of lower likelihood or to no convergence
+  within 5,000 iterations (deprivation quintiles of England in
+  `ons_data`). Fits with a Lee-Carter reference can change. The vignette
+  "Inequality in England" is re-knitted: the relative model forecasts the
+  gap of men at 7.6 years in 2035.
+* `li_lee(ratio_order = )` caps the order by the number of age groups and
+  by the number of years minus 2. `li_lee()`, `tucker3()` and
+  `coda_multiway()` warn with class `mt_warning_argument` when they reduce
+  the requested order or ranks, and `mt_parameters()` reports the values
+  used (`ratio_order`, `rank`). The label of a `coda_multiway()` fit names
+  the ranks used. `mt_parameters()` gains a method for `tucker3()`.
+* `lee_carter(method = "svd", adjust = "dt")` warns with class
+  `mt_warning_model_fit` and records in `no_root_years` the years in which
+  the search finds no index that gives the observed total deaths. These
+  years keep the SVD index; a year without deaths is one of them.
+* `mt_coherence()` stops with class `mt_error_hierarchy` and names the
+  cause when the draws hold no aggregate strata of the hierarchy.
 
 ## Small corrections and labels (R2)
 
