@@ -92,7 +92,7 @@ mt_plot_compare(fc[c("random walk", "Lee-Carter", "fdm", "APC", "Bayesian APC")]
 ```
 
 All models forecast a further rise, at different paces and with
-different uncertainty. By 2031 the medians range from 26.7 to 30.6 years:
+different uncertainty. By 2031 the medians range from 26.8 to 30.6 years:
 
 * **P-splines**, **Bohk-Rau**, **CoDa** and **fdm** give the highest
   forecasts (30.6, 29.9, 29.6 and 29.2 years). The P-spline surface
@@ -251,7 +251,7 @@ mt_score_table(rbind(bt, bt_ens), metrics = c("crps", "cov95"))
 ```
 
 * The **equal-weight ensemble** is more accurate than the average of its
-  components (CRPS of the rates 0.042 against 0.051), and its intervals
+  components (CRPS of the rates 0.043 against 0.051), and its intervals
   cover. This always holds: the CRPS is a convex function of the forecast
   distribution, so the CRPS of a mixture is never larger than the weighted
   mean of the CRPS of its components. It includes the weak Bayesian APC,
