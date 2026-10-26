@@ -98,8 +98,8 @@ mt_compare_forecasts(fc, periods = c(2021, 2031))
 #> 1: 27.0 (26.1-27.8) 28.0 (26.2-29.1) 28.5 (27.7-29.3) 27.3 (27.1-27.5)
 #> 2: 27.9 (26.6-28.9) 29.6 (28.1-30.9) 30.6 (28.3-32.1) 28.4 (28.2-28.6)
 #>            Bohk-Rau     Bayesian APC      Bayesian RH
-#> 1: 28.1 (27.5-28.2) 26.5 (25.5-27.4) 27.5 (26.5-28.4)
-#> 2: 29.9 (29.1-30.1) 26.7 (25.0-28.2) 28.5 (27.1-29.8)
+#> 1: 28.1 (27.5-28.2) 26.6 (25.4-27.6) 27.5 (26.5-28.4)
+#> 2: 29.9 (29.1-30.1) 26.8 (24.9-28.4) 28.5 (27.1-29.8)
 ```
 
 
@@ -110,7 +110,7 @@ mt_plot_compare(fc[c("random walk", "Lee-Carter", "fdm", "APC", "Bayesian APC")]
 ![](model-choice-plot-models-1.png)
 
 All models forecast a further rise, at different paces and with
-different uncertainty. By 2031 the medians range from 26.7 to 30.6 years:
+different uncertainty. By 2031 the medians range from 26.8 to 30.6 years:
 
 * **P-splines**, **Bohk-Rau**, **CoDa** and **fdm** give the highest
   forecasts (30.6, 29.9, 29.6 and 29.2 years). The P-spline surface
@@ -160,7 +160,7 @@ mt_score_table(bt, metrics = c("crps", "cov95"))
 #> 10:    P-splines 0.0565 0.628   0.352    0.400
 #> 11:   CP-splines 0.0624 0.359   0.497    0.100
 #> 12:     Bohk-Rau 0.0337 0.682   0.108    0.867
-#> 13: Bayesian APC 0.0733 0.644   0.583    0.533
+#> 13: Bayesian APC 0.0720 0.667   0.570    0.600
 #> 14:  Bayesian RH 0.0455 0.901   0.278    1.000
 ```
 
@@ -329,14 +329,14 @@ mt_score_table(rbind(bt, bt_ens), metrics = c("crps", "cov95"))
 #> 10:                                     P-splines 0.0565 0.628   0.352    0.400
 #> 11:                                    CP-splines 0.0624 0.359   0.497    0.100
 #> 12:                                      Bohk-Rau 0.0337 0.682   0.108    0.867
-#> 13:                                  Bayesian APC 0.0733 0.644   0.583    0.533
+#> 13:                                  Bayesian APC 0.0720 0.667   0.570    0.600
 #> 14:                                   Bayesian RH 0.0455 0.901   0.278    1.000
-#> 15: equal: Lee-Carter, fdm, APC, M6, Bayesian APC 0.0424 0.968   0.298    1.000
+#> 15: equal: Lee-Carter, fdm, APC, M6, Bayesian APC 0.0426 0.953   0.303    1.000
 #> 16:                     CRPS weights, best 3 of 6 0.0354 0.980   0.238    1.000
 ```
 
 * The **equal-weight ensemble** is more accurate than the average of its
-  components (CRPS of the rates 0.042 against 0.051), and its intervals
+  components (CRPS of the rates 0.043 against 0.051), and its intervals
   cover. This always holds: the CRPS is a convex function of the forecast
   distribution, so the CRPS of a mixture is never larger than the weighted
   mean of the CRPS of its components. It includes the weak Bayesian APC,
