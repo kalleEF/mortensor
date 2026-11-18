@@ -27,7 +27,9 @@ ideas of the design note into the coherent methods mortensor already has.
    (no published source for the combination was found).
 3. The coherent model allows three or more strata, labelled
    package-specific beyond the two populations of Cairns et al. (2011).
-4. Correlated deviations in `li_lee()`: the audit decides (B3).
+4. Correlated deviations in `li_lee()`: the audit decides (B3). Result
+   (`dev/audit-li-lee-innovations.md`): no change; joint innovations leave
+   the scores unchanged.
 
 ## Work packages
 
