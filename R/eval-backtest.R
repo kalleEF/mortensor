@@ -49,6 +49,18 @@
 #'   (difference of log ASR, the log rate ratio). This checks forecasts of
 #'   inequality, whose uncertainty depends on how the paths of the strata
 #'   move together; the rows carry the stratum of the compared level.
+#' @param multivariate With `quantities`, also score the vector of each
+#'   derived quantity over all strata jointly, per origin and test year:
+#'   targets `"life_expectancy_joint"` and `"asr_joint"`, with the energy
+#'   score (column `energy`; Gneiting and Raftery 2007) and the variogram
+#'   score of order 0.5 with equal weights (column `variogram`; Scheuerer
+#'   and Hamill 2015). The energy score rewards forecasts whose joint
+#'   distribution is close to the observed vector; the variogram score
+#'   responds to the dependence between the strata, which the scores of
+#'   single cells cannot see. The rows have no stratum; `n_dim` is the
+#'   number of strata in the vector (those that scored the quantity in that
+#'   year). Both use the draws of all strata path by path, so they reward
+#'   models whose strata move together as observed.
 #' @details
 #' Data whose deaths were ungrouped beforehand with [mt_ungroup()], and
 #' data smoothed with [mt_smooth()], are refused: the forecasts would be scored against
@@ -102,6 +114,10 @@
 #' mesoscale forecast ensemble verification. *Quarterly Journal of the Royal
 #' Meteorological Society* 132: 2925-2942.
 #'
+#' Scheuerer M, Hamill TM (2015). Variogram-based proper scoring rules for
+#' probabilistic forecasts of multivariate quantities. *Monthly Weather
+#' Review* 143(4): 1321-1334. \doi{10.1175/MWR-D-14-00269.1}
+#'
 #' Tashman LJ (2000). Out-of-sample tests of forecasting accuracy: an
 #' analysis and review. *International Journal of Forecasting* 16(4):
 #' 437-450.
@@ -118,17 +134,20 @@
 #'   (randomised for ties), and for the opt-in summaries of [mt_score()]
 #'   (`measures`) the standard deviation of the draws `sd`, `cov90` and the
 #'   half-widths `hw80`, `hw90` and `hw95` of the central intervals. Rows of
-#'   derived quantities have no `age_lo`, `age_hi` and `scale`. Summarise
-#'   with [mt_score()].
+#'   derived quantities have no `age_lo`, `age_hi` and `scale`; rows of
+#'   joint scores (`multivariate = TRUE`) carry `energy`, `variogram` and
+#'   `n_dim` instead of the scores of single cells. Summarise with
+#'   [mt_score()].
 #' @examples
 #' x <- mt_example(deaths = "single", years = 1990:2012)
 #' bt <- mt_backtest(rwd(), x, origins = c(2005, 2007), h = 5, n_draws = 100)
 #' mt_score(bt)
 #' @export
 mt_backtest <- function(spec, data, origins = NULL, h = 10, prep = NULL, n_draws = 200, n_origins = 5,
-                        seed = 1, cores = 1, score_estimated = FALSE, quantities = NULL, contrast = NULL) {
+                        seed = 1, cores = 1, score_estimated = FALSE, quantities = NULL, contrast = NULL,
+                        multivariate = FALSE) {
   backtest_impl(spec, data, origins, h, prep, n_draws, n_origins, seed, cores, score_estimated, quantities,
-                contrast, call = sys.call())
+                contrast, multivariate = multivariate, call = sys.call())
 }
 
 # The backtest of mt_backtest(). With `keep_draws = TRUE` (inner backtests of
@@ -137,7 +156,11 @@ mt_backtest <- function(spec, data, origins = NULL, h = 10, prep = NULL, n_draws
 # mean forecast rates (column `plugin`)
 backtest_impl <- function(spec, data, origins = NULL, h = 10, prep = NULL, n_draws = 200, n_origins = 5,
                           seed = 1, cores = 1, score_estimated = FALSE, quantities = NULL, contrast = NULL,
-                          keep_draws = FALSE, call = sys.call(-1)) {
+                          keep_draws = FALSE, multivariate = FALSE, call = sys.call(-1)) {
+  check_flag(multivariate, "multivariate")
+  if (multivariate && !length(quantities)) {
+    mt_abort("`multivariate = TRUE` needs `quantities` to score.", class = "argument", call = call)
+  }
   if (length(quantities)) {
     bad <- setdiff(quantities, c("life_expectancy", "asr"))
     if (length(bad)) {
@@ -158,7 +181,8 @@ backtest_impl <- function(spec, data, origins = NULL, h = 10, prep = NULL, n_dra
   if (!length(origins)) mt_abort("No origin leaves test data.", class = "backtest", call = call)
   one <- function(o) {
     res <- tryCatch(backtest_origin(spec, data, o, h, prep, n_draws, if (is.null(seed)) NULL else seed + o,
-                                    score_estimated, quantities, contrast, keep_draws), error = function(e) e)
+                                    score_estimated, quantities, contrast, keep_draws, multivariate),
+                    error = function(e) e)
     if (inherits(res, "error")) {
       mt_warn(sprintf("Origin %s failed: %s", o, conditionMessage(res)), class = "backtest_origin")
       return(NULL)
@@ -229,7 +253,7 @@ ungrouped_deaths <- function(data) {
 }
 
 backtest_origin <- function(spec, data, origin, h, prep, n_draws, seed, score_estimated = FALSE, quantities = NULL,
-                            contrast = NULL, keep_draws = FALSE) {
+                            contrast = NULL, keep_draws = FALSE, multivariate = FALSE) {
   train <- mt_window(data, to = origin)
   fit <- mt_fit(spec, train, prep = prep)
   last_fit <- max(fit$periods)
@@ -303,8 +327,68 @@ backtest_origin <- function(spec, data, origin, h, prep, n_draws, seed, score_es
   # inner backtests (draws, plugin)
   out <- rbindlist(rows, fill = keep_draws)
   out <- merge(data$strata, out, by = "stratum", sort = FALSE)
+  if (multivariate) {
+    jr <- joint_quantity_rows(qdraws, spec, prep, origin)
+    if (!is.null(jr)) out <- rbindlist(list(out, jr), fill = TRUE)
+  }
   if (length(skipped)) setattr(out, "skipped", skipped)
   out[]
+}
+
+# Rows of the joint scores of derived quantities over all strata
+# (`multivariate = TRUE` of mt_backtest()): per test year and quantity, the
+# energy and variogram scores of the vector of the strata that scored it
+joint_quantity_rows <- function(qdraws, spec, prep, origin) {
+  if (length(qdraws) < 2) return(NULL)
+  key <- function(q) paste(q$period, q$target, q$at, sep = "\r")
+  keys <- unique(unlist(lapply(qdraws, key)))
+  out <- list()
+  for (k in keys) {
+    pos <- vapply(qdraws, function(q) match(k, key(q)), 0L)
+    use <- which(!is.na(pos))
+    if (length(use) < 2) next
+    X <- do.call(rbind, lapply(use, function(u) qdraws[[u]]$draws[[pos[u]]]))
+    y <- vapply(use, function(u) qdraws[[u]]$observed[pos[u]], 0)
+    q1 <- qdraws[[use[1]]]
+    out[[length(out) + 1L]] <- data.table(model = spec$label, prep = prep_label(prep), origin = origin,
+                                          horizon = q1$period[pos[use[1]]] - origin, period = q1$period[pos[use[1]]],
+                                          target = paste0(q1$target[pos[use[1]]], "_joint"),
+                                          energy = energy_score(X, y), variogram = variogram_score(X, y),
+                                          n_dim = length(use))
+  }
+  if (!length(out)) return(NULL)
+  rbindlist(out)
+}
+
+# Energy score of the draws X (one row per dimension, one column per draw) for
+# the observed vector y (Gneiting and Raftery 2007): the mean
+# Euclidean distance between the draws and y minus half the mean distance
+# between pairs of draws (all n^2 pairs, as the CRPS of score_samples(), so
+# that both agree in one dimension)
+energy_score <- function(X, y) {
+  X <- as.matrix(X)
+  n <- ncol(X)
+  d_obs <- sqrt(colSums((X - y)^2))
+  G <- crossprod(X)
+  sq <- diag(G)
+  D2 <- pmax(outer(sq, sq, "+") - 2 * G, 0)
+  mean(d_obs) - sum(sqrt(D2)) / (2 * n^2)
+}
+
+# Variogram score of order p with equal weights (Scheuerer and Hamill 2015):
+# the sum over all ordered pairs (i, j) of dimensions of the squared
+# difference between |y_i - y_j|^p and its expectation under the draws
+variogram_score <- function(X, y, p = 0.5) {
+  X <- as.matrix(X)
+  d <- nrow(X)
+  total <- 0
+  for (i in seq_len(d - 1)) {
+    for (j in (i + 1):d) {
+      e <- mean(abs(X[i, ] - X[j, ])^p)
+      total <- total + 2 * (abs(y[i] - y[j])^p - e)^2
+    }
+  }
+  total
 }
 
 # Rows of a backtest table for scored derived quantities
@@ -553,7 +637,10 @@ wis_from_quantiles <- function(Q, y, probs) {
 #'   `"life_expectancy"` or `"asr"` (when the backtest scored these
 #'   quantities, see `quantities` in [mt_backtest()]), or
 #'   `"life_expectancy_gap"` or `"asr_gap"` (differences between strata, see
-#'   `contrast` in [mt_backtest()]).
+#'   `contrast` in [mt_backtest()]), or `"life_expectancy_joint"` or
+#'   `"asr_joint"` (all strata jointly, see `multivariate` in
+#'   [mt_backtest()]; summarised by the mean energy and variogram scores,
+#'   the number of vectors `n` and their mean dimension `n_dim`).
 #' @param measures Optional further summaries (none by default):
 #'   * `"sape"`: the mean standardised absolute predictive error of Raftery
 #'     et al. (2013), `sqrt(pi / 2) |y - median| / sd` with the standard
@@ -652,10 +739,15 @@ wis_from_quantiles <- function(Q, y, probs) {
 #'          measures = "robustness")
 #' @export
 mt_score <- function(backtest, by = "model",
-                     target = c("rate", "life_expectancy", "asr", "life_expectancy_gap", "asr_gap"),
+                     target = c("rate", "life_expectancy", "asr", "life_expectancy_gap", "asr_gap",
+                                "life_expectancy_joint", "asr_joint"),
                      measures = NULL) {
   if (!is.data.frame(backtest)) mt_abort("`backtest` must be a backtest table.", class = "argument")
   target <- match.arg(target)
+  joint <- target %in% c("life_expectancy_joint", "asr_joint")
+  if (joint && length(measures)) {
+    mt_abort("`measures` summarise the scores of single cells; joint targets have none.", class = "argument")
+  }
   measures <- check_score_measures(measures, target, by)
   bt <- as.data.table(backtest)
   if ("target" %in% names(bt)) {
@@ -665,6 +757,12 @@ mt_score <- function(backtest, by = "model",
     mt_abort("The backtest has no derived quantities; use `quantities` in mt_backtest().", class = "argument")
   }
   if (!nrow(bt)) mt_abort(sprintf("The backtest holds no scores for target \"%s\".", target), class = "argument")
+  if (joint) {
+    by <- score_by(bt, by)
+    out <- bt[, list(energy = mean(energy), variogram = mean(variogram), n = .N, n_dim = mean(n_dim)), by = by]
+    out[, unit := switch(target, life_expectancy_joint = "years", asr_joint = "log rate (ASR)")]
+    return(out[])
+  }
   rates_only <- identical(target, "rate")
   # cells whose observed deaths were floored at half a death (rates only)
   count_floored <- rates_only && "floored" %in% names(bt)

@@ -115,6 +115,7 @@ package-specific, or a deviation that is not listed.
 | `anchored(years = , decay = , shrink = TRUE)` | offset of several years, linear fade, empirical Bayes shrinkage of the offsets | DerSimonian and Laird (1986) for the variance estimator of the shrinkage | package-specific, opt-in; `years` is a variant of the averaged jump-off of Stoeldraijer et al. (2018), which `lee_carter(jump_off_years = )` implements |
 | `mt_jump_off()` | step between the last observed or fitted year and the first forecast year | none | package-specific diagnostic |
 | `tuned()`, `mt_tune()` | choice of settings by rolling-origin or hold-out accuracy; one-standard-error rule | Tashman (2000); Hastie, Tibshirani and Friedman (2009) | published, deviations: the standard error of the one-SE rule is approximate; `strategy = "two_stage"` and the minimum number of training years are package heuristics |
+| `mt_tune(target = "asr_gap", contrast = )`, `target = "asr_joint"` | choice of the coherence settings of published models (for example `ratio_order` of `li_lee()`) by the scores of the gaps between strata or the joint scores of all strata | none | package-specific (reference unknown), opt-in |
 
 ## Evaluation
 
@@ -124,6 +125,7 @@ package-specific, or a deviation that is not listed.
 | CRPS from draws | empirical-CDF estimator | Gneiting and Raftery (2007); Grimit et al. (2006) | published |
 | WIS | weighted interval score with the 23 quantiles of the COVID-19 forecast hubs | Bracher et al. (2021) | published |
 | PIT | randomised where draws equal the observation | Czado, Gneiting and Held (2009) | published |
+| `mt_backtest(multivariate = TRUE)` | energy score and variogram score of order 0.5 (equal weights) of the vector of a derived quantity over all strata, from the draws path by path; the energy score with the same estimator as the CRPS | Gneiting and Raftery (2007); Scheuerer and Hamill (2015) | published |
 | MASE (`mt_score()`) | absolute error scaled by the mean absolute year-to-year change of the training data | Hyndman and Koehler (2006) | published |
 | `mt_score(measures = "sape")` | standardised absolute predictive error `sqrt(pi / 2) abs(y - median) / sd` with the standard deviation of the draws; mean 1 for a correct normal predictive distribution | Raftery et al. (2013) | published; for life expectancy only, as in the source |
 | `mt_score(measures = c("cov90", "halfwidth"))` | coverage of the central 90% intervals and mean half-widths of the 80%, 90% and 95% intervals (by horizon with `by`) | Raftery et al. (2013) | published |

@@ -1,3 +1,27 @@
+# mortensor 0.3.0.9000
+
+Work packages of `dev/coherence-plan.md`: ideas on coherent forecasting
+from the design note and the coherent forecasting branch of bamp.
+
+## Joint scores and coherence targets (C1)
+
+* `mt_backtest(multivariate = TRUE)` scores the vector of each derived
+  quantity (`quantities`) over all strata jointly, per origin and test
+  year: targets `"life_expectancy_joint"` and `"asr_joint"` with the
+  energy score (Gneiting and Raftery 2007) and the variogram score of
+  order 0.5 (Scheuerer and Hamill 2015). They use the draws of all strata
+  path by path, so they reward forecasts whose strata move together as
+  observed. `mt_score()` summarises them, and `mt_score_table(metrics =
+  c("energy", "variogram"))` shows them next to the other scores. The
+  energy score equals the CRPS of `mt_backtest()` in one dimension; both
+  scores agree with scoringRules.
+* `mt_tune()` and `tuned()` choose settings by the gaps between strata
+  (`target = "life_expectancy_gap"` or `"asr_gap"` with `contrast`) or by
+  the joint scores (`target = "life_expectancy_joint"` or `"asr_joint"`
+  with `metric = "energy"` or `"variogram"`), for example how strongly
+  `li_lee()`, `saint()` or `relative_model()` tie the strata together. This
+  selection is package-specific (reference unknown).
+
 # mortensor 0.3.0
 
 Release after the independent review of 0.2.0 (`dev/review-0.2.md`, plan

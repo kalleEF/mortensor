@@ -15,9 +15,11 @@ mt_tune(
   metric = "crps",
   n_draws = 100,
   strategy = c("full", "two_stage"),
-  target = c("rate", "life_expectancy", "asr"),
+  target = c("rate", "life_expectancy", "asr", "life_expectancy_gap", "asr_gap",
+    "life_expectancy_joint", "asr_joint"),
   select = c("min", "one_se"),
-  by = NULL
+  by = NULL,
+  contrast = NULL
 )
 
 tuned(
@@ -29,9 +31,11 @@ tuned(
   n_draws = 100,
   label = "Tuned model",
   strategy = c("full", "two_stage"),
-  target = c("rate", "life_expectancy", "asr"),
+  target = c("rate", "life_expectancy", "asr", "life_expectancy_gap", "asr_gap",
+    "life_expectancy_joint", "asr_joint"),
   select = c("min", "one_se"),
-  by = NULL
+  by = NULL,
+  contrast = NULL
 )
 }
 \arguments{
@@ -53,7 +57,8 @@ tuned(
 \item{inner_h}{Horizon of the inner backtest (the number of years held
 out from each origin).}
 
-\item{metric}{\code{"crps"}, \code{"wis"}, \code{"mae"}, \code{"rmse"} or \code{"mase"}.}
+\item{metric}{\code{"crps"}, \code{"wis"}, \code{"mae"}, \code{"rmse"} or \code{"mase"}; for
+the joint targets \code{"energy"} or \code{"variogram"}.}
 
 \item{n_draws}{Draws per inner forecast.}
 
@@ -65,11 +70,17 @@ such as Tucker ranks, this needs far fewer fits. The two-stage search
 is a package heuristic: it can miss the best row when the score has
 several minima along a column.}
 
-\item{target}{\code{"rate"}, \code{"life_expectancy"} or \code{"asr"}.}
+\item{target}{\code{"rate"}, \code{"life_expectancy"}, \code{"asr"},
+\code{"life_expectancy_gap"}, \code{"asr_gap"} (with \code{contrast}),
+\code{"life_expectancy_joint"} or \code{"asr_joint"}.}
 
 \item{select}{\code{"min"} or \code{"one_se"}.}
 
 \item{by}{Stratum variables: tune each group of strata separately.}
+
+\item{contrast}{For the gap targets: \code{c(var = , ref = )}, a stratum
+variable and its reference level (see \code{\link[=mt_backtest]{mt_backtest()}}). It cannot be a
+variable of \code{by}.}
 
 \item{label}{Display name.}
 }
@@ -118,6 +129,18 @@ per test year and stratum. \code{"crps"} and \code{"wis"} score the whole foreca
 distribution; \code{"mae"} and \code{"rmse"} the error of the median (point
 accuracy); \code{"mase"} scales the absolute error by the mean year-to-year
 change of the training data (rates only).
+
+\strong{Coherence.} To choose how strongly the strata of a joint model are
+tied together (for example \code{ratio_order} of \code{\link[=li_lee]{li_lee()}}, \code{spread_ar} of
+\code{\link[=saint]{saint()}}, \code{deviation} of \code{\link[=relative_model]{relative_model()}}), the criterion can score
+the differences between strata or all strata jointly, as in
+\code{\link[=mt_backtest]{mt_backtest()}}: \code{target = "life_expectancy_gap"} or \code{"asr_gap"} with
+\code{contrast} (the gaps between each level of a stratum variable and its
+reference level, scored with \code{metric} \code{"crps"}, \code{"wis"}, \code{"mae"} or
+\code{"rmse"}), or \code{target = "life_expectancy_joint"} or \code{"asr_joint"} with
+\code{metric = "energy"} or \code{"variogram"} (the vector of all strata of each
+group). The models are published; choosing their coherence settings by
+these scores is a procedure of this package (reference unknown).
 
 \strong{Selection.} \code{select = "min"} takes the lowest score. \code{select = "one_se"} takes the first row of \code{grid} whose score is within one
 standard error of the lowest (the one-standard-error rule of Hastie,

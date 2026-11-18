@@ -239,7 +239,11 @@ spec <- tuned(function(order, k) hyndman_ullah(order = order, smooth_args = list
 origins (`inner_origins = 3, inner_h = 5`) average over more periods.
 `metric = "rmse"` chooses by point accuracy, `"crps"` by the whole
 forecast distribution, and `target = "life_expectancy"` by the quantity of
-interest. `recalibrated()` answers a different question: it keeps the model
+interest. For models that tie strata together, `target = "life_expectancy_gap"`
+or `"asr_gap"` with `contrast` chooses the setting that forecast the gaps
+between strata best, and `target = "asr_joint"` with `metric = "energy"`
+the one that forecast all strata jointly best (see "Will the gap between
+regions or deprivation groups keep growing?"). `recalibrated()` answers a different question: it keeps the model
 and rescales the width of its intervals to the recent forecast errors. The
 two combine as `recalibrated(tuned(...))`.
 
@@ -305,6 +309,26 @@ nothing unless they were fitted to smoothed rates. Backtests use
 predictive draws because they are compared with observed rates. For life
 expectancy and other summaries of the underlying mortality, use the
 default draws.
+
+### How do I turn forecast rates into probabilities for a microsimulation?
+
+mortensor forecasts central death rates `m`, deaths per person-year. With
+a constant hazard within each age and year, `m` is that hazard, and the
+rates of competing causes add up to the all-cause rate. A microsimulation
+with yearly steps needs probabilities:
+
+* the probability of dying within the year: `q = 1 - exp(-m)`;
+* the probability of dying from cause `c` within the year, with the other
+  causes competing: `q_c = (m_c / m) (1 - exp(-m))`. These add up to `q`.
+
+Both hold exactly under constant hazards within the year (multiple
+decrement relations, Preston, Heuveline and Guillot 2001). Converting each
+cause on its own, `1 - exp(-m_c)`, leaves out the competing causes: the
+cause probabilities then add up to more than `q`. The reverse conversion
+of a cause probability, `-log(1 - q_c)`, gives too small a cause hazard
+for the same reason. For steps shorter than a year, use `m` times the
+length of the step in years. For single ages from forecasts on age
+groups, `mt_disaggregate()` splits the draws by a fixed age shape.
 
 ### How do I handle small populations and zero deaths?
 
@@ -411,7 +435,14 @@ quintiles, the trend of their national population plus their own drifting
 improvement differences, so a gap that widened keeps widening; with
 `deviation = "constant"` the differences stay at their last values
 (Villegas and Haberman 2014). Backtests over a few years rarely tell these
-models apart; the choice is an assumption to state.
+models apart; the choice is an assumption to state. To compare them on
+what matters here, score the gaps (`mt_backtest(quantities = "asr",
+contrast = c(var = "quintile", ref = "Q5"))`) and the joint distribution of
+all strata (`multivariate = TRUE`: the energy score of Gneiting and Raftery
+2007 and the variogram score of Scheuerer and Hamill 2015, which responds
+to how the strata move together). The section "Models with a common
+trend" of "Coherent forecasts: totals and their parts" lists what each
+model takes as the common trend.
 
 ### Which ages and causes explain a gap, and how much is composition?
 
@@ -538,6 +569,10 @@ Enchev V, Kleinow T, Cairns AJG (2017). Multi-population mortality
 models: fitting, forecasting and comparisons. *Scandinavian Actuarial
 Journal* 2017(4): 319-342. doi:10.1080/03461238.2015.1133450.
 
+Gneiting T, Raftery AE (2007). Strictly proper scoring rules, prediction,
+and estimation. *Journal of the American Statistical Association*
+102(477): 359-378. doi:10.1198/016214506000001437.
+
 Harvey AC (1989). *Forecasting, Structural Time Series Models and the
 Kalman Filter*. Cambridge University Press.
 
@@ -584,6 +619,9 @@ Probabilistic forecast reconciliation: properties, evaluation and score
 optimisation. *European Journal of Operational Research* 306(2): 693-706.
 doi:10.1016/j.ejor.2022.07.040.
 
+Preston SH, Heuveline P, Guillot M (2001). *Demography: Measuring and
+Modeling Population Processes*. Blackwell, Oxford.
+
 Riffe T, Tursun-zade R, Trias Llimós S (2024). Arriaga meets Kitagawa.
 Life expectancy decomposition with population subgroups. MPIDR Working
 Paper WP-2024-029. doi:10.4054/MPIDR-WP-2024-029.
@@ -591,6 +629,10 @@ Paper WP-2024-029. doi:10.4054/MPIDR-WP-2024-029.
 Rizzi S, Gampe J, Eilers PHC (2015). Efficient estimation of smooth
 distributions from coarsely grouped data. *American Journal of
 Epidemiology* 182(2): 138-147. doi:10.1093/aje/kwv020.
+
+Scheuerer M, Hamill TM (2015). Variogram-based proper scoring rules for
+probabilistic forecasts of multivariate quantities. *Monthly Weather
+Review* 143(4): 1321-1334. doi:10.1175/MWR-D-14-00269.1.
 
 Shang HL (2012). Point and interval forecasts of age-specific life
 expectancies: a model averaging approach. *Demographic Research* 27(21):
