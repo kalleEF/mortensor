@@ -7,7 +7,8 @@
 mt_score(
   backtest,
   by = "model",
-  target = c("rate", "life_expectancy", "asr", "life_expectancy_gap", "asr_gap"),
+  target = c("rate", "life_expectancy", "asr", "life_expectancy_gap", "asr_gap",
+    "life_expectancy_joint", "asr_joint"),
   measures = NULL
 )
 }
@@ -21,7 +22,10 @@ mt_score(
 \code{"life_expectancy"} or \code{"asr"} (when the backtest scored these
 quantities, see \code{quantities} in \code{\link[=mt_backtest]{mt_backtest()}}), or
 \code{"life_expectancy_gap"} or \code{"asr_gap"} (differences between strata, see
-\code{contrast} in \code{\link[=mt_backtest]{mt_backtest()}}).}
+\code{contrast} in \code{\link[=mt_backtest]{mt_backtest()}}), or \code{"life_expectancy_joint"} or
+\code{"asr_joint"} (all strata jointly, see \code{multivariate} in
+\code{\link[=mt_backtest]{mt_backtest()}}; summarised by the mean energy and variogram scores,
+the number of vectors \code{n} and their mean dimension \code{n_dim}).}
 
 \item{measures}{Optional further summaries (none by default):
 \itemize{

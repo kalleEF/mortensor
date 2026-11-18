@@ -28,6 +28,63 @@
 #' Heterogeneity variants (`"rw1+het"`, `"rw2+het"`) are not offered because
 #' `bamp::predict_apc()` does not forecast them in bamp 3.0.0.
 #'
+#' @section Coherent model (`coherent = TRUE`):
+#' Fits the strata of each group of `common_by` (all strata without it) in
+#' one model, so that their forecasts do not diverge:
+#'
+#' `logit p[s, i, j] = mu + a[s] + theta[s, i] + phi[j] + psi[k] + d[s, j]`
+#'
+#' for stratum `s`, age group `i`, year `j` and cohort `k`, with binomial
+#' deaths given the exposures. The period effect `phi` and the cohort
+#' effect `psi` are shared and carry the common trend; their random-walk
+#' priors (orders `period`, `cohort`) are scaled to unit generalised
+#' variance (Sørbye and Rue 2014) and forecast as random walks. Each stratum
+#' has its own age effect `theta[s, ]` (random walk of order `age`, one
+#' precision for all strata) and level `a[s]`. The deviations `d[s, ]` of
+#' the strata from the shared period effect are stationary AR(1) series with
+#' a common coefficient `rho` (uniform prior on 0 to 1, sampled) and
+#' innovation precision; they sum to zero over the strata in every year, or,
+#' with `reference`, the deviation of the reference stratum is zero. Their
+#' forecasts revert towards zero, so the gaps between strata stay bounded.
+#' `cohort_deviation = TRUE` adds deviations `c[s, k]` of the same form
+#' along the cohorts. The precisions have Gamma priors with shape 1 and
+#' rates 0.5 (age) and 5e-4 (period, cohort, deviations). For the deviations
+#' the branch uses the rate 0.05, which dominates typical data: the
+#' posterior of their precision and the width of the forecast gaps are then
+#' set by the prior.
+#'
+#' **Sources.** The model is the coherent model of the development branch
+#' "coherent_forecasting" of bamp (`bamp_coherent()`, by Chris
+#' Kypridemos), rewritten in this package because that branch is not
+#' released; when a bamp release contains it, `apc_bayes(coherent = TRUE)`
+#' will call bamp and the native sampler will be deprecated. Its published
+#' anchor is the two-population Bayesian APC model of Cairns et al. (2011):
+#' a common period trend and a mean-reverting AR(1) spread with level zero,
+#' population-specific age effects, a single-stage Bayesian fit, and two
+#' parameterisations, the spread between equal populations (their Section
+#' 4.5, the default here) and the spread from a dominant population (Section
+#' 4.4, `reference`). It differs from that paper, and these parts are
+#' package-specific (reference unknown): the binomial-logit likelihood and
+#' the random-walk smoothing priors of bamp (Schmid and Held 2007) in place
+#' of the Poisson likelihood with a random walk with drift and AR(2) cohort
+#' processes; one cohort effect shared by all strata (the alternative
+#' cohort hypothesis of their Section 4.3), with optional AR(1) cohort
+#' deviations in place of an AR(2) cohort spread; independent innovations
+#' of the common trend and the deviations (the paper: correlated); the
+#' priors; and more than two strata.
+#'
+#' **Sampler.** Four chains of a Metropolis-Hastings sampler: all effects are
+#' proposed jointly from a Gaussian approximation of their conditional
+#' posterior (one Newton step from the current state, with sparse Cholesky
+#' factors; Rue and Held 2005, Section 4.4), the precisions are drawn from
+#' their Gamma conditionals, `rho` by a random-walk Metropolis step on the
+#' logit scale whose step size adapts during the burn-in only. Convergence
+#' is checked with the Gelman-Rubin statistic of the hyperparameters, the
+#' last period effect and the level of every stratum in the last year
+#' (`rhat` below 1.1); a group that has not converged is refitted with
+#' twice as many iterations up to `max_refits` times. Overdispersion is not
+#' available in the coherent model.
+#'
 #' Draws are posterior draws of the rates. Predictive draws
 #' (`mt_forecast(predictive = TRUE)`) add Poisson variation of the deaths
 #' given the rates of each draw and the exposures, as for the other models
@@ -50,6 +107,21 @@
 #' @param resolution `"observed"` or `"grid"`.
 #' @param shape_years Number of recent years used for the shape factors.
 #' @param max_refits Refits with longer chains if not converged.
+#' @param coherent Fit the strata of each group jointly with shared period
+#'   and cohort effects and mean-reverting stratum deviations (see the
+#'   section "Coherent model"); needs at least two strata per group.
+#' @param common_by Stratum variable(s) defining groups with their own
+#'   common trend (`coherent = TRUE`), for example `"sex"` for the
+#'   deprivation groups of each sex. `NULL`: one group of all strata.
+#' @param reference With `coherent = TRUE`: `NULL` (the deviations sum to
+#'   zero over the strata of a group) or a named list of values of stratum
+#'   variables that selects one reference stratum in every group, for
+#'   example `list(quintile = "England")`, whose deviation is zero.
+#' @param cohort_deviation With `coherent = TRUE`: add AR(1) deviations of
+#'   the strata along the cohorts.
+#' @param seed Seed of the native sampler (`coherent = TRUE`); `NULL` draws
+#'   one from R's random number generator, so that `set.seed()` makes fits
+#'   reproducible.
 #' @return A model specification.
 #' @references
 #' Knorr-Held L, Rainer E (2001). Prognosis of lung cancer mortality in
@@ -59,6 +131,21 @@
 #' Schmid VJ, Held L (2007). Bayesian age-period-cohort modeling and
 #' prediction: BAMP. *Journal of Statistical Software* 21(8): 1-15.
 #' \doi{10.18637/jss.v021.i08}
+#'
+#' Cairns AJG, Blake D, Dowd K, Coughlan GD, Khalaf-Allah M (2011). Bayesian
+#' stochastic mortality modelling for two populations. *ASTIN Bulletin*
+#' 41(1): 29-59. \doi{10.2143/AST.41.1.2084385}
+#'
+#' Gelman A, Rubin DB (1992). Inference from iterative simulation using
+#' multiple sequences. *Statistical Science* 7(4): 457-472.
+#' \doi{10.1214/ss/1177011136}
+#'
+#' Rue H, Held L (2005). *Gaussian Markov Random Fields: Theory and
+#' Applications*. Chapman and Hall/CRC, Boca Raton.
+#'
+#' Sørbye SH, Rue H (2014). Scaling intrinsic Gaussian Markov random field
+#' priors in spatial modelling. *Spatial Statistics* 8: 39-51.
+#' \doi{10.1016/j.spasta.2013.06.004}
 #' @examples
 #' \donttest{
 #' if (requireNamespace("bamp", quietly = TRUE)) {
@@ -67,11 +154,29 @@
 #'   fc <- mt_forecast(fit, h = 5, n_draws = 200, seed = 1)
 #' }
 #' }
+#' # coherent model of the two sexes (native sampler, no bamp needed)
+#' \donttest{
+#' x <- mt_example(years = 2005:2019)
+#' fit <- mt_fit(apc_bayes(coherent = TRUE, mcmc = mcmc_control("test"), seed = 1), x,
+#'               prep = mt_prep(step_ungroup()))
+#' }
 #' @export
 apc_bayes <- function(age = "rw2", period = "rw1", cohort = "rw1", overdispersion = FALSE,
                       mcmc = mcmc_control(), resolution = c("observed", "grid"), shape_years = 5,
-                      max_refits = 1) {
-  need_pkg("bamp", "for apc_bayes()")
+                      max_refits = 1, coherent = FALSE, common_by = NULL, reference = NULL,
+                      cohort_deviation = FALSE, seed = NULL) {
+  check_flag(coherent, "coherent")
+  check_flag(cohort_deviation, "cohort_deviation")
+  if (!coherent && (!is.null(common_by) || !is.null(reference) || cohort_deviation)) {
+    mt_abort("`common_by`, `reference` and `cohort_deviation` need `coherent = TRUE`.", class = "argument")
+  }
+  if (coherent && overdispersion) {
+    mt_abort("Overdispersion is not available in the coherent model.", class = "argument")
+  }
+  if (!is.null(reference) && (!is.list(reference) || is.null(names(reference)))) {
+    mt_abort("`reference` must be a named list of values of stratum variables.", class = "argument")
+  }
+  if (!coherent) need_pkg("bamp", "for apc_bayes()")
   for (nm in c("age", "period", "cohort")) {
     v <- get(nm)
     if (!v %in% c("rw1", "rw2")) {
@@ -80,6 +185,13 @@ apc_bayes <- function(age = "rw2", period = "rw1", cohort = "rw1", overdispersio
     }
   }
   resolution <- match.arg(resolution)
+  if (coherent) {
+    return(new_mt_spec("apc_coherent", list(age = age, period = period, cohort = cohort, mcmc = mcmc,
+                                            resolution = resolution, shape_years = shape_years,
+                                            max_refits = max_refits, common_by = common_by, reference = reference,
+                                            cohort_deviation = cohort_deviation, seed = seed),
+                       joint = TRUE, min_periods = 5, label = "Bayesian APC, coherent"))
+  }
   new_mt_spec("apc_bayes", list(age = age, period = period, cohort = cohort, overdispersion = overdispersion,
                                 mcmc = mcmc, resolution = resolution, shape_years = shape_years,
                                 max_refits = max_refits),

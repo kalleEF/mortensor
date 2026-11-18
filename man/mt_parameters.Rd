@@ -64,7 +64,16 @@ per stratum the centre \code{a} (with \code{centre = TRUE});
 \item \code{\link[=apc_bayes]{apc_bayes()}}: posterior medians and 90\% intervals of the age, period
 and cohort effects (logit scale, bamp's identification), and the
 Gelman-Rubin statistics (\code{rhat}, values below 1.1 indicate convergence)
-of the identified quantities;
+of the identified quantities; with \code{coherent = TRUE} per group the
+shared intercept, period and cohort effects (stratum \code{"common (group)"}),
+per stratum the age effects, the level and the deviations, the
+hyperparameters (precisions \code{kappa}, \code{lambda}, \code{nu}, \code{lambda_d}, AR(1)
+coefficient \code{rho}, and \code{lambda_c}, \code{rho_c} of the cohort deviations)
+and \code{rhat} of the monitored quantities;
+\item \code{\link[=apc_causes]{apc_causes()}}: per group the effects of the all-cause model and of the
+share of each cause, the correlations of the period and cohort effects
+of the shares across causes (\code{period_correlation},
+\code{cohort_correlation}) and \code{rhat};
 \item \code{\link[=p_splines]{p_splines()}}, \code{\link[=cp_splines]{cp_splines()}}: the smoothing parameters over age
 (\code{lambda_age}) and years (\code{lambda_year}), the effective dimension
 (\code{ed}), the criterion (\code{bic} or \code{aic}) and the dispersion (deviance

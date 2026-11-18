@@ -92,3 +92,30 @@ test_that("wrappers around tuned() forecast with the chosen model", {
   expect_true(all(is.finite(fc$rates)))
   expect_s3_class(mt_parameters(fit), "data.table")
 })
+
+test_that("mt_tune() scores gaps and joint vectors as mt_backtest() does", {
+  x <- mt_example(deaths = "single", years = 1990:2010)
+  ct <- c(var = "sex", ref = "male")
+  tn <- mt_tune(function(ratio_order) li_lee(ratio_order = ratio_order), data.frame(ratio_order = 1), x,
+                inner_origins = 2, inner_h = 3, n_draws = 30, target = "life_expectancy_gap", contrast = ct)
+  bt <- mt_backtest(li_lee(ratio_order = 1), x, origins = tn$origins, h = 3, n_draws = 30,
+                    quantities = "life_expectancy", contrast = ct)
+  expect_equal(tn$scores$crps, mean(bt[target == "life_expectancy_gap"]$crps))
+  tj <- mt_tune(function(ratio_order) li_lee(ratio_order = ratio_order), data.frame(ratio_order = 1), x,
+                inner_origins = 2, inner_h = 3, n_draws = 30, target = "asr_joint", metric = "energy")
+  bj <- mt_backtest(li_lee(ratio_order = 1), x, origins = tj$origins, h = 3, n_draws = 30, quantities = "asr",
+                    multivariate = TRUE)
+  expect_equal(tj$scores$energy, mean(bj[target == "asr_joint"]$energy))
+  # criteria that do not fit together
+  f <- function(ratio_order) li_lee(ratio_order = ratio_order)
+  g <- data.frame(ratio_order = 1)
+  expect_error(mt_tune(f, g, x, target = "asr_gap"), class = "mt_error_argument")
+  expect_error(mt_tune(f, g, x, target = "asr", contrast = ct), class = "mt_error_argument")
+  expect_error(mt_tune(f, g, x, target = "asr_joint"), class = "mt_error_argument")
+  expect_error(mt_tune(f, g, x, target = "asr", metric = "energy"), class = "mt_error_argument")
+  expect_error(mt_tune(f, g, x, target = "asr_gap", contrast = ct, by = "sex"), class = "mt_error_argument")
+  expect_error(tuned(f, g, target = "asr_gap"), class = "mt_error_argument")
+  sp <- tuned(f, g, inner_origins = 1, inner_h = 3, n_draws = 20, target = "life_expectancy_gap", contrast = ct)
+  fit <- mt_fit(sp, mt_window(x, to = 2006))
+  expect_named(fit$tuning, c("ratio_order", "crps", "se", "selected"))
+})

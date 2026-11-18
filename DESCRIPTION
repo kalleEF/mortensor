@@ -1,6 +1,6 @@
 Package: mortensor
 Title: Flexible Mortality Forecasting Across Data Granularities
-Version: 0.3.0
+Version: 0.3.0.9000
 Authors@R:
     person("Karl", "Emmert-Fees", email = "karl.emmert-fees@tum.de",
            role = c("aut", "cre", "cph"))
@@ -43,6 +43,7 @@ Suggests:
     readxl,
     rmarkdown,
     rstan,
+    scoringRules,
     StanMoMo,
     StMoMo,
     testthat (>= 3.0.0),

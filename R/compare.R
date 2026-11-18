@@ -48,8 +48,11 @@
 #' @param ... Further arguments of [mt_backtest()].
 #' @param backtest An [mt_backtest()] result.
 #' @param metrics Score columns of [mt_score()], for example `"crps"`,
-#'   `"rmse"`, `"cov80"`, `"cov95"`.
-#' @param targets Targets to show (default: all in the backtest).
+#'   `"rmse"`, `"cov80"`, `"cov95"`, or `"energy"` and `"variogram"` for the
+#'   joint targets (`multivariate = TRUE` of [mt_backtest()]). Each target
+#'   shows the metrics it has.
+#' @param targets Targets to show (default: all in the backtest; the joint
+#'   targets when `metrics` includes `"energy"` or `"variogram"`).
 #' @param by Columns that define the rows (default `"model"`), for example
 #'   `c("model", "horizon")` for the scores of each horizon.
 #' @param digits Significant digits (`mt_score_table()`) or decimals
@@ -129,7 +132,7 @@ common_cells <- function(bt) {
   who <- dm_model_units(bt)
   n_units <- length(attr(who, "levels"))
   if (n_units < 2) return(bt)
-  keys <- intersect(c("origin", "horizon", "stratum", "age_lo", "age_hi", "period", "target"), names(bt))
+  keys <- intersect(c("origin", "horizon", "stratum", "age_lo", "age_hi", "period", "target", "n_dim"), names(bt))
   cell <- do.call(paste, c(unname(as.list(bt[, keys, with = FALSE])), sep = "\r"))
   cnt <- data.table(cell = cell, unit = as.vector(who))[, list(n = data.table::uniqueN(unit)), by = "cell"]
   keep <- cnt$n[match(cell, cnt$cell)] == n_units
@@ -188,17 +191,32 @@ mt_score_table <- function(backtest, metrics = c("crps", "cov95"), targets = NUL
   }
   backtest <- bt
   have <- if ("target" %in% names(bt)) unique(bt$target) else "rate"
-  targets <- targets %||% intersect(c("rate", "life_expectancy", "asr", "life_expectancy_gap", "asr_gap"), have)
+  joint_targets <- c("life_expectancy_joint", "asr_joint")
+  # joint targets carry the energy and variogram scores only: shown by
+  # default when `metrics` asks for them
+  default <- c("rate", "life_expectancy", "asr", "life_expectancy_gap", "asr_gap",
+               if (any(metrics %in% c("energy", "variogram"))) joint_targets)
+  targets <- targets %||% intersect(default, have)
   # the rows of mt_score(), the same for every target (with `prep` when a
   # model was backtested with several pipelines)
   by <- score_by(bt, by)
-  suffix <- c(rate = "", life_expectancy = "_le", asr = "_asr", life_expectancy_gap = "_le_gap", asr_gap = "_asr_gap")
+  suffix <- c(rate = "", life_expectancy = "_le", asr = "_asr", life_expectancy_gap = "_le_gap", asr_gap = "_asr_gap",
+              life_expectancy_joint = "_le_joint", asr_joint = "_asr_joint")
   tabs <- lapply(targets, function(tg) {
     s <- mt_score(backtest, by = by, target = tg)
-    miss <- setdiff(metrics, names(s))
+    # each target with the metrics it has (joint targets: energy, variogram;
+    # the others: the scores of single cells)
+    ms <- intersect(metrics, names(s))
+    if (!length(ms)) {
+      mt_abort(sprintf("None of the metric(s) %s exists for target \"%s\".", paste(metrics, collapse = ", "), tg),
+               class = "argument")
+    }
+    miss <- setdiff(metrics, c(names(s), if (tg %in% joint_targets) c("crps", "wis", "mae", "rmse", "mase", "cov50",
+                                                                         "cov80", "cov95", "pit_mean", "n_floored")
+                                           else c("energy", "variogram")))
     if (length(miss)) mt_abort(sprintf("Unknown metric(s): %s.", paste(miss, collapse = ", ")), class = "argument")
-    s <- s[, c(by, metrics), with = FALSE]
-    setnames(s, metrics, paste0(metrics, suffix[[tg]]))
+    s <- s[, c(by, ms), with = FALSE]
+    setnames(s, ms, paste0(ms, suffix[[tg]]))
     s
   })
   out <- Reduce(function(a, b) merge(a, b, by = by, sort = FALSE, all = TRUE), tabs)

@@ -35,6 +35,18 @@
 #' accuracy); `"mase"` scales the absolute error by the mean year-to-year
 #' change of the training data (rates only).
 #'
+#' **Coherence.** To choose how strongly the strata of a joint model are
+#' tied together (for example `ratio_order` of [li_lee()], `spread_ar` of
+#' [saint()], `deviation` of [relative_model()]), the criterion can score
+#' the differences between strata or all strata jointly, as in
+#' [mt_backtest()]: `target = "life_expectancy_gap"` or `"asr_gap"` with
+#' `contrast` (the gaps between each level of a stratum variable and its
+#' reference level, scored with `metric` `"crps"`, `"wis"`, `"mae"` or
+#' `"rmse"`), or `target = "life_expectancy_joint"` or `"asr_joint"` with
+#' `metric = "energy"` or `"variogram"` (the vector of all strata of each
+#' group). The models are published; choosing their coherence settings by
+#' these scores is a procedure of this package (reference unknown).
+#'
 #' **Selection.** `select = "min"` takes the lowest score. `select =
 #' "one_se"` takes the first row of `grid` whose score is within one
 #' standard error of the lowest (the one-standard-error rule of Hastie,
@@ -63,7 +75,8 @@
 #' @param inner_origins Number of inner origins (`1` for a single hold-out).
 #' @param inner_h Horizon of the inner backtest (the number of years held
 #'   out from each origin).
-#' @param metric `"crps"`, `"wis"`, `"mae"`, `"rmse"` or `"mase"`.
+#' @param metric `"crps"`, `"wis"`, `"mae"`, `"rmse"` or `"mase"`; for
+#'   the joint targets `"energy"` or `"variogram"`.
 #' @param n_draws Draws per inner forecast.
 #' @param strategy `"full"` evaluates every row of `grid`; `"two_stage"`
 #'   first evaluates a coarse grid (every second value of each column,
@@ -72,7 +85,12 @@
 #'   such as Tucker ranks, this needs far fewer fits. The two-stage search
 #'   is a package heuristic: it can miss the best row when the score has
 #'   several minima along a column.
-#' @param target `"rate"`, `"life_expectancy"` or `"asr"`.
+#' @param target `"rate"`, `"life_expectancy"`, `"asr"`,
+#'   `"life_expectancy_gap"`, `"asr_gap"` (with `contrast`),
+#'   `"life_expectancy_joint"` or `"asr_joint"`.
+#' @param contrast For the gap targets: `c(var = , ref = )`, a stratum
+#'   variable and its reference level (see [mt_backtest()]). It cannot be a
+#'   variable of `by`.
 #' @param select `"min"` or `"one_se"`.
 #' @param by Stratum variables: tune each group of strata separately.
 #' @return `mt_tune()`: a list with `scores` (one row per setting and group:
@@ -103,24 +121,25 @@
 #' tn2$scores
 #' @export
 mt_tune <- function(spec_fun, grid, data, prep = NULL, inner_origins = 3, inner_h = 5, metric = "crps",
-                    n_draws = 100, strategy = c("full", "two_stage"), target = c("rate", "life_expectancy", "asr"),
-                    select = c("min", "one_se"), by = NULL) {
+                    n_draws = 100, strategy = c("full", "two_stage"),
+                    target = c("rate", "life_expectancy", "asr", "life_expectancy_gap", "asr_gap",
+                               "life_expectancy_joint", "asr_joint"),
+                    select = c("min", "one_se"), by = NULL, contrast = NULL) {
   if (!is.function(spec_fun)) mt_abort("`spec_fun` must be a function.", class = "argument")
   check_class(data, "mt_data", "data")
   check_not_ungrouped(data)
   strategy <- match.arg(strategy)
   target <- match.arg(target)
   select <- match.arg(select)
-  check_choice(metric, c("crps", "wis", "mae", "rmse", "mase"), "metric")
-  if (metric == "mase" && target != "rate") {
-    mt_abort("`metric = \"mase\"` is defined for rates only.", class = "argument")
-  }
+  check_tune_criterion(metric, target, contrast, by)
+  if (!is.null(contrast)) contrast <- check_backtest_contrast(contrast, data, "life_expectancy")
   check_number(inner_origins, "inner_origins", lower = 1, integerish = TRUE)
   check_number(inner_h, "inner_h", lower = 1, integerish = TRUE)
   grid <- as.data.frame(grid)
   if (!nrow(grid)) mt_abort("`grid` has no rows.", class = "argument")
   opts <- list(spec_fun = spec_fun, grid = grid, prep = prep, inner_origins = inner_origins, inner_h = inner_h,
-               metric = metric, target = target, select = select, n_draws = n_draws, strategy = strategy)
+               metric = metric, target = target, select = select, n_draws = n_draws, strategy = strategy,
+               contrast = contrast)
   if (is.null(by)) return(tune_one(data, opts))
   groups <- strata_groups(data$strata, by)
   res <- lapply(groups, function(idx) tune_one(strata_subset(data, idx), opts))
@@ -140,6 +159,24 @@ strata_groups <- function(strata, by) {
   }
   key <- do.call(paste, c(as.list(strata[, by, with = FALSE]), sep = "."))
   split(seq_len(nrow(strata)), factor(key, levels = unique(key)))
+}
+
+# Metric, target and contrast of mt_tune() and tuned(): the joint targets
+# take the energy or variogram score, the others the scores of single cells;
+# the gap targets need a contrast, which cannot split the groups of `by`
+check_tune_criterion <- function(metric, target, contrast, by) {
+  joint <- target %in% c("life_expectancy_joint", "asr_joint")
+  check_choice(metric, if (joint) c("energy", "variogram") else c("crps", "wis", "mae", "rmse", "mase"), "metric")
+  if (metric == "mase" && target != "rate") {
+    mt_abort("`metric = \"mase\"` is defined for rates only.", class = "argument")
+  }
+  gap <- target %in% c("life_expectancy_gap", "asr_gap")
+  if (gap && is.null(contrast)) mt_abort(sprintf("`target = \"%s\"` needs `contrast`.", target), class = "argument")
+  if (!gap && !is.null(contrast)) mt_abort("`contrast` is used with the gap targets only.", class = "argument")
+  if (gap && contrast[["var"]] %in% by) {
+    mt_abort("The variable of `contrast` cannot be in `by`: each group would hold one level.", class = "argument")
+  }
+  invisible(TRUE)
 }
 
 # Specification and preprocessing of one candidate
@@ -162,7 +199,8 @@ tune_score <- function(bt, tgt, metric) {
   if (is.null(bt)) return(none)
   b <- bt[target == tgt]
   if (!nrow(b)) return(none)
-  lv <- switch(metric, crps = b$crps, wis = b$wis, mae = b$ae, rmse = b$ae^2, mase = b$ae / b$scale)
+  lv <- switch(metric, crps = b$crps, wis = b$wis, mae = b$ae, rmse = b$ae^2, mase = b$ae / b$scale,
+               energy = b$energy, variogram = b$variogram)
   ok <- is.finite(lv)
   if (!any(ok)) return(none)
   b <- b[ok]
@@ -183,7 +221,8 @@ tune_score <- function(bt, tgt, metric) {
 tune_one <- function(data, o) {
   last <- max(mt_grid(data)$period$lower)
   origins <- seq(last - o$inner_origins - o$inner_h + 1, last - o$inner_h)
-  quantities <- if (o$target == "rate") NULL else o$target
+  quantities <- if (o$target == "rate") NULL else sub("_(gap|joint)$", "", o$target)
+  multivariate <- grepl("_joint$", o$target)
   acc <- new.env(parent = emptyenv())
   acc$hz <- list()
   score_rows <- function(rows) {
@@ -191,7 +230,8 @@ tune_one <- function(data, o) {
       args <- as.list(o$grid[i, , drop = FALSE])
       cand <- tune_candidate(o$spec_fun, args, o$prep)
       bt <- suppressWarnings(tryCatch(mt_backtest(cand$spec, data, origins = origins, h = o$inner_h,
-                                                  prep = cand$prep, n_draws = o$n_draws, quantities = quantities),
+                                                  prep = cand$prep, n_draws = o$n_draws, quantities = quantities,
+                                                  contrast = o$contrast, multivariate = multivariate),
                                       error = function(e) NULL))
       sc <- tune_score(bt, o$target, o$metric)
       if (!is.null(sc$by_h)) acc$hz[[length(acc$hz) + 1L]] <- cbind(data.table(row = i), sc$by_h)
@@ -246,13 +286,16 @@ tune_select <- function(scores, select) {
 #' @export
 tuned <- function(spec_fun, grid, inner_origins = 3, inner_h = 5, metric = "crps", n_draws = 100,
                   label = "Tuned model", strategy = c("full", "two_stage"),
-                  target = c("rate", "life_expectancy", "asr"), select = c("min", "one_se"), by = NULL) {
+                  target = c("rate", "life_expectancy", "asr", "life_expectancy_gap", "asr_gap",
+                             "life_expectancy_joint", "asr_joint"),
+                  select = c("min", "one_se"), by = NULL, contrast = NULL) {
   if (!is.function(spec_fun)) mt_abort("`spec_fun` must be a function.", class = "argument")
-  check_choice(metric, c("crps", "wis", "mae", "rmse", "mase"), "metric")
+  target <- match.arg(target)
+  check_tune_criterion(metric, target, contrast, by)
   grid <- as.data.frame(grid)
   new_mt_spec("tuned", list(spec_fun = spec_fun, grid = grid, inner_origins = inner_origins,
                             inner_h = inner_h, metric = metric, n_draws = n_draws, strategy = match.arg(strategy),
-                            target = match.arg(target), select = match.arg(select), by = by),
+                            target = target, select = match.arg(select), by = by, contrast = contrast),
               min_periods = inner_origins + inner_h + 5, label = label, smooth = tuned_smooth(spec_fun, grid))
 }
 
@@ -270,7 +313,7 @@ mt_fit.mt_spec_tuned <- function(spec, data, prep = NULL, cores = 1, ...) {
   p <- spec$params
   tn <- mt_tune(p$spec_fun, p$grid, data, prep = prep, inner_origins = p$inner_origins, inner_h = p$inner_h,
                 metric = p$metric, n_draws = p$n_draws, strategy = p$strategy %||% "full",
-                target = p$target %||% "rate", select = p$select %||% "min", by = p$by)
+                target = p$target %||% "rate", select = p$select %||% "min", by = p$by, contrast = p$contrast)
   if (is.null(p$by)) {
     fit <- mt_fit(tn$best, data, prep = tn$best_prep, cores = cores)
     fit$tuning <- tn$scores

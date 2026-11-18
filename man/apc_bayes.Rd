@@ -12,7 +12,12 @@ apc_bayes(
   mcmc = mcmc_control(),
   resolution = c("observed", "grid"),
   shape_years = 5,
-  max_refits = 1
+  max_refits = 1,
+  coherent = FALSE,
+  common_by = NULL,
+  reference = NULL,
+  cohort_deviation = FALSE,
+  seed = NULL
 )
 }
 \arguments{
@@ -33,6 +38,26 @@ models with bamp" compares both.}
 \item{shape_years}{Number of recent years used for the shape factors.}
 
 \item{max_refits}{Refits with longer chains if not converged.}
+
+\item{coherent}{Fit the strata of each group jointly with shared period
+and cohort effects and mean-reverting stratum deviations (see the
+section "Coherent model"); needs at least two strata per group.}
+
+\item{common_by}{Stratum variable(s) defining groups with their own
+common trend (\code{coherent = TRUE}), for example \code{"sex"} for the
+deprivation groups of each sex. \code{NULL}: one group of all strata.}
+
+\item{reference}{With \code{coherent = TRUE}: \code{NULL} (the deviations sum to
+zero over the strata of a group) or a named list of values of stratum
+variables that selects one reference stratum in every group, for
+example \code{list(quintile = "England")}, whose deviation is zero.}
+
+\item{cohort_deviation}{With \code{coherent = TRUE}: add AR(1) deviations of
+the strata along the cohorts.}
+
+\item{seed}{Seed of the native sampler (\code{coherent = TRUE}); \code{NULL} draws
+one from R's random number generator, so that \code{set.seed()} makes fits
+reproducible.}
 }
 \value{
 A model specification.
@@ -67,6 +92,64 @@ and the largest relative rounding change is recorded.
 
 Heterogeneity variants (\code{"rw1+het"}, \code{"rw2+het"}) are not offered because
 \code{bamp::predict_apc()} does not forecast them in bamp 3.0.0.
+}
+\section{Coherent model (\code{coherent = TRUE})}{
+
+Fits the strata of each group of \code{common_by} (all strata without it) in
+one model, so that their forecasts do not diverge:
+
+\verb{logit p[s, i, j] = mu + a[s] + theta[s, i] + phi[j] + psi[k] + d[s, j]}
+
+for stratum \code{s}, age group \code{i}, year \code{j} and cohort \code{k}, with binomial
+deaths given the exposures. The period effect \code{phi} and the cohort
+effect \code{psi} are shared and carry the common trend; their random-walk
+priors (orders \code{period}, \code{cohort}) are scaled to unit generalised
+variance (Sørbye and Rue 2014) and forecast as random walks. Each stratum
+has its own age effect \code{theta[s, ]} (random walk of order \code{age}, one
+precision for all strata) and level \code{a[s]}. The deviations \code{d[s, ]} of
+the strata from the shared period effect are stationary AR(1) series with
+a common coefficient \code{rho} (uniform prior on 0 to 1, sampled) and
+innovation precision; they sum to zero over the strata in every year, or,
+with \code{reference}, the deviation of the reference stratum is zero. Their
+forecasts revert towards zero, so the gaps between strata stay bounded.
+\code{cohort_deviation = TRUE} adds deviations \code{c[s, k]} of the same form
+along the cohorts. The precisions have Gamma priors with shape 1 and
+rates 0.5 (age) and 5e-4 (period, cohort, deviations). For the deviations
+the branch uses the rate 0.05, which dominates typical data: the
+posterior of their precision and the width of the forecast gaps are then
+set by the prior.
+
+\strong{Sources.} The model is the coherent model of the development branch
+"coherent_forecasting" of bamp (\code{bamp_coherent()}, by Chris
+Kypridemos), rewritten in this package because that branch is not
+released; when a bamp release contains it, \code{apc_bayes(coherent = TRUE)}
+will call bamp and the native sampler will be deprecated. Its published
+anchor is the two-population Bayesian APC model of Cairns et al. (2011):
+a common period trend and a mean-reverting AR(1) spread with level zero,
+population-specific age effects, a single-stage Bayesian fit, and two
+parameterisations, the spread between equal populations (their Section
+4.5, the default here) and the spread from a dominant population (Section
+4.4, \code{reference}). It differs from that paper, and these parts are
+package-specific (reference unknown): the binomial-logit likelihood and
+the random-walk smoothing priors of bamp (Schmid and Held 2007) in place
+of the Poisson likelihood with a random walk with drift and AR(2) cohort
+processes; one cohort effect shared by all strata (the alternative
+cohort hypothesis of their Section 4.3), with optional AR(1) cohort
+deviations in place of an AR(2) cohort spread; independent innovations
+of the common trend and the deviations (the paper: correlated); the
+priors; and more than two strata.
+
+\strong{Sampler.} Four chains of a Metropolis-Hastings sampler: all effects are
+proposed jointly from a Gaussian approximation of their conditional
+posterior (one Newton step from the current state, with sparse Cholesky
+factors; Rue and Held 2005, Section 4.4), the precisions are drawn from
+their Gamma conditionals, \code{rho} by a random-walk Metropolis step on the
+logit scale whose step size adapts during the burn-in only. Convergence
+is checked with the Gelman-Rubin statistic of the hyperparameters, the
+last period effect and the level of every stratum in the last year
+(\code{rhat} below 1.1); a group that has not converged is refitted with
+twice as many iterations up to \code{max_refits} times. Overdispersion is not
+available in the coherent model.
 
 Draws are posterior draws of the rates. Predictive draws
 (\code{mt_forecast(predictive = TRUE)}) add Poisson variation of the deaths
@@ -78,6 +161,7 @@ posterior of the rates. If intervals are too narrow on real data, that is
 a property of the model (see \code{\link[=recalibrated]{recalibrated()}}, \code{\link[=ensemble]{ensemble()}}, or
 overdispersed models such as \code{stanmomo(family = "nb")}).
 }
+
 \examples{
 \donttest{
 if (requireNamespace("bamp", quietly = TRUE)) {
@@ -85,6 +169,12 @@ if (requireNamespace("bamp", quietly = TRUE)) {
   fit <- mt_fit(apc_bayes(mcmc = mcmc_control("test")), x, prep = mt_prep(step_ungroup()))
   fc <- mt_forecast(fit, h = 5, n_draws = 200, seed = 1)
 }
+}
+# coherent model of the two sexes (native sampler, no bamp needed)
+\donttest{
+x <- mt_example(years = 2005:2019)
+fit <- mt_fit(apc_bayes(coherent = TRUE, mcmc = mcmc_control("test"), seed = 1), x,
+              prep = mt_prep(step_ungroup()))
 }
 }
 \references{
@@ -95,4 +185,19 @@ West Germany: a case study in Bayesian prediction. \emph{Biostatistics} 2(1):
 Schmid VJ, Held L (2007). Bayesian age-period-cohort modeling and
 prediction: BAMP. \emph{Journal of Statistical Software} 21(8): 1-15.
 \doi{10.18637/jss.v021.i08}
+
+Cairns AJG, Blake D, Dowd K, Coughlan GD, Khalaf-Allah M (2011). Bayesian
+stochastic mortality modelling for two populations. \emph{ASTIN Bulletin}
+41(1): 29-59. \doi{10.2143/AST.41.1.2084385}
+
+Gelman A, Rubin DB (1992). Inference from iterative simulation using
+multiple sequences. \emph{Statistical Science} 7(4): 457-472.
+\doi{10.1214/ss/1177011136}
+
+Rue H, Held L (2005). \emph{Gaussian Markov Random Fields: Theory and
+Applications}. Chapman and Hall/CRC, Boca Raton.
+
+Sørbye SH, Rue H (2014). Scaling intrinsic Gaussian Markov random field
+priors in spatial modelling. \emph{Spatial Statistics} 8: 39-51.
+\doi{10.1016/j.spasta.2013.06.004}
 }

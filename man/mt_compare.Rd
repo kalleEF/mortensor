@@ -67,9 +67,12 @@ the training data of the first forecast).}
 \item{backtest}{An \code{\link[=mt_backtest]{mt_backtest()}} result.}
 
 \item{metrics}{Score columns of \code{\link[=mt_score]{mt_score()}}, for example \code{"crps"},
-\code{"rmse"}, \code{"cov80"}, \code{"cov95"}.}
+\code{"rmse"}, \code{"cov80"}, \code{"cov95"}, or \code{"energy"} and \code{"variogram"} for the
+joint targets (\code{multivariate = TRUE} of \code{\link[=mt_backtest]{mt_backtest()}}). Each target
+shows the metrics it has.}
 
-\item{targets}{Targets to show (default: all in the backtest).}
+\item{targets}{Targets to show (default: all in the backtest; the joint
+targets when \code{metrics} includes \code{"energy"} or \code{"variogram"}).}
 
 \item{by}{Columns that define the rows (default \code{"model"}), for example
 \code{c("model", "horizon")} for the scores of each horizon.}

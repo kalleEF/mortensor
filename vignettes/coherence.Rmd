@@ -241,6 +241,64 @@ pair of strata at each age, the method follows the errors of the training
 years; it suits long and stable histories, and a backtest should confirm
 it.
 
+## Models with a common trend
+
+Reconciliation makes forecasts add up. Strata at the same level, such as
+the sexes or the quintiles, can also be tied together by the model: a
+common trend that all of them follow, and deviations from it that stay
+bounded, so that gaps do not grow without limit. What the common trend is
+differs between these models:
+
+| Model | Common trend | Weights of the strata | Source |
+|---|---|---|---|
+| `li_lee()` | Lee-Carter model of the pooled rates (sum of deaths over sum of exposures) | exposures | Li and Lee (2005) |
+| `coherent_fdm()` | geometric mean of the strata's rates | equal | Hyndman, Booth and Yasmeen (2013) |
+| `coda(coherent = TRUE)` | arithmetic mean of the strata's death rates | equal | Bergeron-Boucher et al. (2017) |
+| `cae()` | common age effect of all strata | equal | Kleinow (2015) |
+| `relative_model()` | the reference population | reference only | Villegas and Haberman (2014) |
+| `saint()` | the pooled reference population | reference only | Jarner and Kryger (2011) |
+| `apc_bayes(coherent = TRUE)` | shared period and cohort effects; deviations sum to zero over the strata | equal, or a reference stratum | Cairns et al. (2011) for two populations |
+
+With equal weights, a small stratum moves the common trend as much as a
+large one; with exposure weights, the common trend follows the largest
+strata. With a reference population, the trend is that population's
+trend, and the other strata are tied to it. Each model keeps the weights
+of its paper. The gaps these models forecast can be compared in a
+backtest with `contrast` (gaps between strata) and `multivariate = TRUE`
+(the energy and variogram scores of all strata jointly), and `mt_tune()`
+can choose their settings by these scores (`target = "asr_gap"` or
+`"asr_joint"`).
+
+## Causes within sexes
+
+Forecasts by sex and cause need two kinds of coherence: the sexes should
+not drift apart, and the causes should add up to all causes. A model with
+a common trend gives the first, reconciliation with a fixed total the
+second. `stratified()` fits one model to the all-cause strata and another
+to the cause strata, and `reconciled()` scales the causes so that they add
+up to the all-cause forecast, which stays as it is
+(`method = "proportional"`, `fixed`). Here `li_lee()` ties women and men
+together for all causes, and `li_lee(common_by = "cause")` ties them
+together for each cause:
+
+```{r}
+xc <- mt_example_causes(years = 1990:2019)
+hc <- mt_hierarchy(cause = list(total = "all", additive = "rates"))
+spec_c <- reconciled(stratified("cause", all = li_lee(), .default = li_lee(common_by = "cause")), hc,
+                     method = "proportional", fixed = c("female.all", "male.all"))
+fc_c <- mt_forecast(mt_fit(spec_c, xc), h = 10, n_draws = 200, seed = 1)
+mt_compare_forecasts(list("sex x cause" = fc_c), quantity = "asr", periods = 2029,
+                     strata = c("female.all", "male.all", "female.cvd", "male.cvd"))
+```
+
+Age-standardised rates per 100,000 in 2029 with 95% intervals. The causes of each sex
+add up to its all-cause forecast in every draw.
+The draws of the all-cause and the cause models are independent, so the
+reconciliation, and not the models, sets how the causes move with all
+causes. `apc_causes()` models all causes and the shares of the causes
+together, with period trends of the causes that are correlated as
+estimated, at the cost of an MCMC fit.
+
 ## Choosing a method
 
 * **Bottom-up** with a joint model of the parts keeps the detailed
@@ -273,14 +331,40 @@ Athanasopoulos G, Ahmed RA, Hyndman RJ (2009). Hierarchical forecasts for
 Australian domestic tourism. *International Journal of Forecasting* 25:
 146-166.
 
+Bergeron-Boucher M-P, Canudas-Romo V, Oeppen J, Vaupel JW (2017).
+Coherent forecasts of mortality with compositional data analysis.
+*Demographic Research* 37(17): 527-566.
+
+Cairns AJG, Blake D, Dowd K, Coughlan GD, Khalaf-Allah M (2011). Bayesian
+stochastic mortality modelling for two populations. *ASTIN Bulletin*
+41(1): 29-59.
+
 Clark M, Gangopadhyay S, Hay L, Rajagopalan B, Wilby R (2004). The Schaake
 shuffle: a method for reconstructing space-time variability in forecasted
 precipitation and temperature fields. *Journal of Hydrometeorology* 5(1):
 243-262.
 
+Hyndman RJ, Booth H, Yasmeen F (2013). Coherent mortality forecasting: the
+product-ratio method with functional time series models. *Demography*
+50(1): 261-283.
+
+Jarner SF, Kryger EM (2011). Modelling adult mortality in small
+populations: the SAINT model. *ASTIN Bulletin* 41(2): 377-418.
+
+Kleinow T (2015). A common age effect model for the mortality of multiple
+populations. *Insurance: Mathematics and Economics* 63: 147-152.
+
+Li N, Lee R (2005). Coherent mortality forecasts for a group of
+populations: an extension of the Lee-Carter method. *Demography* 42(3):
+575-594.
+
 Panagiotelis A, Gamakumara P, Athanasopoulos G, Hyndman RJ (2023).
 Probabilistic forecast reconciliation: properties, evaluation and score
 optimisation. *European Journal of Operational Research* 306(2): 693-706.
+
+Villegas AM, Haberman S (2014). On the modeling and forecasting of
+socioeconomic mortality differentials: an application to deprivation and
+mortality in England. *North American Actuarial Journal* 18(1): 168-193.
 
 Wickramasuriya SL, Athanasopoulos G, Hyndman RJ (2019). Optimal forecast
 reconciliation for hierarchical and grouped time series through trace
