@@ -80,11 +80,15 @@ mt_plot_compare(
 - metrics:
 
   Score columns of [`mt_score()`](mt_score.md), for example `"crps"`,
-  `"rmse"`, `"cov80"`, `"cov95"`.
+  `"rmse"`, `"cov80"`, `"cov95"`, or `"energy"` and `"variogram"` for
+  the joint targets (`multivariate = TRUE` of
+  [`mt_backtest()`](mt_backtest.md)). Each target shows the metrics it
+  has.
 
 - targets:
 
-  Targets to show (default: all in the backtest).
+  Targets to show (default: all in the backtest; the joint targets when
+  `metrics` includes `"energy"` or `"variogram"`).
 
 - by:
 

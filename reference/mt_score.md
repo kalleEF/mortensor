@@ -8,7 +8,8 @@ Summarise backtest scores
 mt_score(
   backtest,
   by = "model",
-  target = c("rate", "life_expectancy", "asr", "life_expectancy_gap", "asr_gap"),
+  target = c("rate", "life_expectancy", "asr", "life_expectancy_gap", "asr_gap",
+    "life_expectancy_joint", "asr_joint"),
   measures = NULL
 )
 ```
@@ -30,7 +31,11 @@ mt_score(
   `"asr"` (when the backtest scored these quantities, see `quantities`
   in [`mt_backtest()`](mt_backtest.md)), or `"life_expectancy_gap"` or
   `"asr_gap"` (differences between strata, see `contrast` in
-  [`mt_backtest()`](mt_backtest.md)).
+  [`mt_backtest()`](mt_backtest.md)), or `"life_expectancy_joint"` or
+  `"asr_joint"` (all strata jointly, see `multivariate` in
+  [`mt_backtest()`](mt_backtest.md); summarised by the mean energy and
+  variogram scores, the number of vectors `n` and their mean dimension
+  `n_dim`).
 
 - measures:
 

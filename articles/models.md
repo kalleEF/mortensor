@@ -628,6 +628,27 @@ the deaths were observed (5-year age groups with annual periods use
 [`apc_select()`](../reference/apc_select.md) compares random-walk orders
 by the deviance information criterion (Spiegelhalter et al. 2002).
 
+`apc_bayes(coherent = TRUE)` fits the strata of a group (all strata, or
+each level of `common_by`) jointly: shared period and cohort effects
+carry the common trend, each stratum has its own age effects and level,
+and its deviations from the shared period effect are stationary AR(1)
+series that sum to zero over the strata (or are zero for a `reference`
+stratum), so the gaps between strata stay bounded. It rewrites the
+coherent model of the development branch of bamp, which is not released,
+with a native sampler; its published anchor is the two-population model
+of Cairns et al. (2011), and the help page lists the package-specific
+parts. When a bamp release contains the model,
+[`apc_bayes()`](../reference/apc_bayes.md) will call bamp.
+
+[`apc_causes()`](../reference/apc_causes.md) forecasts causes of death
+with all causes: an APC model of the all-cause rates and, by
+stick-breaking, APC models of the share of each cause among the deaths
+not yet assigned, whose period and cohort trends are coupled across
+causes by Wishart priors. Cause rates are shares times the all-cause
+rate, so they add up in every draw. It rewrites the multi-cause model of
+the same bamp branch; no published source of the combination is known,
+so it is package-specific.
+
 ### Nordpred: `nordpred_apc()`
 
 The Nordpred method of Møller et al. (2003) for projections of cancer
@@ -1390,6 +1411,10 @@ Cairns AJG, Blake D, Dowd K, Coughlan GD, Epstein D, Ong A, Balevich I
 (2009). A quantitative comparison of stochastic mortality models using
 data from England and Wales and the United States. *North American
 Actuarial Journal* 13(1): 1-35.
+
+Cairns AJG, Blake D, Dowd K, Coughlan GD, Khalaf-Allah M (2011).
+Bayesian stochastic mortality modelling for two populations. *ASTIN
+Bulletin* 41(1): 29-59. <doi:10.2143/AST.41.1.2084385>.
 
 Camarda CG (2012). MortalitySmooth: an R package for smoothing Poisson
 counts with P-splines. *Journal of Statistical Software* 50(1): 1-24.

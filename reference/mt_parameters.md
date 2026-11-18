@@ -77,7 +77,18 @@ ensembles also `component`, for fits by groups also `group`.
 - [`apc_bayes()`](apc_bayes.md): posterior medians and 90% intervals of
   the age, period and cohort effects (logit scale, bamp's
   identification), and the Gelman-Rubin statistics (`rhat`, values below
-  1.1 indicate convergence) of the identified quantities;
+  1.1 indicate convergence) of the identified quantities; with
+  `coherent = TRUE` per group the shared intercept, period and cohort
+  effects (stratum `"common (group)"`), per stratum the age effects, the
+  level and the deviations, the hyperparameters (precisions `kappa`,
+  `lambda`, `nu`, `lambda_d`, AR(1) coefficient `rho`, and `lambda_c`,
+  `rho_c` of the cohort deviations) and `rhat` of the monitored
+  quantities;
+
+- [`apc_causes()`](apc_causes.md): per group the effects of the
+  all-cause model and of the share of each cause, the correlations of
+  the period and cohort effects of the shares across causes
+  (`period_correlation`, `cohort_correlation`) and `rhat`;
 
 - [`p_splines()`](p_splines.md), [`cp_splines()`](cp_splines.md): the
   smoothing parameters over age (`lambda_age`) and years

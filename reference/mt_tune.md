@@ -22,9 +22,11 @@ mt_tune(
   metric = "crps",
   n_draws = 100,
   strategy = c("full", "two_stage"),
-  target = c("rate", "life_expectancy", "asr"),
+  target = c("rate", "life_expectancy", "asr", "life_expectancy_gap", "asr_gap",
+    "life_expectancy_joint", "asr_joint"),
   select = c("min", "one_se"),
-  by = NULL
+  by = NULL,
+  contrast = NULL
 )
 
 tuned(
@@ -36,9 +38,11 @@ tuned(
   n_draws = 100,
   label = "Tuned model",
   strategy = c("full", "two_stage"),
-  target = c("rate", "life_expectancy", "asr"),
+  target = c("rate", "life_expectancy", "asr", "life_expectancy_gap", "asr_gap",
+    "life_expectancy_joint", "asr_joint"),
   select = c("min", "one_se"),
-  by = NULL
+  by = NULL,
+  contrast = NULL
 )
 ```
 
@@ -76,7 +80,8 @@ tuned(
 
 - metric:
 
-  `"crps"`, `"wis"`, `"mae"`, `"rmse"` or `"mase"`.
+  `"crps"`, `"wis"`, `"mae"`, `"rmse"` or `"mase"`; for the joint
+  targets `"energy"` or `"variogram"`.
 
 - n_draws:
 
@@ -94,7 +99,9 @@ tuned(
 
 - target:
 
-  `"rate"`, `"life_expectancy"` or `"asr"`.
+  `"rate"`, `"life_expectancy"`, `"asr"`, `"life_expectancy_gap"`,
+  `"asr_gap"` (with `contrast`), `"life_expectancy_joint"` or
+  `"asr_joint"`.
 
 - select:
 
@@ -103,6 +110,12 @@ tuned(
 - by:
 
   Stratum variables: tune each group of strata separately.
+
+- contrast:
+
+  For the gap targets: `c(var = , ref = )`, a stratum variable and its
+  reference level (see [`mt_backtest()`](mt_backtest.md)). It cannot be
+  a variable of `by`.
 
 - label:
 
@@ -147,6 +160,20 @@ per test year and stratum. `"crps"` and `"wis"` score the whole forecast
 distribution; `"mae"` and `"rmse"` the error of the median (point
 accuracy); `"mase"` scales the absolute error by the mean year-to-year
 change of the training data (rates only).
+
+**Coherence.** To choose how strongly the strata of a joint model are
+tied together (for example `ratio_order` of [`li_lee()`](li_lee.md),
+`spread_ar` of [`saint()`](saint.md), `deviation` of
+[`relative_model()`](relative_model.md)), the criterion can score the
+differences between strata or all strata jointly, as in
+[`mt_backtest()`](mt_backtest.md): `target = "life_expectancy_gap"` or
+`"asr_gap"` with `contrast` (the gaps between each level of a stratum
+variable and its reference level, scored with `metric` `"crps"`,
+`"wis"`, `"mae"` or `"rmse"`), or `target = "life_expectancy_joint"` or
+`"asr_joint"` with `metric = "energy"` or `"variogram"` (the vector of
+all strata of each group). The models are published; choosing their
+coherence settings by these scores is a procedure of this package
+(reference unknown).
 
 **Selection.** `select = "min"` takes the lowest score.
 `select = "one_se"` takes the first row of `grid` whose score is within

@@ -22,7 +22,8 @@ mt_backtest(
   cores = 1,
   score_estimated = FALSE,
   quantities = NULL,
-  contrast = NULL
+  contrast = NULL,
+  multivariate = FALSE
 )
 ```
 
@@ -99,6 +100,21 @@ mt_backtest(
   inequality, whose uncertainty depends on how the paths of the strata
   move together; the rows carry the stratum of the compared level.
 
+- multivariate:
+
+  With `quantities`, also score the vector of each derived quantity over
+  all strata jointly, per origin and test year: targets
+  `"life_expectancy_joint"` and `"asr_joint"`, with the energy score
+  (column `energy`; Gneiting and Raftery 2007) and the variogram score
+  of order 0.5 with equal weights (column `variogram`; Scheuerer and
+  Hamill 2015). The energy score rewards forecasts whose joint
+  distribution is close to the observed vector; the variogram score
+  responds to the dependence between the strata, which the scores of
+  single cells cannot see. The rows have no stratum; `n_dim` is the
+  number of strata in the vector (those that scored the quantity in that
+  year). Both use the draws of all strata path by path, so they reward
+  models whose strata move together as observed.
+
 ## Value
 
 An object of class `mt_backtest`: a `data.table` with one row per
@@ -114,7 +130,9 @@ median), `cov50`, `cov80`, `cov95` and `pit` (randomised for ties), and
 for the opt-in summaries of [`mt_score()`](mt_score.md) (`measures`) the
 standard deviation of the draws `sd`, `cov90` and the half-widths
 `hw80`, `hw90` and `hw95` of the central intervals. Rows of derived
-quantities have no `age_lo`, `age_hi` and `scale`. Summarise with
+quantities have no `age_lo`, `age_hi` and `scale`; rows of joint scores
+(`multivariate = TRUE`) carry `energy`, `variogram` and `n_dim` instead
+of the scores of single cells. Summarise with
 [`mt_score()`](mt_score.md).
 
 ## Details
@@ -185,6 +203,11 @@ Grimit EP, Gneiting T, Berrocal VJ, Johnson NA (2006). The continuous
 ranked probability score for circular variables and its application to
 mesoscale forecast ensemble verification. *Quarterly Journal of the
 Royal Meteorological Society* 132: 2925-2942.
+
+Scheuerer M, Hamill TM (2015). Variogram-based proper scoring rules for
+probabilistic forecasts of multivariate quantities. *Monthly Weather
+Review* 143(4): 1321-1334.
+[doi:10.1175/MWR-D-14-00269.1](https://doi.org/10.1175/MWR-D-14-00269.1)
 
 Tashman LJ (2000). Out-of-sample tests of forecasting accuracy: an
 analysis and review. *International Journal of Forecasting* 16(4):

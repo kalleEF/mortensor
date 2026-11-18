@@ -167,6 +167,8 @@ Models for several populations and causes
   (three-way Lee-Carter model)
 - [`coda_causes()`](coda_causes.md) : Multiple-decrement CoDa model of
   causes of death (experimental)
+- [`apc_causes()`](apc_causes.md) : Multi-cause age-period-cohort model
+  with coupled cause trends
 
 ## 
 

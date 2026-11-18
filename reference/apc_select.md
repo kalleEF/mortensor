@@ -72,7 +72,7 @@ if (requireNamespace("bamp", quietly = TRUE)) {
 }
 #>       age period cohort overdispersion     dic       pd deviance_at_mean
 #>    <char> <char> <char>         <lgcl>   <num>    <num>            <num>
-#> 1:    rw1    rw1    rw1          FALSE 1029.48 131.4061         766.6683
+#> 1:    rw1    rw1    rw1          FALSE 1027.39 130.3468         766.6967
 #>    converged
 #>       <lgcl>
 #> 1:      TRUE

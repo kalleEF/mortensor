@@ -1,5 +1,91 @@
 # Changelog
 
+## mortensor 0.3.0.9000
+
+Work packages of `dev/coherence-plan.md`: ideas on coherent forecasting
+from the design note and the coherent forecasting branch of bamp.
+
+### Multi-cause Bayesian APC model and causes within sexes (C5, C3)
+
+- [`apc_causes()`](../reference/apc_causes.md) models all causes and the
+  shares of the causes of death together: binomial-logit
+  age-period-cohort models of the all-cause rates and, by
+  stick-breaking, of the share of each cause among the deaths not yet
+  assigned, with period and cohort trends of the shares coupled across
+  causes by Wishart priors (correlations, also negative ones, are
+  estimated). Cause rates are shares times the all-cause rate, so they
+  add up in every draw. It rewrites `bamp_multicause()` of the
+  unreleased bamp branch “coherent_forecasting” with the native sampler
+  of `apc_bayes(coherent = TRUE)`; the branch’s second slope constraint
+  per cause is left out, and the latent-factor coupling is not taken
+  over. Package-specific (reference unknown); when a bamp release
+  contains the model, [`apc_causes()`](../reference/apc_causes.md) will
+  call bamp.
+- The coherence vignette shows forecasts by sex and cause that are
+  coherent both ways: [`stratified()`](../reference/stratified.md) with
+  [`li_lee()`](../reference/li_lee.md) for all causes and by cause,
+  reconciled to the all-cause forecast with `method = "proportional"`
+  and `fixed`.
+
+### Coherent Bayesian age-period-cohort model (C4)
+
+- `apc_bayes(coherent = TRUE)` fits the strata of each group
+  (`common_by`) jointly: shared period and cohort random walks, stratum
+  age effects and levels, and stationary AR(1) deviations of the strata
+  from the shared period effect, which sum to zero over the strata or
+  are zero for a `reference` stratum; `cohort_deviation = TRUE` adds
+  AR(1) deviations along the cohorts. Forecasts keep the gaps between
+  strata bounded. It rewrites `bamp_coherent()` of the unreleased bamp
+  branch “coherent_forecasting” with a native sampler (no bamp needed);
+  when a bamp release contains the model,
+  [`apc_bayes()`](../reference/apc_bayes.md) will call bamp and the
+  native sampler will be deprecated. Published anchor: Cairns et
+  al. (2011), two populations; the help page lists the package-specific
+  parts (likelihood, priors, shared cohort effect, three or more
+  strata).
+- The sampler proposes all effects jointly from a Gaussian approximation
+  of their conditional posterior (Metropolis-Hastings with sparse
+  Cholesky factors), draws the precisions from their conditionals and
+  rho by a Metropolis step, runs four chains and refits when the
+  Gelman-Rubin statistic exceeds 1.1. Tests check the constraints in
+  every draw, the forecast variances against the formulas of the AR(1)
+  and random-walk processes, the recovery of simulated deviations, and,
+  with fixed hyperparameters, the posterior means against importance
+  sampling. `dev/check-coherent-apc.R` compares the model with
+  `bamp_coherent()` on English data: fitted rates agree within 0.3%, and
+  with the branch’s prior the hyperparameters agree.
+- The prior of the deviation precision is Gamma(1, 5e-4), as for the
+  period and cohort precisions. The branch’s Gamma(1, 0.05) outweighs
+  the data and sets the width of the forecast gaps
+  (`dev/coherent-apc-check.md`).
+- [`mt_parameters()`](../reference/mt_parameters.md) reports the shared
+  and stratum effects, the hyperparameters and the Gelman-Rubin
+  statistics of the coherent model.
+
+### Joint scores and coherence targets (C1)
+
+- `mt_backtest(multivariate = TRUE)` scores the vector of each derived
+  quantity (`quantities`) over all strata jointly, per origin and test
+  year: targets `"life_expectancy_joint"` and `"asr_joint"` with the
+  energy score (Gneiting and Raftery 2007) and the variogram score of
+  order 0.5 (Scheuerer and Hamill 2015). They use the draws of all
+  strata path by path, so they reward forecasts whose strata move
+  together as observed. [`mt_score()`](../reference/mt_score.md)
+  summarises them, and
+  `mt_score_table(metrics = c("energy", "variogram"))` shows them next
+  to the other scores. The energy score equals the CRPS of
+  [`mt_backtest()`](../reference/mt_backtest.md) in one dimension; both
+  scores agree with scoringRules.
+- [`mt_tune()`](../reference/mt_tune.md) and
+  [`tuned()`](../reference/mt_tune.md) choose settings by the gaps
+  between strata (`target = "life_expectancy_gap"` or `"asr_gap"` with
+  `contrast`) or by the joint scores (`target = "life_expectancy_joint"`
+  or `"asr_joint"` with `metric = "energy"` or `"variogram"`), for
+  example how strongly [`li_lee()`](../reference/li_lee.md),
+  [`saint()`](../reference/saint.md) or
+  [`relative_model()`](../reference/relative_model.md) tie the strata
+  together. This selection is package-specific (reference unknown).
+
 ## mortensor 0.3.0
 
 Release after the independent review of 0.2.0 (`dev/review-0.2.md`, plan
