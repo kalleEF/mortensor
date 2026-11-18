@@ -49,7 +49,12 @@
 #' * [apc_bayes()]: posterior medians and 90% intervals of the age, period
 #'   and cohort effects (logit scale, bamp's identification), and the
 #'   Gelman-Rubin statistics (`rhat`, values below 1.1 indicate convergence)
-#'   of the identified quantities;
+#'   of the identified quantities; with `coherent = TRUE` per group the
+#'   shared intercept, period and cohort effects (stratum `"common (group)"`),
+#'   per stratum the age effects, the level and the deviations, the
+#'   hyperparameters (precisions `kappa`, `lambda`, `nu`, `lambda_d`, AR(1)
+#'   coefficient `rho`, and `lambda_c`, `rho_c` of the cohort deviations)
+#'   and `rhat` of the monitored quantities;
 #' * [p_splines()], [cp_splines()]: the smoothing parameters over age
 #'   (`lambda_age`) and years (`lambda_year`), the effective dimension
 #'   (`ed`), the criterion (`bic` or `aic`) and the dispersion (deviance
@@ -356,6 +361,7 @@ base_parameters <- function(fit, sp) {
   if (inherits(sp, "mt_spec_bohk_rau")) return(bohk_rau_parameters(fit))
   if (inherits(sp, "mt_spec_apci")) return(apci_parameters(fit))
   if (inherits(sp, "mt_spec_nordpred")) return(nordpred_parameters(fit))
+  if (inherits(sp, "mt_spec_apc_coherent")) return(coh_parameters(fit))
   if (inherits(sp, "mt_spec_apc_bayes")) {
     e <- apc_effects(fit)
     e <- e[, list(stratum, parameter = effect, index = as.character(index), value = q0.5, lower = q0.05,

@@ -257,6 +257,7 @@ differs between these models:
 | `cae()` | common age effect of all strata | equal | Kleinow (2015) |
 | `relative_model()` | the reference population | reference only | Villegas and Haberman (2014) |
 | `saint()` | the pooled reference population | reference only | Jarner and Kryger (2011) |
+| `apc_bayes(coherent = TRUE)` | shared period and cohort effects; deviations sum to zero over the strata | equal, or a reference stratum | Cairns et al. (2011) for two populations |
 
 With equal weights, a small stratum moves the common trend as much as a
 large one; with exposure weights, the common trend follows the largest
@@ -303,6 +304,10 @@ Australian domestic tourism. *International Journal of Forecasting* 25:
 Bergeron-Boucher M-P, Canudas-Romo V, Oeppen J, Vaupel JW (2017).
 Coherent forecasts of mortality with compositional data analysis.
 *Demographic Research* 37(17): 527-566.
+
+Cairns AJG, Blake D, Dowd K, Coughlan GD, Khalaf-Allah M (2011). Bayesian
+stochastic mortality modelling for two populations. *ASTIN Bulletin*
+41(1): 29-59.
 
 Clark M, Gangopadhyay S, Hay L, Rajagopalan B, Wilby R (2004). The Schaake
 shuffle: a method for reconstructing space-time variability in forecasted

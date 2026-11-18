@@ -3,6 +3,37 @@
 Work packages of `dev/coherence-plan.md`: ideas on coherent forecasting
 from the design note and the coherent forecasting branch of bamp.
 
+## Coherent Bayesian age-period-cohort model (C4)
+
+* `apc_bayes(coherent = TRUE)` fits the strata of each group (`common_by`)
+  jointly: shared period and cohort random walks, stratum age effects and
+  levels, and stationary AR(1) deviations of the strata from the shared
+  period effect, which sum to zero over the strata or are zero for a
+  `reference` stratum; `cohort_deviation = TRUE` adds AR(1) deviations
+  along the cohorts. Forecasts keep the gaps between strata bounded. It
+  rewrites `bamp_coherent()` of the unreleased bamp branch
+  "coherent_forecasting" with a native sampler (no bamp needed); when a bamp
+  release contains the model, `apc_bayes()` will call bamp and the native
+  sampler will be deprecated. Published anchor: Cairns et al. (2011), two
+  populations; the help page lists the package-specific parts (likelihood,
+  priors, shared cohort effect, three or more strata).
+* The sampler proposes all effects jointly from a Gaussian approximation
+  of their conditional posterior (Metropolis-Hastings with sparse Cholesky
+  factors), draws the precisions from their conditionals and rho by a
+  Metropolis step, runs four chains and refits when the Gelman-Rubin
+  statistic exceeds 1.1. Tests check the constraints in every draw, the
+  forecast variances against the formulas of the AR(1) and random-walk
+  processes, the recovery of simulated deviations, and, with fixed
+  hyperparameters, the posterior means against importance sampling.
+  `dev/check-coherent-apc.R` compares the model with `bamp_coherent()` on
+  English data: fitted rates agree within 0.3%, and with the branch's prior
+  the hyperparameters agree.
+* The prior of the deviation precision is Gamma(1, 5e-4), as for the period
+  and cohort precisions. The branch's Gamma(1, 0.05) outweighs the data and
+  sets the width of the forecast gaps (`dev/coherent-apc-check.md`).
+* `mt_parameters()` reports the shared and stratum effects, the
+  hyperparameters and the Gelman-Rubin statistics of the coherent model.
+
 ## Joint scores and coherence targets (C1)
 
 * `mt_backtest(multivariate = TRUE)` scores the vector of each derived

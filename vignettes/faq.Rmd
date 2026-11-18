@@ -430,7 +430,10 @@ of the distributions of deaths by age do not diverge, and their
 intervals widen with the horizon. `cae(index = "coherent")` gives all
 strata one common drift and lets their other period effects revert to
 zero (Enchev, Kleinow and Cairns 2017), so the expected rates do not
-diverge. `relative_model()` gives subpopulations, such as deprivation
+diverge. `apc_bayes(coherent = TRUE)` shares the period and cohort effects
+of the strata and lets their deviations revert to zero (AR(1) processes;
+Cairns et al. 2011), with the parameter uncertainty of a Bayesian fit.
+`relative_model()` gives subpopulations, such as deprivation
 quintiles, the trend of their national population plus their own drifting
 improvement differences, so a gap that widened keeps widening; with
 `deviation = "constant"` the differences stay at their last values
@@ -546,6 +549,10 @@ doi:10.1186/s41118-016-0017-8.
 Brouhns N, Denuit M, Vermunt JK (2002). A Poisson log-bilinear regression
 approach to the construction of projected lifetables. *Insurance:
 Mathematics and Economics* 31(3): 373-393.
+
+Cairns AJG, Blake D, Dowd K, Coughlan GD, Khalaf-Allah M (2011). Bayesian
+stochastic mortality modelling for two populations. *ASTIN Bulletin*
+41(1): 29-59. doi:10.2143/AST.41.1.2084385.
 
 Camarda CG (2019). Smooth constrained mortality forecasting. *Demographic
 Research* 41(38): 1091-1130. doi:10.4054/DemRes.2019.41.38.

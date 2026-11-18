@@ -66,6 +66,10 @@ Metropolis-Hastings sampler (the branch approximates the Polya-Gamma draws
 by normal draws). Forecast innovations use the scaled precision of the
 prior, as the branch does since commit 08c7a18.
 
+The deviation precisions get Gamma(1, 5e-4) priors, as the period and
+cohort precisions: the branch's Gamma(1, 0.05) outweighs the data and sets
+the width of the forecast gaps (`dev/coherent-apc-check.md`).
+
 Tests: constraints hold in every draw; the AR(1) and random-walk forecast
 variances match their formulas; the sampler recovers simulated parameters;
 with fixed hyperparameters, its posterior means agree with importance
@@ -76,10 +80,13 @@ compares the posterior with the branch implementation.
 
 Native rewrite of `bamp_multicause()`: the deaths of each cell split by a
 stick-breaking sequence of binomial-logit APC models of the cause shares
-(Linderman, Johnson and Adams 2015 for the representation), period (and
-cohort) effects of the shares coupled across causes by a Wishart prior,
+(Linderman, Johnson and Adams 2015 for the representation), period and
+cohort effects of the shares coupled across causes by Wishart priors,
 all-cause rates from an APC model of the total, cause rates as shares
-times the total. Package-specific (reference unknown).
+times the total. Package-specific (reference unknown). Fixes: one slope
+constraint per cause share, and only when all effects are RW2 (the branch
+pins period and cohort slopes when both are RW2); the exact sampler of A1.
+The latent-factor coupling of the branch is not taken over.
 
 ### Not taken over
 
@@ -89,8 +96,13 @@ times the total. Package-specific (reference unknown).
   totals and shares on the rate scale (`coda_causes()`, `relative_model()`,
   `mt_reconcile(method = "proportional")`).
 - Forecast options of the branch (damped trends, variance damping, trend
-  windows, changepoints, exogenous age drifts): unpublished extensions of
-  the forecast, outside this plan.
+  windows, changepoints, exogenous age drifts), the damped-drift prior
+  `"dd"` and the share coupling of the sex cascade: unpublished, with open
+  issues listed in the review.
+- The output layer of the branch (`align_to_total()`, `expected_counts()`,
+  `life_table()`, `burden()`): covered by `mt_reconcile(method =
+  "proportional", fixed = )`, `mt_deaths()`, `life_table()` and
+  `mt_decompose()`.
 
 ## Sources
 
