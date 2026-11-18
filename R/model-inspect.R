@@ -55,6 +55,10 @@
 #'   hyperparameters (precisions `kappa`, `lambda`, `nu`, `lambda_d`, AR(1)
 #'   coefficient `rho`, and `lambda_c`, `rho_c` of the cohort deviations)
 #'   and `rhat` of the monitored quantities;
+#' * [apc_causes()]: per group the effects of the all-cause model and of the
+#'   share of each cause, the correlations of the period and cohort effects
+#'   of the shares across causes (`period_correlation`,
+#'   `cohort_correlation`) and `rhat`;
 #' * [p_splines()], [cp_splines()]: the smoothing parameters over age
 #'   (`lambda_age`) and years (`lambda_year`), the effective dimension
 #'   (`ed`), the criterion (`bic` or `aic`) and the dispersion (deviance
@@ -362,6 +366,7 @@ base_parameters <- function(fit, sp) {
   if (inherits(sp, "mt_spec_apci")) return(apci_parameters(fit))
   if (inherits(sp, "mt_spec_nordpred")) return(nordpred_parameters(fit))
   if (inherits(sp, "mt_spec_apc_coherent")) return(coh_parameters(fit))
+  if (inherits(sp, "mt_spec_apc_causes")) return(mc_parameters(fit))
   if (inherits(sp, "mt_spec_apc_bayes")) {
     e <- apc_effects(fit)
     e <- e[, list(stratum, parameter = effect, index = as.character(index), value = q0.5, lower = q0.05,

@@ -269,6 +269,36 @@ backtest with `contrast` (gaps between strata) and `multivariate = TRUE`
 can choose their settings by these scores (`target = "asr_gap"` or
 `"asr_joint"`).
 
+## Causes within sexes
+
+Forecasts by sex and cause need two kinds of coherence: the sexes should
+not drift apart, and the causes should add up to all causes. A model with
+a common trend gives the first, reconciliation with a fixed total the
+second. `stratified()` fits one model to the all-cause strata and another
+to the cause strata, and `reconciled()` scales the causes so that they add
+up to the all-cause forecast, which stays as it is
+(`method = "proportional"`, `fixed`). Here `li_lee()` ties women and men
+together for all causes, and `li_lee(common_by = "cause")` ties them
+together for each cause:
+
+```{r}
+xc <- mt_example_causes(years = 1990:2019)
+hc <- mt_hierarchy(cause = list(total = "all", additive = "rates"))
+spec_c <- reconciled(stratified("cause", all = li_lee(), .default = li_lee(common_by = "cause")), hc,
+                     method = "proportional", fixed = c("female.all", "male.all"))
+fc_c <- mt_forecast(mt_fit(spec_c, xc), h = 10, n_draws = 200, seed = 1)
+mt_compare_forecasts(list("sex x cause" = fc_c), quantity = "asr", periods = 2029,
+                     strata = c("female.all", "male.all", "female.cvd", "male.cvd"))
+```
+
+Age-standardised rates per 100,000 in 2029 with 95% intervals. The causes of each sex
+add up to its all-cause forecast in every draw.
+The draws of the all-cause and the cause models are independent, so the
+reconciliation, and not the models, sets how the causes move with all
+causes. `apc_causes()` models all causes and the shares of the causes
+together, with period trends of the causes that are correlated as
+estimated, at the cost of an MCMC fit.
+
 ## Choosing a method
 
 * **Bottom-up** with a joint model of the parts keeps the detailed

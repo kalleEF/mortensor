@@ -3,6 +3,25 @@
 Work packages of `dev/coherence-plan.md`: ideas on coherent forecasting
 from the design note and the coherent forecasting branch of bamp.
 
+## Multi-cause Bayesian APC model and causes within sexes (C5, C3)
+
+* `apc_causes()` models all causes and the shares of the causes of death
+  together: binomial-logit age-period-cohort models of the all-cause rates
+  and, by stick-breaking, of the share of each cause among the deaths not
+  yet assigned, with period and cohort trends of the shares coupled across
+  causes by Wishart priors (correlations, also negative ones, are
+  estimated). Cause rates are shares times the all-cause rate, so they add
+  up in every draw. It rewrites `bamp_multicause()` of the unreleased bamp
+  branch "coherent_forecasting" with the native sampler of
+  `apc_bayes(coherent = TRUE)`; the branch's second slope constraint per
+  cause is left out, and the latent-factor coupling is not taken over.
+  Package-specific (reference unknown); when a bamp release contains the
+  model, `apc_causes()` will call bamp.
+* The coherence vignette shows forecasts by sex and cause that are
+  coherent both ways: `stratified()` with `li_lee()` for all causes and by
+  cause, reconciled to the all-cause forecast with `method =
+  "proportional"` and `fixed`.
+
 ## Coherent Bayesian age-period-cohort model (C4)
 
 * `apc_bayes(coherent = TRUE)` fits the strata of each group (`common_by`)

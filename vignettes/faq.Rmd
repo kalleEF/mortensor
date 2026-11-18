@@ -413,7 +413,8 @@ population projections as `exposure` when they are available. See
 reconciles causes by sex and quintile in one crossed hierarchy,
 `mt_hierarchy(sex = "both", quintile = "England", cause = list(total = "all", additive = "rates"))`,
 and compares the methods and a per-cause ensemble with Lee-Carter in a
-backtest.
+backtest. `apc_causes()` models all causes and the shares of the causes
+together (package-specific), so causes add up without reconciliation.
 
 ### Will the gap between regions or deprivation groups keep growing?
 

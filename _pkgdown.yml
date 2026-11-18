@@ -76,6 +76,7 @@ reference:
       - relative_model
       - tucker3
       - coda_causes
+      - apc_causes
   - title: 7. Combine models and make forecasts coherent
     desc: Model wrappers (ensembles, different models for groups of strata, reconciliation, coupling, calibration, jump-off, bootstrap, tuning) and hierarchies of strata.
     contents:

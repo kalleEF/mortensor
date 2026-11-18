@@ -268,24 +268,7 @@ coh_start <- function(st, Qp, sym) {
     th <- stats::qlogis(pmin(pmax(r, 1e-10), 1 - 1e-10)) - mu
     x[st$idx$th[(s - 1L) * st$I + seq_len(st$I)]] <- th - mean(th)
   }
-  lp <- coh_lp(st, x, Qp)
-  for (it in 1:50) {
-    m <- coh_approx(st, x, Qp, sym)$m
-    step <- 1
-    repeat {
-      xn <- x + step * (m - x)
-      ln <- coh_lp(st, xn, Qp)
-      if (is.finite(ln) && ln >= lp - 1e-10) break
-      step <- step / 2
-      if (step < 1e-6) break
-    }
-    if (step < 1e-6) break
-    done <- abs(ln - lp) < 1e-8 * (1 + abs(lp))
-    x <- xn
-    lp <- ln
-    if (done) break
-  }
-  x
+  gmrf_mode(st, x, Qp, sym)
 }
 
 # Log density (up to a constant) of the constrained Gaussian approximation

@@ -578,6 +578,14 @@ sampler; its published anchor is the two-population model of Cairns et
 al. (2011), and the help page lists the package-specific parts. When a
 bamp release contains the model, `apc_bayes()` will call bamp.
 
+`apc_causes()` forecasts causes of death with all causes: an APC model of
+the all-cause rates and, by stick-breaking, APC models of the share of
+each cause among the deaths not yet assigned, whose period and cohort
+trends are coupled across causes by Wishart priors. Cause rates are shares
+times the all-cause rate, so they add up in every draw. It rewrites the
+multi-cause model of the same bamp branch; no published source of the
+combination is known, so it is package-specific.
+
 ### Nordpred: `nordpred_apc()`
 
 The Nordpred method of Møller et al. (2003) for projections of cancer
